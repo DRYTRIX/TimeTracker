@@ -129,7 +129,7 @@ class Config:
     if not APP_VERSION:
         # If no tag provided, create a dev-build identifier if available
         github_run_number = os.getenv('GITHUB_RUN_NUMBER')
-        APP_VERSION = f"dev-{github_run_number}" if github_run_number else "dev-0"
+        APP_VERSION = f"dev-{github_run_number}" if github_run_number else "3.1.0"
 
 class DevelopmentConfig(Config):
     """Development configuration"""

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, redirect, url_for, flash, jsonify, render_template
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from app import db
+from app import db, log_event, track_event
 from app.models import Comment, Project, Task
 from app.utils.db import safe_commit
 
@@ -59,6 +59,15 @@ def create_comment():
         
         db.session.add(comment)
         if safe_commit():
+            # Log comment creation
+            log_event("comment.created", 
+                     user_id=current_user.id, 
+                     comment_id=comment.id,
+                     target_type=target_type)
+            track_event(current_user.id, "comment.created", {
+                "comment_id": comment.id,
+                "target_type": target_type
+            })
             flash(_('Comment added successfully'), 'success')
         else:
             flash(_('Error adding comment'), 'error')
@@ -94,6 +103,11 @@ def edit_comment(comment_id):
                 return render_template('comments/edit.html', comment=comment)
             
             comment.edit_content(content, current_user)
+            
+            # Log comment update
+            log_event("comment.updated", user_id=current_user.id, comment_id=comment.id)
+            track_event(current_user.id, "comment.updated", {"comment_id": comment.id})
+            
             flash(_('Comment updated successfully'), 'success')
             
             # Redirect back to the source page
@@ -123,8 +137,14 @@ def delete_comment(comment_id):
     try:
         project_id = comment.project_id
         task_id = comment.task_id
+        comment_id_for_log = comment.id
         
         comment.delete_comment(current_user)
+        
+        # Log comment deletion
+        log_event("comment.deleted", user_id=current_user.id, comment_id=comment_id_for_log)
+        track_event(current_user.id, "comment.deleted", {"comment_id": comment_id_for_log})
+        
         flash(_('Comment deleted successfully'), 'success')
         
         # Redirect back to the source page

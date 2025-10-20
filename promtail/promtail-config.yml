@@ -1,0 +1,41 @@
+# Promtail configuration for shipping logs to Loki
+# This file configures Promtail to read TimeTracker logs and send them to Loki
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape JSON logs from TimeTracker
+  - job_name: timetracker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: timetracker
+          __path__: /var/log/timetracker/app.jsonl
+    
+    # Parse JSON logs
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: asctime
+            level: levelname
+            logger: name
+            message: message
+            request_id: request_id
+      
+      - labels:
+          level:
+          logger:
+      
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+

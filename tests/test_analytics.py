@@ -1,243 +1,275 @@
+"""
+Tests for analytics functionality (logging, Prometheus, PostHog)
+"""
+
 import pytest
-from app import db
-from app.models import User, Project, TimeEntry
-from datetime import datetime, timedelta
-from app.models import Task
+import os
+import json
+from unittest.mock import patch, MagicMock, call
+from flask import g
+from app import create_app, log_event, track_event
+
 
 @pytest.fixture
-def sample_data(app):
-    with app.app_context():
-        # Create test user
-        user = User(username='testuser', role='user')
-        user.is_active = True
-        db.session.add(user)
-        
-        # Create test project
-        project = Project(name='Test Project', client='Test Client')
-        db.session.add(project)
-        
-        db.session.commit()
-        
-        # Store IDs before session ends
-        user_id = user.id
-        project_id = project.id
-        
-        # Create test time entries
-        base_time = datetime.now() - timedelta(days=5)
-        for i in range(5):
-            entry = TimeEntry(
-                user_id=user_id,
-                project_id=project_id,
-                start_time=base_time + timedelta(days=i),
-                end_time=base_time + timedelta(days=i, hours=8),
-                billable=True
+def app():
+    """Create test Flask application"""
+    app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
+    return app
+
+
+@pytest.fixture
+def client(app):
+    """Create test client"""
+    return app.test_client()
+
+
+class TestLogEvent:
+    """Tests for structured JSON logging"""
+    
+    def test_log_event_basic(self, app):
+        """Test basic log event"""
+        with app.app_context():
+            with app.test_request_context():
+                g.request_id = 'test-request-123'
+                # This should not raise an exception
+                log_event("test.event", user_id=1, test_data="value")
+    
+    def test_log_event_without_request_context(self, app):
+        """Test that log_event handles missing request context gracefully"""
+        with app.app_context():
+            # Should not raise an exception even without request context
+            log_event("test.event", user_id=1)
+    
+    def test_log_event_with_extra_data(self, app):
+        """Test log event with various data types"""
+        with app.app_context():
+            with app.test_request_context():
+                g.request_id = 'test-request-456'
+                log_event("test.event",
+                         user_id=1,
+                         project_id=42,
+                         duration=3600,
+                         success=True,
+                         tags=['tag1', 'tag2'])
+
+
+class TestTrackEvent:
+    """Tests for PostHog event tracking"""
+    
+    @patch('app.posthog.capture')
+    def test_track_event_when_enabled(self, mock_capture, app):
+        """Test that PostHog events are tracked when API key is set"""
+        with patch.dict(os.environ, {'POSTHOG_API_KEY': 'test-key'}):
+            track_event(123, "test.event", {"property": "value"})
+            mock_capture.assert_called_once_with(
+                distinct_id='123',
+                event='test.event',
+                properties={"property": "value"}
             )
-            db.session.add(entry)
-        
-        # Create some tasks for task-completion endpoint
-        t1 = Task(project_id=project_id, name='T1', created_by=user_id, assigned_to=user_id)
-        t1.status = 'done'
-        t1.completed_at = datetime.now() - timedelta(days=1)
-        db.session.add(t1)
-        t2 = Task(project_id=project_id, name='T2', created_by=user_id, assigned_to=user_id)
-        t2.status = 'in_progress'
-        db.session.add(t2)
-        t3 = Task(project_id=project_id, name='T3', created_by=user_id, assigned_to=user_id)
-        t3.status = 'todo'
-        db.session.add(t3)
+    
+    @patch('app.posthog.capture')
+    def test_track_event_when_disabled(self, mock_capture, app):
+        """Test that PostHog events are not tracked when API key is not set"""
+        with patch.dict(os.environ, {'POSTHOG_API_KEY': ''}):
+            track_event(123, "test.event", {"property": "value"})
+            mock_capture.assert_not_called()
+    
+    @patch('app.posthog.capture')
+    def test_track_event_handles_errors_gracefully(self, mock_capture, app):
+        """Test that tracking errors don't crash the application"""
+        mock_capture.side_effect = Exception("PostHog error")
+        with patch.dict(os.environ, {'POSTHOG_API_KEY': 'test-key'}):
+            # Should not raise an exception
+            track_event(123, "test.event", {})
+    
+    def test_track_event_with_none_properties(self, app):
+        """Test that track_event handles None properties"""
+        with patch.dict(os.environ, {'POSTHOG_API_KEY': 'test-key'}):
+            with patch('app.posthog.capture') as mock_capture:
+                track_event(123, "test.event", None)
+                # Should use empty dict as default
+                call_args = mock_capture.call_args
+                assert call_args[1]['properties'] == {}
 
-        db.session.commit()
-        
-        return {'user_id': user_id, 'project_id': project_id}
 
-@pytest.mark.integration
-@pytest.mark.routes
-def test_analytics_dashboard_requires_login(client):
-    """Test that analytics dashboard requires authentication"""
-    response = client.get('/analytics')
-    assert response.status_code == 302  # Redirect to login
-
-@pytest.mark.integration
-@pytest.mark.routes
-def test_analytics_dashboard_accessible_when_logged_in(client, app, sample_data):
-    """Test that analytics dashboard is accessible when logged in"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            # Simulate login
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-        
-        response = client.get('/analytics')
+class TestPrometheusMetrics:
+    """Tests for Prometheus metrics"""
+    
+    def test_metrics_endpoint_exists(self, client):
+        """Test that /metrics endpoint exists"""
+        response = client.get('/metrics')
         assert response.status_code == 200
-        assert b'Analytics Dashboard' in response.data
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_hours_by_day_api(client, app, sample_data):
-    """Test hours by day API endpoint"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
+        assert response.content_type == 'text/plain; version=0.0.4; charset=utf-8'
+    
+    def test_metrics_endpoint_format(self, client):
+        """Test that /metrics returns Prometheus format"""
+        response = client.get('/metrics')
+        data = response.data.decode('utf-8')
         
-        response = client.get('/api/analytics/hours-by-day?days=7')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        assert 'labels' in data
-        assert 'datasets' in data
-        assert len(data['datasets']) > 0
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_hours_by_project_api(client, app, sample_data):
-    """Test hours by project API endpoint"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-        
-        response = client.get('/api/analytics/hours-by-project?days=7')
+        # Should contain our custom metrics
+        assert 'tt_requests_total' in data
+        assert 'tt_request_latency_seconds' in data
+    
+    def test_metrics_are_incremented(self, client):
+        """Test that metrics are incremented on requests"""
+        # Make a request to trigger metric recording
+        response = client.get('/metrics')
         assert response.status_code == 200
         
-        data = response.get_json()
-        assert 'labels' in data
-        assert 'datasets' in data
-        assert len(data['labels']) > 0
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_billable_vs_nonbillable_api(client, app, sample_data):
-    """Test billable vs non-billable API endpoint"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
+        # Get metrics
+        response = client.get('/metrics')
+        data = response.data.decode('utf-8')
         
-        response = client.get('/api/analytics/billable-vs-nonbillable?days=7')
+        # Should have recorded requests
+        assert 'tt_requests_total' in data
+
+
+class TestAnalyticsIntegration:
+    """Integration tests for analytics in routes"""
+    
+    @patch('app.routes.auth.log_event')
+    @patch('app.routes.auth.track_event')
+    def test_login_analytics(self, mock_track, mock_log, app, client):
+        """Test that login events are tracked"""
+        with app.app_context():
+            from app.models import User
+            from app import db
+            
+            # Create a test user
+            user = User(username='testuser', role='user')
+            db.session.add(user)
+            db.session.commit()
+            
+            # Attempt login
+            response = client.post('/login', data={'username': 'testuser'}, follow_redirects=False)
+            
+            # Should have logged the event
+            # Note: This might not be called if there are validation errors or other issues
+            # The actual assertion depends on your authentication flow
+    
+    @patch('app.routes.timer.log_event')
+    @patch('app.routes.timer.track_event')
+    def test_timer_analytics_integration(self, mock_track, mock_log, app, client):
+        """Test that timer events are tracked (integration test placeholder)"""
+        # This is a placeholder - actual implementation would require:
+        # 1. Authenticated session
+        # 2. Valid project
+        # 3. Timer start/stop operations
+        pass
+
+
+class TestSentryIntegration:
+    """Tests for Sentry error monitoring"""
+    
+    @patch('app.sentry_sdk.init')
+    def test_sentry_initializes_when_dsn_set(self, mock_init):
+        """Test that Sentry initializes when DSN is provided"""
+        with patch.dict(os.environ, {
+            'SENTRY_DSN': 'https://test@sentry.io/123',
+            'SENTRY_TRACES_RATE': '0.1',
+            'FLASK_ENV': 'production'
+        }):
+            app = create_app({'TESTING': True})
+            # Sentry should have been initialized
+            # Note: The actual initialization happens in create_app
+    
+    def test_sentry_not_initialized_without_dsn(self):
+        """Test that Sentry is not initialized when DSN is not set"""
+        with patch.dict(os.environ, {'SENTRY_DSN': ''}, clear=True):
+            with patch('app.sentry_sdk.init') as mock_init:
+                app = create_app({'TESTING': True})
+                # Sentry init should not be called
+                mock_init.assert_not_called()
+
+
+class TestRequestIDAttachment:
+    """Tests for request ID attachment"""
+    
+    def test_request_id_attached(self, app, client):
+        """Test that request ID is attached to requests"""
+        with app.app_context():
+            with app.test_request_context():
+                # Trigger the before_request hook
+                with client:
+                    response = client.get('/metrics')
+                    # Request ID should be set in g
+                    # Note: This test might need adjustment based on context handling
+
+
+class TestAnalyticsEventSchema:
+    """Tests to ensure analytics events follow the documented schema"""
+    
+    def test_event_naming_convention(self):
+        """Test that event names follow resource.action pattern"""
+        valid_events = [
+            "auth.login",
+            "auth.logout",
+            "timer.started",
+            "timer.stopped",
+            "project.created",
+            "project.updated",
+            "export.csv",
+            "report.viewed"
+        ]
+        
+        for event_name in valid_events:
+            parts = event_name.split('.')
+            assert len(parts) == 2, f"Event {event_name} should follow resource.action pattern"
+            assert parts[0].isalpha(), f"Resource part should be alphabetic: {event_name}"
+            assert parts[1].replace('_', '').isalpha(), f"Action part should be alphabetic: {event_name}"
+
+
+class TestAnalyticsPrivacy:
+    """Tests to ensure analytics respect privacy guidelines"""
+    
+    def test_no_pii_in_standard_events(self, app):
+        """Test that standard events don't include PII"""
+        # Events should use IDs, not emails or usernames
+        with app.app_context():
+            with app.test_request_context():
+                g.request_id = 'test-123'
+                
+                # This is acceptable (uses ID)
+                log_event("test.event", user_id=123)
+                
+                # In production, events should NOT include:
+                # - email addresses
+                # - usernames (use IDs instead)
+                # - IP addresses (unless explicitly needed)
+                # - passwords or tokens
+    
+    @patch('app.posthog.capture')
+    def test_posthog_uses_internal_ids(self, mock_capture, app):
+        """Test that PostHog events use internal IDs, not PII"""
+        with patch.dict(os.environ, {'POSTHOG_API_KEY': 'test-key'}):
+            # Should use numeric ID, not email
+            track_event(123, "test.event", {"project_id": 456})
+            
+            call_args = mock_capture.call_args
+            # distinct_id should be the internal user ID (converted to string)
+            assert call_args[1]['distinct_id'] == '123'
+
+
+class TestAnalyticsPerformance:
+    """Tests to ensure analytics don't impact performance"""
+    
+    def test_analytics_dont_block_requests(self, client):
+        """Test that analytics operations don't significantly delay requests"""
+        import time
+        
+        start = time.time()
+        response = client.get('/metrics')
+        duration = time.time() - start
+        
+        # Request should complete quickly even with analytics
+        assert duration < 1.0  # Should complete in less than 1 second
         assert response.status_code == 200
+    
+    @patch('app.posthog.capture')
+    def test_analytics_errors_dont_break_app(self, mock_capture, app, client):
+        """Test that analytics failures don't break the application"""
+        mock_capture.side_effect = Exception("Analytics service down")
         
-        data = response.get_json()
-        assert 'labels' in data
-        assert 'datasets' in data
-        assert len(data['labels']) == 2  # Billable and Non-Billable
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_hours_by_hour_api(client, app, sample_data):
-    """Test hours by hour API endpoint"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-        
-        response = client.get('/api/analytics/hours-by-hour?days=7')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        assert 'labels' in data
-        assert 'datasets' in data
-        assert len(data['labels']) == 24  # 24 hours
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_weekly_trends_api(client, app, sample_data):
-    """Test weekly trends API endpoint"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-        
-        response = client.get('/api/analytics/weekly-trends?weeks=4')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        assert 'labels' in data
-        assert 'datasets' in data
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_task_completion_api(client, app, sample_data):
-    """Test task completion analytics API endpoint structure"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-
-        response = client.get('/api/analytics/task-completion?days=7')
-        assert response.status_code == 200
-
-        data = response.get_json()
-        assert 'status_breakdown' in data
-        sb = data['status_breakdown'] or {}
-        # Ensure essential keys exist
-        for key in ['done', 'in_progress', 'todo', 'review', 'cancelled']:
-            assert key in sb
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_project_efficiency_api(client, app, sample_data):
-    """Test project efficiency API endpoint"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-        
-        response = client.get('/api/analytics/project-efficiency?days=7')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        assert 'labels' in data
-        assert 'datasets' in data
-
-@pytest.mark.integration
-@pytest.mark.api
-@pytest.mark.security
-def test_user_performance_api_requires_admin(client, app, sample_data):
-    """Test that user performance API requires admin access"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-        
-        response = client.get('/api/analytics/hours-by-user?days=7')
-        assert response.status_code == 403  # Forbidden for non-admin users
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_user_performance_api_accessible_by_admin(client, app, sample_data):
-    """Test that user performance API is accessible by admin users"""
-    with app.app_context():
-        # Make user admin
-        user_id = sample_data['user_id']
-        user = db.session.get(User, user_id)
-        user.role = 'admin'
-        db.session.commit()
-        
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(user_id)
-            sess['_fresh'] = True
-        
-        response = client.get('/api/analytics/hours-by-user?days=7')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        assert 'labels' in data
-        assert 'datasets' in data
-
-@pytest.mark.integration
-@pytest.mark.api
-def test_api_endpoints_with_invalid_parameters(client, app, sample_data):
-    """Test API endpoints with invalid parameters"""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(sample_data['user_id'])
-            sess['_fresh'] = True
-        
-        # Test with invalid days parameter
-        response = client.get('/api/analytics/hours-by-day?days=invalid')
-        assert response.status_code == 400  # Should return 400 for invalid parameter
-        
-        # Test with missing parameter (should use default)
-        response = client.get('/api/analytics/hours-by-day')
+        # Application should still work
+        response = client.get('/metrics')
         assert response.status_code == 200

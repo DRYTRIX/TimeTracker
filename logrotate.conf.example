@@ -1,0 +1,102 @@
+# Logrotate configuration for TimeTracker logs
+# 
+# Installation on Linux:
+# 1. Copy this file to /etc/logrotate.d/timetracker
+# 2. Adjust the path to match your installation
+# 3. Test: sudo logrotate -d /etc/logrotate.d/timetracker
+# 4. Force rotation: sudo logrotate -f /etc/logrotate.d/timetracker
+#
+# For Docker deployments:
+# - Mount logs directory: -v ./logs:/app/logs
+# - This config applies to the host logs directory
+
+/path/to/TimeTracker/logs/*.jsonl {
+    # Rotate daily
+    daily
+    
+    # Keep 7 days of logs
+    rotate 7
+    
+    # Compress old logs
+    compress
+    
+    # Delay compression until next rotation
+    delaycompress
+    
+    # Don't error if log file is missing
+    missingok
+    
+    # Don't rotate if log is empty
+    notifempty
+    
+    # Copy and truncate instead of moving (allows app to keep writing)
+    copytruncate
+    
+    # Set permissions on rotated logs
+    create 0640 root root
+    
+    # Maximum age of logs (30 days)
+    maxage 30
+    
+    # Rotate if larger than 100MB
+    size 100M
+    
+    # Shared scripts section for all log files
+    sharedscripts
+    
+    # Optional: Run a command after rotation
+    postrotate
+        # Example: Send logs to long-term storage
+        # aws s3 sync /path/to/TimeTracker/logs/ s3://your-bucket/logs/
+        
+        # Example: Clear old archives
+        # find /path/to/TimeTracker/logs/ -name "*.gz" -mtime +90 -delete
+    endscript
+}
+
+# Separate config for standard logs
+/path/to/TimeTracker/logs/timetracker.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    create 0640 root root
+}
+
+# Configuration for error logs (if separate)
+/path/to/TimeTracker/logs/error.log {
+    # Rotate more frequently for error logs
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    create 0640 root root
+    
+    # Alert if error log is too large
+    size 50M
+    
+    postrotate
+        # Optional: Send alert if error log is rotated frequently
+        # echo "TimeTracker error log rotated" | mail -s "Error log alert" admin@example.com
+    endscript
+}
+
+# Alternative: More aggressive rotation for high-traffic installations
+# /path/to/TimeTracker/logs/*.jsonl {
+#     hourly
+#     rotate 168  # Keep 1 week of hourly logs
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     copytruncate
+#     dateext
+#     dateformat -%Y%m%d-%H
+# }
+

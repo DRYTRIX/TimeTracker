@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, send_file, jsonify, render_template_string
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from app import db, limiter
+from app import db, limiter, log_event, track_event
 from app.models import User, Project, TimeEntry, Settings, Invoice
 from datetime import datetime
 from sqlalchemy import text
@@ -10,6 +10,8 @@ from werkzeug.utils import secure_filename
 import uuid
 from app.utils.db import safe_commit
 from app.utils.backup import create_backup, restore_backup
+from app.utils.installation import get_installation_config
+from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
 import threading
 import time
 
@@ -226,6 +228,70 @@ def delete_user(user_id):
     
     flash(f'User "{username}" deleted successfully', 'success')
     return redirect(url_for('admin.list_users'))
+
+@admin_bp.route('/admin/telemetry')
+@login_required
+@admin_required
+def telemetry_dashboard():
+    """Telemetry and analytics dashboard"""
+    installation_config = get_installation_config()
+    
+    # Get telemetry status
+    telemetry_data = {
+        'enabled': is_telemetry_enabled(),
+        'setup_complete': installation_config.is_setup_complete(),
+        'installation_id': installation_config.get_installation_id(),
+        'telemetry_salt': installation_config.get_installation_salt()[:16] + '...',  # Show partial salt
+        'fingerprint': get_telemetry_fingerprint(),
+        'config': installation_config.get_all_config()
+    }
+    
+    # Get PostHog status
+    posthog_data = {
+        'enabled': bool(os.getenv('POSTHOG_API_KEY')),
+        'host': os.getenv('POSTHOG_HOST', 'https://app.posthog.com'),
+        'api_key_set': bool(os.getenv('POSTHOG_API_KEY'))
+    }
+    
+    # Get Sentry status
+    sentry_data = {
+        'enabled': bool(os.getenv('SENTRY_DSN')),
+        'dsn_set': bool(os.getenv('SENTRY_DSN')),
+        'traces_rate': os.getenv('SENTRY_TRACES_RATE', '0.0')
+    }
+    
+    # Log dashboard access
+    log_event("admin.telemetry_dashboard_viewed", user_id=current_user.id)
+    track_event(current_user.id, "admin.telemetry_dashboard_viewed", {})
+    
+    return render_template('admin/telemetry.html',
+                         telemetry=telemetry_data,
+                         posthog=posthog_data,
+                         sentry=sentry_data)
+
+
+@admin_bp.route('/admin/telemetry/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_telemetry():
+    """Toggle telemetry on/off"""
+    installation_config = get_installation_config()
+    current_state = installation_config.get_telemetry_preference()
+    new_state = not current_state
+    
+    installation_config.set_telemetry_preference(new_state)
+    
+    # Log the change
+    log_event("admin.telemetry_toggled", user_id=current_user.id, new_state=new_state)
+    track_event(current_user.id, "admin.telemetry_toggled", {"enabled": new_state})
+    
+    if new_state:
+        flash('Telemetry has been enabled. Thank you for helping us improve!', 'success')
+    else:
+        flash('Telemetry has been disabled.', 'info')
+    
+    return redirect(url_for('admin.telemetry_dashboard'))
+
 
 @admin_bp.route('/admin/settings', methods=['GET', 'POST'])
 @login_required

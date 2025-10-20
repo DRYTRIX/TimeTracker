@@ -130,8 +130,7 @@ dmypy.json
 
 # Application specific
 data/
-logs/*.log
-logs/*.log.*
+logs/
 backups/
 *.db
 *.sqlite

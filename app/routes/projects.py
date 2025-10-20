@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, make_response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from app import db
+from app import db, log_event, track_event
 from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn
 from datetime import datetime
 from decimal import Decimal
@@ -155,6 +155,19 @@ def create_project():
         if not safe_commit('create_project', {'name': name, 'client_id': client_id}):
             flash('Could not create project due to a database error. Please check server logs.', 'error')
             return render_template('projects/create.html', clients=Client.get_active_clients())
+        
+        # Track project created event
+        log_event("project.created", 
+                 user_id=current_user.id, 
+                 project_id=project.id, 
+                 project_name=name,
+                 has_client=bool(client_id))
+        track_event(current_user.id, "project.created", {
+            "project_id": project.id,
+            "project_name": name,
+            "has_client": bool(client_id),
+            "billable": billable
+        })
         
         flash(f'Project "{name}" created successfully', 'success')
         return redirect(url_for('projects.view_project', project_id=project.id))
