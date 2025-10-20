@@ -421,6 +421,56 @@ def temp_dir():
 
 
 # ============================================================================
+# Alias Fixtures (for compatibility with different test naming conventions)
+# ============================================================================
+
+@pytest.fixture
+def test_client_obj(test_client):
+    """Alias for test_client to avoid naming conflicts"""
+    return test_client
+
+
+@pytest.fixture
+def auth_user(user):
+    """Alias for user fixture"""
+    return user
+
+
+@pytest.fixture
+def test_project(project):
+    """Alias for project fixture"""
+    return project
+
+
+@pytest.fixture
+def test_task(task):
+    """Alias for task fixture"""
+    return task
+
+
+# ============================================================================
+# Installation Config Fixture
+# ============================================================================
+
+@pytest.fixture
+def installation_config(temp_dir):
+    """Create a temporary installation config for testing"""
+    from app.utils.installation import InstallationConfig
+    
+    # Override the config directory to use temp directory
+    original_config_dir = InstallationConfig.CONFIG_DIR
+    InstallationConfig.CONFIG_DIR = temp_dir
+    
+    # Create the config instance
+    config = InstallationConfig()
+    
+    yield config
+    
+    # Restore original config directory
+    InstallationConfig.CONFIG_DIR = original_config_dir
+
+
+# ============================================================================
 # Pytest Markers
 # ============================================================================
 
