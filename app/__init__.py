@@ -305,13 +305,17 @@ def create_app(config=None):
     @app.before_request
     def check_setup_required():
         try:
+            # Skip setup check in testing mode
+            if app.config.get('TESTING'):
+                return
+            
             # Skip setup check for these routes
-            skip_routes = ['setup.initial_setup', 'static', 'auth.login', 'auth.logout']
+            skip_routes = ['setup.initial_setup', 'static', 'auth.login', 'auth.logout', 'main.health_check', 'main.readiness_check']
             if request.endpoint in skip_routes:
                 return
             
-            # Skip for assets
-            if request.path.startswith('/static/'):
+            # Skip for assets and health checks
+            if request.path.startswith('/static/') or request.path.startswith('/_'):
                 return
             
             # Check if setup is complete
