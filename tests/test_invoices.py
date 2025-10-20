@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app import db
-from app.models import User, Project, Invoice, InvoiceItem, Settings
+from app.models import User, Project, Invoice, InvoiceItem, Settings, Client
 
 @pytest.fixture
 def sample_user(app):
@@ -225,6 +225,32 @@ def test_invoice_overdue_status(app, sample_user, sample_project):
     if hasattr(invoice, 'days_overdue'):
         assert invoice.days_overdue >= 0  # Should be non-negative
 
+
+@pytest.mark.routes
+def test_create_invoice_template_has_client_data_attributes(app, client, user, project):
+    """Ensure the create invoice page renders project options with client data attributes."""
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+
+    # Ensure project has a client with email/address
+    proj = Project.query.get(project.id)
+    cl = Client.query.get(proj.client_id)
+    cl.email = 'client@example.com'
+    cl.address = '123 Test St\nCity'
+    from app import db
+    db.session.commit()
+
+    resp = client.get('/invoices/create')
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+
+    # The option should include data-client-name/email/address
+    assert f'data-client-name="{cl.name}"' in html
+    assert 'data-client-email="client@example.com"' in html
+    assert 'data-client-address="123 Test St' in html
+
 def test_invoice_to_dict(app, sample_invoice):
     """Test that invoice can be converted to dictionary."""
     invoice_dict = sample_invoice.to_dict()
@@ -255,6 +281,104 @@ def test_invoice_item_to_dict(app, sample_invoice):
     assert 'quantity' in item_dict
     assert 'unit_price' in item_dict
     assert 'total_amount' in item_dict
+
+
+@pytest.mark.routes
+def test_edit_invoice_template_has_expected_fields(app, client, user, project):
+    """Ensure the edit invoice page renders key fields and existing items."""
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+
+    # Create client and invoice with an item
+    from app.models import Client, InvoiceItem
+    cl = Client(name='Edit Test Client', email='edit@test.com', address='Street 1')
+    db.session.add(cl)
+    db.session.commit()
+
+    inv = Invoice(
+        invoice_number='INV-TEST-EDIT-001',
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=14),
+        created_by=user.id,
+        tax_rate=Decimal('10.00'),
+        notes='Note',
+        terms='Terms'
+    )
+    db.session.add(inv)
+    db.session.commit()
+
+    it = InvoiceItem(invoice_id=inv.id, description='Line A', quantity=Decimal('2.00'), unit_price=Decimal('50.00'))
+    db.session.add(it)
+    db.session.commit()
+
+    resp = client.get(f'/invoices/{inv.id}/edit')
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+
+    # Fields
+    assert 'name="client_name"' in html
+    assert 'name="client_email"' in html
+    assert 'name="client_address"' in html
+    assert 'name="due_date"' in html
+    assert 'name="tax_rate"' in html
+    assert 'name="notes"' in html
+    assert 'name="terms"' in html
+
+    # Item row present with existing description
+    assert 'Line A' in html
+
+
+@pytest.mark.routes
+def test_generate_from_time_page_renders_lists(app, client, user, project):
+    """Ensure the generate-from-time page renders unbilled entries and costs with checkboxes."""
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+
+    # Create client and invoice
+    cl = Client(name='GenFromTime Client', email='gft@test.com')
+    db.session.add(cl)
+    db.session.commit()
+
+    inv = Invoice(
+        invoice_number='INV-TEST-GFT-001',
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id
+    )
+    db.session.add(inv)
+    db.session.commit()
+
+    # Add an unbilled time entry and a project cost
+    from app.models import TimeEntry, ProjectCost
+    start = datetime.utcnow() - timedelta(hours=2)
+    end = datetime.utcnow()
+    te = TimeEntry(user_id=user.id, project_id=project.id, start_time=start, end_time=end, notes='Work A', billable=True)
+    db.session.add(te)
+    db.session.commit()
+
+    pc = ProjectCost(project_id=project.id, user_id=user.id, description='Expense A', category='materials', amount=Decimal('12.50'), cost_date=date.today(), billable=True)
+    db.session.add(pc)
+    db.session.commit()
+
+    # Visit page
+    resp = client.get(f'/invoices/{inv.id}/generate-from-time')
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+
+    # Check checkboxes render
+    assert 'name="time_entries[]"' in html
+    assert 'name="project_costs[]"' in html
+    # Check summary numbers render
+    assert 'Total available hours' in html
+    assert 'Total available costs' in html
 
 # Payment Status Tracking Tests
 

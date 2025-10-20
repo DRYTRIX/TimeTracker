@@ -192,3 +192,4 @@ package-lock.json
 
 # Tailwind CSS build output (keep source in git)
 app/static/dist/
+/logs

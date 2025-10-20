@@ -1,47 +1,99 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Create Invoice</h1>
-</div>
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Create Invoice') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Generate a new invoice for a project and client') }}</p>
+    </div>
+    <a href="{{ url_for('invoices.list_invoices') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Invoices') }}</a>
+    </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
-                <select name="project_id" id="project_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-                    <option value="">Select a project</option>
-                    {% for project in projects %}
-                    <option value="{{ project.id }}">{{ project.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div>
-                <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Name</label>
-                <input type="text" name="client_name" id="client_name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
-            <div>
-                <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Email</label>
-                <input type="email" name="client_email" id="client_email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
-            <div>
-                <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Due Date</label>
-                <input type="date" name="due_date" id="due_date" value="{{ default_due_date }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
-            <div class="md:col-span-2">
-                <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Address</label>
-                <textarea name="client_address" id="client_address" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600"></textarea>
-            </div>
-            <div>
-                <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tax Rate (%)</label>
-                <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <form method="POST" id="createInvoiceForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }} *</label>
+                        <select name="project_id" id="project_id" required class="form-input">
+                            <option value="">{{ _('Select a project') }}</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }} ({{ project.client }})</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Selecting a project will auto-fill client details') }}</p>
+                    </div>
+                    <div>
+                        <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Name') }} *</label>
+                        <input type="text" name="client_name" id="client_name" value="{{ request.form.get('client_name','') }}" required class="form-input">
+                    </div>
+                    <div>
+                        <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Email') }}</label>
+                        <input type="email" name="client_email" id="client_email" value="{{ request.form.get('client_email','') }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Due Date') }} *</label>
+                        <input type="date" name="due_date" id="due_date" value="{{ default_due_date }}" required class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Address') }}</label>
+                        <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ request.form.get('client_address','') }}</textarea>
+                    </div>
+                    <div>
+                        <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tax Rate (%)') }}</label>
+                        <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes') }}</label>
+                        <textarea name="notes" id="notes" rows="3" class="form-input">{{ request.form.get('notes','') }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Terms') }}</label>
+                        <textarea name="terms" id="terms" rows="3" class="form-input">{{ request.form.get('terms','') }}</textarea>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Create Invoice') }}</button>
+                </div>
+            </form>
         </div>
-        <div class="mt-6">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Create Invoice</button>
+    </div>
+    <div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Tips') }}</h2>
+            <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
+                <li>{{ _('Choose the correct project to auto-fill client details.') }}</li>
+                <li>{{ _('You can customize notes and terms before sending the invoice.') }}</li>
+            </ul>
         </div>
-    </form>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var projectSelect = document.getElementById('project_id');
+    var clientName = document.getElementById('client_name');
+    var clientEmail = document.getElementById('client_email');
+    var clientAddress = document.getElementById('client_address');
+
+    function applyFromSelected() {
+        var opt = projectSelect.options[projectSelect.selectedIndex];
+        if (!opt) return;
+        var name = opt.getAttribute('data-client-name') || '';
+        var email = opt.getAttribute('data-client-email') || '';
+        var address = opt.getAttribute('data-client-address') || '';
+        clientName.value = name || clientName.value;
+        clientEmail.value = email || '';
+        clientAddress.value = address || '';
+    }
+
+    projectSelect.addEventListener('change', applyFromSelected);
+    // Apply on first load if query param preselects a project
+    applyFromSelected();
+});
+</script>
 {% endblock %}

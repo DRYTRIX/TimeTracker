@@ -1,69 +1,157 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Edit Invoice {{ invoice.invoice_number }}</h1>
-</div>
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Edit Invoice') }} {{ invoice.invoice_number }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Update invoice details, items, and terms') }}</p>
+    </div>
+    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Invoice') }}</a>
+    </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Name</label>
-                <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
-            <div>
-                <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Email</label>
-                <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
-            <div>
-                <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Due Date</label>
-                <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
-            <div class="md:col-span-2">
-                <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Address</label>
-                <textarea name="client_address" id="client_address" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">{{ invoice.client_address }}</textarea>
-            </div>
-            <div>
-                <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tax Rate (%)</label>
-                <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            </div>
-        </div>
-
-        <div class="mt-6">
-            <h2 class="text-lg font-semibold mb-4">Items</h2>
-            <div id="invoice-items">
-                {% for item in invoice.items %}
-                <div class="grid grid-cols-4 gap-4 mb-4">
-                    <input type="text" name="description[]" placeholder="Description" value="{{ item.description }}" class="col-span-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-                    <input type="number" name="quantity[]" placeholder="Quantity" value="{{ item.quantity }}" step="0.01" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-                    <input type="number" name="unit_price[]" placeholder="Unit Price" value="{{ item.unit_price }}" step="0.01" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <form method="POST" id="editInvoiceForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Name') }} *</label>
+                        <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input">
+                    </div>
+                    <div>
+                        <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Email') }}</label>
+                        <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Due Date') }} *</label>
+                        <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="form-input">
+                    </div>
+                    <div>
+                        <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tax Rate (%)') }}</label>
+                        <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Address') }}</label>
+                        <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ invoice.client_address }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes') }}</label>
+                        <textarea name="notes" id="notes" rows="3" class="form-input">{{ invoice.notes or '' }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Terms') }}</label>
+                        <textarea name="terms" id="terms" rows="3" class="form-input">{{ invoice.terms or '' }}</textarea>
+                    </div>
                 </div>
-                {% endfor %}
+
+                <div class="mt-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold">{{ _('Items') }}</h2>
+                        <button type="button" id="add-item" class="bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-lg text-sm"><i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}</button>
+                    </div>
+                    <div id="invoice-items">
+                        {% for item in invoice.items %}
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3 invoice-item-row">
+                            <input type="text" name="description[]" placeholder="{{ _('Description') }}" value="{{ item.description }}" class="md:col-span-6 form-input">
+                            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" class="md:col-span-2 form-input">
+                            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" class="md:col-span-3 form-input">
+                            <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded"><i class="fas fa-trash"></i></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+                    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-3">{{ _('Invoice Summary') }}</h3>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Issue Date') }}</div>
+                    <div class="font-medium">{{ invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else '-' }}</div>
+                </div>
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</div>
+                    <div class="font-medium">{{ invoice.status|capitalize }}</div>
+                </div>
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Payment Status') }}</div>
+                    <div class="font-medium">{{ invoice.payment_status.replace('_',' ')|capitalize }}</div>
+                </div>
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Currency') }}</div>
+                    <div class="font-medium">{{ invoice.currency_code }}</div>
+                </div>
             </div>
-            <button type="button" id="add-item" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">Add Item</button>
+            <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Subtotal') }}</div>
+                    <div class="font-semibold">{{ '%.2f'|format(invoice.subtotal) }}</div>
+                </div>
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Tax') }}</div>
+                    <div class="font-semibold">{{ '%.2f'|format(invoice.tax_amount) }} ({{ '%.2f'|format(invoice.tax_rate) }}%)</div>
+                </div>
+                <div class="col-span-2">
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Total Amount') }}</div>
+                    <div class="text-xl font-bold">{{ '%.2f'|format(invoice.total_amount) }}</div>
+                </div>
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Amount Paid') }}</div>
+                    <div class="font-semibold">{{ '%.2f'|format(invoice.amount_paid or 0) }}</div>
+                </div>
+                <div>
+                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Outstanding') }}</div>
+                    <div class="font-semibold">{{ '%.2f'|format(invoice.outstanding_amount) }}</div>
+                </div>
+            </div>
         </div>
 
-        <div class="mt-6">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Save Changes</button>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-3">{{ _('Quick Actions') }}</h3>
+            <div class="grid grid-cols-1 gap-2">
+                <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-primary text-primary hover:bg-primary/10"><i class="fas fa-clock mr-2"></i>{{ _('Generate from Time/Costs') }}</a>
+                <a href="{{ url_for('invoices.record_payment', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700"><i class="fas fa-cash-register mr-2"></i>{{ _('Record Payment') }}</a>
+                <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"><i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}</a>
+                <a href="{{ url_for('invoices.export_invoice_csv', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"><i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}</a>
+                <a href="{{ url_for('invoices.duplicate_invoice', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"><i class="fas fa-clone mr-2"></i>{{ _('Duplicate Invoice') }}</a>
+            </div>
         </div>
-    </form>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
-    document.getElementById('add-item').addEventListener('click', function() {
-        var itemsContainer = document.getElementById('invoice-items');
-        var newItem = document.createElement('div');
-        newItem.className = 'grid grid-cols-4 gap-4 mb-4';
-        newItem.innerHTML = `
-            <input type="text" name="description[]" placeholder="Description" class="col-span-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            <input type="number" name="quantity[]" placeholder="Quantity" step="0.01" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
-            <input type="number" name="unit_price[]" placeholder="Unit Price" step="0.01" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsContainer = document.getElementById('invoice-items');
+    const addBtn = document.getElementById('add-item');
+    addBtn && addBtn.addEventListener('click', function() {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 mb-3 invoice-item-row';
+        row.innerHTML = `
+            <input type="text" name="description[]" placeholder="{{ _('Description') }}" class="md:col-span-6 form-input">
+            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" step="0.01" class="md:col-span-2 form-input">
+            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" step="0.01" class="md:col-span-3 form-input">
+            <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded"><i class="fas fa-trash"></i></button>
         `;
-        itemsContainer.appendChild(newItem);
+        itemsContainer.appendChild(row);
     });
+
+    itemsContainer && itemsContainer.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-item')) {
+            const row = e.target.closest('.invoice-item-row');
+            row && row.remove();
+        }
+    });
+});
 </script>
 {% endblock %}
