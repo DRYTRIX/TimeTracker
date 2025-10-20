@@ -5,10 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Professional time tracking and project management">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='form-bridge.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='enhanced-ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <style>
         /* Minimal styles to properly align enhanced search UI */
         .search-enhanced .search-input-wrapper { position: relative; }
@@ -164,6 +169,13 @@
                         </a>
                     </li>
                 </ul>
+                <!-- App Version -->
+                <div class="mt-4 pt-3 border-t border-border-light dark:border-border-dark">
+                    <div class="flex items-center justify-center px-2 py-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        <i class="fas fa-code-branch w-4 text-center"></i>
+                        <span class="ml-2 sidebar-label">v{{ app_version }}</span>
+                    </div>
+                </div>
             </div>
         </aside>
 
@@ -280,18 +292,22 @@
     <!-- Old command palette and keyboard navigation (restored) -->
     <script src="{{ url_for('static', filename='commands.js') }}"></script>
     <script>
-        // Minimal global shortcuts: Ctrl+K (focus search), Ctrl+Shift+L (toggle theme), 't' (toggle timer)
+        // Minimal global shortcuts: Ctrl+/ (focus search), Ctrl+Shift+L (toggle theme), 't' (toggle timer)
+        // Note: Ctrl+K is handled by keyboard-shortcuts-advanced.js for command palette
         (function(){
             function isTyping(e){
                 const t = e.target; const tag = (t && t.tagName || '').toLowerCase();
                 return tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable);
             }
             document.addEventListener('keydown', (e) => {
-                // Ctrl/Cmd + K -> focus search
-                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+                // Ctrl/Cmd + / -> focus search (removed Ctrl+K to avoid conflict with command palette)
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '/') {
                     e.preventDefault();
                     const search = document.getElementById('search');
-                    if (search) { search.focus(); search.select && search.select(); }
+                    if (search) { 
+                        search.focus(); 
+                        if (search.select) search.select(); 
+                    }
                 }
             });
             document.addEventListener('keydown', (e) => {
@@ -439,7 +455,9 @@
         <div class="absolute inset-0 bg-black/50" onclick="document.getElementById('commandPaletteModal').classList.add('hidden')"></div>
         <div class="relative max-w-2xl mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
             <div class="p-3 sm:p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
-                <div id="commandPaletteHelp" class="text-xs text-text-muted-light dark:text-text-muted-dark"></div>
+                <div id="commandPaletteHelp" class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                    Press <kbd class="px-1 py-0.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-xs">Esc</kbd> to close, <kbd class="px-1 py-0.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-xs">Shift+?</kbd> for all shortcuts
+                </div>
                 <button id="commandPaletteClose" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">Close</button>
             </div>
             <div class="p-3 sm:p-4">
@@ -451,6 +469,28 @@
             </div>
         </div>
     </div>
+    <script>
+        // Command Palette close handlers
+        (function() {
+            const modal = document.getElementById('commandPaletteModal');
+            const closeBtn = document.getElementById('commandPaletteClose');
+            const input = document.getElementById('commandPaletteInput');
+            
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            }
+            
+            // Close on Escape key
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+        })();
+    </script>
     <script>
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
@@ -497,6 +537,75 @@
             dropdown.classList.toggle('hidden');
         }
     </script>
+    
+    <!-- Enhanced UI Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='enhanced-ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='onboarding.js') }}"></script>
+    
+    <!-- Advanced Features -->
+    <script src="{{ url_for('static', filename='keyboard-shortcuts-advanced.js') }}"></script>
+    <script src="{{ url_for('static', filename='quick-actions.js') }}"></script>
+    <script src="{{ url_for('static', filename='smart-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='dashboard-widgets.js') }}"></script>
+    
+    <!-- PWA Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registered:', registration);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    if (window.toastManager) {
+                                        const toast = window.toastManager.info('New version available!', 0);
+                                        const btn = document.createElement('button');
+                                        btn.textContent = 'Reload';
+                                        btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
+                                        btn.onclick = () => window.location.reload();
+                                        toast.appendChild(btn);
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+        
+        // Install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button in UI
+            if (window.toastManager) {
+                const toast = window.toastManager.info('Install TimeTracker as an app!', 0);
+                const btn = document.createElement('button');
+                btn.textContent = 'Install';
+                btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
+                btn.onclick = async () => {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        window.toastManager.success('App installed successfully!');
+                    }
+                    deferredPrompt = null;
+                    toast.remove();
+                };
+                toast.appendChild(btn);
+            }
+        });
+    </script>
+    
     {% block scripts_extra %}{% endblock %}
 </body>
 </html>

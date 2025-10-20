@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db
+from app import db, log_event, track_event
 from app.models import User
 from app.config import Config
 from app.utils.db import safe_commit
@@ -39,6 +39,7 @@ def login():
             current_app.logger.info("POST /login (username=%s) from %s", username or '<empty>', request.headers.get('X-Forwarded-For') or request.remote_addr)
             
             if not username:
+                log_event("auth.login_failed", reason="empty_username", auth_method="local")
                 flash(_('Username is required'), 'error')
                 return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
             
@@ -66,6 +67,7 @@ def login():
                     current_app.logger.info("Created new user '%s'", username)
                     flash(_('Welcome! Your account has been created.'), 'success')
                 else:
+                    log_event("auth.login_failed", username=username, reason="user_not_found", auth_method="local")
                     flash(_('User not found. Please contact an administrator.'), 'error')
                     return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
             else:
@@ -79,6 +81,7 @@ def login():
             
             # Check if user is active
             if not user.is_active:
+                log_event("auth.login_failed", user_id=user.id, reason="account_disabled", auth_method="local")
                 flash(_('Account is disabled. Please contact an administrator.'), 'error')
                 return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
             
@@ -86,6 +89,25 @@ def login():
             login_user(user, remember=True)
             user.update_last_login()
             current_app.logger.info("User '%s' logged in successfully", user.username)
+            
+            # Track successful login
+            log_event("auth.login", user_id=user.id, auth_method="local")
+            track_event(user.id, "auth.login", {"auth_method": "local"})
+            
+            # Identify user in PostHog with person properties (for segmentation)
+            from app import identify_user
+            identify_user(user.id, {
+                "$set": {
+                    "role": user.role if hasattr(user, 'role') else "user",
+                    "is_admin": user.is_admin if hasattr(user, 'is_admin') else False,
+                    "last_login": user.last_login.isoformat() if user.last_login else None,
+                    "auth_method": "local",
+                },
+                "$set_once": {
+                    "first_login": user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None,
+                    "signup_method": "local",
+                }
+            })
             
             # Redirect to intended page or dashboard
             next_page = request.args.get('next')
@@ -107,6 +129,12 @@ def login():
 def logout():
     """Logout the current user"""
     username = current_user.username
+    user_id = current_user.id
+    
+    # Track logout event before logging out
+    log_event("auth.logout", user_id=user_id)
+    track_event(user_id, "auth.logout", {})
+    
     # Try OIDC end-session if enabled and configured
     try:
         auth_method = (getattr(Config, 'AUTH_METHOD', 'local') or 'local').strip().lower()
@@ -423,6 +451,25 @@ def oidc_callback():
             user.update_last_login()
         except Exception:
             pass
+        
+        # Track successful OIDC login
+        log_event("auth.login", user_id=user.id, auth_method="oidc")
+        track_event(user.id, "auth.login", {"auth_method": "oidc"})
+        
+        # Identify user in PostHog with person properties (for segmentation)
+        from app import identify_user
+        identify_user(user.id, {
+            "$set": {
+                "role": user.role if hasattr(user, 'role') else "user",
+                "is_admin": user.is_admin if hasattr(user, 'is_admin') else False,
+                "last_login": user.last_login.isoformat() if user.last_login else None,
+                "auth_method": "oidc",
+            },
+            "$set_once": {
+                "first_login": user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None,
+                "signup_method": "oidc",
+            }
+        })
 
         # Redirect to intended page or dashboard
         next_page = session.pop('oidc_next', None) or request.args.get('next')

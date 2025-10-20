@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from app import db
+from app import db, log_event, track_event
 from app.models import Client, Project
 from datetime import datetime
 from decimal import Decimal
@@ -108,6 +108,10 @@ def create_client():
             flash('Could not create client due to a database error. Please check server logs.', 'error')
             return render_template('clients/create.html')
         
+        # Log client creation
+        log_event("client.created", user_id=current_user.id, client_id=client.id)
+        track_event(current_user.id, "client.created", {"client_id": client.id})
+        
         flash(f'Client "{name}" created successfully', 'success')
         return redirect(url_for('clients.view_client', client_id=client.id))
     
@@ -175,6 +179,10 @@ def edit_client(client_id):
             flash('Could not update client due to a database error. Please check server logs.', 'error')
             return render_template('clients/edit.html', client=client)
         
+        # Log client update
+        log_event("client.updated", user_id=current_user.id, client_id=client.id)
+        track_event(current_user.id, "client.updated", {"client_id": client.id})
+        
         flash(f'Client "{name}" updated successfully', 'success')
         return redirect(url_for('clients.view_client', client_id=client.id))
     
@@ -194,6 +202,8 @@ def archive_client(client_id):
         flash('Client is already inactive', 'info')
     else:
         client.archive()
+        log_event("client.archived", user_id=current_user.id, client_id=client.id)
+        track_event(current_user.id, "client.archived", {"client_id": client.id})
         flash(f'Client "{client.name}" archived successfully', 'success')
     
     return redirect(url_for('clients.list_clients'))
@@ -232,10 +242,15 @@ def delete_client(client_id):
         return redirect(url_for('clients.view_client', client_id=client_id))
     
     client_name = client.name
+    client_id_for_log = client.id
     db.session.delete(client)
     if not safe_commit('delete_client', {'client_id': client.id}):
         flash('Could not delete client due to a database error. Please check server logs.', 'error')
         return redirect(url_for('clients.view_client', client_id=client.id))
+    
+    # Log client deletion
+    log_event("client.deleted", user_id=current_user.id, client_id=client_id_for_log)
+    track_event(current_user.id, "client.deleted", {"client_id": client_id_for_log})
     
     flash(f'Client "{client_name}" deleted successfully', 'success')
     return redirect(url_for('clients.list_clients'))

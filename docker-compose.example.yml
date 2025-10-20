@@ -1,0 +1,76 @@
+services:
+  app:
+    image: ghcr.io/drytrix/timetracker:latest
+    container_name: timetracker-app
+    environment:
+      - TZ=${TZ:-Europe/Brussels}
+      - CURRENCY=${CURRENCY:-EUR}
+      - ROUNDING_MINUTES=${ROUNDING_MINUTES:-1}
+      - SINGLE_ACTIVE_TIMER=${SINGLE_ACTIVE_TIMER:-true}
+      - ALLOW_SELF_REGISTER=${ALLOW_SELF_REGISTER:-true}
+      - IDLE_TIMEOUT_MINUTES=${IDLE_TIMEOUT_MINUTES:-30}
+      - ADMIN_USERNAMES=${ADMIN_USERNAMES:-admin}
+      # Security (required in production)
+      - SECRET_KEY=${SECRET_KEY}
+      # Database (bundled Postgres)
+      - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
+      # CSRF & cookies (safe for HTTP local; tighten for HTTPS)
+      - WTF_CSRF_ENABLED=${WTF_CSRF_ENABLED:-true}
+      - WTF_CSRF_TIME_LIMIT=${WTF_CSRF_TIME_LIMIT:-3600}
+      - WTF_CSRF_SSL_STRICT=${WTF_CSRF_SSL_STRICT:-false}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-false}
+      - REMEMBER_COOKIE_SECURE=${REMEMBER_COOKIE_SECURE:-false}
+      - CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE:-false}
+      - CSRF_COOKIE_HTTPONLY=${CSRF_COOKIE_HTTPONLY:-false}
+      - CSRF_COOKIE_SAMESITE=${CSRF_COOKIE_SAMESITE:-Lax}
+      - CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-XSRF-TOKEN}
+      - SESSION_COOKIE_SAMESITE=${SESSION_COOKIE_SAMESITE:-Lax}
+      - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-http}
+      # Analytics (optional)
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_TRACES_RATE=${SENTRY_TRACES_RATE:-0.0}
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY:-}
+      - POSTHOG_HOST=${POSTHOG_HOST:-https://app.posthog.com}
+      - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
+      - TELE_SALT=${TELE_SALT:-}
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_data:/data
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:16-alpine
+    container_name: timetracker-db
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-timetracker}
+      - POSTGRES_USER=${POSTGRES_USER:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-timetracker}
+      - TZ=${TZ:-Europe/Brussels}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  app_data:
+    driver: local
+  db_data:
+    driver: local
+
+

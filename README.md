@@ -145,11 +145,17 @@ Get TimeTracker running in under 2 minutes:
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
+# Create your .env from the template and set SECRET_KEY and TZ
+cp env.example .env
+# Edit .env and set a strong SECRET_KEY (python -c "import secrets; print(secrets.token_hex(32))")
+
 # Start with Docker Compose
-docker-compose up -d
+docker-compose -f docker-compose.example.yml up -d
 
 # Access at http://localhost:8080
 ```
+
+See the full Docker Compose setup guide: [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
 
 **First login creates the admin account** — just enter your username!
 
@@ -239,11 +245,9 @@ docker-compose up -d
 ```bash
 # Configure your .env file
 cp env.example .env
-# Edit .env with production settings
-# IMPORTANT: Set a secure SECRET_KEY for CSRF tokens and sessions
-# Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
+# Edit .env with production settings (set SECRET_KEY, TZ, DB credentials)
 
-# Start with production compose
+# Start with production compose (published image)
 docker-compose -f docker-compose.remote.yml up -d
 ```
 
@@ -262,7 +266,12 @@ docker-compose up -d
 
 ## 🔧 Configuration
 
-TimeTracker is highly configurable through environment variables:
+TimeTracker is highly configurable through environment variables. For a comprehensive list and recommended values, see:
+
+- [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
+- [`env.example`](env.example)
+
+Common settings:
 
 ```bash
 # Timezone and locale
@@ -283,7 +292,103 @@ SECRET_KEY=your-secure-random-key
 SESSION_COOKIE_SECURE=true
 ```
 
-**📖 See [Configuration Guide](docs/REQUIREMENTS.md) for all options**
+---
+
+## 📊 Analytics & Telemetry
+
+TimeTracker includes **optional** analytics and monitoring features to help improve the application and understand how it's being used. All analytics features are:
+
+- ✅ **Disabled by default** — You must explicitly opt-in
+- ✅ **Privacy-first** — No personally identifiable information (PII) is collected
+- ✅ **Self-hostable** — Run your own analytics infrastructure
+- ✅ **Transparent** — All data collection is documented
+
+### What We Collect (When Enabled)
+
+#### 1. **Structured Logs** (Always On, Local Only)
+- Request logs and error messages stored **locally** in `logs/app.jsonl`
+- Used for troubleshooting and debugging
+- **Never leaves your server**
+
+#### 2. **Prometheus Metrics** (Always On, Self-Hosted)
+- Request counts, latency, and performance metrics
+- Exposed at `/metrics` endpoint for your Prometheus server
+- **Stays on your infrastructure**
+
+#### 3. **Error Monitoring** (Optional - Sentry)
+- Captures uncaught exceptions and performance issues
+- Helps identify and fix bugs quickly
+- **Opt-in:** Set `SENTRY_DSN` environment variable
+
+#### 4. **Product Analytics** (Optional - PostHog)
+- Tracks feature usage and user behavior patterns with advanced features:
+  - **Person Properties**: Role, auth method, login history
+  - **Feature Flags**: Gradual rollouts, A/B testing, kill switches
+  - **Group Analytics**: Segment by version, platform, deployment
+  - **Rich Context**: Browser, device, environment on every event
+- **Opt-in:** Set `POSTHOG_API_KEY` environment variable
+- See [POSTHOG_ADVANCED_FEATURES.md](POSTHOG_ADVANCED_FEATURES.md) for complete guide
+
+#### 5. **Installation Telemetry** (Optional, Anonymous)
+- Sends anonymous installation data via PostHog with:
+  - Anonymized fingerprint (SHA-256 hash, cannot be reversed)
+  - Application version
+  - Platform information
+- **No PII:** No IP addresses, usernames, or business data
+- **Opt-in:** Set `ENABLE_TELEMETRY=true` and `POSTHOG_API_KEY` environment variables
+
+### How to Enable Analytics
+
+```bash
+# Enable Sentry error monitoring (optional)
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+SENTRY_TRACES_RATE=0.1  # 10% sampling for performance traces
+
+# Enable PostHog product analytics (optional)
+POSTHOG_API_KEY=your-posthog-api-key
+POSTHOG_HOST=https://app.posthog.com
+
+# Enable anonymous telemetry (optional, uses PostHog)
+ENABLE_TELEMETRY=true
+TELE_SALT=your-unique-salt
+APP_VERSION=1.0.0
+```
+
+### Self-Hosting Analytics
+
+You can self-host all analytics services for complete control:
+
+```bash
+# Use docker-compose with monitoring profile
+docker-compose --profile monitoring up -d
+```
+
+This starts:
+- **Prometheus** — Metrics collection and storage
+- **Grafana** — Visualization dashboards
+- **Loki** (optional) — Log aggregation
+- **Promtail** (optional) — Log shipping
+
+### Privacy & Data Protection
+
+> **Telemetry**: TimeTracker can optionally send anonymized usage data to help improve the product (errors, feature usage, install counts). All telemetry is **opt-in**. No personal data is collected. To disable telemetry, set `ENABLE_TELEMETRY=false` or simply don't set the environment variable (disabled by default).
+
+**What we DON'T collect:**
+- ❌ Email addresses or usernames
+- ❌ IP addresses
+- ❌ Project names or descriptions
+- ❌ Time entry notes or client data
+- ❌ Any personally identifiable information (PII)
+
+**Your rights:**
+- 📥 **Access**: View all collected data
+- ✏️ **Rectify**: Correct inaccurate data
+- 🗑️ **Erase**: Delete your data at any time
+- 📤 **Export**: Export your data in standard formats
+
+**📖 See [Privacy Policy](docs/privacy.md) for complete details**  
+**📖 See [Analytics Documentation](docs/analytics.md) for configuration**  
+**📖 See [Events Schema](docs/events.md) for tracked events**
 
 ---
 

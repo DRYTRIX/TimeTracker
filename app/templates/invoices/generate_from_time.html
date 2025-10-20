@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Generate from Time & Costs') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Select unbilled time entries and project costs to add as invoice items') }}</p>
+    </div>
+    <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Edit') }}</a>
+    </div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <form method="POST" id="generateFromTimeForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold mb-3">{{ _('Unbilled Time Entries') }}</h2>
+                    {% if time_entries %}
+                    <div class="space-y-2">
+                        {% for entry in time_entries %}
+                        <label class="flex items-start gap-3 p-3 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                            <input type="checkbox" class="mt-1" name="time_entries[]" value="{{ entry.id }}">
+                            <div class="flex-1 text-sm">
+                                <div class="font-medium">{{ entry.task.name if entry.task else _('Time Entry') }} · {{ '%.2f'|format(entry.duration_hours) }} {{ _('h') }}</div>
+                                <div class="text-text-muted-light dark:text-text-muted-dark">
+                                    {{ entry.start_time.strftime('%Y-%m-%d %H:%M') }} → {{ entry.end_time.strftime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}
+                                    {% if entry.notes %} · {{ entry.notes[:80] }}{% if entry.notes|length > 80 %}…{% endif %}{% endif %}
+                                </div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No unbilled time entries found for this project.') }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold mb-3">{{ _('Uninvoiced Project Costs') }}</h2>
+                    {% if project_costs %}
+                    <div class="space-y-2">
+                        {% for cost in project_costs %}
+                        <label class="flex items-start gap-3 p-3 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                            <input type="checkbox" class="mt-1" name="project_costs[]" value="{{ cost.id }}">
+                            <div class="flex-1 text-sm">
+                                <div class="font-medium">{{ cost.description }} ({{ cost.category|title }}) · {{ '%.2f'|format(cost.amount) }} {{ cost.currency_code }}</div>
+                                <div class="text-text-muted-light dark:text-text-muted-dark">{{ cost.cost_date.strftime('%Y-%m-%d') }}</div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No uninvoiced costs found for this project.') }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+                    <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Add Selected to Invoice') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-3">{{ _('Selection Summary') }}</h3>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available hours') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_hours) }}</span></div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available costs') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_costs) }} {{ currency }}</span></div>
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-3">{{ _('Tips') }}</h3>
+            <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
+                <li>{{ _('You can select multiple time entry groups and costs.') }}</li>
+                <li>{{ _('Time entries are grouped by task or project at item creation.') }}</li>
+                <li>{{ _('Costs are added as individual invoice items.') }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('generateFromTimeForm');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+        const anyChecked = form.querySelector('input[name="time_entries[]"]:checked, input[name="project_costs[]"]:checked');
+        if (!anyChecked) {
+            e.preventDefault();
+            try { window.toastManager && window.toastManager.warning('{{ _('Please select at least one time entry or cost') }}'); } catch(_) {}
+        }
+    });
+});
+</script>
+{% endblock %}
+
+

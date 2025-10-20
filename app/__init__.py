@@ -1,7 +1,9 @@
 import os
 import logging
+import uuid
+import time
 from datetime import timedelta
-from flask import Flask, request, session, redirect, url_for, flash, jsonify
+from flask import Flask, request, session, redirect, url_for, flash, jsonify, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -17,6 +19,11 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 from urllib.parse import urlparse
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.http import parse_options_header
+from pythonjsonlogger import jsonlogger
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+import posthog
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +37,105 @@ babel = Babel()
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 oauth = OAuth()
+
+# Initialize Prometheus metrics
+REQUEST_COUNT = Counter('tt_requests_total', 'Total requests', ['method', 'endpoint', 'http_status'])
+REQUEST_LATENCY = Histogram('tt_request_latency_seconds', 'Request latency seconds', ['endpoint'])
+
+# Initialize JSON logger for structured logging
+json_logger = logging.getLogger("timetracker")
+json_logger.setLevel(logging.INFO)
+
+
+def log_event(name: str, **kwargs):
+    """Log an event with structured JSON format including request context"""
+    try:
+        extra = {"request_id": getattr(g, "request_id", None), "event": name, **kwargs}
+        json_logger.info(name, extra=extra)
+    except Exception:
+        # Don't let logging errors break the application
+        pass
+
+
+def identify_user(user_id, properties=None):
+    """
+    Identify a user in PostHog with person properties.
+    
+    Sets properties on the user for better segmentation, cohort analysis,
+    and personalization in PostHog.
+    
+    Args:
+        user_id: The user ID (internal ID, not PII)
+        properties: Dict of properties to set (use $set and $set_once)
+    """
+    try:
+        posthog_api_key = os.getenv("POSTHOG_API_KEY", "")
+        if not posthog_api_key:
+            return
+        
+        posthog.identify(
+            distinct_id=str(user_id),
+            properties=properties or {}
+        )
+    except Exception:
+        # Don't let analytics errors break the application
+        pass
+
+
+def track_event(user_id, event_name, properties=None):
+    """
+    Track a product analytics event via PostHog.
+    
+    Enhanced to include contextual properties like user agent, referrer,
+    and deployment info for better analysis.
+    
+    Args:
+        user_id: The user ID (internal ID, not PII)
+        event_name: Name of the event (use resource.action format)
+        properties: Dict of event properties (no PII)
+    """
+    try:
+        # Get PostHog API key - must be explicitly set to enable tracking
+        posthog_api_key = os.getenv("POSTHOG_API_KEY", "")
+        if not posthog_api_key:
+            return
+        
+        # Enhance properties with context
+        enhanced_properties = properties or {}
+        
+        # Add request context if available
+        try:
+            if request:
+                enhanced_properties.update({
+                    "$current_url": request.url,
+                    "$host": request.host,
+                    "$pathname": request.path,
+                    "$browser": request.user_agent.browser,
+                    "$device_type": "mobile" if request.user_agent.platform in ["android", "iphone"] else "desktop",
+                    "$os": request.user_agent.platform,
+                })
+        except Exception:
+            pass
+        
+        # Add deployment context
+        # Get app version from analytics config
+        from app.config.analytics_defaults import get_analytics_config
+        analytics_config = get_analytics_config()
+        
+        enhanced_properties.update({
+            "environment": os.getenv("FLASK_ENV", "production"),
+            "app_version": analytics_config.get("app_version"),
+            "deployment_method": "docker" if os.path.exists("/.dockerenv") else "native",
+        })
+        
+        posthog.capture(
+            distinct_id=str(user_id), 
+            event=event_name, 
+            properties=enhanced_properties
+        )
+    except Exception:
+        # Don't let analytics errors break the application
+        pass
 
 
 def create_app(config=None):
@@ -89,7 +195,10 @@ def create_app(config=None):
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
-    csrf.init_app(app)
+    
+    # Only initialize CSRF protection if enabled
+    if app.config.get('WTF_CSRF_ENABLED'):
+        csrf.init_app(app)
     try:
         # Configure limiter defaults from config if provided
         default_limits = []
@@ -195,6 +304,48 @@ def create_app(config=None):
 
         return User.query.get(int(user_id))
 
+    # Check if initial setup is required (skip for certain routes)
+    @app.before_request
+    def check_setup_required():
+        try:
+            # Skip setup check in testing mode
+            if app.config.get('TESTING'):
+                return
+            
+            # Skip setup check for these routes
+            skip_routes = ['setup.initial_setup', 'static', 'auth.login', 'auth.logout', 'main.health_check', 'main.readiness_check']
+            if request.endpoint in skip_routes:
+                return
+            
+            # Skip for assets and health checks
+            if request.path.startswith('/static/') or request.path.startswith('/_'):
+                return
+            
+            # Check if setup is complete
+            from app.utils.installation import get_installation_config
+            installation_config = get_installation_config()
+            
+            if not installation_config.is_setup_complete():
+                return redirect(url_for('setup.initial_setup'))
+        except Exception:
+            pass
+    
+    # Attach request ID for tracing
+    @app.before_request
+    def attach_request_id():
+        try:
+            g.request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+        except Exception:
+            pass
+
+    # Start timer for Prometheus metrics
+    @app.before_request
+    def prom_start_timer():
+        try:
+            g._start_time = time.time()
+        except Exception:
+            pass
+
     # Request logging for /login to trace POSTs reaching the app
     @app.before_request
     def log_login_requests():
@@ -210,10 +361,24 @@ def create_app(config=None):
         except Exception:
             pass
 
-    # Log all write operations and their outcomes
+    # Record Prometheus metrics and log write operations
     @app.after_request
-    def log_write_requests(response):
+    def record_metrics_and_log(response):
         try:
+            # Record Prometheus metrics
+            latency = time.time() - getattr(g, '_start_time', time.time())
+            endpoint = request.endpoint or "unknown"
+            REQUEST_LATENCY.labels(endpoint=endpoint).observe(latency)
+            REQUEST_COUNT.labels(
+                method=request.method, 
+                endpoint=endpoint, 
+                http_status=response.status_code
+            ).inc()
+        except Exception:
+            pass
+        
+        try:
+            # Log write operations
             if request.method in ("POST", "PUT", "PATCH", "DELETE"):
                 app.logger.info(
                     "%s %s -> %s from %s",
@@ -231,8 +396,46 @@ def create_app(config=None):
         seconds=int(os.getenv("PERMANENT_SESSION_LIFETIME", 86400))
     )
 
-    # Setup logging
+    # Setup logging (including JSON logging)
     setup_logging(app)
+
+    # Load analytics configuration (embedded at build time)
+    from app.config.analytics_defaults import get_analytics_config, has_analytics_configured
+    analytics_config = get_analytics_config()
+    
+    # Log analytics status (for transparency)
+    if has_analytics_configured():
+        app.logger.info("TimeTracker with analytics configured (telemetry opt-in via admin dashboard)")
+    else:
+        app.logger.info("TimeTracker build without analytics configuration")
+    
+    # Initialize Sentry for error monitoring
+    # Priority: Env var > Built-in default > Disabled
+    sentry_dsn = analytics_config.get("sentry_dsn", "")
+    if sentry_dsn:
+        try:
+            sentry_sdk.init(
+                dsn=sentry_dsn,
+                integrations=[FlaskIntegration()],
+                traces_sample_rate=analytics_config.get("sentry_traces_rate", 0.0),
+                environment=os.getenv("FLASK_ENV", "production"),
+                release=analytics_config.get("app_version")
+            )
+            app.logger.info("Sentry error monitoring initialized")
+        except Exception as e:
+            app.logger.warning(f"Failed to initialize Sentry: {e}")
+
+    # Initialize PostHog for product analytics
+    # Priority: Env var > Built-in default > Disabled
+    posthog_api_key = analytics_config.get("posthog_api_key", "")
+    posthog_host = analytics_config.get("posthog_host", "https://app.posthog.com")
+    if posthog_api_key:
+        try:
+            posthog.project_api_key = posthog_api_key
+            posthog.host = posthog_host
+            app.logger.info(f"PostHog product analytics initialized (host: {posthog_host})")
+        except Exception as e:
+            app.logger.warning(f"Failed to initialize PostHog: {e}")
 
     # Fail-fast on weak/missing secret in production
     if not app.debug and app.config.get("FLASK_ENV", "production") == "production":
@@ -273,47 +476,68 @@ def create_app(config=None):
         except Exception:
             pass
 
-        # Ensure CSRF cookie is present for HTML GET responses (helps login page)
-        try:
-            # Only for safe, HTML page responses
-            if request.method == "GET":
-                content_type = response.headers.get("Content-Type", "")
-                if isinstance(content_type, str) and content_type.startswith("text/html"):
-                    cookie_name = app.config.get("CSRF_COOKIE_NAME", "XSRF-TOKEN")
-                    has_cookie = bool(request.cookies.get(cookie_name))
-                    if not has_cookie:
-                        # Generate a CSRF token and set cookie using same settings as /auth/csrf-token
-                        try:
-                            from flask_wtf.csrf import generate_csrf
-                            token = generate_csrf()
-                        except Exception:
-                            token = ""
-                        cookie_secure = bool(
-                            app.config.get(
-                                "CSRF_COOKIE_SECURE",
-                                app.config.get("SESSION_COOKIE_SECURE", False),
+        # CSRF cookie/token handling
+        # If CSRF is enabled, ensure CSRF cookie exists for HTML GET responses
+        # If CSRF is disabled, explicitly clear any existing CSRF cookie to avoid confusion
+        if app.config.get('WTF_CSRF_ENABLED'):
+            try:
+                # Only for safe, HTML page responses
+                if request.method == "GET":
+                    content_type = response.headers.get("Content-Type", "")
+                    if isinstance(content_type, str) and content_type.startswith("text/html"):
+                        cookie_name = app.config.get("CSRF_COOKIE_NAME", "XSRF-TOKEN")
+                        has_cookie = bool(request.cookies.get(cookie_name))
+                        if not has_cookie:
+                            # Generate a CSRF token and set cookie using same settings as /auth/csrf-token
+                            try:
+                                from flask_wtf.csrf import generate_csrf
+                                token = generate_csrf()
+                            except Exception:
+                                token = ""
+                            cookie_secure = bool(
+                                app.config.get(
+                                    "CSRF_COOKIE_SECURE",
+                                    app.config.get("SESSION_COOKIE_SECURE", False),
+                                )
                             )
-                        )
-                        cookie_httponly = bool(app.config.get("CSRF_COOKIE_HTTPONLY", False))
-                        cookie_samesite = app.config.get("CSRF_COOKIE_SAMESITE", "Lax")
-                        cookie_domain = app.config.get("CSRF_COOKIE_DOMAIN") or None
-                        cookie_path = app.config.get("CSRF_COOKIE_PATH", "/")
-                        try:
-                            max_age = int(app.config.get("WTF_CSRF_TIME_LIMIT", 3600))
-                        except Exception:
-                            max_age = 3600
-                        response.set_cookie(
-                            cookie_name,
-                            token or "",
-                            max_age=max_age,
-                            secure=cookie_secure,
-                            httponly=cookie_httponly,
-                            samesite=cookie_samesite,
-                            domain=cookie_domain,
-                            path=cookie_path,
-                        )
-        except Exception:
-            pass
+                            cookie_httponly = bool(app.config.get("CSRF_COOKIE_HTTPONLY", False))
+                            cookie_samesite = app.config.get("CSRF_COOKIE_SAMESITE", "Lax")
+                            cookie_domain = app.config.get("CSRF_COOKIE_DOMAIN") or None
+                            cookie_path = app.config.get("CSRF_COOKIE_PATH", "/")
+                            try:
+                                max_age = int(app.config.get("WTF_CSRF_TIME_LIMIT", 3600))
+                            except Exception:
+                                max_age = 3600
+                            response.set_cookie(
+                                cookie_name,
+                                token or "",
+                                max_age=max_age,
+                                secure=cookie_secure,
+                                httponly=cookie_httponly,
+                                samesite=cookie_samesite,
+                                domain=cookie_domain,
+                                path=cookie_path,
+                            )
+            except Exception:
+                pass
+        else:
+            try:
+                cookie_name = app.config.get("CSRF_COOKIE_NAME", "XSRF-TOKEN")
+                if request.cookies.get(cookie_name):
+                    # Clear the cookie by setting it expired
+                    response.set_cookie(
+                        cookie_name,
+                        "",
+                        max_age=0,
+                        expires=0,
+                        path=app.config.get("CSRF_COOKIE_PATH", "/"),
+                        domain=app.config.get("CSRF_COOKIE_DOMAIN") or None,
+                        secure=bool(app.config.get("CSRF_COOKIE_SECURE", app.config.get("SESSION_COOKIE_SECURE", False))),
+                        httponly=bool(app.config.get("CSRF_COOKIE_HTTPONLY", False)),
+                        samesite=app.config.get("CSRF_COOKIE_SAMESITE", "Lax"),
+                    )
+            except Exception:
+                pass
         return response
 
     # CSRF error handler with HTML-friendly fallback
@@ -397,26 +621,36 @@ def create_app(config=None):
         return redirect(dest)
 
     # Expose csrf_token() in Jinja templates even without FlaskForm
-    try:
-        from flask_wtf.csrf import generate_csrf
-
-        @app.context_processor
-        def inject_csrf_token():
-            return dict(csrf_token=lambda: generate_csrf())
-
-    except Exception:
-        pass
+    # Always inject the function, but return empty string when CSRF is disabled
+    @app.context_processor
+    def inject_csrf_token():
+        def get_csrf_token():
+            # Return empty string if CSRF is disabled
+            if not app.config.get('WTF_CSRF_ENABLED'):
+                return ""
+            try:
+                from flask_wtf.csrf import generate_csrf
+                return generate_csrf()
+            except Exception:
+                return ""
+        return dict(csrf_token=get_csrf_token)
 
     # CSRF token refresh endpoint (GET)
     @app.route("/auth/csrf-token", methods=["GET"])
     def get_csrf_token():
+        # If CSRF is disabled, return empty token
+        if not app.config.get('WTF_CSRF_ENABLED'):
+            resp = jsonify(csrf_token="", csrf_enabled=False)
+            resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            return resp
+        
         try:
             from flask_wtf.csrf import generate_csrf
 
             token = generate_csrf()
         except Exception:
             token = ""
-        resp = jsonify(csrf_token=token)
+        resp = jsonify(csrf_token=token, csrf_enabled=True)
         try:
             resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         except Exception:
@@ -467,6 +701,7 @@ def create_app(config=None):
     from app.routes.clients import clients_bp
     from app.routes.comments import comments_bp
     from app.routes.kanban import kanban_bp
+    from app.routes.setup import setup_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -481,9 +716,12 @@ def create_app(config=None):
     app.register_blueprint(clients_bp)
     app.register_blueprint(comments_bp)
     app.register_blueprint(kanban_bp)
+    app.register_blueprint(setup_bp)
 
     # Exempt API blueprint from CSRF protection (JSON API uses authentication, not CSRF tokens)
-    csrf.exempt(api_bp)
+    # Only if CSRF is enabled
+    if app.config.get('WTF_CSRF_ENABLED'):
+        csrf.exempt(api_bp)
 
     # Register OAuth OIDC client if enabled
     try:
@@ -516,6 +754,12 @@ def create_app(config=None):
                 "AUTH_METHOD is %s but OIDC envs are incomplete; OIDC login will not work",
                 auth_method,
             )
+
+    # Prometheus metrics endpoint
+    @app.route('/metrics')
+    def metrics():
+        """Expose Prometheus metrics"""
+        return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
     # Register error handlers
     from app.utils.error_handlers import register_error_handlers
@@ -605,7 +849,7 @@ def create_app(config=None):
 
 
 def setup_logging(app):
-    """Setup application logging"""
+    """Setup application logging including JSON logging"""
     log_level = os.getenv("LOG_LEVEL", "INFO")
     # Default to a file in the project logs directory if not provided
     default_log_path = os.path.abspath(
@@ -614,6 +858,13 @@ def setup_logging(app):
         )
     )
     log_file = os.getenv("LOG_FILE", default_log_path)
+    
+    # JSON log file path
+    json_log_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "logs", "app.jsonl"
+        )
+    )
 
     # Prepare handlers
     handlers = [logging.StreamHandler()]
@@ -656,6 +907,28 @@ def setup_logging(app):
     root_logger.handlers = []
     for handler in handlers:
         root_logger.addHandler(handler)
+
+    # Setup JSON logging for structured events
+    try:
+        json_log_dir = os.path.dirname(json_log_path)
+        if json_log_dir and not os.path.exists(json_log_dir):
+            os.makedirs(json_log_dir, exist_ok=True)
+        
+        json_handler = logging.FileHandler(json_log_path)
+        json_formatter = jsonlogger.JsonFormatter(
+            '%(asctime)s %(levelname)s %(name)s %(message)s'
+        )
+        json_handler.setFormatter(json_formatter)
+        json_handler.setLevel(logging.INFO)
+        
+        # Add JSON handler to the timetracker logger
+        json_logger.handlers.clear()
+        json_logger.addHandler(json_handler)
+        json_logger.propagate = False
+        
+        app.logger.info(f"JSON logging initialized: {json_log_path}")
+    except (PermissionError, OSError) as e:
+        app.logger.warning(f"Could not initialize JSON logging: {e}")
 
     # Suppress noisy logs in production
     if not app.debug:

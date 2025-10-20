@@ -1,0 +1,34 @@
+# Prometheus configuration for TimeTracker
+# This file configures Prometheus to scrape metrics from the TimeTracker application
+
+global:
+  scrape_interval: 15s  # Scrape targets every 15 seconds
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds
+  external_labels:
+    monitor: 'timetracker'
+
+# Scrape configurations
+scrape_configs:
+  # TimeTracker application metrics
+  - job_name: 'timetracker'
+    static_configs:
+      - targets: ['timetracker:8000']  # Scrape from timetracker service
+    metrics_path: '/metrics'
+    scrape_interval: 30s  # Scrape every 30 seconds
+    scrape_timeout: 10s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+# Example alerting rules (optional)
+# rule_files:
+#   - 'alerts.yml'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+

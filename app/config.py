@@ -129,7 +129,7 @@ class Config:
     if not APP_VERSION:
         # If no tag provided, create a dev-build identifier if available
         github_run_number = os.getenv('GITHUB_RUN_NUMBER')
-        APP_VERSION = f"dev-{github_run_number}" if github_run_number else "dev-0"
+        APP_VERSION = f"dev-{github_run_number}" if github_run_number else "3.1.0"
 
 class DevelopmentConfig(Config):
     """Development configuration"""
@@ -159,7 +159,8 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SECURE = True
-    WTF_CSRF_ENABLED = True
+    # Honor environment configuration; default to enabled in production
+    WTF_CSRF_ENABLED = os.getenv('WTF_CSRF_ENABLED', 'true').lower() == 'true'
     WTF_CSRF_SSL_STRICT = True
 
 # Configuration mapping

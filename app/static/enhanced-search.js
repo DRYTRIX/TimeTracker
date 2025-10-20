@@ -70,7 +70,7 @@
                 <button type="button" class="search-clear-btn" style="display: none;" aria-label="{{ _('Clear search') if false else 'Clear search' }}">
                     <i class="fas fa-xmark"></i>
                 </button>
-                <span class="search-kbd">Ctrl+K</span>
+                <span class="search-kbd">Ctrl+/</span>
             `;
             inputWrapper.appendChild(actions);
 

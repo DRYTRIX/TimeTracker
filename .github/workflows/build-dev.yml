@@ -1,0 +1,94 @@
+name: Build Development Image
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-dev:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Extract branch name
+        id: branch
+        run: |
+          BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          BRANCH_SAFE=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          echo "BRANCH=$BRANCH_SAFE" >> $GITHUB_OUTPUT
+          echo "Building branch: $BRANCH_SAFE"
+      
+      - name: Keep placeholders for dev builds
+        run: |
+          echo "Development build - keeping analytics placeholders"
+          echo "Users must provide their own keys via environment variables"
+          
+          # Verify placeholders are still present (not accidentally replaced)
+          if ! grep -q "%%POSTHOG_API_KEY_PLACEHOLDER%%" app/config/analytics_defaults.py; then
+            echo "⚠️  WARNING: Placeholders already replaced in source!"
+          else
+            echo "✅ Placeholders intact for dev build"
+          fi
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=${{ steps.branch.outputs.BRANCH }}-
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=dev-${{ steps.branch.outputs.BRANCH }}
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Development build completed successfully!\n\n**Note:** This is a development build without embedded analytics keys. Provide your own via environment variables if needed.'
+            })
+

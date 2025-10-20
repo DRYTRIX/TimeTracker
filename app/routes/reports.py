@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
-from app import db
+from app import db, log_event, track_event
 from app.models import User, Project, TimeEntry, Settings, Task, ProjectCost
 from datetime import datetime, timedelta
 import csv
@@ -40,6 +40,10 @@ def reports():
     }
 
     recent_entries = entries_query.order_by(TimeEntry.start_time.desc()).limit(10).all()
+    
+    # Track report access
+    log_event("report.viewed", user_id=current_user.id, report_type="summary")
+    track_event(current_user.id, "report.viewed", {"report_type": "summary"})
 
     return render_template('reports/index.html', summary=summary, recent_entries=recent_entries)
 
@@ -346,6 +350,18 @@ def export_csv():
     
     # Create filename
     filename = f'timetracker_export_{start_date}_to_{end_date}.csv'
+    
+    # Track CSV export event
+    log_event("export.csv", 
+             user_id=current_user.id, 
+             export_type="time_entries",
+             num_rows=len(entries),
+             date_range_days=(end_dt - start_dt).days)
+    track_event(current_user.id, "export.csv", {
+        "export_type": "time_entries",
+        "num_rows": len(entries),
+        "date_range_days": (end_dt - start_dt).days
+    })
     
     return send_file(
         io.BytesIO(output.getvalue().encode('utf-8')),

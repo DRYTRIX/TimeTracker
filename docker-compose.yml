@@ -69,6 +69,15 @@ services:
       - WTF_CSRF_TRUSTED_ORIGINS=$(WTF_CSRF_TRUSTED_ORIGINS:-https://localhost)
       - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
       - LOG_FILE=/app/logs/timetracker.log
+      # Analytics & Monitoring (optional)
+      # See docs/analytics.md for configuration details
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_TRACES_RATE=${SENTRY_TRACES_RATE:-0.0}
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY:-}
+      - POSTHOG_HOST=${POSTHOG_HOST:-https://app.posthog.com}
+      - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
+      - TELE_URL=${TELE_URL:-}
+      - TELE_SALT=${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
 
     # Expose only internally; nginx publishes ports
     ports: []
@@ -103,10 +112,75 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
- 
+
+  # Analytics & Monitoring Services
+  # All services start by default for complete monitoring
+  # See docs/analytics.md and ANALYTICS_QUICK_START.md for details
+
+  # Prometheus - Metrics collection and storage
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: timetracker-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  # Grafana - Metrics visualization and dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: timetracker-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Loki - Log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: timetracker-loki
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  # Promtail - Log shipping to Loki
+  promtail:
+    image: grafana/promtail:latest
+    container_name: timetracker-promtail
+    volumes:
+      - ./logs:/var/log/timetracker:ro
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
 
 volumes:
   app_data:
     driver: local
   db_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
     driver: local
