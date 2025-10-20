@@ -58,6 +58,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Determine version
+        id: version
+        run: |
+          BUILD_NUMBER=${{ github.run_number }}
+          COMMIT_SHA=${GITHUB_SHA::8}
+          BRANCH=${{ steps.branch.outputs.BRANCH }}
+          VERSION="dev-${BRANCH}-${BUILD_NUMBER}-${COMMIT_SHA}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Building version: $VERSION"
+      
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -67,6 +77,8 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix=${{ steps.branch.outputs.BRANCH }}-
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -78,7 +90,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VERSION=dev-${{ steps.branch.outputs.BRANCH }}
+            VERSION=${{ steps.version.outputs.version }}
+            APP_VERSION=${{ steps.version.outputs.version }}
       
       - name: Comment on PR
         if: github.event_name == 'pull_request'
