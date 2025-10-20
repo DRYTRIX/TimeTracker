@@ -68,6 +68,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy project files
 COPY . .
 
+# Also install certificate generation script to a stable path used by docs/compose
+COPY scripts/generate-certs.sh /scripts/generate-certs.sh
+
 # Copy compiled assets from frontend stage (overwriting the stale one from COPY .)
 COPY --from=frontend /app/app/static/dist/output.css /app/app/static/dist/output.css
 
@@ -89,7 +92,7 @@ COPY docker/start-fixed.py /app/start.py
 
 # Fix line endings and set permissions in a single layer
 RUN find /app/docker -name "*.sh" -o -name "*.py" | xargs dos2unix 2>/dev/null || true \
-    && dos2unix /app/start.py 2>/dev/null || true \
+    && dos2unix /app/start.py /scripts/generate-certs.sh 2>/dev/null || true \
     && chmod +x \
     /app/start.py \
     /app/docker/init-database.py \
@@ -107,7 +110,8 @@ RUN find /app/docker -name "*.sh" -o -name "*.py" | xargs dos2unix 2>/dev/null |
     /app/docker/startup_with_migration.py \
     /app/docker/test_db_connection.py \
     /app/docker/debug_startup.sh \
-    /app/docker/simple_test.sh
+    /app/docker/simple_test.sh \
+    /scripts/generate-certs.sh
 
 # Create non-root user and set ownership
 RUN useradd -m -u 1000 timetracker \
@@ -118,7 +122,8 @@ RUN useradd -m -u 1000 timetracker \
     /app/instance \
     /app/app/static/uploads \
     /app/static/uploads \
-    /app/translations
+    /app/translations \
+    /scripts
 
 USER timetracker
 
