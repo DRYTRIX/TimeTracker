@@ -1,0 +1,150 @@
+name: Build and Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v3.0.0
+    branches:
+      - main       # Also build on main branch pushes
+      - develop    # And develop branch
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      version:
+        description: 'Version to build (e.g., 3.0.0)'
+        required: true
+        default: '3.0.0'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+      
+      - name: Inject analytics configuration
+        env:
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          echo "Injecting analytics configuration into build..."
+          
+          # Replace placeholders in analytics_defaults.py
+          sed -i "s|%%POSTHOG_API_KEY_PLACEHOLDER%%|${POSTHOG_API_KEY}|g" app/config/analytics_defaults.py
+          sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN}|g" app/config/analytics_defaults.py
+          
+          echo "✅ Analytics configuration injected"
+          
+          # Verify (without exposing secrets)
+          if grep -q "%%POSTHOG_API_KEY_PLACEHOLDER%%" app/config/analytics_defaults.py; then
+            echo "❌ ERROR: PostHog API key placeholder not replaced!"
+            exit 1
+          fi
+          
+          echo "✅ All placeholders replaced successfully"
+          echo "ℹ️  App version will be read from setup.py at runtime"
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.VERSION }}
+            type=semver,pattern={{major}},value=v${{ steps.version.outputs.VERSION }}
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.VERSION }}
+      
+      - name: Create Release Notes
+        run: |
+          cat > release-notes.md <<EOF
+          # TimeTracker ${{ steps.version.outputs.VERSION }}
+          
+          ## Build Configuration
+          
+          This build includes embedded analytics for community insights:
+          - ✅ PostHog analytics configured
+          - ✅ Sentry error monitoring configured
+          - ⚙️ Telemetry is **OPT-IN** (disabled by default)
+          
+          ## Privacy Commitment
+          
+          - Telemetry is **disabled by default** - you must explicitly enable it
+          - **No personally identifiable information** is ever collected
+          - Users can disable telemetry at any time via admin dashboard
+          - All tracked events are documented in docs/all_tracked_events.md
+          - Open source - you can audit what is sent
+          
+          ## What We Collect (Only If You Opt In)
+          
+          - ✅ Anonymous event types (e.g., "timer.started")
+          - ✅ Internal numeric IDs (no names, emails, or content)
+          - ✅ Platform and version information
+          - ❌ NO usernames, emails, project names, or any PII
+          
+          ## Docker Image
+          
+          \`\`\`bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          \`\`\`
+          
+          ## Your Choice
+          
+          You decide:
+          - ✅ Enable telemetry to help improve TimeTracker
+          - ⬜ Keep telemetry disabled for complete privacy (default)
+          
+          Change your preference anytime at: Admin → Telemetry Dashboard
+          
+          EOF
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

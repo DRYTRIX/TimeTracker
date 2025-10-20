@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from app import db, socketio
+from app import db, socketio, log_event, track_event
 from app.models import User, Project, TimeEntry, Task, Settings
 from app.utils.timezone import parse_local_datetime, utc_to_local
 from datetime import datetime
@@ -64,6 +64,14 @@ def start_timer():
         flash('Could not start timer due to a database error. Please check server logs.', 'error')
         return redirect(url_for('main.dashboard'))
     current_app.logger.info("Started new timer id=%s for user=%s project_id=%s task_id=%s", new_timer.id, current_user.username, project_id, task_id)
+    
+    # Track timer started event
+    log_event("timer.started", user_id=current_user.id, project_id=project_id, task_id=task_id, description=notes)
+    track_event(current_user.id, "timer.started", {
+        "project_id": project_id,
+        "task_id": task_id,
+        "has_description": bool(notes)
+    })
     
     # Emit WebSocket event for real-time updates
     try:
@@ -159,6 +167,21 @@ def stop_timer():
     try:
         active_timer.stop_timer()
         current_app.logger.info("Stopped timer id=%s for user=%s", active_timer.id, current_user.username)
+        
+        # Track timer stopped event
+        duration_seconds = active_timer.duration if hasattr(active_timer, 'duration') else 0
+        log_event("timer.stopped", 
+                 user_id=current_user.id, 
+                 time_entry_id=active_timer.id,
+                 project_id=active_timer.project_id,
+                 task_id=active_timer.task_id,
+                 duration_seconds=duration_seconds)
+        track_event(current_user.id, "timer.stopped", {
+            "time_entry_id": active_timer.id,
+            "project_id": active_timer.project_id,
+            "task_id": active_timer.task_id,
+            "duration_seconds": duration_seconds
+        })
     except Exception as e:
         current_app.logger.exception("Error stopping timer: %s", e)
     

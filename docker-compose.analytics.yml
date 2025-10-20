@@ -1,0 +1,120 @@
+version: '3.8'
+
+# Analytics-enabled Docker Compose configuration
+# This extends the base docker-compose.yml with analytics services and configuration
+
+services:
+  timetracker:
+    environment:
+      # Sentry Error Monitoring
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_TRACES_RATE=${SENTRY_TRACES_RATE:-0.0}
+      
+      # PostHog Product Analytics
+      - POSTHOG_API_KEY=${POSTHOG_API_KEY:-}
+      - POSTHOG_HOST=${POSTHOG_HOST:-https://app.posthog.com}
+      
+      # Telemetry (opt-in, uses PostHog)
+      - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
+      - TELE_SALT=${TELE_SALT:-change-me}
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      
+    volumes:
+      # Mount logs directory for persistent JSON logs
+      - ./logs:/app/logs
+      # Mount data directory for telemetry marker files
+      - ./data:/app/data
+    
+    # Expose metrics endpoint (optional, for Prometheus scraping)
+    # ports:
+    #   - "8000:8000"  # Already exposed in base compose
+
+  # Optional: Self-hosted Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: timetracker-prometheus
+    profiles:
+      - monitoring
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  # Optional: Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: timetracker-grafana
+    profiles:
+      - monitoring
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Optional: Grafana Loki for log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: timetracker-loki
+    profiles:
+      - logging
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  # Optional: Promtail for log shipping to Loki
+  promtail:
+    image: grafana/promtail:latest
+    container_name: timetracker-promtail
+    profiles:
+      - logging
+    volumes:
+      - ./logs:/var/log/timetracker:ro
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+# Usage:
+# 
+# 1. Base setup with analytics enabled (Sentry, PostHog):
+#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml up -d
+#
+# 2. With self-hosted monitoring (Prometheus + Grafana):
+#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml --profile monitoring up -d
+#
+# 3. With log aggregation (Loki + Promtail):
+#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml --profile logging up -d
+#
+# 4. With everything (monitoring + logging):
+#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml --profile monitoring --profile logging up -d
+#
+# Configuration:
+# - Copy env.example to .env and configure analytics variables
+# - See docs/analytics.md for detailed configuration instructions
+

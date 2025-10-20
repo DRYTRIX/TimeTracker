@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Telemetry & Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Telemetry & Analytics Dashboard</h1>
+        <p class="text-gray-600">Monitor what data is being collected and manage your privacy settings</p>
+    </div>
+
+    <!-- Telemetry Status Card -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">📊 Telemetry Status</h2>
+            {% if telemetry.enabled %}
+            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Enabled</span>
+            {% else %}
+            <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Disabled</span>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Installation ID</p>
+                <p class="font-mono text-sm">{{ telemetry.installation_id }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Telemetry Fingerprint</p>
+                <p class="font-mono text-sm break-all">{{ telemetry.fingerprint[:32] }}...</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Salt (Partial)</p>
+                <p class="font-mono text-sm">{{ telemetry.telemetry_salt }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Setup Status</p>
+                <p class="font-medium">{{ 'Complete' if telemetry.setup_complete else 'Pending' }}</p>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.toggle_telemetry') }}" class="mt-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="px-4 py-2 rounded-lg transition {% if telemetry.enabled %}bg-red-600 hover:bg-red-700 text-white{% else %}bg-green-600 hover:bg-green-700 text-white{% endif %}">
+                {% if telemetry.enabled %}Disable Telemetry{% else %}Enable Telemetry{% endif %}
+            </button>
+        </form>
+
+        {% if telemetry.enabled %}
+        <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+            <p class="text-sm text-green-800">
+                <strong>Thank you!</strong> Your anonymous telemetry data helps us improve TimeTracker.
+                No personally identifiable information is ever collected.
+            </p>
+        </div>
+        {% else %}
+        <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="text-sm text-gray-700">
+                Telemetry is currently disabled. No data is being sent.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PostHog Status Card -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">📈 PostHog (Product Analytics)</h2>
+            {% if posthog.enabled %}
+            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Configured</span>
+            {% else %}
+            <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Not Configured</span>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">API Key</p>
+                <p class="font-medium">{{ 'Set' if posthog.api_key_set else 'Not Set' }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Host</p>
+                <p class="font-mono text-sm">{{ posthog.host }}</p>
+            </div>
+        </div>
+
+        {% if posthog.enabled %}
+        <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>PostHog is tracking:</strong> User behavior events like timer starts, project creation, etc.
+                Uses internal user IDs only (no PII).
+            </p>
+        </div>
+        {% else %}
+        <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="text-sm text-gray-700">
+                To enable PostHog, set <code class="bg-gray-200 px-1 py-0.5 rounded">POSTHOG_API_KEY</code> in your environment variables.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sentry Status Card -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">🔍 Sentry (Error Monitoring)</h2>
+            {% if sentry.enabled %}
+            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Configured</span>
+            {% else %}
+            <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Not Configured</span>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">DSN</p>
+                <p class="font-medium">{{ 'Set' if sentry.dsn_set else 'Not Set' }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Traces Sample Rate</p>
+                <p class="font-medium">{{ sentry.traces_rate }}</p>
+            </div>
+        </div>
+
+        {% if sentry.enabled %}
+        <div class="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <p class="text-sm text-purple-800">
+                <strong>Sentry is monitoring:</strong> Application errors and performance issues.
+                Helps identify and fix bugs quickly.
+            </p>
+        </div>
+        {% else %}
+        <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="text-sm text-gray-700">
+                To enable Sentry, set <code class="bg-gray-200 px-1 py-0.5 rounded">SENTRY_DSN</code> in your environment variables.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- What Data is Collected -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">📋 What Data is Collected</h2>
+
+        <div class="space-y-4">
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">✅ What We Collect (When Enabled)</h3>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 ml-4">
+                    <li>Anonymous installation fingerprint (hashed, cannot identify you)</li>
+                    <li>Application version and platform information</li>
+                    <li>Feature usage events (e.g., "timer started", "project created")</li>
+                    <li>Internal user IDs (numeric, not linked to real identities)</li>
+                    <li>Error messages and stack traces (for debugging)</li>
+                    <li>Performance metrics (request latency, response times)</li>
+                </ul>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">❌ What We DON'T Collect</h3>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 ml-4">
+                    <li>Email addresses or usernames</li>
+                    <li>IP addresses</li>
+                    <li>Project names or descriptions</li>
+                    <li>Time entry notes or descriptions</li>
+                    <li>Client information or business data</li>
+                    <li>Any personally identifiable information (PII)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy & Documentation -->
+    <div class="bg-gray-50 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">📚 Documentation & Privacy</h2>
+        <div class="space-y-2 text-sm text-gray-700">
+            <p>
+                <a href="/docs/analytics.md" class="text-indigo-600 hover:text-indigo-800 underline">📖 Analytics Documentation</a> - 
+                Complete guide to analytics features
+            </p>
+            <p>
+                <a href="/docs/events.md" class="text-indigo-600 hover:text-indigo-800 underline">📊 Events Schema</a> - 
+                List of all tracked events
+            </p>
+            <p>
+                <a href="/docs/privacy.md" class="text-indigo-600 hover:text-indigo-800 underline">🔒 Privacy Policy</a> - 
+                Data collection and your rights
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
