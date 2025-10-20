@@ -22,7 +22,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # Needed for creating GitHub releases
       packages: write
       
     steps:
