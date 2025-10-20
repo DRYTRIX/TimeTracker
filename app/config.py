@@ -159,7 +159,8 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SECURE = True
-    WTF_CSRF_ENABLED = True
+    # Honor environment configuration; default to enabled in production
+    WTF_CSRF_ENABLED = os.getenv('WTF_CSRF_ENABLED', 'true').lower() == 'true'
     WTF_CSRF_SSL_STRICT = True
 
 # Configuration mapping

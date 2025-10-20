@@ -195,7 +195,10 @@ def create_app(config=None):
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
-    csrf.init_app(app)
+    
+    # Only initialize CSRF protection if enabled
+    if app.config.get('WTF_CSRF_ENABLED'):
+        csrf.init_app(app)
     try:
         # Configure limiter defaults from config if provided
         default_limits = []
@@ -473,47 +476,68 @@ def create_app(config=None):
         except Exception:
             pass
 
-        # Ensure CSRF cookie is present for HTML GET responses (helps login page)
-        try:
-            # Only for safe, HTML page responses
-            if request.method == "GET":
-                content_type = response.headers.get("Content-Type", "")
-                if isinstance(content_type, str) and content_type.startswith("text/html"):
-                    cookie_name = app.config.get("CSRF_COOKIE_NAME", "XSRF-TOKEN")
-                    has_cookie = bool(request.cookies.get(cookie_name))
-                    if not has_cookie:
-                        # Generate a CSRF token and set cookie using same settings as /auth/csrf-token
-                        try:
-                            from flask_wtf.csrf import generate_csrf
-                            token = generate_csrf()
-                        except Exception:
-                            token = ""
-                        cookie_secure = bool(
-                            app.config.get(
-                                "CSRF_COOKIE_SECURE",
-                                app.config.get("SESSION_COOKIE_SECURE", False),
+        # CSRF cookie/token handling
+        # If CSRF is enabled, ensure CSRF cookie exists for HTML GET responses
+        # If CSRF is disabled, explicitly clear any existing CSRF cookie to avoid confusion
+        if app.config.get('WTF_CSRF_ENABLED'):
+            try:
+                # Only for safe, HTML page responses
+                if request.method == "GET":
+                    content_type = response.headers.get("Content-Type", "")
+                    if isinstance(content_type, str) and content_type.startswith("text/html"):
+                        cookie_name = app.config.get("CSRF_COOKIE_NAME", "XSRF-TOKEN")
+                        has_cookie = bool(request.cookies.get(cookie_name))
+                        if not has_cookie:
+                            # Generate a CSRF token and set cookie using same settings as /auth/csrf-token
+                            try:
+                                from flask_wtf.csrf import generate_csrf
+                                token = generate_csrf()
+                            except Exception:
+                                token = ""
+                            cookie_secure = bool(
+                                app.config.get(
+                                    "CSRF_COOKIE_SECURE",
+                                    app.config.get("SESSION_COOKIE_SECURE", False),
+                                )
                             )
-                        )
-                        cookie_httponly = bool(app.config.get("CSRF_COOKIE_HTTPONLY", False))
-                        cookie_samesite = app.config.get("CSRF_COOKIE_SAMESITE", "Lax")
-                        cookie_domain = app.config.get("CSRF_COOKIE_DOMAIN") or None
-                        cookie_path = app.config.get("CSRF_COOKIE_PATH", "/")
-                        try:
-                            max_age = int(app.config.get("WTF_CSRF_TIME_LIMIT", 3600))
-                        except Exception:
-                            max_age = 3600
-                        response.set_cookie(
-                            cookie_name,
-                            token or "",
-                            max_age=max_age,
-                            secure=cookie_secure,
-                            httponly=cookie_httponly,
-                            samesite=cookie_samesite,
-                            domain=cookie_domain,
-                            path=cookie_path,
-                        )
-        except Exception:
-            pass
+                            cookie_httponly = bool(app.config.get("CSRF_COOKIE_HTTPONLY", False))
+                            cookie_samesite = app.config.get("CSRF_COOKIE_SAMESITE", "Lax")
+                            cookie_domain = app.config.get("CSRF_COOKIE_DOMAIN") or None
+                            cookie_path = app.config.get("CSRF_COOKIE_PATH", "/")
+                            try:
+                                max_age = int(app.config.get("WTF_CSRF_TIME_LIMIT", 3600))
+                            except Exception:
+                                max_age = 3600
+                            response.set_cookie(
+                                cookie_name,
+                                token or "",
+                                max_age=max_age,
+                                secure=cookie_secure,
+                                httponly=cookie_httponly,
+                                samesite=cookie_samesite,
+                                domain=cookie_domain,
+                                path=cookie_path,
+                            )
+            except Exception:
+                pass
+        else:
+            try:
+                cookie_name = app.config.get("CSRF_COOKIE_NAME", "XSRF-TOKEN")
+                if request.cookies.get(cookie_name):
+                    # Clear the cookie by setting it expired
+                    response.set_cookie(
+                        cookie_name,
+                        "",
+                        max_age=0,
+                        expires=0,
+                        path=app.config.get("CSRF_COOKIE_PATH", "/"),
+                        domain=app.config.get("CSRF_COOKIE_DOMAIN") or None,
+                        secure=bool(app.config.get("CSRF_COOKIE_SECURE", app.config.get("SESSION_COOKIE_SECURE", False))),
+                        httponly=bool(app.config.get("CSRF_COOKIE_HTTPONLY", False)),
+                        samesite=app.config.get("CSRF_COOKIE_SAMESITE", "Lax"),
+                    )
+            except Exception:
+                pass
         return response
 
     # CSRF error handler with HTML-friendly fallback
@@ -597,26 +621,36 @@ def create_app(config=None):
         return redirect(dest)
 
     # Expose csrf_token() in Jinja templates even without FlaskForm
-    try:
-        from flask_wtf.csrf import generate_csrf
-
-        @app.context_processor
-        def inject_csrf_token():
-            return dict(csrf_token=lambda: generate_csrf())
-
-    except Exception:
-        pass
+    # Always inject the function, but return empty string when CSRF is disabled
+    @app.context_processor
+    def inject_csrf_token():
+        def get_csrf_token():
+            # Return empty string if CSRF is disabled
+            if not app.config.get('WTF_CSRF_ENABLED'):
+                return ""
+            try:
+                from flask_wtf.csrf import generate_csrf
+                return generate_csrf()
+            except Exception:
+                return ""
+        return dict(csrf_token=get_csrf_token)
 
     # CSRF token refresh endpoint (GET)
     @app.route("/auth/csrf-token", methods=["GET"])
     def get_csrf_token():
+        # If CSRF is disabled, return empty token
+        if not app.config.get('WTF_CSRF_ENABLED'):
+            resp = jsonify(csrf_token="", csrf_enabled=False)
+            resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            return resp
+        
         try:
             from flask_wtf.csrf import generate_csrf
 
             token = generate_csrf()
         except Exception:
             token = ""
-        resp = jsonify(csrf_token=token)
+        resp = jsonify(csrf_token=token, csrf_enabled=True)
         try:
             resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         except Exception:
@@ -685,7 +719,9 @@ def create_app(config=None):
     app.register_blueprint(setup_bp)
 
     # Exempt API blueprint from CSRF protection (JSON API uses authentication, not CSRF tokens)
-    csrf.exempt(api_bp)
+    # Only if CSRF is enabled
+    if app.config.get('WTF_CSRF_ENABLED'):
+        csrf.exempt(api_bp)
 
     # Register OAuth OIDC client if enabled
     try:

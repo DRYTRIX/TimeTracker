@@ -145,11 +145,17 @@ Get TimeTracker running in under 2 minutes:
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
+# Create your .env from the template and set SECRET_KEY and TZ
+cp env.example .env
+# Edit .env and set a strong SECRET_KEY (python -c "import secrets; print(secrets.token_hex(32))")
+
 # Start with Docker Compose
-docker-compose up -d
+docker-compose -f docker-compose.example.yml up -d
 
 # Access at http://localhost:8080
 ```
+
+See the full Docker Compose setup guide: [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
 
 **First login creates the admin account** — just enter your username!
 
@@ -239,11 +245,9 @@ docker-compose up -d
 ```bash
 # Configure your .env file
 cp env.example .env
-# Edit .env with production settings
-# IMPORTANT: Set a secure SECRET_KEY for CSRF tokens and sessions
-# Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
+# Edit .env with production settings (set SECRET_KEY, TZ, DB credentials)
 
-# Start with production compose
+# Start with production compose (published image)
 docker-compose -f docker-compose.remote.yml up -d
 ```
 
@@ -262,7 +266,12 @@ docker-compose up -d
 
 ## 🔧 Configuration
 
-TimeTracker is highly configurable through environment variables:
+TimeTracker is highly configurable through environment variables. For a comprehensive list and recommended values, see:
+
+- [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
+- [`env.example`](env.example)
+
+Common settings:
 
 ```bash
 # Timezone and locale
@@ -282,8 +291,6 @@ ALLOW_SELF_REGISTER=false
 SECRET_KEY=your-secure-random-key
 SESSION_COOKIE_SECURE=true
 ```
-
-**📖 See [Configuration Guide](docs/REQUIREMENTS.md) for all options**
 
 ---
 
