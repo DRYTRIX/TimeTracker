@@ -119,7 +119,7 @@ jobs:
       
       - name: Run complete test suite
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: sqlite:///:memory:
           FLASK_APP: app.py
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}

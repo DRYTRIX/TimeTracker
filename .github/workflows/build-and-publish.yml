@@ -136,9 +136,9 @@ jobs:
           
           ## Docker Image
           
-          \`\`\`bash
+          ```bash
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
-          \`\`\`
+          ```
           
           ## Your Choice
           
