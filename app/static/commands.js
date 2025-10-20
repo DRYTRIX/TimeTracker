@@ -145,13 +145,9 @@
     // Check if typing in input field
     if (['input','textarea'].includes(ev.target.tagName.toLowerCase())) return;
     
-    // Open with ? key (question mark)
-    if (ev.key === '?' && !ev.ctrlKey && !ev.metaKey && !ev.altKey){ 
-      ev.preventDefault(); 
-      openModal(); 
-      return; 
-    }
-
+    // Note: ? key (Shift+/) is now handled by keyboard-shortcuts-advanced.js for shortcuts panel
+    // Command palette is opened with Ctrl+K
+    
     // Sequence shortcuts: g d / g p / g r / g t
     sequenceHandler(ev);
   }
@@ -207,7 +203,7 @@
     if (closeBtn){ closeBtn.addEventListener('click', closeModal); }
     const help = $('#commandPaletteHelp');
     if (help){
-      help.textContent = `Shortcuts: ? (Command Palette) · ${isMac ? '⌘' : 'Ctrl'}+K (Search) · g d (Dashboard) · g p (Projects) · g r (Reports) · g t (Tasks)`;
+      help.textContent = `Shortcuts: ${isMac ? '⌘' : 'Ctrl'}+K (Command Palette) · ${isMac ? '⌘' : 'Ctrl'}+/ (Search) · Shift+? (All Shortcuts) · g d (Dashboard) · g p (Projects) · g r (Reports) · g t (Tasks)`;
     }
   });
 

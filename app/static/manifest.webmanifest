@@ -1,11 +1,12 @@
 {
-  "name": "Time Tracker",
+  "name": "TimeTracker - Professional Time Tracking",
   "short_name": "TimeTracker",
+  "description": "Professional time tracking and project management application",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
+  "orientation": "any",
   "icons": [
     {
       "src": "/static/images/drytrix-logo.svg",
@@ -13,7 +14,66 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "categories": ["productivity", "business"],
+  "shortcuts": [
+    {
+      "name": "Start Timer",
+      "short_name": "Timer",
+      "description": "Start tracking time",
+      "url": "/timer/manual_entry",
+      "icons": [
+        {
+          "src": "/static/images/drytrix-logo.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View dashboard",
+      "url": "/main/dashboard",
+      "icons": [
+        {
+          "src": "/static/images/drytrix-logo.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "short_name": "Projects",
+      "description": "Manage projects",
+      "url": "/projects/",
+      "icons": [
+        {
+          "src": "/static/images/drytrix-logo.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "short_name": "Reports",
+      "description": "View reports",
+      "url": "/reports/",
+      "icons": [
+        {
+          "src": "/static/images/drytrix-logo.svg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/timer/manual_entry",
+    "method": "GET",
+    "params": {
+      "title": "notes",
+      "text": "notes"
+    }
+  },
+  "prefer_related_applications": false
 }
-
-

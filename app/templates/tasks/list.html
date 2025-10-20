@@ -1,17 +1,35 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, stat_card, badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">Tasks</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">Manage your tasks here.</p>
-    </div>
-    <a href="{{ url_for('tasks.create_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Create Task</a>
+{% set breadcrumbs = [
+    {'text': 'Tasks'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-tasks',
+    title_text='Tasks',
+    subtitle_text='Manage your tasks here',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("tasks.create_task") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Task</a>'
+) }}
+
+<!-- Task Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-animation">
+    {% set todo_count = tasks|selectattr('status', 'equalto', 'todo')|list|length %}
+    {% set in_progress_count = tasks|selectattr('status', 'equalto', 'in_progress')|list|length %}
+    {% set review_count = tasks|selectattr('status', 'equalto', 'review')|list|length %}
+    {% set done_count = tasks|selectattr('status', 'equalto', 'done')|list|length %}
+    
+    {{ stat_card('To Do', todo_count, 'fas fa-list', 'slate-500') }}
+    {{ stat_card('In Progress', in_progress_count, 'fas fa-spinner', 'blue-500') }}
+    {{ stat_card('In Review', review_count, 'fas fa-eye', 'amber-500') }}
+    {{ stat_card('Completed', done_count, 'fas fa-check-circle', 'green-500') }}
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h2 class="text-lg font-semibold mb-4">Filter Tasks</h2>
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-filter-form>
         <div class="lg:col-span-1">
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
@@ -66,15 +84,28 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+            {{ tasks|length }} task{{ 's' if tasks|length != 1 else '' }} found
+        </h3>
+        <div class="flex gap-2">
+            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Export to CSV">
+                <i class="fas fa-download mr-1"></i> Export
+            </button>
+            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Bulk actions">
+                <i class="fas fa-check-square mr-1"></i> Bulk
+            </button>
+        </div>
+    </div>
+    <table class="table table-zebra w-full text-left" data-enhanced>
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
-                <th class="p-4">Name</th>
-                <th class="p-4">Project</th>
-                <th class="p-4">Priority</th>
-                <th class="p-4">Status</th>
-                <th class="p-4 table-number">Due</th>
-                <th class="p-4 table-number">Progress</th>
+                <th class="p-4" data-sortable>Name</th>
+                <th class="p-4" data-sortable>Project</th>
+                <th class="p-4" data-sortable>Priority</th>
+                <th class="p-4" data-sortable>Status</th>
+                <th class="p-4 table-number" data-sortable>Due</th>
+                <th class="p-4 table-number" data-sortable>Progress</th>
                 <th class="p-4">Actions</th>
             </tr>
         </thead>
@@ -119,10 +150,21 @@
                 </td>
             </tr>
             {% else %}
-            <tr>
-                <td colspan="7" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">No tasks found.</td>
-            </tr>
             {% endfor %}
+        </tbody>
+    </table>
+    {% if not tasks %}
+    {% from "components/ui.html" import empty_state %}
+    {% set actions %}
+        <a href="{{ url_for('tasks.create_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>Create Your First Task
+        </a>
+        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-question-circle mr-2"></i>Learn More
+        </a>
+    {% endset %}
+    {{ empty_state('fas fa-tasks', 'No Tasks Found', 'Get started by creating your first task to organize your work and track progress.', actions) }}
+    {% endif %}
         </tbody>
     </table>
 </div>
