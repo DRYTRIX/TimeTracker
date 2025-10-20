@@ -6,7 +6,6 @@ on:
       - 'v*.*.*'  # Trigger on version tags like v3.0.0
     branches:
       - main       # Also build on main branch pushes
-      - develop    # And develop branch
   workflow_dispatch:  # Allow manual trigger
     inputs:
       version:
@@ -34,8 +33,16 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
-          else
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Tag push: extract version from tag
             VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            # Branch push: create development version
+            BUILD_NUMBER=${{ github.run_number }}
+            COMMIT_SHA=${GITHUB_SHA::8}
+            BRANCH=${GITHUB_REF#refs/heads/}
+            BRANCH_SAFE=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            VERSION="dev-${BRANCH_SAFE}-${BUILD_NUMBER}-${COMMIT_SHA}"
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION"
@@ -78,10 +85,14 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}},value=v${{ steps.version.outputs.VERSION }}
-            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.VERSION }}
-            type=semver,pattern={{major}},value=v${{ steps.version.outputs.VERSION }}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.VERSION }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.VERSION }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=semver,pattern={{major}},value=v${{ steps.version.outputs.VERSION }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=${{ steps.version.outputs.VERSION }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -94,6 +105,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VERSION=${{ steps.version.outputs.VERSION }}
+            APP_VERSION=${{ steps.version.outputs.VERSION }}
       
       - name: Create Release Notes
         run: |

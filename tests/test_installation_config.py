@@ -5,6 +5,7 @@ Tests for installation configuration and setup
 import os
 import json
 import pytest
+from unittest.mock import patch
 from app.utils.installation import InstallationConfig, get_installation_config
 
 
@@ -112,6 +113,10 @@ class TestInstallationConfig:
     
     def test_get_all_config(self, installation_config):
         """Test retrieving all configuration"""
+        # Generate salt and ID first (lazy initialization)
+        salt = installation_config.get_installation_salt()
+        installation_id = installation_config.get_installation_id()
+        
         installation_config.mark_setup_complete(telemetry_enabled=True)
         
         config = installation_config.get_all_config()
@@ -135,24 +140,28 @@ class TestSetupRoutes:
     
     def test_setup_completion_flow(self, client, installation_config):
         """Test completing the setup"""
-        # Ensure setup is not complete
-        assert not installation_config.is_setup_complete()
-        
-        # Access setup page
-        response = client.get('/setup')
-        assert response.status_code == 200
-        
-        # Complete setup with telemetry enabled
-        response = client.post('/setup', data={
-            'telemetry_enabled': 'on'
-        }, follow_redirects=False)
-        
-        # Should redirect after completion
-        assert response.status_code == 302
-        
-        # Verify setup is complete
-        assert installation_config.is_setup_complete()
-        assert installation_config.get_telemetry_preference() is True
+        # Patch the global get_installation_config to return our fixture
+        with patch('app.routes.setup.get_installation_config') as mock_get_config:
+            mock_get_config.return_value = installation_config
+            
+            # Ensure setup is not complete
+            assert not installation_config.is_setup_complete()
+            
+            # Access setup page
+            response = client.get('/setup')
+            assert response.status_code == 200
+            
+            # Complete setup with telemetry enabled
+            response = client.post('/setup', data={
+                'telemetry_enabled': 'on'
+            }, follow_redirects=False)
+            
+            # Should redirect after completion
+            assert response.status_code == 302
+            
+            # Verify setup is complete
+            assert installation_config.is_setup_complete()
+            assert installation_config.get_telemetry_preference() is True
     
     def test_setup_without_telemetry(self, client, installation_config):
         """Test completing setup with telemetry disabled"""

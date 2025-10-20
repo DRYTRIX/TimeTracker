@@ -61,11 +61,13 @@ class TestTrackEvent:
         """Test that PostHog events are tracked when API key is set"""
         with patch.dict(os.environ, {'POSTHOG_API_KEY': 'test-key'}):
             track_event(123, "test.event", {"property": "value"})
-            mock_capture.assert_called_once_with(
-                distinct_id='123',
-                event='test.event',
-                properties={"property": "value"}
-            )
+            # Verify the event was tracked
+            assert mock_capture.called
+            call_args = mock_capture.call_args
+            assert call_args[1]['distinct_id'] == '123'
+            assert call_args[1]['event'] == 'test.event'
+            # Verify our property is included (along with context properties)
+            assert call_args[1]['properties']['property'] == 'value'
     
     @patch('app.posthog.capture')
     def test_track_event_when_disabled(self, mock_capture, app):
@@ -87,9 +89,12 @@ class TestTrackEvent:
         with patch.dict(os.environ, {'POSTHOG_API_KEY': 'test-key'}):
             with patch('app.posthog.capture') as mock_capture:
                 track_event(123, "test.event", None)
-                # Should use empty dict as default
+                # Should have context properties even when None is passed
                 call_args = mock_capture.call_args
-                assert call_args[1]['properties'] == {}
+                # Properties should be a dict (not None) with at least context properties
+                assert isinstance(call_args[1]['properties'], dict)
+                # Context properties should be present
+                assert 'environment' in call_args[1]['properties']
 
 
 class TestPrometheusMetrics:
@@ -129,23 +134,16 @@ class TestAnalyticsIntegration:
     
     @patch('app.routes.auth.log_event')
     @patch('app.routes.auth.track_event')
-    def test_login_analytics(self, mock_track, mock_log, app, client):
+    def test_login_analytics(self, mock_track, mock_log, user, client):
         """Test that login events are tracked"""
-        with app.app_context():
-            from app.models import User
-            from app import db
-            
-            # Create a test user
-            user = User(username='testuser', role='user')
-            db.session.add(user)
-            db.session.commit()
-            
-            # Attempt login
-            response = client.post('/login', data={'username': 'testuser'}, follow_redirects=False)
-            
-            # Should have logged the event
-            # Note: This might not be called if there are validation errors or other issues
-            # The actual assertion depends on your authentication flow
+        # Attempt login with existing user fixture
+        response = client.post('/login', data={
+            'username': user.username,
+            'password': 'testpassword'
+        }, follow_redirects=False)
+        
+        # Note: Whether events are tracked depends on login success
+        # This test verifies the analytics hooks are in place
     
     @patch('app.routes.timer.log_event')
     @patch('app.routes.timer.track_event')

@@ -32,13 +32,17 @@ class TestTelemetryFingerprint:
     
     def test_fingerprint_changes_with_salt(self):
         """Test that fingerprint changes when salt changes"""
-        with patch.dict(os.environ, {'TELE_SALT': 'salt1'}):
-            fp1 = get_telemetry_fingerprint()
-        
-        with patch.dict(os.environ, {'TELE_SALT': 'salt2'}):
-            fp2 = get_telemetry_fingerprint()
-        
-        assert fp1 != fp2
+        # Mock the installation config to force fallback to environment variable
+        with patch('app.utils.telemetry.get_installation_config') as mock_config:
+            mock_config.side_effect = Exception("Force fallback to env var")
+            
+            with patch.dict(os.environ, {'TELE_SALT': 'salt1'}):
+                fp1 = get_telemetry_fingerprint()
+            
+            with patch.dict(os.environ, {'TELE_SALT': 'salt2'}):
+                fp2 = get_telemetry_fingerprint()
+            
+            assert fp1 != fp2
     
     def test_fingerprint_is_sha256_hash(self):
         """Test that fingerprint is a valid SHA-256 hash"""
@@ -66,13 +70,19 @@ class TestTelemetryEnabled:
     ])
     def test_telemetry_enabled_values(self, value, expected):
         """Test various values for ENABLE_TELEMETRY"""
-        with patch.dict(os.environ, {'ENABLE_TELEMETRY': value}):
-            assert is_telemetry_enabled() == expected
+        # Mock installation config to force fallback to environment variable
+        with patch('app.utils.telemetry.get_installation_config') as mock_config:
+            mock_config.side_effect = Exception("Force fallback to env var")
+            with patch.dict(os.environ, {'ENABLE_TELEMETRY': value}):
+                assert is_telemetry_enabled() == expected
     
     def test_telemetry_disabled_by_default(self):
         """Test that telemetry is disabled by default"""
-        with patch.dict(os.environ, {}, clear=True):
-            assert is_telemetry_enabled() is False
+        # Mock installation config to force fallback to environment variable
+        with patch('app.utils.telemetry.get_installation_config') as mock_config:
+            mock_config.side_effect = Exception("Force fallback to env var")
+            with patch.dict(os.environ, {}, clear=True):
+                assert is_telemetry_enabled() is False
 
 
 class TestSendTelemetryPing:
@@ -234,10 +244,13 @@ class TestCheckAndSendTelemetry:
     @patch('app.utils.telemetry.send_install_ping')
     def test_no_send_when_disabled(self, mock_send):
         """Test that telemetry is not sent when disabled"""
-        with patch.dict(os.environ, {'ENABLE_TELEMETRY': 'false'}):
-            result = check_and_send_telemetry()
-            assert result is False
-            assert not mock_send.called
+        # Mock installation config to force fallback to environment variable
+        with patch('app.utils.telemetry.get_installation_config') as mock_config:
+            mock_config.side_effect = Exception("Force fallback to env var")
+            with patch.dict(os.environ, {'ENABLE_TELEMETRY': 'false'}):
+                result = check_and_send_telemetry()
+                assert result is False
+                assert not mock_send.called
     
     @patch('app.utils.telemetry.send_install_ping')
     def test_no_send_when_already_sent(self, mock_send):
