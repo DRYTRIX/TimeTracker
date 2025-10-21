@@ -84,6 +84,15 @@ def db_session(app):
 @pytest.fixture
 def user(app):
     """Create a regular test user."""
+    # Idempotent: return existing test user if already present (PostgreSQL CI)
+    existing = User.query.filter_by(username='testuser').first()
+    if existing:
+        if not existing.is_active:
+            existing.is_active = True
+            db.session.commit()
+        db.session.refresh(existing)
+        return existing
+
     user = User(
         username='testuser',
         role='user',
@@ -101,6 +110,16 @@ def user(app):
 @pytest.fixture
 def admin_user(app):
     """Create an admin test user."""
+    # Idempotent: return existing admin user if already present (PostgreSQL CI)
+    existing = User.query.filter_by(username='admin').first()
+    if existing:
+        if existing.role != 'admin':
+            existing.role = 'admin'
+            existing.is_active = True
+            db.session.commit()
+        db.session.refresh(existing)
+        return existing
+
     admin = User(
         username='admin',
         role='admin',
