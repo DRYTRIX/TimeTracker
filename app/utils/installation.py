@@ -101,6 +101,8 @@ class InstallationConfig:
     
     def get_telemetry_preference(self) -> bool:
         """Get user's telemetry preference"""
+        # Reload on read to reflect external updates (e.g., tests toggling state)
+        self._config = self._load_config()
         return self._config.get('telemetry_enabled', False)
     
     def set_telemetry_preference(self, enabled: bool):
