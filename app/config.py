@@ -156,12 +156,12 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     """Production configuration"""
     FLASK_DEBUG = False
-    SESSION_COOKIE_SECURE = True
-    SESSION_COOKIE_HTTPONLY = True
-    REMEMBER_COOKIE_SECURE = True
-    # Honor environment configuration; default to enabled in production
+    # Honor environment with secure-by-default values in production
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
+    SESSION_COOKIE_HTTPONLY = os.getenv('SESSION_COOKIE_HTTPONLY', 'true').lower() == 'true'
+    REMEMBER_COOKIE_SECURE = os.getenv('REMEMBER_COOKIE_SECURE', 'true').lower() == 'true'
     WTF_CSRF_ENABLED = os.getenv('WTF_CSRF_ENABLED', 'true').lower() == 'true'
-    WTF_CSRF_SSL_STRICT = True
+    WTF_CSRF_SSL_STRICT = os.getenv('WTF_CSRF_SSL_STRICT', 'true').lower() == 'true'
 
 # Configuration mapping
 config = {

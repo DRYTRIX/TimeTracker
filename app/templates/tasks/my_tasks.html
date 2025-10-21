@@ -191,12 +191,8 @@
                 <div class="card-header border-0 pb-0">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div class="d-flex align-items-center">
-                            <span class="status-badge status-{{ task.status }} me-2">
-                                {{ task.status_display }}
-                            </span>
-                            <span class="priority-badge priority-{{ task.priority }}">
-                                {{ task.priority_display }}
-                            </span>
+                            <span class="status-badge status-{{ task.status }} me-2"><span class="whitespace-nowrap">{{ task.status_display }}</span></span>
+                            <span class="priority-badge priority-{{ task.priority }}"><span class="whitespace-nowrap">{{ task.priority_display }}</span></span>
                         </div>
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-secondary border-0" type="button" data-bs-toggle="dropdown">

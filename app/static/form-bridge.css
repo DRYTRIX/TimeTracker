@@ -110,7 +110,7 @@ textarea.form-control { min-height: 6rem; resize: vertical; }
 /* =============================
    Badge chips
    ============================= */
-.chip { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; line-height: 1; border: 1px solid transparent; }
+.chip { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; line-height: 1; border: 1px solid transparent; white-space: nowrap; }
 .chip-neutral { background: #F1F5F9; color: #334155; }
 .dark .chip-neutral { background: #1F2937; color: #E5E7EB; border-color: #374151; }
 .chip-success { background: #DCFCE7; color: #166534; }
