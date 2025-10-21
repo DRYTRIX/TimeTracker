@@ -116,6 +116,16 @@ jobs:
           else
             echo "ℹ️ No migration-related changes detected"
           fi
+
+      - name: Initialize database schema for tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+        run: |
+          echo "🔧 Applying migrations to ensure test schema exists..."
+          flask db upgrade
+          echo "Current migration: $(flask db current)"
       
       - name: Run complete test suite
         env:
