@@ -52,20 +52,33 @@ def is_telemetry_enabled() -> bool:
     Checks both environment variable and user preference from installation config.
     User preference takes precedence over environment variable.
     """
+    # Environment variable takes precedence for tests/CI and explicit overrides
+    env_value = os.getenv("ENABLE_TELEMETRY")
+    if env_value is not None:
+        enabled = env_value.lower()
+        return enabled in ("true", "1", "yes", "on")
+
     try:
         # Import here to avoid circular imports
         from app.utils.installation import get_installation_config
-        
+
         # Get user preference from installation config
         installation_config = get_installation_config()
         if installation_config.is_setup_complete():
             return installation_config.get_telemetry_preference()
     except Exception:
         pass
-    
-    # Fallback to environment variable
-    enabled = os.getenv("ENABLE_TELEMETRY", "false").lower()
-    return enabled in ("true", "1", "yes", "on")
+
+    # Default disabled if not explicitly enabled
+    return False
+
+
+# Re-export helper for tests to patch
+try:
+    from app.utils.installation import get_installation_config  # type: ignore
+except Exception:
+    def get_installation_config():  # type: ignore
+        raise RuntimeError("installation config unavailable")
 
 
 def _ensure_posthog_initialized() -> bool:

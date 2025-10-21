@@ -12,9 +12,19 @@ from app import create_app, log_event, track_event
 
 @pytest.fixture
 def app():
-    """Create test Flask application"""
+    """Create test Flask application and initialize DB tables."""
     app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
-    return app
+    from app import db
+    with app.app_context():
+        db.create_all()
+    try:
+        yield app
+    finally:
+        try:
+            with app.app_context():
+                db.drop_all()
+        except Exception:
+            pass
 
 
 @pytest.fixture
