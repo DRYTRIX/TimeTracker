@@ -127,7 +127,7 @@
                                    'medium':'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
                                    'high':'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
                                    'urgent':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}[p] if p in ['low','medium','high','urgent'] else 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %}
-                    <span class="px-2 py-1 rounded-full text-xs font-medium {{ pcls }}">{{ task.priority_display }}</span>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ pcls }}">{{ task.priority_display }}</span>
                 </td>
                 <td class="p-4">
                     {% set s = task.status %}
@@ -136,12 +136,12 @@
                                    'review':'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
                                    'done':'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
                                    'cancelled':'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}[s] if s in ['todo','in_progress','review','done','cancelled'] else 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %}
-                    <span class="px-2 py-1 rounded-full text-xs font-medium {{ scls }}">{{ task.status_display }}</span>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ scls }}">{{ task.status_display }}</span>
                 </td>
                 <td class="p-4 table-number">
                     {% if task.due_date %}
                         {% set overdue = task.is_overdue %}
-                        <span class="chip {{ 'chip-danger' if overdue else 'chip-neutral' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</span>
+                        <span class="chip whitespace-nowrap {{ 'chip-danger' if overdue else 'chip-neutral' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}

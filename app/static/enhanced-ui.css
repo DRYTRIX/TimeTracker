@@ -337,6 +337,7 @@
 
 .dark .toast {
     background: #2d3748;
+    color: #E2E8F0; /* ensure readable text on dark background */
 }
 
 .toast.removing {

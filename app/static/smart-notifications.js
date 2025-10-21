@@ -277,18 +277,31 @@ class SmartNotificationManager {
         try {
             const response = await fetch('/api/summary/today');
             const summary = await response.json();
-            
-            this.show({
-                title: 'Daily Summary',
-                message: `Today you logged ${summary.hours}h across ${summary.projects} projects. Great work!`,
-                type: 'success',
-                priority: 'normal',
-                persistent: true,
-                actions: [
-                    { id: 'view-details', label: 'View Details' },
-                    { id: 'dismiss', label: 'Dismiss' }
-                ]
-            });
+
+            const hours = (summary && typeof summary.hours === 'number')
+                ? summary.hours
+                : (summary && summary.hours ? Number(summary.hours) : 0);
+            const projects = (summary && typeof summary.projects === 'number')
+                ? summary.projects
+                : (summary && summary.projects ? Number(summary.projects) : 0);
+
+            // Build a safe, human-friendly message
+            const hoursText = isNaN(hours) ? '0' : String(hours);
+            const projectsText = isNaN(projects) ? '0' : String(projects);
+            const message = `Today you logged ${hoursText}h across ${projectsText} projects. Great work!`;
+
+            // Auto-dismiss after 8s; no permanent sticky summary to avoid lingering toasts
+            if (window.toastManager && typeof window.toastManager.show === 'function') {
+                window.toastManager.show(message, 'success', 8000);
+            } else {
+                this.show({
+                    title: 'Daily Summary',
+                    message,
+                    type: 'success',
+                    priority: 'normal',
+                    persistent: false
+                });
+            }
         } catch (error) {
             console.error('Error fetching daily summary:', error);
         }
