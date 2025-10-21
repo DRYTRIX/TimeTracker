@@ -459,9 +459,9 @@ def create_app(config=None):
                 csp = (
                     "default-src 'self'; "
                     "img-src 'self' data: https:; "
-                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.datatables.net; "
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.datatables.net https://uicdn.toast.com; "
                     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
-                    "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.datatables.net https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh; "
+                    "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.datatables.net https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://uicdn.toast.com; "
                     "connect-src 'self' ws: wss:; "
                     "frame-ancestors 'none'"
                 )

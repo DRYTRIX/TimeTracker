@@ -123,6 +123,16 @@ def test_projects_list_page(authenticated_client):
 
 @pytest.mark.integration
 @pytest.mark.routes
+def test_projects_create_page_contains_client_modal_trigger(admin_authenticated_client):
+    """Projects create page should contain inline client creation trigger."""
+    response = admin_authenticated_client.get('/projects/create')
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'id="openCreateClientModal"' in html
+
+
+@pytest.mark.integration
+@pytest.mark.routes
 @pytest.mark.xfail(reason="Endpoint /projects/new may not exist or uses different URL")
 def test_project_create_page(authenticated_client):
     """Test project creation page."""

@@ -54,6 +54,7 @@ services:
       # 5. Check the token hasn't expired (increase WTF_CSRF_TIME_LIMIT if needed)
       # 6. If accessing via IP (not localhost): WTF_CSRF_SSL_STRICT=false
       # For details: docs/CSRF_CONFIGURATION.md and docs/CSRF_IP_ACCESS_GUIDE.md
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
       # Disable strict Referer check by default to avoid privacy/port issues
       - WTF_CSRF_SSL_STRICT=${WTF_CSRF_SSL_STRICT:-true}
       - WTF_CSRF_ENABLED=${WTF_CSRF_ENABLED:-true}
@@ -83,7 +84,7 @@ services:
     ports: []
     volumes:
       - app_data:/data
-      - ./logs:/app/logs
+      - app_logs:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -175,6 +176,8 @@ services:
 
 volumes:
   app_data:
+    driver: local
+  app_logs:
     driver: local
   db_data:
     driver: local

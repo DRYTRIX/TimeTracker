@@ -35,8 +35,14 @@
                 </div>
 
                 <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
-                    <textarea id="description" name="description" rows="3" class="form-input">{{ request.form.get('description', project.description or '') }}</textarea>
+                    <div class="flex items-center justify-between">
+                        <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                        <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Supports Markdown') }}</small>
+                    </div>
+                    <div class="markdown-editor-wrapper">
+                        <textarea class="form-input hidden" id="description" name="description" rows="10">{{ request.form.get('description', project.description or '') }}</textarea>
+                        <div id="description_editor"></div>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -78,15 +84,75 @@
     </div>
 </div>
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+{% endblock %}
+
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const clientSelect = document.getElementById('client_id');
     const hourlyRateInput = document.getElementById('hourly_rate');
+    const descriptionInput = document.getElementById('description');
     clientSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const defaultRate = selectedOption.getAttribute('data-default-rate');
         if (defaultRate && !hourlyRateInput.value) {
             hourlyRateInput.value = defaultRate;
+        }
+    });
+
+    // Initialize Markdown editor
+    let mdEditor = null;
+    if (descriptionInput && window.toastui && window.toastui.Editor) {
+        const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        mdEditor = new toastui.Editor({
+            el: document.getElementById('description_editor'),
+            height: '340px',
+            initialEditType: 'wysiwyg',
+            previewStyle: 'vertical',
+            usageStatistics: false,
+            theme: theme,
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task'],
+                ['link', 'code', 'codeblock', 'table'],
+                ['image'],
+                ['scrollSync']
+            ],
+            initialValue: descriptionInput.value || ''
+        });
+
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class' && mdEditor) {
+                    const nextTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                    try { if (typeof mdEditor.setTheme === 'function') mdEditor.setTheme(nextTheme); } catch (e) {}
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        // Image upload
+        mdEditor.removeHook && mdEditor.removeHook('addImageBlobHook');
+        mdEditor.addHook && mdEditor.addHook('addImageBlobHook', async (blob, callback) => {
+            try {
+                const formData = new FormData();
+                formData.append('image', blob, blob.name || 'upload.png');
+                const res = await fetch('{{ url_for('api.upload_editor_image') }}', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data && data.url) { callback(data.url, blob.name || 'image'); }
+            } catch (e) { console.error('Image upload error', e); }
+        });
+    }
+
+    // Sync markdown on form submit
+    const form = document.querySelector('form[action*="projects/edit"]') || document.querySelector('form');
+    form && form.addEventListener('submit', function(){
+        if (mdEditor && descriptionInput) {
+            try { descriptionInput.value = mdEditor.getMarkdown(); } catch (err) {}
         }
     });
 });

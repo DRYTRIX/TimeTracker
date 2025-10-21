@@ -20,7 +20,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="kanban-column-body p-3 space-y-3 overflow-y-auto h-96 flex-grow" data-status="{{ col.key }}" role="list" aria-label="{{ _('Column') }}: {{ col.label }}" tabindex="0">
+            <div class="kanban-column-body p-3 space-y-3 overflow-y-auto max-h-[75vh] flex-grow" data-status="{{ col.key }}" role="list" aria-label="{{ _('Column') }}: {{ col.label }}" tabindex="0">
                 {% set column_tasks = tasks|selectattr('status', 'equalto', col.key)|list %}
                 {% if column_tasks %}
                     {% for task in column_tasks %}

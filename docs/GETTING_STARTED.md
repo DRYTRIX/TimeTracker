@@ -25,10 +25,16 @@ The fastest way to get TimeTracker running:
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
-# 2. Start TimeTracker
+# 2. Set a strong SECRET_KEY (required for sessions & CSRF)
+# Linux/macOS:
+export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
+# Windows PowerShell:
+$env:SECRET_KEY = python -c "import secrets; print(secrets.token_hex(32))"
+
+# 3. Start TimeTracker
 docker-compose up -d
 
-# 3. Access the application
+# 4. Access the application
 # Open your browser to: https://localhost
 # (Self‑signed certificate; your browser will show a warning the first time.)
 
@@ -39,6 +45,8 @@ docker-compose up -d
 ```
 
 **That's it!** TimeTracker is now running with PostgreSQL.
+
+> Important: The default `docker-compose.yml` expects `SECRET_KEY` to be set. You can also edit the file and replace `SECRET_KEY=your-secret-key-here` with a securely generated value. Never use weak or guessable keys.
 
 ### Option 2: Quick Test (SQLite)
 
