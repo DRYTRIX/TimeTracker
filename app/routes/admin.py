@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, send_file, jsonify, render_template_string
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from app import db, limiter, log_event, track_event
+import app as app_module
+from app import db, limiter
 from app.models import User, Project, TimeEntry, Settings, Invoice
 from datetime import datetime
 from sqlalchemy import text
@@ -261,8 +262,8 @@ def telemetry_dashboard():
     }
     
     # Log dashboard access
-    log_event("admin.telemetry_dashboard_viewed", user_id=current_user.id)
-    track_event(current_user.id, "admin.telemetry_dashboard_viewed", {})
+    app_module.log_event("admin.telemetry_dashboard_viewed", user_id=current_user.id)
+    app_module.track_event(current_user.id, "admin.telemetry_dashboard_viewed", {})
     
     return render_template('admin/telemetry.html',
                          telemetry=telemetry_data,
@@ -282,8 +283,8 @@ def toggle_telemetry():
     installation_config.set_telemetry_preference(new_state)
     
     # Log the change
-    log_event("admin.telemetry_toggled", user_id=current_user.id, new_state=new_state)
-    track_event(current_user.id, "admin.telemetry_toggled", {"enabled": new_state})
+    app_module.log_event("admin.telemetry_toggled", user_id=current_user.id, new_state=new_state)
+    app_module.track_event(current_user.id, "admin.telemetry_toggled", {"enabled": new_state})
     
     if new_state:
         flash('Telemetry has been enabled. Thank you for helping us improve!', 'success')

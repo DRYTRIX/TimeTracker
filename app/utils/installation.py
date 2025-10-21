@@ -115,13 +115,18 @@ class InstallationConfig:
 
 # Global instance
 _installation_config = None
+_installation_config_path = None
 
 
 def get_installation_config() -> InstallationConfig:
     """Get the global installation configuration instance"""
-    global _installation_config
-    if _installation_config is None:
-        _installation_config = InstallationConfig()
+    global _installation_config, _installation_config_path
+    # Reinitialize if config path changed (e.g., tests overriding directories)
+    tmp = InstallationConfig()
+    current_path = tmp.config_path
+    if (_installation_config is None) or (_installation_config_path != current_path):
+        _installation_config = tmp
+        _installation_config_path = current_path
     return _installation_config
 
 

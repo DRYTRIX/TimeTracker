@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from app import db, log_event, track_event
+import app as app_module
+from app import db
 from app.models import Task, Project, User, TimeEntry, TaskActivity, KanbanColumn
 from datetime import datetime, date
 from decimal import Decimal
@@ -156,12 +157,12 @@ def create_task():
             return render_template('tasks/create.html')
         
         # Log task creation
-        log_event("task.created", 
+        app_module.log_event("task.created", 
                  user_id=current_user.id, 
                  task_id=task.id,
                  project_id=project_id,
                  priority=priority)
-        track_event(current_user.id, "task.created", {
+        app_module.track_event(current_user.id, "task.created", {
             "task_id": task.id,
             "project_id": project_id,
             "priority": priority
@@ -302,11 +303,11 @@ def edit_task(task_id):
             return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         
         # Log task update
-        log_event("task.updated", 
+        app_module.log_event("task.updated", 
                  user_id=current_user.id, 
                  task_id=task.id,
                  project_id=task.project_id)
-        track_event(current_user.id, "task.updated", {
+        app_module.track_event(current_user.id, "task.updated", {
             "task_id": task.id,
             "project_id": task.project_id
         })
@@ -388,12 +389,12 @@ def update_task_status(task_id):
                 return redirect(url_for('tasks.view_task', task_id=task.id))
             
             # Log task status change
-            log_event("task.status_changed", 
+            app_module.log_event("task.status_changed", 
                      user_id=current_user.id, 
                      task_id=task.id,
                      old_status=previous_status,
                      new_status=new_status)
-            track_event(current_user.id, "task.status_changed", {
+            app_module.track_event(current_user.id, "task.status_changed", {
                 "task_id": task.id,
                 "old_status": previous_status,
                 "new_status": new_status
@@ -476,8 +477,8 @@ def delete_task(task_id):
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     # Log task deletion
-    log_event("task.deleted", user_id=current_user.id, task_id=task_id_for_log, project_id=project_id_for_log)
-    track_event(current_user.id, "task.deleted", {"task_id": task_id_for_log, "project_id": project_id_for_log})
+    app_module.log_event("task.deleted", user_id=current_user.id, task_id=task_id_for_log, project_id=project_id_for_log)
+    app_module.track_event(current_user.id, "task.deleted", {"task_id": task_id_for_log, "project_id": project_id_for_log})
     
     flash(f'Task "{task_name}" deleted successfully', 'success')
     return redirect(url_for('tasks.list_tasks'))
