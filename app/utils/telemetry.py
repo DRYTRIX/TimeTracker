@@ -27,9 +27,8 @@ def get_telemetry_fingerprint() -> str:
     - Uses installation-specific salt (generated once, persisted)
     """
     try:
-        # Import here to avoid circular imports
-        from app.utils.installation import get_installation_config
-        
+        # Import via re-export to allow tests to patch app.utils.telemetry.get_installation_config
+        from app.utils.telemetry import get_installation_config  # type: ignore
         # Get installation-specific salt (generated once and stored)
         installation_config = get_installation_config()
         salt = installation_config.get_installation_salt()
