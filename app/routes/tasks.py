@@ -214,6 +214,7 @@ def edit_task(task_id):
         # Preload context for potential validation errors
         projects = Project.query.filter_by(status='active').order_by(Project.name).all()
         users = User.query.order_by(User.username).all()
+        project_id = request.form.get('project_id', type=int)
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         priority = request.form.get('priority', 'medium')
@@ -224,6 +225,15 @@ def edit_task(task_id):
         # Validate required fields
         if not name:
             flash('Task name is required', 'error')
+            return render_template('tasks/edit.html', task=task, projects=projects, users=users)
+
+        # Validate project selection
+        if not project_id:
+            flash('Project is required', 'error')
+            return render_template('tasks/edit.html', task=task, projects=projects, users=users)
+        new_project = Project.query.filter_by(id=project_id, status='active').first()
+        if not new_project:
+            flash('Selected project does not exist or is inactive', 'error')
             return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         
         # Parse estimated hours
@@ -243,6 +253,19 @@ def edit_task(task_id):
                 return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         
         # Update task
+        # Handle project change first so any early returns (status flows) still persist it
+        if project_id != task.project_id:
+            old_project_id = task.project_id
+            task.project_id = project_id
+            # Keep related time entries consistent with the task's project
+            try:
+                for entry in task.time_entries.all():
+                    entry.project_id = project_id
+                db.session.add(TaskActivity(task_id=task.id, user_id=current_user.id, event='project_change', details=f"Project changed from {old_project_id} to {project_id}"))
+            except Exception:
+                # If anything goes wrong here, fall back to just changing the task
+                pass
+
         task.name = name
         task.description = description
         task.priority = priority

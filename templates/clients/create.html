@@ -30,8 +30,14 @@
                 </div>
 
                 <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
-                    <textarea id="description" name="description" rows="3" placeholder="{{ _('Brief description of the client or project scope') }}" class="form-input">{{ request.form.get('description','') }}</textarea>
+                    <div class="flex items-center justify-between">
+                        <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                        <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Supports Markdown') }}</small>
+                    </div>
+                    <div class="markdown-editor-wrapper">
+                        <textarea class="form-input hidden" id="description" name="description" rows="8" placeholder="{{ _('Brief description of the client or project scope') }}">{{ request.form.get('description','') }}</textarea>
+                        <div id="description_editor"></div>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -89,3 +95,41 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+{% endblock %}
+
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const descriptionInput = document.getElementById('description');
+  let mdEditor = null;
+  if (descriptionInput && window.toastui && window.toastui.Editor) {
+    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    mdEditor = new toastui.Editor({
+      el: document.getElementById('description_editor'),
+      height: '300px',
+      initialEditType: 'wysiwyg',
+      previewStyle: 'vertical',
+      usageStatistics: false,
+      theme: theme,
+      toolbarItems: [
+        ['heading','bold','italic','strike'],
+        ['hr','quote'],
+        ['ul','ol','task'],
+        ['link','code','codeblock','table'],
+        ['image'],
+      ],
+      initialValue: descriptionInput.value || ''
+    });
+    const form = document.querySelector('form[action*="clients/create"]') || document.querySelector('form');
+    form && form.addEventListener('submit', function(){
+      if (mdEditor && descriptionInput) {
+        try { descriptionInput.value = mdEditor.getMarkdown(); } catch(_) {}
+      }
+    });
+  }
+});
+</script>

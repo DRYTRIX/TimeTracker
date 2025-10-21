@@ -28,7 +28,13 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">Filter Tasks</h2>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Filter Tasks</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+        </button>
+    </div>
+    <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-filter-form>
         <div class="lg:col-span-1">
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
@@ -81,6 +87,7 @@
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Filter</button>
         </div>
     </form>
+    </div>
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
@@ -170,4 +177,41 @@
 </div>
 {% endblock %}
 
-{% block content_after %}{% endblock %}
+{% block scripts_extra %}
+<style>
+.filter-collapsed { display: none !important; }
+.filter-toggle-transition { transition: all 0.3s ease-in-out; }
+</style>
+<script>
+function toggleFilterVisibility() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    if (filterBody.classList.contains('filter-collapsed')) {
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.className = 'fas fa-chevron-up';
+        toggleButton.title = '{{ _('Hide Filters') }}';
+        localStorage.setItem('taskListFiltersVisible', 'true');
+    } else {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.className = 'fas fa-chevron-down';
+        toggleButton.title = '{{ _('Show Filters') }}';
+        localStorage.setItem('taskListFiltersVisible', 'false');
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    const filtersVisible = localStorage.getItem('taskListFiltersVisible');
+    if (filtersVisible === 'false') {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.className = 'fas fa-chevron-down';
+        toggleButton.title = '{{ _('Show Filters') }}';
+    }
+    setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
+});
+</script>
+{% endblock %}

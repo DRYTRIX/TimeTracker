@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import confirm_dialog %}
 
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -7,7 +8,16 @@
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.client.name }}</p>
     </div>
     {% if current_user.is_admin %}
-    <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Project</a>
+    <div class="flex gap-2">
+        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Project</a>
+        <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
+                onclick="document.getElementById('confirmDeleteProject-{{ project.id }}').classList.remove('hidden')">
+            {{ _('Delete Project') }}
+        </button>
+        <form id="confirmDeleteProject-{{ project.id }}-form" method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="hidden">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+    </div>
     {% endif %}
 </div>
 
@@ -19,7 +29,7 @@
             <div class="space-y-4">
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Description</h3>
-                    <p>{{ project.description or 'No description provided.' }}</p>
+                    <div class="prose prose-sm dark:prose-invert max-w-none">{{ (project.description or 'No description provided.') | markdown | safe }}</div>
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Status</h3>
@@ -110,6 +120,16 @@
         </div>
     </div>
 </div>
+{% if current_user.is_admin %}
+{{ confirm_dialog(
+    'confirmDeleteProject-' ~ project.id,
+    'Delete Project',
+    'Are you sure you want to delete this project? This action cannot be undone.',
+    'Delete',
+    'Cancel',
+    'danger'
+) }}
+{% endif %}
 {% endblock %}
 
 {% block scripts_extra %}{% endblock %}

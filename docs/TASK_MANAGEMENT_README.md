@@ -8,6 +8,14 @@ The Task Management feature allows you to break down projects into manageable ta
 
 ### Core Functionality
 - **Task Creation**: Create tasks within projects with names, descriptions, and priorities
+### Markdown Support
+
+Task and project descriptions support Markdown formatting with a rich editor:
+
+- Editing: Task create/edit and Project create/edit pages include a Markdown editor with dark-mode and image uploads
+- Rendering: View pages render Markdown via the `markdown` Jinja filter (`app/utils/template_filters.py`), sanitized with Bleach
+- Supported: headings, emphasis, lists, links, code blocks, tables, images
+
 - **Status Tracking**: Monitor task progress through different states (To Do, In Progress, Review, Done)
 - **Priority Management**: Set and track task priorities (Low, Medium, High, Urgent)
 - **Time Estimation**: Estimate and track actual time for tasks
@@ -71,6 +79,21 @@ Task Management migration check completed
 - **My Tasks**: Tasks assigned to or created by the current user
 - **Project Tasks**: Tasks within a specific project
 - **Overdue Tasks**: Admin view of all overdue tasks
+
+### Filters UI
+- The **All Tasks** page includes a filter panel that is **collapsible**.
+- Use the chevron button near "Filter Tasks" to show/hide the filters.
+- Your preference is **remembered** using `localStorage` so the panel stays collapsed or expanded across visits.
+
+### Inline Client Creation (Quality of Life)
+
+When creating a new project on `Projects → Create`, you can now create a new client without losing your filled-in project data:
+
+- Click "Create new client" under the Client dropdown to open a modal
+- Fill in the minimal client details and submit
+- The newly created client is selected automatically and the default hourly rate is prefilled if available
+
+This flow uses an AJAX request to `POST /clients/create` and updates the client select dynamically, preserving the current project form state.
 
 ## Database Schema
 

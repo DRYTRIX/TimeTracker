@@ -639,3 +639,87 @@
     top: 0;
 }
 
+/* ============================================
+   Markdown content styling (fallback to match app)
+   Applies when Tailwind Typography is not available
+   ============================================ */
+.prose, .prose-sm {
+    color: #2D3748;
+    line-height: 1.7;
+}
+.dark .prose, .dark .prose-sm { color: #E2E8F0; }
+.prose h1, .prose h2, .prose h3, .prose-sm h1, .prose-sm h2, .prose-sm h3 {
+    color: inherit;
+    font-weight: 700;
+    margin: 0.75rem 0 0.5rem;
+}
+.prose h4, .prose h5, .prose h6, .prose-sm h4, .prose-sm h5, .prose-sm h6 {
+    color: inherit;
+    font-weight: 600;
+    margin: 0.75rem 0 0.5rem;
+}
+.prose p, .prose-sm p { margin: 0.5rem 0; }
+.prose a, .prose-sm a { color: #3B82F6; text-decoration: underline; }
+.dark .prose a, .dark .prose-sm a { color: #60A5FA; }
+.prose ul, .prose ol, .prose-sm ul, .prose-sm ol { padding-left: 1.25rem; margin: 0.5rem 0; }
+.prose li, .prose-sm li { margin: 0.25rem 0; }
+.prose code, .prose-sm code {
+    background: #F7F9FB;
+    color: #1F2937;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+}
+.dark .prose code, .dark .prose-sm code { background: #1F2937; color: #E5E7EB; }
+.prose pre, .prose-sm pre {
+    background: #0B1220;
+    color: #E5E7EB;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+.dark .prose pre, .dark .prose-sm pre { background: #0B1220; }
+.prose blockquote, .prose-sm blockquote {
+    border-left: 4px solid #3B82F6;
+    padding-left: 0.75rem;
+    margin: 0.75rem 0;
+    color: #475569;
+}
+.dark .prose blockquote, .dark .prose-sm blockquote { color: #94A3B8; }
+.prose table, .prose-sm table { width: 100%; border-collapse: collapse; }
+.prose table th, .prose table td, .prose-sm table th, .prose-sm table td {
+    border: 1px solid #E2E8F0; padding: 0.5rem 0.75rem;
+}
+.dark .prose table th, .dark .prose table td, .dark .prose-sm table th, .dark .prose-sm table td { border-color: #4A5568; }
+.prose img, .prose-sm img { max-width: 100%; border-radius: 8px; }
+
+/* ============================================
+   Toast UI Editor – theme bridging to match app
+   ============================================ */
+.toastui-editor-defaultUI {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+}
+.dark .toastui-editor-defaultUI {
+    background: #2D3748;
+    border-color: #4A5568;
+}
+.toastui-editor-defaultUI .toastui-editor-toolbar {
+    background: transparent;
+    border-bottom-color: #E2E8F0;
+}
+.dark .toastui-editor-defaultUI .toastui-editor-toolbar { border-bottom-color: #4A5568; }
+.toastui-editor-defaultUI .ProseMirror,
+.toastui-editor-contents {
+    color: #2D3748;
+}
+.dark .toastui-editor-defaultUI .ProseMirror,
+.dark .toastui-editor-contents {
+    color: #E2E8F0;
+}
+.toastui-editor-contents a { color: #3B82F6; }
+.dark .toastui-editor-contents a { color: #60A5FA; }
+.toastui-editor-contents pre { background: #0B1220; color: #E5E7EB; border-radius: 8px; }
+.toastui-editor-contents code { background: #F7F9FB; color: #1F2937; padding: 0.1rem 0.3rem; border-radius: 4px; }
+.dark .toastui-editor-contents code { background: #1F2937; color: #E5E7EB; }
+

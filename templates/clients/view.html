@@ -101,7 +101,7 @@
                     {% if client.description %}
                     <div class="mb-3">
                         <div class="section-title text-primary mb-2">{{ _('Description') }}</div>
-                        <div class="content-box">{{ client.description }}</div>
+                        <div class="content-box prose dark:prose-invert max-w-none">{{ client.description | markdown | safe }}</div>
                     </div>
                     {% endif %}
                     {% if client.contact_person %}

@@ -16,8 +16,8 @@
     <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Task') }}</a>
     </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div class="xl:col-span-2">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
     <!-- Header -->
     <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg mb-4">
@@ -33,8 +33,8 @@
     </div>
 
     <!-- Edit Task Form -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="xl:col-span-2">
             <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
                 <div class="border-b border-border-light dark:border-border-dark p-4">
                     <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-edit text-yellow-600"></i>{{ _('Task Information') }}</h6>
@@ -58,7 +58,7 @@
                                 <span><i class="fas fa-align-left mr-2 text-primary"></i>{{ _('Description') }}</span>
                             </label>
                             <div class="markdown-editor-wrapper">
-                                <textarea class="form-input d-none" id="description" name="description" rows="12" placeholder="{{ _('Provide detailed information about the task, requirements, and any specific instructions...') }}">{{ task.description or '' }}</textarea>
+                                <textarea class="form-input hidden" id="description" name="description" rows="12" placeholder="{{ _('Provide detailed information about the task, requirements, and any specific instructions...') }}">{{ task.description or '' }}</textarea>
                                 <div id="description_editor"></div>
                             </div>
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Add context, requirements, or specific instructions for the task') }}</p>
@@ -149,7 +149,7 @@
         </div>
 
         <!-- Sidebar -->
-        <div class="lg:col-span-1 space-y-4">
+        <div class="xl:col-span-1 space-y-4">
             <!-- Progress -->
             <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
                 <div class="border-b border-border-light dark:border-border-dark p-4">

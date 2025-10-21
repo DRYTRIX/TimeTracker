@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
@@ -42,7 +42,22 @@ def list_clients():
 @login_required
 def create_client():
     """Create a new client"""
+    # Detect AJAX/JSON request
+    try:
+        wants_json = (
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or request.is_json
+            or request.accept_mimetypes['application/json'] >= request.accept_mimetypes['text/html']
+        )
+    except Exception:
+        wants_json = False
+
     if not current_user.is_admin:
+        if wants_json:
+            return jsonify({
+                'error': 'forbidden',
+                'message': _('Only administrators can create clients')
+            }), 403
         flash(_('Only administrators can create clients'), 'error')
         return redirect(url_for('clients.list_clients'))
     
@@ -66,6 +81,8 @@ def create_client():
         
         # Validate required fields
         if not name:
+            if wants_json:
+                return jsonify({'error': 'validation_error', 'messages': ['Client name is required']}), 400
             flash('Client name is required', 'error')
             try:
                 current_app.logger.warning("Validation failed: missing client name")
@@ -75,6 +92,8 @@ def create_client():
         
         # Check if client name already exists
         if Client.query.filter_by(name=name).first():
+            if wants_json:
+                return jsonify({'error': 'validation_error', 'messages': ['A client with this name already exists']}), 400
             flash('A client with this name already exists', 'error')
             try:
                 current_app.logger.warning("Validation failed: duplicate client name '%s'", name)
@@ -86,6 +105,8 @@ def create_client():
         try:
             default_hourly_rate = Decimal(default_hourly_rate) if default_hourly_rate else None
         except ValueError:
+            if wants_json:
+                return jsonify({'error': 'validation_error', 'messages': ['Invalid hourly rate format']}), 400
             flash('Invalid hourly rate format', 'error')
             try:
                 current_app.logger.warning("Validation failed: invalid hourly rate '%s'", default_hourly_rate)
@@ -106,6 +127,8 @@ def create_client():
         
         db.session.add(client)
         if not safe_commit('create_client', {'name': name}):
+            if wants_json:
+                return jsonify({'error': 'db_error', 'message': 'Could not create client due to a database error.'}), 500
             flash('Could not create client due to a database error. Please check server logs.', 'error')
             return render_template('clients/create.html')
         
@@ -113,6 +136,13 @@ def create_client():
         app_module.log_event("client.created", user_id=current_user.id, client_id=client.id)
         app_module.track_event(current_user.id, "client.created", {"client_id": client.id})
         
+        if wants_json:
+            return jsonify({
+                'id': client.id,
+                'name': client.name,
+                'default_hourly_rate': float(client.default_hourly_rate) if client.default_hourly_rate is not None else None
+            }), 201
+
         flash(f'Client "{name}" created successfully', 'success')
         return redirect(url_for('clients.view_client', client_id=client.id))
     

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import confirm_dialog %}
 
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -7,7 +8,16 @@
         <p class="text-text-muted-light dark:text-text-muted-dark">Task details and history.</p>
     </div>
     {% if current_user.is_admin or task.created_by == current_user.id %}
-    <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Task</a>
+    <div class="flex gap-2">
+        <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Task</a>
+        <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
+                onclick="document.getElementById('confirmDeleteTask-{{ task.id }}').classList.remove('hidden')">
+            {{ _('Delete Task') }}
+        </button>
+        <form id="confirmDeleteTask-{{ task.id }}-form" method="POST" action="{{ url_for('tasks.delete_task', task_id=task.id) }}" class="hidden">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+    </div>
     {% endif %}
 </div>
 
@@ -17,7 +27,7 @@
         {% if task.description %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h2 class="text-lg font-semibold mb-4">Description</h2>
-            <p>{{ task.description }}</p>
+            <div class="prose prose-sm dark:prose-invert max-w-none">{{ task.description | markdown | safe }}</div>
         </div>
         {% endif %}
 
@@ -83,4 +93,14 @@
         </div>
     </div>
 </div>
+{% if current_user.is_admin or task.created_by == current_user.id %}
+{{ confirm_dialog(
+    'confirmDeleteTask-' ~ task.id,
+    'Delete Task',
+    'Are you sure you want to delete this task? This action cannot be undone.',
+    'Delete',
+    'Cancel',
+    'danger'
+) }}
+{% endif %}
 {% endblock %}
