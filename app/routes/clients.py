@@ -42,12 +42,23 @@ def list_clients():
 @login_required
 def create_client():
     """Create a new client"""
-    # Detect AJAX/JSON request
+    # Detect AJAX/JSON request while preserving classic form behavior
+    try:
+        # Consider classic HTML forms regardless of Accept header
+        is_classic_form = request.mimetype in (
+            'application/x-www-form-urlencoded',
+            'multipart/form-data'
+        )
+    except Exception:
+        is_classic_form = False
+
     try:
         wants_json = (
             request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             or request.is_json
-            or request.accept_mimetypes['application/json'] >= request.accept_mimetypes['text/html']
+            or (not is_classic_form and (
+                request.accept_mimetypes['application/json'] > request.accept_mimetypes['text/html']
+            ))
         )
     except Exception:
         wants_json = False
