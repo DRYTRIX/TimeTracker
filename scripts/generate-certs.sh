@@ -36,7 +36,14 @@ echo ""
 # Install openssl if not present
 if ! command -v openssl >/dev/null 2>&1; then
     echo "Installing OpenSSL..."
-    apk add --no-cache openssl
+    if command -v apk >/dev/null 2>&1; then
+        apk add --no-cache openssl
+    elif command -v apt-get >/dev/null 2>&1; then
+        apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+    else
+        echo "⚠️ Could not detect package manager to install openssl. Please install it manually."
+        exit 1
+    fi
 fi
 
 # Detect IP address (try to get container host IP)

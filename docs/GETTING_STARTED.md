@@ -29,7 +29,13 @@ cd TimeTracker
 docker-compose up -d
 
 # 3. Access the application
-# Open your browser to: http://localhost:8080
+# Open your browser to: https://localhost
+# (Self‑signed certificate; your browser will show a warning the first time.)
+
+# Prefer plain HTTP on port 8080 instead?
+# Use the example compose that publishes the app directly:
+# docker-compose -f docker-compose.example.yml up -d
+# Then open: http://localhost:8080
 ```
 
 **That's it!** TimeTracker is now running with PostgreSQL.
