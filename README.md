@@ -149,9 +149,14 @@ cd TimeTracker
 cp env.example .env
 # Edit .env and set a strong SECRET_KEY (python -c "import secrets; print(secrets.token_hex(32))")
 
-# Start with Docker Compose
-docker-compose -f docker-compose.example.yml up -d
+# Start with Docker Compose (HTTPS via nginx)
+docker-compose up -d
 
+# Access at https://localhost (self-signed cert)
+
+# Prefer plain HTTP on port 8080?
+# Use the example compose that publishes the app directly:
+# docker-compose -f docker-compose.example.yml up -d
 # Access at http://localhost:8080
 ```
 

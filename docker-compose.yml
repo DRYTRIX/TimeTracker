@@ -66,7 +66,7 @@ services:
       - CSRF_COOKIE_SAMESITE=${CSRF_COOKIE_SAMESITE:-Lax}
       - CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-XSRF-TOKEN}
       - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-https}
-      - WTF_CSRF_TRUSTED_ORIGINS=$(WTF_CSRF_TRUSTED_ORIGINS:-https://localhost)
+      - WTF_CSRF_TRUSTED_ORIGINS=${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
       - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
       - LOG_FILE=/app/logs/timetracker.log
       # Analytics & Monitoring (optional)
