@@ -119,7 +119,7 @@ jobs:
       
       - name: Run complete test suite
         env:
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
@@ -315,6 +315,19 @@ jobs:
             type=semver,pattern={{major}},value=${{ needs.determine-version.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=stable,enable=${{ needs.determine-version.outputs.is_prerelease == 'false' }}
+
+      - name: Inject analytics configuration
+        env:
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          echo "Injecting analytics configuration into build..."
+          sed -i "s|%%POSTHOG_API_KEY_PLACEHOLDER%%|${POSTHOG_API_KEY}|g" app/config/analytics_defaults.py
+          sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN}|g" app/config/analytics_defaults.py
+          if grep -q "%%POSTHOG_API_KEY_PLACEHOLDER%%" app/config/analytics_defaults.py; then
+            echo "❌ ERROR: PostHog API key placeholder not replaced!"; exit 1;
+          fi
+          echo "✅ Analytics configuration injected"
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
