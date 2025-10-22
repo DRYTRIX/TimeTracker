@@ -16,30 +16,27 @@
     <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Task') }}</a>
     </div>
 
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-    <div class="xl:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <!-- Header -->
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg mb-4">
-        <div class="flex items-center">
-            <div class="flex items-center justify-center mr-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30" style="width:48px;height:48px;">
-                <i class="fas fa-edit text-yellow-600"></i>
-            </div>
-            <div>
-                <h2 class="text-xl font-semibold">{{ _('Edit Task') }}</h2>
-                <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Update task details and settings for "%(task)s"', task=task.name) }}</p>
-            </div>
+<!-- Header -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <div class="flex items-center">
+        <div class="flex items-center justify-center mr-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30" style="width:48px;height:48px;">
+            <i class="fas fa-edit text-yellow-600"></i>
+        </div>
+        <div>
+            <h2 class="text-xl font-semibold">{{ _('Edit Task') }}</h2>
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Update task details and settings for "%(task)s"', task=task.name) }}</p>
         </div>
     </div>
+</div>
 
-    <!-- Edit Task Form -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div class="xl:col-span-2">
-            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
-                <div class="border-b border-border-light dark:border-border-dark p-4">
-                    <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-edit text-yellow-600"></i>{{ _('Task Information') }}</h6>
-                </div>
-                <div class="p-4">
+<!-- Edit Task Form -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="lg:col-span-1">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
+            <div class="border-b border-border-light dark:border-border-dark p-4">
+                <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-edit text-yellow-600"></i>{{ _('Task Information') }}</h6>
+            </div>
+            <div class="p-4">
                     <form method="POST" id="editTaskForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Task Name -->
@@ -143,13 +140,13 @@
                             <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
                             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Update Task') }}</button>
                         </div>
-                    </form>
-                </div>
+                </form>
             </div>
         </div>
+    </div>
 
-        <!-- Sidebar -->
-        <div class="xl:col-span-1 space-y-4">
+    <!-- Sidebar -->
+    <div class="lg:col-span-1 space-y-4">
             <!-- Progress -->
             <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
                 <div class="border-b border-border-light dark:border-border-dark p-4">
@@ -208,7 +205,7 @@
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Currently Assigned To') }}</small>
                         <div class="flex items-center">
-                            <div class="rounded-full flex items-center justify-content-center mr-2 bg-cyan-500/10" style="width: 24px; height:24px;">
+                            <div class="rounded-full flex items-center justify-center mr-2 bg-cyan-500/10" style="width: 24px; height:24px;">
                                 <i class="fas fa-user text-cyan-600 fa-xs"></i>
                             </div>
                             <span>{{ task.assigned_user.display_name }}</span>
@@ -220,7 +217,7 @@
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Current Due Date') }}</small>
                         <div class="flex items-center">
-                            <div class="rounded-full flex items-center justify-content-center mr-2 {% if task.is_overdue %}bg-rose-500/10{% else %}bg-slate-500/10{% endif %}" style="width: 24px; height: 24px;">
+                            <div class="rounded-full flex items-center justify-center mr-2 {% if task.is_overdue %}bg-rose-500/10{% else %}bg-slate-500/10{% endif %}" style="width: 24px; height: 24px;">
                                 <i class="fas fa-calendar {% if task.is_overdue %}text-rose-600{% else %}text-slate-500{% endif %} fa-xs"></i>
                             </div>
                             <span class="{% if task.is_overdue %}text-rose-600 font-semibold{% endif %}">
@@ -234,7 +231,7 @@
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Current Estimate') }}</small>
                         <div class="flex items-center">
-                            <div class="rounded-full flex items-center justify-content-center mr-2 bg-amber-500/10" style="width: 24px; height: 24px;">
+                            <div class="rounded-full flex items-center justify-center mr-2 bg-amber-500/10" style="width: 24px; height: 24px;">
                                 <i class="fas fa-clock text-amber-600 fa-xs"></i>
                             </div>
                             <span>{{ task.estimated_hours }} {{ _('hours') }}</span>
@@ -246,7 +243,7 @@
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Actual Hours') }}</small>
                         <div class="flex items-center">
-                            <div class="rounded-full flex items-center justify-content-center mr-2 bg-emerald-500/10" style="width: 24px; height: 24px;">
+                            <div class="rounded-full flex items-center justify-center mr-2 bg-emerald-500/10" style="width: 24px; height: 24px;">
                                 <i class="fas fa-stopwatch text-emerald-600 fa-xs"></i>
                             </div>
                             <span>{{ task.total_hours }} {{ _('hours') }}</span>

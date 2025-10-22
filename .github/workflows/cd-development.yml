@@ -3,6 +3,22 @@ name: CD - Development Build
 on:
   push:
     branches: [ develop ]
+    # Only trigger builds when actual code changes
+    # This uses explicit paths to skip documentation, markdown, and other non-code changes
+    paths:
+      - 'app/**'
+      - 'migrations/**'
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'Dockerfile'
+      - 'docker-compose*.yml'
+      - 'package*.json'
+      - 'tailwind.config.js'
+      - 'postcss.config.js'
+      - '.github/workflows/cd-development.yml'
+      - 'babel.cfg'
+      - 'pytest.ini'
+      - 'Makefile'
   workflow_dispatch:
     inputs:
       force_build:
@@ -10,6 +26,17 @@ on:
         required: false
         type: boolean
         default: false
+      create_release:
+        description: 'Create GitHub release (default: false for regular builds)'
+        required: false
+        type: boolean
+        default: false
+
+# Concurrency control: cancel in-progress builds when new commits are pushed
+# This prevents wasting resources on outdated builds
+concurrency:
+  group: dev-build-${{ github.ref }}
+  cancel-in-progress: true
 
 # Required permissions for creating releases and pushing images
 permissions: write-all
@@ -204,6 +231,9 @@ jobs:
           path: deployment-dev.yml
       
       - name: Create GitHub Release (Development)
+        # Only create releases when explicitly requested via workflow_dispatch
+        # This prevents cluttering the releases page with every dev build
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true'
         continue-on-error: true
         uses: actions/github-script@v7
         with:
@@ -239,7 +269,7 @@ jobs:
                 ${context.payload.head_commit?.message || 'See commit history'}
                 
                 ---
-                *This is an automated development build. Use at your own risk.*
+                *This is a manually triggered development build.*
                 `,
                 draft: false,
                 prerelease: true
@@ -286,6 +316,7 @@ jobs:
           echo "**Branch:** develop" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Build:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Results" >> $GITHUB_STEP_SUMMARY
           echo "- Tests: ${{ needs.quick-tests.result }}" >> $GITHUB_STEP_SUMMARY
@@ -297,5 +328,17 @@ jobs:
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Note about release creation
+            if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.create_release }}" == "true" ]; then
+              echo "📦 GitHub release created" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "ℹ️ No GitHub release created (use workflow_dispatch with create_release=true to create one)" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "💡 **Tip:** This workflow only runs for code changes. Documentation and test-only changes are skipped." >> $GITHUB_STEP_SUMMARY
 

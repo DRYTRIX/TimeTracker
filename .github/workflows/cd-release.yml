@@ -1,5 +1,19 @@
 name: CD - Release Build
 
+# This workflow builds and publishes official releases
+# 
+# Testing Strategy:
+# - Full test suite runs on PRs via ci-comprehensive.yml
+# - This workflow focuses on building and publishing
+# - Security audit still runs to catch any last-minute issues
+# - Tests can optionally be run via workflow_dispatch for manual releases
+#
+# Workflow is triggered by:
+# - Push to main/master (after PR merge)
+# - Git tags (v*.*.*)
+# - Release events
+# - Manual workflow_dispatch
+
 on:
   push:
     branches: [ main, master ]
@@ -13,10 +27,10 @@ on:
         required: true
         type: string
       skip_tests:
-        description: 'Skip tests (not recommended)'
+        description: 'Skip tests (tests already ran on PR, only for workflow_dispatch)'
         required: false
         type: boolean
-        default: false
+        default: true
 
 env:
   REGISTRY: ghcr.io
@@ -25,12 +39,14 @@ env:
 
 jobs:
   # ============================================================================
-  # Full Test Suite
+  # Full Test Suite (Optional - tests already ran on PR)
   # ============================================================================
   full-test-suite:
-    name: Full Test Suite
+    name: Full Test Suite (Optional)
     runs-on: ubuntu-latest
-    if: github.event.inputs.skip_tests != 'true'
+    # Skip by default since tests already ran on PR
+    # Only run if explicitly requested via workflow_dispatch
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_tests != 'true'
     timeout-minutes: 30
     
     services:
@@ -162,7 +178,7 @@ jobs:
           check_name: Release Test Results
 
   # ============================================================================
-  # Security Audit
+  # Security Audit (always runs for releases)
   # ============================================================================
   security-audit:
     name: Security Audit
@@ -288,8 +304,9 @@ jobs:
   build-and-push:
     name: Build and Push Release Image
     runs-on: ubuntu-latest
-    needs: [full-test-suite, security-audit, determine-version]
-    if: always() && (needs.full-test-suite.result == 'success' || needs.full-test-suite.result == 'skipped')
+    needs: [security-audit, determine-version]
+    # Note: full-test-suite is optional, so we don't depend on it
+    # Tests already ran on PR before merge
     permissions:
       contents: read
       packages: write
@@ -332,12 +349,40 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           echo "Injecting analytics configuration into build..."
+          
+          # Verify secrets are available
+          if [ -z "$POSTHOG_API_KEY" ]; then
+            echo "❌ ERROR: POSTHOG_API_KEY secret is not set!"
+            echo "Please set it in: Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          
+          if [ -z "$SENTRY_DSN" ]; then
+            echo "⚠️ WARNING: SENTRY_DSN secret is not set (optional)"
+          fi
+          
+          # Perform replacement
           sed -i "s|%%POSTHOG_API_KEY_PLACEHOLDER%%|${POSTHOG_API_KEY}|g" app/config/analytics_defaults.py
           sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN}|g" app/config/analytics_defaults.py
+          
+          # Verify placeholders were replaced
           if grep -q "%%POSTHOG_API_KEY_PLACEHOLDER%%" app/config/analytics_defaults.py; then
             echo "❌ ERROR: PostHog API key placeholder not replaced!"; exit 1;
           fi
-          echo "✅ Analytics configuration injected"
+          
+          if grep -q "%%SENTRY_DSN_PLACEHOLDER%%" app/config/analytics_defaults.py; then
+            echo "❌ ERROR: Sentry DSN placeholder not replaced!"; exit 1;
+          fi
+          
+          # Verify the actual key format (should start with 'phc_')
+          if ! grep -q "POSTHOG_API_KEY_DEFAULT = \"phc_" app/config/analytics_defaults.py; then
+            echo "❌ ERROR: PostHog API key doesn't appear to be in correct format (should start with 'phc_')"
+            exit 1
+          fi
+          
+          echo "✅ Analytics configuration injected and verified"
+          echo "✅ PostHog API key: phc_***${POSTHOG_API_KEY: -4}"
+          echo "✅ Sentry DSN: ${SENTRY_DSN:0:20}..." 
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -574,7 +619,7 @@ jobs:
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [full-test-suite, security-audit, build-and-push, determine-version, create-release]
+    needs: [security-audit, build-and-push, determine-version, create-release]
     if: always()
     
     steps:
@@ -583,10 +628,11 @@ jobs:
           echo "## 🚀 Release ${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Status" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Tests: ${{ needs.full-test-suite.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Security: ${{ needs.security-audit.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ *Full test suite already ran on PR before merge*" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🐳 Docker Images" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
