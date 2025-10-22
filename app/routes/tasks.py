@@ -506,6 +506,71 @@ def delete_task(task_id):
     flash(f'Task "{task_name}" deleted successfully', 'success')
     return redirect(url_for('tasks.list_tasks'))
 
+@tasks_bp.route('/tasks/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_tasks():
+    """Delete multiple tasks at once"""
+    task_ids = request.form.getlist('task_ids[]')
+    
+    if not task_ids:
+        flash('No tasks selected for deletion', 'warning')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for task_id_str in task_ids:
+        try:
+            task_id = int(task_id_str)
+            task = Task.query.get(task_id)
+            
+            if not task:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and task.created_by != current_user.id:
+                skipped_count += 1
+                errors.append(f"'{task.name}': No permission")
+                continue
+            
+            # Check for time entries
+            if task.time_entries.count() > 0:
+                skipped_count += 1
+                errors.append(f"'{task.name}': Has time entries")
+                continue
+            
+            # Delete the task
+            task_id_for_log = task.id
+            project_id_for_log = task.project_id
+            task_name = task.name
+            
+            db.session.delete(task)
+            deleted_count += 1
+            
+            # Log the deletion
+            app_module.log_event("task.deleted", user_id=current_user.id, task_id=task_id_for_log, project_id=project_id_for_log)
+            app_module.track_event(current_user.id, "task.deleted", {"task_id": task_id_for_log, "project_id": project_id_for_log})
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {task_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit('bulk_delete_tasks', {'count': deleted_count}):
+            flash('Could not delete tasks due to a database error. Please check server logs.', 'error')
+            return redirect(url_for('tasks.list_tasks'))
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(f'Successfully deleted {deleted_count} task{"s" if deleted_count != 1 else ""}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""}: {"; ".join(errors[:3])}', 'warning')
+    
+    return redirect(url_for('tasks.list_tasks'))
+
 @tasks_bp.route('/tasks/my-tasks')
 @login_required
 def my_tasks():

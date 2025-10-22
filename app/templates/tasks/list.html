@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, stat_card, badge %}
+{% from "components/ui.html" import page_header, stat_card, badge, confirm_dialog %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -99,14 +99,17 @@
             <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Export to CSV">
                 <i class="fas fa-download mr-1"></i> Export
             </button>
-            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Bulk actions">
-                <i class="fas fa-check-square mr-1"></i> Bulk
+            <button type="button" id="bulkDeleteBtn" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors hidden" title="Delete selected tasks" onclick="showBulkDeleteConfirm()">
+                <i class="fas fa-trash mr-1"></i> Delete Selected (<span id="selectedCount">0</span>)
             </button>
         </div>
     </div>
-    <table class="table table-zebra w-full text-left" data-enhanced>
+    <table class="table table-zebra w-full text-left">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
+                <th class="p-4 w-12">
+                    <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllTasks()">
+                </th>
                 <th class="p-4" data-sortable>Name</th>
                 <th class="p-4" data-sortable>Project</th>
                 <th class="p-4" data-sortable>Priority</th>
@@ -118,7 +121,10 @@
         </thead>
         <tbody>
             {% for task in tasks %}
-            <tr class="border-b border-border-light dark:border-border-dark">
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                <td class="p-4">
+                    <input type="checkbox" class="task-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ task.id }}" onchange="updateBulkDeleteButton()">
+                </td>
                 <td class="p-4">{{ task.name }}</td>
                 <td class="p-4">{{ task.project.name }}</td>
                 <td class="p-4">
@@ -175,6 +181,22 @@
         </tbody>
     </table>
 </div>
+
+<!-- Bulk Delete Form (hidden) -->
+<form id="confirmBulkDelete-form" method="POST" action="{{ url_for('tasks.bulk_delete_tasks') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<!-- Bulk Delete Confirmation Dialog -->
+{{ confirm_dialog(
+    'confirmBulkDelete',
+    'Delete Selected Tasks',
+    'Are you sure you want to delete the selected tasks? This action cannot be undone. Tasks with existing time entries will be skipped.',
+    'Delete',
+    'Cancel',
+    'danger'
+) }}
+
 {% endblock %}
 
 {% block scripts_extra %}
@@ -183,6 +205,69 @@
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
 </style>
 <script>
+// Bulk delete functions
+function toggleAllTasks() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.task-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton() {
+    const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+    const count = checkboxes.length;
+    const btn = document.getElementById('bulkDeleteBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (count > 0) {
+        btn.classList.remove('hidden');
+        countSpan.textContent = count;
+    } else {
+        btn.classList.add('hidden');
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.task-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll && allCheckboxes.length > 0) {
+        selectAll.checked = count === allCheckboxes.length;
+        selectAll.indeterminate = count > 0 && count < allCheckboxes.length;
+    }
+}
+
+function showBulkDeleteConfirm() {
+    document.getElementById('confirmBulkDelete').classList.remove('hidden');
+}
+
+// Handle bulk delete confirmation
+document.addEventListener('DOMContentLoaded', function() {
+    // Intercept the form submission to add task IDs
+    const form = document.getElementById('confirmBulkDelete-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Prevent default to add task IDs first
+            e.preventDefault();
+            
+            const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+            
+            // Clear existing hidden inputs
+            form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
+            
+            // Add selected task IDs to form
+            checkboxes.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'task_ids[]';
+                input.value = cb.value;
+                form.appendChild(input);
+            });
+            
+            // Now submit the form
+            form.submit();
+        });
+    }
+});
+
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');
