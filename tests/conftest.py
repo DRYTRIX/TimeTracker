@@ -84,63 +84,61 @@ def db_session(app):
 @pytest.fixture
 def user(app):
     """Create a regular test user."""
-    with app.app_context():
-        # Idempotent: return existing test user if already present (PostgreSQL CI)
-        try:
-            existing = User.query.filter_by(username='testuser').first()
-            if existing:
-                if not existing.is_active:
-                    existing.is_active = True
-                    db.session.commit()
-                db.session.refresh(existing)
-                return existing
-        except Exception:
-            # Tables don't exist yet or other DB error, proceed to create user
-            pass
+    # Idempotent: return existing test user if already present (PostgreSQL CI)
+    try:
+        existing = User.query.filter_by(username='testuser').first()
+        if existing:
+            if not existing.is_active:
+                existing.is_active = True
+                db.session.commit()
+            db.session.refresh(existing)
+            return existing
+    except Exception:
+        # Tables don't exist yet or other DB error, proceed to create user
+        pass
 
-        user = User(
-            username='testuser',
-            role='user',
-            email='testuser@example.com'
-        )
-        user.is_active = True  # Set after creation
-        db.session.add(user)
-        db.session.commit()
-        
-        # Refresh to ensure all relationships are loaded
-        db.session.refresh(user)
-        return user
+    user = User(
+        username='testuser',
+        role='user',
+        email='testuser@example.com'
+    )
+    user.is_active = True  # Set after creation
+    db.session.add(user)
+    db.session.commit()
+    
+    # Refresh to ensure all relationships are loaded
+    db.session.refresh(user)
+    return user
 
 
 @pytest.fixture
 def admin_user(app):
     """Create an admin test user."""
-    with app.app_context():
-        # Idempotent: return existing admin user if already present (PostgreSQL CI)
-        try:
-            existing = User.query.filter_by(username='admin').first()
-            if existing:
-                if existing.role != 'admin':
-                    existing.role = 'admin'
-                    existing.is_active = True
-                    db.session.commit()
-                db.session.refresh(existing)
-                return existing
-        except Exception:
-            # Tables don't exist yet or other DB error, proceed to create admin
-            pass
+    # Idempotent: return existing admin user if already present (PostgreSQL CI)
+    try:
+        existing = User.query.filter_by(username='admin').first()
+        if existing:
+            if existing.role != 'admin':
+                existing.role = 'admin'
+                existing.is_active = True
+                db.session.commit()
+            db.session.refresh(existing)
+            return existing
+    except Exception:
+        # Tables don't exist yet or other DB error, proceed to create admin
+        pass
 
-        admin = User(
-            username='admin',
-            role='admin',
-            email='admin@example.com'
-        )
-        admin.is_active = True  # Set after creation
-        db.session.add(admin)
-        db.session.commit()
-        
-        db.session.refresh(admin)
-        return admin
+    admin = User(
+        username='admin',
+        role='admin',
+        email='admin@example.com'
+    )
+    admin.is_active = True  # Set after creation
+    db.session.add(admin)
+    db.session.commit()
+    
+    db.session.refresh(admin)
+    return admin
 
 
 @pytest.fixture
