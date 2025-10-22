@@ -92,7 +92,6 @@ def user(app):
                 existing.is_active = True
                 db.session.commit()
             db.session.refresh(existing)
-            db.session.add(existing)  # Ensure it remains in the session
             return existing
     except Exception:
         # Tables don't exist yet or other DB error, rollback and proceed to create user
@@ -109,7 +108,6 @@ def user(app):
     
     # Refresh to ensure all relationships are loaded and object stays in session
     db.session.refresh(user)
-    db.session.add(user)  # Ensure it remains in the session
     return user
 
 
@@ -125,7 +123,6 @@ def admin_user(app):
                 existing.is_active = True
                 db.session.commit()
             db.session.refresh(existing)
-            db.session.add(existing)  # Ensure it remains in the session
             return existing
     except Exception:
         # Tables don't exist yet or other DB error, rollback and proceed to create admin
@@ -142,7 +139,6 @@ def admin_user(app):
     
     # Refresh to ensure all relationships are loaded and object stays in session
     db.session.refresh(admin)
-    db.session.add(admin)  # Ensure it remains in the session
     return admin
 
 
