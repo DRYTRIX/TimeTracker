@@ -4,7 +4,7 @@ on:
   push:
     branches: [ develop ]
     # Only trigger builds when actual code changes
-    # Skip builds for documentation, markdown, and other non-code changes
+    # This uses explicit paths to skip documentation, markdown, and other non-code changes
     paths:
       - 'app/**'
       - 'migrations/**'
@@ -16,15 +16,9 @@ on:
       - 'tailwind.config.js'
       - 'postcss.config.js'
       - '.github/workflows/cd-development.yml'
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'assets/**'
-      - 'tests/**'
-      - 'scripts/**'
-      - 'README*'
-      - 'LICENSE'
-      - '.gitignore'
+      - 'babel.cfg'
+      - 'pytest.ini'
+      - 'Makefile'
   workflow_dispatch:
     inputs:
       force_build:
