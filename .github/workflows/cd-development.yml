@@ -1,8 +1,8 @@
 name: CD - Development Build
 
 on:
-  push:
-    branches: [ develop ]
+  pull_request:
+    branches: [ 'rc', 'rc/**' ]
     # Only trigger builds when actual code changes
     # This uses explicit paths to skip documentation, markdown, and other non-code changes
     paths:
@@ -251,7 +251,8 @@ jobs:
                 
                 **Version:** ${version}
                 **Commit:** ${context.sha.substring(0, 7)}
-                **Branch:** develop
+                **PR:** #${{ github.event.pull_request.number }}
+                **Target Branch:** ${{ github.base_ref }}
                 **Build:** #${context.runNumber}
                 
                 ### Docker Image
@@ -313,7 +314,8 @@ jobs:
         run: |
           echo "## 🚀 Development Build ${{ steps.status.outputs.status }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** develop" >> $GITHUB_STEP_SUMMARY
+          echo "**Target Branch:** ${{ github.base_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Source Branch:** ${{ github.head_ref }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Build:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
@@ -340,5 +342,5 @@ jobs:
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "💡 **Tip:** This workflow only runs for code changes. Documentation and test-only changes are skipped." >> $GITHUB_STEP_SUMMARY
+          echo "💡 **Tip:** This workflow runs on PRs to RC branches. Documentation and test-only changes are skipped." >> $GITHUB_STEP_SUMMARY
 

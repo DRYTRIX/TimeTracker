@@ -32,8 +32,10 @@ def fix_permissions_aggressive():
     upload_dirs = [
         '/app/app/static/uploads',
         '/app/app/static/uploads/logos',
+        '/app/app/static/uploads/avatars',
         '/app/static/uploads',
-        '/app/static/uploads/logos'
+        '/app/static/uploads/logos',
+        '/app/static/uploads/avatars'
     ]
     
     # Define the static directories

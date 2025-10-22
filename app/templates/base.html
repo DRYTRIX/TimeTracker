@@ -228,7 +228,7 @@
                     <!-- User Profile -->
                     <div class="relative">
                         <button onclick="toggleDropdown('userDropdown')" class="flex items-center" aria-label="{{ _('User menu') }}" aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown">
-                            <img src="{{ url_for('static', filename='images/avatar-default.svg') }}" alt="{{ current_user.display_name }}" class="w-8 h-8 rounded-full">
+                            <img src="{{ (current_user.get_avatar_url() if current_user.is_authenticated else None) or url_for('static', filename='images/avatar-default.svg') }}" alt="{{ current_user.display_name if current_user.is_authenticated else 'User' }}" class="w-8 h-8 rounded-full object-cover">
                             <span class="ml-2 hidden md:inline">{{ current_user.display_name }}</span>
                             <i class="fas fa-chevron-down ml-1 hidden md:inline" aria-hidden="true"></i>
                         </button>

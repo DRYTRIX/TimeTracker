@@ -2,6 +2,7 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
+import os
 
 class User(UserMixin, db.Model):
     """User model for username-based authentication"""
@@ -23,6 +24,7 @@ class User(UserMixin, db.Model):
     preferred_language = db.Column(db.String(8), default=None, nullable=True)  # e.g., 'en', 'de'
     oidc_sub = db.Column(db.String(255), nullable=True)
     oidc_issuer = db.Column(db.String(255), nullable=True)
+    avatar_filename = db.Column(db.String(255), nullable=True)
     
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
@@ -96,5 +98,29 @@ class User(UserMixin, db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'is_active': self.is_active,
-            'total_hours': self.total_hours
+            'total_hours': self.total_hours,
+            'avatar_url': self.get_avatar_url(),
         }
+
+    # Avatar helpers
+    def get_avatar_url(self):
+        """Return the public URL for the user's avatar, or None if not set"""
+        if self.avatar_filename:
+            return f"/uploads/avatars/{self.avatar_filename}"
+        return None
+
+    def get_avatar_path(self):
+        """Return absolute filesystem path to the user's avatar, or None if not set"""
+        if not self.avatar_filename:
+            return None
+        try:
+            from flask import current_app
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'avatars')
+            return os.path.join(upload_folder, self.avatar_filename)
+        except Exception:
+            return os.path.join('app', 'static', 'uploads', 'avatars', self.avatar_filename)
+
+    def has_avatar(self):
+        """Check whether the user's avatar file exists on disk"""
+        path = self.get_avatar_path()
+        return bool(path and os.path.exists(path))

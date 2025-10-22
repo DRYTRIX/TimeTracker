@@ -9,9 +9,23 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
+            <div class="flex items-center gap-4">
+                <img id="avatar-preview" src="{{ current_user.get_avatar_url() or url_for('static', filename='images/avatar-default.svg') }}" alt="{{ current_user.display_name }}" class="w-16 h-16 rounded-full object-cover bg-gray-200 dark:bg-gray-700">
+                <div class="flex-1">
+                    <label for="avatar" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Profile picture</label>
+                    <input type="file" name="avatar" id="avatar" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" class="mt-1 block w-full text-sm text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90" onchange="previewAvatar(this)">
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">PNG, JPG, GIF, or WEBP up to 5MB.</p>
+                    {% if current_user.has_avatar() %}
+                    <form method="POST" action="{{ url_for('auth.remove_avatar') }}" class="mt-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-red-600 hover:text-red-700 text-sm">Remove current picture</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
                 <input type="text" name="username" id="username" value="{{ current_user.username }}" disabled class="form-input bg-gray-100 dark:bg-gray-700">
@@ -43,6 +57,38 @@
         </div>
     </form>
 </div>
+
+<script>
+function previewAvatar(input) {
+    const preview = document.getElementById('avatar-preview');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            input.value = '';
+            return;
+        }
+        
+        // Validate file type
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Invalid file type. Please select a valid image file (PNG, JPG, GIF, or WEBP).');
+            input.value = '';
+            return;
+        }
+        
+        // Read and display the image
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+</script>
 {% endblock %}
 
 
