@@ -17,7 +17,8 @@ class TestExtraGoodModel:
         db_session.add(client)
         db_session.commit()
         
-        user = User(username="testuser", email="test@example.com", password_hash="hash")
+        user = User(username="testuser", email="test@example.com", role='user')
+        user.password_hash = "hash"
         db_session.add(user)
         db_session.commit()
         
@@ -57,7 +58,8 @@ class TestExtraGoodModel:
         db_session.add(client)
         db_session.commit()
         
-        user = User(username="testuser", email="test@example.com", password_hash="hash")
+        user = User(username="testuser", email="test@example.com", role='user')
+        user.password_hash = "hash"
         db_session.add(user)
         db_session.commit()
         
@@ -95,7 +97,8 @@ class TestExtraGoodModel:
     
     def test_update_total(self, app, db_session):
         """Test updating total when quantity or price changes"""
-        user = User(username="testuser", email="test@example.com", password_hash="hash")
+        user = User(username="testuser", email="test@example.com", role='user')
+        user.password_hash = "hash"
         db_session.add(user)
         db_session.commit()
         
@@ -122,7 +125,8 @@ class TestExtraGoodModel:
     
     def test_to_dict(self, app, db_session):
         """Test converting extra good to dictionary"""
-        user = User(username="testuser", email="test@example.com", password_hash="hash")
+        user = User(username="testuser", email="test@example.com", role='user')
+        user.password_hash = "hash"
         db_session.add(user)
         db_session.commit()
         
@@ -154,7 +158,8 @@ class TestExtraGoodModel:
         db_session.add(client)
         db_session.commit()
         
-        user = User(username="testuser", email="test@example.com", password_hash="hash")
+        user = User(username="testuser", email="test@example.com", role='user')
+        user.password_hash = "hash"
         db_session.add(user)
         db_session.commit()
         
@@ -183,7 +188,8 @@ class TestExtraGoodModel:
         db_session.add(client)
         db_session.commit()
         
-        user = User(username="testuser", email="test@example.com", password_hash="hash")
+        user = User(username="testuser", email="test@example.com", role='user')
+        user.password_hash = "hash"
         db_session.add(user)
         db_session.commit()
         
@@ -211,7 +217,8 @@ class TestExtraGoodModel:
         db_session.add(client)
         db_session.commit()
         
-        user = User(username="testuser", email="test@example.com", password_hash="hash")
+        user = User(username="testuser", email="test@example.com", role='user')
+        user.password_hash = "hash"
         db_session.add(user)
         db_session.commit()
         
