@@ -21,7 +21,8 @@ def allowed_avatar_file(filename: str) -> bool:
 def get_avatar_upload_folder() -> str:
     """Get the upload folder path for user avatars and ensure it exists."""
     import os
-    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'avatars')
+    # Store avatars in /data volume to persist between container updates
+    upload_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/data/uploads'), 'avatars')
     os.makedirs(upload_folder, exist_ok=True)
     return upload_folder
 

@@ -55,6 +55,7 @@ class Invoice(db.Model):
     credits = db.relationship('CreditNote', backref='invoice', lazy='dynamic', cascade='all, delete-orphan')
     reminder_schedules = db.relationship('InvoiceReminderSchedule', backref='invoice', lazy='dynamic', cascade='all, delete-orphan')
     template = db.relationship('InvoiceTemplate', backref='invoices', lazy='joined')
+    extra_goods = db.relationship('ExtraGood', backref='invoice', lazy='dynamic', cascade='all, delete-orphan')
     
     def __init__(self, invoice_number, project_id, client_name, due_date, created_by, client_id, **kwargs):
         self.invoice_number = invoice_number
@@ -154,13 +155,15 @@ class Invoice(db.Model):
                 self.status = 'sent'
     
     def calculate_totals(self):
-        """Calculate invoice totals from items"""
+        """Calculate invoice totals from items and extra goods"""
         # Optionally apply tax rules before totals
         try:
             self._apply_tax_rules_if_any()
         except Exception:
             pass
-        subtotal = sum(item.total_amount for item in self.items)
+        items_total = sum(item.total_amount for item in self.items)
+        goods_total = sum(good.total_amount for good in self.extra_goods)
+        subtotal = items_total + goods_total
         self.subtotal = subtotal
         self.tax_amount = subtotal * (self.tax_rate / 100)
         self.total_amount = subtotal + self.tax_amount

@@ -11,6 +11,7 @@ from .payments import Payment, CreditNote, InvoiceReminderSchedule
 from .reporting import SavedReportView, ReportEmailSchedule
 from .client import Client
 from .task_activity import TaskActivity
+from .extra_good import ExtraGood
 from .comment import Comment
 from .focus_session import FocusSession
 from .recurring_block import RecurringBlock

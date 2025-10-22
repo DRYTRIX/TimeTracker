@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn
+from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
@@ -627,6 +627,220 @@ def api_project_costs(project_id):
         'total_costs': total_costs,
         'billable_costs': billable_costs,
         'count': len(costs)
+    })
+
+
+# ===== PROJECT EXTRA GOODS ROUTES =====
+
+@projects_bp.route('/projects/<int:project_id>/goods')
+@login_required
+def list_goods(project_id):
+    """List all extra goods for a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Get goods
+    goods = project.extra_goods.order_by(ExtraGood.created_at.desc()).all()
+    
+    # Get category breakdown
+    category_breakdown = ExtraGood.get_goods_by_category(project_id=project_id)
+    
+    # Calculate totals
+    total_amount = ExtraGood.get_total_amount(project_id=project_id)
+    billable_amount = ExtraGood.get_total_amount(project_id=project_id, billable_only=True)
+    
+    return render_template(
+        'projects/goods.html',
+        project=project,
+        goods=goods,
+        category_breakdown=category_breakdown,
+        total_amount=total_amount,
+        billable_amount=billable_amount
+    )
+
+
+@projects_bp.route('/projects/<int:project_id>/goods/add', methods=['GET', 'POST'])
+@login_required
+def add_good(project_id):
+    """Add a new extra good to a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', 'product').strip()
+        quantity = request.form.get('quantity', '1').strip()
+        unit_price = request.form.get('unit_price', '').strip()
+        sku = request.form.get('sku', '').strip()
+        billable = request.form.get('billable') == 'on'
+        currency_code = request.form.get('currency_code', 'EUR').strip()
+        
+        # Validate required fields
+        if not name or not unit_price:
+            flash(_('Name and unit price are required'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        # Validate quantity
+        try:
+            quantity = Decimal(quantity)
+            if quantity <= 0:
+                raise ValueError('Quantity must be positive')
+        except (ValueError, Exception):
+            flash(_('Invalid quantity format'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        # Validate unit price
+        try:
+            unit_price = Decimal(unit_price)
+            if unit_price < 0:
+                raise ValueError('Unit price cannot be negative')
+        except (ValueError, Exception):
+            flash(_('Invalid unit price format'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        # Create extra good
+        good = ExtraGood(
+            name=name,
+            description=description if description else None,
+            category=category,
+            quantity=quantity,
+            unit_price=unit_price,
+            sku=sku if sku else None,
+            billable=billable,
+            currency_code=currency_code,
+            project_id=project_id,
+            created_by=current_user.id
+        )
+        
+        db.session.add(good)
+        if not safe_commit('add_project_good', {'project_id': project_id}):
+            flash(_('Could not add extra good due to a database error. Please check server logs.'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        flash(_('Extra good added successfully'), 'success')
+        return redirect(url_for('projects.view_project', project_id=project.id))
+    
+    return render_template('projects/add_good.html', project=project)
+
+
+@projects_bp.route('/projects/<int:project_id>/goods/<int:good_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_good(project_id, good_id):
+    """Edit a project extra good"""
+    project = Project.query.get_or_404(project_id)
+    good = ExtraGood.query.get_or_404(good_id)
+    
+    # Verify good belongs to project
+    if good.project_id != project_id:
+        flash(_('Extra good not found'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    # Only admin or the user who created the good can edit
+    if not current_user.is_admin and good.created_by != current_user.id:
+        flash(_('You do not have permission to edit this extra good'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', 'product').strip()
+        quantity = request.form.get('quantity', '1').strip()
+        unit_price = request.form.get('unit_price', '').strip()
+        sku = request.form.get('sku', '').strip()
+        billable = request.form.get('billable') == 'on'
+        currency_code = request.form.get('currency_code', 'EUR').strip()
+        
+        # Validate required fields
+        if not name or not unit_price:
+            flash(_('Name and unit price are required'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        # Validate quantity
+        try:
+            quantity = Decimal(quantity)
+            if quantity <= 0:
+                raise ValueError('Quantity must be positive')
+        except (ValueError, Exception):
+            flash(_('Invalid quantity format'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        # Validate unit price
+        try:
+            unit_price = Decimal(unit_price)
+            if unit_price < 0:
+                raise ValueError('Unit price cannot be negative')
+        except (ValueError, Exception):
+            flash(_('Invalid unit price format'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        # Update good
+        good.name = name
+        good.description = description if description else None
+        good.category = category
+        good.quantity = quantity
+        good.unit_price = unit_price
+        good.sku = sku if sku else None
+        good.billable = billable
+        good.currency_code = currency_code
+        good.update_total()
+        
+        if not safe_commit('edit_project_good', {'good_id': good_id}):
+            flash(_('Could not update extra good due to a database error. Please check server logs.'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        flash(_('Extra good updated successfully'), 'success')
+        return redirect(url_for('projects.view_project', project_id=project.id))
+    
+    return render_template('projects/edit_good.html', project=project, good=good)
+
+
+@projects_bp.route('/projects/<int:project_id>/goods/<int:good_id>/delete', methods=['POST'])
+@login_required
+def delete_good(project_id, good_id):
+    """Delete a project extra good"""
+    project = Project.query.get_or_404(project_id)
+    good = ExtraGood.query.get_or_404(good_id)
+    
+    # Verify good belongs to project
+    if good.project_id != project_id:
+        flash(_('Extra good not found'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    # Only admin or the user who created the good can delete
+    if not current_user.is_admin and good.created_by != current_user.id:
+        flash(_('You do not have permission to delete this extra good'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    # Check if good has been added to an invoice
+    if good.invoice_id:
+        flash(_('Cannot delete extra good that has been added to an invoice'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    good_name = good.name
+    db.session.delete(good)
+    if not safe_commit('delete_project_good', {'good_id': good_id}):
+        flash(_('Could not delete extra good due to a database error. Please check server logs.'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    flash(_(f'Extra good "{good_name}" deleted successfully'), 'success')
+    return redirect(url_for('projects.view_project', project_id=project.id))
+
+
+# API endpoint for getting project extra goods as JSON
+@projects_bp.route('/api/projects/<int:project_id>/goods')
+@login_required
+def api_project_goods(project_id):
+    """API endpoint to get project extra goods"""
+    project = Project.query.get_or_404(project_id)
+    
+    goods = ExtraGood.get_project_goods(project_id)
+    total_amount = ExtraGood.get_total_amount(project_id=project_id)
+    billable_amount = ExtraGood.get_total_amount(project_id=project_id, billable_only=True)
+    
+    return jsonify({
+        'goods': [good.to_dict() for good in goods],
+        'total_amount': total_amount,
+        'billable_amount': billable_amount,
+        'count': len(goods)
     })
 
 
