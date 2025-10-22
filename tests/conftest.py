@@ -97,18 +97,36 @@ def user(app):
         # Tables don't exist yet or other DB error, rollback and proceed to create user
         db.session.rollback()
 
-    user = User(
-        username='testuser',
-        role='user',
-        email='testuser@example.com'
-    )
-    user.is_active = True  # Set after creation
-    db.session.add(user)
-    db.session.commit()
-    
-    # Refresh to ensure all relationships are loaded and object stays in session
-    db.session.refresh(user)
-    return user
+    try:
+        user = User(
+            username='testuser',
+            role='user',
+            email='testuser@example.com'
+        )
+        user.is_active = True  # Set after creation
+        db.session.add(user)
+        db.session.commit()
+        
+        # Refresh to ensure all relationships are loaded and object stays in session
+        db.session.refresh(user)
+        return user
+    except Exception:
+        # If tables still don't exist, try to create them
+        db.session.rollback()
+        db.create_all()
+        
+        # Try again after creating tables
+        user = User(
+            username='testuser',
+            role='user',
+            email='testuser@example.com'
+        )
+        user.is_active = True  # Set after creation
+        db.session.add(user)
+        db.session.commit()
+        
+        db.session.refresh(user)
+        return user
 
 
 @pytest.fixture
@@ -128,18 +146,36 @@ def admin_user(app):
         # Tables don't exist yet or other DB error, rollback and proceed to create admin
         db.session.rollback()
 
-    admin = User(
-        username='admin',
-        role='admin',
-        email='admin@example.com'
-    )
-    admin.is_active = True  # Set after creation
-    db.session.add(admin)
-    db.session.commit()
-    
-    # Refresh to ensure all relationships are loaded and object stays in session
-    db.session.refresh(admin)
-    return admin
+    try:
+        admin = User(
+            username='admin',
+            role='admin',
+            email='admin@example.com'
+        )
+        admin.is_active = True  # Set after creation
+        db.session.add(admin)
+        db.session.commit()
+        
+        # Refresh to ensure all relationships are loaded and object stays in session
+        db.session.refresh(admin)
+        return admin
+    except Exception:
+        # If tables still don't exist, try to create them
+        db.session.rollback()
+        db.create_all()
+        
+        # Try again after creating tables
+        admin = User(
+            username='admin',
+            role='admin',
+            email='admin@example.com'
+        )
+        admin.is_active = True  # Set after creation
+        db.session.add(admin)
+        db.session.commit()
+        
+        db.session.refresh(admin)
+        return admin
 
 
 @pytest.fixture
