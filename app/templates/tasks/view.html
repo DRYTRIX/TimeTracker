@@ -40,6 +40,8 @@
                             <th class="p-4">Date</th>
                             <th class="p-4">Duration</th>
                             <th class="p-4">User</th>
+                            <th class="p-4">Notes</th>
+                            <th class="p-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -48,10 +50,26 @@
                             <td class="p-4">{{ entry.start_time.strftime('%Y-%m-%d') }}</td>
                             <td class="p-4">{{ entry.duration_formatted }}</td>
                             <td class="p-4">{{ entry.user.display_name }}</td>
+                            <td class="p-4">{% if entry.notes %}<span title="{{ entry.notes }}">{{ entry.notes[:40] }}{% if entry.notes|length > 40 %}...{% endif %}</span>{% else %}-{% endif %}</td>
+                            <td class="p-4">
+                                <div class="flex gap-2">
+                                    <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary-dark" title="{{ _('Edit entry') }}">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if current_user.is_admin or entry.user_id == current_user.id %}
+                                    <form id="confirmDeleteEntry-{{ entry.id }}-form" method="POST" action="{{ url_for('timer.delete_timer', timer_id=entry.id) }}" class="hidden">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    </form>
+                                    <button type="button" class="text-red-600 hover:text-red-800" title="{{ _('Delete entry') }}" onclick="document.getElementById('confirmDeleteEntry-{{ entry.id }}').classList.remove('hidden')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="3" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">No time has been logged for this task.</td>
+                            <td colspan="5" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">No time has been logged for this task.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -103,4 +121,18 @@
     'danger'
 ) }}
 {% endif %}
+
+<!-- Delete Entry Confirmation Dialogs -->
+{% for entry in time_entries %}
+{% if current_user.is_admin or entry.user_id == current_user.id %}
+{{ confirm_dialog(
+    'confirmDeleteEntry-' ~ entry.id,
+    'Delete Time Entry',
+    'Are you sure you want to delete this time entry? This action cannot be undone.',
+    'Delete',
+    'Cancel',
+    'danger'
+) }}
+{% endif %}
+{% endfor %}
 {% endblock %}

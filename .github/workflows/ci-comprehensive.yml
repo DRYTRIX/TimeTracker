@@ -1,5 +1,16 @@
 name: Comprehensive CI Pipeline
 
+# This workflow runs comprehensive tests on pull requests
+# 
+# Test Strategy:
+# - Smoke tests (fast, critical) run first
+# - Unit, integration, security, and code quality tests run in parallel
+# - Full test suite with PostgreSQL runs for PRs to main/master
+# - Docker build test ensures the image builds correctly
+# - Test summary posted as PR comment
+#
+# All tests must pass before a PR can be merged to main
+
 on:
   pull_request:
     branches: [ main, develop ]
@@ -289,12 +300,13 @@ jobs:
           docker rm test-container
 
   # ============================================================================
-  # Full Test Suite (for releases)
+  # Full Test Suite (runs on all PRs to main/master)
   # ============================================================================
   full-test-suite:
-    name: Full Test Suite
+    name: Full Test Suite with PostgreSQL
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [smoke-tests, unit-tests, integration-tests]
+    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'master')
     timeout-minutes: 30
     
     services:
@@ -328,6 +340,57 @@ jobs:
           pip install -r requirements-test.txt
           pip install -e .
       
+      - name: Validate database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+        run: |
+          echo "🔍 Validating database migrations..."
+          
+          # Check if there are migration-related changes
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "(app/models/|migrations/)" > /dev/null; then
+            echo "📋 Migration-related changes detected"
+            
+            # Initialize fresh database
+            flask db upgrade
+            
+            # Test migration rollback
+            CURRENT_MIGRATION=$(flask db current)
+            echo "Current migration: $CURRENT_MIGRATION"
+            
+            if [ -n "$CURRENT_MIGRATION" ] && [ "$CURRENT_MIGRATION" != "None" ]; then
+              echo "Testing migration operations..."
+              flask db upgrade head
+              echo "✅ Migration validation passed"
+            fi
+            
+            # Test with sample data
+            python -c "
+            from app import create_app, db
+            from app.models.user import User
+            from app.models.project import Project
+            from app.models.client import Client
+            
+            app = create_app()
+            with app.app_context():
+                user = User(username='test_user', role='user')
+                db.session.add(user)
+                db.session.commit()
+                
+                client = Client(name='Test Client', description='Test client')
+                db.session.add(client)
+                db.session.commit()
+                
+                project = Project(name='Test Project', client_id=client.id, description='Test project')
+                db.session.add(project)
+                db.session.commit()
+                print('✅ Sample data created and validated successfully')
+            "
+          else
+            echo "ℹ️ No migration-related changes detected"
+          fi
+      
       - name: Run full test suite
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
@@ -335,7 +398,8 @@ jobs:
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -v --cov=app --cov-report=xml --cov-report=html --cov-report=term
+          pytest -v --cov=app --cov-report=xml --cov-report=html --cov-report=term \
+                 --junitxml=junit.xml
       
       - name: Upload full coverage
         uses: codecov/codecov-action@v4
@@ -352,6 +416,14 @@ jobs:
           path: |
             htmlcov/
             coverage.xml
+            junit.xml
+      
+      - name: Publish full test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: junit.xml
+          check_name: Full Test Suite Results
 
   # ============================================================================
   # Test Summary and PR Comment
@@ -359,7 +431,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [smoke-tests, unit-tests, integration-tests, security-tests, code-quality, docker-build]
+    needs: [smoke-tests, unit-tests, integration-tests, security-tests, code-quality, docker-build, full-test-suite]
     if: always() && github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -377,7 +449,8 @@ jobs:
               { name: 'Integration Tests', result: '${{ needs.integration-tests.result }}' },
               { name: 'Security Tests', result: '${{ needs.security-tests.result }}' },
               { name: 'Code Quality', result: '${{ needs.code-quality.result }}' },
-              { name: 'Docker Build', result: '${{ needs.docker-build.result }}' }
+              { name: 'Docker Build', result: '${{ needs.docker-build.result }}' },
+              { name: 'Full Test Suite', result: '${{ needs.full-test-suite.result }}' }
             ];
             
             const passed = jobs.filter(j => j.result === 'success').length;

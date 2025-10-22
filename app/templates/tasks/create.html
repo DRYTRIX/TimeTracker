@@ -35,7 +35,7 @@
                                 <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Supports Markdown') }}</small>
                             </div>
                             <div class="markdown-editor-wrapper">
-                                <textarea class="form-input d-none" id="description" name="description" rows="12" placeholder="{{ _('Provide detailed information about the task, requirements, and any specific instructions...') }}">{{ request.form.get('description', '') }}</textarea>
+                                <textarea class="form-input hidden" id="description" name="description" rows="12" placeholder="{{ _('Provide detailed information about the task, requirements, and any specific instructions...') }}">{{ request.form.get('description', '') }}</textarea>
                                 <div id="description_editor"></div>
                             </div>
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Add context, requirements, or specific instructions for the task') }}</p>
@@ -117,11 +117,12 @@
                             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Create Task') }}</button>
                         </div>
                     </form>
-                </div>
-            </div>
         </div>
-        <div class="">
-            <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow space-y-4 text-sm" data-testid="task-create-tips">
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="lg:col-span-1">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow space-y-4 text-sm" data-testid="task-create-tips">
                 <h3 class="text-lg font-semibold">{{ _('Task Creation Tips') }}</h3>
                 <ul class="space-y-2" role="list">
                     <li class="tip-item flex items-start gap-3">
