@@ -64,9 +64,10 @@ The CI/CD pipeline will automatically:
 
 ### Documentation
 
-- **Quick Start**: [CI_CD_QUICK_START.md](CI_CD_QUICK_START.md)
-- **Full Documentation**: [CI_CD_DOCUMENTATION.md](CI_CD_DOCUMENTATION.md)
-- **Implementation Summary**: [CI_CD_IMPLEMENTATION_SUMMARY.md](CI_CD_IMPLEMENTATION_SUMMARY.md)
+- 📚 **Testing Strategy**: [TESTING_WORKFLOW_STRATEGY.md](TESTING_WORKFLOW_STRATEGY.md) - Complete testing workflow guide
+- ⚡ **Quick Reference**: [QUICK_REFERENCE_TESTING.md](QUICK_REFERENCE_TESTING.md) - Quick commands and workflows
+- 🏗️ **Build Configuration**: [BUILD_CONFIGURATION_SUMMARY.md](BUILD_CONFIGURATION_SUMMARY.md) - Build and deployment setup
+- 🚀 **Quick Start**: [CI_CD_QUICK_START.md](CI_CD_QUICK_START.md) - Getting started guide
 
 ### Test Organization
 
@@ -82,24 +83,36 @@ Tests are organized using pytest markers:
 
 ### CI/CD Workflows
 
-#### Pull Requests
-- Runs on: Every PR to main or develop
-- Duration: ~15-20 minutes
-- Tests: Smoke, unit, integration, security, database
-- Quality: Code quality checks, security scanning
-- Feedback: Automated PR comment with results
+#### 🔍 Pull Requests (Comprehensive Testing)
+- **Runs on**: Every PR to main or develop
+- **Duration**: ~30-40 minutes
+- **Tests**: 
+  - Smoke tests (fast, critical)
+  - Unit tests (parallel)
+  - Integration tests (with PostgreSQL)
+  - Security tests
+  - Code quality checks
+  - Docker build test
+  - **Full test suite with PostgreSQL** (PRs to main only)
+- **Output**: Test summary comment on PR
+- **Purpose**: **Catch issues BEFORE merge** ⚠️
 
-#### Development Builds
-- Runs on: Push to develop branch
-- Duration: ~25 minutes
-- Output: `ghcr.io/{owner}/{repo}:develop`
-- Creates: Development release with deployment manifest
+#### 🔧 Development Builds
+- **Runs on**: Push to develop branch
+- **Duration**: ~20-25 minutes
+- **Tests**: Quick smoke tests only
+- **Output**: `ghcr.io/{owner}/{repo}:develop`
+- **Creates**: Development release with deployment manifest
 
-#### Production Releases
-- Runs on: Push to main or version tag
-- Duration: ~55 minutes
-- Output: `ghcr.io/{owner}/{repo}:latest`, `v1.2.3`, etc.
-- Creates: GitHub release with manifests and changelog
+#### 🚀 Production Releases
+- **Runs on**: Push to main or version tag
+- **Duration**: ~40-60 minutes
+- **Tests**: Security audit only (full tests already ran on PR)
+- **Output**: `ghcr.io/{owner}/{repo}:latest`, `v1.2.3`, etc.
+- **Creates**: GitHub release with manifests and changelog
+- **Purpose**: Build and publish (tests already passed on PR)
+
+> **📝 Note**: Full test suite runs on PRs, not releases. This ensures issues are caught and fixed BEFORE code reaches main.
 
 ### Monitoring
 
