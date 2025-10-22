@@ -60,6 +60,7 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Self-Hosted** — Complete control over your data
 - **Username-Only Login** — Simple authentication for internal use
 - **Session Management** — Secure cookies and session handling
+ - **Profile Pictures** — Users can upload a profile picture in their profile settings
 
 ### 🛠️ **Technical Excellence**
 - **Docker Ready** — Deploy in minutes with Docker Compose
