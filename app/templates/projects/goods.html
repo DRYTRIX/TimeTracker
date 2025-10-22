@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Extra Goods') }} · {{ project.name }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Manage products and services for this project') }}</p>
+    </div>
+    <div class="flex gap-2 mt-4 md:mt-0">
+        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Back to Project') }}</a>
+        <a href="{{ url_for('projects.add_good', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Add Good') }}</a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Goods') }}</h3>
+        <p class="text-2xl font-bold mt-2">{{ goods|length }}</p>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Amount') }}</h3>
+        <p class="text-2xl font-bold mt-2">{{ '%.2f'|format(total_amount) }}</p>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Billable Amount') }}</h3>
+        <p class="text-2xl font-bold mt-2">{{ '%.2f'|format(billable_amount) }}</p>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Categories') }}</h3>
+        <p class="text-2xl font-bold mt-2">{{ category_breakdown|length }}</p>
+    </div>
+</div>
+
+{% if goods %}
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-background-light dark:bg-background-dark">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Name') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Category') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Quantity') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Unit Price') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Total') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Status') }}</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-light dark:divide-border-dark">
+            {% for good in goods %}
+            <tr class="hover:bg-background-light dark:hover:bg-background-dark">
+                <td class="px-6 py-4">
+                    <div class="font-medium">{{ good.name }}</div>
+                    {% if good.description %}
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ good.description[:80] }}{% if good.description|length > 80 %}...{% endif %}</div>
+                    {% endif %}
+                    {% if good.sku %}
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark">SKU: {{ good.sku }}</div>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800">{{ good.category|capitalize }}</span>
+                </td>
+                <td class="px-6 py-4">{{ '%.2f'|format(good.quantity) }}</td>
+                <td class="px-6 py-4">{{ '%.2f'|format(good.unit_price) }} {{ good.currency_code }}</td>
+                <td class="px-6 py-4 font-medium">{{ '%.2f'|format(good.total_amount) }} {{ good.currency_code }}</td>
+                <td class="px-6 py-4">
+                    {% if good.invoice_id %}
+                    <span class="px-2 py-1 text-xs rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">{{ _('Invoiced') }}</span>
+                    {% elif good.billable %}
+                    <span class="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">{{ _('Billable') }}</span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{{ _('Non-billable') }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                        <a href="{{ url_for('projects.edit_good', project_id=project.id, good_id=good.id) }}" class="text-primary hover:text-primary/80">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        {% if not good.invoice_id %}
+                        <form method="POST" action="{{ url_for('projects.delete_good', project_id=project.id, good_id=good.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this extra good?') }}');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
+    <i class="fas fa-box-open text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+    <p class="text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('No extra goods found for this project') }}</p>
+    <a href="{{ url_for('projects.add_good', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg inline-block">{{ _('Add Your First Good') }}</a>
+</div>
+{% endif %}
+
+{% if category_breakdown %}
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Breakdown by Category') }}</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {% for item in category_breakdown %}
+        <div class="p-4 rounded border border-border-light dark:border-border-dark">
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ item.category|capitalize }}</div>
+            <div class="text-xl font-bold">{{ '%.2f'|format(item.total_amount) }}</div>
+            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ item.count }} {{ _('item(s)') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

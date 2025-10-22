@@ -26,6 +26,7 @@ class Project(db.Model):
     time_entries = db.relationship('TimeEntry', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     tasks = db.relationship('Task', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     costs = db.relationship('ProjectCost', backref='project', lazy='dynamic', cascade='all, delete-orphan')
+    extra_goods = db.relationship('ExtraGood', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     # comments relationship is defined via backref in Comment model
     
     def __init__(self, name, client_id=None, description=None, billable=True, hourly_rate=None, billing_ref=None, client=None, budget_amount=None, budget_threshold_percent=80):

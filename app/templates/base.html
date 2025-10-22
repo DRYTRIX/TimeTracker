@@ -226,15 +226,36 @@
                     </div>
 
                     <!-- User Profile -->
-                    <div class="relative">
-                        <button onclick="toggleDropdown('userDropdown')" class="flex items-center" aria-label="{{ _('User menu') }}" aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown">
-                            <img src="{{ (current_user.get_avatar_url() if current_user.is_authenticated else None) or url_for('static', filename='images/avatar-default.svg') }}" alt="{{ current_user.display_name if current_user.is_authenticated else 'User' }}" class="w-8 h-8 rounded-full object-cover">
-                            <span class="ml-2 hidden md:inline">{{ current_user.display_name }}</span>
-                            <i class="fas fa-chevron-down ml-1 hidden md:inline" aria-hidden="true"></i>
+                    <div class="relative z-50">
+                        <button onclick="toggleDropdown('userDropdown')" class="flex items-center space-x-2" aria-label="{{ _('User menu') }}" aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown">
+                            {% if current_user.is_authenticated %}
+                                {% if current_user.get_avatar_url() %}
+                                    <img id="userAvatar" src="{{ current_user.get_avatar_url() }}" alt="{{ current_user.display_name }}" class="w-8 h-8 rounded-full object-cover border-2 border-primary" onerror="this.onerror=null; this.style.display='none'; document.getElementById('userAvatarFallback').style.display='flex';">
+                                    <div id="userAvatarFallback" class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm" style="display: none;">
+                                        {{ current_user.display_name[0:1].upper() }}
+                                    </div>
+                                {% else %}
+                                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm border-2 border-primary">
+                                        {{ current_user.display_name[0:1].upper() }}
+                                    </div>
+                                {% endif %}
+                                <span class="hidden md:inline text-text-light dark:text-text-dark font-medium">{{ current_user.display_name }}</span>
+                            {% else %}
+                                <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                <span class="hidden md:inline text-text-light dark:text-text-dark">{{ _('Guest') }}</span>
+                            {% endif %}
+                            <i class="fas fa-chevron-down text-text-muted-light dark:text-text-muted-dark hidden md:inline" aria-hidden="true"></i>
                         </button>
-                        <ul id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg">
-                            <li><a href="{{ url_for('auth.profile') }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Profile') }}</a></li>
-                            <li><a href="{{ url_for('auth.logout') }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Logout') }}</a></li>
+                        <ul id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                            <li class="px-4 py-3 border-b border-border-light dark:border-border-dark">
+                                <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ current_user.display_name if current_user.is_authenticated else _('Guest') }}</div>
+                                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ current_user.email if current_user.is_authenticated else '' }}</div>
+                            </li>
+                            <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('Profile') }}</a></li>
+                            <li><a href="{{ url_for('auth.edit_profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('Settings') }}</a></li>
+                            <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
                         </ul>
                     </div>
                 </div>

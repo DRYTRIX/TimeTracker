@@ -115,10 +115,12 @@ class User(UserMixin, db.Model):
             return None
         try:
             from flask import current_app
-            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'avatars')
+            # Avatars are now stored in /data volume to persist between container updates
+            upload_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/data/uploads'), 'avatars')
             return os.path.join(upload_folder, self.avatar_filename)
         except Exception:
-            return os.path.join('app', 'static', 'uploads', 'avatars', self.avatar_filename)
+            # Fallback for development/non-docker environments
+            return os.path.join('/data/uploads', 'avatars', self.avatar_filename)
 
     def has_avatar(self):
         """Check whether the user's avatar file exists on disk"""
