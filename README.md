@@ -75,14 +75,24 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 <div align="center">
 
-### Dashboard — Your Command Center
+### 🏠 Dashboard — Your Command Center
 <img src="assets/screenshots/Dashboard.png" alt="Dashboard" width="700">
 
 *Start timers, view recent entries, and see your productivity at a glance*
 
 ---
 
-### Projects & Tasks — Stay Organized
+### 🔐 Simple Login & User Management
+<div>
+  <img src="assets/screenshots/Login.png" alt="Login" width="45%" style="display: inline-block; margin: 5px;">
+  <img src="assets/screenshots/Profile.png" alt="Profile" width="45%" style="display: inline-block; margin: 5px;">
+</div>
+
+*Simple username-based authentication and customizable user profiles with avatar support*
+
+---
+
+### 📁 Projects & Tasks — Stay Organized
 <div>
   <img src="assets/screenshots/Projects.png" alt="Projects" width="45%" style="display: inline-block; margin: 5px;">
   <img src="assets/screenshots/Tasks.png" alt="Tasks" width="45%" style="display: inline-block; margin: 5px;">
@@ -92,17 +102,24 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 ---
 
-### Time Tracking — Flexible & Powerful
-<div>
-  <img src="assets/screenshots/LogTime.png" alt="Log Time" width="45%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/Calendar.png" alt="Calendar View" width="45%" style="display: inline-block; margin: 5px;">
-</div>
+### 📋 Kanban Board — Visual Task Management
+<img src="assets/screenshots/Kanban.png" alt="Kanban Board" width="700">
 
-*Manual time entry and visual calendar view for better planning*
+*Drag-and-drop task management with customizable columns and visual workflow*
 
 ---
 
-### Invoicing & Clients — Professional Billing
+### ⏱️ Time Tracking — Flexible & Powerful
+<div>
+  <img src="assets/screenshots/LogTime.png" alt="Log Time" width="45%" style="display: inline-block; margin: 5px;">
+  <img src="assets/screenshots/TimeEntryTemplates.png" alt="Time Entry Templates" width="45%" style="display: inline-block; margin: 5px;">
+</div>
+
+*Manual time entry and reusable templates for faster logging*
+
+---
+
+### 🧾 Invoicing & Clients — Professional Billing
 <div>
   <img src="assets/screenshots/Invoices.png" alt="Invoices" width="45%" style="display: inline-block; margin: 5px;">
   <img src="assets/screenshots/Clients.png" alt="Client Management" width="45%" style="display: inline-block; margin: 5px;">
@@ -112,7 +129,7 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 ---
 
-### Reports & Analytics — Data-Driven Insights
+### 📊 Reports & Analytics — Data-Driven Insights
 <div>
   <img src="assets/screenshots/Reports.png" alt="Reports" width="45%" style="display: inline-block; margin: 5px;">
   <img src="assets/screenshots/UserReports.png" alt="User Reports" width="45%" style="display: inline-block; margin: 5px;">
@@ -122,7 +139,14 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 ---
 
-### Easy Creation — Streamlined Workflows
+### 🛠️ Admin Dashboard — Complete Control
+<img src="assets/screenshots/AdminDashboard.png" alt="Admin Dashboard" width="700">
+
+*Manage users, configure settings, and monitor system health*
+
+---
+
+### 🎯 Easy Creation — Streamlined Workflows
 <div>
   <img src="assets/screenshots/CreateProject.png" alt="Create Project" width="30%" style="display: inline-block; margin: 5px;">
   <img src="assets/screenshots/CreateTask.png" alt="Create Task" width="30%" style="display: inline-block; margin: 5px;">
