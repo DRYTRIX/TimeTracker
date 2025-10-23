@@ -55,7 +55,16 @@
                         
                         <div class="mt-4 flex justify-between items-center">
                             {% if task.assigned_user %}
-                            <img src="https://i.pravatar.cc/40?u={{ task.assigned_user.id }}" alt="{{ task.assigned_user.display_name }}" class="w-8 h-8 rounded-full" title="{{ task.assigned_user.display_name }}">
+                                {% if task.assigned_user.get_avatar_url() %}
+                                    <img src="{{ task.assigned_user.get_avatar_url() }}" alt="{{ task.assigned_user.display_name }}" class="w-8 h-8 rounded-full object-cover border-2 border-primary" title="{{ task.assigned_user.display_name }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm" style="display: none;" title="{{ task.assigned_user.display_name }}">
+                                        {{ task.assigned_user.display_name[0:1].upper() }}
+                                    </div>
+                                {% else %}
+                                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm" title="{{ task.assigned_user.display_name }}">
+                                        {{ task.assigned_user.display_name[0:1].upper() }}
+                                    </div>
+                                {% endif %}
                             {% else %}
                             <div class="w-8"></div> <!-- Placeholder for alignment -->
                             {% endif %}
