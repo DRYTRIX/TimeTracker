@@ -9,7 +9,19 @@
     </div>
     {% if current_user.is_admin %}
     <div class="flex gap-2">
-        <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Client</a>
+        <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Client') }}</a>
+        {% if client.status == 'active' %}
+        <form method="POST" action="{{ url_for('clients.archive_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark client as Inactive?') }}', { title: '{{ _('Change Client Status') }}', confirmText: '{{ _('Change') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-white mt-4 md:mt-0">{{ _('Mark Inactive') }}</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('clients.activate_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate client?') }}', { title: '{{ _('Activate Client') }}', confirmText: '{{ _('Activate') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white mt-4 md:mt-0">{{ _('Activate') }}</button>
+        </form>
+        {% endif %}
+        {% if client.total_projects == 0 %}
         <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
                 onclick="document.getElementById('confirmDeleteClient-{{ client.id }}').classList.remove('hidden')">
             {{ _('Delete Client') }}
@@ -17,6 +29,7 @@
         <form id="confirmDeleteClient-{{ client.id }}-form" method="POST" action="{{ url_for('clients.delete_client', client_id=client.id) }}" class="hidden">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -63,8 +76,23 @@
                     <tbody>
                         {% for project in projects %}
                         <tr class="border-b border-border-light dark:border-border-dark">
-                            <td class="p-4">{{ project.name }}</td>
-                            <td class="p-4">{{ project.status | capitalize }}</td>
+                            <td class="p-4">
+                                <div class="flex items-center gap-2">
+                                    <span>{{ project.name }}</span>
+                                    {% if project.code_display %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ project.code_display }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="p-4">
+                                {% set status_map = {
+                                    'active':   {'cls': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', 'label': _('Active')},
+                                    'inactive': {'cls': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', 'label': _('Inactive')},
+                                    'archived': {'cls': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200', 'label': _('Archived')},
+                                } %}
+                                {% set st = status_map.get(project.status, status_map['inactive']) %}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ st.cls }}">{{ st.label }}</span>
+                            </td>
                             <td class="p-4">
                                 <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">View</a>
                             </td>

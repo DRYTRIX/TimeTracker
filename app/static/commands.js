@@ -14,6 +14,11 @@
   function openModal(){
     const el = $('#commandPaletteModal');
     if (!el) return;
+    // If already open, just refocus the input instead of reopening
+    if (!el.classList.contains('hidden')) {
+      setTimeout(() => $('#commandPaletteInput')?.focus(), 10);
+      return;
+    }
     el.classList.remove('hidden');
     setTimeout(() => $('#commandPaletteInput')?.focus(), 50);
     refreshCommands();
@@ -79,7 +84,18 @@
   addCommand({ id: 'open-profile', title: 'Open Profile', hint: '', keywords: 'account user', action: () => nav('/profile') });
   addCommand({ id: 'open-help', title: 'Open Help', hint: '', keywords: 'support docs', action: () => nav('/help') });
   addCommand({ id: 'open-about', title: 'Open About', hint: '', keywords: 'info version', action: () => nav('/about') });
-  addCommand({ id: 'toggle-theme', title: 'Toggle Theme', hint: isMac ? '⌘⇧L' : 'Ctrl+Shift+L', keywords: 'light dark', action: () => { try { document.getElementById('theme-toggle-global')?.click(); } catch(e) {} } });
+  addCommand({ id: 'toggle-theme', title: 'Toggle Theme', hint: isMac ? '⌘⇧L' : 'Ctrl+Shift+L', keywords: 'light dark', action: () => { try { document.getElementById('theme-toggle')?.click(); } catch(e) {} } });
+  
+  // New Quick Wins Features
+  addCommand({ id: 'time-templates', title: 'Time Entry Templates', hint: '', keywords: 'quick templates saved', action: () => nav('/templates') });
+  addCommand({ id: 'saved-filters', title: 'Saved Filters', hint: '', keywords: 'search quick filters', action: () => nav('/filters') });
+  addCommand({ id: 'user-settings', title: 'User Settings', hint: '', keywords: 'preferences config options', action: () => nav('/settings') });
+  addCommand({ id: 'create-project', title: 'Create New Project', hint: '', keywords: 'add new', action: () => nav('/projects/create') });
+  addCommand({ id: 'create-task', title: 'Create New Task', hint: '', keywords: 'add new', action: () => nav('/tasks/create') });
+  addCommand({ id: 'create-client', title: 'Create New Client', hint: '', keywords: 'add new', action: () => nav('/clients/create') });
+  addCommand({ id: 'create-invoice', title: 'Create New Invoice', hint: '', keywords: 'add new billing', action: () => nav('/invoices/create') });
+  addCommand({ id: 'export-excel', title: 'Export Reports to Excel', hint: '', keywords: 'download export xlsx', action: () => nav('/reports/export/excel') });
+  addCommand({ id: 'my-tasks', title: 'My Tasks', hint: '', keywords: 'assigned work todo', action: () => nav('/tasks/my-tasks') });
 
   // Filtering and rendering
   let filtered = registry.slice();
@@ -181,6 +197,17 @@
   document.addEventListener('keydown', (ev) => {
     const modal = $('#commandPaletteModal');
     if (!modal || modal.classList.contains('hidden')) return;
+    // If palette is already open, prevent re-opening via hotkeys and simply refocus input
+    if ((ev.ctrlKey || ev.metaKey) && (ev.key === '?' || ev.key === '/')) {
+      ev.preventDefault();
+      setTimeout(() => $('#commandPaletteInput')?.focus(), 10);
+      return;
+    }
+    if (ev.key === '?') {
+      ev.preventDefault();
+      setTimeout(() => $('#commandPaletteInput')?.focus(), 10);
+      return;
+    }
     if (ev.key === 'Escape'){ ev.preventDefault(); closeModal(); return; }
     if (ev.key === 'ArrowDown'){ ev.preventDefault(); selectedIdx = Math.min(selectedIdx + 1, filtered.length - 1); highlightSelected(); return; }
     if (ev.key === 'ArrowUp'){ ev.preventDefault(); selectedIdx = Math.max(selectedIdx - 1, 0); highlightSelected(); return; }

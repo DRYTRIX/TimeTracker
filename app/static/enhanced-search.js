@@ -457,6 +457,28 @@
             const options = JSON.parse(input.getAttribute('data-enhanced-search') || '{}');
             new EnhancedSearch(input, options);
         });
+        // Global hook: ensure Ctrl+/ focuses the main search input and opens recent suggestions when empty
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '/') {
+                const search = document.getElementById('search') || document.querySelector('[data-enhanced-search]');
+                if (search) {
+                    e.preventDefault();
+                    search.focus();
+                    if (typeof search.select === 'function') search.select();
+                    try {
+                        // If enhanced instance attached, show recent when empty
+                        if (!search.value) {
+                            const wrapper = search.closest('.search-enhanced');
+                            const autocomplete = wrapper && wrapper.querySelector('.search-autocomplete');
+                            if (autocomplete) {
+                                // Fire a synthetic focus to render recents
+                                search.dispatchEvent(new Event('focus'));
+                            }
+                        }
+                    } catch(_) {}
+                }
+            }
+        });
     });
 
     // Export for manual initialization

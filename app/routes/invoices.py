@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import User, Project, TimeEntry, Invoice, InvoiceItem, Settings, RateOverride, ProjectCost
+from app.models import User, Project, TimeEntry, Invoice, InvoiceItem, Settings, RateOverride, ProjectCost, ExtraGood
 from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
 import io
@@ -181,6 +181,41 @@ def edit_invoice(invoice_id):
                     flash(f'Invalid quantity or price for item {i+1}', 'error')
                     continue
         
+        # Update extra goods
+        good_ids = request.form.getlist('good_id[]')
+        good_names = request.form.getlist('good_name[]')
+        good_descriptions = request.form.getlist('good_description[]')
+        good_categories = request.form.getlist('good_category[]')
+        good_quantities = request.form.getlist('good_quantity[]')
+        good_unit_prices = request.form.getlist('good_unit_price[]')
+        good_skus = request.form.getlist('good_sku[]')
+        
+        # Remove existing extra goods
+        invoice.extra_goods.delete()
+        
+        # Add new extra goods
+        for i in range(len(good_names)):
+            if good_names[i].strip() and good_quantities[i] and good_unit_prices[i]:
+                try:
+                    quantity = Decimal(good_quantities[i])
+                    unit_price = Decimal(good_unit_prices[i])
+                    
+                    good = ExtraGood(
+                        name=good_names[i].strip(),
+                        description=good_descriptions[i].strip() if i < len(good_descriptions) and good_descriptions[i] else None,
+                        category=good_categories[i] if i < len(good_categories) and good_categories[i] else 'product',
+                        quantity=quantity,
+                        unit_price=unit_price,
+                        sku=good_skus[i].strip() if i < len(good_skus) and good_skus[i] else None,
+                        invoice_id=invoice.id,
+                        created_by=current_user.id,
+                        currency_code=invoice.currency_code
+                    )
+                    db.session.add(good)
+                except ValueError:
+                    flash(f'Invalid quantity or price for extra good {i+1}', 'error')
+                    continue
+        
         # Calculate totals
         invoice.calculate_totals()
         if not safe_commit('edit_invoice', {'invoice_id': invoice.id}):
@@ -312,12 +347,13 @@ def generate_from_time(invoice_id):
         return redirect(url_for('invoices.list_invoices'))
     
     if request.method == 'POST':
-        # Get selected time entries and costs
+        # Get selected time entries, costs, and extra goods
         selected_entries = request.form.getlist('time_entries[]')
         selected_costs = request.form.getlist('project_costs[]')
+        selected_goods = request.form.getlist('extra_goods[]')
         
-        if not selected_entries and not selected_costs:
-            flash('No time entries or costs selected', 'error')
+        if not selected_entries and not selected_costs and not selected_goods:
+            flash('No time entries, costs, or extra goods selected', 'error')
             return redirect(url_for('invoices.generate_from_time', invoice_id=invoice.id))
         
         # Clear existing items
@@ -382,6 +418,25 @@ def generate_from_time(invoice_id):
                 # Mark cost as invoiced
                 cost.mark_as_invoiced(invoice.id)
         
+        # Process extra goods from project
+        if selected_goods:
+            goods = ExtraGood.query.filter(ExtraGood.id.in_(selected_goods)).all()
+            
+            for good in goods:
+                # Create a copy of the good for the invoice
+                invoice_good = ExtraGood(
+                    name=good.name,
+                    description=good.description,
+                    category=good.category,
+                    quantity=good.quantity,
+                    unit_price=good.unit_price,
+                    sku=good.sku,
+                    invoice_id=invoice.id,
+                    created_by=current_user.id,
+                    currency_code=good.currency_code
+                )
+                db.session.add(invoice_good)
+        
         # Calculate totals
         invoice.calculate_totals()
         if not safe_commit('generate_from_time', {'invoice_id': invoice.id}):
@@ -419,9 +474,17 @@ def generate_from_time(invoice_id):
     # Get uninvoiced billable costs for this project
     unbilled_costs = ProjectCost.get_uninvoiced_costs(invoice.project_id)
     
+    # Get billable extra goods for this project (not yet on an invoice)
+    project_goods = ExtraGood.query.filter(
+        ExtraGood.project_id == invoice.project_id,
+        ExtraGood.invoice_id.is_(None),
+        ExtraGood.billable == True
+    ).order_by(ExtraGood.created_at.desc()).all()
+    
     # Calculate totals
     total_available_hours = sum(entry.duration_hours for entry in unbilled_entries)
     total_available_costs = sum(float(cost.amount) for cost in unbilled_costs)
+    total_available_goods = sum(float(good.total_amount) for good in project_goods)
     
     # Get currency from settings
     settings = Settings.get_settings()
@@ -431,8 +494,10 @@ def generate_from_time(invoice_id):
                          invoice=invoice, 
                          time_entries=unbilled_entries,
                          project_costs=unbilled_costs,
+                         extra_goods=project_goods,
                          total_available_hours=total_available_hours,
                          total_available_costs=total_available_costs,
+                         total_available_goods=total_available_goods,
                          currency=currency)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/export/csv')
@@ -565,6 +630,21 @@ def duplicate_invoice(invoice_id):
             unit_price=original_item.unit_price
         )
         db.session.add(new_item)
+    
+    # Duplicate extra goods
+    for original_good in original_invoice.extra_goods:
+        new_good = ExtraGood(
+            name=original_good.name,
+            description=original_good.description,
+            category=original_good.category,
+            quantity=original_good.quantity,
+            unit_price=original_good.unit_price,
+            sku=original_good.sku,
+            invoice_id=new_invoice.id,
+            created_by=current_user.id,
+            currency_code=original_good.currency_code
+        )
+        db.session.add(new_good)
     
     # Calculate totals
     new_invoice.calculate_totals()

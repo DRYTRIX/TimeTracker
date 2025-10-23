@@ -9,7 +9,7 @@ name: CD - Release Build
 # - Tests can optionally be run via workflow_dispatch for manual releases
 #
 # Workflow is triggered by:
-# - Push to main/master (after PR merge)
+# - Push to main/master (after PR merge from RC)
 # - Git tags (v*.*.*)
 # - Release events
 # - Manual workflow_dispatch

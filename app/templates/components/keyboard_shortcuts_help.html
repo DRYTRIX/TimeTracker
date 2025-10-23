@@ -1,0 +1,233 @@
+<!-- Keyboard Shortcuts Help Modal -->
+<!-- Triggered by Shift+? -->
+
+<div id="keyboardShortcutsModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeKeyboardShortcutsModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Header -->
+            <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    <i class="fas fa-keyboard mr-2 text-blue-600"></i>
+                    Keyboard Shortcuts
+                </h2>
+                <button onclick="closeKeyboardShortcutsModal()" 
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Shortcuts Grid -->
+            <div class="p-6 space-y-8">
+                <!-- General -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-globe mr-2 text-blue-600"></i>
+                        General
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Command Palette</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                <span class="platform-key">Ctrl</span> K
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Toggle Theme</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                <span class="platform-key">Ctrl</span> Shift L
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Search</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                <span class="platform-key">Ctrl</span> /
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Show This Help</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                Shift ?
+                            </kbd>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-compass mr-2 text-green-600"></i>
+                        Navigation
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Go to Dashboard</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                g d
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Go to Projects</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                g p
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Go to Reports</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                g r
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Go to Tasks</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                g t
+                            </kbd>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-clock mr-2 text-purple-600"></i>
+                        Timer
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Start/Stop Timer</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                t
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Log Manual Time</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                <span class="platform-key">Ctrl</span> M
+                            </kbd>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-bolt mr-2 text-yellow-600"></i>
+                        Quick Actions
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Create New Project</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                c p
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Create New Task</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                c t
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Create New Client</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                c c
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Create New Invoice</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                c i
+                            </kbd>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Features -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-star mr-2 text-yellow-500"></i>
+                        New Features
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Time Entry Templates</span>
+                            <span class="text-xs text-gray-500">via Command Palette</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Saved Filters</span>
+                            <span class="text-xs text-gray-500">via Command Palette</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">User Settings</span>
+                            <span class="text-xs text-gray-500">via Command Palette</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Export to Excel</span>
+                            <span class="text-xs text-gray-500">via Command Palette</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                        <i class="fas fa-lightbulb mr-2"></i>Pro Tips
+                    </h4>
+                    <ul class="space-y-1 text-sm text-blue-800 dark:text-blue-300">
+                        <li>• Press <kbd class="px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">Ctrl K</kbd> to open the command palette and search for any action</li>
+                        <li>• Use sequence shortcuts like <kbd class="px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">g d</kbd> for quick navigation (type 'g' then 'd')</li>
+                        <li>• Most forms can be submitted with <kbd class="px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">Ctrl Enter</kbd></li>
+                        <li>• Press <kbd class="px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">Esc</kbd> to close any modal or dropdown</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+                <button onclick="closeKeyboardShortcutsModal()" 
+                        class="w-full btn btn-primary">
+                    Close <kbd class="ml-2 px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">Esc</kbd>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openKeyboardShortcutsModal() {
+    document.getElementById('keyboardShortcutsModal').classList.remove('hidden');
+    
+    // Update platform-specific key labels
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    document.querySelectorAll('.platform-key').forEach(el => {
+        el.textContent = isMac ? '⌘' : 'Ctrl';
+    });
+}
+
+function closeKeyboardShortcutsModal() {
+    document.getElementById('keyboardShortcutsModal').classList.add('hidden');
+}
+
+// Listen for Shift+? to open shortcuts modal
+document.addEventListener('keydown', function(e) {
+    // Shift+? (which is Shift+/)
+    if (e.shiftKey && e.key === '?') {
+        // Don't trigger if user is typing in an input
+        if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+            return;
+        }
+        e.preventDefault();
+        openKeyboardShortcutsModal();
+    }
+    
+    // Close on Escape
+    if (e.key === 'Escape') {
+        closeKeyboardShortcutsModal();
+    }
+});
+</script>
+

@@ -8,8 +8,10 @@ echo "=== Fixing upload directory permissions ==="
 UPLOAD_DIRS=(
     "/app/app/static/uploads"
     "/app/app/static/uploads/logos"
+    "/app/app/static/uploads/avatars"
     "/app/static/uploads"
     "/app/static/uploads/logos"
+    "/app/static/uploads/avatars"
 )
 
 # Function to fix directory permissions

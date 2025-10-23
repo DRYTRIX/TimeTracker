@@ -50,6 +50,36 @@
         </table>
     </div>
 
+    {% if invoice.extra_goods.count() > 0 %}
+    <div class="mt-6">
+        <h2 class="text-lg font-semibold mb-4">Extra Goods</h2>
+        <table class="w-full text-left">
+            <thead>
+                <tr>
+                    <th class="p-2">Name</th>
+                    <th class="p-2">Description</th>
+                    <th class="p-2">Category</th>
+                    <th class="p-2">Quantity</th>
+                    <th class="p-2">Unit Price</th>
+                    <th class="p-2">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for good in invoice.extra_goods %}
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <td class="p-2">{{ good.name }}</td>
+                    <td class="p-2">{{ good.description or '-' }}</td>
+                    <td class="p-2">{{ good.category|capitalize }}</td>
+                    <td class="p-2">{{ "%.2f"|format(good.quantity) }}</td>
+                    <td class="p-2">{{ "%.2f"|format(good.unit_price) }}</td>
+                    <td class="p-2">{{ "%.2f"|format(good.total_amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
     <div class="mt-6 flex justify-end">
         <div class="w-full md:w-1/3">
             <div class="flex justify-between">

@@ -3,11 +3,15 @@
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>
-        <h1 class="text-2xl font-bold">{{ _('Edit Invoice') }} {{ invoice.invoice_number }}</h1>
+        <h1 class="text-2xl font-bold">{{ _('Edit Invoice') }} <span class="text-primary">{{ invoice.invoice_number }}</span></h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Update invoice details, items, and terms') }}</p>
     </div>
-    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Invoice') }}</a>
+    <div class="flex gap-2 mt-4 md:mt-0">
+        <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+            <i class="fas fa-arrow-left mr-2"></i>{{ _('Back') }}
+        </a>
     </div>
+</div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
@@ -45,20 +49,103 @@
                     </div>
                 </div>
 
-                <div class="mt-8">
+                <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold">{{ _('Items') }}</h2>
-                        <button type="button" id="add-item" class="bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-lg text-sm"><i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}</button>
+                        <div>
+                            <h2 class="text-lg font-semibold flex items-center">
+                                <i class="fas fa-file-invoice mr-2 text-blue-600"></i>
+                                {{ _('Invoice Items') }}
+                                <span id="items-count" class="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">0</span>
+                            </h2>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time-based services and hourly work') }}</p>
+                        </div>
+                        <button type="button" id="add-item" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition shadow-sm">
+                            <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
+                        </button>
                     </div>
-                    <div id="invoice-items">
+                    
+                    <!-- Items header (desktop) -->
+                    <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase">
+                        <div class="md:col-span-6">{{ _('Description') }}</div>
+                        <div class="md:col-span-2">{{ _('Quantity') }}</div>
+                        <div class="md:col-span-3">{{ _('Unit Price') }}</div>
+                        <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
+                    </div>
+                    
+                    <div id="invoice-items" class="space-y-2">
                         {% for item in invoice.items %}
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3 invoice-item-row">
-                            <input type="text" name="description[]" placeholder="{{ _('Description') }}" value="{{ item.description }}" class="md:col-span-6 form-input">
-                            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" class="md:col-span-2 form-input">
-                            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" class="md:col-span-3 form-input">
-                            <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded"><i class="fas fa-trash"></i></button>
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition">
+                            <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" value="{{ item.description }}" class="md:col-span-6 form-input" data-calc-trigger>
+                            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" class="md:col-span-2 form-input item-quantity" data-calc-trigger>
+                            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="md:col-span-3 form-input item-price" data-calc-trigger>
+                            <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                         {% endfor %}
+                    </div>
+                    
+                    <div id="items-subtotal" class="mt-3 p-3 bg-blue-50/30 dark:bg-blue-950/10 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
+                        <div class="flex justify-between items-center text-sm font-medium">
+                            <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Items Subtotal') }}:</span>
+                            <span class="text-lg font-bold text-blue-700 dark:text-blue-400">{{ invoice.currency_code }} <span id="items-subtotal-amount">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-lg font-semibold flex items-center">
+                                <i class="fas fa-box mr-2 text-emerald-600"></i>
+                                {{ _('Extra Goods') }}
+                                <span id="goods-count" class="ml-2 px-2 py-0.5 text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">0</span>
+                            </h2>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Products, materials, licenses, and other goods') }}</p>
+                        </div>
+                        <button type="button" id="add-good" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition shadow-sm">
+                            <i class="fas fa-plus mr-2"></i>{{ _('Add Good') }}
+                        </button>
+                    </div>
+                    
+                    <!-- Goods header (desktop) -->
+                    <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase">
+                        <div class="md:col-span-2">{{ _('Name') }}</div>
+                        <div class="md:col-span-3">{{ _('Description') }}</div>
+                        <div class="md:col-span-2">{{ _('Category') }}</div>
+                        <div class="md:col-span-1">{{ _('Qty') }}</div>
+                        <div class="md:col-span-2">{{ _('Price') }}</div>
+                        <div class="md:col-span-1">{{ _('SKU') }}</div>
+                        <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
+                    </div>
+                    
+                    <div id="invoice-goods" class="space-y-2">
+                        {% for good in invoice.extra_goods %}
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 invoice-good-row hover:shadow-sm transition">
+                            <input type="text" name="good_name[]" placeholder="{{ _('e.g., Software License') }}" value="{{ good.name }}" class="md:col-span-2 form-input" data-calc-trigger>
+                            <input type="text" name="good_description[]" placeholder="{{ _('Description') }}" value="{{ good.description or '' }}" class="md:col-span-3 form-input">
+                            <select name="good_category[]" class="md:col-span-2 form-input">
+                                <option value="product" {% if good.category == 'product' %}selected{% endif %}>{{ _('Product') }}</option>
+                                <option value="service" {% if good.category == 'service' %}selected{% endif %}>{{ _('Service') }}</option>
+                                <option value="material" {% if good.category == 'material' %}selected{% endif %}>{{ _('Material') }}</option>
+                                <option value="license" {% if good.category == 'license' %}selected{% endif %}>{{ _('License') }}</option>
+                                <option value="other" {% if good.category == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
+                            </select>
+                            <input type="number" name="good_quantity[]" placeholder="{{ _('Qty') }}" value="{{ good.quantity }}" step="0.01" min="0" class="md:col-span-1 form-input good-quantity" data-calc-trigger>
+                            <input type="number" name="good_unit_price[]" placeholder="{{ _('Price') }}" value="{{ good.unit_price }}" step="0.01" min="0" class="md:col-span-2 form-input good-price" data-calc-trigger>
+                            <input type="text" name="good_sku[]" placeholder="{{ _('SKU') }}" value="{{ good.sku or '' }}" class="md:col-span-1 form-input text-xs">
+                            <button type="button" class="remove-good md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove good') }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div id="goods-subtotal" class="mt-3 p-3 bg-emerald-50/30 dark:bg-emerald-950/10 rounded-lg border border-emerald-200/30 dark:border-emerald-800/30">
+                        <div class="flex justify-between items-center text-sm font-medium">
+                            <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Goods Subtotal') }}:</span>
+                            <span class="text-lg font-bold text-emerald-700 dark:text-emerald-400">{{ invoice.currency_code }} <span id="goods-subtotal-amount">0.00</span></span>
+                        </div>
                     </div>
                 </div>
 
@@ -71,46 +158,79 @@
     </div>
 
     <div class="space-y-4">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <h3 class="text-lg font-semibold mb-3">{{ _('Invoice Summary') }}</h3>
-            <div class="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Issue Date') }}</div>
-                    <div class="font-medium">{{ invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else '-' }}</div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow sticky top-4">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fas fa-calculator mr-2 text-primary"></i>
+                {{ _('Live Preview') }}
+            </h3>
+            
+            <div class="space-y-4">
+                <!-- Invoice Info -->
+                <div class="pb-4 border-b border-border-light dark:border-border-dark">
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <div class="text-text-muted-light dark:text-text-muted-dark text-xs">{{ _('Issue Date') }}</div>
+                            <div class="font-medium">{{ invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-text-muted-light dark:text-text-muted-dark text-xs">{{ _('Status') }}</div>
+                            <div>
+                                <span class="px-2 py-0.5 text-xs rounded {% if invoice.status == 'paid' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300{% elif invoice.status == 'sent' %}bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300{% elif invoice.status == 'overdue' %}bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300{% else %}bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300{% endif %}">
+                                    {{ invoice.status|capitalize }}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-text-muted-light dark:text-text-muted-dark text-xs">{{ _('Payment') }}</div>
+                            <div>
+                                <span class="px-2 py-0.5 text-xs rounded {% if invoice.payment_status == 'fully_paid' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300{% elif invoice.payment_status == 'partially_paid' %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300{% else %}bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300{% endif %}">
+                                    {{ invoice.payment_status.replace('_',' ')|capitalize }}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-text-muted-light dark:text-text-muted-dark text-xs">{{ _('Currency') }}</div>
+                            <div class="font-medium">{{ invoice.currency_code }}</div>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</div>
-                    <div class="font-medium">{{ invoice.status|capitalize }}</div>
+                
+                <!-- Calculation Preview -->
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Items') }} (<span id="preview-items-count">0</span>)</span>
+                        <span class="font-medium" id="preview-items-total">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Goods') }} (<span id="preview-goods-count">0</span>)</span>
+                        <span class="font-medium" id="preview-goods-total">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm pt-3 border-t border-border-light dark:border-border-dark">
+                        <span class="font-medium">{{ _('Subtotal') }}</span>
+                        <span class="font-semibold" id="preview-subtotal">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Tax') }} (<span id="preview-tax-rate">{{ '%.2f'|format(invoice.tax_rate) }}</span>%)
+                        </span>
+                        <span class="font-medium" id="preview-tax-amount">0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t-2 border-primary">
+                        <span class="text-lg font-bold">{{ _('Total') }}</span>
+                        <span class="text-2xl font-bold text-primary" id="preview-total">0.00</span>
+                    </div>
                 </div>
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Payment Status') }}</div>
-                    <div class="font-medium">{{ invoice.payment_status.replace('_',' ')|capitalize }}</div>
-                </div>
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Currency') }}</div>
-                    <div class="font-medium">{{ invoice.currency_code }}</div>
-                </div>
-            </div>
-            <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Subtotal') }}</div>
-                    <div class="font-semibold">{{ '%.2f'|format(invoice.subtotal) }}</div>
-                </div>
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Tax') }}</div>
-                    <div class="font-semibold">{{ '%.2f'|format(invoice.tax_amount) }} ({{ '%.2f'|format(invoice.tax_rate) }}%)</div>
-                </div>
-                <div class="col-span-2">
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Total Amount') }}</div>
-                    <div class="text-xl font-bold">{{ '%.2f'|format(invoice.total_amount) }}</div>
-                </div>
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Amount Paid') }}</div>
-                    <div class="font-semibold">{{ '%.2f'|format(invoice.amount_paid or 0) }}</div>
-                </div>
-                <div>
-                    <div class="text-text-muted-light dark:text-text-muted-dark">{{ _('Outstanding') }}</div>
-                    <div class="font-semibold">{{ '%.2f'|format(invoice.outstanding_amount) }}</div>
+                
+                <!-- Payment Info -->
+                <div class="pt-4 border-t border-border-light dark:border-border-dark space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Amount Paid') }}</span>
+                        <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ '%.2f'|format(invoice.amount_paid or 0) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Outstanding') }}</span>
+                        <span class="font-semibold" id="preview-outstanding">{{ '%.2f'|format(invoice.outstanding_amount) }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -133,23 +253,158 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const itemsContainer = document.getElementById('invoice-items');
+    const goodsContainer = document.getElementById('invoice-goods');
+    const taxRateInput = document.getElementById('tax_rate');
+    
+    // Calculate totals function
+    function calculateTotals() {
+        // Calculate items
+        let itemsTotal = 0;
+        let itemsCount = 0;
+        document.querySelectorAll('.invoice-item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-quantity')?.value || 0);
+            const price = parseFloat(row.querySelector('.item-price')?.value || 0);
+            if (qty > 0 && price > 0) {
+                itemsTotal += qty * price;
+                itemsCount++;
+            }
+        });
+        
+        // Calculate goods
+        let goodsTotal = 0;
+        let goodsCount = 0;
+        document.querySelectorAll('.invoice-good-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.good-quantity')?.value || 0);
+            const price = parseFloat(row.querySelector('.good-price')?.value || 0);
+            if (qty > 0 && price > 0) {
+                goodsTotal += qty * price;
+                goodsCount++;
+            }
+        });
+        
+        // Calculate subtotal and tax
+        const subtotal = itemsTotal + goodsTotal;
+        const taxRate = parseFloat(taxRateInput?.value || 0);
+        const taxAmount = subtotal * (taxRate / 100);
+        const total = subtotal + taxAmount;
+        
+        // Calculate outstanding
+        const amountPaid = parseFloat('{{ invoice.amount_paid or 0 }}');
+        const outstanding = Math.max(0, total - amountPaid);
+        
+        // Update displays
+        document.getElementById('items-count').textContent = itemsCount;
+        document.getElementById('goods-count').textContent = goodsCount;
+        document.getElementById('items-subtotal-amount').textContent = itemsTotal.toFixed(2);
+        document.getElementById('goods-subtotal-amount').textContent = goodsTotal.toFixed(2);
+        
+        // Update preview panel
+        document.getElementById('preview-items-count').textContent = itemsCount;
+        document.getElementById('preview-goods-count').textContent = goodsCount;
+        document.getElementById('preview-items-total').textContent = itemsTotal.toFixed(2);
+        document.getElementById('preview-goods-total').textContent = goodsTotal.toFixed(2);
+        document.getElementById('preview-subtotal').textContent = subtotal.toFixed(2);
+        document.getElementById('preview-tax-rate').textContent = taxRate.toFixed(2);
+        document.getElementById('preview-tax-amount').textContent = taxAmount.toFixed(2);
+        document.getElementById('preview-total').textContent = total.toFixed(2);
+        document.getElementById('preview-outstanding').textContent = outstanding.toFixed(2);
+    }
+    
+    // Add item button
     const addBtn = document.getElementById('add-item');
     addBtn && addBtn.addEventListener('click', function() {
         const row = document.createElement('div');
-        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 mb-3 invoice-item-row';
+        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition space-y-2';
         row.innerHTML = `
-            <input type="text" name="description[]" placeholder="{{ _('Description') }}" class="md:col-span-6 form-input">
-            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" step="0.01" class="md:col-span-2 form-input">
-            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" step="0.01" class="md:col-span-3 form-input">
-            <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded"><i class="fas fa-trash"></i></button>
+            <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" class="md:col-span-6 form-input" data-calc-trigger>
+            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="1" step="0.01" min="0" class="md:col-span-2 form-input item-quantity" data-calc-trigger>
+            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" step="0.01" min="0" class="md:col-span-3 form-input item-price" data-calc-trigger>
+            <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
+                <i class="fas fa-trash"></i>
+            </button>
         `;
         itemsContainer.appendChild(row);
+        calculateTotals();
+        row.querySelector('.item-quantity').focus();
     });
 
+    // Add good button
+    const addGoodBtn = document.getElementById('add-good');
+    addGoodBtn && addGoodBtn.addEventListener('click', function() {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 invoice-good-row hover:shadow-sm transition space-y-2';
+        row.innerHTML = `
+            <input type="text" name="good_name[]" placeholder="{{ _('e.g., Software License') }}" class="md:col-span-2 form-input" data-calc-trigger>
+            <input type="text" name="good_description[]" placeholder="{{ _('Description') }}" class="md:col-span-3 form-input">
+            <select name="good_category[]" class="md:col-span-2 form-input">
+                <option value="product">{{ _('Product') }}</option>
+                <option value="service">{{ _('Service') }}</option>
+                <option value="material">{{ _('Material') }}</option>
+                <option value="license">{{ _('License') }}</option>
+                <option value="other">{{ _('Other') }}</option>
+            </select>
+            <input type="number" name="good_quantity[]" placeholder="{{ _('Qty') }}" value="1" step="0.01" min="0" class="md:col-span-1 form-input good-quantity" data-calc-trigger>
+            <input type="number" name="good_unit_price[]" placeholder="{{ _('Price') }}" step="0.01" min="0" class="md:col-span-2 form-input good-price" data-calc-trigger>
+            <input type="text" name="good_sku[]" placeholder="{{ _('SKU') }}" class="md:col-span-1 form-input text-xs">
+            <button type="button" class="remove-good md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove good') }}">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        goodsContainer.appendChild(row);
+        calculateTotals();
+        row.querySelector('[name="good_name[]"]').focus();
+    });
+
+    // Remove item handler
     itemsContainer && itemsContainer.addEventListener('click', function(e) {
         if (e.target.closest('.remove-item')) {
             const row = e.target.closest('.invoice-item-row');
-            row && row.remove();
+            if (row) {
+                row.style.opacity = '0.5';
+                row.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    row.remove();
+                    calculateTotals();
+                }, 200);
+            }
+        }
+    });
+
+    // Remove good handler
+    goodsContainer && goodsContainer.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-good')) {
+            const row = e.target.closest('.invoice-good-row');
+            if (row) {
+                row.style.opacity = '0.5';
+                row.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    row.remove();
+                    calculateTotals();
+                }, 200);
+            }
+        }
+    });
+    
+    // Live calculation on input changes
+    document.addEventListener('input', function(e) {
+        if (e.target.hasAttribute('data-calc-trigger') || e.target.id === 'tax_rate') {
+            calculateTotals();
+        }
+    });
+    
+    // Initial calculation
+    calculateTotals();
+    
+    // Form validation before submit
+    const form = document.getElementById('editInvoiceForm');
+    form && form.addEventListener('submit', function(e) {
+        const itemRows = document.querySelectorAll('.invoice-item-row');
+        const goodRows = document.querySelectorAll('.invoice-good-row');
+        
+        if (itemRows.length === 0 && goodRows.length === 0) {
+            e.preventDefault();
+            alert('{{ _("Please add at least one item or extra good to the invoice") }}');
+            return false;
         }
     });
 });

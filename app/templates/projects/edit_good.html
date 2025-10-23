@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Edit Extra Good') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ good.name }} · {{ project.name }}</p>
+    </div>
+    <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Project') }}</a>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Name') }} *</label>
+                    <input type="text" name="name" id="name" value="{{ good.name }}" required class="form-input">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                    <textarea name="description" id="description" rows="3" class="form-input">{{ good.description or '' }}</textarea>
+                </div>
+                
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }} *</label>
+                    <select name="category" id="category" required class="form-input">
+                        <option value="product" {% if good.category == 'product' %}selected{% endif %}>{{ _('Product') }}</option>
+                        <option value="service" {% if good.category == 'service' %}selected{% endif %}>{{ _('Service') }}</option>
+                        <option value="material" {% if good.category == 'material' %}selected{% endif %}>{{ _('Material') }}</option>
+                        <option value="license" {% if good.category == 'license' %}selected{% endif %}>{{ _('License') }}</option>
+                        <option value="other" {% if good.category == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="sku" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('SKU/Product Code') }}</label>
+                    <input type="text" name="sku" id="sku" value="{{ good.sku or '' }}" class="form-input">
+                </div>
+                
+                <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Quantity') }} *</label>
+                    <input type="number" name="quantity" id="quantity" value="{{ good.quantity }}" step="0.01" min="0.01" required class="form-input">
+                </div>
+                
+                <div>
+                    <label for="unit_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Unit Price') }} *</label>
+                    <input type="number" name="unit_price" id="unit_price" value="{{ good.unit_price }}" step="0.01" min="0" required class="form-input">
+                </div>
+                
+                <div>
+                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Currency') }}</label>
+                    <input type="text" name="currency_code" id="currency_code" value="{{ good.currency_code }}" maxlength="3" class="form-input">
+                </div>
+                
+                <div>
+                    <label class="flex items-center mt-6">
+                        <input type="checkbox" name="billable" {% if good.billable %}checked{% endif %} class="form-checkbox">
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Billable') }}</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+                <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

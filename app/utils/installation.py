@@ -99,6 +99,16 @@ class InstallationConfig:
         self._config['setup_completed_at'] = str(datetime.now())
         self._save_config()
     
+    def is_initial_data_seeded(self) -> bool:
+        """Check if initial database data (default client/project) has been seeded"""
+        return self._config.get('initial_data_seeded', False)
+    
+    def mark_initial_data_seeded(self):
+        """Mark that initial database data has been seeded"""
+        self._config['initial_data_seeded'] = True
+        self._config['initial_data_seeded_at'] = str(datetime.now())
+        self._save_config()
+    
     def get_telemetry_preference(self) -> bool:
         """Get user's telemetry preference"""
         # Reload on read to reflect external updates (e.g., tests toggling state)

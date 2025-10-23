@@ -32,3 +32,4 @@
 {"asctime": "2025-10-21 16:02:11,272", "levelname": "INFO", "name": "timetracker", "message": "auth.login", "request_id": "9f445ef0-b6e6-4631-8bc5-c40c5689a501", "event": "auth.login", "user_id": 1, "auth_method": "local"}
 {"asctime": "2025-10-21 16:02:32,456", "levelname": "INFO", "name": "timetracker", "message": "report.viewed", "request_id": "d1de7948-78b1-4b74-b534-e342fe7f7830", "event": "report.viewed", "user_id": 1, "report_type": "summary"}
 {"asctime": "2025-10-21 16:02:59,857", "levelname": "INFO", "name": "timetracker", "message": "task.updated", "request_id": "090070f8-6a79-4eaa-bb07-805cdf525ce7", "event": "task.updated", "user_id": 1, "task_id": 1, "project_id": 1}
+{"asctime": "2025-10-22 11:20:05,729", "levelname": "INFO", "name": "timetracker", "message": "auth.logout", "taskName": null, "request_id": "423f12e2-cbd5-4322-ac98-8fd0411537c7", "event": "auth.logout", "user_id": 1}

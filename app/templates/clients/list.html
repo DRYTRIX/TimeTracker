@@ -33,9 +33,32 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+            {{ clients|length }} client{{ 's' if clients|length != 1 else '' }} found
+        </h3>
+        {% if current_user.is_admin %}
+        <div class="relative">
+            <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'clientsBulkMenu')" disabled>
+                <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
+            </button>
+            <ul id="clientsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg">
+                <li><a class="block px-4 py-2 text-sm" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
+                <li><a class="block px-4 py-2 text-sm" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
+                <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
+                <li><a class="block px-4 py-2 text-sm text-rose-600" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
+            </ul>
+        </div>
+        {% endif %}
+    </div>
     <table class="w-full text-left">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
+                {% if current_user.is_admin %}
+                <th class="p-4 w-10">
+                    <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllClients()">
+                </th>
+                {% endif %}
                 <th class="p-4">Name</th>
                 <th class="p-4">Contact Person</th>
                 <th class="p-4">Email</th>
@@ -47,6 +70,11 @@
         <tbody>
             {% for client in clients %}
             <tr class="border-b border-border-light dark:border-border-dark">
+                {% if current_user.is_admin %}
+                <td class="p-4">
+                    <input type="checkbox" class="client-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ client.id }}" onchange="updateClientsBulkState()">
+                </td>
+                {% endif %}
                 <td class="p-4">{{ client.name }}</td>
                 <td class="p-4">{{ client.contact_person }}</td>
                 <td class="p-4">{{ client.email }}</td>
@@ -66,10 +94,65 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">No clients found.</td>
+                <td colspan="7" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">No clients found.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    {% if current_user.is_admin %}
+    <form id="clients-bulk-status-form" method="POST" action="{{ url_for('clients.bulk_status_change') }}" class="hidden">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="new_status" id="clientsBulkNewStatus" value="">
+    </form>
+    <form id="clients-bulk-delete-form" method="POST" action="{{ url_for('clients.bulk_delete_clients') }}" class="hidden">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
+    <script>
+    function toggleAllClients(){
+        const selectAll = document.getElementById('selectAll');
+        document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = !!(selectAll && selectAll.checked));
+        updateClientsBulkState();
+    }
+    function updateClientsBulkState(){
+        const selected = document.querySelectorAll('.client-checkbox:checked').length;
+        const btn = document.getElementById('bulkActionsBtn');
+        const cnt = document.getElementById('selectedCount');
+        if (cnt) cnt.textContent = selected;
+        if (btn) btn.disabled = selected === 0;
+    }
+    function showBulkDeleteConfirm(){
+        const count = document.querySelectorAll('.client-checkbox:checked').length;
+        if (count === 0) return false;
+        const msg = `Are you sure you want to delete ${count} client(s)? Clients with projects will be skipped.`;
+        if (window.showConfirm){ window.showConfirm(msg, { title: 'Delete Clients', confirmText: 'Delete', variant: 'danger' }).then(function(ok){ if (ok) submitClientsBulkDelete(); }); }
+        return false;
+    }
+    function submitClientsBulkDelete(){
+        const form = document.getElementById('clients-bulk-delete-form');
+        form.querySelectorAll('input[name="client_ids[]"]').forEach(n => n.remove());
+        document.querySelectorAll('.client-checkbox:checked').forEach(cb => {
+            const i = document.createElement('input'); i.type='hidden'; i.name='client_ids[]'; i.value=cb.value; form.appendChild(i);
+        });
+        form.submit();
+    }
+    function showBulkStatusChange(newStatus){
+        const count = document.querySelectorAll('.client-checkbox:checked').length;
+        if (count === 0) return false;
+        const label = {active:'Active', inactive:'Inactive'}[newStatus] || newStatus;
+        const msg = `Are you sure you want to mark ${count} client(s) as ${label}?`;
+        if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Client Status', confirmText: 'Change' }).then(function(ok){ if (ok){ document.getElementById('clientsBulkNewStatus').value=newStatus; submitClientsBulkStatus(); }}); }
+        return false;
+    }
+    function submitClientsBulkStatus(){
+        const form = document.getElementById('clients-bulk-status-form');
+        form.querySelectorAll('input[name="client_ids[]"]').forEach(n => n.remove());
+        document.querySelectorAll('.client-checkbox:checked').forEach(cb => {
+            const i = document.createElement('input'); i.type='hidden'; i.name='client_ids[]'; i.value=cb.value; form.appendChild(i);
+        });
+        form.submit();
+    }
+    </script>
+    {% endif %}
 </div>
 {% endblock %}

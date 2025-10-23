@@ -30,8 +30,8 @@
 </div>
 
 <!-- Edit Task Form -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="lg:col-span-1">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
         <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
             <div class="border-b border-border-light dark:border-border-dark p-4">
                 <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-edit text-yellow-600"></i>{{ _('Task Information') }}</h6>
@@ -70,7 +70,7 @@
                                 <option value="">{{ _('Select a project') }}</option>
                                 {% for project in projects %}
                                 <option value="{{ project.id }}" {% if task.project_id == project.id %}selected{% endif %}>
-                                    {{ project.name }} ({{ project.client }})
+                                    {{ project.name }}{% if project.code_display %} [{{ project.code_display }}]{% endif %} ({{ project.client }})
                                 </option>
                                 {% endfor %}
                             </select>

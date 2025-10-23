@@ -4,12 +4,41 @@
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>
-        <h1 class="text-2xl font-bold">{{ project.name }}</h1>
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+            <span>{{ project.name }}</span>
+            {% if project.code_display %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200" title="{{ _('Project Code') }}">{{ project.code_display }}</span>
+            {% endif %}
+        </h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.client.name }}</p>
     </div>
     {% if current_user.is_admin %}
     <div class="flex gap-2">
-        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Project</a>
+        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Project') }}</a>
+        {% if project.status == 'active' %}
+        <form method="POST" action="{{ url_for('projects.deactivate_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark project as Inactive?') }}', { title: '{{ _('Change Project Status') }}', confirmText: '{{ _('Change') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-white mt-4 md:mt-0">{{ _('Mark Inactive') }}</button>
+        </form>
+        <form method="POST" action="{{ url_for('projects.archive_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Archive this project?') }}', { title: '{{ _('Archive Project') }}', confirmText: '{{ _('Archive') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-gray-600 text-white mt-4 md:mt-0">{{ _('Archive') }}</button>
+        </form>
+        {% elif project.status == 'inactive' %}
+        <form method="POST" action="{{ url_for('projects.activate_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate project?') }}', { title: '{{ _('Activate Project') }}', confirmText: '{{ _('Activate') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white mt-4 md:mt-0">{{ _('Activate') }}</button>
+        </form>
+        <form method="POST" action="{{ url_for('projects.archive_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Archive this project?') }}', { title: '{{ _('Archive Project') }}', confirmText: '{{ _('Archive') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-gray-600 text-white mt-4 md:mt-0">{{ _('Archive') }}</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('projects.unarchive_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Unarchive project?') }}', { title: '{{ _('Unarchive Project') }}', confirmText: '{{ _('Unarchive') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-sky-600 text-white mt-4 md:mt-0">{{ _('Unarchive') }}</button>
+        </form>
+        {% endif %}
         <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
                 onclick="document.getElementById('confirmDeleteProject-{{ project.id }}').classList.remove('hidden')">
             {{ _('Delete Project') }}
@@ -28,12 +57,28 @@
             <h2 class="text-lg font-semibold mb-4">Details</h2>
             <div class="space-y-4">
                 <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Project Code') }}</h3>
+                    <p>
+                        {% if project.code_display %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ project.code_display }}</span>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Description</h3>
                     <div class="prose prose-sm dark:prose-invert max-w-none">{{ (project.description or 'No description provided.') | markdown | safe }}</div>
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Status</h3>
-                    <p class="{{ 'text-green-500' if project.status == 'active' else 'text-red-500' }}">{{ project.status | capitalize }}</p>
+                    {% set status_map = {
+                        'active':   {'cls': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', 'label': _('Active')},
+                        'inactive': {'cls': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', 'label': _('Inactive')},
+                        'archived': {'cls': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200', 'label': _('Archived')},
+                    } %}
+                    {% set st = status_map.get(project.status, status_map['inactive']) %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ st.cls }}">{{ st.label }}</span>
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Billing</h3>

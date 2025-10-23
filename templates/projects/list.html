@@ -20,10 +20,12 @@
 
     {# Summary cards similar to invoices #}
     {% set _active = 0 %}
+    {% set _inactive = 0 %}
     {% set _archived = 0 %}
     {% set _total_hours = 0 %}
     {% for p in projects %}
         {% if p.status == 'active' %}{% set _active = _active + 1 %}{% endif %}
+        {% if p.status == 'inactive' %}{% set _inactive = _inactive + 1 %}{% endif %}
         {% if p.status == 'archived' %}{% set _archived = _archived + 1 %}{% endif %}
         {% set _total_hours = _total_hours + (p.total_hours or 0) %}
     {% endfor %}
@@ -53,10 +55,10 @@
         <div class="col-md-3 col-sm-6 mb-3">
             <div class="card border-0 shadow-sm h-100 summary-card">
                 <div class="card-body p-3 d-flex align-items-center">
-                    <div class="summary-icon bg-secondary bg-opacity-10 text-secondary"><i class="fas fa-archive"></i></div>
+                    <div class="summary-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-pause-circle"></i></div>
                     <div class="ms-3">
-                        <div class="summary-label">{{ _('Archived') }}</div>
-                        <div class="summary-value">{{ _archived }}</div>
+                        <div class="summary-label">{{ _('Inactive') }}</div>
+                        <div class="summary-value">{{ _inactive }}</div>
                     </div>
                 </div>
             </div>
@@ -64,10 +66,10 @@
         <div class="col-md-3 col-sm-6 mb-3">
             <div class="card border-0 shadow-sm h-100 summary-card">
                 <div class="card-body p-3 d-flex align-items-center">
-                    <div class="summary-icon bg-info bg-opacity-10 text-info"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="summary-icon bg-secondary bg-opacity-10 text-secondary"><i class="fas fa-archive"></i></div>
                     <div class="ms-3">
-                        <div class="summary-label">{{ _('Total Hours') }}</div>
-                        <div class="summary-value">{{ '%.1f'|format(_total_hours) }}h</div>
+                        <div class="summary-label">{{ _('Archived') }}</div>
+                        <div class="summary-value">{{ _archived }}</div>
                     </div>
                 </div>
             </div>
@@ -96,6 +98,7 @@
                                 <option value="">{{ _('All Statuses') }}</option>
                                 <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
                                 <option value="archived" {% if request.args.get('status') == 'archived' %}selected{% endif %}>{{ _('Archived') }}</option>
+                                <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>{{ _('Inactive') }}</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-4 mobile-form-group">
@@ -143,6 +146,20 @@
                                 <input type="text" class="form-control border-start-0" id="searchInput" 
                                        placeholder="{{ _('Search projects...') }}">
                             </div>
+                            {% if current_user.is_admin %}
+                            <div class="btn-group" id="bulkActionsGroup">
+                                <button type="button" id="bulkActionsBtn" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" disabled>
+                                    <i class="fas fa-tasks me-1"></i> {{ _('Bulk Actions') }} (<span id="selectedCount">0</span>)
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="showBulkStatusChange('active')"><i class="fas fa-check-circle me-2 text-success"></i>{{ _('Mark as Active') }}</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showBulkStatusChange('inactive')"><i class="fas fa-pause-circle me-2 text-warning"></i>{{ _('Mark as Inactive') }}</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showBulkStatusChange('archived')"><i class="fas fa-archive me-2 text-secondary"></i>{{ _('Archive') }}</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="showBulkDeleteConfirm()"><i class="fas fa-trash me-2"></i>{{ _('Delete') }}</a></li>
+                                </ul>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -152,6 +169,11 @@
                         <table class="table table-hover mb-0" id="projectsTable">
                             <thead class="table-light">
                                 <tr>
+                                    {% if current_user.is_admin %}
+                                    <th class="border-0" style="width: 40px;">
+                                        <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleAllProjects()">
+                                    </th>
+                                    {% endif %}
                                     <th class="border-0">{{ _('Project') }}</th>
                                     <th class="border-0">{{ _('Client') }}</th>
                                     <th class="border-0">{{ _('Status') }}</th>
@@ -163,6 +185,11 @@
                             <tbody>
                                 {% for project in projects %}
                                 <tr>
+                                    {% if current_user.is_admin %}
+                                    <td>
+                                        <input type="checkbox" class="project-checkbox form-check-input" value="{{ project.id }}" onchange="updateBulkDeleteButton()">
+                                    </td>
+                                    {% endif %}
                                     <td data-label="Project">
                                         <div>
                                             <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-decoration-none">
@@ -179,6 +206,8 @@
                                     <td data-label="Status">
                                         {% if project.status == 'active' %}
                                         <span class="status-badge bg-success text-white">{{ _('Active') }}</span>
+                                        {% elif project.status == 'inactive' %}
+                                        <span class="status-badge bg-warning text-white">{{ _('Inactive') }}</span>
                                         {% else %}
                                         <span class="status-badge bg-secondary text-white">{{ _('Archived') }}</span>
                                         {% endif %}
@@ -214,22 +243,31 @@
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             {% if project.status == 'active' %}
-                                            <form method="POST" action="{{ url_for('projects.archive_project', project_id=project.id) }}" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-action btn-action--more touch-target" title="{{ _('Archive project') }}">
-                                                    <i class="fas fa-archive"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-sm btn-action btn-action--warning touch-target" title="{{ _('Mark as inactive') }}"
+                                                    onclick="confirmDeactivateProject('{{ project.id }}', '{{ project.name }}')">
+                                                <i class="fas fa-pause-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-action btn-action--more touch-target" title="{{ _('Archive project') }}"
+                                                    onclick="confirmArchiveProject('{{ project.id }}', '{{ project.name }}')">
+                                                <i class="fas fa-archive"></i>
+                                            </button>
+                                            {% elif project.status == 'inactive' %}
+                                            <button type="button" class="btn btn-sm btn-action btn-action--success touch-target" title="{{ _('Activate project') }}"
+                                                    onclick="confirmActivateProject('{{ project.id }}', '{{ project.name }}')">
+                                                <i class="fas fa-check-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-action btn-action--more touch-target" title="{{ _('Archive project') }}"
+                                                    onclick="confirmArchiveProject('{{ project.id }}', '{{ project.name }}')">
+                                                <i class="fas fa-archive"></i>
+                                            </button>
                                             {% else %}
-                                            <form method="POST" action="{{ url_for('projects.unarchive_project', project_id=project.id) }}" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-action btn-action--more touch-target" title="{{ _('Unarchive project') }}">
-                                                    <i class="fas fa-box-open"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-sm btn-action btn-action--success touch-target" title="{{ _('Unarchive project') }}"
+                                                    onclick="confirmUnarchiveProject('{{ project.id }}', '{{ project.name }}')">
+                                                <i class="fas fa-box-open"></i>
+                                            </button>
                                             {% endif %}
                                             <button type="button" class="btn btn-sm btn-action btn-action--danger touch-target" title="{{ _('Delete project') }}"
-                                                    onclick="showDeleteProjectModal('{{ project.id }}', '{{ project.name }}')">
+                                                    onclick="confirmDeleteProject('{{ project.id }}', '{{ project.name }}', {{ 'true' if project.time_entries.count() > 0 else 'false' }})">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                             {% endif %}
@@ -260,13 +298,48 @@
     </div>
 </div>
 
-<!-- Delete Project Modal -->
-<div class="modal fade" id="deleteProjectModal" tabindex="-1">
+<!-- Bulk Action Forms (hidden) -->
+<form id="confirmBulkDelete-form" method="POST" action="{{ url_for('projects.bulk_delete_projects') }}" class="d-none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<form id="bulkStatusChange-form" method="POST" action="{{ url_for('projects.bulk_status_change') }}" class="d-none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="new_status" id="bulkNewStatus" value="">
+</form>
+
+<!-- Bulk Status Change Confirmation Modal -->
+<div class="modal fade" id="confirmBulkStatusChange" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-trash me-2 text-danger"></i>{{ _('Delete Project') }}
+                    <i class="fas fa-exchange-alt me-2 text-primary"></i>{{ _('Change Status') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="bulkStatusChangeMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>{{ _('Cancel') }}
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitBulkStatusChange()">
+                    <i class="fas fa-check me-2"></i>{{ _('Change Status') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="confirmBulkDelete" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2 text-danger"></i>{{ _('Delete Selected Projects') }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -275,19 +348,16 @@
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>{{ _('Warning:') }}</strong> {{ _('This action cannot be undone.') }}
                 </div>
-                <p>{{ _('Are you sure you want to delete the project') }} <strong id="deleteProjectName"></strong>?</p>
-                <p class="text-muted mb-0">{{ _('All associated time entries will also be deleted.') }}</p>
+                <p>{{ _('Are you sure you want to delete the selected projects?') }}</p>
+                <p class="text-muted mb-0">{{ _('Projects with existing time entries will be skipped.') }}</p>
             </div>
-            <div class="modal-footer d-flex flex-column flex-md-row">
-                <button type="button" class="btn btn-secondary mb-2 mb-md-0 me-md-2 touch-target" data-bs-dismiss="modal">
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>{{ _('Cancel') }}
                 </button>
-                <form method="POST" id="deleteProjectForm" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger touch-target">
-                        <i class="fas fa-trash me-2"></i>{{ _('Delete Project') }}
-                    </button>
-                </form>
+                <button type="button" class="btn btn-danger" onclick="submitBulkDelete()">
+                    <i class="fas fa-trash me-2"></i>{{ _('Delete Projects') }}
+                </button>
             </div>
         </div>
     </div>
@@ -309,16 +379,114 @@ thead th[style*="cursor: pointer"]:hover { background-color: var(--surface-hover
     "length_menu": {{ _('Show _MENU_ projects per page')|tojson }},
     "info": {{ _('Showing _START_ to _END_ of _TOTAL_ projects')|tojson }},
     "status_active": {{ _('Active')|tojson }},
+    "status_inactive": {{ _('Inactive')|tojson }},
     "status_archived": {{ _('Archived')|tojson }},
     "deleting": {{ _('Deleting...')|tojson }},
     "hide_filters": {{ _('Hide Filters')|tojson }},
-    "show_filters": {{ _('Show Filters')|tojson }}
+    "show_filters": {{ _('Show Filters')|tojson }},
+    "confirm_delete": {{ _('Are you sure you want to delete the project "{name}"?')|tojson }},
+    "confirm_delete_with_entries": {{ _('Cannot delete project "{name}" because it has time entries. Please delete the time entries first.')|tojson }},
+    "confirm_archive": {{ _('Are you sure you want to archive "{name}"?')|tojson }},
+    "confirm_unarchive": {{ _('Are you sure you want to unarchive "{name}"?')|tojson }},
+    "confirm_activate": {{ _('Are you sure you want to activate "{name}"?')|tojson }},
+    "confirm_deactivate": {{ _('Are you sure you want to mark "{name}" as inactive?')|tojson }}
 }
 </script>
 <script>
 var i18nProjects = (function(){ try{ var el = document.getElementById('i18n-json-projects-list'); return el ? JSON.parse(el.textContent) : {}; } catch(e){ return {}; } })();
 </script>
 <script>
+// Bulk delete functions for projects
+function toggleAllProjects() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.project-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton() {
+    const checkboxes = document.querySelectorAll('.project-checkbox:checked');
+    const count = checkboxes.length;
+    const btnGroup = document.getElementById('bulkActionsGroup');
+    const btn = document.getElementById('bulkActionsBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (countSpan) countSpan.textContent = count;
+    if (btn) btn.disabled = count === 0;
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.project-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll && allCheckboxes.length > 0) {
+        selectAll.checked = count === allCheckboxes.length;
+        selectAll.indeterminate = count > 0 && count < allCheckboxes.length;
+    }
+}
+
+function showBulkDeleteConfirm() {
+    new bootstrap.Modal(document.getElementById('confirmBulkDelete')).show();
+}
+
+function submitBulkDelete() {
+    const checkboxes = document.querySelectorAll('.project-checkbox:checked');
+    const form = document.getElementById('confirmBulkDelete-form');
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="project_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected project IDs to form
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'project_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Close modal and submit form
+    bootstrap.Modal.getInstance(document.getElementById('confirmBulkDelete')).hide();
+    form.submit();
+}
+
+function showBulkStatusChange(newStatus) {
+    const count = document.querySelectorAll('.project-checkbox:checked').length;
+    const statusLabels = {
+        'active': '{{ _("Active") }}',
+        'inactive': '{{ _("Inactive") }}',
+        'archived': '{{ _("Archived") }}'
+    };
+    
+    const message = `{{ _("Are you sure you want to mark {count} project(s) as {status}?") }}`
+        .replace('{count}', count)
+        .replace('{status}', statusLabels[newStatus] || newStatus);
+    
+    document.getElementById('bulkStatusChangeMessage').textContent = message;
+    document.getElementById('bulkNewStatus').value = newStatus;
+    new bootstrap.Modal(document.getElementById('confirmBulkStatusChange')).show();
+    return false;
+}
+
+function submitBulkStatusChange() {
+    const checkboxes = document.querySelectorAll('.project-checkbox:checked');
+    const form = document.getElementById('bulkStatusChange-form');
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="project_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected project IDs to form
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'project_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Close modal and submit form
+    bootstrap.Modal.getInstance(document.getElementById('confirmBulkStatusChange')).hide();
+    form.submit();
+}
+
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');
@@ -476,23 +644,101 @@ function filterByStatus(status) {
     if (active) active.classList.add('active');
 }
 
-// Function to show delete project modal
-function showDeleteProjectModal(projectId, projectName) {
-    document.getElementById('deleteProjectName').textContent = projectName;
-    document.getElementById('deleteProjectForm').action = "{{ url_for('projects.delete_project', project_id=0) }}".replace('0', projectId);
-    new bootstrap.Modal(document.getElementById('deleteProjectModal')).show();
+// Project action confirmation functions
+function confirmDeleteProject(projectId, projectName, hasTimeEntries) {
+    if (hasTimeEntries) {
+        const msg = (i18nProjects.confirm_delete_with_entries || 'Cannot delete project "{name}" because it has time entries. Please delete the time entries first.').replace('{name}', projectName);
+        if (window.showAlert) {
+            window.showAlert(msg);
+        } else {
+            alert(msg);
+        }
+        return;
+    }
+    
+    const msg = (i18nProjects.confirm_delete || 'Are you sure you want to delete the project "{name}"?').replace('{name}', projectName);
+    if (window.showConfirm) {
+        window.showConfirm(msg).then(function(ok){
+            if (!ok) return;
+            submitProjectAction(projectId, 'delete');
+        });
+    } else {
+        if (confirm(msg)) {
+            submitProjectAction(projectId, 'delete');
+        }
+    }
 }
 
-// Add loading state to delete project form
-document.addEventListener('DOMContentLoaded', function() {
-    const deleteForm = document.getElementById('deleteProjectForm');
-    if (deleteForm) {
-        deleteForm.addEventListener('submit', function() {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = '<div class="loading-spinner me-2"></div>' + (i18nProjects.deleting || 'Deleting...');
-            submitBtn.disabled = true;
+function confirmArchiveProject(projectId, projectName) {
+    const msg = (i18nProjects.confirm_archive || 'Are you sure you want to archive "{name}"?').replace('{name}', projectName);
+    if (window.showConfirm) {
+        window.showConfirm(msg).then(function(ok){
+            if (!ok) return;
+            submitProjectAction(projectId, 'archive');
         });
+    } else {
+        if (confirm(msg)) {
+            submitProjectAction(projectId, 'archive');
+        }
     }
-});
+}
+
+function confirmUnarchiveProject(projectId, projectName) {
+    const msg = (i18nProjects.confirm_unarchive || 'Are you sure you want to unarchive "{name}"?').replace('{name}', projectName);
+    if (window.showConfirm) {
+        window.showConfirm(msg).then(function(ok){
+            if (!ok) return;
+            submitProjectAction(projectId, 'unarchive');
+        });
+    } else {
+        if (confirm(msg)) {
+            submitProjectAction(projectId, 'unarchive');
+        }
+    }
+}
+
+function confirmActivateProject(projectId, projectName) {
+    const msg = (i18nProjects.confirm_activate || 'Are you sure you want to activate "{name}"?').replace('{name}', projectName);
+    if (window.showConfirm) {
+        window.showConfirm(msg).then(function(ok){
+            if (!ok) return;
+            submitProjectAction(projectId, 'activate');
+        });
+    } else {
+        if (confirm(msg)) {
+            submitProjectAction(projectId, 'activate');
+        }
+    }
+}
+
+function confirmDeactivateProject(projectId, projectName) {
+    const msg = (i18nProjects.confirm_deactivate || 'Are you sure you want to mark "{name}" as inactive?').replace('{name}', projectName);
+    if (window.showConfirm) {
+        window.showConfirm(msg).then(function(ok){
+            if (!ok) return;
+            submitProjectAction(projectId, 'deactivate');
+        });
+    } else {
+        if (confirm(msg)) {
+            submitProjectAction(projectId, 'deactivate');
+        }
+    }
+}
+
+function submitProjectAction(projectId, action) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/projects/${projectId}/${action}`;
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    form.appendChild(csrfInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 {% endblock %}

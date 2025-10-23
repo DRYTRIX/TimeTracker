@@ -78,7 +78,7 @@
     </form>
 </div>
 <script>
-document.addEventListener('DOMContentLoaded', function(){
+document.addEventListener('DOMContentLoaded', async function(){
     // Default values for date/time to now
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
@@ -131,6 +131,73 @@ document.addEventListener('DOMContentLoaded', function(){
         if (projectSelect.value){ loadTasks(projectSelect.value); }
         projectSelect.addEventListener('change', () => loadTasks(projectSelect.value));
     }
+
+    // Apply Time Entry Template if provided via sessionStorage or query param
+    try {
+        let tpl = null;
+        const raw = sessionStorage.getItem('activeTemplate');
+        if (raw) {
+            try { tpl = JSON.parse(raw); } catch(_) { tpl = null; }
+        }
+        if (!tpl) {
+            const params = new URLSearchParams(window.location.search);
+            const tplId = params.get('template');
+            if (tplId) {
+                try {
+                    const resp = await fetch(`/api/templates/${tplId}`);
+                    if (resp.ok) tpl = await resp.json();
+                } catch(_) {}
+            }
+        }
+        if (tpl && typeof tpl === 'object') {
+            // Preselect project and task
+            if (tpl.project_id && projectSelect) {
+                projectSelect.value = String(tpl.project_id);
+                // Preselect task after load
+                if (taskSelect) {
+                    taskSelect.setAttribute('data-selected-task-id', tpl.task_id ? String(tpl.task_id) : '');
+                }
+                await loadTasks(projectSelect.value);
+            }
+
+            // Notes, tags, billable
+            const notes = document.getElementById('notes');
+            const tagsInput = document.getElementById('tags');
+            const billable = document.getElementById('billable');
+            if (notes && tpl.default_notes) notes.value = tpl.default_notes;
+            if (tagsInput && tpl.tags) tagsInput.value = tpl.tags;
+            if (billable != null && typeof tpl.billable === 'boolean') billable.checked = !!tpl.billable;
+
+            // Duration → set end time relative to start if provided
+            const minutes = (() => {
+                if (typeof tpl.default_duration_minutes === 'number') return tpl.default_duration_minutes;
+                if (typeof tpl.default_duration === 'number') return Math.round(tpl.default_duration * 60);
+                return 0;
+            })();
+            if (minutes > 0) {
+                const sd = document.getElementById('start_date');
+                const st = document.getElementById('start_time');
+                const ed = document.getElementById('end_date');
+                const et = document.getElementById('end_time');
+                if (sd && st && ed && et && sd.value && st.value) {
+                    const start = new Date(`${sd.value}T${st.value}:00`);
+                    if (!isNaN(start.getTime())) {
+                        const end = new Date(start.getTime() + minutes * 60000);
+                        const yyyy = end.getFullYear();
+                        const mm = String(end.getMonth() + 1).padStart(2,'0');
+                        const dd = String(end.getDate()).padStart(2,'0');
+                        const hh = String(end.getHours()).padStart(2,'0');
+                        const mi = String(end.getMinutes()).padStart(2,'0');
+                        ed.value = `${yyyy}-${mm}-${dd}`;
+                        et.value = `${hh}:${mi}`;
+                    }
+                }
+            }
+
+            // Clear after applying so it does not persist
+            try { sessionStorage.removeItem('activeTemplate'); } catch(_) {}
+        }
+    } catch(_) {}
 });
 </script>
 {% endblock %}

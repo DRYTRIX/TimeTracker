@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn
+from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood, Activity
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
@@ -23,6 +23,8 @@ def list_projects():
         query = query.filter_by(status='active')
     elif status == 'archived':
         query = query.filter_by(status='archived')
+    elif status == 'inactive':
+        query = query.filter_by(status='inactive')
     
     if client_name:
         query = query.join(Client).filter(Client.name == client_name)
@@ -75,6 +77,7 @@ def create_project():
         # Budgets
         budget_amount_raw = request.form.get('budget_amount', '').strip()
         budget_threshold_raw = request.form.get('budget_threshold_percent', '').strip()
+        code = request.form.get('code', '').strip()
         try:
             current_app.logger.info(
                 "POST /projects/create user=%s name=%s client_id=%s billable=%s",
@@ -139,6 +142,16 @@ def create_project():
                 pass
             return render_template('projects/create.html', clients=Client.get_active_clients())
         
+        # Normalize code
+        normalized_code = code.upper() if code else None
+
+        # Validate code uniqueness if provided
+        if normalized_code:
+            existing_code = Project.query.filter(Project.code == normalized_code).first()
+            if existing_code:
+                flash(_('Project code already in use'), 'error')
+                return render_template('projects/create.html', clients=Client.get_active_clients())
+
         # Create project
         project = Project(
             name=name,
@@ -147,6 +160,7 @@ def create_project():
             billable=billable,
             hourly_rate=hourly_rate,
             billing_ref=billing_ref,
+            code=normalized_code,
             budget_amount=budget_amount,
             budget_threshold_percent=budget_threshold_percent or 80
         )
@@ -168,6 +182,18 @@ def create_project():
             "has_client": bool(client_id),
             "billable": billable
         })
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='created',
+            entity_type='project',
+            entity_id=project.id,
+            entity_name=project.name,
+            description=f'Created project "{project.name}" for {client.name}',
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
         
         flash(f'Project "{name}" created successfully', 'success')
         return redirect(url_for('projects.view_project', project_id=project.id))
@@ -248,6 +274,7 @@ def edit_project(project_id):
         billable = request.form.get('billable') == 'on'
         hourly_rate = request.form.get('hourly_rate', '').strip()
         billing_ref = request.form.get('billing_ref', '').strip()
+        code = request.form.get('code', '').strip()
         budget_amount_raw = request.form.get('budget_amount', '').strip()
         budget_threshold_raw = request.form.get('budget_threshold_percent', '').strip()
         
@@ -294,6 +321,14 @@ def edit_project(project_id):
         if existing and existing.id != project.id:
             flash('A project with this name already exists', 'error')
             return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
+
+        # Validate code uniqueness if provided
+        normalized_code = code.upper() if code else None
+        if normalized_code:
+            existing_code = Project.query.filter(Project.code == normalized_code).first()
+            if existing_code and existing_code.id != project.id:
+                flash(_('Project code already in use'), 'error')
+                return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
         
         # Update project
         project.name = name
@@ -302,6 +337,7 @@ def edit_project(project_id):
         project.billable = billable
         project.hourly_rate = hourly_rate
         project.billing_ref = billing_ref
+        project.code = normalized_code
         project.budget_amount = budget_amount if budget_amount_raw != '' else None
         project.budget_threshold_percent = budget_threshold_percent
         project.updated_at = datetime.utcnow()
@@ -351,6 +387,48 @@ def unarchive_project(project_id):
     
     return redirect(url_for('projects.list_projects'))
 
+@projects_bp.route('/projects/<int:project_id>/deactivate', methods=['POST'])
+@login_required
+def deactivate_project(project_id):
+    """Mark a project as inactive"""
+    if not current_user.is_admin:
+        flash('Only administrators can deactivate projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    project = Project.query.get_or_404(project_id)
+    
+    if project.status == 'inactive':
+        flash('Project is already inactive', 'info')
+    else:
+        project.deactivate()
+        # Log project deactivation
+        log_event("project.deactivated", user_id=current_user.id, project_id=project.id)
+        track_event(current_user.id, "project.deactivated", {"project_id": project.id})
+        flash(f'Project "{project.name}" marked as inactive', 'success')
+    
+    return redirect(url_for('projects.list_projects'))
+
+@projects_bp.route('/projects/<int:project_id>/activate', methods=['POST'])
+@login_required
+def activate_project(project_id):
+    """Activate a project"""
+    if not current_user.is_admin:
+        flash('Only administrators can activate projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    project = Project.query.get_or_404(project_id)
+    
+    if project.status == 'active':
+        flash('Project is already active', 'info')
+    else:
+        project.activate()
+        # Log project activation
+        log_event("project.activated", user_id=current_user.id, project_id=project.id)
+        track_event(current_user.id, "project.activated", {"project_id": project.id})
+        flash(f'Project "{project.name}" activated successfully', 'success')
+    
+    return redirect(url_for('projects.list_projects'))
+
 @projects_bp.route('/projects/<int:project_id>/delete', methods=['POST'])
 @login_required
 def delete_project(project_id):
@@ -373,6 +451,132 @@ def delete_project(project_id):
         return redirect(url_for('projects.view_project', project_id=project.id))
     
     flash(f'Project "{project_name}" deleted successfully', 'success')
+    return redirect(url_for('projects.list_projects'))
+
+@projects_bp.route('/projects/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_projects():
+    """Delete multiple projects at once"""
+    if not current_user.is_admin:
+        flash('Only administrators can delete projects', 'error')
+        return redirect(url_for('projects.list_projects'))
+    
+    project_ids = request.form.getlist('project_ids[]')
+    
+    if not project_ids:
+        flash('No projects selected for deletion', 'warning')
+        return redirect(url_for('projects.list_projects'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for project_id_str in project_ids:
+        try:
+            project_id = int(project_id_str)
+            project = Project.query.get(project_id)
+            
+            if not project:
+                continue
+            
+            # Check for time entries
+            if project.time_entries.count() > 0:
+                skipped_count += 1
+                errors.append(f"'{project.name}': Has time entries")
+                continue
+            
+            # Delete the project
+            project_id_for_log = project.id
+            project_name = project.name
+            
+            db.session.delete(project)
+            deleted_count += 1
+            
+            # Log the deletion
+            log_event("project.deleted", user_id=current_user.id, project_id=project_id_for_log)
+            track_event(current_user.id, "project.deleted", {"project_id": project_id_for_log})
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {project_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit('bulk_delete_projects', {'count': deleted_count}):
+            flash('Could not delete projects due to a database error. Please check server logs.', 'error')
+            return redirect(url_for('projects.list_projects'))
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(f'Successfully deleted {deleted_count} project{"s" if deleted_count != 1 else ""}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} project{"s" if skipped_count != 1 else ""}: {", ".join(errors[:3])}{"..." if len(errors) > 3 else ""}', 'warning')
+    
+    if deleted_count == 0 and skipped_count == 0:
+        flash('No projects were deleted', 'info')
+    
+    return redirect(url_for('projects.list_projects'))
+
+@projects_bp.route('/projects/bulk-status-change', methods=['POST'])
+@login_required
+def bulk_status_change():
+    """Change status for multiple projects at once"""
+    if not current_user.is_admin:
+        flash('Only administrators can change project status', 'error')
+        return redirect(url_for('projects.list_projects'))
+    
+    project_ids = request.form.getlist('project_ids[]')
+    new_status = request.form.get('new_status', '').strip()
+    
+    if not project_ids:
+        flash('No projects selected', 'warning')
+        return redirect(url_for('projects.list_projects'))
+    
+    if new_status not in ['active', 'inactive', 'archived']:
+        flash('Invalid status', 'error')
+        return redirect(url_for('projects.list_projects'))
+    
+    updated_count = 0
+    errors = []
+    
+    for project_id_str in project_ids:
+        try:
+            project_id = int(project_id_str)
+            project = Project.query.get(project_id)
+            
+            if not project:
+                continue
+            
+            # Update status
+            project.status = new_status
+            project.updated_at = datetime.utcnow()
+            updated_count += 1
+            
+            # Log the status change
+            log_event(f"project.status_changed_{new_status}", user_id=current_user.id, project_id=project.id)
+            track_event(current_user.id, "project.status_changed", {"project_id": project.id, "new_status": new_status})
+            
+        except Exception as e:
+            errors.append(f"ID {project_id_str}: {str(e)}")
+    
+    # Commit all changes
+    if updated_count > 0:
+        if not safe_commit('bulk_status_change_projects', {'count': updated_count, 'status': new_status}):
+            flash('Could not update project status due to a database error. Please check server logs.', 'error')
+            return redirect(url_for('projects.list_projects'))
+    
+    # Show appropriate messages
+    status_labels = {'active': 'active', 'inactive': 'inactive', 'archived': 'archived'}
+    if updated_count > 0:
+        flash(f'Successfully marked {updated_count} project{"s" if updated_count != 1 else ""} as {status_labels.get(new_status, new_status)}', 'success')
+    
+    if errors:
+        flash(f'Some projects could not be updated: {", ".join(errors[:3])}{"..." if len(errors) > 3 else ""}', 'warning')
+    
+    if updated_count == 0:
+        flash('No projects were updated', 'info')
+    
     return redirect(url_for('projects.list_projects'))
 
 
@@ -627,6 +831,220 @@ def api_project_costs(project_id):
         'total_costs': total_costs,
         'billable_costs': billable_costs,
         'count': len(costs)
+    })
+
+
+# ===== PROJECT EXTRA GOODS ROUTES =====
+
+@projects_bp.route('/projects/<int:project_id>/goods')
+@login_required
+def list_goods(project_id):
+    """List all extra goods for a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Get goods
+    goods = project.extra_goods.order_by(ExtraGood.created_at.desc()).all()
+    
+    # Get category breakdown
+    category_breakdown = ExtraGood.get_goods_by_category(project_id=project_id)
+    
+    # Calculate totals
+    total_amount = ExtraGood.get_total_amount(project_id=project_id)
+    billable_amount = ExtraGood.get_total_amount(project_id=project_id, billable_only=True)
+    
+    return render_template(
+        'projects/goods.html',
+        project=project,
+        goods=goods,
+        category_breakdown=category_breakdown,
+        total_amount=total_amount,
+        billable_amount=billable_amount
+    )
+
+
+@projects_bp.route('/projects/<int:project_id>/goods/add', methods=['GET', 'POST'])
+@login_required
+def add_good(project_id):
+    """Add a new extra good to a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', 'product').strip()
+        quantity = request.form.get('quantity', '1').strip()
+        unit_price = request.form.get('unit_price', '').strip()
+        sku = request.form.get('sku', '').strip()
+        billable = request.form.get('billable') == 'on'
+        currency_code = request.form.get('currency_code', 'EUR').strip()
+        
+        # Validate required fields
+        if not name or not unit_price:
+            flash(_('Name and unit price are required'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        # Validate quantity
+        try:
+            quantity = Decimal(quantity)
+            if quantity <= 0:
+                raise ValueError('Quantity must be positive')
+        except (ValueError, Exception):
+            flash(_('Invalid quantity format'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        # Validate unit price
+        try:
+            unit_price = Decimal(unit_price)
+            if unit_price < 0:
+                raise ValueError('Unit price cannot be negative')
+        except (ValueError, Exception):
+            flash(_('Invalid unit price format'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        # Create extra good
+        good = ExtraGood(
+            name=name,
+            description=description if description else None,
+            category=category,
+            quantity=quantity,
+            unit_price=unit_price,
+            sku=sku if sku else None,
+            billable=billable,
+            currency_code=currency_code,
+            project_id=project_id,
+            created_by=current_user.id
+        )
+        
+        db.session.add(good)
+        if not safe_commit('add_project_good', {'project_id': project_id}):
+            flash(_('Could not add extra good due to a database error. Please check server logs.'), 'error')
+            return render_template('projects/add_good.html', project=project)
+        
+        flash(_('Extra good added successfully'), 'success')
+        return redirect(url_for('projects.view_project', project_id=project.id))
+    
+    return render_template('projects/add_good.html', project=project)
+
+
+@projects_bp.route('/projects/<int:project_id>/goods/<int:good_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_good(project_id, good_id):
+    """Edit a project extra good"""
+    project = Project.query.get_or_404(project_id)
+    good = ExtraGood.query.get_or_404(good_id)
+    
+    # Verify good belongs to project
+    if good.project_id != project_id:
+        flash(_('Extra good not found'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    # Only admin or the user who created the good can edit
+    if not current_user.is_admin and good.created_by != current_user.id:
+        flash(_('You do not have permission to edit this extra good'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', 'product').strip()
+        quantity = request.form.get('quantity', '1').strip()
+        unit_price = request.form.get('unit_price', '').strip()
+        sku = request.form.get('sku', '').strip()
+        billable = request.form.get('billable') == 'on'
+        currency_code = request.form.get('currency_code', 'EUR').strip()
+        
+        # Validate required fields
+        if not name or not unit_price:
+            flash(_('Name and unit price are required'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        # Validate quantity
+        try:
+            quantity = Decimal(quantity)
+            if quantity <= 0:
+                raise ValueError('Quantity must be positive')
+        except (ValueError, Exception):
+            flash(_('Invalid quantity format'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        # Validate unit price
+        try:
+            unit_price = Decimal(unit_price)
+            if unit_price < 0:
+                raise ValueError('Unit price cannot be negative')
+        except (ValueError, Exception):
+            flash(_('Invalid unit price format'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        # Update good
+        good.name = name
+        good.description = description if description else None
+        good.category = category
+        good.quantity = quantity
+        good.unit_price = unit_price
+        good.sku = sku if sku else None
+        good.billable = billable
+        good.currency_code = currency_code
+        good.update_total()
+        
+        if not safe_commit('edit_project_good', {'good_id': good_id}):
+            flash(_('Could not update extra good due to a database error. Please check server logs.'), 'error')
+            return render_template('projects/edit_good.html', project=project, good=good)
+        
+        flash(_('Extra good updated successfully'), 'success')
+        return redirect(url_for('projects.view_project', project_id=project.id))
+    
+    return render_template('projects/edit_good.html', project=project, good=good)
+
+
+@projects_bp.route('/projects/<int:project_id>/goods/<int:good_id>/delete', methods=['POST'])
+@login_required
+def delete_good(project_id, good_id):
+    """Delete a project extra good"""
+    project = Project.query.get_or_404(project_id)
+    good = ExtraGood.query.get_or_404(good_id)
+    
+    # Verify good belongs to project
+    if good.project_id != project_id:
+        flash(_('Extra good not found'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    # Only admin or the user who created the good can delete
+    if not current_user.is_admin and good.created_by != current_user.id:
+        flash(_('You do not have permission to delete this extra good'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    # Check if good has been added to an invoice
+    if good.invoice_id:
+        flash(_('Cannot delete extra good that has been added to an invoice'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    good_name = good.name
+    db.session.delete(good)
+    if not safe_commit('delete_project_good', {'good_id': good_id}):
+        flash(_('Could not delete extra good due to a database error. Please check server logs.'), 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
+    
+    flash(_(f'Extra good "{good_name}" deleted successfully'), 'success')
+    return redirect(url_for('projects.view_project', project_id=project.id))
+
+
+# API endpoint for getting project extra goods as JSON
+@projects_bp.route('/api/projects/<int:project_id>/goods')
+@login_required
+def api_project_goods(project_id):
+    """API endpoint to get project extra goods"""
+    project = Project.query.get_or_404(project_id)
+    
+    goods = ExtraGood.get_project_goods(project_id)
+    total_amount = ExtraGood.get_total_amount(project_id=project_id)
+    billable_amount = ExtraGood.get_total_amount(project_id=project_id, billable_only=True)
+    
+    return jsonify({
+        'goods': [good.to_dict() for good in goods],
+        'total_amount': total_amount,
+        'billable_amount': billable_amount,
+        'count': len(goods)
     })
 
 

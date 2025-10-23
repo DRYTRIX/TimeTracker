@@ -3,8 +3,8 @@
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>
-        <h1 class="text-2xl font-bold">{{ _('Generate from Time & Costs') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Select unbilled time entries and project costs to add as invoice items') }}</p>
+        <h1 class="text-2xl font-bold">{{ _('Generate from Time, Costs & Goods') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Select unbilled time entries, project costs, and extra goods to add to this invoice') }}</p>
     </div>
     <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Edit') }}</a>
     </div>
@@ -56,6 +56,28 @@
                     {% endif %}
                 </div>
 
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold mb-3">{{ _('Project Extra Goods') }}</h2>
+                    {% if extra_goods %}
+                    <div class="space-y-2">
+                        {% for good in extra_goods %}
+                        <label class="flex items-start gap-3 p-3 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                            <input type="checkbox" class="mt-1" name="extra_goods[]" value="{{ good.id }}">
+                            <div class="flex-1 text-sm">
+                                <div class="font-medium">{{ good.name }} ({{ good.category|title }}) · {{ '%.2f'|format(good.quantity) }} x {{ '%.2f'|format(good.unit_price) }} {{ good.currency_code }}</div>
+                                <div class="text-text-muted-light dark:text-text-muted-dark">
+                                    {{ _('Total') }}: {{ '%.2f'|format(good.total_amount) }} {{ good.currency_code }}
+                                    {% if good.description %} · {{ good.description[:80] }}{% if good.description|length > 80 %}…{% endif %}{% endif %}
+                                </div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No extra goods found for this project.') }}</div>
+                    {% endif %}
+                </div>
+
                 <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
                     <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
                     <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Add Selected to Invoice') }}</button>
@@ -69,14 +91,15 @@
             <h3 class="text-lg font-semibold mb-3">{{ _('Selection Summary') }}</h3>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available hours') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_hours) }}</span></div>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available costs') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_costs) }} {{ currency }}</span></div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available goods') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_goods) }} {{ currency }}</span></div>
         </div>
 
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h3 class="text-lg font-semibold mb-3">{{ _('Tips') }}</h3>
             <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
-                <li>{{ _('You can select multiple time entry groups and costs.') }}</li>
+                <li>{{ _('You can select multiple time entries, costs, and extra goods.') }}</li>
                 <li>{{ _('Time entries are grouped by task or project at item creation.') }}</li>
-                <li>{{ _('Costs are added as individual invoice items.') }}</li>
+                <li>{{ _('Costs and extra goods are added as individual invoice items.') }}</li>
             </ul>
         </div>
     </div>
@@ -89,10 +112,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('generateFromTimeForm');
     if (!form) return;
     form.addEventListener('submit', function(e) {
-        const anyChecked = form.querySelector('input[name="time_entries[]"]:checked, input[name="project_costs[]"]:checked');
+        const anyChecked = form.querySelector('input[name="time_entries[]"]:checked, input[name="project_costs[]"]:checked, input[name="extra_goods[]"]:checked');
         if (!anyChecked) {
             e.preventDefault();
-            try { window.toastManager && window.toastManager.warning('{{ _('Please select at least one time entry or cost') }}'); } catch(_) {}
+            try { window.toastManager && window.toastManager.warning('{{ _('Please select at least one time entry, cost, or extra good') }}'); } catch(_) {}
         }
     });
 });
