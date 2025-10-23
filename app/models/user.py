@@ -40,6 +40,7 @@ class User(UserMixin, db.Model):
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     project_costs = db.relationship('ProjectCost', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    favorite_projects = db.relationship('Project', secondary='user_favorite_projects', lazy='dynamic', backref=db.backref('favorited_by', lazy='dynamic'))
     
     def __init__(self, username, role='user', email=None, full_name=None):
         self.username = username.lower().strip()
@@ -137,3 +138,33 @@ class User(UserMixin, db.Model):
         """Check whether the user's avatar file exists on disk"""
         path = self.get_avatar_path()
         return bool(path and os.path.exists(path))
+    
+    # Favorite projects helpers
+    def add_favorite_project(self, project):
+        """Add a project to user's favorites"""
+        if not self.is_project_favorite(project):
+            self.favorite_projects.append(project)
+            db.session.commit()
+    
+    def remove_favorite_project(self, project):
+        """Remove a project from user's favorites"""
+        if self.is_project_favorite(project):
+            self.favorite_projects.remove(project)
+            db.session.commit()
+    
+    def is_project_favorite(self, project):
+        """Check if a project is in user's favorites"""
+        from .project import Project
+        if isinstance(project, int):
+            project_id = project
+            return self.favorite_projects.filter_by(id=project_id).count() > 0
+        elif isinstance(project, Project):
+            return self.favorite_projects.filter_by(id=project.id).count() > 0
+        return False
+    
+    def get_favorite_projects(self, status='active'):
+        """Get user's favorite projects, optionally filtered by status"""
+        query = self.favorite_projects
+        if status:
+            query = query.filter_by(status=status)
+        return query.order_by('name').all()

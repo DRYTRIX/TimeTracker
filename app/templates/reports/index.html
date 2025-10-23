@@ -20,7 +20,9 @@
         <a href="{{ url_for('reports.user_report') }}" class="bg-primary text-white p-4 rounded-lg text-center">User Report</a>
         <a href="{{ url_for('reports.summary_report') }}" class="bg-primary text-white p-4 rounded-lg text-center">Summary Report</a>
         <a href="{{ url_for('reports.task_report') }}" class="bg-primary text-white p-4 rounded-lg text-center">Task Report</a>
-        <a href="{{ url_for('reports.export_csv') }}" class="bg-secondary text-white p-4 rounded-lg text-center">Export CSV</a>
+        <a href="{{ url_for('reports.export_form') }}" class="bg-secondary text-white p-4 rounded-lg text-center hover:bg-indigo-700 transition">
+            <i class="fas fa-file-csv mr-2"></i>Export CSV
+        </a>
         <a href="{{ url_for('reports.export_excel') }}" class="bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700">
             <i class="fas fa-file-excel mr-2"></i>Export Excel
         </a>

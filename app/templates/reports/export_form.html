@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            <i class="fas fa-file-export mr-2"></i>
+            Export Time Entries to CSV
+        </h1>
+        <a href="{{ url_for('reports.reports') }}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition inline-block">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Reports
+        </a>
+    </div>
+
+    <!-- Info Card -->
+    <div class="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 p-4 mb-6 rounded">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700 dark:text-blue-200">
+                    Use the filters below to customize your CSV export. All filters are optional - leave blank to include all entries within the date range.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Form -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-lg">
+        <form id="exportForm" method="GET" action="{{ url_for('reports.export_csv') }}" class="space-y-6">
+            
+            <!-- Date Range Section -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                    <i class="fas fa-calendar-alt mr-2 text-indigo-500"></i>
+                    Date Range
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Start Date <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" 
+                               name="start_date" 
+                               id="start_date" 
+                               value="{{ default_start_date }}" 
+                               required
+                               class="form-input">
+                    </div>
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            End Date <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" 
+                               name="end_date" 
+                               id="end_date" 
+                               value="{{ default_end_date }}" 
+                               required
+                               class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700">
+
+            <!-- Filter Section -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                    <i class="fas fa-filter mr-2 text-indigo-500"></i>
+                    Filters
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+                    {% if current_user.is_admin %}
+                    <!-- User Filter (Admin Only) -->
+                    <div>
+                        <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-user mr-1"></i> User
+                        </label>
+                        <select name="user_id" 
+                                id="user_id" 
+                                class="form-input">
+                            <option value="">All Users</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <!-- Client Filter -->
+                    <div>
+                        <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-building mr-1"></i> Client
+                        </label>
+                        <select name="client_id" 
+                                id="client_id" 
+                                class="form-input">
+                            <option value="">All Clients</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Project Filter -->
+                    <div>
+                        <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-project-diagram mr-1"></i> Project
+                        </label>
+                        <select name="project_id" 
+                                id="project_id" 
+                                class="form-input">
+                            <option value="">All Projects</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" data-client-id="{{ project.client_id }}">{{ project.name }} ({{ project.client }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Task Filter -->
+                    <div>
+                        <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-tasks mr-1"></i> Task
+                        </label>
+                        <select name="task_id" 
+                                id="task_id" 
+                                class="form-input"
+                                disabled>
+                            <option value="">All Tasks (Select a project first)</option>
+                        </select>
+                    </div>
+
+                    <!-- Billable Filter -->
+                    <div>
+                        <label for="billable" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-dollar-sign mr-1"></i> Billable Status
+                        </label>
+                        <select name="billable" 
+                                id="billable" 
+                                class="form-input">
+                            <option value="all">All Entries</option>
+                            <option value="yes">Billable Only</option>
+                            <option value="no">Non-Billable Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Source Filter -->
+                    <div>
+                        <label for="source" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-compass mr-1"></i> Entry Source
+                        </label>
+                        <select name="source" 
+                                id="source" 
+                                class="form-input">
+                            <option value="all">All Sources</option>
+                            <option value="manual">Manual Entries</option>
+                            <option value="auto">Timer Entries</option>
+                        </select>
+                    </div>
+
+                    <!-- Tags Filter -->
+                    <div class="md:col-span-2 lg:col-span-3">
+                        <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-tags mr-1"></i> Tags (comma-separated)
+                        </label>
+                        <input type="text" 
+                               name="tags" 
+                               id="tags" 
+                               placeholder="e.g., development, meeting, urgent"
+                               class="form-input">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Enter tags separated by commas. Entries matching any of the tags will be included.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700">
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-4">
+                <button type="button" 
+                        id="resetBtn"
+                        class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-undo mr-2"></i>Reset Filters
+                </button>
+                <button type="submit" 
+                        class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+                    <i class="fas fa-download mr-2"></i>Export to CSV
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Preview Section -->
+    <div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+            <i class="fas fa-eye mr-2 text-indigo-500"></i>
+            Export Preview
+        </h3>
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+            <p class="mb-2"><strong>CSV Format:</strong></p>
+            <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded font-mono text-xs overflow-x-auto">
+                <div class="text-gray-700 dark:text-gray-300">
+                    ID, User, Project, Client, Task, Start Time, End Time, Duration (hours), Duration (formatted), Notes, Tags, Source, Billable, Created At, Updated At
+                </div>
+            </div>
+            <p class="mt-4 text-xs">
+                <i class="fas fa-info-circle mr-1"></i>
+                The CSV file will be downloaded with a filename indicating the date range and applied filters.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const projectSelect = document.getElementById('project_id');
+    const taskSelect = document.getElementById('task_id');
+    const clientSelect = document.getElementById('client_id');
+    const resetBtn = document.getElementById('resetBtn');
+    const exportForm = document.getElementById('exportForm');
+
+    // Load tasks when project is selected
+    if (projectSelect) {
+        projectSelect.addEventListener('change', function() {
+            const projectId = this.value;
+            
+            if (projectId) {
+                // Enable task select and load tasks
+                taskSelect.disabled = true;
+                taskSelect.innerHTML = '<option value="">Loading tasks...</option>';
+                
+                // Fetch tasks for the selected project
+                fetch(`/api/projects/${projectId}/tasks`)
+                    .then(response => response.json())
+                    .then(data => {
+                        taskSelect.innerHTML = '<option value="">All Tasks</option>';
+                        
+                        if (data.tasks && data.tasks.length > 0) {
+                            data.tasks.forEach(task => {
+                                const option = document.createElement('option');
+                                option.value = task.id;
+                                option.textContent = task.name;
+                                taskSelect.appendChild(option);
+                            });
+                            taskSelect.disabled = false;
+                        } else {
+                            taskSelect.innerHTML = '<option value="">No tasks available</option>';
+                            taskSelect.disabled = true;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading tasks:', error);
+                        taskSelect.innerHTML = '<option value="">Error loading tasks</option>';
+                        taskSelect.disabled = true;
+                    });
+            } else {
+                // Reset task select
+                taskSelect.innerHTML = '<option value="">All Tasks (Select a project first)</option>';
+                taskSelect.disabled = true;
+            }
+        });
+    }
+
+    // Sync client and project selections
+    if (projectSelect && clientSelect) {
+        projectSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.dataset.clientId) {
+                clientSelect.value = selectedOption.dataset.clientId;
+            }
+        });
+
+        clientSelect.addEventListener('change', function() {
+            const clientId = this.value;
+            if (clientId) {
+                // Filter projects by client
+                const projectOptions = projectSelect.querySelectorAll('option');
+                let foundMatch = false;
+                projectOptions.forEach(option => {
+                    if (option.dataset.clientId === clientId && !foundMatch) {
+                        projectSelect.value = option.value;
+                        foundMatch = true;
+                        // Trigger change event to load tasks
+                        projectSelect.dispatchEvent(new Event('change'));
+                    }
+                });
+            }
+        });
+    }
+
+    // Reset button functionality
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            // Reset all select fields to default
+            exportForm.reset();
+            
+            // Reset task select
+            if (taskSelect) {
+                taskSelect.innerHTML = '<option value="">All Tasks (Select a project first)</option>';
+                taskSelect.disabled = true;
+            }
+            
+            // Set default dates
+            document.getElementById('start_date').value = '{{ default_start_date }}';
+            document.getElementById('end_date').value = '{{ default_end_date }}';
+        });
+    }
+
+    // Form validation
+    exportForm.addEventListener('submit', function(e) {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        if (!startDate || !endDate) {
+            e.preventDefault();
+            alert('Please select both start and end dates.');
+            return false;
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+            e.preventDefault();
+            alert('Start date must be before or equal to end date.');
+            return false;
+        }
+        
+        return true;
+    });
+});
+</script>
+
+{% endblock %}
+
