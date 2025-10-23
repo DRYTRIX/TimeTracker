@@ -124,6 +124,39 @@ class TestInstallationConfig:
         assert 'installation_id' in config
         assert 'setup_complete' in config
         assert config['setup_complete'] is True
+    
+    def test_initial_data_seeding_tracking(self, installation_config):
+        """Test that initial data seeding is tracked"""
+        # Initially not seeded
+        assert not installation_config.is_initial_data_seeded()
+        
+        # Mark as seeded
+        installation_config.mark_initial_data_seeded()
+        assert installation_config.is_initial_data_seeded()
+        
+        # Verify persistence
+        config2 = InstallationConfig()
+        assert config2.is_initial_data_seeded()
+    
+    def test_initial_data_seeding_persistence(self, installation_config, temp_config_dir):
+        """Test that initial data seeding flag is persisted to disk"""
+        # Mark as seeded
+        installation_config.mark_initial_data_seeded()
+        
+        # Read the file directly
+        config_path = os.path.join(temp_config_dir, 'installation.json')
+        assert os.path.exists(config_path)
+        
+        with open(config_path, 'r') as f:
+            data = json.load(f)
+        
+        assert data['initial_data_seeded'] is True
+        assert 'initial_data_seeded_at' in data
+    
+    def test_initial_data_seeding_default_value(self, installation_config):
+        """Test that initial data seeding defaults to False"""
+        # Should default to False for new installations
+        assert installation_config.is_initial_data_seeded() is False
 
 
 class TestSetupRoutes:

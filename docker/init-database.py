@@ -185,22 +185,35 @@ def initialize_database(engine):
             else:
                 print("Default settings already exist")
             
-            # Create default project if it doesn't exist
-            print("Checking for default project...")
-            if not Project.query.first():
-                print("Creating default project...")
-                project = Project(
-                    name='General',
-                    client='Default Client',
-                    description='Default project for general tasks',
-                    billable=True,
-                    status='active'
-                )
-                db.session.add(project)
-                db.session.commit()
-                print("Created default project")
+            # Import installation config to check if initial data has been seeded
+            from app.utils.installation import get_installation_config
+            installation_config = get_installation_config()
+            
+            # Only create default project/client on fresh installations
+            # Check if initial data has already been seeded
+            if not installation_config.is_initial_data_seeded():
+                print("Checking for default project...")
+                if not Project.query.first():
+                    print("Creating default project and client (fresh installation)...")
+                    project = Project(
+                        name='General',
+                        client='Default Client',
+                        description='Default project for general tasks',
+                        billable=True,
+                        status='active'
+                    )
+                    db.session.add(project)
+                    db.session.commit()
+                    print("Created default project and client")
+                    
+                    # Mark that initial data has been seeded
+                    installation_config.mark_initial_data_seeded()
+                    print("Marked initial data as seeded")
+                else:
+                    print("Projects already exist, marking initial data as seeded")
+                    installation_config.mark_initial_data_seeded()
             else:
-                print("Default project already exists")
+                print("Initial data already seeded previously, skipping default project/client creation")
             
             print("Database initialized successfully")
             return True

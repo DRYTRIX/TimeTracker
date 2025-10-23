@@ -259,59 +259,97 @@ def insert_initial_data(engine):
     """Insert initial data"""
     print("Inserting initial data...")
     
-    # Get admin username from environment
-    admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0]
-    
-    insert_sql = f"""
-    -- Insert default admin user idempotently
-    INSERT INTO users (username, role, is_active) 
-    SELECT '{admin_username}', 'admin', true
-    WHERE NOT EXISTS (
-        SELECT 1 FROM users WHERE username = '{admin_username}'
-    );
-
-    -- Ensure default client exists
-    INSERT INTO clients (name, status)
-    SELECT 'Default Client', 'active'
-    WHERE NOT EXISTS (
-        SELECT 1 FROM clients WHERE name = 'Default Client'
-    );
-
-    -- Insert default project idempotently and link to default client
-    INSERT INTO projects (name, client, description, billable, status) 
-    SELECT 'General', 'Default Client', 'Default project for general tasks', true, 'active'
-    WHERE NOT EXISTS (
-        SELECT 1 FROM projects WHERE name = 'General'
-    );
-
-    -- Insert default settings only if none exist
-    INSERT INTO settings (
-        timezone, currency, rounding_minutes, single_active_timer, allow_self_register, 
-        idle_timeout_minutes, backup_retention_days, backup_time, export_delimiter, 
-        company_name, company_address, company_email, company_phone, company_website, 
-        company_logo_filename, company_tax_id, company_bank_info, invoice_prefix, 
-        invoice_start_number, invoice_terms, invoice_notes
-    ) 
-    SELECT 'Europe/Rome', 'EUR', 1, true, true, 30, 30, '02:00', ',', 
-           'Your Company Name', 'Your Company Address', 'info@yourcompany.com', 
-           '+1 (555) 123-4567', 'www.yourcompany.com', '', '', '', 'INV', 1000, 
-           'Payment is due within 30 days of invoice date.', 'Thank you for your business!'
-    WHERE NOT EXISTS (
-        SELECT 1 FROM settings
-    );
-    """
-    
     try:
+        # Check if initial data has already been seeded
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
+        from app.utils.installation import InstallationConfig
+        installation_config = InstallationConfig()
+        
+        # Get admin username from environment
+        admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0]
+        
+        # Base SQL for admin user and settings (always run)
+        base_sql = f"""
+        -- Insert default admin user idempotently
+        INSERT INTO users (username, role, is_active) 
+        SELECT '{admin_username}', 'admin', true
+        WHERE NOT EXISTS (
+            SELECT 1 FROM users WHERE username = '{admin_username}'
+        );
+
+        -- Insert default settings only if none exist
+        INSERT INTO settings (
+            timezone, currency, rounding_minutes, single_active_timer, allow_self_register, 
+            idle_timeout_minutes, backup_retention_days, backup_time, export_delimiter, 
+            company_name, company_address, company_email, company_phone, company_website, 
+            company_logo_filename, company_tax_id, company_bank_info, invoice_prefix, 
+            invoice_start_number, invoice_terms, invoice_notes
+        ) 
+        SELECT 'Europe/Rome', 'EUR', 1, true, true, 30, 30, '02:00', ',', 
+               'Your Company Name', 'Your Company Address', 'info@yourcompany.com', 
+               '+1 (555) 123-4567', 'www.yourcompany.com', '', '', '', 'INV', 1000, 
+               'Payment is due within 30 days of invoice date.', 'Thank you for your business!'
+        WHERE NOT EXISTS (
+            SELECT 1 FROM settings
+        );
+        """
+        
         with engine.connect() as conn:
-            conn.execute(text(insert_sql))
+            # Always execute base SQL (admin user and settings)
+            conn.execute(text(base_sql))
             conn.commit()
-        
-        print("✓ Initial data inserted successfully")
-        return True
-        
+            
+            # Only insert default client and project on fresh installations
+            if not installation_config.is_initial_data_seeded():
+                print("Fresh installation detected, checking for existing projects...")
+                
+                # Check if there are any existing projects
+                result = conn.execute(text("SELECT COUNT(*) FROM projects;"))
+                project_count = result.scalar()
+                
+                if project_count == 0:
+                    print("No projects found, creating default client and project...")
+                    
+                    default_data_sql = """
+                    -- Ensure default client exists
+                    INSERT INTO clients (name, status)
+                    SELECT 'Default Client', 'active'
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM clients WHERE name = 'Default Client'
+                    );
+
+                    -- Insert default project idempotently and link to default client
+                    INSERT INTO projects (name, client, description, billable, status) 
+                    SELECT 'General', 'Default Client', 'Default project for general tasks', true, 'active'
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM projects WHERE name = 'General'
+                    );
+                    """
+                    
+                    conn.execute(text(default_data_sql))
+                    conn.commit()
+                    print("✓ Default client and project created")
+                    
+                    # Mark initial data as seeded
+                    installation_config.mark_initial_data_seeded()
+                    print("✓ Marked initial data as seeded")
+                else:
+                    print(f"Projects already exist ({project_count} found), marking initial data as seeded")
+                    installation_config.mark_initial_data_seeded()
+            else:
+                print("Initial data already seeded previously, skipping default client/project creation")
+    
     except Exception as e:
-        print(f"✗ Error inserting initial data: {e}")
+        print(f"Error inserting initial data: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return False
+    
+    print("Initial data inserted successfully")
+    return True
 
 def verify_tables(engine):
     """Verify that all required tables exist"""

@@ -35,6 +35,19 @@
                                 <input type="text" class="form-control border-start-0" id="searchInput" 
                                        placeholder="{{ _('Search clients...') }}">
                             </div>
+                            {% if current_user.is_admin %}
+                            <div class="btn-group" id="bulkActionsGroup">
+                                <button type="button" id="bulkActionsBtn" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" disabled>
+                                    <i class="fas fa-tasks me-1"></i> {{ _('Bulk Actions') }} (<span id="selectedCount">0</span>)
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="showBulkStatusChange('active')"><i class="fas fa-check-circle me-2 text-success"></i>{{ _('Mark as Active') }}</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showBulkStatusChange('inactive')"><i class="fas fa-pause-circle me-2 text-warning"></i>{{ _('Mark as Inactive') }}</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="showBulkDeleteConfirm()"><i class="fas fa-trash me-2"></i>{{ _('Delete') }}</a></li>
+                                </ul>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -44,6 +57,11 @@
                         <table class="table table-hover mb-0" id="clientsTable">
                             <thead class="table-light">
                                 <tr>
+                                    {% if current_user.is_admin %}
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleAllClients()">
+                                    </th>
+                                    {% endif %}
                                     <th>{{ _('Name') }}</th>
                                     <th>{{ _('Contact Person') }}</th>
                                     <th>{{ _('Email') }}</th>
@@ -57,6 +75,11 @@
                             <tbody>
                                 {% for client in clients %}
                                 <tr class="client-row" data-status="{{ client.status }}">
+                                    {% if current_user.is_admin %}
+                                    <td>
+                                        <input type="checkbox" class="client-checkbox form-check-input" value="{{ client.id }}" onchange="updateBulkDeleteButton()">
+                                    </td>
+                                    {% endif %}
                                     <td>
                                         <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="text-decoration-none">
                                             <strong>{{ client.name }}</strong>
@@ -150,6 +173,71 @@
 </div>
 <!-- Modern styling now handled by global CSS in base.css -->
 
+<!-- Bulk Action Forms (hidden) -->
+<form id="confirmBulkDelete-form" method="POST" action="{{ url_for('clients.bulk_delete_clients') }}" class="d-none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<form id="bulkStatusChange-form" method="POST" action="{{ url_for('clients.bulk_status_change') }}" class="d-none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="new_status" id="bulkNewStatus" value="">
+</form>
+
+<!-- Bulk Status Change Confirmation Modal -->
+<div class="modal fade" id="confirmBulkStatusChange" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exchange-alt me-2 text-primary"></i>{{ _('Change Status') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="bulkStatusChangeMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>{{ _('Cancel') }}
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitBulkStatusChange()">
+                    <i class="fas fa-check me-2"></i>{{ _('Change Status') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="confirmBulkDelete" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2 text-danger"></i>{{ _('Delete Selected Clients') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>{{ _('Warning:') }}</strong> {{ _('This action cannot be undone.') }}
+                </div>
+                <p>{{ _('Are you sure you want to delete the selected clients?') }}</p>
+                <p class="text-muted mb-0">{{ _('Clients with existing projects will be skipped.') }}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>{{ _('Cancel') }}
+                </button>
+                <button type="button" class="btn btn-danger" onclick="submitBulkDelete()">
+                    <i class="fas fa-trash me-2"></i>{{ _('Delete Clients') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% block extra_js %}
 <script type="application/json" id="i18n-json-clients-list">
 {
@@ -162,6 +250,96 @@
 var i18nClientsList = (function(){ try{ var el=document.getElementById('i18n-json-clients-list'); return el?JSON.parse(el.textContent):{}; }catch(e){ return {}; } })();
 </script>
 <script>
+// Bulk delete functions for clients
+function toggleAllClients() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.client-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton() {
+    const checkboxes = document.querySelectorAll('.client-checkbox:checked');
+    const count = checkboxes.length;
+    const btnGroup = document.getElementById('bulkActionsGroup');
+    const btn = document.getElementById('bulkActionsBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (countSpan) countSpan.textContent = count;
+    if (btn) btn.disabled = count === 0;
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.client-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll && allCheckboxes.length > 0) {
+        selectAll.checked = count === allCheckboxes.length;
+        selectAll.indeterminate = count > 0 && count < allCheckboxes.length;
+    }
+}
+
+function showBulkDeleteConfirm() {
+    new bootstrap.Modal(document.getElementById('confirmBulkDelete')).show();
+}
+
+function submitBulkDelete() {
+    const checkboxes = document.querySelectorAll('.client-checkbox:checked');
+    const form = document.getElementById('confirmBulkDelete-form');
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="client_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected client IDs to form
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'client_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Close modal and submit form
+    bootstrap.Modal.getInstance(document.getElementById('confirmBulkDelete')).hide();
+    form.submit();
+}
+
+function showBulkStatusChange(newStatus) {
+    const count = document.querySelectorAll('.client-checkbox:checked').length;
+    const statusLabels = {
+        'active': '{{ _("Active") }}',
+        'inactive': '{{ _("Inactive") }}'
+    };
+    
+    const message = `{{ _("Are you sure you want to mark {count} client(s) as {status}?") }}`
+        .replace('{count}', count)
+        .replace('{status}', statusLabels[newStatus] || newStatus);
+    
+    document.getElementById('bulkStatusChangeMessage').textContent = message;
+    document.getElementById('bulkNewStatus').value = newStatus;
+    new bootstrap.Modal(document.getElementById('confirmBulkStatusChange')).show();
+    return false;
+}
+
+function submitBulkStatusChange() {
+    const checkboxes = document.querySelectorAll('.client-checkbox:checked');
+    const form = document.getElementById('bulkStatusChange-form');
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="client_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected client IDs to form
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'client_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Close modal and submit form
+    bootstrap.Modal.getInstance(document.getElementById('confirmBulkStatusChange')).hide();
+    form.submit();
+}
+
 // Simple search (vanilla JS)
 (function() {
   const searchInput = document.getElementById('searchInput');

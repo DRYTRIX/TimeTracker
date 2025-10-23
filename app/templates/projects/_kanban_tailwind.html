@@ -27,6 +27,11 @@
                     <div class="kanban-card group bg-background-light dark:bg-background-dark p-4 rounded-lg shadow-sm border border-border-light dark:border-border-dark hover:shadow-md transition-all cursor-grab active:cursor-grabbing" draggable="true" data-task-id="{{ task.id }}" data-status="{{ task.status }}" data-project-id="{{ task.project_id }}" role="listitem" aria-grabbed="false" aria-label="{{ _('Task') }}: {{ task.name }} — {{ _('Status') }}: {{ col.label }}">
                         <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="block">
                             <h4 class="font-semibold mb-2 group-hover:text-primary transition-colors">{{ task.name }}</h4>
+                            {% if task.project %}
+                            <div class="mb-2">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200" data-testid="kanban-project-code">{{ task.project.code_display }}</span>
+                            </div>
+                            {% endif %}
                             {% if task.description %}
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ task.description | truncate(80) }}</p>
                             {% endif %}
@@ -56,15 +61,7 @@
                             {% endif %}
                         </div>
 
-                        <div class="mt-3 flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
-                                <label class="text-xs text-text-muted-light dark:text-text-muted-dark" for="status-{{ task.id }}">{{ _('Status') }}</label>
-                                <select id="status-{{ task.id }}" class="kanban-status bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded px-2 py-1 text-xs" data-task-id="{{ task.id }}">
-                                    {% for st in kanban_columns %}
-                                    <option value="{{ st.key }}" {% if task.status == st.key %}selected{% endif %}>{{ st.label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                        <div class="mt-3 flex items-center justify-end gap-2">
                             <div class="flex items-center gap-2">
                                 <a href="{{ url_for('timer.start_timer_for_project', project_id=task.project_id) }}?task_id={{ task.id }}" class="text-xs px-2 py-1 rounded bg-primary text-white hover:opacity-90">{{ _('Start') }}</a>
                                 <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-xs px-2 py-1 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('View') }}</a>

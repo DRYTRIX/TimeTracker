@@ -14,7 +14,9 @@ class Project(db.Model):
     billable = db.Column(db.Boolean, default=True, nullable=False)
     hourly_rate = db.Column(db.Numeric(9, 2), nullable=True)
     billing_ref = db.Column(db.String(100), nullable=True)
-    status = db.Column(db.String(20), default='active', nullable=False)  # 'active' or 'archived'
+    # Short project code for compact display (e.g., on Kanban cards)
+    code = db.Column(db.String(20), nullable=True, unique=True, index=True)
+    status = db.Column(db.String(20), default='active', nullable=False)  # 'active', 'inactive', or 'archived'
     # Estimates & budgets
     estimated_hours = db.Column(db.Float, nullable=True)
     budget_amount = db.Column(db.Numeric(10, 2), nullable=True)
@@ -29,7 +31,7 @@ class Project(db.Model):
     extra_goods = db.relationship('ExtraGood', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     # comments relationship is defined via backref in Comment model
     
-    def __init__(self, name, client_id=None, description=None, billable=True, hourly_rate=None, billing_ref=None, client=None, budget_amount=None, budget_threshold_percent=80):
+    def __init__(self, name, client_id=None, description=None, billable=True, hourly_rate=None, billing_ref=None, client=None, budget_amount=None, budget_threshold_percent=80, code=None):
         """Create a Project.
 
         Backward-compatible initializer that accepts either client_id or client name.
@@ -43,6 +45,7 @@ class Project(db.Model):
         self.billable = billable
         self.hourly_rate = Decimal(str(hourly_rate)) if hourly_rate else None
         self.billing_ref = billing_ref.strip() if billing_ref else None
+        self.code = code.strip().upper() if code and code.strip() else None
         self.budget_amount = Decimal(str(budget_amount)) if budget_amount else None
         self.budget_threshold_percent = budget_threshold_percent if budget_threshold_percent else 80
 
@@ -79,6 +82,20 @@ class Project(db.Model):
     def is_active(self):
         """Check if project is active"""
         return self.status == 'active'
+
+    @property
+    def code_display(self):
+        """Return configured short code or a fallback derived from project name.
+
+        Fallback: first 4 non-space characters of the project name, uppercased.
+        """
+        if self.code:
+            return self.code
+        try:
+            base = (self.name or '').replace(' ', '')
+            return (base.upper()[:4]) if base else ''
+        except Exception:
+            return ''
     
     @property
     def total_hours(self):
@@ -231,11 +248,25 @@ class Project(db.Model):
         self.updated_at = datetime.utcnow()
         db.session.commit()
     
+    def deactivate(self):
+        """Mark project as inactive"""
+        self.status = 'inactive'
+        self.updated_at = datetime.utcnow()
+        db.session.commit()
+    
+    def activate(self):
+        """Activate the project"""
+        self.status = 'active'
+        self.updated_at = datetime.utcnow()
+        db.session.commit()
+    
     def to_dict(self):
         """Convert project to dictionary for API responses"""
         return {
             'id': self.id,
             'name': self.name,
+            'code': self.code,
+            'code_display': self.code_display,
             'client': self.client,
             'description': self.description,
             'billable': self.billable,

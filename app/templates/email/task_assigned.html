@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #3b82f6;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .content {
+            background-color: #f9fafb;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .task-details {
+            background-color: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #3b82f6;
+        }
+        .task-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .task-details td {
+            padding: 8px 0;
+        }
+        .task-details td:first-child {
+            font-weight: bold;
+            width: 30%;
+        }
+        .description {
+            background-color: #eff6ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #10b981;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .footer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Task Assignment</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ user.display_name }},</p>
+        
+        <p><strong>{{ assigned_by.display_name }}</strong> has assigned you to a task:</p>
+        
+        <div class="task-details">
+            <table>
+                <tr>
+                    <td>Task:</td>
+                    <td><strong>{{ task.name }}</strong></td>
+                </tr>
+                <tr>
+                    <td>Project:</td>
+                    <td>{{ task.project.name if task.project else 'N/A' }}</td>
+                </tr>
+                {% if task.priority %}
+                <tr>
+                    <td>Priority:</td>
+                    <td>{{ task.priority }}</td>
+                </tr>
+                {% endif %}
+                {% if task.due_date %}
+                <tr>
+                    <td>Due Date:</td>
+                    <td>{{ task.due_date }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td>Status:</td>
+                    <td>{{ task.status|replace('_', ' ')|title }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        {% if task.description %}
+        <div class="description">
+            <strong>Description:</strong>
+            <p>{{ task.description }}</p>
+        </div>
+        {% endif %}
+        
+        <center>
+            <a href="{{ url_for('tasks.edit_task', task_id=task.id, _external=True) }}" class="button">
+                View Task
+            </a>
+        </center>
+    </div>
+    
+    <div class="footer">
+        <p>TimeTracker - Time Tracking & Project Management</p>
+        <p>To manage your notification preferences, visit your user settings.</p>
+    </div>
+</body>
+</html>
+

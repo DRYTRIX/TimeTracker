@@ -24,6 +24,11 @@
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Choose a clear, descriptive name that explains the project scope') }}</p>
                     </div>
                     <div>
+                        <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project Code') }}</label>
+                        <input type="text" id="code" name="code" value="{{ request.form.get('code','') }}" placeholder="{{ _('Short code, e.g., ABC') }}" class="form-input" maxlength="20">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Short tag shown on Kanban cards') }}</p>
+                    </div>
+                    <div>
                         <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }} *</label>
                         <select id="client_id" name="client_id" required class="form-input">
                             <option value="">{{ _('Select a client...') }}</option>

@@ -1,0 +1,220 @@
+<!-- Save Filter Widget -->
+<!-- Usage: {% include 'components/save_filter_widget.html' with scope='reports' %} -->
+
+<div class="inline-block">
+    <button onclick="openSaveFilterModal()" 
+            class="btn btn-sm btn-secondary" 
+            title="Save current filters">
+        <i class="fas fa-bookmark mr-2"></i>Save Filter
+    </button>
+</div>
+
+<!-- Save Filter Modal -->
+<div id="saveFilterModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="mt-3">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Save Current Filter</h3>
+                <button onclick="closeSaveFilterModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form id="saveFilterForm" onsubmit="saveFilter(event)">
+                <div class="mb-4">
+                    <label for="filterName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Filter Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           id="filterName" 
+                           required 
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                           placeholder="e.g., Last 30 days - Billable">
+                </div>
+
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" 
+                               id="filterShared" 
+                               class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Share with team</span>
+                    </label>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end space-x-2">
+                    <button type="button" 
+                            onclick="closeSaveFilterModal()" 
+                            class="btn btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Load Saved Filters Dropdown -->
+<div class="inline-block relative ml-2">
+    <button onclick="toggleSavedFiltersDropdown()" 
+            class="btn btn-sm btn-secondary" 
+            title="Load saved filter">
+        <i class="fas fa-folder-open mr-2"></i>Load Filter
+    </button>
+    
+    <div id="savedFiltersDropdown" 
+         class="hidden absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+        <div class="p-2 max-h-96 overflow-y-auto">
+            <div id="savedFiltersList" class="space-y-1">
+                <!-- Filters will be loaded here -->
+                <div class="text-center py-4 text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading...
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700 p-2">
+            <a href="{{ url_for('saved_filters.list_filters') }}" 
+               class="block text-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                Manage All Filters
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get the scope from template variable
+var filterScope = '{{ scope }}';
+
+function openSaveFilterModal() {
+    document.getElementById('saveFilterModal').classList.remove('hidden');
+}
+
+function closeSaveFilterModal() {
+    document.getElementById('saveFilterModal').classList.add('hidden');
+    document.getElementById('saveFilterForm').reset();
+}
+
+function getCurrentFilterParameters() {
+    // Get all form inputs on the page and build filter payload
+    var params = {};
+    var urlParams = new URLSearchParams(window.location.search);
+    
+    // Get all URL parameters
+    for (let [key, value] of urlParams.entries()) {
+        if (value) {
+            params[key] = value;
+        }
+    }
+    
+    return params;
+}
+
+function saveFilter(event) {
+    event.preventDefault();
+    
+    var filterName = document.getElementById('filterName').value;
+    var isShared = document.getElementById('filterShared').checked;
+    var payload = getCurrentFilterParameters();
+    
+    // Send to API
+    fetch('/api/filters', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            name: filterName,
+            scope: filterScope,
+            payload: payload,
+            is_shared: isShared
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeSaveFilterModal();
+            // Show success message
+            showNotification('Filter saved successfully!', 'success');
+        } else {
+            showNotification(data.error || 'Failed to save filter', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving filter:', error);
+        showNotification('Failed to save filter', 'error');
+    });
+}
+
+function toggleSavedFiltersDropdown() {
+    var dropdown = document.getElementById('savedFiltersDropdown');
+    dropdown.classList.toggle('hidden');
+    
+    if (!dropdown.classList.contains('hidden')) {
+        loadSavedFilters();
+    }
+}
+
+function loadSavedFilters() {
+    fetch(`/api/filters?scope=${filterScope}`)
+        .then(response => response.json())
+        .then(data => {
+            var filtersList = document.getElementById('savedFiltersList');
+            
+            if (data.filters && data.filters.length > 0) {
+                filtersList.innerHTML = '';
+                data.filters.forEach(filter => {
+                    var filterItem = document.createElement('button');
+                    filterItem.className = 'w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center';
+                    filterItem.onclick = function() { applyFilter(filter.id); };
+                    filterItem.innerHTML = `
+                        <span class="text-sm text-gray-900 dark:text-white">${filter.name}</span>
+                        <i class="fas fa-chevron-right text-xs text-gray-400"></i>
+                    `;
+                    filtersList.appendChild(filterItem);
+                });
+            } else {
+                filtersList.innerHTML = '<div class="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">No saved filters</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading filters:', error);
+            document.getElementById('savedFiltersList').innerHTML = '<div class="text-center py-4 text-red-500 text-sm">Error loading filters</div>';
+        });
+}
+
+function applyFilter(filterId) {
+    fetch(`/api/filters/${filterId}`)
+        .then(response => response.json())
+        .then(filter => {
+            // Build URL with filter parameters
+            var params = new URLSearchParams(filter.payload);
+            window.location.href = window.location.pathname + '?' + params.toString();
+        })
+        .catch(error => {
+            console.error('Error loading filter:', error);
+            showNotification('Failed to load filter', 'error');
+        });
+}
+
+function showNotification(message, type) {
+    // Simple notification - you can enhance this with a toast library
+    alert(message);
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    var dropdown = document.getElementById('savedFiltersDropdown');
+    var button = event.target.closest('button[onclick="toggleSavedFiltersDropdown()"]');
+    
+    if (!dropdown.contains(event.target) && !button) {
+        dropdown.classList.add('hidden');
+    }
+});
+</script>
+

@@ -234,7 +234,7 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>{{ _('Project Name') }}</th>
+                                    <th>{{ _('Project') }}</th>
                                     <th>{{ _('Status') }}</th>
                                     <th>{{ _('Billable') }}</th>
                                     <th>{{ _('Hourly Rate') }}</th>
@@ -250,6 +250,9 @@
                                         <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-decoration-none">
                                             <strong>{{ project.name }}</strong>
                                         </a>
+                                        {% if project.code_display %}
+                                            <span class="badge bg-light text-dark border ms-2 align-middle">{{ project.code_display }}</span>
+                                        {% endif %}
                                         {% if project.description %}
                                             <br><small class="text-muted">{{ project.description[:50] }}{% if project.description|length > 50 %}...{% endif %}</small>
                                         {% endif %}
