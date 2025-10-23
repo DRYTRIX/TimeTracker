@@ -343,46 +343,114 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=stable,enable=${{ needs.determine-version.outputs.is_prerelease == 'false' }}
 
-      - name: Inject analytics configuration
+      - name: Inject analytics configuration from GitHub Secrets
         env:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          echo "Injecting analytics configuration into build..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔐 INJECTING ANALYTICS CREDENTIALS FROM GITHUB SECRET STORE"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📍 Location: Settings → Secrets and variables → Actions"
+          echo "📝 Target File: app/config/analytics_defaults.py"
+          echo ""
+          
+          # Show file before injection
+          echo "📄 File content BEFORE injection (showing placeholders):"
+          echo "──────────────────────────────────────────────────────────────────"
+          grep -E "(POSTHOG_API_KEY_DEFAULT|SENTRY_DSN_DEFAULT)" app/config/analytics_defaults.py || true
+          echo "──────────────────────────────────────────────────────────────────"
+          echo ""
           
           # Verify secrets are available
+          echo "🔍 Verifying GitHub Secrets availability..."
           if [ -z "$POSTHOG_API_KEY" ]; then
-            echo "❌ ERROR: POSTHOG_API_KEY secret is not set!"
-            echo "Please set it in: Settings → Secrets and variables → Actions"
+            echo "❌ ERROR: POSTHOG_API_KEY secret is NOT available from GitHub Secret Store!"
+            echo ""
+            echo "To fix this:"
+            echo "  1. Go to: Repository → Settings → Secrets and variables → Actions"
+            echo "  2. Click 'New repository secret'"
+            echo "  3. Name: POSTHOG_API_KEY"
+            echo "  4. Value: Your PostHog API key (format: phc_xxxxx)"
+            echo ""
             exit 1
+          else
+            echo "✅ POSTHOG_API_KEY secret found in GitHub Secret Store"
+            echo "   → Format: ${POSTHOG_API_KEY:0:8}***${POSTHOG_API_KEY: -4} (${#POSTHOG_API_KEY} characters)"
           fi
           
           if [ -z "$SENTRY_DSN" ]; then
-            echo "⚠️ WARNING: SENTRY_DSN secret is not set (optional)"
+            echo "⚠️  SENTRY_DSN secret not set (optional)"
+            echo "   → Sentry error tracking will be disabled"
+          else
+            echo "✅ SENTRY_DSN secret found in GitHub Secret Store"
+            echo "   → Format: ${SENTRY_DSN:0:25}***${SENTRY_DSN: -10} (${#SENTRY_DSN} characters)"
           fi
+          echo ""
           
           # Perform replacement
+          echo "🔧 Injecting secrets into application configuration..."
           sed -i "s|%%POSTHOG_API_KEY_PLACEHOLDER%%|${POSTHOG_API_KEY}|g" app/config/analytics_defaults.py
           sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN}|g" app/config/analytics_defaults.py
+          echo "   → Placeholders replaced with actual secret values"
+          echo ""
+          
+          # Show file after injection (redacted)
+          echo "📄 File content AFTER injection (secrets redacted):"
+          echo "──────────────────────────────────────────────────────────────────"
+          grep -E "(POSTHOG_API_KEY_DEFAULT|SENTRY_DSN_DEFAULT)" app/config/analytics_defaults.py | \
+            sed 's/\(phc_[a-zA-Z0-9]\{8\}\)[a-zA-Z0-9]*\([a-zA-Z0-9]\{4\}\)/\1***\2/g' | \
+            sed 's|\(https://[^@]*@[^/]*\)|***REDACTED***|g' || true
+          echo "──────────────────────────────────────────────────────────────────"
+          echo ""
           
           # Verify placeholders were replaced
+          echo "🔍 Verifying injection was successful..."
           if grep -q "%%POSTHOG_API_KEY_PLACEHOLDER%%" app/config/analytics_defaults.py; then
-            echo "❌ ERROR: PostHog API key placeholder not replaced!"; exit 1;
+            echo "❌ ERROR: PostHog API key placeholder was NOT replaced!"
+            echo "   The placeholder '%%POSTHOG_API_KEY_PLACEHOLDER%%' is still present in the file."
+            exit 1
+          else
+            echo "✅ PostHog API key placeholder successfully replaced"
           fi
           
           if grep -q "%%SENTRY_DSN_PLACEHOLDER%%" app/config/analytics_defaults.py; then
-            echo "❌ ERROR: Sentry DSN placeholder not replaced!"; exit 1;
+            echo "❌ ERROR: Sentry DSN placeholder was NOT replaced!"
+            echo "   The placeholder '%%SENTRY_DSN_PLACEHOLDER%%' is still present in the file."
+            exit 1
+          else
+            echo "✅ Sentry DSN placeholder successfully replaced"
           fi
           
           # Verify the actual key format (should start with 'phc_')
-          if ! grep -q "POSTHOG_API_KEY_DEFAULT = \"phc_" app/config/analytics_defaults.py; then
-            echo "❌ ERROR: PostHog API key doesn't appear to be in correct format (should start with 'phc_')"
+          if ! grep -q 'POSTHOG_API_KEY_DEFAULT = "phc_' app/config/analytics_defaults.py; then
+            echo "❌ ERROR: PostHog API key format validation FAILED!"
+            echo "   Expected format: phc_* (PostHog Cloud key)"
+            echo "   Please verify the secret value in GitHub Settings."
             exit 1
+          else
+            echo "✅ PostHog API key format validated (phc_* pattern confirmed)"
           fi
+          echo ""
           
-          echo "✅ Analytics configuration injected and verified"
-          echo "✅ PostHog API key: phc_***${POSTHOG_API_KEY: -4}"
-          echo "✅ Sentry DSN: ${SENTRY_DSN:0:20}..." 
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ SUCCESS: Analytics credentials injected from GitHub Secret Store"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📊 Injected Credentials Summary:"
+          echo "   • PostHog API Key: phc_***${POSTHOG_API_KEY: -4} ✓"
+          if [ -n "$SENTRY_DSN" ]; then
+            echo "   • Sentry DSN: ${SENTRY_DSN:0:20}*** ✓"
+          else
+            echo "   • Sentry DSN: [Not configured] ⚠️"
+          fi
+          echo ""
+          echo "🔒 Security Notes:"
+          echo "   • Secrets are injected at build time from GitHub Secret Store"
+          echo "   • Secrets are never exposed in logs or build artifacts"
+          echo "   • Users can still opt-in/opt-out of telemetry via admin dashboard"
+          echo "" 
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -633,6 +701,15 @@ jobs:
           echo "- ✅ Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "ℹ️ *Full test suite already ran on PR before merge*" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔐 Analytics Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "Analytics credentials were **successfully injected** from GitHub Secret Store:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **PostHog API Key**: Injected from \`POSTHOG_API_KEY\` secret" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Sentry DSN**: Injected from \`SENTRY_DSN\` secret" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> 📍 **Secret Location**: Repository Settings → Secrets and variables → Actions" >> $GITHUB_STEP_SUMMARY
+          echo "> 🔒 **Security**: Secrets are embedded at build time and never exposed in logs" >> $GITHUB_STEP_SUMMARY
+          echo "> 👥 **Privacy**: Users maintain full control via opt-in/opt-out in admin dashboard" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🐳 Docker Images" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

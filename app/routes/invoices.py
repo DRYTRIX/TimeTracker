@@ -9,6 +9,12 @@ import io
 import csv
 import json
 from app.utils.db import safe_commit
+from app.utils.posthog_funnels import (
+    track_invoice_page_viewed,
+    track_invoice_project_selected,
+    track_invoice_previewed,
+    track_invoice_generated
+)
 
 invoices_bp = Blueprint('invoices', __name__)
 
@@ -16,6 +22,9 @@ invoices_bp = Blueprint('invoices', __name__)
 @login_required
 def list_invoices():
     """List all invoices"""
+    # Track invoice page viewed
+    track_invoice_page_viewed(current_user.id)
+    
     # Get invoices (scope by user unless admin)
     if current_user.is_admin:
         invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
@@ -85,6 +94,13 @@ def create_invoice():
         # Generate invoice number
         invoice_number = Invoice.generate_invoice_number()
         
+        # Track project selected for invoice
+        track_invoice_project_selected(current_user.id, {
+            "project_id": project_id,
+            "has_email": bool(client_email),
+            "has_tax": tax_rate > 0
+        })
+        
         # Create invoice
         invoice = Invoice(
             invoice_number=invoice_number,
@@ -104,6 +120,14 @@ def create_invoice():
         if not safe_commit('create_invoice', {'invoice_number': invoice_number, 'project_id': project_id}):
             flash('Could not create invoice due to a database error. Please check server logs.', 'error')
             return render_template('invoices/create.html')
+        
+        # Track invoice created
+        track_invoice_generated(current_user.id, {
+            "invoice_id": invoice.id,
+            "invoice_number": invoice_number,
+            "has_tax": float(tax_rate) > 0,
+            "has_notes": bool(notes)
+        })
         
         flash(f'Invoice {invoice_number} created successfully', 'success')
         return redirect(url_for('invoices.edit_invoice', invoice_id=invoice.id))
@@ -130,6 +154,12 @@ def view_invoice(invoice_id):
     if not current_user.is_admin and invoice.created_by != current_user.id:
         flash('You do not have permission to view this invoice', 'error')
         return redirect(url_for('invoices.list_invoices'))
+    
+    # Track invoice previewed
+    track_invoice_previewed(current_user.id, {
+        "invoice_id": invoice.id,
+        "invoice_number": invoice.invoice_number
+    })
     
     return render_template('invoices/view.html', invoice=invoice)
 

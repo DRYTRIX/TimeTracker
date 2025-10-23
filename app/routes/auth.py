@@ -6,6 +6,8 @@ from app.config import Config
 from app.utils.db import safe_commit
 from flask_babel import gettext as _
 from app import oauth, limiter
+from app.utils.posthog_segmentation import identify_user_with_segments, set_super_properties
+from app.utils.posthog_funnels import track_onboarding_started
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -81,6 +83,14 @@ def login():
                         flash(_('Could not create your account due to a database error. Please try again later.'), 'error')
                         return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
                     current_app.logger.info("Created new user '%s'", username)
+                    
+                    # Track onboarding started for new user
+                    track_onboarding_started(user.id, {
+                        "auth_method": "local",
+                        "self_registered": True,
+                        "is_admin": role == 'admin'
+                    })
+                    
                     flash(_('Welcome! Your account has been created.'), 'success')
                 else:
                     log_event("auth.login_failed", username=username, reason="user_not_found", auth_method="local")
@@ -110,20 +120,11 @@ def login():
             log_event("auth.login", user_id=user.id, auth_method="local")
             track_event(user.id, "auth.login", {"auth_method": "local"})
             
-            # Identify user in PostHog with person properties (for segmentation)
-            from app import identify_user
-            identify_user(user.id, {
-                "$set": {
-                    "role": user.role if hasattr(user, 'role') else "user",
-                    "is_admin": user.is_admin if hasattr(user, 'is_admin') else False,
-                    "last_login": user.last_login.isoformat() if user.last_login else None,
-                    "auth_method": "local",
-                },
-                "$set_once": {
-                    "first_login": user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None,
-                    "signup_method": "local",
-                }
-            })
+            # Identify user with comprehensive segmentation properties
+            identify_user_with_segments(user.id, user)
+            
+            # Set super properties (included in all events)
+            set_super_properties(user.id, user)
             
             # Redirect to intended page or dashboard
             next_page = request.args.get('next')
@@ -489,6 +490,15 @@ def oidc_callback():
                 db.session.add(user)
                 if not safe_commit('oidc_create_user', {'username': username, 'email': email}):
                     raise RuntimeError('db commit failed on user create')
+                
+                # Track onboarding started for new OIDC user
+                track_onboarding_started(user.id, {
+                    "auth_method": "oidc",
+                    "self_registered": True,
+                    "is_admin": role == 'admin',
+                    "has_email": bool(email)
+                })
+                
                 flash(_('Welcome! Your account has been created.'), 'success')
             except Exception as e:
                 current_app.logger.exception("Failed to create user from OIDC claims: %s", e)
@@ -552,20 +562,11 @@ def oidc_callback():
         log_event("auth.login", user_id=user.id, auth_method="oidc")
         track_event(user.id, "auth.login", {"auth_method": "oidc"})
         
-        # Identify user in PostHog with person properties (for segmentation)
-        from app import identify_user
-        identify_user(user.id, {
-            "$set": {
-                "role": user.role if hasattr(user, 'role') else "user",
-                "is_admin": user.is_admin if hasattr(user, 'is_admin') else False,
-                "last_login": user.last_login.isoformat() if user.last_login else None,
-                "auth_method": "oidc",
-            },
-            "$set_once": {
-                "first_login": user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None,
-                "signup_method": "oidc",
-            }
-        })
+        # Identify user with comprehensive segmentation properties
+        identify_user_with_segments(user.id, user)
+        
+        # Set super properties (included in all events)
+        set_super_properties(user.id, user)
 
         # Redirect to intended page or dashboard
         next_page = session.pop('oidc_next', None) or request.args.get('next')

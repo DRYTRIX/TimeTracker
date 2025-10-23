@@ -27,6 +27,8 @@ On first access, choose whether to enable telemetry for community support.
 
 ## How It Works
 
+> 📖 **Detailed Guide**: For a comprehensive explanation of how PostHog credentials are injected from GitHub Secrets, see [POSTHOG_CREDENTIAL_INJECTION.md](./POSTHOG_CREDENTIAL_INJECTION.md)
+
 ### Architecture
 
 ```
@@ -288,6 +290,7 @@ A: Yes! Check `logs/app.jsonl` for all events, and `docs/all_tracked_events.md` 
 - **Telemetry Code:** `app/utils/telemetry.py`
 - **All Events:** `docs/all_tracked_events.md`
 - **Official vs Self-Hosted:** `docs/OFFICIAL_BUILDS.md`
+- **🔐 PostHog Credential Injection:** `docs/cicd/POSTHOG_CREDENTIAL_INJECTION.md` (detailed guide with examples)
 
 ---
 
