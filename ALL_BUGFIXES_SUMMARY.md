@@ -1,3 +1,5 @@
+2025-10-23
+- Added optional `code` field to `Project` for short tags; displayed on Kanban cards. Removed redundant inline status dropdown on Kanban (status derives from column).
 # 🐛 All Bug Fixes Summary - Quick Wins Implementation
 
 ## Overview

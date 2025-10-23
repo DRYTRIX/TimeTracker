@@ -583,7 +583,9 @@ def bulk_update_status():
         flash('No tasks selected', 'warning')
         return redirect(url_for('tasks.list_tasks'))
     
-    if not new_status or new_status not in ['active', 'completed', 'on_hold', 'cancelled']:
+    # Validate against configured kanban columns
+    valid_statuses = set(KanbanColumn.get_valid_status_keys()) if KanbanColumn else set(['todo','in_progress','review','done','cancelled'])
+    if not new_status or new_status not in valid_statuses:
         flash('Invalid status value', 'error')
         return redirect(url_for('tasks.list_tasks'))
     
@@ -603,7 +605,11 @@ def bulk_update_status():
                 skipped_count += 1
                 continue
             
+            # Handle reopening from done if needed
+            if task.status == 'done' and new_status in ['todo', 'review', 'in_progress']:
+                task.completed_at = None
             task.status = new_status
+            task.updated_at = now_in_app_timezone()
             updated_count += 1
             
         except Exception:

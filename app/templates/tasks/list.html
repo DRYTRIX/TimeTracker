@@ -95,13 +95,18 @@
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ tasks|length }} task{{ 's' if tasks|length != 1 else '' }} found
         </h3>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-2">
             <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Export to CSV">
                 <i class="fas fa-download mr-1"></i> Export
             </button>
-            <button type="button" id="bulkDeleteBtn" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors hidden" title="Delete selected tasks" onclick="showBulkDeleteConfirm()">
-                <i class="fas fa-trash mr-1"></i> Delete Selected (<span id="selectedCount">0</span>)
-            </button>
+            <div class="relative">
+                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'tasksBulkMenu')" disabled>
+                    <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
+                </button>
+                <ul id="tasksBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg">
+                    <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
+                </ul>
+            </div>
         </div>
     </div>
     <table class="table table-zebra w-full text-left">
@@ -204,7 +209,15 @@
 .filter-collapsed { display: none !important; }
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
 </style>
+<script type="application/json" id="i18n-json-tasks-list">
+{
+  "confirm_delete": {{ _('Are you sure you want to delete the task "{name}"?')|tojson }},
+  "confirm_delete_with_entries": {{ _('Cannot delete task "{name}" because it has time entries. Please delete the time entries first.')|tojson }}
+}
+</script>
 <script>
+var i18nTasksList = (function(){ try{ var el=document.getElementById('i18n-json-tasks-list'); return el?JSON.parse(el.textContent):{}; }catch(e){ return {}; } })();
+
 // Bulk delete functions
 function toggleAllTasks() {
     const selectAll = document.getElementById('selectAll');
@@ -216,15 +229,11 @@ function toggleAllTasks() {
 function updateBulkDeleteButton() {
     const checkboxes = document.querySelectorAll('.task-checkbox:checked');
     const count = checkboxes.length;
-    const btn = document.getElementById('bulkDeleteBtn');
+    const btn = document.getElementById('bulkActionsBtn');
     const countSpan = document.getElementById('selectedCount');
     
-    if (count > 0) {
-        btn.classList.remove('hidden');
-        countSpan.textContent = count;
-    } else {
-        btn.classList.add('hidden');
-    }
+    if (countSpan) countSpan.textContent = count;
+    if (btn) btn.disabled = count === 0;
     
     // Update select all checkbox state
     const allCheckboxes = document.querySelectorAll('.task-checkbox');
@@ -237,11 +246,90 @@ function updateBulkDeleteButton() {
 
 function showBulkDeleteConfirm() {
     document.getElementById('confirmBulkDelete').classList.remove('hidden');
+    return false;
 }
 
-// Handle bulk delete confirmation
+// Delete task confirmation (single)
+function confirmDeleteTask(taskId, taskName, hasTimeEntries) {
+    if (hasTimeEntries) {
+        const msg = (i18nTasksList.confirm_delete_with_entries || 'Cannot delete task "{name}" because it has time entries. Please delete the time entries first.').replace('{name}', taskName);
+        if (window.showAlert) {
+            window.showAlert(msg);
+        } else {
+            alert(msg);
+        }
+        return;
+    }
+    
+    const msg = (i18nTasksList.confirm_delete || 'Are you sure you want to delete the task "{name}"?').replace('{name}', taskName);
+    if (window.showConfirm) {
+        window.showConfirm(msg).then(function(ok){
+            if (!ok) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/tasks/${taskId}/delete`;
+            
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content') || '';
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        });
+    } else {
+        if (confirm(msg)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/tasks/${taskId}/delete`;
+            
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content') || '';
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+}
+
+function toggleFilterVisibility() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    if (filterBody.classList.contains('filter-collapsed')) {
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.className = 'fas fa-chevron-up';
+        toggleButton.title = '{{ _('Hide Filters') }}';
+        localStorage.setItem('taskListFiltersVisible', 'true');
+    } else {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.className = 'fas fa-chevron-down';
+        toggleButton.title = '{{ _('Show Filters') }}';
+        localStorage.setItem('taskListFiltersVisible', 'false');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Intercept the form submission to add task IDs
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    const filtersVisible = localStorage.getItem('taskListFiltersVisible');
+    if (filtersVisible === 'false') {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.className = 'fas fa-chevron-down';
+        toggleButton.title = '{{ _('Show Filters') }}';
+    }
+    setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
+    
+    // Handle bulk delete confirmation
     const form = document.getElementById('confirmBulkDelete-form');
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -266,37 +354,6 @@ document.addEventListener('DOMContentLoaded', function() {
             form.submit();
         });
     }
-});
-
-function toggleFilterVisibility() {
-    const filterBody = document.getElementById('filterBody');
-    const toggleIcon = document.getElementById('filterToggleIcon');
-    const toggleButton = document.getElementById('toggleFilters');
-    if (!filterBody || !toggleIcon || !toggleButton) return;
-    if (filterBody.classList.contains('filter-collapsed')) {
-        filterBody.classList.remove('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-up';
-        toggleButton.title = '{{ _('Hide Filters') }}';
-        localStorage.setItem('taskListFiltersVisible', 'true');
-    } else {
-        filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
-        toggleButton.title = '{{ _('Show Filters') }}';
-        localStorage.setItem('taskListFiltersVisible', 'false');
-    }
-}
-document.addEventListener('DOMContentLoaded', function() {
-    const filterBody = document.getElementById('filterBody');
-    const toggleIcon = document.getElementById('filterToggleIcon');
-    const toggleButton = document.getElementById('toggleFilters');
-    if (!filterBody || !toggleIcon || !toggleButton) return;
-    const filtersVisible = localStorage.getItem('taskListFiltersVisible');
-    if (filtersVisible === 'false') {
-        filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
-        toggleButton.title = '{{ _('Show Filters') }}';
-    }
-    setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });
 </script>
 {% endblock %}

@@ -1,3 +1,4 @@
+- Kanban project tag: Implemented `Project.code` and display badge on Kanban cards. Removed status dropdown on cards; drag-and-drop continues to update status.
 # Quick Wins Implementation - Completion Summary
 
 ## ✅ What's Been Completed

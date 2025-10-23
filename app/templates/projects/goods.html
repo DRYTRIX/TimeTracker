@@ -78,7 +78,7 @@
                             <i class="fas fa-edit"></i>
                         </a>
                         {% if not good.invoice_id %}
-                        <form method="POST" action="{{ url_for('projects.delete_good', project_id=project.id, good_id=good.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this extra good?') }}');">
+                        <form method="POST" action="{{ url_for('projects.delete_good', project_id=project.id, good_id=good.id) }}" class="inline" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this extra good?') }}', { title: '{{ _('Delete Extra Good') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300">
                                 <i class="fas fa-trash"></i>

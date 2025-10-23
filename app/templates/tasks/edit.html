@@ -70,7 +70,7 @@
                                 <option value="">{{ _('Select a project') }}</option>
                                 {% for project in projects %}
                                 <option value="{{ project.id }}" {% if task.project_id == project.id %}selected{% endif %}>
-                                    {{ project.name }} ({{ project.client }})
+                                    {{ project.name }}{% if project.code_display %} [{{ project.code_display }}]{% endif %} ({{ project.client }})
                                 </option>
                                 {% endfor %}
                             </select>

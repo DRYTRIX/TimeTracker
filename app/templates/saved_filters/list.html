@@ -44,7 +44,7 @@
                         </button>
                         <form method="POST" 
                               action="{{ url_for('saved_filters.delete_filter', filter_id=filter.id) }}"
-                              onsubmit="return confirm('Are you sure you want to delete this filter?');"
+                              onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this filter?') }}', { title: '{{ _('Delete Filter') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });"
                               class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" 

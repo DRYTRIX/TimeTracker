@@ -208,27 +208,23 @@ function submitBulkAction(url, extraData = {}) {
 }
 
 function bulkUpdateStatus(status) {
-    if (confirm(`Change status of ${selectedTaskIds.size} task(s) to ${status}?`)) {
-        submitBulkAction('{{ url_for("tasks.bulk_update_status") }}', { status: status });
-    }
+    const msg = `Change status of ${selectedTaskIds.size} task(s) to ${status}?`;
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Task Status', confirmText: 'Change' }).then(function(ok){ if (ok) submitBulkAction('{{ url_for("tasks.bulk_update_status") }}', { status: status }); }); }
 }
 
 function bulkUpdatePriority(priority) {
-    if (confirm(`Change priority of ${selectedTaskIds.size} task(s) to ${priority}?`)) {
-        submitBulkAction('{{ url_for("tasks.bulk_update_priority") }}', { priority: priority });
-    }
+    const msg = `Change priority of ${selectedTaskIds.size} task(s) to ${priority}?`;
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Task Priority', confirmText: 'Change' }).then(function(ok){ if (ok) submitBulkAction('{{ url_for("tasks.bulk_update_priority") }}', { priority: priority }); }); }
 }
 
 function bulkAssign(userId) {
-    if (confirm(`Assign ${selectedTaskIds.size} task(s) to selected user?`)) {
-        submitBulkAction('{{ url_for("tasks.bulk_assign_tasks") }}', { assigned_to: userId });
-    }
+    const msg = `Assign ${selectedTaskIds.size} task(s) to selected user?`;
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Assign Tasks', confirmText: 'Assign' }).then(function(ok){ if (ok) submitBulkAction('{{ url_for("tasks.bulk_assign_tasks") }}', { assigned_to: userId }); }); }
 }
 
 function bulkDelete() {
-    if (confirm(`Are you sure you want to delete ${selectedTaskIds.size} task(s)? This action cannot be undone.`)) {
-        submitBulkAction('{{ url_for("tasks.bulk_delete_tasks") }}');
-    }
+    const msg = `Are you sure you want to delete ${selectedTaskIds.size} task(s)? This action cannot be undone.`;
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Delete Tasks', confirmText: 'Delete', variant: 'danger' }).then(function(ok){ if (ok) submitBulkAction('{{ url_for("tasks.bulk_delete_tasks") }}'); }); }
 }
 
 // Close dropdowns when clicking outside

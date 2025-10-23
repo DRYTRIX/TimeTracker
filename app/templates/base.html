@@ -39,10 +39,11 @@
         .sidebar-collapsed .sidebar-header-title { display: none; }
         .sidebar-collapsed #workDropdown, .sidebar-collapsed #insightsDropdown { display: none; }
         .sidebar-collapsed #sidebar { width: 4rem !important; overflow-x: hidden; }
+        /* Shared bulk menu */
+        .bulk-menu { z-index: 50; max-height: 16rem; overflow-y: auto; }
     </style>
     <script>
-        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
-        // Priority: User preference from server > localStorage > system preference
+        // Theme init (unchanged)
         {% if current_user.is_authenticated and current_user.theme %}
         var userTheme = '{{ current_user.theme }}';
         if (userTheme === 'dark') {
@@ -52,7 +53,6 @@
             document.documentElement.classList.remove('dark');
             localStorage.setItem('color-theme', 'light');
         } else if (userTheme === 'system') {
-            // Follow system preference
             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 document.documentElement.classList.add('dark');
             } else {
@@ -60,7 +60,6 @@
             }
         }
         {% else %}
-        // Fall back to localStorage or system preference
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -72,10 +71,8 @@
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
     <script>
-        // Apply collapsed sidebar state ASAP to prevent flicker on navigations
-        (function(){
-            try { if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); } } catch(_) {}
-        })();
+        // Sidebar collapsed ASAP
+        (function(){ try { if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); } } catch(_) {} })();
     </script>
     <a href="#mainContentAnchor" class="sr-only focus:not-sr-only focus-ring absolute left-2 top-2 z-[1000] px-3 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded">Skip to content</a>
     <div id="appShell" class="flex h-screen">
@@ -87,7 +84,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') %}
                 {% set insights_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('analytics.') %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
@@ -689,6 +686,107 @@
                 toast.appendChild(dismissBtn);
             }
         });
+    </script>
+    
+    <script>
+        // Global helpers for bulk menus and confirmation using custom modal (no native confirm)
+        window.showConfirm = function(message, opts){
+            try {
+                const options = Object.assign({
+                    title: '',
+                    confirmText: 'Confirm',
+                    cancelText: 'Cancel',
+                    variant: 'primary' // 'primary' | 'danger' | 'warning'
+                }, opts || {});
+                return new Promise((resolve) => {
+                    // Build overlay
+                    const overlay = document.createElement('div');
+                    overlay.className = 'fixed inset-0 z-[2000] flex items-center justify-center';
+                    overlay.innerHTML = `
+                        <div class="absolute inset-0 bg-black/50" data-close></div>
+                        <div class="relative bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl w-full max-w-md mx-4">
+                            <div class="p-6">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-12 h-12 rounded-full ${options.variant==='danger' ? 'bg-rose-100 dark:bg-rose-900/30' : (options.variant==='warning' ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-sky-100 dark:bg-sky-900/30')} flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle ${options.variant==='danger' ? 'text-rose-600 dark:text-rose-400' : (options.variant==='warning' ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400')}"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        ${options.title ? `<h3 class="text-lg font-semibold mb-1">${options.title}</h3>` : ''}
+                                        <p class="text-sm">${message || ''}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-6 flex justify-end gap-3">
+                                    <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg" data-cancel>${options.cancelText}</button>
+                                    <button type="button" class="px-4 py-2 ${options.variant==='danger' ? 'bg-rose-600 hover:bg-rose-700' : (options.variant==='warning' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-primary hover:bg-primary/90')} text-white rounded-lg" data-confirm>${options.confirmText}</button>
+                                </div>
+                            </div>
+                        </div>`;
+
+                    function cleanup(result){
+                        try { document.body.removeChild(overlay); } catch(_) {}
+                        resolve(result);
+                    }
+
+                    overlay.addEventListener('click', (e) => {
+                        if (e.target.hasAttribute('data-close')) cleanup(false);
+                        if (e.target.hasAttribute('data-cancel')) cleanup(false);
+                        if (e.target.hasAttribute('data-confirm')) cleanup(true);
+                    });
+                    document.addEventListener('keydown', function onKey(e){
+                        if (e.key === 'Escape'){ cleanup(false); document.removeEventListener('keydown', onKey); }
+                        if (e.key === 'Enter'){ cleanup(true); document.removeEventListener('keydown', onKey); }
+                    });
+                    document.body.appendChild(overlay);
+                    // Focus confirm button
+                    setTimeout(() => { try { overlay.querySelector('[data-confirm]').focus(); } catch(_) {} }, 0);
+                });
+            } catch(_) {
+                // Absolute fallback if anything goes wrong
+                try { return Promise.resolve(window.confirm(message)); } catch(__) { return Promise.resolve(false); }
+            }
+        };
+        window.showAlert = window.showAlert || function(message){
+            try { window.alert(message); } catch(_) {}
+        };
+        function closeAllMenus(){
+            try { document.querySelectorAll('.bulk-menu').forEach(m => m.classList.add('hidden')); } catch(_) {}
+        }
+        function openMenu(triggerEl, menuId){
+            try{
+                const menu = document.getElementById(menuId);
+                if (!menu) return;
+                const willOpen = menu.classList.contains('hidden');
+                closeAllMenus();
+                if (!willOpen) return;
+                // Reset positioning
+                menu.style.top = '';
+                menu.style.bottom = '';
+                menu.style.maxHeight = '16rem';
+                // Temporarily show off-screen to measure accurately
+                const originalDisplay = menu.style.display;
+                menu.style.visibility = 'hidden';
+                menu.style.display = 'block';
+                const rect = triggerEl.getBoundingClientRect();
+                const menuHeight = menu.scrollHeight || menu.offsetHeight || 200;
+                const spaceBelow = window.innerHeight - rect.bottom;
+                const spaceAbove = rect.top;
+                // Restore visibility before final placement
+                menu.style.display = originalDisplay || '';
+                menu.style.visibility = '';
+                // Flip to dropup if not enough space below
+                const needsDropup = spaceBelow < Math.min(menuHeight, 256) + 16 && spaceAbove > spaceBelow;
+                if (needsDropup) { menu.style.bottom = 'calc(100% + 8px)'; } else { menu.style.top = 'calc(100% + 8px)'; }
+                menu.classList.remove('hidden');
+            } catch(_) {}
+        }
+        // Click outside to close any bulk menus
+        document.addEventListener('click', function(e){
+            const trigger = e.target.closest('#bulkActionsBtn');
+            const insideAnyMenu = e.target.closest('.bulk-menu');
+            if (!trigger && !insideAnyMenu){ closeAllMenus(); }
+        });
+        // Close on Escape
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
     </script>
     
     {% block scripts_extra %}{% endblock %}

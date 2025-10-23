@@ -41,7 +41,7 @@
                     </a>
                     <form method="POST" 
                           action="{{ url_for('time_entry_templates.delete_template', template_id=template.id) }}"
-                          onsubmit="return confirm('Are you sure you want to delete this template?');"
+                          onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this template?') }}', { title: '{{ _('Delete Template') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });"
                           class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" 

@@ -76,6 +76,11 @@
             <h6 class="kanban-card-title">
               <a href="javascript:void(0);" onclick="openTaskModal({{ task.id }})">{{ task.name }}</a>
             </h6>
+            {% if task.project %}
+            <div class="mb-2">
+              <span class="kanban-badge" style="background:#e5e7eb;color:#374151;">{{ task.project.code_display }}</span>
+            </div>
+            {% endif %}
             
             {% if task.description %}
             <p class="kanban-card-description">

@@ -9,7 +9,31 @@
     </div>
     {% if current_user.is_admin or task.created_by == current_user.id %}
     <div class="flex gap-2">
-        <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Task</a>
+        <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Task') }}</a>
+        {% if task.status in ['todo','review'] %}
+        <form method="POST" action="{{ url_for('tasks.update_task_status', task_id=task.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Start task and mark as In Progress?') }}', { title: '{{ _('Change Task Status') }}', confirmText: '{{ _('Start') }}' }).then(ok=>{ if(ok){ this.submit(); } });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="in_progress">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white mt-4 md:mt-0">{{ _('Start') }}</button>
+        </form>
+        {% elif task.status == 'in_progress' %}
+        <form method="POST" action="{{ url_for('tasks.update_task_status', task_id=task.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark task as To Do?') }}', { title: '{{ _('Change Task Status') }}', confirmText: '{{ _('Change') }}' }).then(ok=>{ if(ok){ this.submit(); } });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="todo">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-white mt-4 md:mt-0">{{ _('Pause') }}</button>
+        </form>
+        <form method="POST" action="{{ url_for('tasks.update_task_status', task_id=task.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark task as Done?') }}', { title: '{{ _('Complete Task') }}', confirmText: '{{ _('Complete') }}' }).then(ok=>{ if(ok){ this.submit(); } });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="done">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-sky-600 text-white mt-4 md:mt-0">{{ _('Complete') }}</button>
+        </form>
+        {% elif task.status == 'done' %}
+        <form method="POST" action="{{ url_for('tasks.update_task_status', task_id=task.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Reopen task to Review?') }}', { title: '{{ _('Reopen Task') }}', confirmText: '{{ _('Reopen') }}' }).then(ok=>{ if(ok){ this.submit(); } });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="review">
+            <button type="submit" class="px-4 py-2 rounded-lg bg-gray-600 text-white mt-4 md:mt-0">{{ _('Reopen') }}</button>
+        </form>
+        {% endif %}
         <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
                 onclick="document.getElementById('confirmDeleteTask-{{ task.id }}').classList.remove('hidden')">
             {{ _('Delete Task') }}
@@ -93,7 +117,12 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Project</h3>
-                    <p>{{ task.project.name }}</p>
+                    <p class="flex items-center gap-2">
+                        <span>{{ task.project.name }}</span>
+                        {% if task.project.code_display %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ task.project.code_display }}</span>
+                        {% endif %}
+                    </p>
                 </div>
                 {% if task.assigned_user %}
                 <div>
