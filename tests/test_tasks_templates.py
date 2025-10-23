@@ -50,6 +50,10 @@ def test_edit_task_page_has_tips(client, app):
 @pytest.mark.routes
 def test_kanban_board_aria_and_dnd(authenticated_client, app):
     with app.app_context():
+        # Initialize kanban columns first
+        from app.models import KanbanColumn
+        KanbanColumn.initialize_default_columns()
+        
         # Minimal data for rendering board
         user = User(username='kanban_user', role='admin')
         project = Project(name='Kanban Project', client='Client K', code='KAN')
@@ -73,6 +77,10 @@ def test_kanban_board_aria_and_dnd(authenticated_client, app):
 @pytest.mark.routes
 def test_kanban_card_shows_project_code_and_no_status_dropdown(authenticated_client, app):
     with app.app_context():
+        # Initialize kanban columns first
+        from app.models import KanbanColumn
+        KanbanColumn.initialize_default_columns()
+        
         admin = User(username='admin_user', role='admin')
         project = Project(name='Very Long Project Name', client='CL', code='VLPN')
         db.session.add_all([admin, project])
