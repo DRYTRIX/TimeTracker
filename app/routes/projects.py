@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood, Activity
+from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood, Activity, UserFavoriteProject
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
@@ -28,14 +28,28 @@ def list_projects():
     status = request.args.get('status', 'active')
     client_name = request.args.get('client', '').strip()
     search = request.args.get('search', '').strip()
+    favorites_only = request.args.get('favorites', '').lower() == 'true'
     
     query = Project.query
+    
+    # Filter by favorites if requested
+    if favorites_only:
+        # Join with user_favorite_projects table
+        query = query.join(
+            UserFavoriteProject,
+            db.and_(
+                UserFavoriteProject.project_id == Project.id,
+                UserFavoriteProject.user_id == current_user.id
+            )
+        )
+    
+    # Filter by status (use Project.status to be explicit)
     if status == 'active':
-        query = query.filter_by(status='active')
+        query = query.filter(Project.status == 'active')
     elif status == 'archived':
-        query = query.filter_by(status='archived')
+        query = query.filter(Project.status == 'archived')
     elif status == 'inactive':
-        query = query.filter_by(status='inactive')
+        query = query.filter(Project.status == 'inactive')
     
     if client_name:
         query = query.join(Client).filter(Client.name == client_name)
@@ -49,11 +63,15 @@ def list_projects():
             )
         )
     
-    projects = query.order_by(Project.name).paginate(
+    # Get all projects for the current page
+    projects_pagination = query.order_by(Project.name).paginate(
         page=page,
         per_page=20,
         error_out=False
     )
+    
+    # Get user's favorite project IDs for quick lookup in template
+    favorite_project_ids = {p.id for p in current_user.favorite_projects.all()}
     
     # Get clients for filter dropdown
     clients = Client.get_active_clients()
@@ -61,9 +79,11 @@ def list_projects():
     
     return render_template(
         'projects/list.html',
-        projects=projects.items,
+        projects=projects_pagination.items,
         status=status,
-        clients=client_list
+        clients=client_list,
+        favorite_project_ids=favorite_project_ids,
+        favorites_only=favorites_only
     )
 
 @projects_bp.route('/projects/create', methods=['GET', 'POST'])
@@ -635,6 +655,98 @@ def bulk_status_change():
         flash('No projects were updated', 'info')
     
     return redirect(url_for('projects.list_projects'))
+
+
+# ===== FAVORITE PROJECTS ROUTES =====
+
+@projects_bp.route('/projects/<int:project_id>/favorite', methods=['POST'])
+@login_required
+def favorite_project(project_id):
+    """Add a project to user's favorites"""
+    project = Project.query.get_or_404(project_id)
+    
+    try:
+        # Check if already favorited
+        if current_user.is_project_favorite(project):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': _('Project is already in favorites')}), 200
+            flash(_('Project is already in favorites'), 'info')
+        else:
+            # Add to favorites
+            current_user.add_favorite_project(project)
+            
+            # Log activity
+            Activity.log(
+                user_id=current_user.id,
+                action='favorited',
+                entity_type='project',
+                entity_id=project.id,
+                entity_name=project.name,
+                description=f'Added project "{project.name}" to favorites',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            # Track event
+            log_event("project.favorited", user_id=current_user.id, project_id=project.id)
+            track_event(current_user.id, "project.favorited", {"project_id": project.id})
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': True, 'message': _('Project added to favorites')}), 200
+            flash(_('Project added to favorites'), 'success')
+    except Exception as e:
+        current_app.logger.error(f"Error favoriting project: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': _('Failed to add project to favorites')}), 500
+        flash(_('Failed to add project to favorites'), 'error')
+    
+    # Redirect back to referrer or project list
+    return redirect(request.referrer or url_for('projects.list_projects'))
+
+
+@projects_bp.route('/projects/<int:project_id>/unfavorite', methods=['POST'])
+@login_required
+def unfavorite_project(project_id):
+    """Remove a project from user's favorites"""
+    project = Project.query.get_or_404(project_id)
+    
+    try:
+        # Check if not favorited
+        if not current_user.is_project_favorite(project):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': _('Project is not in favorites')}), 200
+            flash(_('Project is not in favorites'), 'info')
+        else:
+            # Remove from favorites
+            current_user.remove_favorite_project(project)
+            
+            # Log activity
+            Activity.log(
+                user_id=current_user.id,
+                action='unfavorited',
+                entity_type='project',
+                entity_id=project.id,
+                entity_name=project.name,
+                description=f'Removed project "{project.name}" from favorites',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            # Track event
+            log_event("project.unfavorited", user_id=current_user.id, project_id=project.id)
+            track_event(current_user.id, "project.unfavorited", {"project_id": project.id})
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': True, 'message': _('Project removed from favorites')}), 200
+            flash(_('Project removed from favorites'), 'success')
+    except Exception as e:
+        current_app.logger.error(f"Error unfavoriting project: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': _('Failed to remove project from favorites')}), 500
+        flash(_('Failed to remove project from favorites'), 'error')
+    
+    # Redirect back to referrer or project list
+    return redirect(request.referrer or url_for('projects.list_projects'))
 
 
 # ===== PROJECT COSTS ROUTES =====

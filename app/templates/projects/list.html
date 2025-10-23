@@ -16,7 +16,7 @@
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h2 class="text-lg font-semibold mb-4">Filter Projects</h2>
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" data-filter-form>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-filter-form>
         <div>
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
@@ -39,8 +39,15 @@
                 {% endfor %}
             </select>
         </div>
+        <div>
+            <label for="favorites" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Show</label>
+            <select name="favorites" id="favorites" class="form-input">
+                <option value="">All Projects</option>
+                <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
+            </select>
+        </div>
         <div class="self-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Filter</button>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
         </div>
     </form>
 </div>
@@ -78,6 +85,7 @@
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllProjects()">
                 </th>
                 {% endif %}
+                <th class="p-4 w-10"></th>
                 <th class="p-4" data-sortable>Name</th>
                 <th class="p-4" data-sortable>Client</th>
                 <th class="p-4" data-sortable>Status</th>
@@ -89,13 +97,24 @@
         </thead>
         <tbody>
             {% for project in projects %}
-            <tr class="border-b border-border-light dark:border-border-dark">
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                 {% if current_user.is_admin %}
                 <td class="p-4">
                     <input type="checkbox" class="project-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ project.id }}" onchange="updateBulkDeleteButton()">
                 </td>
                 {% endif %}
-                <td class="p-4">{{ project.name }}</td>
+                <td class="p-4 text-center">
+                    {% set is_fav = favorite_project_ids and project.id in favorite_project_ids %}
+                    <button type="button" 
+                            class="favorite-btn text-xl hover:scale-110 transition-transform" 
+                            data-project-id="{{ project.id }}"
+                            data-is-favorited="{{ 'true' if is_fav else 'false' }}"
+                            onclick="toggleFavorite({{ project.id }}, this)"
+                            title="{{ 'Remove from favorites' if is_fav else 'Add to favorites' }}">
+                        <i class="{{ 'fas fa-star text-yellow-500' if is_fav else 'far fa-star text-gray-400' }}"></i>
+                    </button>
+                </td>
+                <td class="p-4 font-medium">{{ project.name }}</td>
                 <td class="p-4">{{ project.client }}</td>
                 <td class="p-4">
                     {% if project.status == 'active' %}
@@ -245,6 +264,119 @@ function submitBulkStatusChange(){
         const i = document.createElement('input'); i.type='hidden'; i.name='project_ids[]'; i.value=cb.value; form.appendChild(i);
     });
     form.submit();
+}
+
+// Favorite project functionality
+function toggleFavorite(projectId, button) {
+    // Font Awesome converts <i> to <svg>, so we need to look for either
+    const icon = button.querySelector('i, svg');
+    
+    // Safety check
+    if (!icon) {
+        console.error('Star icon not found in button');
+        console.log('Button HTML:', button.innerHTML);
+        return;
+    }
+    
+    // Check if favorited by looking at classes (works for both <i> and <svg>)
+    const isFavorited = icon.classList.contains('fa-star') && 
+                        (icon.classList.contains('fas') || icon.getAttribute('data-prefix') === 'fas');
+    const action = isFavorited ? 'unfavorite' : 'favorite';
+    
+    // Disable button to prevent double clicks
+    button.disabled = true;
+    
+    // Optimistic UI update - toggle classes
+    if (isFavorited) {
+        // Change to unfilled star
+        icon.classList.remove('fas', 'text-yellow-500');
+        icon.classList.add('far', 'text-gray-400');
+        if (icon.tagName === 'svg') {
+            icon.setAttribute('data-prefix', 'far');
+        }
+        button.title = 'Add to favorites';
+    } else {
+        // Change to filled star
+        icon.classList.remove('far', 'text-gray-400');
+        icon.classList.add('fas', 'text-yellow-500');
+        if (icon.tagName === 'svg') {
+            icon.setAttribute('data-prefix', 'fas');
+        }
+        button.title = 'Remove from favorites';
+    }
+    
+    // Send AJAX request
+    fetch(`/projects/${projectId}/${action}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Success - show toast notification
+            const message = action === 'favorite' ? 'Project added to favorites' : 'Project removed from favorites';
+            if (window.toastManager) {
+                window.toastManager.success(message, 'Success', 3000);
+            } else if (window.showToast) {
+                window.showToast(message, 'success');
+            }
+        } else {
+            // Revert UI on error
+            if (isFavorited) {
+                icon.classList.remove('far', 'text-gray-400');
+                icon.classList.add('fas', 'text-yellow-500');
+                if (icon.tagName === 'svg') {
+                    icon.setAttribute('data-prefix', 'fas');
+                }
+                button.title = 'Remove from favorites';
+            } else {
+                icon.classList.remove('fas', 'text-yellow-500');
+                icon.classList.add('far', 'text-gray-400');
+                if (icon.tagName === 'svg') {
+                    icon.setAttribute('data-prefix', 'far');
+                }
+                button.title = 'Add to favorites';
+            }
+            if (window.showAlert) {
+                window.showAlert(data.message || 'Failed to update favorite status');
+            } else {
+                alert(data.message || 'Failed to update favorite status');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling favorite:', error);
+        // Revert UI on error
+        if (isFavorited) {
+            icon.classList.remove('far', 'text-gray-400');
+            icon.classList.add('fas', 'text-yellow-500');
+            if (icon.tagName === 'svg') {
+                icon.setAttribute('data-prefix', 'fas');
+            }
+            button.title = 'Remove from favorites';
+        } else {
+            icon.classList.remove('fas', 'text-yellow-500');
+            icon.classList.add('far', 'text-gray-400');
+            if (icon.tagName === 'svg') {
+                icon.setAttribute('data-prefix', 'far');
+            }
+            button.title = 'Add to favorites';
+        }
+        if (window.showAlert) {
+            window.showAlert('Failed to update favorite status');
+        } else {
+            alert('Failed to update favorite status');
+        }
+    })
+    .finally(() => {
+        // Re-enable button
+        button.disabled = false;
+    });
 }
 </script>
 {% endblock %}
