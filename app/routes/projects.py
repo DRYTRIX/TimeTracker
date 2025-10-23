@@ -6,6 +6,13 @@ from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColu
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
+from app.utils.posthog_funnels import (
+    track_onboarding_first_project,
+    track_project_setup_started,
+    track_project_setup_basic_info,
+    track_project_setup_billing_configured,
+    track_project_setup_completed
+)
 
 projects_bp = Blueprint('projects', __name__)
 
@@ -13,6 +20,10 @@ projects_bp = Blueprint('projects', __name__)
 @login_required
 def list_projects():
     """List all projects"""
+    # Track page view
+    from app import track_page_view
+    track_page_view("projects_list")
+    
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'active')
     client_name = request.args.get('client', '').strip()
@@ -66,6 +77,10 @@ def create_project():
             pass
         flash('Only administrators can create projects', 'error')
         return redirect(url_for('projects.list_projects'))
+    
+    # Track project setup started when user opens the form
+    if request.method == 'GET':
+        track_project_setup_started(current_user.id)
     
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -182,6 +197,48 @@ def create_project():
             "has_client": bool(client_id),
             "billable": billable
         })
+        
+        # Track project setup funnel steps
+        track_project_setup_basic_info(current_user.id, {
+            "has_description": bool(description),
+            "has_code": bool(code),
+            "billable": billable
+        })
+        
+        if hourly_rate or billing_ref or budget_amount:
+            track_project_setup_billing_configured(current_user.id, {
+                "has_hourly_rate": bool(hourly_rate),
+                "has_billing_ref": bool(billing_ref),
+                "has_budget": bool(budget_amount)
+            })
+        
+        track_project_setup_completed(current_user.id, {
+            "project_id": project.id,
+            "billable": billable,
+            "has_budget": bool(budget_amount)
+        })
+        
+        # Check if this is user's first project (onboarding milestone)
+        # Count projects this user has created or has time entries for
+        from sqlalchemy import func, or_
+        project_count = db.session.query(func.count(Project.id.distinct())).join(
+            TimeEntry, 
+            TimeEntry.project_id == Project.id,
+            isouter=True
+        ).filter(
+            or_(
+                TimeEntry.user_id == current_user.id,
+                Project.id == project.id  # Include the just-created project
+            )
+        ).scalar() or 0
+        
+        if project_count == 1:
+            track_onboarding_first_project(current_user.id, {
+                "project_name_length": len(name),
+                "has_description": bool(description),
+                "billable": billable,
+                "has_budget": bool(budget_amount)
+            })
         
         # Log activity
         Activity.log(

@@ -7,6 +7,10 @@ from app.utils.timezone import parse_local_datetime, utc_to_local
 from datetime import datetime
 import json
 from app.utils.db import safe_commit
+from app.utils.posthog_funnels import (
+    track_onboarding_first_timer,
+    track_onboarding_first_time_entry
+)
 
 timer_bp = Blueprint('timer', __name__)
 
@@ -72,6 +76,19 @@ def start_timer():
         "task_id": task_id,
         "has_description": bool(notes)
     })
+    
+    # Check if this is user's first timer (onboarding milestone)
+    timer_count = TimeEntry.query.filter_by(
+        user_id=current_user.id,
+        source='auto'
+    ).count()
+    
+    if timer_count == 1:  # First timer ever
+        track_onboarding_first_timer(current_user.id, {
+            "project_id": project_id,
+            "has_task": bool(task_id),
+            "has_notes": bool(notes)
+        })
     
     # Emit WebSocket event for real-time updates
     try:
@@ -182,6 +199,20 @@ def stop_timer():
             "task_id": active_timer.task_id,
             "duration_seconds": duration_seconds
         })
+        
+        # Check if this is user's first completed time entry (onboarding milestone)
+        entry_count = TimeEntry.query.filter_by(
+            user_id=current_user.id
+        ).filter(
+            TimeEntry.end_time.isnot(None)
+        ).count()
+        
+        if entry_count == 1:  # First completed time entry ever
+            track_onboarding_first_time_entry(current_user.id, {
+                "source": "timer",
+                "duration_seconds": duration_seconds,
+                "has_task": bool(active_timer.task_id)
+            })
     except Exception as e:
         current_app.logger.exception("Error stopping timer: %s", e)
     
