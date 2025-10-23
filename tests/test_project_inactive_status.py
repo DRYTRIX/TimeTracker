@@ -159,11 +159,11 @@ class TestProjectInactiveRoutes:
 
 
 class TestTaskDeletion:
-    """Test individual task deletion"""
+    """Test task deletion functionality"""
     
     @pytest.mark.routes
-    def test_task_list_has_delete_buttons(self, admin_authenticated_client, app, project, admin_user):
-        """Test that task list shows individual delete buttons"""
+    def test_task_list_has_bulk_delete_features(self, admin_authenticated_client, app, project, admin_user):
+        """Test that task list shows bulk delete features"""
         from app.models import Task
         from app import db
         
@@ -177,9 +177,9 @@ class TestTaskDeletion:
         
         response = admin_authenticated_client.get('/tasks')
         assert response.status_code == 200
-        # Should have delete button, not bulk checkboxes
-        assert b'confirmDeleteTask' in response.data
-        # Should not have bulk delete
-        assert b'bulkDeleteBtn' not in response.data
-        assert b'selectAll' not in response.data
+        # Should have bulk delete functionality
+        assert b'bulkActionsBtn' in response.data
+        assert b'selectAll' in response.data
+        # Should also have task checkboxes for selection
+        assert b'task-checkbox' in response.data
 
