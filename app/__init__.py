@@ -761,6 +761,7 @@ def create_app(config=None):
     from app.routes.user import user_bp
     from app.routes.time_entry_templates import time_entry_templates_bp
     from app.routes.saved_filters import saved_filters_bp
+    from app.routes.settings import settings_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -779,6 +780,7 @@ def create_app(config=None):
     app.register_blueprint(user_bp)
     app.register_blueprint(time_entry_templates_bp)
     app.register_blueprint(saved_filters_bp)
+    app.register_blueprint(settings_bp)
 
     # Exempt API blueprint from CSRF protection (JSON API uses authentication, not CSRF tokens)
     # Only if CSRF is enabled

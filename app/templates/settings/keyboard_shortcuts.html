@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+
+{% block title %}Keyboard Shortcuts Settings - {{ super() }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='keyboard-shortcuts.css') }}">
+<style>
+    .setting-card {
+        transition: all 0.2s ease;
+    }
+    .setting-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="mainContentAnchor" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
+                    <i class="fas fa-keyboard text-primary"></i>
+                    Keyboard Shortcuts
+                </h1>
+                <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">
+                    Customize and manage your keyboard shortcuts for faster navigation
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="window.enhancedKeyboardShortcuts.showCheatSheet()" 
+                        class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <i class="fas fa-list mr-2"></i>View All Shortcuts
+                </button>
+                <button onclick="resetToDefaults()" 
+                        class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <i class="fas fa-undo mr-2"></i>Reset to Defaults
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Total Shortcuts</p>
+                    <p class="text-2xl font-bold text-text-light dark:text-text-dark mt-1" id="total-shortcuts">0</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-keyboard text-blue-600 dark:text-blue-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Custom Shortcuts</p>
+                    <p class="text-2xl font-bold text-text-light dark:text-text-dark mt-1" id="custom-shortcuts">0</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-magic text-purple-600 dark:text-purple-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Most Used</p>
+                    <p class="text-sm font-semibold text-text-light dark:text-text-dark mt-1" id="most-used">-</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-chart-line text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Total Uses</p>
+                    <p class="text-2xl font-bold text-text-light dark:text-text-dark mt-1" id="total-uses">0</p>
+                </div>
+                <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-fire text-amber-600 dark:text-amber-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tabs -->
+    <div class="mb-6">
+        <div class="border-b border-border-light dark:border-border-dark">
+            <nav class="flex space-x-8" aria-label="Tabs">
+                <button onclick="switchTab('general')" 
+                        data-tab="general"
+                        class="tab-button border-b-2 border-primary text-primary py-3 px-1 font-medium">
+                    <i class="fas fa-cog mr-2"></i>General Settings
+                </button>
+                <button onclick="switchTab('customization')" 
+                        data-tab="customization"
+                        class="tab-button border-b-2 border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark py-3 px-1 font-medium">
+                    <i class="fas fa-edit mr-2"></i>Customize Shortcuts
+                </button>
+                <button onclick="switchTab('statistics')" 
+                        data-tab="statistics"
+                        class="tab-button border-b-2 border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark py-3 px-1 font-medium">
+                    <i class="fas fa-chart-bar mr-2"></i>Usage Statistics
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="general-tab" class="tab-content">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Enable/Disable Shortcuts -->
+            <div class="setting-card bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
+                            <i class="fas fa-power-off text-primary"></i>
+                            Enable Keyboard Shortcuts
+                        </h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                            Turn keyboard shortcuts on or off globally
+                        </p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer ml-4">
+                        <input type="checkbox" id="shortcuts-enabled" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Show Hints -->
+            <div class="setting-card bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
+                            <i class="fas fa-lightbulb text-primary"></i>
+                            Show Shortcut Hints
+                        </h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                            Display keyboard shortcut hints next to buttons
+                        </p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer ml-4">
+                        <input type="checkbox" id="show-hints" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Sequence Timeout -->
+            <div class="setting-card bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+                <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2 mb-4">
+                    <i class="fas fa-clock text-primary"></i>
+                    Sequence Timeout
+                </h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    Time to wait between key presses in a sequence (e.g., 'g d')
+                </p>
+                <div class="flex items-center gap-4">
+                    <input type="range" id="sequence-timeout" min="500" max="3000" step="100" value="1000" 
+                           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                    <span id="timeout-value" class="text-sm font-semibold text-text-light dark:text-text-dark w-16 text-right">1000ms</span>
+                </div>
+            </div>
+
+            <!-- Context Awareness -->
+            <div class="setting-card bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
+                            <i class="fas fa-layer-group text-primary"></i>
+                            Context-Aware Shortcuts
+                        </h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                            Enable different shortcuts based on current context
+                        </p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer ml-4">
+                        <input type="checkbox" id="context-aware" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Access -->
+        <div class="mt-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2 mb-4">
+                <i class="fas fa-rocket text-primary"></i>
+                Quick Tips
+            </h3>
+            <ul class="space-y-2 text-sm text-text-light dark:text-text-dark">
+                <li class="flex items-start gap-2">
+                    <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-0.5"></i>
+                    <span>Press <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs">Shift</kbd> + <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs">?</kbd> to view all keyboard shortcuts</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-0.5"></i>
+                    <span>Use <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs">Ctrl</kbd> + <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs">K</kbd> to open the command palette</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-0.5"></i>
+                    <span>Navigate quickly with sequences like <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs">g</kbd> <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs">d</kbd> for dashboard</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-0.5"></i>
+                    <span>Context-aware shortcuts change based on what you're doing (table, form, etc.)</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="customization-tab" class="tab-content hidden">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">Customize Shortcuts</h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                        Click on a shortcut to record a new key combination
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" 
+                           id="customization-search" 
+                           placeholder="Search shortcuts..." 
+                           class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+            </div>
+
+            <div id="customization-list" class="space-y-2">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div id="statistics-tab" class="tab-content hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Most Used Shortcuts -->
+            <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+                <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2 mb-4">
+                    <i class="fas fa-trophy text-amber-500"></i>
+                    Most Used Shortcuts
+                </h3>
+                <div id="most-used-list" class="space-y-3">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Recent Usage -->
+            <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+                <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2 mb-4">
+                    <i class="fas fa-history text-blue-500"></i>
+                    Recently Used
+                </h3>
+                <div id="recent-usage-list" class="space-y-3">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Chart -->
+        <div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg border border-border-light dark:border-border-dark">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2 mb-4">
+                <i class="fas fa-chart-area text-green-500"></i>
+                Usage Over Time
+            </h3>
+            <div class="h-64 flex items-center justify-center text-text-muted-light dark:text-text-muted-dark">
+                <div class="text-center">
+                    <i class="fas fa-chart-line text-4xl mb-4 opacity-30"></i>
+                    <p>Usage statistics will appear here as you use keyboard shortcuts</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        const isActive = btn.dataset.tab === tabName;
+        btn.classList.toggle('border-primary', isActive);
+        btn.classList.toggle('text-primary', isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+        btn.classList.toggle('text-text-muted-light', !isActive);
+        btn.classList.toggle('dark:text-text-muted-dark', !isActive);
+    });
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+
+    // Load content
+    if (tabName === 'customization') {
+        loadCustomizationList();
+    } else if (tabName === 'statistics') {
+        loadStatistics();
+    }
+}
+
+// Load statistics
+function loadStatistics() {
+    const shortcuts = window.enhancedKeyboardShortcuts;
+    if (!shortcuts) return;
+
+    const stats = shortcuts.stats || {};
+    
+    // Update overview stats
+    const totalShortcuts = Array.from(shortcuts.shortcuts.values()).reduce((acc, map) => acc + map.size, 0);
+    document.getElementById('total-shortcuts').textContent = totalShortcuts;
+    
+    const customCount = Object.keys(shortcuts.customShortcuts || {}).length;
+    document.getElementById('custom-shortcuts').textContent = customCount;
+    
+    const totalUses = Object.values(stats).reduce((acc, s) => acc + (s.count || 0), 0);
+    document.getElementById('total-uses').textContent = totalUses.toLocaleString();
+    
+    // Find most used
+    const sortedStats = Object.entries(stats).sort((a, b) => (b[1].count || 0) - (a[1].count || 0));
+    if (sortedStats.length > 0) {
+        const mostUsedKey = sortedStats[0][0];
+        const mostUsedShortcut = findShortcutByNormalizedKey(mostUsedKey);
+        document.getElementById('most-used').textContent = mostUsedShortcut?.name || mostUsedKey;
+    }
+    
+    // Most used list
+    const mostUsedList = document.getElementById('most-used-list');
+    if (sortedStats.length === 0) {
+        mostUsedList.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark">No usage data yet</p>';
+    } else {
+        mostUsedList.innerHTML = sortedStats.slice(0, 5).map(([key, stat], index) => {
+            const shortcut = findShortcutByNormalizedKey(key);
+            return `
+                <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
+                            ${index + 1}
+                        </div>
+                        <div>
+                            <div class="font-medium text-text-light dark:text-text-dark">${shortcut?.name || key}</div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">${shortcut?.keys || key}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-text-light dark:text-text-dark">${stat.count}</div>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">uses</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    // Recent usage
+    const recentList = document.getElementById('recent-usage-list');
+    const sortedRecent = sortedStats.filter(([_, stat]) => stat.lastUsed).sort((a, b) => 
+        new Date(b[1].lastUsed) - new Date(a[1].lastUsed)
+    );
+    
+    if (sortedRecent.length === 0) {
+        recentList.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark">No recent usage</p>';
+    } else {
+        recentList.innerHTML = sortedRecent.slice(0, 5).map(([key, stat]) => {
+            const shortcut = findShortcutByNormalizedKey(key);
+            const lastUsed = new Date(stat.lastUsed);
+            const timeAgo = getTimeAgo(lastUsed);
+            return `
+                <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg">
+                    <div class="flex-1">
+                        <div class="font-medium text-text-light dark:text-text-dark">${shortcut?.name || key}</div>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">${shortcut?.keys || key}</div>
+                    </div>
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark">${timeAgo}</div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+// Helper function to find shortcut by normalized key
+function findShortcutByNormalizedKey(normalizedKey) {
+    const shortcuts = window.enhancedKeyboardShortcuts;
+    if (!shortcuts) return null;
+    
+    for (const [context, shortcutsMap] of shortcuts.shortcuts) {
+        for (const [key, shortcut] of shortcutsMap) {
+            if (shortcut.normalizedKeys === normalizedKey) {
+                return shortcut;
+            }
+        }
+    }
+    return null;
+}
+
+// Get time ago string
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+// Load customization list
+function loadCustomizationList() {
+    const shortcuts = window.enhancedKeyboardShortcuts;
+    if (!shortcuts) return;
+    
+    const list = document.getElementById('customization-list');
+    const allShortcuts = [];
+    
+    for (const [context, shortcutsMap] of shortcuts.shortcuts) {
+        for (const [key, shortcut] of shortcutsMap) {
+            allShortcuts.push({ ...shortcut, context });
+        }
+    }
+    
+    list.innerHTML = allShortcuts.map(shortcut => `
+        <div class="shortcut-customization-row">
+            <div class="flex-1">
+                <div class="font-medium text-text-light dark:text-text-dark flex items-center gap-2">
+                    <i class="fas ${shortcut.icon || 'fa-keyboard'} text-primary"></i>
+                    ${shortcut.name}
+                </div>
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">${shortcut.description}</div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="shortcut-item-keys">
+                    ${shortcuts.formatKeysForDisplay(shortcut.keys)}
+                </div>
+                <button onclick="customizeShortcut('${shortcut.normalizedKeys}')" 
+                        class="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Customize shortcut
+function customizeShortcut(normalizedKey) {
+    alert('Shortcut customization is coming soon! Stay tuned for updates.');
+}
+
+// Reset to defaults
+function resetToDefaults() {
+    if (confirm('This will reset all keyboard shortcuts to their default values. Continue?')) {
+        localStorage.removeItem('tt_shortcuts_custom_shortcuts');
+        localStorage.removeItem('tt_shortcuts_disabled_shortcuts');
+        location.reload();
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial stats
+    loadStatistics();
+    
+    // Sequence timeout slider
+    const timeoutSlider = document.getElementById('sequence-timeout');
+    const timeoutValue = document.getElementById('timeout-value');
+    
+    if (timeoutSlider && timeoutValue) {
+        timeoutSlider.addEventListener('input', function() {
+            timeoutValue.textContent = this.value + 'ms';
+        });
+    }
+    
+    // Search
+    const search = document.getElementById('customization-search');
+    if (search) {
+        search.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.shortcut-customization-row').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
+
