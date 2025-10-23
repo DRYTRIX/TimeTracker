@@ -38,6 +38,14 @@ csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 oauth = OAuth()
 
+# Initialize Mail (will be configured in create_app)
+from flask_mail import Mail
+mail = Mail()
+
+# Initialize APScheduler for background tasks
+from apscheduler.schedulers.background import BackgroundScheduler
+scheduler = BackgroundScheduler()
+
 # Initialize Prometheus metrics
 REQUEST_COUNT = Counter('tt_requests_total', 'Total requests', ['method', 'endpoint', 'http_status'])
 REQUEST_LATENCY = Histogram('tt_request_latency_seconds', 'Request latency seconds', ['endpoint'])
@@ -195,6 +203,18 @@ def create_app(config=None):
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
+    
+    # Initialize Flask-Mail
+    from app.utils.email import init_mail
+    init_mail(app)
+    
+    # Initialize and start background scheduler
+    if not scheduler.running:
+        from app.utils.scheduled_tasks import register_scheduled_tasks
+        scheduler.start()
+        # Register tasks after app context is available
+        with app.app_context():
+            register_scheduled_tasks(scheduler)
     
     # Only initialize CSRF protection if enabled
     if app.config.get('WTF_CSRF_ENABLED'):
@@ -702,6 +722,9 @@ def create_app(config=None):
     from app.routes.comments import comments_bp
     from app.routes.kanban import kanban_bp
     from app.routes.setup import setup_bp
+    from app.routes.user import user_bp
+    from app.routes.time_entry_templates import time_entry_templates_bp
+    from app.routes.saved_filters import saved_filters_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -717,6 +740,9 @@ def create_app(config=None):
     app.register_blueprint(comments_bp)
     app.register_blueprint(kanban_bp)
     app.register_blueprint(setup_bp)
+    app.register_blueprint(user_bp)
+    app.register_blueprint(time_entry_templates_bp)
+    app.register_blueprint(saved_filters_bp)
 
     # Exempt API blueprint from CSRF protection (JSON API uses authentication, not CSRF tokens)
     # Only if CSRF is enabled

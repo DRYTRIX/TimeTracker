@@ -42,11 +42,31 @@
     </style>
     <script>
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+        // Priority: User preference from server > localStorage > system preference
+        {% if current_user.is_authenticated and current_user.theme %}
+        var userTheme = '{{ current_user.theme }}';
+        if (userTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('color-theme', 'dark');
+        } else if (userTheme === 'light') {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('color-theme', 'light');
+        } else if (userTheme === 'system') {
+            // Follow system preference
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+        {% else %}
+        // Fall back to localStorage or system preference
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
-            document.documentElement.classList.remove('dark')
+            document.documentElement.classList.remove('dark');
         }
+        {% endif %}
     </script>
     {% block extra_css %}{% endblock %}
 </head>
@@ -88,10 +108,11 @@
                             <span class="ml-3 sidebar-label">{{ _('Work') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
-                        <ul id="workDropdown" class="{% if not work_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                <ul id="workDropdown" class="{% if not work_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_projects = ep.startswith('projects.') %}
                             {% set nav_active_clients = ep.startswith('clients.') %}
                             {% set nav_active_tasks = ep.startswith('tasks.') %}
+                            {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
                             {% set nav_active_kanban = ep.startswith('kanban.') %}
                             {% set nav_active_timer = ep.startswith('timer.') %}
                             <li>
@@ -102,6 +123,9 @@
                             </li>
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_tasks %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('tasks.list_tasks') }}">{{ _('Tasks') }}</a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">{{ _('Time Entry Templates') }}</a>
                             </li>
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_kanban %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('kanban.board') }}">{{ _('Kanban') }}</a>
@@ -472,6 +496,9 @@
         })();
     </script>
     <!-- Command Palette Modal (restored, Tailwind-styled, no Bootstrap required) -->
+    <!-- Keyboard Shortcuts Help Modal -->
+    {% include 'components/keyboard_shortcuts_help.html' %}
+
     <div id="commandPaletteModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="document.getElementById('commandPaletteModal').classList.add('hidden')"></div>
         <div class="relative max-w-2xl mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
@@ -526,31 +553,46 @@
         var themeToggleBtn = document.getElementById('theme-toggle');
 
         themeToggleBtn.addEventListener('click', function() {
-
             // toggle icons inside button
             themeToggleDarkIcon.classList.toggle('hidden');
             themeToggleLightIcon.classList.toggle('hidden');
 
+            var newTheme;
             // if set via local storage previously
             if (localStorage.getItem('color-theme')) {
                 if (localStorage.getItem('color-theme') === 'light') {
                     document.documentElement.classList.add('dark');
                     localStorage.setItem('color-theme', 'dark');
+                    newTheme = 'dark';
                 } else {
                     document.documentElement.classList.remove('dark');
                     localStorage.setItem('color-theme', 'light');
+                    newTheme = 'light';
                 }
-
             // if NOT set via local storage previously
             } else {
                 if (document.documentElement.classList.contains('dark')) {
                     document.documentElement.classList.remove('dark');
                     localStorage.setItem('color-theme', 'light');
-                    } else {
+                    newTheme = 'light';
+                } else {
                     document.documentElement.classList.add('dark');
                     localStorage.setItem('color-theme', 'dark');
+                    newTheme = 'dark';
                 }
             }
+            
+            // Save to database if user is logged in
+            {% if current_user.is_authenticated %}
+            fetch('/api/preferences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ theme: newTheme })
+            }).catch(err => console.error('Failed to save theme preference:', err));
+            {% endif %}
         });
 
         function toggleDropdown(id) {

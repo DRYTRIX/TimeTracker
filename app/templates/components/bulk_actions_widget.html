@@ -1,0 +1,262 @@
+<!-- Bulk Actions Widget for Tasks -->
+<!-- Usage: Include this in task list pages -->
+
+<div id="bulkActionsBar" class="hidden fixed bottom-0 left-0 right-0 bg-blue-600 text-white shadow-lg z-40 transition-all">
+    <div class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+            <!-- Selection Info -->
+            <div class="flex items-center space-x-4">
+                <button onclick="closeBulkActions()" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+                <span id="selectedCount" class="font-semibold">0 tasks selected</span>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="flex items-center space-x-2">
+                <!-- Status Dropdown -->
+                <div class="relative inline-block">
+                    <button onclick="toggleBulkDropdown('statusDropdown')" 
+                            class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-100 inline-flex items-center">
+                        <i class="fas fa-tasks mr-2"></i>
+                        Change Status
+                        <i class="fas fa-chevron-down ml-2"></i>
+                    </button>
+                    <div id="statusDropdown" class="hidden absolute bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                        <button onclick="bulkUpdateStatus('active')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-circle text-green-500 mr-2"></i>Active
+                        </button>
+                        <button onclick="bulkUpdateStatus('completed')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-check-circle text-blue-500 mr-2"></i>Completed
+                        </button>
+                        <button onclick="bulkUpdateStatus('on_hold')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-pause-circle text-yellow-500 mr-2"></i>On Hold
+                        </button>
+                        <button onclick="bulkUpdateStatus('cancelled')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-times-circle text-red-500 mr-2"></i>Cancelled
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Priority Dropdown -->
+                <div class="relative inline-block">
+                    <button onclick="toggleBulkDropdown('priorityDropdown')" 
+                            class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-100 inline-flex items-center">
+                        <i class="fas fa-flag mr-2"></i>
+                        Change Priority
+                        <i class="fas fa-chevron-down ml-2"></i>
+                    </button>
+                    <div id="priorityDropdown" class="hidden absolute bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                        <button onclick="bulkUpdatePriority('low')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-flag text-gray-400 mr-2"></i>Low
+                        </button>
+                        <button onclick="bulkUpdatePriority('medium')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-flag text-yellow-500 mr-2"></i>Medium
+                        </button>
+                        <button onclick="bulkUpdatePriority('high')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-flag text-orange-500 mr-2"></i>High
+                        </button>
+                        <button onclick="bulkUpdatePriority('urgent')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            <i class="fas fa-flag text-red-500 mr-2"></i>Urgent
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Assign Dropdown -->
+                <div class="relative inline-block">
+                    <button onclick="toggleBulkDropdown('assignDropdown')" 
+                            class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-100 inline-flex items-center">
+                        <i class="fas fa-user mr-2"></i>
+                        Assign To
+                        <i class="fas fa-chevron-down ml-2"></i>
+                    </button>
+                    <div id="assignDropdown" class="hidden absolute bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 max-h-64 overflow-y-auto">
+                        {% if users %}
+                        {% for user in users %}
+                        <button onclick="bulkAssign({{ user.id }})" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900">
+                            {{ user.display_name }}
+                        </button>
+                        {% endfor %}
+                        {% else %}
+                        <div class="px-4 py-2 text-gray-500 text-sm">No users available</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Delete Button -->
+                <button onclick="bulkDelete()" 
+                        class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 inline-flex items-center">
+                    <i class="fas fa-trash mr-2"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for bulk operations -->
+<form id="bulkActionForm" method="POST" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="bulkTaskIds"></div>
+</form>
+
+<script>
+// Track selected task IDs
+let selectedTaskIds = new Set();
+
+// Initialize checkbox functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Add select all checkbox if not exists
+    const tableHeader = document.querySelector('table thead tr');
+    if (tableHeader && !document.getElementById('selectAllTasks')) {
+        const th = document.createElement('th');
+        th.innerHTML = '<input type="checkbox" id="selectAllTasks" onchange="toggleSelectAll(this)" class="rounded">';
+        tableHeader.insertBefore(th, tableHeader.firstChild);
+    }
+    
+    // Add individual checkboxes to each row
+    const taskRows = document.querySelectorAll('table tbody tr[data-task-id]');
+    taskRows.forEach(row => {
+        const taskId = row.getAttribute('data-task-id');
+        if (!row.querySelector('.task-checkbox')) {
+            const td = document.createElement('td');
+            td.innerHTML = `<input type="checkbox" class="task-checkbox rounded" data-task-id="${taskId}" onchange="toggleTaskSelection(this)">`;
+            row.insertBefore(td, row.firstChild);
+        }
+    });
+});
+
+function toggleSelectAll(checkbox) {
+    const taskCheckboxes = document.querySelectorAll('.task-checkbox');
+    taskCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+        toggleTaskSelection(cb);
+    });
+}
+
+function toggleTaskSelection(checkbox) {
+    const taskId = checkbox.getAttribute('data-task-id');
+    
+    if (checkbox.checked) {
+        selectedTaskIds.add(taskId);
+    } else {
+        selectedTaskIds.delete(taskId);
+    }
+    
+    updateBulkActionsBar();
+}
+
+function updateBulkActionsBar() {
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (selectedTaskIds.size > 0) {
+        bulkActionsBar.classList.remove('hidden');
+        selectedCount.textContent = `${selectedTaskIds.size} task${selectedTaskIds.size !== 1 ? 's' : ''} selected`;
+    } else {
+        bulkActionsBar.classList.add('hidden');
+    }
+}
+
+function closeBulkActions() {
+    selectedTaskIds.clear();
+    document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAllTasks').checked = false;
+    updateBulkActionsBar();
+}
+
+function toggleBulkDropdown(dropdownId) {
+    // Close all other dropdowns
+    document.querySelectorAll('#bulkActionsBar .absolute > div').forEach(d => {
+        if (d.id !== dropdownId) {
+            d.classList.add('hidden');
+        }
+    });
+    
+    // Toggle the clicked dropdown
+    const dropdown = document.getElementById(dropdownId);
+    dropdown.classList.toggle('hidden');
+}
+
+function submitBulkAction(url, extraData = {}) {
+    const form = document.getElementById('bulkActionForm');
+    const taskIdsContainer = document.getElementById('bulkTaskIds');
+    
+    // Clear previous task IDs
+    taskIdsContainer.innerHTML = '';
+    
+    // Add task IDs as hidden inputs
+    selectedTaskIds.forEach(taskId => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'task_ids[]';
+        input.value = taskId;
+        taskIdsContainer.appendChild(input);
+    });
+    
+    // Add extra data
+    Object.entries(extraData).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        taskIdsContainer.appendChild(input);
+    });
+    
+    // Set form action and submit
+    form.action = url;
+    form.submit();
+}
+
+function bulkUpdateStatus(status) {
+    if (confirm(`Change status of ${selectedTaskIds.size} task(s) to ${status}?`)) {
+        submitBulkAction('{{ url_for("tasks.bulk_update_status") }}', { status: status });
+    }
+}
+
+function bulkUpdatePriority(priority) {
+    if (confirm(`Change priority of ${selectedTaskIds.size} task(s) to ${priority}?`)) {
+        submitBulkAction('{{ url_for("tasks.bulk_update_priority") }}', { priority: priority });
+    }
+}
+
+function bulkAssign(userId) {
+    if (confirm(`Assign ${selectedTaskIds.size} task(s) to selected user?`)) {
+        submitBulkAction('{{ url_for("tasks.bulk_assign_tasks") }}', { assigned_to: userId });
+    }
+}
+
+function bulkDelete() {
+    if (confirm(`Are you sure you want to delete ${selectedTaskIds.size} task(s)? This action cannot be undone.`)) {
+        submitBulkAction('{{ url_for("tasks.bulk_delete_tasks") }}');
+    }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('#bulkActionsBar')) {
+        return;
+    }
+    
+    if (!event.target.closest('.relative')) {
+        document.querySelectorAll('#bulkActionsBar .absolute > div').forEach(d => {
+            d.classList.add('hidden');
+        });
+    }
+});
+</script>
+
+<style>
+#bulkActionsBar {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+</style>
+

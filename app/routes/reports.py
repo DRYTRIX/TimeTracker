@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import csv
 import io
 import pytz
+from app.utils.excel_export import create_time_entries_excel, create_project_report_excel
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -514,4 +515,149 @@ def task_report():
         end_date=end_date,
         selected_project=project_id,
         selected_user=user_id,
+    )
+
+
+@reports_bp.route('/reports/export/excel')
+@login_required
+def export_excel():
+    """Export time entries as Excel file"""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    user_id = request.args.get('user_id', type=int)
+    project_id = request.args.get('project_id', type=int)
+    
+    # Parse dates
+    if not start_date:
+        start_date = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not end_date:
+        end_date = datetime.utcnow().strftime('%Y-%m-%d')
+    
+    try:
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        flash('Invalid date format', 'error')
+        return redirect(url_for('reports.reports'))
+    
+    # Get time entries
+    query = TimeEntry.query.filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt
+    )
+    
+    if user_id:
+        query = query.filter(TimeEntry.user_id == user_id)
+    
+    if project_id:
+        query = query.filter(TimeEntry.project_id == project_id)
+    
+    entries = query.order_by(TimeEntry.start_time.desc()).all()
+    
+    # Create Excel file
+    output, filename = create_time_entries_excel(entries, filename_prefix='timetracker_export')
+    
+    # Track Excel export event
+    log_event("export.excel", 
+             user_id=current_user.id, 
+             export_type="time_entries",
+             num_rows=len(entries),
+             date_range_days=(end_dt - start_dt).days)
+    track_event(current_user.id, "export.excel", {
+        "export_type": "time_entries",
+        "num_rows": len(entries),
+        "date_range_days": (end_dt - start_dt).days
+    })
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+@reports_bp.route('/reports/project/export/excel')
+@login_required
+def export_project_excel():
+    """Export project report as Excel file"""
+    project_id = request.args.get('project_id', type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    user_id = request.args.get('user_id', type=int)
+    
+    # Parse dates
+    if not start_date:
+        start_date = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not end_date:
+        end_date = datetime.utcnow().strftime('%Y-%m-%d')
+    
+    try:
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        flash('Invalid date format', 'error')
+        return redirect(url_for('reports.project_report'))
+    
+    # Get time entries
+    query = TimeEntry.query.filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt
+    )
+    
+    if project_id:
+        query = query.filter(TimeEntry.project_id == project_id)
+    
+    if user_id:
+        query = query.filter(TimeEntry.user_id == user_id)
+    
+    entries = query.all()
+    
+    # Aggregate by project
+    projects_map = {}
+    for entry in entries:
+        project = entry.project
+        if not project:
+            continue
+        if project.id not in projects_map:
+            projects_map[project.id] = {
+                'name': project.name,
+                'client': project.client.name if project.client else '',
+                'total_hours': 0,
+                'billable_hours': 0,
+                'hourly_rate': float(project.hourly_rate) if project.hourly_rate else 0,
+                'billable_amount': 0,
+                'total_costs': 0,
+                'total_value': 0,
+            }
+        agg = projects_map[project.id]
+        hours = entry.duration_hours
+        agg['total_hours'] += hours
+        if entry.billable and project.billable:
+            agg['billable_hours'] += hours
+            if project.hourly_rate:
+                agg['billable_amount'] += hours * float(project.hourly_rate)
+    
+    projects_data = list(projects_map.values())
+    
+    # Create Excel file
+    output, filename = create_project_report_excel(projects_data, start_date, end_date)
+    
+    # Track event
+    log_event("export.excel", 
+             user_id=current_user.id, 
+             export_type="project_report",
+             num_projects=len(projects_data))
+    track_event(current_user.id, "export.excel", {
+        "export_type": "project_report",
+        "num_projects": len(projects_data)
+    })
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
     )

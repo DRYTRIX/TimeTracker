@@ -26,6 +26,17 @@ class User(UserMixin, db.Model):
     oidc_issuer = db.Column(db.String(255), nullable=True)
     avatar_filename = db.Column(db.String(255), nullable=True)
     
+    # User preferences and settings
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable email notifications
+    notification_overdue_invoices = db.Column(db.Boolean, default=True, nullable=False)  # Notify about overdue invoices
+    notification_task_assigned = db.Column(db.Boolean, default=True, nullable=False)  # Notify when assigned to task
+    notification_task_comments = db.Column(db.Boolean, default=True, nullable=False)  # Notify about task comments
+    notification_weekly_summary = db.Column(db.Boolean, default=False, nullable=False)  # Send weekly time summary
+    timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
+    date_format = db.Column(db.String(20), default='YYYY-MM-DD', nullable=False)  # Date format preference
+    time_format = db.Column(db.String(10), default='24h', nullable=False)  # '12h' or '24h'
+    week_start_day = db.Column(db.Integer, default=1, nullable=False)  # 0=Sunday, 1=Monday, etc.
+    
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     project_costs = db.relationship('ProjectCost', backref='user', lazy='dynamic', cascade='all, delete-orphan')

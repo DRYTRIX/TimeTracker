@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood
+from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood, Activity
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
@@ -168,6 +168,18 @@ def create_project():
             "has_client": bool(client_id),
             "billable": billable
         })
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='created',
+            entity_type='project',
+            entity_id=project.id,
+            entity_name=project.name,
+            description=f'Created project "{project.name}" for {client.name}',
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
         
         flash(f'Project "{name}" created successfully', 'success')
         return redirect(url_for('projects.view_project', project_id=project.id))

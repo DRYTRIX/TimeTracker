@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Profile') }} - {{ user.display_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <!-- Avatar -->
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+                    {{ user.display_name[0].upper() }}
+                </div>
+                
+                <!-- User Info -->
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ user.display_name }}</h1>
+                    <p class="text-gray-600 dark:text-gray-400">@{{ user.username }}</p>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 mt-2">
+                        {% if user.is_admin %}
+                            <i class="fas fa-crown mr-1"></i>{{ _('Admin') }}
+                        {% else %}
+                            <i class="fas fa-user mr-1"></i>{{ _('User') }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div>
+                <a href="{{ url_for('user.settings') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition">
+                    <i class="fas fa-cog mr-2"></i>{{ _('Settings') }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                    <i class="fas fa-clock text-2xl text-blue-600 dark:text-blue-400"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Total Hours') }}</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ "%.1f"|format(total_hours) }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                    <i class="fas fa-play-circle text-2xl text-green-600 dark:text-green-400"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Active Timer') }}</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {% if active_timer %}
+                            {{ active_timer.project.name if active_timer.project else _('No project') }}
+                        {% else %}
+                            {{ _('No active timer') }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900">
+                    <i class="fas fa-calendar-check text-2xl text-purple-600 dark:text-purple-400"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Member Since') }}</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ user.created_at.strftime('%b %Y') if user.created_at else _('N/A') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Time Entries -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-history mr-2"></i>{{ _('Recent Time Entries') }}
+            </h2>
+            
+            {% if recent_entries %}
+                <div class="space-y-3">
+                    {% for entry in recent_entries %}
+                    <div class="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900 dark:text-white">
+                                {{ entry.project.name if entry.project else _('No project') }}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                {{ entry.start_time.strftime('%Y-%m-%d %H:%M') if entry.start_time else '' }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                {{ entry.duration_formatted if entry.end_time else _('In progress') }}
+                            </p>
+                            {% if entry.billable %}
+                            <span class="text-xs text-green-600 dark:text-green-400">
+                                <i class="fas fa-dollar-sign"></i> {{ _('Billable') }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('timer.log_time') }}" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm">
+                        {{ _('View all time entries') }} →
+                    </a>
+                </div>
+            {% else %}
+                <p class="text-gray-600 dark:text-gray-400">{{ _('No recent time entries') }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-stream mr-2"></i>{{ _('Recent Activity') }}
+            </h2>
+            
+            {% if recent_activities %}
+                <div class="space-y-3">
+                    {% for activity in recent_activities %}
+                    <div class="flex items-start space-x-3 py-2">
+                        <div class="flex-shrink-0 mt-1">
+                            <i class="{{ activity.get_icon() }}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-gray-900 dark:text-white">
+                                {{ activity.description or (activity.action ~ ' ' ~ activity.entity_type) }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {{ activity.created_at.strftime('%Y-%m-%d %H:%M') if activity.created_at else '' }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-600 dark:text-gray-400">{{ _('No recent activity') }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
