@@ -7,6 +7,20 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Professional time tracking and project management">
     <meta name="theme-color" content="#3b82f6">
+    <!--
+    PostHog Session Replay Privacy Protection:
+    Add the CSS class 'ph-no-capture' to any element containing sensitive data
+    to prevent it from being recorded in session replays.
+    
+    Examples:
+    - Project names: <span class="ph-no-capture">{{ project.name }}</span>
+    - Client names: <div class="ph-no-capture">{{ client.name }}</div>
+    - Time entry notes: <textarea class="ph-no-capture" name="notes"></textarea>
+    - User emails: <span class="ph-no-capture">{{ user.email }}</span>
+    
+    PostHog will mask these elements automatically in recordings.
+    For more details, see: POSTHOG_SESSION_REPLAY_PRIVACY.md
+    -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <!-- Font Awesome -->

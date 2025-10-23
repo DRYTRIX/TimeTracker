@@ -146,6 +146,42 @@ def track_event(user_id, event_name, properties=None):
         pass
 
 
+def track_page_view(page_name, user_id=None, properties=None):
+    """
+    Track a page view event.
+    
+    Args:
+        page_name: Name of the page (e.g., 'dashboard', 'projects_list')
+        user_id: User ID (optional, will use current_user if not provided)
+        properties: Additional properties for the page view
+    """
+    try:
+        # Get user ID if not provided
+        if user_id is None:
+            from flask_login import current_user
+            if current_user.is_authenticated:
+                user_id = current_user.id
+            else:
+                return  # Don't track anonymous page views
+        
+        # Build page view properties
+        page_properties = {
+            "page_name": page_name,
+            "$pathname": request.path if request else None,
+            "$current_url": request.url if request else None,
+        }
+        
+        # Add custom properties if provided
+        if properties:
+            page_properties.update(properties)
+        
+        # Track the page view
+        track_event(user_id, "$pageview", page_properties)
+    except Exception:
+        # Don't let analytics errors break the application
+        pass
+
+
 def create_app(config=None):
     """Application factory pattern"""
     app = Flask(__name__)
