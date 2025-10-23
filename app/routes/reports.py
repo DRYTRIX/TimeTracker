@@ -6,7 +6,13 @@ from datetime import datetime, timedelta
 import csv
 import io
 import pytz
+import time
 from app.utils.excel_export import create_time_entries_excel, create_project_report_excel
+from app.utils.posthog_monitoring import (
+    track_error,
+    track_export_performance,
+    track_validation_error
+)
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -281,6 +287,8 @@ def user_report():
 @login_required
 def export_csv():
     """Export time entries as CSV"""
+    start_time = time.time()  # Start performance tracking
+    
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     user_id = request.args.get('user_id', type=int)
@@ -296,6 +304,12 @@ def export_csv():
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
     except ValueError:
+        track_validation_error(
+            current_user.id,
+            "date_range",
+            "Invalid date format for CSV export",
+            {"start_date": start_date, "end_date": end_date}
+        )
         flash('Invalid date format', 'error')
         return redirect(url_for('reports.reports'))
     
@@ -364,8 +378,23 @@ def export_csv():
         "date_range_days": (end_dt - start_dt).days
     })
     
+    # Track performance
+    try:
+        duration_ms = (time.time() - start_time) * 1000
+        csv_content = output.getvalue().encode('utf-8')
+        track_export_performance(
+            current_user.id,
+            "csv",
+            row_count=len(entries),
+            duration_ms=duration_ms,
+            file_size_bytes=len(csv_content)
+        )
+    except Exception as e:
+        # Don't let tracking errors break the export
+        pass
+    
     return send_file(
-        io.BytesIO(output.getvalue().encode('utf-8')),
+        io.BytesIO(csv_content),
         mimetype='text/csv',
         as_attachment=True,
         download_name=filename

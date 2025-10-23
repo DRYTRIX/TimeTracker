@@ -3,12 +3,13 @@ from flask_login import login_required, current_user
 from app.models import User, Project, TimeEntry, Settings
 from datetime import datetime, timedelta
 import pytz
-from app import db
+from app import db, track_page_view
 from sqlalchemy import text
 
 from flask import make_response, current_app
 import json
 import os
+from app.utils.posthog_segmentation import update_user_segments_if_needed
 
 main_bp = Blueprint('main', __name__)
 
@@ -17,6 +18,12 @@ main_bp = Blueprint('main', __name__)
 @login_required
 def dashboard():
     """Main dashboard showing active timer and recent entries"""
+    # Track dashboard page view
+    track_page_view("dashboard")
+    
+    # Update user segments periodically (cached, not every request)
+    update_user_segments_if_needed(current_user.id, current_user)
+    
     # Get user's active timer
     active_timer = current_user.active_timer
     
