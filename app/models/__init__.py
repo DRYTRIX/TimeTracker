@@ -21,6 +21,7 @@ from .project_cost import ProjectCost
 from .kanban_column import KanbanColumn
 from .time_entry_template import TimeEntryTemplate
 from .activity import Activity
+from .user_favorite_project import UserFavoriteProject
 
 __all__ = [
     "User",
@@ -50,4 +51,5 @@ __all__ = [
     "KanbanColumn",
     "TimeEntryTemplate",
     "Activity",
+    "UserFavoriteProject",
 ]

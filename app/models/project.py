@@ -260,9 +260,19 @@ class Project(db.Model):
         self.updated_at = datetime.utcnow()
         db.session.commit()
     
-    def to_dict(self):
+    def is_favorited_by(self, user):
+        """Check if this project is favorited by a specific user"""
+        from .user import User
+        if isinstance(user, int):
+            user_id = user
+            return self.favorited_by.filter_by(id=user_id).count() > 0
+        elif isinstance(user, User):
+            return self.favorited_by.filter_by(id=user.id).count() > 0
+        return False
+    
+    def to_dict(self, user=None):
         """Convert project to dictionary for API responses"""
-        return {
+        data = {
             'id': self.id,
             'name': self.name,
             'code': self.code,
@@ -287,3 +297,7 @@ class Project(db.Model):
             'total_billable_costs': self.total_billable_costs,
             'total_project_value': self.total_project_value,
         }
+        # Include favorite status if user is provided
+        if user:
+            data['is_favorite'] = self.is_favorited_by(user)
+        return data

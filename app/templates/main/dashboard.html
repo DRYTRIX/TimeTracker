@@ -77,6 +77,9 @@
                                     <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary-dark" title="{{ _('Edit entry') }}">
                                         <i class="fas fa-edit"></i>
                                     </a>
+                                    <a href="{{ url_for('timer.duplicate_timer', timer_id=entry.id) }}" class="text-blue-600 hover:text-blue-800" title="{{ _('Duplicate entry') }}">
+                                        <i class="fas fa-copy"></i>
+                                    </a>
                                     {% if current_user.is_admin or entry.user_id == current_user.id %}
                                     <form id="confirmDeleteEntry-{{ entry.id }}-form" method="POST" action="{{ url_for('timer.delete_timer', timer_id=entry.id) }}" class="hidden">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
