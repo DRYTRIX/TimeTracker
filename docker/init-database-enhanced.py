@@ -336,6 +336,14 @@ def insert_initial_data(engine):
     print("Inserting initial data...")
     
     try:
+        # Check if initial data has already been seeded
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
+        from app.utils.installation import InstallationConfig
+        installation_config = InstallationConfig()
+        
         with engine.connect() as conn:
             # Get admin username from environment
             admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0]
@@ -349,25 +357,44 @@ def insert_initial_data(engine):
                 );
             """))
             
-            # Ensure default client exists (idempotent via unique name)
-            conn.execute(text("""
-                INSERT INTO clients (name, status)
-                SELECT 'Default Client', 'active'
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM clients WHERE name = 'Default Client'
-                );
-            """))
+            # Only insert default client and project on fresh installations
+            if not installation_config.is_initial_data_seeded():
+                print("Fresh installation detected, creating default client and project...")
+                
+                # Check if there are any existing projects
+                result = conn.execute(text("SELECT COUNT(*) FROM projects;"))
+                project_count = result.scalar()
+                
+                if project_count == 0:
+                    # Ensure default client exists (idempotent via unique name)
+                    conn.execute(text("""
+                        INSERT INTO clients (name, status)
+                        SELECT 'Default Client', 'active'
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM clients WHERE name = 'Default Client'
+                        );
+                    """))
 
-            # Insert default project linked to default client if not present
-            conn.execute(text("""
-                INSERT INTO projects (name, client_id, description, billable, status)
-                SELECT 'General', c.id, 'Default project for general tasks', true, 'active'
-                FROM clients c
-                WHERE c.name = 'Default Client'
-                AND NOT EXISTS (
-                    SELECT 1 FROM projects p WHERE p.name = 'General'
-                );
-            """))
+                    # Insert default project linked to default client if not present
+                    conn.execute(text("""
+                        INSERT INTO projects (name, client_id, description, billable, status)
+                        SELECT 'General', c.id, 'Default project for general tasks', true, 'active'
+                        FROM clients c
+                        WHERE c.name = 'Default Client'
+                        AND NOT EXISTS (
+                            SELECT 1 FROM projects p WHERE p.name = 'General'
+                        );
+                    """))
+                    print("✓ Default client and project created")
+                    
+                    # Mark initial data as seeded
+                    installation_config.mark_initial_data_seeded()
+                    print("✓ Marked initial data as seeded")
+                else:
+                    print(f"Projects already exist ({project_count} found), marking initial data as seeded")
+                    installation_config.mark_initial_data_seeded()
+            else:
+                print("Initial data already seeded previously, skipping default client/project creation")
              
             # Insert default settings only if none exist (singleton semantics)
             conn.execute(text("""
@@ -396,6 +423,8 @@ def insert_initial_data(engine):
         
     except Exception as e:
         print(f"⚠ Error inserting initial data: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return True  # Don't fail on data insertion errors
 
 def verify_database_schema(engine):
