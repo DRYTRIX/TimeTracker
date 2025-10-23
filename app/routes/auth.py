@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, log_event, track_event
 from app.models import User
@@ -9,6 +9,22 @@ from app import oauth, limiter
 
 
 auth_bp = Blueprint('auth', __name__)
+
+# Allowed file extensions for user avatars (avoid SVG due to XSS risk)
+ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+
+def allowed_avatar_file(filename: str) -> bool:
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
+
+
+def get_avatar_upload_folder() -> str:
+    """Get the upload folder path for user avatars and ensure it exists."""
+    import os
+    # Store avatars in /data volume to persist between container updates
+    upload_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/data/uploads'), 'avatars')
+    os.makedirs(upload_folder, exist_ok=True)
+    return upload_folder
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute", methods=["POST"])  # rate limit login attempts
@@ -188,6 +204,56 @@ def edit_profile():
             current_user.preferred_language = preferred_language
             # Also set session so it applies immediately
             session['preferred_language'] = preferred_language
+
+        # Handle avatar upload if provided
+        try:
+            file = request.files.get('avatar')
+        except Exception:
+            file = None
+
+        if file and getattr(file, 'filename', ''):
+            filename = file.filename
+            if not allowed_avatar_file(filename):
+                flash(_('Invalid avatar file type. Allowed: PNG, JPG, JPEG, GIF, WEBP'), 'error')
+                return redirect(url_for('auth.edit_profile'))
+            # Validate image content with Pillow
+            try:
+                from PIL import Image
+                file.stream.seek(0)
+                img = Image.open(file.stream)
+                img.verify()
+                file.stream.seek(0)
+            except Exception:
+                flash(_('Invalid image file.'), 'error')
+                return redirect(url_for('auth.edit_profile'))
+
+            # Generate unique filename and save
+            import uuid
+            import os
+            ext = filename.rsplit('.', 1)[1].lower()
+            unique_name = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+            folder = get_avatar_upload_folder()
+            file_path = os.path.join(folder, unique_name)
+            try:
+                file.save(file_path)
+            except Exception:
+                flash(_('Failed to save avatar on server.'), 'error')
+                return redirect(url_for('auth.edit_profile'))
+
+            # Remove old avatar if exists
+            try:
+                old_filename = getattr(current_user, 'avatar_filename', None)
+                if old_filename:
+                    old_path = os.path.join(folder, old_filename)
+                    if os.path.exists(old_path):
+                        try:
+                            os.remove(old_path)
+                        except OSError:
+                            pass
+            except Exception:
+                pass
+
+            current_user.avatar_filename = unique_name
         try:
             db.session.commit()
             flash(_('Profile updated successfully'), 'success')
@@ -197,6 +263,36 @@ def edit_profile():
         return redirect(url_for('auth.profile'))
     
     return render_template('auth/edit_profile.html')
+
+
+@auth_bp.route('/profile/avatar/remove', methods=['POST'])
+@login_required
+def remove_avatar():
+    """Remove the current user's avatar file and clear the field."""
+    try:
+        import os
+        folder = get_avatar_upload_folder()
+        if current_user.avatar_filename:
+            path = os.path.join(folder, current_user.avatar_filename)
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+        current_user.avatar_filename = None
+        db.session.commit()
+        flash(_('Avatar removed'), 'success')
+    except Exception:
+        db.session.rollback()
+        flash(_('Failed to remove avatar.'), 'error')
+    return redirect(url_for('auth.edit_profile'))
+
+
+# Public route to serve uploaded avatars from the static uploads directory
+@auth_bp.route('/uploads/avatars/<path:filename>')
+def serve_uploaded_avatar(filename):
+    folder = get_avatar_upload_folder()
+    return send_from_directory(folder, filename)
 
 
 @auth_bp.route('/profile/theme', methods=['POST'])

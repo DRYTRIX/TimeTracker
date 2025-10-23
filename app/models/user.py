@@ -2,6 +2,7 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
+import os
 
 class User(UserMixin, db.Model):
     """User model for username-based authentication"""
@@ -23,6 +24,18 @@ class User(UserMixin, db.Model):
     preferred_language = db.Column(db.String(8), default=None, nullable=True)  # e.g., 'en', 'de'
     oidc_sub = db.Column(db.String(255), nullable=True)
     oidc_issuer = db.Column(db.String(255), nullable=True)
+    avatar_filename = db.Column(db.String(255), nullable=True)
+    
+    # User preferences and settings
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable email notifications
+    notification_overdue_invoices = db.Column(db.Boolean, default=True, nullable=False)  # Notify about overdue invoices
+    notification_task_assigned = db.Column(db.Boolean, default=True, nullable=False)  # Notify when assigned to task
+    notification_task_comments = db.Column(db.Boolean, default=True, nullable=False)  # Notify about task comments
+    notification_weekly_summary = db.Column(db.Boolean, default=False, nullable=False)  # Send weekly time summary
+    timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
+    date_format = db.Column(db.String(20), default='YYYY-MM-DD', nullable=False)  # Date format preference
+    time_format = db.Column(db.String(10), default='24h', nullable=False)  # '12h' or '24h'
+    week_start_day = db.Column(db.Integer, default=1, nullable=False)  # 0=Sunday, 1=Monday, etc.
     
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
@@ -96,5 +109,31 @@ class User(UserMixin, db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'is_active': self.is_active,
-            'total_hours': self.total_hours
+            'total_hours': self.total_hours,
+            'avatar_url': self.get_avatar_url(),
         }
+
+    # Avatar helpers
+    def get_avatar_url(self):
+        """Return the public URL for the user's avatar, or None if not set"""
+        if self.avatar_filename:
+            return f"/uploads/avatars/{self.avatar_filename}"
+        return None
+
+    def get_avatar_path(self):
+        """Return absolute filesystem path to the user's avatar, or None if not set"""
+        if not self.avatar_filename:
+            return None
+        try:
+            from flask import current_app
+            # Avatars are now stored in /data volume to persist between container updates
+            upload_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/data/uploads'), 'avatars')
+            return os.path.join(upload_folder, self.avatar_filename)
+        except Exception:
+            # Fallback for development/non-docker environments
+            return os.path.join('/data/uploads', 'avatars', self.avatar_filename)
+
+    def has_avatar(self):
+        """Check whether the user's avatar file exists on disk"""
+        path = self.get_avatar_path()
+        return bool(path and os.path.exists(path))

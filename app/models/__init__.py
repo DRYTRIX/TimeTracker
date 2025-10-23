@@ -11,6 +11,7 @@ from .payments import Payment, CreditNote, InvoiceReminderSchedule
 from .reporting import SavedReportView, ReportEmailSchedule
 from .client import Client
 from .task_activity import TaskActivity
+from .extra_good import ExtraGood
 from .comment import Comment
 from .focus_session import FocusSession
 from .recurring_block import RecurringBlock
@@ -18,6 +19,8 @@ from .rate_override import RateOverride
 from .saved_filter import SavedFilter
 from .project_cost import ProjectCost
 from .kanban_column import KanbanColumn
+from .time_entry_template import TimeEntryTemplate
+from .activity import Activity
 
 __all__ = [
     "User",
@@ -45,4 +48,6 @@ __all__ = [
     "SavedReportView",
     "ReportEmailSchedule",
     "KanbanColumn",
+    "TimeEntryTemplate",
+    "Activity",
 ]

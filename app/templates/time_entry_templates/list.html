@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Time Entry Templates - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Time Entry Templates</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Create reusable templates for quick time entries</p>
+        </div>
+        <a href="{{ url_for('time_entry_templates.create_template') }}" 
+           class="btn btn-primary">
+            <i class="fas fa-plus mr-2"></i> New Template
+        </a>
+    </div>
+
+    {% if templates %}
+    <!-- Templates Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for template in templates %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition">
+            <!-- Template Header -->
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                        {{ template.name }}
+                    </h3>
+                    {% if template.project %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        <i class="fas fa-folder mr-1"></i> {{ template.project.name }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="flex space-x-2">
+                    <a href="{{ url_for('time_entry_templates.edit_template', template_id=template.id) }}" 
+                       class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                       title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <form method="POST" 
+                          action="{{ url_for('time_entry_templates.delete_template', template_id=template.id) }}"
+                          onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this template?') }}', { title: '{{ _('Delete Template') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });"
+                          class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" 
+                                class="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                                title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Template Details -->
+            <div class="space-y-3 mb-4">
+                {% if template.task %}
+                <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-tasks w-5 mr-2"></i>
+                    {{ template.task.name }}
+                </div>
+                {% endif %}
+
+                {% if template.default_duration %}
+                <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-clock w-5 mr-2"></i>
+                    {{ template.default_duration }} hours
+                </div>
+                {% endif %}
+
+                {% if template.default_notes %}
+                <div class="flex items-start text-sm text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-sticky-note w-5 mr-2 mt-1"></i>
+                    <span class="line-clamp-2">{{ template.default_notes }}</span>
+                </div>
+                {% endif %}
+
+                {% if template.tags %}
+                <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-tags w-5 mr-2"></i>
+                    {{ template.tags }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Template Stats -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>
+                        <i class="fas fa-chart-line mr-1"></i>
+                        Used {{ template.usage_count }} time{{ 's' if template.usage_count != 1 else '' }}
+                    </span>
+                    {% if template.last_used_at %}
+                    <span title="{{ template.last_used_at.strftime('%Y-%m-%d %H:%M') }}">
+                        Last used {{ template.last_used_at|timeago }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Use Template Button -->
+            <button onclick="useTemplate({{ template.id }})"
+                    class="w-full mt-4 btn btn-sm btn-primary">
+                <i class="fas fa-play mr-2"></i> Use Template
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-12">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+            <i class="fas fa-file-alt text-3xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">No templates yet</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">
+            Create your first time entry template to speed up your workflow
+        </p>
+        <a href="{{ url_for('time_entry_templates.create_template') }}" 
+           class="btn btn-primary">
+            <i class="fas fa-plus mr-2"></i> Create Your First Template
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function useTemplate(templateId) {
+    // Fetch template data
+    fetch(`/api/templates/${templateId}`)
+        .then(response => response.json())
+        .then(template => {
+            // Store template data in sessionStorage
+            sessionStorage.setItem('activeTemplate', JSON.stringify(template));
+            
+            // Mark template as used
+            fetch(`/api/templates/${templateId}/use`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            // Redirect to manual entry (timer)
+            window.location.href = '{{ url_for("timer.manual_entry") }}?template=' + templateId;
+        })
+        .catch(error => {
+            console.error('Error loading template:', error);
+            alert('Failed to load template. Please try again.');
+        });
+}
+</script>
+{% endblock %}
+

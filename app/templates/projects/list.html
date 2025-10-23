@@ -26,6 +26,7 @@
             <select name="status" id="status" class="form-input">
                 <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
                 <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
                 <option value="archived" {% if status == 'archived' %}selected{% endif %}>Archived</option>
             </select>
         </div>
@@ -49,18 +50,34 @@
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
         </h3>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-2">
             <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Export to CSV">
                 <i class="fas fa-download mr-1"></i> Export
             </button>
-            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Column visibility">
-                <i class="fas fa-columns mr-1"></i> Columns
-            </button>
+            {% if current_user.is_admin %}
+            <div class="relative">
+                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'projectsBulkMenu')" disabled>
+                    <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
+                </button>
+                <ul id="projectsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 z-50 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg max-h-64 overflow-y-auto">
+                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
+                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
+                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('archived')"><i class="fas fa-archive mr-2 text-gray-600"></i>Archive</a></li>
+                    <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
+                    <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
+                </ul>
+            </div>
+            {% endif %}
         </div>
     </div>
-    <table class="w-full text-left" data-enhanced>
+    <table class="w-full text-left">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
+                {% if current_user.is_admin %}
+                <th class="p-4 w-10">
+                    <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllProjects()">
+                </th>
+                {% endif %}
                 <th class="p-4" data-sortable>Name</th>
                 <th class="p-4" data-sortable>Client</th>
                 <th class="p-4" data-sortable>Status</th>
@@ -73,11 +90,18 @@
         <tbody>
             {% for project in projects %}
             <tr class="border-b border-border-light dark:border-border-dark">
+                {% if current_user.is_admin %}
+                <td class="p-4">
+                    <input type="checkbox" class="project-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ project.id }}" onchange="updateBulkDeleteButton()">
+                </td>
+                {% endif %}
                 <td class="p-4">{{ project.name }}</td>
-                <td class="p-4">{{ project.client.name }}</td>
+                <td class="p-4">{{ project.client }}</td>
                 <td class="p-4">
                     {% if project.status == 'active' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
+                    {% elif project.status == 'inactive' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Inactive</span>
                     {% else %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Archived</span>
                     {% endif %}
@@ -135,7 +159,92 @@
     {% endset %}
     {{ empty_state('fas fa-folder-open', 'No Projects Found', 'Projects help you organize your work. Create your first project to get started tracking time.', actions) }}
     {% endif %}
-        </tbody>
-    </table>
 </div>
+{% endblock %}
+
+{% block scripts_extra %}
+<form id="bulkStatusChange-form" method="POST" action="{{ url_for('projects.bulk_status_change') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="new_status" id="bulkNewStatus" value="">
+</form>
+<form id="confirmBulkDelete-form" method="POST" action="{{ url_for('projects.bulk_delete_projects') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+<script>
+function toggleAllProjects(){
+    const selectAll = document.getElementById('selectAll');
+    document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = !!(selectAll && selectAll.checked));
+    updateBulkDeleteButton();
+}
+function updateBulkDeleteButton(){
+    const selected = document.querySelectorAll('.project-checkbox:checked').length;
+    const btn = document.getElementById('bulkActionsBtn');
+    const cnt = document.getElementById('selectedCount');
+    if (cnt) cnt.textContent = selected;
+    if (btn) btn.disabled = selected === 0;
+}
+function closeAllMenus(){
+    document.querySelectorAll('.bulk-menu').forEach(m => m.classList.add('hidden'));
+}
+function openMenu(triggerEl, menuId){
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const willOpen = menu.classList.contains('hidden');
+    closeAllMenus();
+    if (!willOpen) return;
+    // Position menu (dropup if not enough space below)
+    menu.style.top = '';
+    menu.style.bottom = '';
+    const rect = triggerEl.getBoundingClientRect();
+    const menuHeight = menu.offsetHeight || 200;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    if (spaceBelow < menuHeight + 16 && spaceAbove > menuHeight + 16){
+        menu.style.bottom = 'calc(100% + 8px)';
+    } else {
+        menu.style.top = 'calc(100% + 8px)';
+    }
+    menu.classList.remove('hidden');
+}
+// Click outside to close
+document.addEventListener('click', function(e){
+    const insideTrigger = e.target.closest('#bulkActionsBtn');
+    const insideMenu = e.target.closest('#projectsBulkMenu');
+    if (!insideTrigger && !insideMenu){ closeAllMenus(); }
+});
+// Close on Escape
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
+
+function showBulkDeleteConfirm(){
+    const count = document.querySelectorAll('.project-checkbox:checked').length;
+    if (count === 0) return false;
+    const msg = `Are you sure you want to delete ${count} project(s)? Projects with time entries will be skipped.`;
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Delete Projects', confirmText: 'Delete', variant: 'danger' }).then(function(ok){ if (ok) submitBulkDelete(); }); }
+    return false;
+}
+function submitBulkDelete(){
+    const form = document.getElementById('confirmBulkDelete-form');
+    form.querySelectorAll('input[name="project_ids[]"]').forEach(n => n.remove());
+    document.querySelectorAll('.project-checkbox:checked').forEach(cb => {
+        const i = document.createElement('input'); i.type='hidden'; i.name='project_ids[]'; i.value=cb.value; form.appendChild(i);
+    });
+    form.submit();
+}
+function showBulkStatusChange(newStatus){
+    const count = document.querySelectorAll('.project-checkbox:checked').length;
+    if (count === 0) return false;
+    const label = {active:'Active', inactive:'Inactive', archived:'Archived'}[newStatus] || newStatus;
+    const msg = `Are you sure you want to mark ${count} project(s) as ${label}?`;
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Project Status', confirmText: 'Change' }).then(function(ok){ if (ok){ document.getElementById('bulkNewStatus').value=newStatus; submitBulkStatusChange(); }}); }
+    return false;
+}
+function submitBulkStatusChange(){
+    const form = document.getElementById('bulkStatusChange-form');
+    form.querySelectorAll('input[name="project_ids[]"]').forEach(n => n.remove());
+    document.querySelectorAll('.project-checkbox:checked').forEach(cb => {
+        const i = document.createElement('input'); i.type='hidden'; i.name='project_ids[]'; i.value=cb.value; form.appendChild(i);
+    });
+    form.submit();
+}
+</script>
 {% endblock %}

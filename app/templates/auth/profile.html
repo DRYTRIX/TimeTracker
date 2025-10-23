@@ -11,6 +11,28 @@
 
 <div class="bg-card-light dark:bg-card-dark p-8 rounded-lg shadow">
     <div class="space-y-6">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                {% if current_user.get_avatar_url() %}
+                    <img id="profileAvatar" src="{{ current_user.get_avatar_url() }}" alt="{{ current_user.display_name }}" class="w-20 h-20 rounded-full object-cover border-4 border-primary shadow-lg" onerror="this.onerror=null; this.style.display='none'; document.getElementById('profileAvatarFallback').style.display='flex';">
+                    <div id="profileAvatarFallback" class="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-3xl border-4 border-primary shadow-lg" style="display: none;">
+                        {{ current_user.display_name[0:1].upper() }}
+                    </div>
+                {% else %}
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-3xl border-4 border-primary shadow-lg">
+                        {{ current_user.display_name[0:1].upper() }}
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold">{{ current_user.display_name }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ current_user.email or '' }}</p>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary mt-1">
+                    <i class="fas fa-user-shield mr-1"></i>
+                    {{ current_user.role | capitalize }}
+                </span>
+            </div>
+        </div>
         <div>
             <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Username</h2>
             <p class="mt-1 text-lg">{{ current_user.username }}</p>

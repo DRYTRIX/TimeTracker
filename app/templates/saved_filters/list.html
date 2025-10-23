@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Filters - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Saved Filters</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Quick access to your commonly used filters</p>
+        </div>
+    </div>
+
+    {% if filters %}
+    <!-- Grouped Filters -->
+    {% for scope, scope_filters in grouped_filters.items() %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 capitalize">
+            <i class="fas fa-filter mr-2 text-blue-600"></i>
+            {{ scope }} Filters
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for filter in scope_filters %}
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition">
+                <!-- Filter Header -->
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900 dark:text-white">
+                            {{ filter.name }}
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Created {{ filter.created_at|timeago }}
+                        </p>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex space-x-2">
+                        <button onclick="applyFilter({{ filter.id }}, '{{ filter.scope }}')"
+                                class="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                                title="Apply filter">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <form method="POST" 
+                              action="{{ url_for('saved_filters.delete_filter', filter_id=filter.id) }}"
+                              onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this filter?') }}', { title: '{{ _('Delete Filter') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });"
+                              class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" 
+                                    class="text-gray-500 hover:text-red-600 dark:text-gray-400"
+                                    title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Filter Details -->
+                <div class="bg-gray-50 dark:bg-gray-900 rounded p-2 text-xs">
+                    <div class="text-gray-700 dark:text-gray-300">
+                        {% if filter.payload %}
+                        {% for key, value in filter.payload.items() %}
+                        <div class="mb-1">
+                            <span class="font-medium">{{ key|replace('_', ' ')|title }}:</span>
+                            <span class="text-gray-600 dark:text-gray-400">{{ value }}</span>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <span class="text-gray-500 dark:text-gray-400">No parameters</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Shared Badge -->
+                {% if filter.is_shared %}
+                <div class="mt-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <i class="fas fa-users mr-1"></i> Shared
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-12">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+            <i class="fas fa-filter text-3xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">No saved filters yet</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">
+            Save filters from Reports or Tasks pages for quick access
+        </p>
+        <a href="{{ url_for('reports.index') }}" 
+           class="btn btn-primary">
+            <i class="fas fa-chart-bar mr-2"></i> Go to Reports
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function applyFilter(filterId, scope) {
+    // Fetch filter data
+    fetch(`/api/filters/${filterId}`)
+        .then(response => response.json())
+        .then(filter => {
+            // Build URL with filter parameters
+            var targetUrl;
+            
+            switch(scope) {
+                case 'reports':
+                    targetUrl = '{{ url_for("reports.index") }}';
+                    break;
+                case 'tasks':
+                    targetUrl = '{{ url_for("tasks.list_tasks") }}';
+                    break;
+                case 'projects':
+                    targetUrl = '{{ url_for("projects.list_projects") }}';
+                    break;
+                case 'time_entries':
+                    targetUrl = '{{ url_for("timer.timer") }}';
+                    break;
+                default:
+                    targetUrl = '/';
+            }
+            
+            // Add filter parameters to URL
+            var params = new URLSearchParams(filter.payload);
+            targetUrl += '?' + params.toString();
+            
+            // Redirect to target page with filter applied
+            window.location.href = targetUrl;
+        })
+        .catch(error => {
+            console.error('Error loading filter:', error);
+            alert('Failed to load filter. Please try again.');
+        });
+}
+</script>
+{% endblock %}
+

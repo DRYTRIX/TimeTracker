@@ -571,6 +571,169 @@ def bulk_delete_tasks():
     
     return redirect(url_for('tasks.list_tasks'))
 
+
+@tasks_bp.route('/tasks/bulk-status', methods=['POST'])
+@login_required
+def bulk_update_status():
+    """Update status for multiple tasks at once"""
+    task_ids = request.form.getlist('task_ids[]')
+    new_status = request.form.get('status', '').strip()
+    
+    if not task_ids:
+        flash('No tasks selected', 'warning')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    # Validate against configured kanban columns
+    valid_statuses = set(KanbanColumn.get_valid_status_keys()) if KanbanColumn else set(['todo','in_progress','review','done','cancelled'])
+    if not new_status or new_status not in valid_statuses:
+        flash('Invalid status value', 'error')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for task_id_str in task_ids:
+        try:
+            task_id = int(task_id_str)
+            task = Task.query.get(task_id)
+            
+            if not task:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and task.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            
+            # Handle reopening from done if needed
+            if task.status == 'done' and new_status in ['todo', 'review', 'in_progress']:
+                task.completed_at = None
+            task.status = new_status
+            task.updated_at = now_in_app_timezone()
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit('bulk_update_task_status', {'count': updated_count, 'status': new_status}):
+            flash('Could not update tasks due to a database error', 'error')
+            return redirect(url_for('tasks.list_tasks'))
+        
+        flash(f'Successfully updated {updated_count} task{"s" if updated_count != 1 else ""} to {new_status}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
+    
+    return redirect(url_for('tasks.list_tasks'))
+
+
+@tasks_bp.route('/tasks/bulk-priority', methods=['POST'])
+@login_required
+def bulk_update_priority():
+    """Update priority for multiple tasks at once"""
+    task_ids = request.form.getlist('task_ids[]')
+    new_priority = request.form.get('priority', '').strip()
+    
+    if not task_ids:
+        flash('No tasks selected', 'warning')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    if not new_priority or new_priority not in ['low', 'medium', 'high', 'urgent']:
+        flash('Invalid priority value', 'error')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for task_id_str in task_ids:
+        try:
+            task_id = int(task_id_str)
+            task = Task.query.get(task_id)
+            
+            if not task:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and task.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            
+            task.priority = new_priority
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit('bulk_update_task_priority', {'count': updated_count, 'priority': new_priority}):
+            flash('Could not update tasks due to a database error', 'error')
+            return redirect(url_for('tasks.list_tasks'))
+        
+        flash(f'Successfully updated {updated_count} task{"s" if updated_count != 1 else ""} to {new_priority} priority', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
+    
+    return redirect(url_for('tasks.list_tasks'))
+
+
+@tasks_bp.route('/tasks/bulk-assign', methods=['POST'])
+@login_required
+def bulk_assign_tasks():
+    """Assign multiple tasks to a user"""
+    task_ids = request.form.getlist('task_ids[]')
+    assigned_to = request.form.get('assigned_to', type=int)
+    
+    if not task_ids:
+        flash('No tasks selected', 'warning')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    if not assigned_to:
+        flash('No user selected for assignment', 'error')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    # Verify user exists
+    user = User.query.get(assigned_to)
+    if not user:
+        flash('Invalid user selected', 'error')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for task_id_str in task_ids:
+        try:
+            task_id = int(task_id_str)
+            task = Task.query.get(task_id)
+            
+            if not task:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and task.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            
+            task.assigned_to = assigned_to
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit('bulk_assign_tasks', {'count': updated_count, 'assigned_to': assigned_to}):
+            flash('Could not assign tasks due to a database error', 'error')
+            return redirect(url_for('tasks.list_tasks'))
+        
+        flash(f'Successfully assigned {updated_count} task{"s" if updated_count != 1 else ""} to {user.display_name}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
+    
+    return redirect(url_for('tasks.list_tasks'))
+
+
 @tasks_bp.route('/tasks/my-tasks')
 @login_required
 def my_tasks():

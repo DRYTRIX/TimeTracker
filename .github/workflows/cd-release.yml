@@ -9,12 +9,30 @@ name: CD - Release Build
 # - Tests can optionally be run via workflow_dispatch for manual releases
 #
 # Workflow is triggered by:
-# - Push to main/master (after PR merge)
+# - Pull request from RC branch to main/master
+# - Push to main/master (after PR merge from RC)
 # - Git tags (v*.*.*)
 # - Release events
 # - Manual workflow_dispatch
 
 on:
+  pull_request:
+    branches: [ main, master ]
+    # Only trigger from RC branches
+    paths:
+      - 'app/**'
+      - 'migrations/**'
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'Dockerfile'
+      - 'docker-compose*.yml'
+      - 'package*.json'
+      - 'tailwind.config.js'
+      - 'postcss.config.js'
+      - '.github/workflows/cd-release.yml'
+      - 'babel.cfg'
+      - 'pytest.ini'
+      - 'Makefile'
   push:
     branches: [ main, master ]
     tags: [ 'v*.*.*' ]

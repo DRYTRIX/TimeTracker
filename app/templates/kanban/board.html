@@ -87,36 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Inline status select changes
-    document.querySelectorAll('.kanban-status').forEach(sel => {
-        sel.addEventListener('change', async (e) => {
-            const select = e.target;
-            const taskId = select.dataset.taskId;
-            const newStatus = select.value;
-            try {
-                const res = await fetch(`/api/tasks/${taskId}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: JSON.stringify({ status: newStatus }) });
-                if (!res.ok) throw new Error('Failed');
-                // Move the card to target column
-                const card = document.querySelector(`.kanban-card[data-task-id="${taskId}"]`);
-                const originalParent = card ? card.parentElement : null;
-                const target = document.querySelector(`.kanban-column-body[data-status="${newStatus}"]`);
-                if (card && target) {
-                    // Hide target empty placeholder
-                    const targetEmpty = target.querySelector('.kanban-empty');
-                    if (targetEmpty) targetEmpty.style.display = 'none';
-                    target.appendChild(card);
-                    card.dataset.status = newStatus;
-                    updateColumnCounts();
-                    toggleEmptyStatesForBodies([target, originalParent]);
-                    announce(`${card.querySelector('h4, .kanban-card-title')?.textContent || 'Task'} {{ _('moved to') }} ${newStatus}`);
-                }
-            } catch (err) {
-                // revert select silently
-                const card = document.querySelector(`.kanban-card[data-task-id="${taskId}"]`);
-                if (card) select.value = card.dataset.status;
-            }
-        });
-    });
+    // Inline status dropdown removed: status is determined by column.
 
     function updateColumnCounts(){
         document.querySelectorAll('.kanban-count').forEach(span => {

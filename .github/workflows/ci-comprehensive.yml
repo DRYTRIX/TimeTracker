@@ -5,15 +5,19 @@ name: Comprehensive CI Pipeline
 # Test Strategy:
 # - Smoke tests (fast, critical) run first
 # - Unit, integration, security, and code quality tests run in parallel
-# - Full test suite with PostgreSQL runs for PRs to main/master
+# - Full test suite with PostgreSQL runs for PRs to main/master and RC branches
 # - Docker build test ensures the image builds correctly
 # - Test summary posted as PR comment
 #
-# All tests must pass before a PR can be merged to main
+# All tests must pass before a PR can be merged
+#
+# Workflow triggers:
+# - PRs to RC branches (from develop) - validates code before RC build
+# - PRs to main/master (from RC) - validates code before release
 
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, master, 'rc', 'rc/**' ]
 
 env:
   PYTHON_VERSION: '3.11'
@@ -300,13 +304,13 @@ jobs:
           docker rm test-container
 
   # ============================================================================
-  # Full Test Suite (runs on all PRs to main/master)
+  # Full Test Suite (runs on all PRs to main/master/rc)
   # ============================================================================
   full-test-suite:
     name: Full Test Suite with PostgreSQL
     runs-on: ubuntu-latest
     needs: [smoke-tests, unit-tests, integration-tests]
-    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'master')
+    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'master' || startsWith(github.base_ref, 'rc'))
     timeout-minutes: 30
     
     services:

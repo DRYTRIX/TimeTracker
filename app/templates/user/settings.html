@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Settings') }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('Settings') }}</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ _('Manage your account settings and preferences') }}</p>
+    </div>
+
+    <form method="POST" class="space-y-8">
+        {{ csrf_token() if csrf_token }}
+        
+        <!-- Profile Information -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-user mr-2"></i>{{ _('Profile Information') }}
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Username') }}
+                    </label>
+                    <input type="text" value="{{ user.username }}" disabled
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 cursor-not-allowed">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Username cannot be changed') }}</p>
+                </div>
+                
+                <div>
+                    <label for="full_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Full Name') }}
+                    </label>
+                    <input type="text" id="full_name" name="full_name" value="{{ user.full_name or '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Email Address') }}
+                    </label>
+                    <input type="email" id="email" name="email" value="{{ user.email or '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                           placeholder="your.email@example.com">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Required for email notifications') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Preferences -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-bell mr-2"></i>{{ _('Notification Preferences') }}
+            </h2>
+            
+            <div class="space-y-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="email_notifications" name="email_notifications" 
+                           {% if user.email_notifications %}checked{% endif %}
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="email_notifications" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                        <span class="font-medium">{{ _('Enable Email Notifications') }}</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ _('Master switch for all email notifications') }}</p>
+                    </label>
+                </div>
+                
+                <div class="ml-8 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="notification_overdue_invoices" name="notification_overdue_invoices"
+                               {% if user.notification_overdue_invoices %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="notification_overdue_invoices" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                            {{ _('Overdue Invoice Notifications') }}
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="notification_task_assigned" name="notification_task_assigned"
+                               {% if user.notification_task_assigned %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="notification_task_assigned" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                            {{ _('Task Assignment Notifications') }}
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="notification_task_comments" name="notification_task_comments"
+                               {% if user.notification_task_comments %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="notification_task_comments" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                            {{ _('Comment & Mention Notifications') }}
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="notification_weekly_summary" name="notification_weekly_summary"
+                               {% if user.notification_weekly_summary %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="notification_weekly_summary" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                            {{ _('Weekly Time Summary Email') }}
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Display Preferences -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-palette mr-2"></i>{{ _('Display Preferences') }}
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="theme_preference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Theme') }}
+                    </label>
+                    <select id="theme_preference" name="theme_preference"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">{{ _('System Default') }}</option>
+                        <option value="light" {% if user.theme_preference == 'light' %}selected{% endif %}>☀️ {{ _('Light') }}</option>
+                        <option value="dark" {% if user.theme_preference == 'dark' %}selected{% endif %}>🌙 {{ _('Dark') }}</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="preferred_language" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Language') }}
+                    </label>
+                    <select id="preferred_language" name="preferred_language"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">{{ _('System Default') }}</option>
+                        {% for code, name in languages.items() %}
+                        <option value="{{ code }}" {% if user.preferred_language == code %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Regional Settings -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-globe mr-2"></i>{{ _('Regional Settings') }}
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="timezone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Timezone') }}
+                    </label>
+                    <select id="timezone" name="timezone"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">{{ _('System Default') }}</option>
+                        {% for tz in timezones %}
+                        <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="date_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Date Format') }}
+                    </label>
+                    <select id="date_format" name="date_format"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="YYYY-MM-DD" {% if user.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD (2025-01-22)</option>
+                        <option value="MM/DD/YYYY" {% if user.date_format == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY (01/22/2025)</option>
+                        <option value="DD/MM/YYYY" {% if user.date_format == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY (22/01/2025)</option>
+                        <option value="DD.MM.YYYY" {% if user.date_format == 'DD.MM.YYYY' %}selected{% endif %}>DD.MM.YYYY (22.01.2025)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="time_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Time Format') }}
+                    </label>
+                    <select id="time_format" name="time_format"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="24h" {% if user.time_format == '24h' %}selected{% endif %}>24-hour (14:30)</option>
+                        <option value="12h" {% if user.time_format == '12h' %}selected{% endif %}>12-hour (2:30 PM)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="week_start_day" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Week Starts On') }}
+                    </label>
+                    <select id="week_start_day" name="week_start_day"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="0" {% if user.week_start_day == 0 %}selected{% endif %}>{{ _('Sunday') }}</option>
+                        <option value="1" {% if user.week_start_day == 1 %}selected{% endif %}>{{ _('Monday') }}</option>
+                        <option value="6" {% if user.week_start_day == 6 %}selected{% endif %}>{{ _('Saturday') }}</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex justify-end space-x-4">
+            <a href="{{ url_for('main.dashboard') }}" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                {{ _('Cancel') }}
+            </a>
+            <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition">
+                <i class="fas fa-save mr-2"></i>{{ _('Save Settings') }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Live theme preview
+document.getElementById('theme_preference').addEventListener('change', function() {
+    const theme = this.value;
+    if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else if (theme === 'light') {
+        document.documentElement.classList.remove('dark');
+    } else {
+        // System default
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+});
+
+// Show warning if email notifications are enabled but no email is provided
+document.getElementById('email_notifications').addEventListener('change', function() {
+    const emailField = document.getElementById('email');
+    if (this.checked && !emailField.value) {
+        emailField.classList.add('border-yellow-500');
+        emailField.focus();
+    } else {
+        emailField.classList.remove('border-yellow-500');
+    }
+});
+</script>
+{% endblock %}
+

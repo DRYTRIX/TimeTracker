@@ -201,8 +201,28 @@ class KeyboardShortcutManager {
      * Handle key press
      */
     handleKeyPress(e) {
-        // Ignore if typing in input/textarea
+        // When palette is open, do not trigger a second open; let commands.js handle focus
+        const palette = document.getElementById('commandPaletteModal');
+        const paletteOpen = palette && !palette.classList.contains('hidden');
+
+        // Ignore if typing in input/textarea except for allowed global combos
         if (this.isTyping(e)) {
+            // Allow Ctrl+/ to focus search even when typing
+            if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                e.preventDefault();
+                this.toggleSearch();
+            }
+            // Allow Ctrl+K to open/focus palette even when typing
+            else if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+                e.preventDefault();
+                if (paletteOpen) {
+                    // Just refocus input when already open
+                    const inputExisting = document.getElementById('commandPaletteInput');
+                    if (inputExisting) setTimeout(() => inputExisting.focus(), 50);
+                } else {
+                    this.openCommandPalette();
+                }
+            }
             return;
         }
 
@@ -218,6 +238,17 @@ class KeyboardShortcutManager {
                 ctrlKey: e.ctrlKey,
                 metaKey: e.metaKey
             });
+        }
+
+        // Prevent duplicate open when palette already visible (Ctrl+K, ?, etc.)
+        if (paletteOpen) {
+            // If user hits palette keys while open, just refocus and exit
+            if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'k' || e.key === '?')) {
+                e.preventDefault();
+                const inputExisting = document.getElementById('commandPaletteInput');
+                if (inputExisting) setTimeout(() => inputExisting.focus(), 50);
+                return;
+            }
         }
 
         // Check custom shortcuts first
@@ -435,19 +466,29 @@ class KeyboardShortcutManager {
     openCommandPalette() {
         const modal = document.getElementById('commandPaletteModal');
         if (modal) {
+            // If already open, just focus
+            if (!modal.classList.contains('hidden')) {
+                const inputExisting = document.getElementById('commandPaletteInput');
+                if (inputExisting) setTimeout(() => inputExisting.focus(), 50);
+                return;
+            }
             modal.classList.remove('hidden');
             const input = document.getElementById('commandPaletteInput');
-            if (input) {
-                setTimeout(() => input.focus(), 100);
-            }
+            if (input) setTimeout(() => input.focus(), 100);
         }
     }
 
     toggleSearch() {
-        const searchInput = document.querySelector('input[type="search"], input[name="q"]');
+        // Prefer the main header search input
+        let searchInput = document.getElementById('search');
+        if (!searchInput) {
+            searchInput = document.querySelector('form.navbar-search input[type="search"], input[type="search"], input[name="q"], .search-enhanced input');
+        }
         if (searchInput) {
+            // Ensure parent sections are visible (e.g., if search is in a collapsed container)
+            try { searchInput.closest('.hidden')?.classList.remove('hidden'); } catch(_) {}
             searchInput.focus();
-            searchInput.select();
+            if (typeof searchInput.select === 'function') searchInput.select();
         }
     }
 
