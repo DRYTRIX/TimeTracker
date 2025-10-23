@@ -694,3 +694,42 @@ def bulk_entry_for_project(project_id):
     
     return render_template('timer/bulk_entry.html', projects=active_projects, 
                          selected_project_id=project_id, selected_task_id=task_id)
+
+@timer_bp.route('/timer/duplicate/<int:timer_id>')
+@login_required
+def duplicate_timer(timer_id):
+    """Duplicate an existing time entry - opens manual entry form with pre-filled data"""
+    timer = TimeEntry.query.get_or_404(timer_id)
+    
+    # Check if user can duplicate this timer
+    if timer.user_id != current_user.id and not current_user.is_admin:
+        flash('You can only duplicate your own timers', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Get active projects for dropdown
+    active_projects = Project.query.filter_by(status='active').order_by(Project.name).all()
+    
+    # Track duplication event
+    log_event("timer.duplicated", 
+             user_id=current_user.id, 
+             time_entry_id=timer.id,
+             project_id=timer.project_id,
+             task_id=timer.task_id)
+    track_event(current_user.id, "timer.duplicated", {
+        "time_entry_id": timer.id,
+        "project_id": timer.project_id,
+        "task_id": timer.task_id,
+        "has_notes": bool(timer.notes),
+        "has_tags": bool(timer.tags)
+    })
+    
+    # Render the manual entry form with pre-filled data
+    return render_template('timer/manual_entry.html', 
+                         projects=active_projects,
+                         selected_project_id=timer.project_id,
+                         selected_task_id=timer.task_id,
+                         prefill_notes=timer.notes,
+                         prefill_tags=timer.tags,
+                         prefill_billable=timer.billable,
+                         is_duplicate=True,
+                         original_entry=timer)
