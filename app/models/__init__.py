@@ -25,6 +25,7 @@ from .user_favorite_project import UserFavoriteProject
 from .client_note import ClientNote
 from .weekly_time_goal import WeeklyTimeGoal
 from .expense import Expense
+from .permission import Permission, Role
 
 __all__ = [
     "User",
@@ -58,4 +59,6 @@ __all__ = [
     "ClientNote",
     "WeeklyTimeGoal",
     "Expense",
+    "Permission",
+    "Role",
 ]

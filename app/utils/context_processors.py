@@ -1,10 +1,15 @@
 from flask import g, request, current_app
 from flask_babel import get_locale
+from flask_login import current_user
 from app.models import Settings
 from app.utils.timezone import get_timezone_offset_for_timezone
 
 def register_context_processors(app):
     """Register context processors for the application"""
+    
+    # Register permission helpers for templates
+    from app.utils.permissions import init_permission_helpers
+    init_permission_helpers(app)
     
     @app.context_processor
     def inject_settings():

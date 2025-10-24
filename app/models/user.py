@@ -46,6 +46,7 @@ class User(UserMixin, db.Model):
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     project_costs = db.relationship('ProjectCost', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     favorite_projects = db.relationship('Project', secondary='user_favorite_projects', lazy='dynamic', backref=db.backref('favorited_by', lazy='dynamic'))
+    roles = db.relationship('Role', secondary='user_roles', lazy='joined', backref=db.backref('users', lazy='dynamic'))
     
     def __init__(self, username, role='user', email=None, full_name=None):
         self.username = username.lower().strip()
@@ -59,7 +60,11 @@ class User(UserMixin, db.Model):
     @property
     def is_admin(self):
         """Check if user is an admin"""
-        return self.role == 'admin'
+        # Backward compatibility: check legacy role field first
+        if self.role == 'admin':
+            return True
+        # Check if user has any admin role
+        return any(role.name in ['admin', 'super_admin'] for role in self.roles)
     
     @property
     def active_timer(self):
@@ -173,3 +178,47 @@ class User(UserMixin, db.Model):
         if status:
             query = query.filter_by(status=status)
         return query.order_by('name').all()
+    
+    # Permission and role helpers
+    def has_permission(self, permission_name):
+        """Check if user has a specific permission through any of their roles"""
+        # Super admin users have all permissions
+        if self.role == 'admin' and not self.roles:
+            # Legacy admin users without roles have all permissions
+            return True
+        
+        # Check if any of the user's roles have this permission
+        for role in self.roles:
+            if role.has_permission(permission_name):
+                return True
+        return False
+    
+    def has_any_permission(self, *permission_names):
+        """Check if user has any of the specified permissions"""
+        return any(self.has_permission(perm) for perm in permission_names)
+    
+    def has_all_permissions(self, *permission_names):
+        """Check if user has all of the specified permissions"""
+        return all(self.has_permission(perm) for perm in permission_names)
+    
+    def add_role(self, role):
+        """Add a role to this user"""
+        if role not in self.roles:
+            self.roles.append(role)
+    
+    def remove_role(self, role):
+        """Remove a role from this user"""
+        if role in self.roles:
+            self.roles.remove(role)
+    
+    def get_all_permissions(self):
+        """Get all permissions this user has through their roles"""
+        permissions = set()
+        for role in self.roles:
+            for permission in role.permissions:
+                permissions.add(permission)
+        return list(permissions)
+    
+    def get_role_names(self):
+        """Get list of role names for this user"""
+        return [r.name for r in self.roles]

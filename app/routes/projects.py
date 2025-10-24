@@ -6,6 +6,7 @@ from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColu
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
+from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
     track_project_setup_started,
@@ -88,15 +89,9 @@ def list_projects():
 
 @projects_bp.route('/projects/create', methods=['GET', 'POST'])
 @login_required
+@admin_or_permission_required('create_projects')
 def create_project():
     """Create a new project"""
-    if not current_user.is_admin:
-        try:
-            current_app.logger.warning("Non-admin user attempted to create project: user=%s", current_user.username)
-        except Exception:
-            pass
-        flash('Only administrators can create projects', 'error')
-        return redirect(url_for('projects.list_projects'))
     
     # Track project setup started when user opens the form
     if request.method == 'GET':
@@ -336,12 +331,9 @@ def view_project(project_id):
 
 @projects_bp.route('/projects/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required
+@admin_or_permission_required('edit_projects')
 def edit_project(project_id):
     """Edit project details"""
-    if not current_user.is_admin:
-        flash('Only administrators can edit projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
     
     if request.method == 'POST':
@@ -432,11 +424,12 @@ def edit_project(project_id):
 @login_required
 def archive_project(project_id):
     """Archive a project with optional reason"""
-    if not current_user.is_admin:
-        flash('Only administrators can archive projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('archive_projects'):
+        flash('You do not have permission to archive projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
     if request.method == 'GET':
         # Show archive form
@@ -478,11 +471,12 @@ def archive_project(project_id):
 @login_required
 def unarchive_project(project_id):
     """Unarchive a project"""
-    if not current_user.is_admin:
-        flash('Only administrators can unarchive projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('archive_projects'):
+        flash('You do not have permission to unarchive projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'active':
         flash('Project is already active', 'info')
@@ -513,11 +507,12 @@ def unarchive_project(project_id):
 @login_required
 def deactivate_project(project_id):
     """Mark a project as inactive"""
-    if not current_user.is_admin:
-        flash('Only administrators can deactivate projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_projects'):
+        flash('You do not have permission to deactivate projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'inactive':
         flash('Project is already inactive', 'info')
@@ -534,11 +529,12 @@ def deactivate_project(project_id):
 @login_required
 def activate_project(project_id):
     """Activate a project"""
-    if not current_user.is_admin:
-        flash('Only administrators can activate projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_projects'):
+        flash('You do not have permission to activate projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'active':
         flash('Project is already active', 'info')
@@ -553,12 +549,9 @@ def activate_project(project_id):
 
 @projects_bp.route('/projects/<int:project_id>/delete', methods=['POST'])
 @login_required
+@admin_or_permission_required('delete_projects')
 def delete_project(project_id):
     """Delete a project (only if no time entries exist)"""
-    if not current_user.is_admin:
-        flash('Only administrators can delete projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
     
     # Check if project has time entries
@@ -579,8 +572,9 @@ def delete_project(project_id):
 @login_required
 def bulk_delete_projects():
     """Delete multiple projects at once"""
-    if not current_user.is_admin:
-        flash('Only administrators can delete projects', 'error')
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('delete_projects'):
+        flash('You do not have permission to delete projects', 'error')
         return redirect(url_for('projects.list_projects'))
     
     project_ids = request.form.getlist('project_ids[]')
@@ -644,8 +638,9 @@ def bulk_delete_projects():
 @login_required
 def bulk_status_change():
     """Change status for multiple projects at once"""
-    if not current_user.is_admin:
-        flash('Only administrators can change project status', 'error')
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_projects'):
+        flash('You do not have permission to change project status', 'error')
         return redirect(url_for('projects.list_projects'))
     
     project_ids = request.form.getlist('project_ids[]')

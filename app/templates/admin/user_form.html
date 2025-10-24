@@ -30,6 +30,23 @@
                 <input type="checkbox" name="is_active" id="is_active" {% if user.is_active %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <label for="is_active" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Active</label>
             </div>
+            
+            <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
+                <h3 class="font-semibold mb-2">Advanced Permissions</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                    Manage fine-grained role-based permissions for this user.
+                </p>
+                <a href="{{ url_for('permissions.manage_user_roles', user_id=user.id) }}" class="inline-block bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-90">
+                    Manage Roles & Permissions
+                </a>
+                <div class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {% if user.roles %}
+                    <strong>Current roles:</strong> {{ user.get_role_names()|join(', ') }}
+                    {% else %}
+                    No roles assigned yet. Using legacy role: {{ user.role }}
+                    {% endif %}
+                </div>
+            </div>
             {% endif %}
         </div>
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end">

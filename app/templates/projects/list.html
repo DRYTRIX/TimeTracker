@@ -11,7 +11,7 @@
     title_text='Projects',
     subtitle_text='Manage your projects here',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("projects.create_project") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Project</a>' if current_user.is_admin else None
+    actions_html='<a href="' + url_for("projects.create_project") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Project</a>' if (current_user.is_admin or has_permission('create_projects')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">

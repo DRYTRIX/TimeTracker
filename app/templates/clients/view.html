@@ -7,8 +7,9 @@
         <h1 class="text-2xl font-bold">{{ client.name }}</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">Client details and associated projects.</p>
     </div>
-    {% if current_user.is_admin %}
+    {% if current_user.is_admin or has_any_permission(['edit_clients', 'delete_clients']) %}
     <div class="flex gap-2">
+        {% if current_user.is_admin or has_permission('edit_clients') %}
         <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Client') }}</a>
         {% if client.status == 'active' %}
         <form method="POST" action="{{ url_for('clients.archive_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark client as Inactive?') }}', { title: '{{ _('Change Client Status') }}', confirmText: '{{ _('Change') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
@@ -21,7 +22,8 @@
             <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white mt-4 md:mt-0">{{ _('Activate') }}</button>
         </form>
         {% endif %}
-        {% if client.total_projects == 0 %}
+        {% endif %}
+        {% if (current_user.is_admin or has_permission('delete_clients')) and client.total_projects == 0 %}
         <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
                 onclick="document.getElementById('confirmDeleteClient-{{ client.id }}').classList.remove('hidden')">
             {{ _('Delete Client') }}
@@ -265,7 +267,7 @@ function toggleImportant(noteId, setImportant) {
 }
 </script>
 
-{% if current_user.is_admin %}
+{% if current_user.is_admin or has_permission('delete_clients') %}
 {{ confirm_dialog(
     'confirmDeleteClient-' ~ client.id,
     'Delete Client',

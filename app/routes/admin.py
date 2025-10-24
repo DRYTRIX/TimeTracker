@@ -13,6 +13,7 @@ from app.utils.db import safe_commit
 from app.utils.backup import create_backup, restore_backup
 from app.utils.installation import get_installation_config
 from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
+from app.utils.permissions import admin_or_permission_required
 import threading
 import time
 
@@ -26,7 +27,11 @@ RESTORE_PROGRESS = {}
 ALLOWED_LOGO_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 def admin_required(f):
-    """Decorator to require admin access"""
+    """Decorator to require admin access
+    
+    DEPRECATED: Use @admin_or_permission_required() with specific permissions instead.
+    This decorator is kept for backward compatibility.
+    """
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -122,7 +127,7 @@ def admin_dashboard_alias():
 
 @admin_bp.route('/admin/users')
 @login_required
-@admin_required
+@admin_or_permission_required('view_users')
 def list_users():
     """List all users"""
     users = User.query.order_by(User.username).all()
@@ -139,7 +144,7 @@ def list_users():
 
 @admin_bp.route('/admin/users/create', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@admin_or_permission_required('create_users')
 def create_user():
     """Create a new user"""
     if request.method == 'POST':
@@ -169,7 +174,7 @@ def create_user():
 
 @admin_bp.route('/admin/users/<int:user_id>/edit', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@admin_or_permission_required('edit_users')
 def edit_user(user_id):
     """Edit an existing user"""
     user = User.query.get_or_404(user_id)
@@ -204,7 +209,7 @@ def edit_user(user_id):
 
 @admin_bp.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @login_required
-@admin_required
+@admin_or_permission_required('delete_users')
 def delete_user(user_id):
     """Delete a user"""
     user = User.query.get_or_404(user_id)
@@ -232,7 +237,7 @@ def delete_user(user_id):
 
 @admin_bp.route('/admin/telemetry')
 @login_required
-@admin_required
+@admin_or_permission_required('manage_telemetry')
 def telemetry_dashboard():
     """Telemetry and analytics dashboard"""
     installation_config = get_installation_config()
@@ -273,7 +278,7 @@ def telemetry_dashboard():
 
 @admin_bp.route('/admin/telemetry/toggle', methods=['POST'])
 @login_required
-@admin_required
+@admin_or_permission_required('manage_telemetry')
 def toggle_telemetry():
     """Toggle telemetry on/off"""
     installation_config = get_installation_config()
@@ -296,7 +301,7 @@ def toggle_telemetry():
 
 @admin_bp.route('/admin/settings', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@admin_or_permission_required('manage_settings')
 def settings():
     """Manage system settings"""
     settings_obj = Settings.get_settings()
@@ -352,7 +357,7 @@ def settings():
 @admin_bp.route('/admin/pdf-layout', methods=['GET', 'POST'])
 @limiter.limit("30 per minute", methods=["POST"])  # editor saves
 @login_required
-@admin_required
+@admin_or_permission_required('manage_settings')
 def pdf_layout():
     """Edit PDF invoice layout template (HTML and CSS)."""
     settings_obj = Settings.get_settings()
@@ -394,7 +399,7 @@ def pdf_layout():
 @admin_bp.route('/admin/pdf-layout/reset', methods=['POST'])
 @limiter.limit("10 per minute")
 @login_required
-@admin_required
+@admin_or_permission_required('manage_settings')
 def pdf_layout_reset():
     """Reset PDF layout to defaults (clear custom templates)."""
     settings_obj = Settings.get_settings()
@@ -409,7 +414,7 @@ def pdf_layout_reset():
 
 @admin_bp.route('/admin/pdf-layout/default', methods=['GET'])
 @login_required
-@admin_required
+@admin_or_permission_required('manage_settings')
 def pdf_layout_default():
     """Return default HTML and CSS template sources for the PDF layout editor."""
     try:
@@ -439,7 +444,7 @@ def pdf_layout_default():
 @admin_bp.route('/admin/pdf-layout/preview', methods=['POST'])
 @limiter.limit("60 per minute")
 @login_required
-@admin_required
+@admin_or_permission_required('manage_settings')
 def pdf_layout_preview():
     """Render a live preview of the provided HTML/CSS using an invoice context."""
     html = request.form.get('html', '')
@@ -574,7 +579,7 @@ def pdf_layout_preview():
 @admin_bp.route('/admin/upload-logo', methods=['POST'])
 @limiter.limit("10 per minute")
 @login_required
-@admin_required
+@admin_or_permission_required('manage_settings')
 def upload_logo():
     """Upload company logo"""
     if 'logo' not in request.files:
@@ -632,7 +637,7 @@ def upload_logo():
 
 @admin_bp.route('/admin/remove-logo', methods=['POST'])
 @login_required
-@admin_required
+@admin_or_permission_required('manage_settings')
 def remove_logo():
     """Remove company logo"""
     settings_obj = Settings.get_settings()
@@ -669,7 +674,7 @@ def serve_uploaded_logo(filename):
 
 @admin_bp.route('/admin/backup', methods=['GET'])
 @login_required
-@admin_required
+@admin_or_permission_required('manage_backups')
 def backup():
     """Create manual backup and return the archive for download."""
     try:
@@ -686,7 +691,7 @@ def backup():
 @admin_bp.route('/admin/restore', methods=['GET', 'POST'])
 @limiter.limit("3 per minute", methods=["POST"])  # heavy operation
 @login_required
-@admin_required
+@admin_or_permission_required('manage_backups')
 def restore():
     """Restore from an uploaded backup archive."""
     if request.method == 'POST':
@@ -744,7 +749,7 @@ def restore():
 
 @admin_bp.route('/admin/system')
 @login_required
-@admin_required
+@admin_or_permission_required('view_system_info')
 def system_info():
     """Show system information"""
     # Get system statistics
@@ -781,7 +786,7 @@ def system_info():
 
 @admin_bp.route('/admin/oidc/debug')
 @login_required
-@admin_required
+@admin_or_permission_required('manage_oidc')
 def oidc_debug():
     """OIDC Configuration Debug Dashboard"""
     from app.config import Config
@@ -845,7 +850,7 @@ def oidc_debug():
 @admin_bp.route('/admin/oidc/test')
 @limiter.limit("10 per minute")
 @login_required
-@admin_required
+@admin_or_permission_required('manage_oidc')
 def oidc_test():
     """Test OIDC configuration by fetching discovery document"""
     from app.config import Config
@@ -939,7 +944,7 @@ def oidc_test():
 
 @admin_bp.route('/admin/oidc/user/<int:user_id>')
 @login_required
-@admin_required
+@admin_or_permission_required('view_users')
 def oidc_user_detail(user_id):
     """View OIDC details for a specific user"""
     user = User.query.get_or_404(user_id)

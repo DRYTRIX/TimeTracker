@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('permissions.list_roles') }}" class="text-primary hover:underline flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        {{ _('Back to Roles') }}
+    </a>
+</div>
+
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ role.name }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ role.description or _('No description') }}</p>
+    </div>
+    <div class="flex gap-2 mt-4 md:mt-0">
+        {% if not role.is_system_role and (current_user.is_admin or has_permission('manage_roles')) %}
+        <a href="{{ url_for('permissions.edit_role', role_id=role.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Edit Role') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Role Information') }}</h2>
+        <dl class="space-y-2">
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Type') }}</dt>
+                <dd class="font-medium">
+                    {% if role.is_system_role %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {{ _('System Role') }}
+                    </span>
+                    {% else %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                        {{ _('Custom Role') }}
+                    </span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total Permissions') }}</dt>
+                <dd class="font-medium">{{ role.permissions|length }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Assigned Users') }}</dt>
+                <dd class="font-medium">{{ users|length }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}</dt>
+                <dd class="font-medium">{{ role.created_at.strftime('%Y-%m-%d %H:%M') if role.created_at else '-' }}</dd>
+            </div>
+        </dl>
+    </div>
+
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Users with this Role') }}</h2>
+        {% if users %}
+        <ul class="space-y-2">
+            {% for user in users %}
+            <li class="flex items-center justify-between py-2 border-b border-border-light dark:border-border-dark last:border-0">
+                <span>{{ user.username }}</span>
+                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No users assigned to this role yet.') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Permissions') }}</h2>
+    
+    {% set categories = {} %}
+    {% for permission in role.permissions %}
+        {% if permission.category not in categories %}
+            {% set _ = categories.update({permission.category: []}) %}
+        {% endif %}
+        {% set _ = categories[permission.category].append(permission) %}
+    {% endfor %}
+
+    {% if categories %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for category, perms in categories.items() %}
+        <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
+            <h3 class="font-semibold text-primary mb-3 capitalize">{{ category.replace('_', ' ') }}</h3>
+            <ul class="space-y-2">
+                {% for permission in perms %}
+                <li class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">{{ permission.name.replace('_', ' ').title() }}</div>
+                        {% if permission.description %}
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ permission.description }}</div>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('This role has no permissions assigned.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+

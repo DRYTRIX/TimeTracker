@@ -7,6 +7,7 @@ from app.models import Client, Project
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
+from app.utils.permissions import admin_or_permission_required
 
 clients_bp = Blueprint('clients', __name__)
 
@@ -63,13 +64,14 @@ def create_client():
     except Exception:
         wants_json = False
 
-    if not current_user.is_admin:
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('create_clients'):
         if wants_json:
             return jsonify({
                 'error': 'forbidden',
-                'message': _('Only administrators can create clients')
+                'message': _('You do not have permission to create clients')
             }), 403
-        flash(_('Only administrators can create clients'), 'error')
+        flash(_('You do not have permission to create clients'), 'error')
         return redirect(url_for('clients.list_clients'))
     
     if request.method == 'POST':
@@ -174,11 +176,12 @@ def view_client(client_id):
 @login_required
 def edit_client(client_id):
     """Edit client details"""
-    if not current_user.is_admin:
-        flash('Only administrators can edit clients', 'error')
-        return redirect(url_for('clients.view_client', client_id=client_id))
-    
     client = Client.query.get_or_404(client_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_clients'):
+        flash('You do not have permission to edit clients', 'error')
+        return redirect(url_for('clients.view_client', client_id=client_id))
     
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -234,11 +237,12 @@ def edit_client(client_id):
 @login_required
 def archive_client(client_id):
     """Archive a client"""
-    if not current_user.is_admin:
-        flash('Only administrators can archive clients', 'error')
-        return redirect(url_for('clients.view_client', client_id=client_id))
-    
     client = Client.query.get_or_404(client_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_clients'):
+        flash('You do not have permission to archive clients', 'error')
+        return redirect(url_for('clients.view_client', client_id=client_id))
     
     if client.status == 'inactive':
         flash('Client is already inactive', 'info')
@@ -254,11 +258,12 @@ def archive_client(client_id):
 @login_required
 def activate_client(client_id):
     """Activate a client"""
-    if not current_user.is_admin:
-        flash('Only administrators can activate clients', 'error')
-        return redirect(url_for('clients.view_client', client_id=client_id))
-    
     client = Client.query.get_or_404(client_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_clients'):
+        flash('You do not have permission to activate clients', 'error')
+        return redirect(url_for('clients.view_client', client_id=client_id))
     
     if client.status == 'active':
         flash('Client is already active', 'info')
@@ -272,11 +277,12 @@ def activate_client(client_id):
 @login_required
 def delete_client(client_id):
     """Delete a client (only if no projects exist)"""
-    if not current_user.is_admin:
-        flash('Only administrators can delete clients', 'error')
-        return redirect(url_for('clients.view_client', client_id=client_id))
-    
     client = Client.query.get_or_404(client_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('delete_clients'):
+        flash('You do not have permission to delete clients', 'error')
+        return redirect(url_for('clients.view_client', client_id=client_id))
     
     # Check if client has projects
     if client.projects.count() > 0:
@@ -301,8 +307,9 @@ def delete_client(client_id):
 @login_required
 def bulk_delete_clients():
     """Delete multiple clients at once"""
-    if not current_user.is_admin:
-        flash('Only administrators can delete clients', 'error')
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('delete_clients'):
+        flash('You do not have permission to delete clients', 'error')
         return redirect(url_for('clients.list_clients'))
     
     client_ids = request.form.getlist('client_ids[]')
@@ -366,8 +373,9 @@ def bulk_delete_clients():
 @login_required
 def bulk_status_change():
     """Change status for multiple clients at once"""
-    if not current_user.is_admin:
-        flash('Only administrators can change client status', 'error')
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_clients'):
+        flash('You do not have permission to change client status', 'error')
         return redirect(url_for('clients.list_clients'))
     
     client_ids = request.form.getlist('client_ids[]')

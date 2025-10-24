@@ -14,7 +14,7 @@
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
                 <th class="p-4">Username</th>
-                <th class="p-4">Role</th>
+                <th class="p-4">Roles & Permissions</th>
                 <th class="p-4">Status</th>
                 <th class="p-4">Actions</th>
             </tr>
@@ -22,20 +22,52 @@
         <tbody>
             {% for user in users %}
             <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-4">{{ user.username }}</td>
-                <td class="p-4">{{ user.role | capitalize }}</td>
                 <td class="p-4">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ 'bg-green-100 text-green-800' if user.is_active else 'bg-red-100 text-red-800' }}">
+                    <div class="font-medium">{{ user.username }}</div>
+                    {% if user.is_admin %}
+                    <span class="text-xs text-primary">{{ _('Admin Access') }}</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if user.roles %}
+                    <div class="flex flex-wrap gap-1">
+                        {% for role in user.roles %}
+                        <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {% if role.is_system_role %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                            {{ role.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    {# Show legacy role if no new roles assigned yet #}
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
+                            {{ user.role | capitalize }} (legacy)
+                        </span>
+                        <a href="{{ url_for('permissions.manage_user_roles', user_id=user.id) }}" 
+                           class="text-xs text-primary hover:underline"
+                           title="{{ _('Migrate to new role system') }}">
+                            {{ _('Migrate') }} →
+                        </a>
+                    </div>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' if user.is_active else 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' }}">
                         {{ 'Active' if user.is_active else 'Inactive' }}
                     </span>
                 </td>
                 <td class="p-4">
-                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="text-primary hover:underline">Edit</a>
+                    <div class="flex gap-2">
+                        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>
+                        <a href="{{ url_for('permissions.manage_user_roles', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('Roles') }}</a>
+                    </div>
                 </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">No users found.</td>
+                <td colspan="4" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No users found.') }}</td>
             </tr>
             {% endfor %}
         </tbody>

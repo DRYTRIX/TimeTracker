@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="text-primary hover:underline flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+            {{ _('Back to User') }}
+        </a>
+    </div>
+
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-6">{{ _('Manage Roles for') }}: {{ user.username }}</h1>
+
+        <form method="post" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <h3 class="text-lg font-semibold mb-4">{{ _('Assign Roles') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Select the roles this user should have. Users inherit all permissions from their assigned roles.') }}
+                </p>
+                
+                <div class="space-y-3">
+                    {% for role in all_roles %}
+                    <label class="flex items-start gap-3 p-4 border border-border-light dark:border-border-dark rounded-lg cursor-pointer hover:bg-bg-hover-light dark:hover:bg-bg-hover-dark transition">
+                        <input type="checkbox" name="roles" value="{{ role.id }}"
+                               {% if role in user.roles %}checked{% endif %}
+                               class="mt-1 h-5 w-5 text-primary border-gray-300 rounded focus:ring-primary">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold">{{ role.name }}</span>
+                                {% if role.is_system_role %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    {{ _('System') }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if role.description %}
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ role.description }}</p>
+                            {% endif %}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ role.permissions|length }} {{ _('permissions') }}
+                            </p>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition">
+                    {{ _('Update Roles') }}
+                </button>
+                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="bg-secondary text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition">
+                    {{ _('Cancel') }}
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Show current effective permissions -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Current Effective Permissions') }}</h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+            {{ _('These are all the permissions the user currently has through their roles:') }}
+        </p>
+        
+        {% set user_permissions = user.get_all_permissions() %}
+        {% if user_permissions %}
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {% for permission in user_permissions %}
+            <div class="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                {{ permission.name.replace('_', ' ').title() }}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No permissions (assign roles to grant permissions)') }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
