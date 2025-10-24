@@ -64,10 +64,10 @@ class TestTimeRoundingFeatureSmokeTests:
     def test_user_can_view_rounding_settings(self, app, client, authenticated_user):
         """Test that user can access the settings page with rounding options"""
         with app.test_request_context():
-        response = client.get('/settings')
+            response = client.get('/settings')
             
-        # Should be able to access settings page
-        assert response.status_code in [200, 302]  # 302 if redirect to login
+            # Should be able to access settings page
+            assert response.status_code in [200, 302]  # 302 if redirect to login
     
     def test_user_can_update_rounding_preferences(self, app, client, authenticated_user):
         """Test that user can update their rounding preferences"""
@@ -207,21 +207,21 @@ class TestTimeRoundingFeatureSmokeTests:
         ]
         
         for interval, expected_seconds in test_cases:
-        user.time_rounding_minutes = interval
-        user.time_rounding_method = 'nearest'
-        db.session.commit()
+            user.time_rounding_minutes = interval
+            user.time_rounding_method = 'nearest'
+            db.session.commit()
             
-        entry = TimeEntry(
-            user_id=user.id,
-            project_id=project.id,
-            start_time=start_time,
-            end_time=end_time
-        )
+            entry = TimeEntry(
+                user_id=user.id,
+                project_id=project.id,
+                start_time=start_time,
+                end_time=end_time
+            )
             
-        db.session.add(entry)
-        db.session.flush()
+            db.session.add(entry)
+            db.session.flush()
             
-        assert entry.duration_seconds == expected_seconds, \
+            assert entry.duration_seconds == expected_seconds, \
             f"Failed for {interval}-minute rounding: expected {expected_seconds}, got {entry.duration_seconds}"
             
         db.session.rollback()
