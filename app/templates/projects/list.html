@@ -11,12 +11,12 @@
     title_text='Projects',
     subtitle_text='Manage your projects here',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("projects.create_project") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Project</a>' if current_user.is_admin else None
+    actions_html='<a href="' + url_for("projects.create_project") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Project</a>' if (current_user.is_admin or has_permission('create_projects')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h2 class="text-lg font-semibold mb-4">Filter Projects</h2>
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" data-filter-form>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-filter-form>
         <div>
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
@@ -39,8 +39,15 @@
                 {% endfor %}
             </select>
         </div>
+        <div>
+            <label for="favorites" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Show</label>
+            <select name="favorites" id="favorites" class="form-input">
+                <option value="">All Projects</option>
+                <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
+            </select>
+        </div>
         <div class="self-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Filter</button>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
         </div>
     </form>
 </div>
@@ -62,7 +69,7 @@
                 <ul id="projectsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 z-50 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg max-h-64 overflow-y-auto">
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
-                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('archived')"><i class="fas fa-archive mr-2 text-gray-600"></i>Archive</a></li>
+                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkArchiveDialog()"><i class="fas fa-archive mr-2 text-gray-600"></i>Archive</a></li>
                     <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
                     <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
                 </ul>
@@ -78,6 +85,7 @@
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllProjects()">
                 </th>
                 {% endif %}
+                <th class="p-4 w-10"></th>
                 <th class="p-4" data-sortable>Name</th>
                 <th class="p-4" data-sortable>Client</th>
                 <th class="p-4" data-sortable>Status</th>
@@ -89,13 +97,24 @@
         </thead>
         <tbody>
             {% for project in projects %}
-            <tr class="border-b border-border-light dark:border-border-dark">
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                 {% if current_user.is_admin %}
                 <td class="p-4">
                     <input type="checkbox" class="project-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ project.id }}" onchange="updateBulkDeleteButton()">
                 </td>
                 {% endif %}
-                <td class="p-4">{{ project.name }}</td>
+                <td class="p-4 text-center">
+                    {% set is_fav = favorite_project_ids and project.id in favorite_project_ids %}
+                    <button type="button" 
+                            class="favorite-btn text-xl hover:scale-110 transition-transform" 
+                            data-project-id="{{ project.id }}"
+                            data-is-favorited="{{ 'true' if is_fav else 'false' }}"
+                            onclick="toggleFavorite({{ project.id }}, this)"
+                            title="{{ 'Remove from favorites' if is_fav else 'Add to favorites' }}">
+                        <i class="{{ 'fas fa-star text-yellow-500' if is_fav else 'far fa-star text-gray-400' }}"></i>
+                    </button>
+                </td>
+                <td class="p-4 font-medium">{{ project.name }}</td>
                 <td class="p-4">{{ project.client }}</td>
                 <td class="p-4">
                     {% if project.status == 'active' %}
@@ -166,6 +185,7 @@
 <form id="bulkStatusChange-form" method="POST" action="{{ url_for('projects.bulk_status_change') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="new_status" id="bulkNewStatus" value="">
+    <input type="hidden" name="archive_reason" id="bulkArchiveReason" value="">
 </form>
 <form id="confirmBulkDelete-form" method="POST" action="{{ url_for('projects.bulk_delete_projects') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -230,12 +250,62 @@ function submitBulkDelete(){
     });
     form.submit();
 }
+function showBulkArchiveDialog(){
+    const count = document.querySelectorAll('.project-checkbox:checked').length;
+    if (count === 0) return false;
+    
+    // Create a custom modal for archive reason
+    const modalHtml = `
+        <div id="bulkArchiveModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" onclick="closeBulkArchiveModal()"></div>
+            <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+                <h3 class="text-lg font-semibold mb-4">Archive ${count} Project${count !== 1 ? 's' : ''}?</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Reason for Archiving <span class="text-text-muted-light dark:text-text-muted-dark">(Optional)</span>
+                    </label>
+                    <textarea id="bulkArchiveReasonInput" rows="3" class="form-input" placeholder="e.g., Projects completed, Contracts ended, etc."></textarea>
+                </div>
+                <div class="flex gap-2 mb-3">
+                    <button type="button" onclick="setBulkArchiveReason('Projects completed successfully')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Completed</button>
+                    <button type="button" onclick="setBulkArchiveReason('Contracts ended')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Contract Ended</button>
+                    <button type="button" onclick="setBulkArchiveReason('Projects cancelled')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Cancelled</button>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeBulkArchiveModal()" class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                    <button type="button" onclick="confirmBulkArchive()" class="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700">Archive</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    return false;
+}
+
+function closeBulkArchiveModal(){
+    const modal = document.getElementById('bulkArchiveModal');
+    if (modal) modal.remove();
+}
+
+function setBulkArchiveReason(reason){
+    document.getElementById('bulkArchiveReasonInput').value = reason;
+}
+
+function confirmBulkArchive(){
+    const reason = document.getElementById('bulkArchiveReasonInput').value.trim();
+    document.getElementById('bulkNewStatus').value = 'archived';
+    document.getElementById('bulkArchiveReason').value = reason;
+    closeBulkArchiveModal();
+    submitBulkStatusChange();
+}
+
 function showBulkStatusChange(newStatus){
     const count = document.querySelectorAll('.project-checkbox:checked').length;
     if (count === 0) return false;
     const label = {active:'Active', inactive:'Inactive', archived:'Archived'}[newStatus] || newStatus;
     const msg = `Are you sure you want to mark ${count} project(s) as ${label}?`;
-    if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Project Status', confirmText: 'Change' }).then(function(ok){ if (ok){ document.getElementById('bulkNewStatus').value=newStatus; submitBulkStatusChange(); }}); }
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Project Status', confirmText: 'Change' }).then(function(ok){ if (ok){ document.getElementById('bulkNewStatus').value=newStatus; document.getElementById('bulkArchiveReason').value=''; submitBulkStatusChange(); }}); }
     return false;
 }
 function submitBulkStatusChange(){
@@ -245,6 +315,119 @@ function submitBulkStatusChange(){
         const i = document.createElement('input'); i.type='hidden'; i.name='project_ids[]'; i.value=cb.value; form.appendChild(i);
     });
     form.submit();
+}
+
+// Favorite project functionality
+function toggleFavorite(projectId, button) {
+    // Font Awesome converts <i> to <svg>, so we need to look for either
+    const icon = button.querySelector('i, svg');
+    
+    // Safety check
+    if (!icon) {
+        console.error('Star icon not found in button');
+        console.log('Button HTML:', button.innerHTML);
+        return;
+    }
+    
+    // Check if favorited by looking at classes (works for both <i> and <svg>)
+    const isFavorited = icon.classList.contains('fa-star') && 
+                        (icon.classList.contains('fas') || icon.getAttribute('data-prefix') === 'fas');
+    const action = isFavorited ? 'unfavorite' : 'favorite';
+    
+    // Disable button to prevent double clicks
+    button.disabled = true;
+    
+    // Optimistic UI update - toggle classes
+    if (isFavorited) {
+        // Change to unfilled star
+        icon.classList.remove('fas', 'text-yellow-500');
+        icon.classList.add('far', 'text-gray-400');
+        if (icon.tagName === 'svg') {
+            icon.setAttribute('data-prefix', 'far');
+        }
+        button.title = 'Add to favorites';
+    } else {
+        // Change to filled star
+        icon.classList.remove('far', 'text-gray-400');
+        icon.classList.add('fas', 'text-yellow-500');
+        if (icon.tagName === 'svg') {
+            icon.setAttribute('data-prefix', 'fas');
+        }
+        button.title = 'Remove from favorites';
+    }
+    
+    // Send AJAX request
+    fetch(`/projects/${projectId}/${action}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Success - show toast notification
+            const message = action === 'favorite' ? 'Project added to favorites' : 'Project removed from favorites';
+            if (window.toastManager) {
+                window.toastManager.success(message, 'Success', 3000);
+            } else if (window.showToast) {
+                window.showToast(message, 'success');
+            }
+        } else {
+            // Revert UI on error
+            if (isFavorited) {
+                icon.classList.remove('far', 'text-gray-400');
+                icon.classList.add('fas', 'text-yellow-500');
+                if (icon.tagName === 'svg') {
+                    icon.setAttribute('data-prefix', 'fas');
+                }
+                button.title = 'Remove from favorites';
+            } else {
+                icon.classList.remove('fas', 'text-yellow-500');
+                icon.classList.add('far', 'text-gray-400');
+                if (icon.tagName === 'svg') {
+                    icon.setAttribute('data-prefix', 'far');
+                }
+                button.title = 'Add to favorites';
+            }
+            if (window.showAlert) {
+                window.showAlert(data.message || 'Failed to update favorite status');
+            } else {
+                alert(data.message || 'Failed to update favorite status');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling favorite:', error);
+        // Revert UI on error
+        if (isFavorited) {
+            icon.classList.remove('far', 'text-gray-400');
+            icon.classList.add('fas', 'text-yellow-500');
+            if (icon.tagName === 'svg') {
+                icon.setAttribute('data-prefix', 'fas');
+            }
+            button.title = 'Remove from favorites';
+        } else {
+            icon.classList.remove('fas', 'text-yellow-500');
+            icon.classList.add('far', 'text-gray-400');
+            if (icon.tagName === 'svg') {
+                icon.setAttribute('data-prefix', 'far');
+            }
+            button.title = 'Add to favorites';
+        }
+        if (window.showAlert) {
+            window.showAlert('Failed to update favorite status');
+        } else {
+            alert('Failed to update favorite status');
+        }
+    })
+    .finally(() => {
+        // Re-enable button
+        button.disabled = false;
+    });
 }
 </script>
 {% endblock %}

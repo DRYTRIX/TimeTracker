@@ -3,13 +3,29 @@
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>
-        <h1 class="text-2xl font-bold">Log Time Manually</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">Create a new time entry.</p>
+        <h1 class="text-2xl font-bold">{% if is_duplicate %}Duplicate Time Entry{% else %}Log Time Manually{% endif %}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{% if is_duplicate %}Create a copy of a previous entry with new times.{% else %}Create a new time entry.{% endif %}</p>
     </div>
 </div>
 
+{% if is_duplicate and original_entry %}
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 max-w-3xl mx-auto">
+    <div class="flex items-start gap-3">
+        <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1"></i>
+        <div>
+            <p class="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Duplicating entry:</strong> {{ original_entry.project.name }}{% if original_entry.task %} - {{ original_entry.task.name }}{% endif %}
+            </p>
+            <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                Original: {{ original_entry.start_time.strftime('%Y-%m-%d %H:%M') }} to {{ original_entry.end_time.strftime('%Y-%m-%d %H:%M') if original_entry.end_time else 'N/A' }} ({{ original_entry.duration_formatted }})
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-3xl mx-auto">
-    <form method="POST" autocomplete="off">
+    <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -56,15 +72,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-2">
                     <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-                    <textarea name="notes" id="notes" rows="4" class="form-input" placeholder="What did you work on?"></textarea>
+                    <textarea name="notes" id="notes" rows="4" class="form-input" placeholder="What did you work on?">{{ prefill_notes or '' }}</textarea>
                 </div>
                 <div class="space-y-4">
                     <div>
                         <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
-                        <input type="text" name="tags" id="tags" class="form-input" placeholder="tag1, tag2">
+                        <input type="text" name="tags" id="tags" class="form-input" placeholder="tag1, tag2" value="{{ prefill_tags or '' }}">
                     </div>
                     <div class="flex items-center gap-3">
-                        <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" checked>
+                        <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if prefill_billable is not defined or prefill_billable %}checked{% endif %}>
                         <label for="billable" class="text-sm text-gray-700 dark:text-gray-300">Billable</label>
                     </div>
                 </div>

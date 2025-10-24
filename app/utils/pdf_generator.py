@@ -271,8 +271,10 @@ class InvoicePDFGenerator:
         return ''
     
     def _generate_items_rows(self):
-        """Generate HTML rows for invoice items"""
+        """Generate HTML rows for invoice items and extra goods"""
         rows = []
+        
+        # Add regular invoice items
         for item in self.invoice.items:
             row = f"""
             <tr>
@@ -286,6 +288,32 @@ class InvoicePDFGenerator:
             </tr>
             """
             rows.append(row)
+        
+        # Add extra goods
+        for good in self.invoice.extra_goods:
+            # Build description with category and SKU if available
+            description_parts = [self._escape(good.name)]
+            if good.description:
+                description_parts.append(f"<br><small class='good-description'>{self._escape(good.description)}</small>")
+            if good.sku:
+                description_parts.append(f"<br><small class='good-sku'>{_('SKU')}: {self._escape(good.sku)}</small>")
+            if good.category:
+                description_parts.append(f"<br><small class='good-category'>{_('Category')}: {self._escape(good.category.title())}</small>")
+            
+            description_html = ''.join(description_parts)
+            
+            row = f"""
+            <tr>
+                <td>
+                    {description_html}
+                </td>
+                <td class="num">{good.quantity:.2f}</td>
+                <td class="num">{self._format_currency(good.unit_price)}</td>
+                <td class="num">{self._format_currency(good.total_amount)}</td>
+            </tr>
+            """
+            rows.append(row)
+        
         return ''.join(rows)
     
     def _get_time_entry_info_html(self, item):

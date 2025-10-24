@@ -2,10 +2,11 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood, Activity
+from app.models import Project, TimeEntry, Task, Client, ProjectCost, KanbanColumn, ExtraGood, Activity, UserFavoriteProject
 from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
+from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
     track_project_setup_started,
@@ -28,14 +29,28 @@ def list_projects():
     status = request.args.get('status', 'active')
     client_name = request.args.get('client', '').strip()
     search = request.args.get('search', '').strip()
+    favorites_only = request.args.get('favorites', '').lower() == 'true'
     
     query = Project.query
+    
+    # Filter by favorites if requested
+    if favorites_only:
+        # Join with user_favorite_projects table
+        query = query.join(
+            UserFavoriteProject,
+            db.and_(
+                UserFavoriteProject.project_id == Project.id,
+                UserFavoriteProject.user_id == current_user.id
+            )
+        )
+    
+    # Filter by status (use Project.status to be explicit)
     if status == 'active':
-        query = query.filter_by(status='active')
+        query = query.filter(Project.status == 'active')
     elif status == 'archived':
-        query = query.filter_by(status='archived')
+        query = query.filter(Project.status == 'archived')
     elif status == 'inactive':
-        query = query.filter_by(status='inactive')
+        query = query.filter(Project.status == 'inactive')
     
     if client_name:
         query = query.join(Client).filter(Client.name == client_name)
@@ -49,11 +64,15 @@ def list_projects():
             )
         )
     
-    projects = query.order_by(Project.name).paginate(
+    # Get all projects for the current page
+    projects_pagination = query.order_by(Project.name).paginate(
         page=page,
         per_page=20,
         error_out=False
     )
+    
+    # Get user's favorite project IDs for quick lookup in template
+    favorite_project_ids = {p.id for p in current_user.favorite_projects.all()}
     
     # Get clients for filter dropdown
     clients = Client.get_active_clients()
@@ -61,22 +80,18 @@ def list_projects():
     
     return render_template(
         'projects/list.html',
-        projects=projects.items,
+        projects=projects_pagination.items,
         status=status,
-        clients=client_list
+        clients=client_list,
+        favorite_project_ids=favorite_project_ids,
+        favorites_only=favorites_only
     )
 
 @projects_bp.route('/projects/create', methods=['GET', 'POST'])
 @login_required
+@admin_or_permission_required('create_projects')
 def create_project():
     """Create a new project"""
-    if not current_user.is_admin:
-        try:
-            current_app.logger.warning("Non-admin user attempted to create project: user=%s", current_user.username)
-        except Exception:
-            pass
-        flash('Only administrators can create projects', 'error')
-        return redirect(url_for('projects.list_projects'))
     
     # Track project setup started when user opens the form
     if request.method == 'GET':
@@ -316,12 +331,9 @@ def view_project(project_id):
 
 @projects_bp.route('/projects/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required
+@admin_or_permission_required('edit_projects')
 def edit_project(project_id):
     """Edit project details"""
-    if not current_user.is_admin:
-        flash('Only administrators can edit projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
     
     if request.method == 'POST':
@@ -408,38 +420,85 @@ def edit_project(project_id):
     
     return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
 
-@projects_bp.route('/projects/<int:project_id>/archive', methods=['POST'])
+@projects_bp.route('/projects/<int:project_id>/archive', methods=['GET', 'POST'])
 @login_required
 def archive_project(project_id):
-    """Archive a project"""
-    if not current_user.is_admin:
-        flash('Only administrators can archive projects', 'error')
+    """Archive a project with optional reason"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('archive_projects'):
+        flash('You do not have permission to archive projects', 'error')
         return redirect(url_for('projects.view_project', project_id=project_id))
     
-    project = Project.query.get_or_404(project_id)
+    if request.method == 'GET':
+        # Show archive form
+        return render_template('projects/archive.html', project=project)
     
     if project.status == 'archived':
         flash('Project is already archived', 'info')
     else:
-        project.archive()
+        reason = request.form.get('reason', '').strip()
+        project.archive(user_id=current_user.id, reason=reason if reason else None)
+        
+        # Log the archiving
+        log_event("project.archived", 
+                 user_id=current_user.id, 
+                 project_id=project.id,
+                 reason=reason if reason else None)
+        track_event(current_user.id, "project.archived", {
+            "project_id": project.id,
+            "has_reason": bool(reason)
+        })
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='archived',
+            entity_type='project',
+            entity_id=project.id,
+            entity_name=project.name,
+            description=f'Archived project "{project.name}"' + (f': {reason}' if reason else ''),
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash(f'Project "{project.name}" archived successfully', 'success')
     
-    return redirect(url_for('projects.list_projects'))
+    return redirect(url_for('projects.list_projects', status='archived'))
 
 @projects_bp.route('/projects/<int:project_id>/unarchive', methods=['POST'])
 @login_required
 def unarchive_project(project_id):
     """Unarchive a project"""
-    if not current_user.is_admin:
-        flash('Only administrators can unarchive projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('archive_projects'):
+        flash('You do not have permission to unarchive projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'active':
         flash('Project is already active', 'info')
     else:
         project.unarchive()
+        
+        # Log the unarchiving
+        log_event("project.unarchived", user_id=current_user.id, project_id=project.id)
+        track_event(current_user.id, "project.unarchived", {"project_id": project.id})
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='unarchived',
+            entity_type='project',
+            entity_id=project.id,
+            entity_name=project.name,
+            description=f'Unarchived project "{project.name}"',
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash(f'Project "{project.name}" unarchived successfully', 'success')
     
     return redirect(url_for('projects.list_projects'))
@@ -448,11 +507,12 @@ def unarchive_project(project_id):
 @login_required
 def deactivate_project(project_id):
     """Mark a project as inactive"""
-    if not current_user.is_admin:
-        flash('Only administrators can deactivate projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_projects'):
+        flash('You do not have permission to deactivate projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'inactive':
         flash('Project is already inactive', 'info')
@@ -469,11 +529,12 @@ def deactivate_project(project_id):
 @login_required
 def activate_project(project_id):
     """Activate a project"""
-    if not current_user.is_admin:
-        flash('Only administrators can activate projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_projects'):
+        flash('You do not have permission to activate projects', 'error')
+        return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'active':
         flash('Project is already active', 'info')
@@ -488,12 +549,9 @@ def activate_project(project_id):
 
 @projects_bp.route('/projects/<int:project_id>/delete', methods=['POST'])
 @login_required
+@admin_or_permission_required('delete_projects')
 def delete_project(project_id):
     """Delete a project (only if no time entries exist)"""
-    if not current_user.is_admin:
-        flash('Only administrators can delete projects', 'error')
-        return redirect(url_for('projects.view_project', project_id=project_id))
-    
     project = Project.query.get_or_404(project_id)
     
     # Check if project has time entries
@@ -514,8 +572,9 @@ def delete_project(project_id):
 @login_required
 def bulk_delete_projects():
     """Delete multiple projects at once"""
-    if not current_user.is_admin:
-        flash('Only administrators can delete projects', 'error')
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('delete_projects'):
+        flash('You do not have permission to delete projects', 'error')
         return redirect(url_for('projects.list_projects'))
     
     project_ids = request.form.getlist('project_ids[]')
@@ -579,12 +638,14 @@ def bulk_delete_projects():
 @login_required
 def bulk_status_change():
     """Change status for multiple projects at once"""
-    if not current_user.is_admin:
-        flash('Only administrators can change project status', 'error')
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_projects'):
+        flash('You do not have permission to change project status', 'error')
         return redirect(url_for('projects.list_projects'))
     
     project_ids = request.form.getlist('project_ids[]')
     new_status = request.form.get('new_status', '').strip()
+    archive_reason = request.form.get('archive_reason', '').strip() if new_status == 'archived' else None
     
     if not project_ids:
         flash('No projects selected', 'warning')
@@ -605,14 +666,43 @@ def bulk_status_change():
             if not project:
                 continue
             
-            # Update status
-            project.status = new_status
-            project.updated_at = datetime.utcnow()
+            # Update status based on type
+            if new_status == 'archived':
+                # Use the enhanced archive method
+                project.status = 'archived'
+                project.archived_at = datetime.utcnow()
+                project.archived_by = current_user.id
+                project.archived_reason = archive_reason if archive_reason else None
+                project.updated_at = datetime.utcnow()
+            elif new_status == 'active':
+                # Clear archiving metadata when activating
+                project.status = 'active'
+                project.archived_at = None
+                project.archived_by = None
+                project.archived_reason = None
+                project.updated_at = datetime.utcnow()
+            else:
+                # Just update status for inactive
+                project.status = new_status
+                project.updated_at = datetime.utcnow()
+            
             updated_count += 1
             
             # Log the status change
             log_event(f"project.status_changed_{new_status}", user_id=current_user.id, project_id=project.id)
             track_event(current_user.id, "project.status_changed", {"project_id": project.id, "new_status": new_status})
+            
+            # Log activity
+            Activity.log(
+                user_id=current_user.id,
+                action=f'status_changed_{new_status}',
+                entity_type='project',
+                entity_id=project.id,
+                entity_name=project.name,
+                description=f'Changed project "{project.name}" status to {new_status}' + (f': {archive_reason}' if new_status == 'archived' and archive_reason else ''),
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
             
         except Exception as e:
             errors.append(f"ID {project_id_str}: {str(e)}")
@@ -635,6 +725,98 @@ def bulk_status_change():
         flash('No projects were updated', 'info')
     
     return redirect(url_for('projects.list_projects'))
+
+
+# ===== FAVORITE PROJECTS ROUTES =====
+
+@projects_bp.route('/projects/<int:project_id>/favorite', methods=['POST'])
+@login_required
+def favorite_project(project_id):
+    """Add a project to user's favorites"""
+    project = Project.query.get_or_404(project_id)
+    
+    try:
+        # Check if already favorited
+        if current_user.is_project_favorite(project):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': _('Project is already in favorites')}), 200
+            flash(_('Project is already in favorites'), 'info')
+        else:
+            # Add to favorites
+            current_user.add_favorite_project(project)
+            
+            # Log activity
+            Activity.log(
+                user_id=current_user.id,
+                action='favorited',
+                entity_type='project',
+                entity_id=project.id,
+                entity_name=project.name,
+                description=f'Added project "{project.name}" to favorites',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            # Track event
+            log_event("project.favorited", user_id=current_user.id, project_id=project.id)
+            track_event(current_user.id, "project.favorited", {"project_id": project.id})
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': True, 'message': _('Project added to favorites')}), 200
+            flash(_('Project added to favorites'), 'success')
+    except Exception as e:
+        current_app.logger.error(f"Error favoriting project: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': _('Failed to add project to favorites')}), 500
+        flash(_('Failed to add project to favorites'), 'error')
+    
+    # Redirect back to referrer or project list
+    return redirect(request.referrer or url_for('projects.list_projects'))
+
+
+@projects_bp.route('/projects/<int:project_id>/unfavorite', methods=['POST'])
+@login_required
+def unfavorite_project(project_id):
+    """Remove a project from user's favorites"""
+    project = Project.query.get_or_404(project_id)
+    
+    try:
+        # Check if not favorited
+        if not current_user.is_project_favorite(project):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': _('Project is not in favorites')}), 200
+            flash(_('Project is not in favorites'), 'info')
+        else:
+            # Remove from favorites
+            current_user.remove_favorite_project(project)
+            
+            # Log activity
+            Activity.log(
+                user_id=current_user.id,
+                action='unfavorited',
+                entity_type='project',
+                entity_id=project.id,
+                entity_name=project.name,
+                description=f'Removed project "{project.name}" from favorites',
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            # Track event
+            log_event("project.unfavorited", user_id=current_user.id, project_id=project.id)
+            track_event(current_user.id, "project.unfavorited", {"project_id": project.id})
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': True, 'message': _('Project removed from favorites')}), 200
+            flash(_('Project removed from favorites'), 'success')
+    except Exception as e:
+        current_app.logger.error(f"Error unfavoriting project: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': _('Failed to remove project from favorites')}), 500
+        flash(_('Failed to remove project from favorites'), 'error')
+    
+    # Redirect back to referrer or project list
+    return redirect(request.referrer or url_for('projects.list_projects'))
 
 
 # ===== PROJECT COSTS ROUTES =====

@@ -86,6 +86,17 @@ def settings():
             if preferred_language:
                 current_user.preferred_language = preferred_language
             
+            # Time rounding preferences
+            current_user.time_rounding_enabled = 'time_rounding_enabled' in request.form
+            
+            time_rounding_minutes = request.form.get('time_rounding_minutes', type=int)
+            if time_rounding_minutes and time_rounding_minutes in [1, 5, 10, 15, 30, 60]:
+                current_user.time_rounding_minutes = time_rounding_minutes
+            
+            time_rounding_method = request.form.get('time_rounding_method')
+            if time_rounding_method in ['nearest', 'up', 'down']:
+                current_user.time_rounding_method = time_rounding_method
+            
             # Save changes
             if safe_commit(db.session):
                 # Log activity
@@ -122,10 +133,17 @@ def settings():
         'fi': 'Suomi'
     })
     
+    # Get time rounding options
+    from app.utils.time_rounding import get_available_rounding_intervals, get_available_rounding_methods
+    rounding_intervals = get_available_rounding_intervals()
+    rounding_methods = get_available_rounding_methods()
+    
     return render_template('user/settings.html',
                          user=current_user,
                          timezones=timezones,
-                         languages=languages)
+                         languages=languages,
+                         rounding_intervals=rounding_intervals,
+                         rounding_methods=rounding_methods)
 
 
 @user_bp.route('/api/preferences', methods=['PATCH'])

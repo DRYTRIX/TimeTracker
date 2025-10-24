@@ -17,7 +17,7 @@ DO NOT commit actual keys to this file - they are injected at build time only.
 # PostHog Configuration
 # Replaced by GitHub Actions: POSTHOG_API_KEY_PLACEHOLDER
 POSTHOG_API_KEY_DEFAULT = "%%POSTHOG_API_KEY_PLACEHOLDER%%"
-POSTHOG_HOST_DEFAULT = "https://app.posthog.com"
+POSTHOG_HOST_DEFAULT = "https://us.i.posthog.com"
 
 # Sentry Configuration
 # Replaced by GitHub Actions: SENTRY_DSN_PLACEHOLDER

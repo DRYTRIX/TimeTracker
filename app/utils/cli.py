@@ -6,6 +6,7 @@ from app.models import User, Project, TimeEntry, Settings, Client, RecurringBloc
 from datetime import datetime, timedelta
 import shutil
 from app.utils.backup import create_backup, restore_backup
+from app.utils.permissions_seed import seed_all, seed_permissions, seed_roles, migrate_legacy_users
 
 def register_cli_commands(app):
     """Register CLI commands for the application"""
@@ -232,3 +233,32 @@ def register_cli_commands(app):
                 cur += timedelta(days=1)
         db.session.commit()
         click.echo(f"Recurring generation complete. Created {created} entries.")
+
+    @app.cli.command()
+    @with_appcontext
+    def seed_permissions_cmd():
+        """Seed default permissions, roles, and migrate existing users
+        
+        Note: This is now optional! The database migration (flask db upgrade)
+        automatically seeds permissions and roles. This command is only needed
+        if you want to re-seed or update permissions after the initial migration.
+        """
+        if seed_all():
+            click.echo("✓ Permission system initialized successfully")
+        else:
+            click.echo("✗ Failed to initialize permission system")
+            raise SystemExit(1)
+
+    @app.cli.command()
+    @with_appcontext
+    def update_permissions():
+        """Update permissions and roles after system updates
+        
+        Use this command to add new permissions or update role definitions
+        without affecting existing user role assignments.
+        """
+        if seed_permissions() and seed_roles():
+            click.echo("✓ Permissions and roles updated successfully")
+        else:
+            click.echo("✗ Failed to update permissions and roles")
+            raise SystemExit(1)

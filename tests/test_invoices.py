@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app import db
-from app.models import User, Project, Invoice, InvoiceItem, Settings, Client
+from app.models import User, Project, Invoice, InvoiceItem, Settings, Client, ExtraGood
 
 @pytest.fixture
 def sample_user(app):
@@ -627,3 +627,291 @@ def test_invoice_to_dict_includes_payment_fields(app, sample_invoice):
     assert invoice_dict['payment_reference'] == 'PP-123'
     assert invoice_dict['payment_notes'] == 'PayPal payment'
     assert invoice_dict['amount_paid'] == 500.00
+
+
+# ===============================================
+# Extra Goods PDF Export Tests
+# ===============================================
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_with_extra_goods(app, sample_invoice, sample_user):
+    """Test that invoices can have extra goods associated."""
+    # Create an extra good
+    good = ExtraGood(
+        name='Software License',
+        description='Annual software license',
+        category='license',
+        quantity=Decimal('1.00'),
+        unit_price=Decimal('299.99'),
+        sku='LIC-2024-001',
+        created_by=sample_user.id,
+        invoice_id=sample_invoice.id
+    )
+    
+    db.session.add(good)
+    db.session.commit()
+    
+    # Verify the good is associated with the invoice
+    assert len(list(sample_invoice.extra_goods)) == 1
+    assert sample_invoice.extra_goods[0].name == 'Software License'
+    assert sample_invoice.extra_goods[0].category == 'license'
+    assert sample_invoice.extra_goods[0].sku == 'LIC-2024-001'
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_pdf_generator_includes_extra_goods(app, sample_invoice, sample_user):
+    """Test that PDF generator includes extra goods in the output."""
+    from app.utils.pdf_generator import InvoicePDFGenerator
+    
+    # Add an invoice item
+    item = InvoiceItem(
+        invoice_id=sample_invoice.id,
+        description='Development work',
+        quantity=Decimal('10.00'),
+        unit_price=Decimal('75.00')
+    )
+    db.session.add(item)
+    
+    # Add an extra good
+    good = ExtraGood(
+        name='Hardware Component',
+        description='Raspberry Pi 4 Model B',
+        category='product',
+        quantity=Decimal('2.00'),
+        unit_price=Decimal('55.00'),
+        sku='RPI4-4GB',
+        created_by=sample_user.id,
+        invoice_id=sample_invoice.id
+    )
+    db.session.add(good)
+    db.session.commit()
+    
+    # Calculate totals
+    sample_invoice.calculate_totals()
+    db.session.commit()
+    
+    # Generate PDF
+    generator = InvoicePDFGenerator(sample_invoice)
+    html_content = generator._generate_html()
+    
+    # Verify invoice item is in HTML
+    assert 'Development work' in html_content
+    
+    # Verify extra good is in HTML
+    assert 'Hardware Component' in html_content
+    assert 'Raspberry Pi 4 Model B' in html_content
+    assert 'RPI4-4GB' in html_content
+    assert 'Product' in html_content or 'product' in html_content
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_pdf_generator_extra_goods_formatting(app, sample_invoice, sample_user):
+    """Test that extra goods are properly formatted in PDF."""
+    from app.utils.pdf_generator import InvoicePDFGenerator
+    
+    # Add extra goods with various attributes
+    goods = [
+        ExtraGood(
+            name='Product A',
+            description='Description A',
+            category='product',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('100.00'),
+            sku='PROD-A',
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        ),
+        ExtraGood(
+            name='Service B',
+            description='Description B',
+            category='service',
+            quantity=Decimal('5.00'),
+            unit_price=Decimal('50.00'),
+            sku='SRV-B',
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        ),
+        ExtraGood(
+            name='Material C',
+            category='material',
+            quantity=Decimal('10.00'),
+            unit_price=Decimal('25.00'),
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        )
+    ]
+    
+    for good in goods:
+        db.session.add(good)
+    db.session.commit()
+    
+    # Calculate totals
+    sample_invoice.calculate_totals()
+    db.session.commit()
+    
+    # Generate PDF
+    generator = InvoicePDFGenerator(sample_invoice)
+    html_content = generator._generate_html()
+    
+    # Verify all goods are present
+    assert 'Product A' in html_content
+    assert 'Service B' in html_content
+    assert 'Material C' in html_content
+    
+    # Verify quantities and prices
+    assert '1.00' in html_content  # Product A quantity
+    assert '5.00' in html_content  # Service B quantity
+    assert '10.00' in html_content  # Material C quantity
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_pdf_fallback_generator_includes_extra_goods(app, sample_invoice, sample_user):
+    """Test that fallback PDF generator includes extra goods."""
+    from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
+    
+    # Add an invoice item
+    item = InvoiceItem(
+        invoice_id=sample_invoice.id,
+        description='Consulting Services',
+        quantity=Decimal('8.00'),
+        unit_price=Decimal('100.00')
+    )
+    db.session.add(item)
+    
+    # Add extra goods
+    good = ExtraGood(
+        name='Training Materials',
+        description='Printed training manuals',
+        category='material',
+        quantity=Decimal('20.00'),
+        unit_price=Decimal('15.00'),
+        sku='TRN-MAN-001',
+        created_by=sample_user.id,
+        invoice_id=sample_invoice.id
+    )
+    db.session.add(good)
+    db.session.commit()
+    
+    # Calculate totals
+    sample_invoice.calculate_totals()
+    db.session.commit()
+    
+    # Generate PDF using fallback generator
+    generator = InvoicePDFGeneratorFallback(sample_invoice)
+    story = generator._build_story()
+    
+    # Verify story is not empty
+    assert len(story) > 0
+    
+    # Note: We can't easily verify the content of the ReportLab story
+    # but we can ensure it doesn't crash with extra goods
+
+
+@pytest.mark.smoke
+@pytest.mark.invoices
+def test_pdf_export_with_extra_goods_smoke(app, sample_invoice, sample_user):
+    """Smoke test: Generate PDF with extra goods without errors."""
+    from app.utils.pdf_generator import InvoicePDFGenerator
+    
+    # Add multiple items and goods
+    item = InvoiceItem(
+        invoice_id=sample_invoice.id,
+        description='Web Development',
+        quantity=Decimal('40.00'),
+        unit_price=Decimal('85.00')
+    )
+    db.session.add(item)
+    
+    goods = [
+        ExtraGood(
+            name='Domain Registration',
+            description='Annual domain .com',
+            category='service',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('12.99'),
+            sku='DOM-REG-001',
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        ),
+        ExtraGood(
+            name='SSL Certificate',
+            description='Wildcard SSL cert',
+            category='service',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('89.00'),
+            sku='SSL-WILD-001',
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        ),
+        ExtraGood(
+            name='Server Credits',
+            category='service',
+            quantity=Decimal('12.00'),
+            unit_price=Decimal('50.00'),
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        )
+    ]
+    
+    for good in goods:
+        db.session.add(good)
+    db.session.commit()
+    
+    # Calculate totals
+    sample_invoice.calculate_totals()
+    db.session.commit()
+    
+    # Generate PDF - should not raise any exceptions
+    generator = InvoicePDFGenerator(sample_invoice)
+    pdf_bytes = generator.generate_pdf()
+    
+    # Verify PDF was generated
+    assert pdf_bytes is not None
+    assert len(pdf_bytes) > 0
+    assert pdf_bytes[:4] == b'%PDF'  # PDF magic number
+
+
+@pytest.mark.smoke
+@pytest.mark.invoices
+def test_pdf_export_fallback_with_extra_goods_smoke(app, sample_invoice, sample_user):
+    """Smoke test: Generate fallback PDF with extra goods without errors."""
+    from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
+    
+    # Add items and goods
+    item = InvoiceItem(
+        invoice_id=sample_invoice.id,
+        description='Design Services',
+        quantity=Decimal('20.00'),
+        unit_price=Decimal('65.00')
+    )
+    db.session.add(item)
+    
+    good = ExtraGood(
+        name='Stock Photos',
+        description='Premium stock photo bundle',
+        category='material',
+        quantity=Decimal('1.00'),
+        unit_price=Decimal('199.00'),
+        sku='STOCK-BUNDLE-PRO',
+        created_by=sample_user.id,
+        invoice_id=sample_invoice.id
+    )
+    db.session.add(good)
+    db.session.commit()
+    
+    # Calculate totals
+    sample_invoice.calculate_totals()
+    db.session.commit()
+    
+    # Generate PDF using fallback - should not raise any exceptions
+    generator = InvoicePDFGeneratorFallback(sample_invoice)
+    pdf_bytes = generator.generate_pdf()
+    
+    # Verify PDF was generated
+    assert pdf_bytes is not None
+    assert len(pdf_bytes) > 0
+    assert pdf_bytes[:4] == b'%PDF'  # PDF magic number

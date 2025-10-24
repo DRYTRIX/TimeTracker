@@ -28,11 +28,21 @@ def start_timer():
         current_app.logger.warning("Start timer failed: missing project_id")
         return redirect(url_for('main.dashboard'))
     
-    # Check if project exists and is active
-    project = Project.query.filter_by(id=project_id, status='active').first()
+    # Check if project exists
+    project = Project.query.get(project_id)
     if not project:
-        flash('Invalid project selected', 'error')
-        current_app.logger.warning("Start timer failed: invalid or inactive project_id=%s", project_id)
+        flash(_('Invalid project selected'), 'error')
+        current_app.logger.warning("Start timer failed: invalid project_id=%s", project_id)
+        return redirect(url_for('main.dashboard'))
+    
+    # Check if project is active (not archived or inactive)
+    if project.status == 'archived':
+        flash(_('Cannot start timer for an archived project. Please unarchive the project first.'), 'error')
+        current_app.logger.warning("Start timer failed: project_id=%s is archived", project_id)
+        return redirect(url_for('main.dashboard'))
+    elif project.status != 'active':
+        flash(_('Cannot start timer for an inactive project'), 'error')
+        current_app.logger.warning("Start timer failed: project_id=%s is not active", project_id)
         return redirect(url_for('main.dashboard'))
     
     # If a task is provided, validate it belongs to the project
@@ -118,11 +128,21 @@ def start_timer_for_project(project_id):
     task_id = request.args.get('task_id', type=int)
     current_app.logger.info("GET /timer/start/%s user=%s task_id=%s", project_id, current_user.username, task_id)
     
-    # Check if project exists and is active
-    project = Project.query.filter_by(id=project_id, status='active').first()
+    # Check if project exists
+    project = Project.query.get(project_id)
     if not project:
-        flash('Invalid project selected', 'error')
-        current_app.logger.warning("Start timer (GET) failed: invalid or inactive project_id=%s", project_id)
+        flash(_('Invalid project selected'), 'error')
+        current_app.logger.warning("Start timer (GET) failed: invalid project_id=%s", project_id)
+        return redirect(url_for('main.dashboard'))
+    
+    # Check if project is active (not archived or inactive)
+    if project.status == 'archived':
+        flash(_('Cannot start timer for an archived project. Please unarchive the project first.'), 'error')
+        current_app.logger.warning("Start timer (GET) failed: project_id=%s is archived", project_id)
+        return redirect(url_for('main.dashboard'))
+    elif project.status != 'active':
+        flash(_('Cannot start timer for an inactive project'), 'error')
+        current_app.logger.warning("Start timer (GET) failed: project_id=%s is not active", project_id)
         return redirect(url_for('main.dashboard'))
     
     # Check if user already has an active timer
@@ -423,10 +443,20 @@ def manual_entry():
             return render_template('timer/manual_entry.html', projects=active_projects, 
                                 selected_project_id=project_id, selected_task_id=task_id)
         
-        # Check if project exists and is active
-        project = Project.query.filter_by(id=project_id, status='active').first()
+        # Check if project exists
+        project = Project.query.get(project_id)
         if not project:
-            flash('Invalid project selected', 'error')
+            flash(_('Invalid project selected'), 'error')
+            return render_template('timer/manual_entry.html', projects=active_projects,
+                                selected_project_id=project_id, selected_task_id=task_id)
+        
+        # Check if project is active (not archived or inactive)
+        if project.status == 'archived':
+            flash(_('Cannot create time entries for an archived project. Please unarchive the project first.'), 'error')
+            return render_template('timer/manual_entry.html', projects=active_projects,
+                                selected_project_id=project_id, selected_task_id=task_id)
+        elif project.status != 'active':
+            flash(_('Cannot create time entries for an inactive project'), 'error')
             return render_template('timer/manual_entry.html', projects=active_projects,
                                 selected_project_id=project_id, selected_task_id=task_id)
         
@@ -531,10 +561,20 @@ def bulk_entry():
             return render_template('timer/bulk_entry.html', projects=active_projects, 
                                 selected_project_id=project_id, selected_task_id=task_id)
         
-        # Check if project exists and is active
-        project = Project.query.filter_by(id=project_id, status='active').first()
+        # Check if project exists
+        project = Project.query.get(project_id)
         if not project:
-            flash('Invalid project selected', 'error')
+            flash(_('Invalid project selected'), 'error')
+            return render_template('timer/bulk_entry.html', projects=active_projects,
+                                selected_project_id=project_id, selected_task_id=task_id)
+        
+        # Check if project is active (not archived or inactive)
+        if project.status == 'archived':
+            flash(_('Cannot create time entries for an archived project. Please unarchive the project first.'), 'error')
+            return render_template('timer/bulk_entry.html', projects=active_projects,
+                                selected_project_id=project_id, selected_task_id=task_id)
+        elif project.status != 'active':
+            flash(_('Cannot create time entries for an inactive project'), 'error')
             return render_template('timer/bulk_entry.html', projects=active_projects,
                                 selected_project_id=project_id, selected_task_id=task_id)
         
@@ -694,3 +734,42 @@ def bulk_entry_for_project(project_id):
     
     return render_template('timer/bulk_entry.html', projects=active_projects, 
                          selected_project_id=project_id, selected_task_id=task_id)
+
+@timer_bp.route('/timer/duplicate/<int:timer_id>')
+@login_required
+def duplicate_timer(timer_id):
+    """Duplicate an existing time entry - opens manual entry form with pre-filled data"""
+    timer = TimeEntry.query.get_or_404(timer_id)
+    
+    # Check if user can duplicate this timer
+    if timer.user_id != current_user.id and not current_user.is_admin:
+        flash('You can only duplicate your own timers', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Get active projects for dropdown
+    active_projects = Project.query.filter_by(status='active').order_by(Project.name).all()
+    
+    # Track duplication event
+    log_event("timer.duplicated", 
+             user_id=current_user.id, 
+             time_entry_id=timer.id,
+             project_id=timer.project_id,
+             task_id=timer.task_id)
+    track_event(current_user.id, "timer.duplicated", {
+        "time_entry_id": timer.id,
+        "project_id": timer.project_id,
+        "task_id": timer.task_id,
+        "has_notes": bool(timer.notes),
+        "has_tags": bool(timer.tags)
+    })
+    
+    # Render the manual entry form with pre-filled data
+    return render_template('timer/manual_entry.html', 
+                         projects=active_projects,
+                         selected_project_id=timer.project_id,
+                         selected_task_id=timer.task_id,
+                         prefill_notes=timer.notes,
+                         prefill_tags=timer.tags,
+                         prefill_billable=timer.billable,
+                         is_duplicate=True,
+                         original_entry=timer)

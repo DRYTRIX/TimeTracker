@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Expenses', 'url': url_for('expenses.list_expenses')},
+    {'text': 'Dashboard'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-chart-line',
+    title_text='Expense Dashboard',
+    subtitle_text='Overview of your expenses',
+    breadcrumbs=breadcrumbs
+) }}
+
+<!-- Date Range Filter -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-[200px]">
+            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Start Date
+            </label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+        </div>
+        
+        <div class="flex-1 min-w-[200px]">
+            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                End Date
+            </label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date }}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+        </div>
+        
+        <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-search mr-2"></i>Update
+        </button>
+    </form>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
+                <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ total_expenses }}</p>
+            </div>
+            <div class="text-primary text-4xl">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
+                <p class="text-3xl font-bold text-green-600">{{ '€%.2f'|format(total_amount) }}</p>
+            </div>
+            <div class="text-green-500 text-4xl">
+                <i class="fas fa-euro-sign"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Pending Approval</p>
+                <p class="text-3xl font-bold text-yellow-600">{{ pending_count }}</p>
+            </div>
+            <div class="text-yellow-500 text-4xl">
+                <i class="fas fa-clock"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Pending Reimbursement</p>
+                <p class="text-3xl font-bold text-blue-600">{{ pending_reimbursement }}</p>
+            </div>
+            <div class="text-blue-500 text-4xl">
+                <i class="fas fa-money-check-alt"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status & Category Breakdown -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Status Breakdown -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <i class="fas fa-check-circle mr-2"></i>By Status
+        </h3>
+        
+        <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-yellow-500 mr-3"></div>
+                    <span class="text-sm font-medium">Pending</span>
+                </div>
+                <span class="font-bold">{{ pending_count }}</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                    <span class="text-sm font-medium">Approved</span>
+                </div>
+                <span class="font-bold">{{ approved_count }}</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-red-500 mr-3"></div>
+                    <span class="text-sm font-medium">Rejected</span>
+                </div>
+                <span class="font-bold">{{ rejected_count }}</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-blue-500 mr-3"></div>
+                    <span class="text-sm font-medium">Reimbursed</span>
+                </div>
+                <span class="font-bold">{{ reimbursed_count }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Category Breakdown -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <i class="fas fa-tags mr-2"></i>By Category
+        </h3>
+        
+        <div class="space-y-3">
+            {% if category_stats %}
+                {% for stat in category_stats %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fas fa-tag text-primary mr-3"></i>
+                        <span class="text-sm font-medium">{{ stat.category|title }}</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">{{ '€%.2f'|format(stat.total_amount) }}</div>
+                        <div class="text-xs text-gray-500">{{ stat.count }} items</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-sm text-gray-500 text-center py-4">No data available</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Expenses -->
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold">
+            <i class="fas fa-history mr-2"></i>Recent Expenses
+        </h3>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {% if recent_expenses %}
+                    {% for expense in recent_expenses %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {{ expense.expense_date.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:underline font-medium">
+                                {{ expense.title }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                {{ expense.category|title }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            {{ expense.currency_code }} {{ '%.2f'|format(expense.total_amount) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if expense.status == 'pending' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                Pending
+                            </span>
+                            {% elif expense.status == 'approved' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                Approved
+                            </span>
+                            {% elif expense.status == 'rejected' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                Rejected
+                            </span>
+                            {% elif expense.status == 'reimbursed' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                Reimbursed
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:text-primary/80" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-receipt text-4xl mb-2 opacity-50"></i>
+                            <p>No expenses found</p>
+                            <a href="{{ url_for('expenses.create_expense') }}" class="text-primary hover:underline mt-2 inline-block">
+                                Create your first expense
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <a href="{{ url_for('expenses.list_expenses') }}" class="text-primary hover:underline text-sm">
+            View all expenses <i class="fas fa-arrow-right ml-1"></i>
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+

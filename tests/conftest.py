@@ -179,6 +179,12 @@ def admin_user(app):
 
 
 @pytest.fixture
+def auth_user(user):
+    """Alias for user fixture (for backward compatibility with older tests)."""
+    return user
+
+
+@pytest.fixture
 def multiple_users(app):
     """Create multiple test users."""
     users = []
@@ -460,6 +466,20 @@ def admin_authenticated_client(client, admin_user):
         sess['_user_id'] = str(admin_user.id)
         sess['_fresh'] = True
     return client
+
+
+@pytest.fixture
+def auth_headers(user):
+    """Create authentication headers for API tests (session-based)."""
+    # Note: For tests that use headers, they should use authenticated_client instead
+    # This fixture is here for backward compatibility
+    return {}
+
+
+@pytest.fixture
+def regular_user(user):
+    """Alias for user fixture (regular non-admin user)."""
+    return user
 
 
 # ============================================================================

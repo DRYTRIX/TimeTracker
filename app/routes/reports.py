@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import User, Project, TimeEntry, Settings, Task, ProjectCost
+from app.models import User, Project, TimeEntry, Settings, Task, ProjectCost, Client
 from datetime import datetime, timedelta
+from sqlalchemy import or_
 import csv
 import io
 import pytz
@@ -283,16 +284,48 @@ def user_report():
                          selected_user=user_id,
                          selected_project=project_id)
 
+@reports_bp.route('/reports/export/form')
+@login_required
+def export_form():
+    """Display CSV export form with filter options"""
+    # Get all users (for admin)
+    users = []
+    if current_user.is_admin:
+        users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    
+    # Get all active projects
+    projects = Project.query.filter_by(status='active').order_by(Project.name).all()
+    
+    # Get all active clients
+    clients = Client.query.filter_by(status='active').order_by(Client.name).all()
+    
+    # Set default date range (last 30 days)
+    default_end_date = datetime.utcnow().strftime('%Y-%m-%d')
+    default_start_date = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    return render_template('reports/export_form.html',
+                         users=users,
+                         projects=projects,
+                         clients=clients,
+                         default_start_date=default_start_date,
+                         default_end_date=default_end_date)
+
 @reports_bp.route('/reports/export/csv')
 @login_required
 def export_csv():
-    """Export time entries as CSV"""
+    """Export time entries as CSV with enhanced filters"""
     start_time = time.time()  # Start performance tracking
     
+    # Get all filter parameters
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     user_id = request.args.get('user_id', type=int)
     project_id = request.args.get('project_id', type=int)
+    task_id = request.args.get('task_id', type=int)
+    client_id = request.args.get('client_id', type=int)
+    billable = request.args.get('billable')  # 'yes', 'no', or 'all'
+    source = request.args.get('source')  # 'manual', 'auto', or 'all'
+    tags = request.args.get('tags', '').strip()
     
     # Parse dates
     if not start_date:
@@ -336,11 +369,11 @@ def export_csv():
     output = io.StringIO()
     writer = csv.writer(output, delimiter=delimiter)
     
-    # Write header
+    # Write header with task column
     writer.writerow([
-        'ID', 'User', 'Project', 'Client', 'Start Time', 'End Time', 
+        'ID', 'User', 'Project', 'Client', 'Task', 'Start Time', 'End Time', 
         'Duration (hours)', 'Duration (formatted)', 'Notes', 'Tags', 
-        'Source', 'Billable', 'Created At'
+        'Source', 'Billable', 'Created At', 'Updated At'
     ])
     
     # Write data
@@ -350,6 +383,7 @@ def export_csv():
             entry.user.display_name,
             entry.project.name,
             entry.project.client,
+            entry.task.name if entry.task else '',
             entry.start_time.isoformat(),
             entry.end_time.isoformat() if entry.end_time else '',
             entry.duration_hours,
@@ -358,24 +392,47 @@ def export_csv():
             entry.tags or '',
             entry.source,
             'Yes' if entry.billable else 'No',
-            entry.created_at.isoformat()
+            entry.created_at.isoformat(),
+            entry.updated_at.isoformat() if entry.updated_at else ''
         ])
     
     output.seek(0)
     
-    # Create filename
-    filename = f'timetracker_export_{start_date}_to_{end_date}.csv'
+    # Create filename with filters indication
+    filename_parts = [f'timetracker_export_{start_date}_to_{end_date}']
+    if project_id:
+        filename_parts.append('project')
+    if client_id:
+        filename_parts.append('client')
+    if task_id:
+        filename_parts.append('task')
+    filename = '_'.join(filename_parts) + '.csv'
     
-    # Track CSV export event
+    # Track CSV export event with enhanced metadata
     log_event("export.csv", 
              user_id=current_user.id, 
              export_type="time_entries",
              num_rows=len(entries),
-             date_range_days=(end_dt - start_dt).days)
+             date_range_days=(end_dt - start_dt).days,
+             filters_applied={
+                 'user_id': user_id,
+                 'project_id': project_id,
+                 'task_id': task_id,
+                 'client_id': client_id,
+                 'billable': billable,
+                 'source': source,
+                 'tags': tags
+             })
     track_event(current_user.id, "export.csv", {
         "export_type": "time_entries",
         "num_rows": len(entries),
-        "date_range_days": (end_dt - start_dt).days
+        "date_range_days": (end_dt - start_dt).days,
+        "has_project_filter": project_id is not None,
+        "has_client_filter": client_id is not None,
+        "has_task_filter": task_id is not None,
+        "has_billable_filter": billable is not None and billable != 'all',
+        "has_source_filter": source is not None and source != 'all',
+        "has_tags_filter": bool(tags)
     })
     
     # Track performance

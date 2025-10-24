@@ -210,7 +210,7 @@ class InvoicePDFGeneratorFallback:
         return story
     
     def _build_items_table(self):
-        """Build the invoice items table"""
+        """Build the invoice items table including extra goods"""
         story = []
         
         story.append(Paragraph(_("Invoice Items"), self.styles['SectionHeader']))
@@ -220,12 +220,35 @@ class InvoicePDFGeneratorFallback:
         
         # Table data
         data = [headers]
+        
+        # Add regular invoice items
         for item in self.invoice.items:
             row = [
                 item.description,
                 f"{item.quantity:.2f}",
                 self._format_currency(item.unit_price),
                 self._format_currency(item.total_amount)
+            ]
+            data.append(row)
+        
+        # Add extra goods
+        for good in self.invoice.extra_goods:
+            # Build description with additional details
+            description_parts = [good.name]
+            if good.description:
+                description_parts.append(f"\n{good.description}")
+            if good.sku:
+                description_parts.append(f"\nSKU: {good.sku}")
+            if good.category:
+                description_parts.append(f"\nCategory: {good.category.title()}")
+            
+            description = '\n'.join(description_parts)
+            
+            row = [
+                description,
+                f"{good.quantity:.2f}",
+                self._format_currency(good.unit_price),
+                self._format_currency(good.total_amount)
             ]
             data.append(row)
         
