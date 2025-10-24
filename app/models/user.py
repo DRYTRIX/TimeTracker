@@ -37,6 +37,11 @@ class User(UserMixin, db.Model):
     time_format = db.Column(db.String(10), default='24h', nullable=False)  # '12h' or '24h'
     week_start_day = db.Column(db.Integer, default=1, nullable=False)  # 0=Sunday, 1=Monday, etc.
     
+    # Time rounding preferences
+    time_rounding_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable time rounding
+    time_rounding_minutes = db.Column(db.Integer, default=1, nullable=False)  # Rounding interval: 1, 5, 10, 15, 30, 60
+    time_rounding_method = db.Column(db.String(10), default='nearest', nullable=False)  # 'nearest', 'up', or 'down'
+    
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     project_costs = db.relationship('ProjectCost', backref='user', lazy='dynamic', cascade='all, delete-orphan')

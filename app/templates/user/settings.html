@@ -9,7 +9,7 @@
     </div>
 
     <form method="POST" class="space-y-8">
-        {{ csrf_token() if csrf_token }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <!-- Profile Information -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -138,6 +138,68 @@
             </div>
         </div>
 
+        <!-- Time Rounding Preferences -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-clock mr-2"></i>{{ _('Time Rounding Preferences') }}
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {{ _('Configure how your time entries are rounded. This affects how durations are calculated when you stop timers.') }}
+            </p>
+            
+            <div class="space-y-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="time_rounding_enabled" name="time_rounding_enabled" 
+                           {% if user.time_rounding_enabled %}checked{% endif %}
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                           onchange="toggleRoundingOptions()">
+                    <label for="time_rounding_enabled" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                        <span class="font-medium">{{ _('Enable Time Rounding') }}</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ _('Round time entries to configured intervals') }}</p>
+                    </label>
+                </div>
+                
+                <div id="rounding-options" class="ml-8 space-y-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                    <div>
+                        <label for="time_rounding_minutes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {{ _('Rounding Interval') }}
+                        </label>
+                        <select id="time_rounding_minutes" name="time_rounding_minutes"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            {% for minutes, label in rounding_intervals %}
+                            <option value="{{ minutes }}" {% if user.time_rounding_minutes == minutes %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Time entries will be rounded to this interval') }}</p>
+                    </div>
+                    
+                    <div>
+                        <label for="time_rounding_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {{ _('Rounding Method') }}
+                        </label>
+                        <select id="time_rounding_method" name="time_rounding_method"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                onchange="updateRoundingMethodDescription()">
+                            {% for method, label, description in rounding_methods %}
+                            <option value="{{ method }}" data-description="{{ description }}" {% if user.time_rounding_method == method %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p id="rounding-method-description" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></p>
+                    </div>
+                    
+                    <!-- Example visualization -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
+                        <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                            <i class="fas fa-info-circle mr-1"></i>{{ _('Example') }}
+                        </p>
+                        <div id="rounding-example" class="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Regional Settings -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
@@ -235,6 +297,83 @@ document.getElementById('email_notifications').addEventListener('change', functi
     } else {
         emailField.classList.remove('border-yellow-500');
     }
+});
+
+// Toggle rounding options visibility
+function toggleRoundingOptions() {
+    const enabled = document.getElementById('time_rounding_enabled').checked;
+    const options = document.getElementById('rounding-options');
+    
+    if (enabled) {
+        options.style.opacity = '1';
+        options.querySelectorAll('select').forEach(select => select.disabled = false);
+    } else {
+        options.style.opacity = '0.5';
+        options.querySelectorAll('select').forEach(select => select.disabled = true);
+    }
+    updateRoundingExample();
+}
+
+// Update rounding method description
+function updateRoundingMethodDescription() {
+    const select = document.getElementById('time_rounding_method');
+    const description = select.options[select.selectedIndex].getAttribute('data-description');
+    document.getElementById('rounding-method-description').textContent = description;
+    updateRoundingExample();
+}
+
+// Update rounding example visualization
+function updateRoundingExample() {
+    const enabled = document.getElementById('time_rounding_enabled').checked;
+    const minutes = parseInt(document.getElementById('time_rounding_minutes').value);
+    const method = document.getElementById('time_rounding_method').value;
+    const exampleDiv = document.getElementById('rounding-example');
+    
+    if (!enabled) {
+        exampleDiv.innerHTML = '<p>{{ _("Time rounding is disabled. All times will be recorded exactly as tracked.") }}</p>';
+        return;
+    }
+    
+    if (minutes === 1) {
+        exampleDiv.innerHTML = '<p>{{ _("No rounding - times will be recorded exactly as tracked.") }}</p>';
+        return;
+    }
+    
+    // Calculate examples
+    const testDuration = 62; // 62 minutes = 1h 2min
+    let rounded;
+    
+    if (method === 'up') {
+        rounded = Math.ceil(testDuration / minutes) * minutes;
+    } else if (method === 'down') {
+        rounded = Math.floor(testDuration / minutes) * minutes;
+    } else {
+        rounded = Math.round(testDuration / minutes) * minutes;
+    }
+    
+    const formatTime = (mins) => {
+        const hours = Math.floor(mins / 60);
+        const remainingMins = mins % 60;
+        if (hours > 0) {
+            return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+        }
+        return `${remainingMins}m`;
+    };
+    
+    exampleDiv.innerHTML = `
+        <p><strong>{{ _("Actual time:") }}</strong> ${formatTime(testDuration)} → <strong>{{ _("Rounded:") }}</strong> ${formatTime(rounded)}</p>
+        <p class="text-xs opacity-75">{{ _("With ") }}${minutes}{{ _(" minute intervals") }}</p>
+    `;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleRoundingOptions();
+    updateRoundingMethodDescription();
+    
+    // Update example when settings change
+    document.getElementById('time_rounding_enabled').addEventListener('change', updateRoundingExample);
+    document.getElementById('time_rounding_minutes').addEventListener('change', updateRoundingExample);
 });
 </script>
 {% endblock %}
