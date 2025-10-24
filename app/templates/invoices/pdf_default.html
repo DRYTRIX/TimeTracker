@@ -82,6 +82,25 @@
                         <td class="num">{{ format_money(item.total_amount) }}</td>
                     </tr>
                     {% endfor %}
+                    {% for good in invoice.extra_goods %}
+                    <tr>
+                        <td>
+                            {{ good.name|e }}
+                            {% if good.description %}
+                                <br><small class="good-description">{{ good.description|e }}</small>
+                            {% endif %}
+                            {% if good.sku %}
+                                <br><small class="good-sku">{{ _('SKU') }}: {{ good.sku|e }}</small>
+                            {% endif %}
+                            {% if good.category %}
+                                <br><small class="good-category">{{ _('Category') }}: {{ good.category|title|e }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="num">{{ '%.2f' % good.quantity }}</td>
+                        <td class="num">{{ format_money(good.unit_price) }}</td>
+                        <td class="num">{{ format_money(good.total_amount) }}</td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr>
