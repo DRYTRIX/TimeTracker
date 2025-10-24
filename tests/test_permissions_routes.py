@@ -294,15 +294,12 @@ def test_api_get_role_permissions(app, client, admin_user):
 
 
 @pytest.mark.smoke
-def test_non_admin_cannot_access_roles(client, regular_user):
+def test_non_admin_cannot_access_roles(authenticated_client):
     """Test that non-admin users cannot access roles management"""
-    # Login as regular user
-    client.post('/login', data={'username': regular_user.username}, follow_redirects=True)
-    
-    # Try to access roles list
-    response = client.get('/admin/roles', follow_redirects=True)
+    # Try to access roles list as authenticated regular user
+    response = authenticated_client.get('/admin/roles', follow_redirects=True)
     # Should redirect to dashboard or show error
     assert response.status_code == 200
-    # Verify not on roles page
+    # Verify not on roles page (should be redirected or see error)
     assert b'Roles & Permissions' not in response.data or b'Administrator access required' in response.data
 

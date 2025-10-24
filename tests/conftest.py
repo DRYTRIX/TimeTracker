@@ -462,6 +462,20 @@ def admin_authenticated_client(client, admin_user):
     return client
 
 
+@pytest.fixture
+def auth_headers(user):
+    """Create authentication headers for API tests (session-based)."""
+    # Note: For tests that use headers, they should use authenticated_client instead
+    # This fixture is here for backward compatibility
+    return {}
+
+
+@pytest.fixture
+def regular_user(user):
+    """Alias for user fixture (regular non-admin user)."""
+    return user
+
+
 # ============================================================================
 # Utility Fixtures
 # ============================================================================
