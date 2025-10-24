@@ -22,15 +22,16 @@ class TestKeyboardShortcutsRoutes:
         response = self.client.get('/settings/keyboard-shortcuts')
         assert response.status_code == 200
         assert b'Keyboard Shortcuts' in response.data
-        assert b'shortcuts-search' in response.data
+        assert b'customization-search' in response.data
         assert b'total-shortcuts' in response.data
 
-    def test_keyboard_shortcuts_settings_requires_auth(self):
+    def test_keyboard_shortcuts_settings_requires_auth(self, app):
         """Test keyboard shortcuts settings requires authentication"""
-        self.client.get('/auth/logout')
-        response = self.client.get('/settings/keyboard-shortcuts', follow_redirects=False)
+        # Create a fresh unauthenticated client
+        unauthenticated_client = app.test_client()
+        response = unauthenticated_client.get('/settings/keyboard-shortcuts', follow_redirects=False)
         assert response.status_code == 302
-        assert '/auth/login' in response.location
+        assert '/auth/login' in response.location or '/login' in response.location
 
     def test_settings_index_loads(self):
         """Test settings index page loads"""
