@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Weekly Goal Details') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-bullseye mr-2 text-blue-600"></i>
+                {{ _('Weekly Goal Details') }}
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">
+                {{ goal.week_label }}
+            </p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{{ url_for('weekly_goals.edit', goal_id=goal.id) }}" 
+               class="btn btn-secondary">
+                <i class="fas fa-edit mr-2"></i> {{ _('Edit') }}
+            </a>
+            <a href="{{ url_for('weekly_goals.index') }}" 
+               class="btn btn-secondary">
+                <i class="fas fa-arrow-left mr-2"></i> {{ _('Back') }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Goal Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Target Hours') }}</h3>
+                <i class="fas fa-bullseye text-2xl text-blue-500"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ goal.target_hours }}h</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Actual Hours') }}</h3>
+                <i class="fas fa-clock text-2xl text-green-500"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ goal.actual_hours }}h</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Status') }}</h3>
+                {% if goal.status == 'completed' %}
+                <i class="fas fa-check-circle text-2xl text-green-500"></i>
+                {% elif goal.status == 'active' %}
+                <i class="fas fa-clock text-2xl text-blue-500"></i>
+                {% elif goal.status == 'failed' %}
+                <i class="fas fa-times-circle text-2xl text-red-500"></i>
+                {% else %}
+                <i class="fas fa-ban text-2xl text-gray-500"></i>
+                {% endif %}
+            </div>
+            {% if goal.status == 'completed' %}
+            <p class="text-xl font-bold text-green-600 dark:text-green-400">{{ _('Completed') }}</p>
+            {% elif goal.status == 'active' %}
+            <p class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ _('Active') }}</p>
+            {% elif goal.status == 'failed' %}
+            <p class="text-xl font-bold text-red-600 dark:text-red-400">{{ _('Failed') }}</p>
+            {% else %}
+            <p class="text-xl font-bold text-gray-600 dark:text-gray-400">{{ _('Cancelled') }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Progress Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <i class="fas fa-chart-line mr-2"></i>
+            {{ _('Progress') }}
+        </h2>
+        
+        <div class="mb-4">
+            <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <span>{{ goal.actual_hours }}h / {{ goal.target_hours }}h</span>
+                <span>{{ goal.progress_percentage }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                {% if goal.status == 'completed' %}
+                <div class="bg-green-500 rounded-full h-4 transition-all duration-300" 
+                     style="width: {{ goal.progress_percentage }}%"></div>
+                {% elif goal.status == 'failed' %}
+                <div class="bg-red-500 rounded-full h-4 transition-all duration-300" 
+                     style="width: {{ goal.progress_percentage }}%"></div>
+                {% else %}
+                <div class="bg-blue-500 rounded-full h-4 transition-all duration-300" 
+                     style="width: {{ goal.progress_percentage }}%"></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{{ _('Remaining Hours') }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ goal.remaining_hours }}h</p>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{{ _('Days Remaining') }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ goal.days_remaining }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{{ _('Avg Hours/Day Needed') }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ goal.average_hours_per_day }}h</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Breakdown -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            {{ _('Daily Breakdown') }}
+        </h2>
+        
+        <div class="space-y-2">
+            {% for date, hours in daily_hours.items() %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <div>
+                    <p class="font-medium text-gray-900 dark:text-white">
+                        {{ date.strftime('%A, %B %d') }}
+                    </p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                        {{ "%.2f"|format(hours) }} hours
+                    </span>
+                    <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        {% set daily_target = goal.target_hours / 7 %}
+                        {% set daily_percentage = (hours / daily_target * 100) if daily_target > 0 else 0 %}
+                        <div class="bg-blue-500 rounded-full h-2" 
+                             style="width: {{ [daily_percentage, 100]|min }}%"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Notes -->
+    {% if goal.notes %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <i class="fas fa-sticky-note mr-2"></i>
+            {{ _('Notes') }}
+        </h2>
+        <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ goal.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Time Entries -->
+    {% if time_entries %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <i class="fas fa-list mr-2"></i>
+            {{ _('Time Entries This Week') }} ({{ time_entries|length }})
+        </h2>
+        
+        <div class="space-y-2">
+            {% for entry in time_entries %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-medium text-gray-900 dark:text-white">
+                            {{ entry.project.name if entry.project else _('No Project') }}
+                        </span>
+                        {% if entry.task %}
+                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                            • {{ entry.task.name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {{ entry.start_time.strftime('%a, %b %d at %H:%M') }}
+                        {% if entry.notes %}
+                        • {{ entry.notes[:50] }}{% if entry.notes|length > 50 %}...{% endif %}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="font-semibold text-gray-900 dark:text-white">
+                        {{ entry.duration_formatted }}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ "%.2f"|format(entry.duration_seconds / 3600) }}h
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                    {{ _('No time entries recorded for this week yet') }}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

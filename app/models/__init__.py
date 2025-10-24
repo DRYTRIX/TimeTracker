@@ -23,6 +23,7 @@ from .time_entry_template import TimeEntryTemplate
 from .activity import Activity
 from .user_favorite_project import UserFavoriteProject
 from .client_note import ClientNote
+from .weekly_time_goal import WeeklyTimeGoal
 
 __all__ = [
     "User",
@@ -54,4 +55,5 @@ __all__ = [
     "Activity",
     "UserFavoriteProject",
     "ClientNote",
+    "WeeklyTimeGoal",
 ]
