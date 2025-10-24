@@ -319,18 +319,13 @@ class TestBackwardCompatibility:
     def test_fallback_to_global_rounding_without_user_preferences(self, app, test_project):
         """Test that system falls back to global rounding if user prefs don't exist"""
         with app.app_context():
-            # Create a user without rounding preferences (simulating old database)
+            # Create a user without setting rounding preferences (simulating default values)
             user = User(username='olduser', role='user')
+            user.is_active = True
+            # Don't set time_rounding_enabled, time_rounding_minutes, or time_rounding_method
+            # This simulates a user with default/null values for rounding preferences
             db.session.add(user)
-            db.session.flush()
-            
-            # Remove the new attributes to simulate old schema
-            if hasattr(user, 'time_rounding_enabled'):
-                delattr(user, 'time_rounding_enabled')
-            if hasattr(user, 'time_rounding_minutes'):
-                delattr(user, 'time_rounding_minutes')
-            if hasattr(user, 'time_rounding_method'):
-                delattr(user, 'time_rounding_method')
+            db.session.commit()
             
             project = Project.query.get(test_project.id)
             

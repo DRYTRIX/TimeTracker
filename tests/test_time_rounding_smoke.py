@@ -132,10 +132,9 @@ class TestTimeRoundingFeatureSmokeTests:
             # Create a project
             project = Project(
                 name='Test Project',
-                client='Test Client',
-                status='active',
-                created_by_id=user1.id
+                client='Test Client'
             )
+            project.status = 'active'
             db.session.add(project)
             db.session.commit()
             
