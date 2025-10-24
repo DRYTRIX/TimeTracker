@@ -49,9 +49,11 @@ class WeeklyTimeGoal(db.Model):
         if week_start_date is None:
             from app.models.user import User
             user = User.query.get(user_id)
-            week_start_day = user.week_start_day if user else 1  # Default to Monday
+            week_start_day = user.week_start_day if user else 1  # Default to Monday (user convention: 0=Sunday, 1=Monday)
             today = local_now().date()
-            days_since_week_start = (today.weekday() - week_start_day) % 7
+            # Convert user convention (0=Sunday, 1=Monday) to Python weekday (0=Monday, 6=Sunday)
+            python_week_start_day = (week_start_day - 1) % 7
+            days_since_week_start = (today.weekday() - python_week_start_day) % 7
             week_start_date = today - timedelta(days=days_since_week_start)
         
         self.week_start_date = week_start_date
@@ -172,10 +174,12 @@ class WeeklyTimeGoal(db.Model):
         """Get the goal for the current week for a specific user"""
         from app.models.user import User
         user = User.query.get(user_id)
-        week_start_day = user.week_start_day if user else 1
+        week_start_day = user.week_start_day if user else 1  # User convention: 0=Sunday, 1=Monday
         
         today = local_now().date()
-        days_since_week_start = (today.weekday() - week_start_day) % 7
+        # Convert user convention (0=Sunday, 1=Monday) to Python weekday (0=Monday, 6=Sunday)
+        python_week_start_day = (week_start_day - 1) % 7
+        days_since_week_start = (today.weekday() - python_week_start_day) % 7
         week_start = today - timedelta(days=days_since_week_start)
         week_end = week_start + timedelta(days=6)
         

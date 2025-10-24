@@ -122,22 +122,26 @@ def test_client_note_client_relationship(app, user, test_client):
 def test_client_has_notes_relationship(app, user, test_client):
     """Test that client has notes relationship."""
     with app.app_context():
+        # Re-query the client to ensure it's in the current session
+        from app.models import Client
+        client = Client.query.get(test_client.id)
+        
         note1 = ClientNote(
             content="First note",
             user_id=user.id,
-            client_id=test_client.id
+            client_id=client.id
         )
         note2 = ClientNote(
             content="Second note",
             user_id=user.id,
-            client_id=test_client.id,
+            client_id=client.id,
             is_important=True
         )
         db.session.add_all([note1, note2])
         db.session.commit()
         
-        db.session.refresh(test_client)
-        assert len(test_client.notes) == 2
+        db.session.refresh(client)
+        assert len(client.notes) == 2
 
 
 @pytest.mark.unit
@@ -145,6 +149,10 @@ def test_client_has_notes_relationship(app, user, test_client):
 def test_client_note_author_name_property(app, user, test_client):
     """Test client note author_name property."""
     with app.app_context():
+        # Ensure user has no full_name set (clean state)
+        user.full_name = None
+        db.session.commit()
+        
         # Test with username only
         note = ClientNote(
             content="Test note",
@@ -155,6 +163,7 @@ def test_client_note_author_name_property(app, user, test_client):
         db.session.commit()
         
         db.session.refresh(note)
+        db.session.refresh(user)
         assert note.author_name == user.username
         
         # Test with full name
@@ -499,10 +508,14 @@ def test_client_note_repr(app, user, test_client):
 def test_client_note_cascade_delete(app, user, test_client):
     """Test that notes are deleted when client is deleted."""
     with app.app_context():
+        # Re-query the client to ensure it's in the current session
+        from app.models import Client
+        client = Client.query.get(test_client.id)
+        
         note = ClientNote(
             content="Test note",
             user_id=user.id,
-            client_id=test_client.id
+            client_id=client.id
         )
         db.session.add(note)
         db.session.commit()
@@ -510,7 +523,7 @@ def test_client_note_cascade_delete(app, user, test_client):
         note_id = note.id
         
         # Delete client
-        db.session.delete(test_client)
+        db.session.delete(client)
         db.session.commit()
         
         # Note should be deleted

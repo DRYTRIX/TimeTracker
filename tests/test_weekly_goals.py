@@ -569,15 +569,19 @@ def test_weekly_goal_user_relationship(app, user):
 def test_user_has_weekly_goals_relationship(app, user):
     """Test that user has weekly_goals relationship."""
     with app.app_context():
-        goal1 = WeeklyTimeGoal(user_id=user.id, target_hours=40.0)
+        # Re-query the user to ensure it's in the current session
+        from app.models import User
+        user_obj = User.query.get(user.id)
+        
+        goal1 = WeeklyTimeGoal(user_id=user_obj.id, target_hours=40.0)
         goal2 = WeeklyTimeGoal(
-            user_id=user.id,
+            user_id=user_obj.id,
             target_hours=35.0,
             week_start_date=date.today() - timedelta(weeks=1, days=date.today().weekday())
         )
         db.session.add_all([goal1, goal2])
         db.session.commit()
         
-        db.session.refresh(user)
-        assert user.weekly_goals.count() >= 2
+        db.session.refresh(user_obj)
+        assert user_obj.weekly_goals.count() >= 2
 

@@ -93,9 +93,11 @@ class TestRoundTimeDuration:
     def test_very_large_durations(self):
         """Test rounding of large durations"""
         # 8 hours 7 minutes (487 minutes) with 15-min rounding
-        assert round_time_duration(29220, 15, 'nearest') == 29100  # 485 minutes
+        # 487 / 15 = 32.47 -> rounds to 32 intervals = 480 minutes = 28800 seconds
+        assert round_time_duration(29220, 15, 'nearest') == 28800  # 480 minutes (8 hours)
         # 8 hours 8 minutes (488 minutes) with 15-min rounding
-        assert round_time_duration(29280, 15, 'nearest') == 29100  # 485 minutes
+        # 488 / 15 = 32.53 -> rounds to 33 intervals = 495 minutes = 29700 seconds
+        assert round_time_duration(29280, 15, 'nearest') == 29700  # 495 minutes (8 hours 15 min)
 
 
 class TestApplyUserRounding:
