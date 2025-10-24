@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Expenses'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-receipt',
+    title_text='Expenses',
+    subtitle_text='Track and manage business expenses',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("expenses.create_expense") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Expense</a>'
+) }}
+
+<!-- Summary Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
+                <p class="text-2xl font-bold">{{ total_count }}</p>
+            </div>
+            <div class="text-primary text-3xl">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
+                <p class="text-2xl font-bold">{{ '€%.2f'|format(total_amount) }}</p>
+            </div>
+            <div class="text-green-500 text-3xl">
+                <i class="fas fa-euro-sign"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <a href="{{ url_for('expenses.dashboard') }}" class="text-sm text-primary hover:underline">
+                    View Dashboard <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            <div class="text-blue-500 text-3xl">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Form -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">Filter Expenses</h2>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
+            <input type="text" name="search" id="search" value="{{ search or '' }}" 
+                   placeholder="Title, vendor, notes..." 
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+        </div>
+        
+        <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All Statuses</option>
+                <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="reimbursed" {% if status == 'reimbursed' %}selected{% endif %}>Reimbursed</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+            <select name="category" id="category" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div>
+            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+            <select name="project_id" id="project_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All Projects</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div>
+            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client</label>
+            <select name="client_id" id="client_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All Clients</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        {% if current_user.is_admin and users %}
+        <div>
+            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User</label>
+            <select name="user_id" id="user_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ user.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        
+        <div>
+            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" 
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+        </div>
+        
+        <div>
+            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" 
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+        </div>
+        
+        <div>
+            <label for="billable" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billable</label>
+            <select name="billable" id="billable" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All</option>
+                <option value="true" {% if billable == 'true' %}selected{% endif %}>Billable Only</option>
+                <option value="false" {% if billable == 'false' %}selected{% endif %}>Non-Billable</option>
+            </select>
+        </div>
+        
+        <div class="flex items-end gap-2">
+            <button type="submit" class="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
+            <a href="{{ url_for('expenses.list_expenses') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <i class="fas fa-times"></i>
+            </a>
+            <a href="{{ url_for('expenses.export_expenses', **request.args) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors" title="Export to CSV">
+                <i class="fas fa-download"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Expenses Table -->
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Project</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {% if expenses %}
+                    {% for expense in expenses %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {{ expense.expense_date.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:underline font-medium">
+                                {{ expense.title }}
+                            </a>
+                            {% if expense.vendor %}
+                            <div class="text-xs text-gray-500">{{ expense.vendor }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                {{ expense.category|title }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            {{ expense.currency_code }} {{ '%.2f'|format(expense.total_amount) }}
+                            {% if expense.billable %}
+                            <span class="ml-1 text-xs text-green-600" title="Billable"><i class="fas fa-check-circle"></i></span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if expense.status == 'pending' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                Pending
+                            </span>
+                            {% elif expense.status == 'approved' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                Approved
+                            </span>
+                            {% elif expense.status == 'rejected' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                Rejected
+                            </span>
+                            {% elif expense.status == 'reimbursed' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                Reimbursed
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {{ expense.user.username if expense.user else '-' }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if expense.project %}
+                            <a href="{{ url_for('projects.view_project', project_id=expense.project_id) }}" class="text-primary hover:underline">
+                                {{ expense.project.name }}
+                            </a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:text-primary/80" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.is_admin or expense.user_id == current_user.id %}
+                                <a href="{{ url_for('expenses.edit_expense', expense_id=expense.id) }}" class="text-blue-600 hover:text-blue-800" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-receipt text-4xl mb-2 opacity-50"></i>
+                            <p>No expenses found</p>
+                            <a href="{{ url_for('expenses.create_expense') }}" class="text-primary hover:underline mt-2 inline-block">
+                                Create your first expense
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
+        <div class="flex-1 flex justify-between sm:hidden">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('expenses.list_expenses', page=pagination.prev_num, **request.args) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Previous
+            </a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('expenses.list_expenses', page=pagination.next_num, **request.args) }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Next
+            </a>
+            {% endif %}
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700 dark:text-gray-300">
+                    Showing <span class="font-medium">{{ ((pagination.page - 1) * pagination.per_page) + 1 }}</span>
+                    to <span class="font-medium">{{ min(pagination.page * pagination.per_page, pagination.total) }}</span>
+                    of <span class="font-medium">{{ pagination.total }}</span> results
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    {% if pagination.has_prev %}
+                    <a href="{{ url_for('expenses.list_expenses', page=pagination.prev_num, **request.args) }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == pagination.page %}
+                            <span class="relative inline-flex items-center px-4 py-2 border border-primary bg-primary text-white text-sm font-medium">
+                                {{ page_num }}
+                            </span>
+                            {% else %}
+                            <a href="{{ url_for('expenses.list_expenses', page=page_num, **request.args) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                {{ page_num }}
+                            </a>
+                            {% endif %}
+                        {% else %}
+                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                ...
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                    <a href="{{ url_for('expenses.list_expenses', page=pagination.next_num, **request.args) }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
