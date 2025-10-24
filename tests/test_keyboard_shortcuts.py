@@ -12,9 +12,9 @@ class TestKeyboardShortcutsRoutes:
     """Test keyboard shortcuts routes"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, client, auth_user):
+    def setup(self, authenticated_client, auth_user):
         """Setup for each test"""
-        self.client = client
+        self.client = authenticated_client
         self.user = auth_user
 
     def test_keyboard_shortcuts_settings_page(self):
@@ -54,9 +54,9 @@ class TestKeyboardShortcutsIntegration:
     """Integration tests for keyboard shortcuts"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, client, auth_user):
+    def setup(self, authenticated_client, auth_user):
         """Setup for each test"""
-        self.client = client
+        self.client = authenticated_client
         self.user = auth_user
 
     def test_keyboard_shortcuts_in_base_template(self):
@@ -160,7 +160,10 @@ def app():
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
         'WTF_CSRF_ENABLED': False,
-        'SECRET_KEY': 'test-secret-key'
+        'SECRET_KEY': 'test-secret-key-do-not-use-in-production',
+        'SERVER_NAME': 'localhost:5000',
+        'APPLICATION_ROOT': '/',
+        'PREFERRED_URL_SCHEME': 'http'
     })
 
     with app.app_context():
@@ -184,24 +187,27 @@ def runner(app):
 
 @pytest.fixture
 def auth_user(app):
-    """Create and authenticate a test user"""
+    """Create a test user for authentication"""
     with app.app_context():
         user = User(
             username='testuser',
             email='test@example.com',
-            is_active=True,
             role='user'
         )
-        user.set_password('password123')
+        user.is_active = True  # Set after creation
         db.session.add(user)
         db.session.commit()
-        
-        # Login the user
-        from flask_login import login_user
-        with app.test_request_context():
-            login_user(user)
-        
+        db.session.refresh(user)
         return user
+
+
+@pytest.fixture
+def authenticated_client(client, auth_user):
+    """Create an authenticated test client"""
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(auth_user.id)
+        sess['_fresh'] = True
+    return client
 
 
 @pytest.fixture
@@ -211,10 +217,9 @@ def admin_user(app):
         user = User(
             username='admin',
             email='admin@example.com',
-            is_active=True,
             role='admin'
         )
-        user.set_password('admin123')
+        user.is_active = True  # Set after creation
         db.session.add(user)
         db.session.commit()
         
@@ -268,9 +273,9 @@ class TestKeyboardShortcutsPerformance:
     """Test keyboard shortcuts performance"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, client, auth_user):
+    def setup(self, authenticated_client, auth_user):
         """Setup for each test"""
-        self.client = client
+        self.client = authenticated_client
         self.user = auth_user
 
     def test_settings_page_loads_quickly(self):
@@ -304,9 +309,9 @@ class TestKeyboardShortcutsSecurity:
     """Test keyboard shortcuts security"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, client, auth_user):
+    def setup(self, authenticated_client, auth_user):
         """Setup for each test"""
-        self.client = client
+        self.client = authenticated_client
         self.user = auth_user
 
     def test_settings_requires_authentication(self):
@@ -334,9 +339,9 @@ class TestKeyboardShortcutsEdgeCases:
     """Test edge cases for keyboard shortcuts"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, client, auth_user):
+    def setup(self, authenticated_client, auth_user):
         """Setup for each test"""
-        self.client = client
+        self.client = authenticated_client
         self.user = auth_user
 
     def test_settings_page_with_no_shortcuts(self):

@@ -33,6 +33,7 @@ def authenticated_user(app, client):
     """Create and authenticate a test user"""
     with app.app_context():
         user = User(username='smoketest', role='user', email='smoke@test.com')
+        user.is_active = True  # Set after creation
         user.time_rounding_enabled = True
         user.time_rounding_minutes = 15
         user.time_rounding_method = 'nearest'
@@ -40,10 +41,9 @@ def authenticated_user(app, client):
         
         project = Project(
             name='Smoke Test Project',
-            client='Smoke Test Client',
-            status='active',
-            created_by_id=1
+            client='Smoke Test Client'
         )
+        project.status = 'active'  # Set after creation
         db.session.add(project)
         db.session.commit()
         

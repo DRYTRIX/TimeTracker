@@ -32,12 +32,16 @@ def client(app):
 def test_user(app):
     """Create a test user with default rounding preferences"""
     with app.app_context():
-        user = User(username='testuser', role='user')
-        user.time_rounding_enabled = True
-        user.time_rounding_minutes = 15
-        user.time_rounding_method = 'nearest'
-        db.session.add(user)
-        db.session.commit()
+        # Check if user already exists (for PostgreSQL tests)
+        user = User.query.filter_by(username='roundinguser').first()
+        if not user:
+            user = User(username='roundinguser', role='user')
+            user.is_active = True  # Set after creation
+            user.time_rounding_enabled = True
+            user.time_rounding_minutes = 15
+            user.time_rounding_method = 'nearest'
+            db.session.add(user)
+            db.session.commit()
         
         # Return the user ID instead of the object
         user_id = user.id
@@ -55,10 +59,9 @@ def test_project(app, test_user):
         user = User.query.get(test_user.id)
         project = Project(
             name='Test Project',
-            client='Test Client',
-            status='active',
-            created_by_id=user.id
+            client='Test Client'
         )
+        project.status = 'active'  # Set after creation
         db.session.add(project)
         db.session.commit()
         
@@ -84,6 +87,7 @@ class TestUserRoundingPreferences:
         """Test default rounding values for new users"""
         with app.app_context():
             user = User(username='newuser', role='user')
+            user.is_active = True  # Set after creation
             db.session.add(user)
             db.session.commit()
             

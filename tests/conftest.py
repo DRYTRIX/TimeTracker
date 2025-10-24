@@ -179,6 +179,12 @@ def admin_user(app):
 
 
 @pytest.fixture
+def auth_user(user):
+    """Alias for user fixture (for backward compatibility with older tests)."""
+    return user
+
+
+@pytest.fixture
 def multiple_users(app):
     """Create multiple test users."""
     users = []
