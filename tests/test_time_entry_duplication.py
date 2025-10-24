@@ -210,7 +210,7 @@ def test_duplicate_shows_original_entry_info(authenticated_client, time_entry_wi
 
 @pytest.mark.unit
 @pytest.mark.security
-def test_duplicate_own_entry_only(app, user, project):
+def test_duplicate_own_entry_only(app, user, project, authenticated_client):
     """Test that users can only duplicate their own entries."""
     with app.app_context():
         # Create another user
@@ -236,20 +236,11 @@ def test_duplicate_own_entry_only(app, user, project):
         db.session.add(other_entry)
         db.session.commit()
         
-        # Try to duplicate as original user via authenticated client
-        # Using session instead of login since we're in test environment
-        from app import create_app
-        test_app = create_app()
-        with test_app.test_client() as test_client:
-            with test_client.session_transaction() as sess:
-                sess['_user_id'] = str(user.id)
-                sess['_fresh'] = True
-            
-            # Try to duplicate other user's entry
-            response = test_client.get(f'/timer/duplicate/{other_entry.id}')
-            
-            # Should be redirected or get error
-            assert response.status_code in [302, 403] or 'error' in response.get_data(as_text=True).lower()
+        # Try to duplicate other user's entry using authenticated client (logged in as original user)
+        response = authenticated_client.get(f'/timer/duplicate/{other_entry.id}')
+        
+        # Should be redirected or get error (user should not be able to duplicate another user's entry)
+        assert response.status_code in [302, 403] or 'error' in response.get_data(as_text=True).lower()
 
 
 @pytest.mark.unit
@@ -430,7 +421,7 @@ def test_duplicate_entry_without_tags(authenticated_client, time_entry_minimal, 
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_duplicate_entry_from_inactive_project(app, user):
+def test_duplicate_entry_from_inactive_project(app, user, authenticated_client):
     """Test duplicating an entry from an inactive project."""
     with app.app_context():
         # Create inactive project
@@ -460,18 +451,10 @@ def test_duplicate_entry_from_inactive_project(app, user):
         db.session.add(entry)
         db.session.commit()
         
-        # Should still be able to view duplication form
-        from app import create_app
-        test_app = create_app()
-        with test_app.test_client() as test_client:
-            # Authenticate via session
-            with test_client.session_transaction() as sess:
-                sess['_user_id'] = str(user.id)
-                sess['_fresh'] = True
-            
-            response = test_client.get(f'/timer/duplicate/{entry.id}')
-            
-            # Should render (200) or redirect if auth issue (302)
-            # Both acceptable since the route exists and handles the request
-            assert response.status_code in [200, 302]
+        # Should still be able to view duplication form using authenticated client
+        response = authenticated_client.get(f'/timer/duplicate/{entry.id}')
+        
+        # Should render (200) or redirect if auth issue (302)
+        # Both acceptable since the route exists and handles the request
+        assert response.status_code in [200, 302]
 

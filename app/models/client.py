@@ -21,6 +21,7 @@ class Client(db.Model):
     
     # Relationships
     projects = db.relationship('Project', backref='client_obj', lazy='dynamic', cascade='all, delete-orphan')
+    notes = db.relationship('ClientNote', backref='client', lazy='dynamic', cascade='all, delete-orphan')
     
     def __init__(self, name, description=None, contact_person=None, email=None, phone=None, address=None, default_hourly_rate=None):
         self.name = name.strip()
