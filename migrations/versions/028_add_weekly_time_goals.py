@@ -1,7 +1,7 @@
 """Add weekly time goals table for tracking weekly hour targets
 
-Revision ID: 027
-Revises: 026
+Revision ID: 028
+Revises: 027
 Create Date: 2025-10-24 12:00:00
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '027'
-down_revision = '026'
+revision = '028'
+down_revision = '027'
 branch_labels = None
 depends_on = None
 
