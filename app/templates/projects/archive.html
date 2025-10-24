@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Projects', 'url': url_for('projects.list_projects')},
+    {'text': project.name, 'url': url_for('projects.view_project', project_id=project.id)},
+    {'text': 'Archive'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-archive',
+    title_text='Archive Project',
+    subtitle_text='Archive "' + project.name + '"',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="max-w-2xl mx-auto">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="mb-6">
+            <div class="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <i class="fas fa-info-circle text-amber-600 dark:text-amber-400 text-xl"></i>
+                <div class="text-sm text-amber-800 dark:text-amber-200">
+                    <p class="font-medium mb-1">{{ _('What happens when you archive a project?') }}</p>
+                    <ul class="list-disc list-inside space-y-1 ml-2">
+                        <li>{{ _('The project will be hidden from active project lists') }}</li>
+                        <li>{{ _('No new time entries can be added to this project') }}</li>
+                        <li>{{ _('Existing data and time entries are preserved') }}</li>
+                        <li>{{ _('You can unarchive the project later if needed') }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('projects.archive_project', project_id=project.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Reason for Archiving') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
+                    </label>
+                    <textarea 
+                        id="reason" 
+                        name="reason" 
+                        rows="4" 
+                        class="form-input"
+                        placeholder="{{ _('e.g., Project completed, Client contract ended, Project cancelled, etc.') }}"
+                    ></textarea>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Adding a reason helps with project organization and future reference.') }}
+                    </p>
+                </div>
+
+                <!-- Common reasons as quick select buttons -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Quick Select') }}
+                    </label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="setReason('{{ _('Project completed successfully') }}')" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            {{ _('Project Completed') }}
+                        </button>
+                        <button type="button" onclick="setReason('{{ _('Client contract ended') }}')" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            {{ _('Contract Ended') }}
+                        </button>
+                        <button type="button" onclick="setReason('{{ _('Project cancelled by client') }}')" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            {{ _('Cancelled') }}
+                        </button>
+                        <button type="button" onclick="setReason('{{ _('Project on hold indefinitely') }}')" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            {{ _('On Hold') }}
+                        </button>
+                        <button type="button" onclick="setReason('{{ _('Maintenance period ended') }}')" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            {{ _('Maintenance Ended') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+                <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    {{ _('Cancel') }}
+                </a>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors">
+                    <i class="fas fa-archive mr-2"></i>{{ _('Archive Project') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function setReason(reason) {
+    document.getElementById('reason').value = reason;
+}
+</script>
+{% endblock %}
+
