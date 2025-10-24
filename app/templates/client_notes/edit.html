@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Client Note') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">
+            {{ _('Edit Client Note') }}
+        </h1>
+        <a href="{{ url_for('clients.view_client', client_id=client_id) }}" class="text-primary hover:underline">
+            {{ _('Back to Client') }}
+        </a>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <!-- Note context -->
+        <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <strong>{{ _('Client:') }}</strong> {{ note.client_name }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Original note info -->
+        <div class="mb-6">
+            <div class="flex items-center mb-2">
+                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold mr-3">
+                    {{ (note.author_name)[0].upper() }}
+                </div>
+                <div>
+                    <strong>{{ note.author_name }}</strong>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Created on') }} {{ note.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        {% if note.created_at != note.updated_at %}
+                        <br>
+                        {{ _('Last edited on') }} {{ note.updated_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit form -->
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="mb-4">
+                <label for="content" class="block text-sm font-medium mb-2">
+                    {{ _('Note Content') }}
+                </label>
+                <textarea 
+                    name="content" 
+                    id="content" 
+                    class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-transparent" 
+                    rows="8" 
+                    required
+                >{{ note.content }}</textarea>
+                <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Internal note visible only to your team.') }}
+                </p>
+            </div>
+            
+            <div class="mb-6">
+                <label class="flex items-center">
+                    <input 
+                        type="checkbox" 
+                        name="is_important" 
+                        value="true" 
+                        {% if note.is_important %}checked{% endif %}
+                        class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2"
+                    >
+                    <span class="ml-2 text-sm">{{ _('Mark as important') }}</span>
+                </label>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition">
+                    {{ _('Save Changes') }}
+                </button>
+                <a href="{{ url_for('clients.view_client', client_id=client_id) }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-opacity-90 transition">
+                    {{ _('Cancel') }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-resize textarea
+    const textarea = document.getElementById('content');
+    
+    function resizeTextarea() {
+        textarea.style.height = 'auto';
+        textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
+    
+    textarea.addEventListener('input', resizeTextarea);
+    
+    // Initial resize
+    resizeTextarea();
+    
+    // Focus on textarea
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    
+    // Add loading state to form
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>' + '{{ _('Saving...') }}';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}
+
