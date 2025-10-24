@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('permissions.list_roles') }}" class="text-primary hover:underline flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        {{ _('Back to Roles') }}
+    </a>
+</div>
+
+<div class="mb-6">
+    <h1 class="text-2xl font-bold">{{ _('System Permissions') }}</h1>
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('All available permissions in the system') }}</p>
+</div>
+
+<div class="space-y-6">
+    {% for category, permissions in permissions_by_category.items() %}
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
+        <div class="bg-primary/10 px-6 py-4 border-b border-border-light dark:border-border-dark">
+            <h2 class="text-lg font-semibold capitalize">{{ category.replace('_', ' ') }}</h2>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ permissions|length }} {{ _('permissions') }}</p>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for permission in permissions %}
+                <div class="flex items-start gap-3 p-3 border border-border-light dark:border-border-dark rounded-lg">
+                    <div class="flex-shrink-0 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-medium text-sm">{{ permission.name.replace('_', ' ').title() }}</h3>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ permission.description or _('No description available') }}
+                        </p>
+                        <div class="mt-2">
+                            <span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ permission.name }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+    <h3 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">{{ _('About Permissions') }}</h3>
+    <p class="text-sm text-blue-800 dark:text-blue-200">
+        {{ _('Permissions define what actions users can perform in the system. These permissions are assigned to roles, and roles are assigned to users. This provides a flexible and granular access control system.') }}
+    </p>
+</div>
+{% endblock %}
+

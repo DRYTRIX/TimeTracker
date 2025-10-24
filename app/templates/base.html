@@ -178,13 +178,15 @@
                             </li>
                         </ul>
                     </li>
-                    {% if current_user.is_admin %}
+                    {% if current_user.is_admin or has_any_permission(['view_users', 'manage_settings', 'view_system_info', 'manage_backups']) %}
                     <li class="mt-2">
                         <a href="{{ url_for('admin.admin_dashboard') }}" class="flex items-center p-2 rounded-lg {% if ep == 'admin.admin_dashboard' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-cog w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Admin') }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if current_user.is_admin or has_permission('manage_oidc') %}
                     <li class="mt-2">
                         <a href="{{ url_for('admin.oidc_debug') }}" class="flex items-center p-2 rounded-lg {% if ep == 'admin.oidc_debug' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-shield-alt w-6 text-center"></i>

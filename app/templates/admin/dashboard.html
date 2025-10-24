@@ -18,8 +18,9 @@
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h2 class="text-lg font-semibold mb-4">Admin Sections</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <a href="{{ url_for('admin.list_users') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">Manage Users</a>
+        <a href="{{ url_for('permissions.list_roles') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">Roles & Permissions</a>
         <a href="{{ url_for('admin.settings') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">Settings</a>
         <a href="{{ url_for('admin.system_info') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">System Info</a>
     </div>

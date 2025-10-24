@@ -6,7 +6,7 @@
         <h1 class="text-2xl font-bold">Clients</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">Manage your clients here.</p>
     </div>
-    {% if current_user.is_admin %}
+    {% if current_user.is_admin or has_permission('create_clients') %}
     <a href="{{ url_for('clients.create_client') }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Create Client</a>
     {% endif %}
 </div>
