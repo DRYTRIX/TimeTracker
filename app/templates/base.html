@@ -115,6 +115,12 @@
                         </a>
                     </li>
                     <li class="mt-2">
+                        <a href="{{ url_for('weekly_goals.index') }}" class="flex items-center p-2 rounded-lg {% if ep.startswith('weekly_goals.') %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                            <i class="fas fa-bullseye w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Weekly Goals') }}</span>
+                        </a>
+                    </li>
+                    <li class="mt-2">
                         <button onclick="toggleDropdown('workDropdown')" data-dropdown="workDropdown" class="w-full flex items-center p-2 rounded-lg {% if work_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-briefcase w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Work') }}</span>
