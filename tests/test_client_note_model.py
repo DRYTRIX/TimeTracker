@@ -168,7 +168,8 @@ def test_client_note_author_name_property(app, user, test_client):
         # Test with full name
         user.full_name = "Test User Full Name"
         db.session.commit()
-        # No need to refresh - the relationship will fetch the updated value
+        # Expire the cached relationship so it reloads with updated data
+        db.session.expire(note, ['author'])
         assert note.author_name == "Test User Full Name"
 
 
