@@ -22,6 +22,7 @@ from .kanban_column import KanbanColumn
 from .time_entry_template import TimeEntryTemplate
 from .activity import Activity
 from .user_favorite_project import UserFavoriteProject
+from .client_note import ClientNote
 
 __all__ = [
     "User",
@@ -52,4 +53,5 @@ __all__ = [
     "TimeEntryTemplate",
     "Activity",
     "UserFavoriteProject",
+    "ClientNote",
 ]
