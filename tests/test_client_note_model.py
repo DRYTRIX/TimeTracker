@@ -168,9 +168,8 @@ def test_client_note_author_name_property(app, user, test_client):
         # Test with full name
         user.full_name = "Test User Full Name"
         db.session.commit()
-        # Refresh both note and user to ensure updated data is loaded
-        db.session.refresh(user)
-        db.session.refresh(note)
+        # Expire the note so it reloads the author relationship with fresh data
+        db.session.expire(note)
         assert note.author_name == "Test User Full Name"
 
 
