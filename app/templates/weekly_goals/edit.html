@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Weekly Goal') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            <i class="fas fa-edit mr-2 text-blue-600"></i>
+            {{ _('Edit Weekly Time Goal') }}
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">
+            {{ goal.week_label }}
+        </p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <form method="POST" action="{{ url_for('weekly_goals.edit', goal_id=goal.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Week Info (Read-only) -->
+            <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Week Period') }}</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ goal.week_label }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Current Progress') }}</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                            {{ goal.actual_hours }}h / {{ goal.target_hours }}h ({{ goal.progress_percentage }}%)
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target Hours -->
+            <div class="mb-6">
+                <label for="target_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Target Hours') }} <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="number" 
+                           id="target_hours" 
+                           name="target_hours" 
+                           step="0.5" 
+                           min="1"
+                           max="168"
+                           required
+                           value="{{ goal.target_hours }}"
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    <span class="absolute right-4 top-2 text-gray-500 dark:text-gray-400">hours</span>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="mb-6">
+                <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Status') }}
+                </label>
+                <select id="status" 
+                        name="status"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    <option value="active" {% if goal.status == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
+                    <option value="completed" {% if goal.status == 'completed' %}selected{% endif %}>{{ _('Completed') }}</option>
+                    <option value="failed" {% if goal.status == 'failed' %}selected{% endif %}>{{ _('Failed') }}</option>
+                    <option value="cancelled" {% if goal.status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                </select>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Notes') }}
+                </label>
+                <textarea id="notes" 
+                          name="notes" 
+                          rows="3"
+                          placeholder="{{ _('Optional notes about your goal...') }}"
+                          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">{{ goal.notes or '' }}</textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-between">
+                <div class="space-x-2">
+                    <a href="{{ url_for('weekly_goals.view', goal_id=goal.id) }}" 
+                       class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <i class="fas fa-times mr-2"></i> {{ _('Cancel') }}
+                    </a>
+                    <button type="button"
+                            onclick="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this goal?') }}', { title: '{{ _('Delete Goal') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) document.getElementById('deleteForm').submit(); });"
+                            class="px-6 py-2 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900 transition">
+                        <i class="fas fa-trash mr-2"></i> {{ _('Delete') }}
+                    </button>
+                </div>
+                <button type="submit" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-save mr-2"></i> {{ _('Save Changes') }}
+                </button>
+            </div>
+        </form>
+
+        <!-- Delete Form (Hidden) -->
+        <form id="deleteForm" method="POST" action="{{ url_for('weekly_goals.delete', goal_id=goal.id) }}" style="display: none;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+    </div>
+</div>
+{% endblock %}
+

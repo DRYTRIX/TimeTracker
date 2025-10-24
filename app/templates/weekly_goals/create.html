@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Create Weekly Goal') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            <i class="fas fa-bullseye mr-2 text-blue-600"></i>
+            {{ _('Create Weekly Time Goal') }}
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">
+            {{ _('Set a target for hours to work this week') }}
+        </p>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <form method="POST" action="{{ url_for('weekly_goals.create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Target Hours -->
+            <div class="mb-6">
+                <label for="target_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Target Hours') }} <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="number" 
+                           id="target_hours" 
+                           name="target_hours" 
+                           step="0.5" 
+                           min="1"
+                           max="168"
+                           required
+                           value="40"
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    <span class="absolute right-4 top-2 text-gray-500 dark:text-gray-400">hours</span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {{ _('How many hours do you want to work this week?') }}
+                </p>
+            </div>
+
+            <!-- Week Start Date -->
+            <div class="mb-6">
+                <label for="week_start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Week Start Date') }}
+                </label>
+                <input type="date" 
+                       id="week_start_date" 
+                       name="week_start_date" 
+                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {{ _('Leave blank to use current week (starting Monday)') }}
+                </p>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Notes') }}
+                </label>
+                <textarea id="notes" 
+                          name="notes" 
+                          rows="3"
+                          placeholder="{{ _('Optional notes about your goal...') }}"
+                          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"></textarea>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Quick Presets') }}
+                </label>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button type="button" 
+                            onclick="document.getElementById('target_hours').value = 20"
+                            class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                        20h
+                    </button>
+                    <button type="button" 
+                            onclick="document.getElementById('target_hours').value = 30"
+                            class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                        30h
+                    </button>
+                    <button type="button" 
+                            onclick="document.getElementById('target_hours').value = 40"
+                            class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                        40h
+                    </button>
+                    <button type="button" 
+                            onclick="document.getElementById('target_hours').value = 50"
+                            class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                        50h
+                    </button>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-between space-x-4">
+                <a href="{{ url_for('weekly_goals.index') }}" 
+                   class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <i class="fas fa-times mr-2"></i> {{ _('Cancel') }}
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-check mr-2"></i> {{ _('Create Goal') }}
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tips -->
+    <div class="mt-6 bg-blue-50 dark:bg-blue-900 border-l-4 border-blue-400 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-lightbulb text-blue-500"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    {{ _('Tips for Setting Goals') }}
+                </h3>
+                <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>{{ _('Be realistic: Consider holidays, meetings, and other commitments') }}</li>
+                        <li>{{ _('Start conservative: You can always adjust your goal later') }}</li>
+                        <li>{{ _('Track progress: Check your dashboard regularly to stay on track') }}</li>
+                        <li>{{ _('Typical full-time: 40 hours per week (8 hours/day, 5 days)') }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

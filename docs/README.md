@@ -41,6 +41,7 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 - **[Task Management](TASK_MANAGEMENT_README.md)** — Complete task tracking system
 - **[Task Management Overview](TASK_MANAGEMENT.md)** — Task management concepts
 - **[Client Management](CLIENT_MANAGEMENT_README.md)** — Manage clients and relationships
+- **[Client Notes](CLIENT_NOTES_FEATURE.md)** — Add internal notes about clients
 - **[Invoice System](INVOICE_FEATURE_README.md)** — Generate and track invoices
 - **[Enhanced Invoice System](ENHANCED_INVOICE_SYSTEM_README.md)** — Advanced invoicing features
 - **[Calendar Features](CALENDAR_FEATURES_README.md)** — Calendar view and bulk entry

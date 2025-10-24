@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <a href="{{ url_for('permissions.list_roles') }}" class="text-primary hover:underline flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+            {{ _('Back to Roles') }}
+        </a>
+    </div>
+
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-6">
+            {% if role %}
+                {{ _('Edit Role') }}: {{ role.name }}
+            {% else %}
+                {{ _('Create New Role') }}
+            {% endif %}
+        </h1>
+
+        <form method="post" class="space-y-6" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Role Name') }}</label>
+                <input type="text" 
+                       id="name" 
+                       name="name" 
+                       value="{{ role.name if role else '' }}" 
+                       required
+                       autocomplete="off"
+                       spellcheck="false"
+                       data-form-type="other"
+                       class="form-input">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('A unique name for this role') }}</p>
+            </div>
+
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                <textarea id="description" 
+                          name="description" 
+                          rows="3"
+                          autocomplete="off"
+                          spellcheck="true"
+                          data-form-type="other"
+                          class="form-input">{{ role.description if role else '' }}</textarea>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional description of this role') }}</p>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold mb-4 text-text-light dark:text-text-dark">{{ _('Permissions') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Select the permissions this role should have:') }}</p>
+                
+                {% set categories = {} %}
+                {% for permission in all_permissions %}
+                    {% if permission.category not in categories %}
+                        {% set _ = categories.update({permission.category: []}) %}
+                    {% endif %}
+                    {% set _ = categories[permission.category].append(permission) %}
+                {% endfor %}
+
+                <div class="space-y-6">
+                    {% for category, perms in categories.items() %}
+                    <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-light dark:bg-bg-dark">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-text-light dark:text-text-dark capitalize">{{ category.replace('_', ' ') }}</h4>
+                            <button type="button" class="text-xs text-primary hover:underline" onclick="toggleCategory(this)">{{ _("Toggle All") }}</button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {% for permission in perms %}
+                            <label class="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-bg-hover-light dark:hover:bg-bg-hover-dark transition">
+                                <input type="checkbox" name="permissions" value="{{ permission.id }}"
+                                       {% if role and role.has_permission(permission.name) %}checked{% endif %}
+                                       class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary bg-input-light dark:bg-input-dark">
+                                <div class="flex-1">
+                                    <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ permission.name.replace('_', ' ').title() }}</div>
+                                    {% if permission.description %}
+                                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ permission.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition">
+                    {% if role %}
+                        {{ _('Update Role') }}
+                    {% else %}
+                        {{ _('Create Role') }}
+                    {% endif %}
+                </button>
+                <a href="{{ url_for('permissions.list_roles') }}" class="bg-secondary text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition">
+                    {{ _('Cancel') }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Toggle all checkboxes in a category
+function toggleCategory(button) {
+    const category = button.closest('.border');
+    const checkboxes = category.querySelectorAll('input[type="checkbox"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+</script>
+{% endblock %}
+

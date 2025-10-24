@@ -23,6 +23,10 @@ class Project(db.Model):
     budget_threshold_percent = db.Column(db.Integer, nullable=False, default=80)  # alert when exceeded
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    # Archiving metadata
+    archived_at = db.Column(db.DateTime, nullable=True, index=True)
+    archived_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    archived_reason = db.Column(db.Text, nullable=True)
     
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='project', lazy='dynamic', cascade='all, delete-orphan')
@@ -82,6 +86,19 @@ class Project(db.Model):
     def is_active(self):
         """Check if project is active"""
         return self.status == 'active'
+    
+    @property
+    def is_archived(self):
+        """Check if project is archived"""
+        return self.status == 'archived'
+    
+    @property
+    def archived_by_user(self):
+        """Get the user who archived this project"""
+        if self.archived_by:
+            from .user import User
+            return User.query.get(self.archived_by)
+        return None
 
     @property
     def code_display(self):
@@ -236,15 +253,26 @@ class Project(db.Model):
             for _id, username, full_name, total_seconds in results
         ]
     
-    def archive(self):
-        """Archive the project"""
+    def archive(self, user_id=None, reason=None):
+        """Archive the project with metadata
+        
+        Args:
+            user_id: ID of the user archiving the project
+            reason: Optional reason for archiving
+        """
         self.status = 'archived'
+        self.archived_at = datetime.utcnow()
+        self.archived_by = user_id
+        self.archived_reason = reason
         self.updated_at = datetime.utcnow()
         db.session.commit()
     
     def unarchive(self):
-        """Unarchive the project"""
+        """Unarchive the project and clear archiving metadata"""
         self.status = 'active'
+        self.archived_at = None
+        self.archived_by = None
+        self.archived_reason = None
         self.updated_at = datetime.utcnow()
         db.session.commit()
     
@@ -296,6 +324,11 @@ class Project(db.Model):
             'total_costs': self.total_costs,
             'total_billable_costs': self.total_billable_costs,
             'total_project_value': self.total_project_value,
+            # Archiving metadata
+            'is_archived': self.is_archived,
+            'archived_at': self.archived_at.isoformat() if self.archived_at else None,
+            'archived_by': self.archived_by,
+            'archived_reason': self.archived_reason,
         }
         # Include favorite status if user is provided
         if user:

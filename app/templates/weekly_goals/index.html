@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Weekly Time Goals') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-bullseye mr-2 text-blue-600"></i>
+                {{ _('Weekly Time Goals') }}
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">
+                {{ _('Set and track your weekly hour targets') }}
+            </p>
+        </div>
+        <a href="{{ url_for('weekly_goals.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus mr-2"></i> {{ _('New Goal') }}
+        </a>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-trophy text-3xl text-yellow-500"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Total Goals') }}</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total_goals }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-3xl text-green-500"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Completed') }}</p>
+                    <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ stats.completed }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-times-circle text-3xl text-red-500"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Failed') }}</p>
+                    <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ stats.failed }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-percentage text-3xl text-blue-500"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Success Rate') }}</p>
+                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.completion_rate }}%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Week Goal -->
+    {% if current_goal %}
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 mb-6 text-white">
+        <h2 class="text-2xl font-bold mb-4">
+            <i class="fas fa-calendar-week mr-2"></i>
+            {{ _('Current Week Goal') }}
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+                <p class="text-sm opacity-90">{{ _('Week') }}</p>
+                <p class="text-xl font-bold">{{ current_goal.week_label }}</p>
+            </div>
+            <div>
+                <p class="text-sm opacity-90">{{ _('Target Hours') }}</p>
+                <p class="text-xl font-bold">{{ current_goal.target_hours }}h</p>
+            </div>
+            <div>
+                <p class="text-sm opacity-90">{{ _('Actual Hours') }}</p>
+                <p class="text-xl font-bold">{{ current_goal.actual_hours }}h</p>
+            </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="mb-4">
+            <div class="flex justify-between text-sm mb-2">
+                <span>{{ _('Progress') }}</span>
+                <span>{{ current_goal.progress_percentage }}%</span>
+            </div>
+            <div class="w-full bg-white bg-opacity-30 rounded-full h-4">
+                <div class="bg-white rounded-full h-4 transition-all duration-300" 
+                     style="width: {{ current_goal.progress_percentage }}%"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <p class="text-sm opacity-90">{{ _('Remaining Hours') }}</p>
+                <p class="text-lg font-semibold">{{ current_goal.remaining_hours }}h</p>
+            </div>
+            <div>
+                <p class="text-sm opacity-90">{{ _('Days Remaining') }}</p>
+                <p class="text-lg font-semibold">{{ current_goal.days_remaining }}</p>
+            </div>
+            <div>
+                <p class="text-sm opacity-90">{{ _('Avg Hours/Day Needed') }}</p>
+                <p class="text-lg font-semibold">{{ current_goal.average_hours_per_day }}h</p>
+            </div>
+        </div>
+
+        <div class="mt-4 flex space-x-2">
+            <a href="{{ url_for('weekly_goals.view', goal_id=current_goal.id) }}" 
+               class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-opacity-90 transition">
+                <i class="fas fa-eye mr-2"></i> {{ _('View Details') }}
+            </a>
+            <a href="{{ url_for('weekly_goals.edit', goal_id=current_goal.id) }}" 
+               class="bg-white bg-opacity-20 text-white px-4 py-2 rounded hover:bg-opacity-30 transition">
+                <i class="fas fa-edit mr-2"></i> {{ _('Edit Goal') }}
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <!-- No Current Goal -->
+    <div class="bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-6 mb-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-2xl text-yellow-500"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-yellow-900 dark:text-yellow-100">
+                    {{ _('No goal set for this week') }}
+                </h3>
+                <p class="text-yellow-700 dark:text-yellow-300 mt-1">
+                    {{ _('Create a weekly time goal to start tracking your progress') }}
+                </p>
+                <a href="{{ url_for('weekly_goals.create') }}" 
+                   class="inline-block mt-3 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition">
+                    <i class="fas fa-plus mr-2"></i> {{ _('Create Goal') }}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Past Goals -->
+    {% if goals %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <i class="fas fa-history mr-2 text-gray-600"></i>
+            {{ _('Goal History') }}
+        </h2>
+        
+        <div class="space-y-4">
+            {% for goal in goals %}
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                {{ goal.week_label }}
+                            </h3>
+                            {% if goal.status == 'completed' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <i class="fas fa-check mr-1"></i> {{ _('Completed') }}
+                            </span>
+                            {% elif goal.status == 'active' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                <i class="fas fa-clock mr-1"></i> {{ _('Active') }}
+                            </span>
+                            {% elif goal.status == 'failed' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                <i class="fas fa-times mr-1"></i> {{ _('Failed') }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {{ _('Target') }}: {{ goal.target_hours }}h | {{ _('Actual') }}: {{ goal.actual_hours }}h
+                        </p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <a href="{{ url_for('weekly_goals.view', goal_id=goal.id) }}" 
+                           class="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                           title="{{ _('View') }}">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{{ url_for('weekly_goals.edit', goal_id=goal.id) }}" 
+                           class="text-gray-600 hover:text-gray-800 dark:text-gray-400"
+                           title="{{ _('Edit') }}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mb-2">
+                    <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        <span>{{ _('Progress') }}</span>
+                        <span>{{ goal.progress_percentage }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        {% if goal.status == 'completed' %}
+                        <div class="bg-green-500 rounded-full h-2" style="width: {{ goal.progress_percentage }}%"></div>
+                        {% elif goal.status == 'failed' %}
+                        <div class="bg-red-500 rounded-full h-2" style="width: {{ goal.progress_percentage }}%"></div>
+                        {% else %}
+                        <div class="bg-blue-500 rounded-full h-2" style="width: {{ goal.progress_percentage }}%"></div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

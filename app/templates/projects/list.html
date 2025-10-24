@@ -11,7 +11,7 @@
     title_text='Projects',
     subtitle_text='Manage your projects here',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("projects.create_project") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Project</a>' if current_user.is_admin else None
+    actions_html='<a href="' + url_for("projects.create_project") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Project</a>' if (current_user.is_admin or has_permission('create_projects')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
@@ -69,7 +69,7 @@
                 <ul id="projectsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 z-50 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg max-h-64 overflow-y-auto">
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
-                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('archived')"><i class="fas fa-archive mr-2 text-gray-600"></i>Archive</a></li>
+                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkArchiveDialog()"><i class="fas fa-archive mr-2 text-gray-600"></i>Archive</a></li>
                     <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
                     <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
                 </ul>
@@ -185,6 +185,7 @@
 <form id="bulkStatusChange-form" method="POST" action="{{ url_for('projects.bulk_status_change') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="new_status" id="bulkNewStatus" value="">
+    <input type="hidden" name="archive_reason" id="bulkArchiveReason" value="">
 </form>
 <form id="confirmBulkDelete-form" method="POST" action="{{ url_for('projects.bulk_delete_projects') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -249,12 +250,62 @@ function submitBulkDelete(){
     });
     form.submit();
 }
+function showBulkArchiveDialog(){
+    const count = document.querySelectorAll('.project-checkbox:checked').length;
+    if (count === 0) return false;
+    
+    // Create a custom modal for archive reason
+    const modalHtml = `
+        <div id="bulkArchiveModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" onclick="closeBulkArchiveModal()"></div>
+            <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+                <h3 class="text-lg font-semibold mb-4">Archive ${count} Project${count !== 1 ? 's' : ''}?</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Reason for Archiving <span class="text-text-muted-light dark:text-text-muted-dark">(Optional)</span>
+                    </label>
+                    <textarea id="bulkArchiveReasonInput" rows="3" class="form-input" placeholder="e.g., Projects completed, Contracts ended, etc."></textarea>
+                </div>
+                <div class="flex gap-2 mb-3">
+                    <button type="button" onclick="setBulkArchiveReason('Projects completed successfully')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Completed</button>
+                    <button type="button" onclick="setBulkArchiveReason('Contracts ended')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Contract Ended</button>
+                    <button type="button" onclick="setBulkArchiveReason('Projects cancelled')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Cancelled</button>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeBulkArchiveModal()" class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                    <button type="button" onclick="confirmBulkArchive()" class="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700">Archive</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    return false;
+}
+
+function closeBulkArchiveModal(){
+    const modal = document.getElementById('bulkArchiveModal');
+    if (modal) modal.remove();
+}
+
+function setBulkArchiveReason(reason){
+    document.getElementById('bulkArchiveReasonInput').value = reason;
+}
+
+function confirmBulkArchive(){
+    const reason = document.getElementById('bulkArchiveReasonInput').value.trim();
+    document.getElementById('bulkNewStatus').value = 'archived';
+    document.getElementById('bulkArchiveReason').value = reason;
+    closeBulkArchiveModal();
+    submitBulkStatusChange();
+}
+
 function showBulkStatusChange(newStatus){
     const count = document.querySelectorAll('.project-checkbox:checked').length;
     if (count === 0) return false;
     const label = {active:'Active', inactive:'Inactive', archived:'Archived'}[newStatus] || newStatus;
     const msg = `Are you sure you want to mark ${count} project(s) as ${label}?`;
-    if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Project Status', confirmText: 'Change' }).then(function(ok){ if (ok){ document.getElementById('bulkNewStatus').value=newStatus; submitBulkStatusChange(); }}); }
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Change Project Status', confirmText: 'Change' }).then(function(ok){ if (ok){ document.getElementById('bulkNewStatus').value=newStatus; document.getElementById('bulkArchiveReason').value=''; submitBulkStatusChange(); }}); }
     return false;
 }
 function submitBulkStatusChange(){

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
-from app.models import User, Project, TimeEntry, Settings
+from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal
 from datetime import datetime, timedelta
 import pytz
 from app import db, track_page_view
@@ -73,6 +73,11 @@ def dashboard():
         if e.billable and e.project.billable:
             project_hours[e.project.id]['billable_hours'] += e.duration_hours
     top_projects = sorted(project_hours.values(), key=lambda x: x['hours'], reverse=True)[:5]
+    
+    # Get current week goal
+    current_week_goal = WeeklyTimeGoal.get_current_week_goal(current_user.id)
+    if current_week_goal:
+        current_week_goal.update_status()
 
     return render_template('main/dashboard.html',
                          active_timer=active_timer,
@@ -81,7 +86,8 @@ def dashboard():
                          today_hours=today_hours,
                          week_hours=week_hours,
                          month_hours=month_hours,
-                         top_projects=top_projects)
+                         top_projects=top_projects,
+                         current_week_goal=current_week_goal)
 
 @main_bp.route('/_health')
 def health_check():

@@ -135,15 +135,20 @@ class TimeEntry(db.Model):
         duration = self.end_time - self.start_time
         raw_seconds = int(duration.total_seconds())
         
-        # Apply rounding
-        rounding_minutes = Config.ROUNDING_MINUTES
-        if rounding_minutes > 1:
-            # Round to nearest interval
-            minutes = raw_seconds / 60
-            rounded_minutes = round(minutes / rounding_minutes) * rounding_minutes
-            self.duration_seconds = int(rounded_minutes * 60)
+        # Apply per-user rounding if user preferences are set
+        if self.user and hasattr(self.user, 'time_rounding_enabled'):
+            from app.utils.time_rounding import apply_user_rounding
+            self.duration_seconds = apply_user_rounding(raw_seconds, self.user)
         else:
-            self.duration_seconds = raw_seconds
+            # Fallback to global rounding setting for backward compatibility
+            rounding_minutes = Config.ROUNDING_MINUTES
+            if rounding_minutes > 1:
+                # Round to nearest interval
+                minutes = raw_seconds / 60
+                rounded_minutes = round(minutes / rounding_minutes) * rounding_minutes
+                self.duration_seconds = int(rounded_minutes * 60)
+            else:
+                self.duration_seconds = raw_seconds
     
     def stop_timer(self, end_time=None):
         """Stop an active timer"""

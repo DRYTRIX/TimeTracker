@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Expenses', 'url': url_for('expenses.list_expenses')},
+    {'text': 'Edit' if expense else 'New'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-receipt',
+    title_text=('Edit Expense' if expense else 'New Expense'),
+    subtitle_text=('Update expense details' if expense else 'Create a new expense record'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="max-w-4xl mx-auto">
+    <form method="POST" enctype="multipart/form-data" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Basic Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Basic Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Title <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="title" id="title" required
+                           value="{{ expense.title if expense else '' }}"
+                           placeholder="e.g., Flight to Berlin"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Description
+                    </label>
+                    <textarea name="description" id="description" rows="3"
+                              placeholder="Additional details about the expense..."
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ expense.description if expense else '' }}</textarea>
+                </div>
+                
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Category <span class="text-red-500">*</span>
+                    </label>
+                    <select name="category" id="category" required
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">Select Category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if expense and expense.category == cat %}selected{% endif %}>
+                            {{ cat|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="expense_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Expense Date <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="expense_date" id="expense_date" required
+                           value="{{ expense.expense_date.strftime('%Y-%m-%d') if expense else '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Amount Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-euro-sign mr-2"></i>Amount Details
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Amount <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="amount" id="amount" step="0.01" required
+                           value="{{ expense.amount if expense else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="tax_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tax Amount
+                    </label>
+                    <input type="number" name="tax_amount" id="tax_amount" step="0.01"
+                           value="{{ expense.tax_amount if expense else '0.00' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Currency
+                    </label>
+                    <select name="currency_code" id="currency_code"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="EUR" {% if not expense or expense.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
+                        <option value="USD" {% if expense and expense.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="GBP" {% if expense and expense.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                        <option value="CHF" {% if expense and expense.currency_code == 'CHF' %}selected{% endif %}>CHF</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <strong>Total Amount:</strong> <span id="total_display">{{ (expense.amount + (expense.tax_amount or 0)) if expense else '0.00' }}</span> {{ expense.currency_code if expense else 'EUR' }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Project & Client -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-project-diagram mr-2"></i>Association
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Project
+                    </label>
+                    <select name="project_id" id="project_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">No Project</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" 
+                                data-client-id="{{ project.client_id if project.client_id else '' }}"
+                                {% if expense and expense.project_id == project.id %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle"></i> Selecting a project will auto-fill the client</p>
+                </div>
+                
+                <div>
+                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Client
+                    </label>
+                    <select name="client_id" id="client_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">No Client</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}" {% if expense and expense.client_id == client.id %}selected{% endif %}>
+                            {{ client.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-credit-card mr-2"></i>Payment Details
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="payment_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Payment Method
+                    </label>
+                    <select name="payment_method" id="payment_method"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">Select Method</option>
+                        {% for method in payment_methods %}
+                        <option value="{{ method }}" {% if expense and expense.payment_method == method %}selected{% endif %}>
+                            {{ method.replace('_', ' ')|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="payment_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Payment Date
+                    </label>
+                    <input type="date" name="payment_date" id="payment_date"
+                           value="{{ expense.payment_date.strftime('%Y-%m-%d') if expense and expense.payment_date else '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="vendor" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Vendor
+                    </label>
+                    <input type="text" name="vendor" id="vendor"
+                           value="{{ expense.vendor if expense else '' }}"
+                           placeholder="e.g., Lufthansa"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Receipt & Additional Info -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-file-alt mr-2"></i>Receipt & Additional Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="receipt_file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Receipt File
+                    </label>
+                    <input type="file" name="receipt_file" id="receipt_file"
+                           accept=".png,.jpg,.jpeg,.gif,.pdf"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                    <p class="text-xs text-gray-500 mt-1">Allowed: PNG, JPG, GIF, PDF (Max 10MB)</p>
+                    {% if expense and expense.receipt_path %}
+                    <p class="text-xs text-green-600 mt-1">
+                        <i class="fas fa-check-circle"></i> Receipt uploaded
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="receipt_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Receipt/Invoice Number
+                    </label>
+                    <input type="text" name="receipt_number" id="receipt_number"
+                           value="{{ expense.receipt_number if expense else '' }}"
+                           placeholder="e.g., INV-2024-001"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Tags (comma-separated)
+                </label>
+                <input type="text" name="tags" id="tags"
+                       value="{{ expense.tags if expense else '' }}"
+                       placeholder="e.g., conference, client-meeting, urgent"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+            </div>
+            
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Notes
+                </label>
+                <textarea name="notes" id="notes" rows="3"
+                          placeholder="Additional notes..."
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ expense.notes if expense else '' }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Flags -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-toggle-on mr-2"></i>Options
+            </h3>
+            
+            <div class="space-y-3">
+                <div class="flex items-center">
+                    <input type="checkbox" name="billable" id="billable"
+                           {% if expense and expense.billable %}checked{% endif %}
+                           class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="billable" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Billable to Client</strong>
+                        <span class="block text-xs text-gray-500">This expense can be billed to the client</span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="checkbox" name="reimbursable" id="reimbursable"
+                           {% if not expense or expense.reimbursable %}checked{% endif %}
+                           class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="reimbursable" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Reimbursable</strong>
+                        <span class="block text-xs text-gray-500">Request reimbursement for this expense</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+            <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) if expense else url_for('expenses.list_expenses') }}" 
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i class="fas fa-times mr-2"></i>Cancel
+            </a>
+            
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ 'Update Expense' if expense else 'Create Expense' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Calculate and display total amount
+function updateTotal() {
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const taxAmount = parseFloat(document.getElementById('tax_amount').value) || 0;
+    const total = amount + taxAmount;
+    const currency = document.getElementById('currency_code').value;
+    document.getElementById('total_display').textContent = total.toFixed(2) + ' ' + currency;
+}
+
+document.getElementById('amount').addEventListener('input', updateTotal);
+document.getElementById('tax_amount').addEventListener('input', updateTotal);
+document.getElementById('currency_code').addEventListener('change', updateTotal);
+
+// Auto-select client when project is selected
+document.getElementById('project_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const clientId = selectedOption.getAttribute('data-client-id');
+    const clientSelect = document.getElementById('client_id');
+    
+    if (clientId) {
+        // Set the client dropdown to the project's client
+        clientSelect.value = clientId;
+        
+        // Visual feedback
+        clientSelect.style.transition = 'all 0.3s ease';
+        clientSelect.style.backgroundColor = '#d1fae5'; // Light green flash
+        setTimeout(() => {
+            clientSelect.style.backgroundColor = '';
+        }, 1000);
+    } else {
+        // If project has no client or "No Project" is selected, clear client selection
+        // But only if user hasn't manually selected a client
+        // We'll be conservative and not clear it automatically
+    }
+});
+
+// Set default expense date to today if creating new
+{% if not expense %}
+document.getElementById('expense_date').value = new Date().toISOString().split('T')[0];
+{% endif %}
+</script>
+
+{% endblock %}
+
