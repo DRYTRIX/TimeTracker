@@ -463,13 +463,10 @@ def admin_authenticated_client(client, admin_user):
 
 
 @pytest.fixture
-def auth_headers(authenticated_client):
-    """Create authentication headers for API tests (session-based).
-    
-    Note: This returns an empty dict because authentication is handled via session.
-    Tests should use authenticated_client directly instead of client + auth_headers.
-    This fixture exists for backward compatibility.
-    """
+def auth_headers(user):
+    """Create authentication headers for API tests (session-based)."""
+    # Note: For tests that use headers, they should use authenticated_client instead
+    # This fixture is here for backward compatibility
     return {}
 
 
