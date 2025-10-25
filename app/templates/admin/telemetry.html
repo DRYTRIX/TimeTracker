@@ -44,6 +44,7 @@
             <button type="submit" class="px-4 py-2 rounded-lg transition {% if telemetry.enabled %}bg-red-600 hover:bg-red-700 text-white{% else %}bg-green-600 hover:bg-green-700 text-white{% endif %}">
                 {% if telemetry.enabled %}Disable Telemetry{% else %}Enable Telemetry{% endif %}
             </button>
+            <p class="text-xs text-gray-600 mt-2">Tip: You can also manage this setting in <a href="{{ url_for('admin.settings') }}" class="text-primary hover:underline">Admin → Settings</a> (Privacy & Analytics section)</p>
         </form>
 
         {% if telemetry.enabled %}

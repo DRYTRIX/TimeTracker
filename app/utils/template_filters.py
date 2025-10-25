@@ -104,3 +104,48 @@ def register_template_filters(app):
             return f"{float(value):,.2f}"
         except Exception:
             return str(value)
+    
+    def get_logo_base64(logo_path):
+        """Convert logo file to base64 data URI for PDF embedding"""
+        import os
+        import base64
+        import mimetypes
+        
+        if not logo_path:
+            print("DEBUG: logo_path is None or empty")
+            return None
+            
+        if not os.path.exists(logo_path):
+            print(f"DEBUG: Logo file does not exist: {logo_path}")
+            return None
+        
+        try:
+            print(f"DEBUG: Reading logo from: {logo_path}")
+            with open(logo_path, 'rb') as logo_file:
+                logo_data = base64.b64encode(logo_file.read()).decode('utf-8')
+            
+            # Detect MIME type
+            mime_type, _ = mimetypes.guess_type(logo_path)
+            if not mime_type:
+                # Try to detect from file extension
+                ext = os.path.splitext(logo_path)[1].lower()
+                mime_map = {
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.svg': 'image/svg+xml',
+                    '.webp': 'image/webp'
+                }
+                mime_type = mime_map.get(ext, 'image/png')
+            
+            print(f"DEBUG: Logo encoded successfully, MIME type: {mime_type}, size: {len(logo_data)} bytes")
+            return f'data:{mime_type};base64,{logo_data}'
+        except Exception as e:
+            print(f"DEBUG: Error encoding logo: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return None
+    
+    # Make get_logo_base64 available in templates as a global function
+    app.jinja_env.globals.update(get_logo_base64=get_logo_base64)

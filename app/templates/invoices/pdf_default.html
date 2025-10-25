@@ -11,7 +11,14 @@
                 {% if settings.has_logo() %}
                     {% set logo_path = settings.get_logo_path() %}
                     {% if logo_path %}
-                        <img src="{{ Path(logo_path).resolve().as_uri() if Path and logo_path else 'file://' ~ logo_path }}" alt="{{ _('Company Logo') }}" class="company-logo">
+                        {# Base64 encode the logo for reliable PDF embedding #}
+                        {% set logo_data = get_logo_base64(logo_path) %}
+                        {% if logo_data %}
+                            <img src="{{ logo_data }}" alt="{{ _('Company Logo') }}" class="company-logo">
+                        {% else %}
+                            {# Fallback to file URI if base64 fails #}
+                            <img src="{{ Path(logo_path).resolve().as_uri() if Path and logo_path else 'file://' ~ logo_path }}" alt="{{ _('Company Logo') }}" class="company-logo">
+                        {% endif %}
                     {% endif %}
                 {% endif %}
                 <div>
