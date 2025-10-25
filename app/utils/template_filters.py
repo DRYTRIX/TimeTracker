@@ -104,3 +104,60 @@ def register_template_filters(app):
             return f"{float(value):,.2f}"
         except Exception:
             return str(value)
+
+    @app.template_filter('timeago')
+    def timeago_filter(dt):
+        """Convert a datetime to a 'time ago' string (e.g., '2 hours ago')"""
+        if dt is None:
+            return ""
+        
+        # Import here to avoid circular imports
+        from datetime import datetime, timezone
+        
+        # Ensure we're working with a timezone-aware datetime
+        if dt.tzinfo is None:
+            # Assume UTC if no timezone info
+            dt = dt.replace(tzinfo=timezone.utc)
+        
+        # Get current time in UTC
+        now = datetime.now(timezone.utc)
+        
+        # Calculate difference
+        diff = now - dt
+        
+        # Convert to seconds
+        seconds = diff.total_seconds()
+        
+        # Handle future dates
+        if seconds < 0:
+            return "just now"
+        
+        # Calculate time units
+        minutes = seconds / 60
+        hours = minutes / 60
+        days = hours / 24
+        weeks = days / 7
+        months = days / 30
+        years = days / 365
+        
+        # Return appropriate string
+        if seconds < 60:
+            return "just now"
+        elif minutes < 60:
+            m = int(minutes)
+            return f"{m} minute{'s' if m != 1 else ''} ago"
+        elif hours < 24:
+            h = int(hours)
+            return f"{h} hour{'s' if h != 1 else ''} ago"
+        elif days < 7:
+            d = int(days)
+            return f"{d} day{'s' if d != 1 else ''} ago"
+        elif weeks < 4:
+            w = int(weeks)
+            return f"{w} week{'s' if w != 1 else ''} ago"
+        elif months < 12:
+            mo = int(months)
+            return f"{mo} month{'s' if mo != 1 else ''} ago"
+        else:
+            y = int(years)
+            return f"{y} year{'s' if y != 1 else ''} ago"
