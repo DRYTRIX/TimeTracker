@@ -42,8 +42,8 @@
                 <tr class="border-b border-border-light dark:border-border-dark">
                     <td class="p-2">{{ item.description }}</td>
                     <td class="p-2">{{ "%.2f"|format(item.quantity) }}</td>
-                    <td class="p-2">{{ "%.2f"|format(item.unit_price) }}</td>
-                    <td class="p-2">{{ "%.2f"|format(item.total_amount) }}</td>
+                    <td class="p-2">{{ "%.2f"|format(item.unit_price) }} {{ invoice.currency_code }}</td>
+                    <td class="p-2">{{ "%.2f"|format(item.total_amount) }} {{ invoice.currency_code }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -71,8 +71,8 @@
                     <td class="p-2">{{ good.description or '-' }}</td>
                     <td class="p-2">{{ good.category|capitalize }}</td>
                     <td class="p-2">{{ "%.2f"|format(good.quantity) }}</td>
-                    <td class="p-2">{{ "%.2f"|format(good.unit_price) }}</td>
-                    <td class="p-2">{{ "%.2f"|format(good.total_amount) }}</td>
+                    <td class="p-2">{{ "%.2f"|format(good.unit_price) }} {{ invoice.currency_code }}</td>
+                    <td class="p-2">{{ "%.2f"|format(good.total_amount) }} {{ invoice.currency_code }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -84,15 +84,15 @@
         <div class="w-full md:w-1/3">
             <div class="flex justify-between">
                 <span>Subtotal</span>
-                <span>{{ "%.2f"|format(invoice.subtotal) }}</span>
+                <span>{{ "%.2f"|format(invoice.subtotal) }} {{ invoice.currency_code }}</span>
             </div>
             <div class="flex justify-between">
                 <span>Tax ({{ "%.2f"|format(invoice.tax_rate) }}%)</span>
-                <span>{{ "%.2f"|format(invoice.tax_amount) }}</span>
+                <span>{{ "%.2f"|format(invoice.tax_amount) }} {{ invoice.currency_code }}</span>
             </div>
             <div class="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>{{ "%.2f"|format(invoice.total_amount) }}</span>
+                <span>{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</span>
             </div>
         </div>
     </div>

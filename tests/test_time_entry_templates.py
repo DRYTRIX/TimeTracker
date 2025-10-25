@@ -239,6 +239,32 @@ class TestTimeEntryTemplateRoutes:
         response = client.get('/templates', follow_redirects=False)
         assert response.status_code == 302  # Redirect to login
     
+    @pytest.mark.smoke
+    def test_list_templates_with_usage_data(self, authenticated_client, user, project):
+        """Test templates list page renders correctly with templates that have usage data"""
+        # Create a template with usage data (last_used_at set)
+        from datetime import datetime, timezone
+        from app.models import TimeEntryTemplate
+        from app import db
+        
+        template = TimeEntryTemplate(
+            user_id=user.id,
+            name='Used Template',
+            project_id=project.id,
+            default_duration_minutes=60,
+            usage_count=5,
+            last_used_at=datetime.now(timezone.utc)
+        )
+        db.session.add(template)
+        db.session.commit()
+        
+        # Access the list page
+        response = authenticated_client.get('/templates')
+        assert response.status_code == 200
+        assert b'Used Template' in response.data
+        # Verify that timeago filter is working (should show "just now" or similar)
+        assert b'ago' in response.data or b'just now' in response.data
+    
     def test_create_template_page_get(self, authenticated_client):
         """Test accessing create template page"""
         response = authenticated_client.get('/templates/create')

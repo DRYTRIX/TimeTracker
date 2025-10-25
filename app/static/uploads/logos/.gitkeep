@@ -1,2 +1,2 @@
-# This file ensures the uploads directory is preserved in git
-# Company logos will be stored in this directory
+# This file ensures the logos directory is tracked by git
+# Logo files uploaded through the admin interface will be stored here

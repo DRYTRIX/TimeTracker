@@ -31,7 +31,7 @@
                 <td class="p-2">{{ invoice.invoice_number }}</td>
                 <td class="p-2">{{ invoice.client_name }}</td>
                 <td class="p-2">{{ invoice.status }}</td>
-                <td class="p-2">{{ "%.2f"|format(invoice.total_amount) }}</td>
+                <td class="p-2">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</td>
                 <td class="p-2">
                     <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="text-primary">View</a>
                 </td>
