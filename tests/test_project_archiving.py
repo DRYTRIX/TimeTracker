@@ -244,7 +244,7 @@ class TestProjectArchivingRoutes:
         )
         
         assert response.status_code == 200
-        assert b'Only administrators can archive projects' in response.data
+        assert b'You do not have permission to archive projects' in response.data
 
 
 class TestArchivedProjectValidation:

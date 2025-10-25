@@ -146,31 +146,51 @@ def test_client_has_notes_relationship(app, user, test_client):
 
 @pytest.mark.unit
 @pytest.mark.models
-def test_client_note_author_name_property(app, user, test_client):
+def test_client_note_author_name_property(app, test_client):
     """Test client note author_name property."""
     with app.app_context():
-        # Ensure user has no full_name set (clean state)
-        user.full_name = None
+        # Test with username only (no full_name)
+        user_without_fullname = User(
+            username='usernoname',
+            email='noname@example.com',
+            role='user'
+        )
+        user_without_fullname.is_active = True
+        db.session.add(user_without_fullname)
         db.session.commit()
         
-        # Test with username only
-        note = ClientNote(
-            content="Test note",
-            user_id=user.id,
+        note1 = ClientNote(
+            content="Test note 1",
+            user_id=user_without_fullname.id,
             client_id=test_client.id
         )
-        db.session.add(note)
+        db.session.add(note1)
         db.session.commit()
         
-        db.session.refresh(note)
-        db.session.refresh(user)
-        assert note.author_name == user.username
+        db.session.refresh(note1)
+        assert note1.author_name == "usernoname"
         
         # Test with full name
-        user.full_name = "Test User Full Name"
+        user_with_fullname = User(
+            username='userwithname',
+            email='withname@example.com',
+            role='user'
+        )
+        user_with_fullname.full_name = "Test User Full Name"
+        user_with_fullname.is_active = True
+        db.session.add(user_with_fullname)
         db.session.commit()
-        db.session.refresh(note)
-        assert note.author_name == "Test User Full Name"
+        
+        note2 = ClientNote(
+            content="Test note 2",
+            user_id=user_with_fullname.id,
+            client_id=test_client.id
+        )
+        db.session.add(note2)
+        db.session.commit()
+        
+        db.session.refresh(note2)
+        assert note2.author_name == "Test User Full Name"
 
 
 @pytest.mark.unit

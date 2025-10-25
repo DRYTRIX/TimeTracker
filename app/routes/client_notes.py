@@ -11,6 +11,9 @@ client_notes_bp = Blueprint('client_notes', __name__)
 @login_required
 def create_note(client_id):
     """Create a new note for a client"""
+    # Verify client exists first (before try block to let 404 abort properly)
+    client = Client.query.get_or_404(client_id)
+    
     try:
         content = request.form.get('content', '').strip()
         is_important = request.form.get('is_important', 'false').lower() == 'true'
@@ -19,9 +22,6 @@ def create_note(client_id):
         if not content:
             flash(_('Note content cannot be empty'), 'error')
             return redirect(url_for('clients.view_client', client_id=client_id))
-        
-        # Verify client exists
-        client = Client.query.get_or_404(client_id)
         
         # Create the note
         note = ClientNote(

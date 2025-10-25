@@ -297,7 +297,7 @@ class TestProjectArchiveProperties:
         
         # Create a temporary user
         temp_user = User(username='tempuser', email='temp@test.com')
-        temp_user.set_password('password')
+        temp_user.is_active = True  # Set after creation
         db.session.add(temp_user)
         db.session.commit()
         temp_user_id = temp_user.id
