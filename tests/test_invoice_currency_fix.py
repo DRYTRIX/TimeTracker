@@ -13,13 +13,17 @@ from app.models import User, Project, Client, Invoice, InvoiceItem, Settings
 @pytest.fixture
 def app():
     """Create and configure a test app instance"""
-    # Set test database URL before creating app
-    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+    # Create app with test configuration
+    test_config = {
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'WTF_CSRF_ENABLED': False,
+        'SECRET_KEY': 'test-secret-key-do-not-use-in-production',
+        'SERVER_NAME': 'localhost:5000',
+    }
     
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    app.config['WTF_CSRF_ENABLED'] = False
+    app = create_app(test_config)
     
     with app.app_context():
         db.create_all()
@@ -45,8 +49,7 @@ def client_fixture(app):
 def test_user(app):
     """Create a test user"""
     with app.app_context():
-        user = User(username='testuser', email='test@example.com', is_admin=True)
-        user.set_password('password123')
+        user = User(username='testuser', role='admin', email='test@example.com')
         db.session.add(user)
         db.session.commit()
         return user

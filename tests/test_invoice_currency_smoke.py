@@ -3,7 +3,6 @@ Smoke tests for invoice currency functionality
 Simple high-level tests to ensure the system works end-to-end
 """
 import pytest
-import os
 from datetime import date, timedelta
 from decimal import Decimal
 from app import create_app, db
@@ -13,13 +12,17 @@ from app.models import User, Project, Client, Invoice, Settings
 @pytest.fixture
 def app():
     """Create and configure a test app instance"""
-    # Set test database URL before creating app
-    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+    # Create app with test configuration
+    test_config = {
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'WTF_CSRF_ENABLED': False,
+        'SECRET_KEY': 'test-secret-key-do-not-use-in-production',
+        'SERVER_NAME': 'localhost:5000',
+    }
     
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    app.config['WTF_CSRF_ENABLED'] = False
+    app = create_app(test_config)
     
     with app.app_context():
         db.create_all()
@@ -32,8 +35,7 @@ def test_invoice_currency_smoke(app):
     """Smoke test: Create invoice and verify it uses settings currency"""
     with app.app_context():
         # Setup: Create user, client, project
-        user = User(username='smokeuser', email='smoke@example.com', is_admin=True)
-        user.set_password('password')
+        user = User(username='smokeuser', role='admin', email='smoke@example.com')
         db.session.add(user)
         
         client = Client(name='Smoke Client', email='client@example.com', created_by=1)
@@ -78,8 +80,7 @@ def test_pdf_generator_uses_settings_currency(app):
     """Smoke test: Verify PDF generator uses settings currency"""
     with app.app_context():
         # Setup
-        user = User(username='pdfuser', email='pdf@example.com', is_admin=True)
-        user.set_password('password')
+        user = User(username='pdfuser', role='admin', email='pdf@example.com')
         db.session.add(user)
         
         client = Client(name='PDF Client', email='pdf@example.com', created_by=1)
