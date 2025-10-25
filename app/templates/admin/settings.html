@@ -46,6 +46,149 @@
                     </div>
                 </div>
             </div>
+
+            <!-- User Management -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">User Management</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="allow_self_register" id="allow_self_register" {% if settings.allow_self_register %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="allow_self_register" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Allow self-registration (users can create accounts by entering any username on login page)</label>
+                    </div>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                        Note: Admin users are configured via the ADMIN_USERNAMES environment variable, not in this UI.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Company Branding -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">Company Branding</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="company_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name</label>
+                        <input type="text" name="company_name" id="company_name" value="{{ settings.company_name }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="company_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Email</label>
+                        <input type="email" name="company_email" id="company_email" value="{{ settings.company_email }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="company_phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Phone</label>
+                        <input type="text" name="company_phone" id="company_phone" value="{{ settings.company_phone }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="company_website" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Website</label>
+                        <input type="text" name="company_website" id="company_website" value="{{ settings.company_website }}" class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="company_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Address</label>
+                        <textarea name="company_address" id="company_address" rows="3" class="form-input">{{ settings.company_address }}</textarea>
+                    </div>
+                    <div>
+                        <label for="company_tax_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tax ID (optional)</label>
+                        <input type="text" name="company_tax_id" id="company_tax_id" value="{{ settings.company_tax_id }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="company_bank_info" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bank Information (optional)</label>
+                        <textarea name="company_bank_info" id="company_bank_info" rows="3" class="form-input">{{ settings.company_bank_info }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Company Logo Upload -->
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Company Logo</label>
+                    {% if settings.has_logo() %}
+                    <div class="mb-4">
+                        <img src="{{ settings.get_logo_url() }}" alt="Company Logo" class="max-h-24 mb-2">
+                        <form method="POST" action="{{ url_for('admin.remove_logo') }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">Remove Logo</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('admin.upload_logo') }}" enctype="multipart/form-data" class="flex items-center gap-4">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" class="form-input flex-1">
+                        <button type="submit" class="bg-secondary text-white px-4 py-2 rounded-lg whitespace-nowrap">Upload Logo</button>
+                    </form>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">Allowed formats: PNG, JPG, GIF, SVG, WEBP</p>
+                </div>
+            </div>
+
+            <!-- Invoice Defaults -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">Invoice Defaults</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="invoice_prefix" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Invoice Prefix</label>
+                        <input type="text" name="invoice_prefix" id="invoice_prefix" value="{{ settings.invoice_prefix }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="invoice_start_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Invoice Start Number</label>
+                        <input type="number" name="invoice_start_number" id="invoice_start_number" value="{{ settings.invoice_start_number }}" class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="invoice_terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Payment Terms</label>
+                        <textarea name="invoice_terms" id="invoice_terms" rows="3" class="form-input">{{ settings.invoice_terms }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="invoice_notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Invoice Notes</label>
+                        <textarea name="invoice_notes" id="invoice_notes" rows="3" class="form-input">{{ settings.invoice_notes }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Settings -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">Backup Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="backup_retention_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Backup Retention (Days)</label>
+                        <input type="number" name="backup_retention_days" id="backup_retention_days" value="{{ settings.backup_retention_days }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="backup_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Backup Time (HH:MM)</label>
+                        <input type="text" name="backup_time" id="backup_time" value="{{ settings.backup_time }}" placeholder="02:00" class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Settings -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">Export Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="export_delimiter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">CSV Export Delimiter</label>
+                        <select name="export_delimiter" id="export_delimiter" class="form-input">
+                            <option value="," {% if settings.export_delimiter == ',' %}selected{% endif %}>Comma (,)</option>
+                            <option value=";" {% if settings.export_delimiter == ';' %}selected{% endif %}>Semicolon (;)</option>
+                            <option value="\t" {% if settings.export_delimiter == '\t' %}selected{% endif %}>Tab</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Settings -->
+            <div>
+                <h2 class="text-lg font-semibold mb-4">Privacy & Analytics</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="allow_analytics" id="allow_analytics" {% if settings.allow_analytics %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="allow_analytics" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable anonymous usage analytics</label>
+                    </div>
+                    <div class="ml-6 text-xs text-text-muted-light dark:text-text-muted-dark space-y-1">
+                        <p>Help improve TimeTracker by sharing anonymous usage data:</p>
+                        <ul class="list-disc ml-4 space-y-0.5">
+                            <li>Platform and version information</li>
+                            <li>Feature usage patterns (no personal data)</li>
+                            <li>Performance and error metrics</li>
+                        </ul>
+                        <p class="mt-2"><strong>Privacy:</strong> All data is anonymized. No personal information, time entries, or client data is ever collected.</p>
+                        <p>This is the same setting as the telemetry preference shown during initial setup.</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="mt-8 pt-6 flex justify-end">
