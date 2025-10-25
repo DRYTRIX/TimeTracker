@@ -101,6 +101,10 @@ def create_invoice():
             "has_tax": tax_rate > 0
         })
         
+        # Get currency from settings
+        settings = Settings.get_settings()
+        currency_code = settings.currency if settings else 'USD'
+        
         # Create invoice
         invoice = Invoice(
             invoice_number=invoice_number,
@@ -113,7 +117,8 @@ def create_invoice():
             client_address=client_address,
             tax_rate=tax_rate,
             notes=notes,
-            terms=terms
+            terms=terms,
+            currency_code=currency_code
         )
         
         db.session.add(invoice)
@@ -643,7 +648,8 @@ def duplicate_invoice(invoice_id):
         client_id=original_invoice.client_id,
         tax_rate=original_invoice.tax_rate,
         notes=original_invoice.notes,
-        terms=original_invoice.terms
+        terms=original_invoice.terms,
+        currency_code=original_invoice.currency_code
     )
     
     db.session.add(new_invoice)
