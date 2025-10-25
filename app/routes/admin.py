@@ -305,6 +305,13 @@ def toggle_telemetry():
 def settings():
     """Manage system settings"""
     settings_obj = Settings.get_settings()
+    installation_config = get_installation_config()
+    
+    # Sync analytics preference from installation config to database on load
+    # (installation config is the source of truth for telemetry)
+    if settings_obj.allow_analytics != installation_config.get_telemetry_preference():
+        settings_obj.allow_analytics = installation_config.get_telemetry_preference()
+        db.session.commit()
     
     if request.method == 'POST':
         # Validate timezone
@@ -343,7 +350,18 @@ def settings():
         settings_obj.invoice_notes = request.form.get('invoice_notes', 'Thank you for your business!')
         
         # Update privacy and analytics settings
-        settings_obj.allow_analytics = request.form.get('allow_analytics') == 'on'
+        allow_analytics = request.form.get('allow_analytics') == 'on'
+        old_analytics_state = settings_obj.allow_analytics
+        settings_obj.allow_analytics = allow_analytics
+        
+        # Also update the installation config (used by telemetry system)
+        # This ensures the telemetry system sees the updated preference
+        installation_config.set_telemetry_preference(allow_analytics)
+        
+        # Log analytics preference change if it changed
+        if old_analytics_state != allow_analytics:
+            app_module.log_event("admin.analytics_toggled", user_id=current_user.id, new_state=allow_analytics)
+            app_module.track_event(current_user.id, "admin.analytics_toggled", {"enabled": allow_analytics})
         
         if not safe_commit('admin_update_settings'):
             flash('Could not update settings due to a database error. Please check server logs.', 'error')

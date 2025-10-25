@@ -71,8 +71,35 @@ class InvoicePDFGenerator:
             html = ''
         if not html:
             try:
-                html = render_template('invoices/pdf_default.html', invoice=self.invoice, settings=self.settings, Path=Path)
-            except Exception:
+                # Import helper functions for template
+                from app.utils.template_filters import get_logo_base64
+                from babel.dates import format_date as babel_format_date
+                
+                def format_date(value, format='medium'):
+                    """Format date for template"""
+                    if babel_format_date:
+                        return babel_format_date(value, format=format)
+                    return value.strftime('%Y-%m-%d') if value else ''
+                
+                def format_money(value):
+                    """Format money for template"""
+                    try:
+                        return f"{float(value):,.2f}"
+                    except Exception:
+                        return str(value)
+                
+                html = render_template('invoices/pdf_default.html', 
+                                     invoice=self.invoice, 
+                                     settings=self.settings, 
+                                     Path=Path,
+                                     get_logo_base64=get_logo_base64,
+                                     format_date=format_date,
+                                     format_money=format_money)
+            except Exception as e:
+                # Log the exception for debugging
+                import traceback
+                print(f"Error rendering PDF template: {e}")
+                print(traceback.format_exc())
                 html = f"<html><body><h1>{_('Invoice')} {self.invoice.invoice_number}</h1></body></html>"
         return html, css
     
@@ -237,13 +264,29 @@ class InvoicePDFGenerator:
         if self.settings.has_logo():
             logo_path = self.settings.get_logo_path()
             if logo_path and os.path.exists(logo_path):
-                # Build a cross-platform file URI (handles Windows and POSIX paths)
+                # Use base64 data URI for reliable PDF embedding (works better with WeasyPrint)
                 try:
-                    file_url = Path(logo_path).resolve().as_uri()
-                except Exception:
-                    # Fallback to naive file:// if as_uri fails
-                    file_url = f'file://{logo_path}'
-                return f'<img src="{file_url}" alt="Company Logo" class="company-logo">'
+                    import base64
+                    import mimetypes
+                    
+                    with open(logo_path, 'rb') as logo_file:
+                        logo_data = base64.b64encode(logo_file.read()).decode('utf-8')
+                    
+                    # Detect MIME type
+                    mime_type, _ = mimetypes.guess_type(logo_path)
+                    if not mime_type:
+                        # Default to PNG if can't detect
+                        mime_type = 'image/png'
+                    
+                    data_uri = f'data:{mime_type};base64,{logo_data}'
+                    return f'<img src="{data_uri}" alt="Company Logo" class="company-logo">'
+                except Exception as e:
+                    # Fallback to file URI if base64 fails
+                    try:
+                        file_url = Path(logo_path).resolve().as_uri()
+                    except Exception:
+                        file_url = f'file://{logo_path}'
+                    return f'<img src="{file_url}" alt="Company Logo" class="company-logo">'
         return ''
     
     def _get_company_tax_info(self):

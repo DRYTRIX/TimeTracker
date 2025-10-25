@@ -31,10 +31,16 @@ export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
 # Windows PowerShell:
 $env:SECRET_KEY = python -c "import secrets; print(secrets.token_hex(32))"
 
-# 3. Start TimeTracker
+# 3. (Optional) Set admin usernames
+# Linux/macOS:
+export ADMIN_USERNAMES=admin,manager
+# Windows PowerShell:
+$env:ADMIN_USERNAMES = "admin,manager"
+
+# 4. Start TimeTracker
 docker-compose up -d
 
-# 4. Access the application
+# 5. Access the application
 # Open your browser to: https://localhost
 # (Self‑signed certificate; your browser will show a warning the first time.)
 
@@ -42,6 +48,8 @@ docker-compose up -d
 # Use the example compose that publishes the app directly:
 # docker-compose -f docker-compose.example.yml up -d
 # Then open: http://localhost:8080
+
+# Note: Login with the username you set in ADMIN_USERNAMES (default: admin) to get admin access
 ```
 
 **That's it!** TimeTracker is now running with PostgreSQL.
@@ -92,9 +100,10 @@ python app.py
    - Example: `admin`, `john`, or your name
    - This creates your account automatically
 
-3. **First user becomes admin** automatically
-   - Full access to all features
-   - Can manage users and settings
+3. **Admin users are configured in the environment**
+   - Set via `ADMIN_USERNAMES` environment variable (default: `admin`)
+   - When you login with a username matching the list, you get admin role
+   - Example: If `ADMIN_USERNAMES=admin,manager`, logging in as "admin" or "manager" gives admin access
 
 4. **You're in!** Welcome to your dashboard
 
@@ -106,27 +115,49 @@ python app.py
 
 ### Step 1: Configure System Settings
 
-1. Go to **Admin → System Settings** (gear icon in top right)
+> **Important**: You need admin access for this step. Login with a username from `ADMIN_USERNAMES` (default: `admin`).
 
-2. **Set your company information**:
-   - Company name
-   - Address for invoices
-   - Optional: Upload your logo
+1. Go to **Admin → Settings** (in the left sidebar menu, expand "Admin", then click "Settings")
 
-3. **Configure regional settings**:
-   - **Timezone**: Your local timezone (e.g., `America/New_York`)
-   - **Currency**: Your preferred currency (e.g., `USD`, `EUR`, `GBP`)
+The Admin Settings page has multiple sections. Configure what you need:
 
-4. **Adjust timer behavior**:
-   - **Idle Timeout**: How long before auto-pause (default: 30 minutes)
-   - **Single Active Timer**: Allow only one running timer per user
-   - **Time Rounding**: Round to nearest minute/5 minutes/15 minutes
+#### General Settings
+- **Timezone**: Your local timezone (e.g., `America/New_York`, `Europe/Rome`)
+- **Currency**: Your preferred currency (e.g., `USD`, `EUR`, `GBP`)
 
-5. **Set user management**:
-   - **Allow Self-Registration**: Let users create their own accounts
-   - **Admin Usernames**: Comma-separated list of admin users
+#### Timer Settings
+- **Rounding (Minutes)**: Round to nearest 1/5/15 minutes
+- **Idle Timeout (Minutes)**: Auto-pause after idle (default: 30)
+- **Single Active Timer**: Allow only one running timer per user
 
-6. **Click Save** to apply settings
+#### User Management
+- **Allow Self-Registration**: ☑ Enable this to let users create accounts by entering any username on the login page
+- **Note**: Admin users are set via `ADMIN_USERNAMES` environment variable, not in this UI
+
+#### Company Branding
+- **Company Name**: Your company or business name
+- **Company Email**: Contact email for invoices
+- **Company Phone**: Contact phone number
+- **Company Website**: Your website URL
+- **Company Address**: Your billing address (multi-line)
+- **Tax ID**: Optional tax identification number
+- **Bank Information**: Optional bank account details for invoices
+- **Company Logo**: Upload your logo (PNG, JPG, GIF, SVG, WEBP)
+
+#### Invoice Defaults
+- **Invoice Prefix**: Prefix for invoice numbers (e.g., `INV`)
+- **Invoice Start Number**: Starting number for invoices (e.g., 1000)
+- **Default Payment Terms**: Terms text (e.g., "Payment due within 30 days")
+- **Default Invoice Notes**: Footer notes (e.g., "Thank you for your business!")
+
+#### Additional Settings
+- **Backup Settings**: Retention days and backup time
+- **Export Settings**: CSV delimiter preference
+- **Privacy & Analytics**: Allow analytics to help improve the application
+
+2. **Click "Save Settings"** at the bottom to apply all changes
+
+> **💡 Tip**: Don't confuse this with the **Settings** option in your account dropdown (top right) - that's for personal/user preferences. System-wide settings are in **Admin → Settings** in the left sidebar.
 
 ### Step 2: Add Your First Client
 
@@ -294,7 +325,7 @@ Break your project into manageable tasks:
 
 ### Customize Your Experience
 
-- **Upload your logo** for branded invoices
+- **Company branding**: Upload your logo and set company info in Admin → Settings
 - **Configure notifications** for task due dates
 - **Set up recurring time blocks** for regular tasks
 - **Create saved filters** for common report views
@@ -305,9 +336,10 @@ Break your project into manageable tasks:
 If you're setting up for a team:
 
 1. **Add team members**:
-   - Go to **Admin → Users**
-   - Users can self-register (if enabled) or admin can add them
-   - Assign roles (Admin/User)
+   - **Self-registration** (recommended): Enable in Admin → Settings → "Allow Self-Registration"
+   - **Admin creates users**: Go to Admin → Users → Create User
+   - **Admin roles**: Set via `ADMIN_USERNAMES` environment variable (comma-separated list)
+   - Regular users can be assigned Manager or User roles via Admin → Users → Edit
 
 2. **Assign projects**:
    - Projects are visible to all users
@@ -333,10 +365,13 @@ Ready to deploy for real use?
    DATABASE_URL=postgresql://user:pass@localhost:5432/timetracker
    ```
 
-2. **Set a secure secret key**:
+2. **Set a secure secret key and admin users**:
    ```bash
    # Generate a random key
    SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
+   
+   # Set admin usernames (comma-separated)
+   ADMIN_USERNAMES=admin,yourusername
    ```
 
 3. **Configure for production**:
@@ -411,9 +446,9 @@ docker-compose up -d
 
 ### How do I add more users?
 
-- Enable self-registration in settings, or
-- Users can just enter a username on first visit, or
-- Admin can create users in Admin → Users
+- **Enable self-registration**: In Admin → Settings, enable "Allow Self-Registration" - then anyone can create an account by entering a username on the login page
+- **Admin creates users**: In Admin → Users → Create User (requires admin access)
+- **Users in ADMIN_USERNAMES**: Any username listed in the `ADMIN_USERNAMES` environment variable will automatically get admin role when they login
 
 ### Can I export my data?
 
