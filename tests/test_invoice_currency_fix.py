@@ -52,6 +52,7 @@ def test_user(app):
         user = User(username='testuser', role='admin', email='test@example.com')
         db.session.add(user)
         db.session.commit()
+        db.session.refresh(user)  # Refresh to keep object in session
         return user
 
 
@@ -59,13 +60,15 @@ def test_user(app):
 def test_client_model(app, test_user):
     """Create a test client"""
     with app.app_context():
+        # Re-query user to get it in this session
+        user = db.session.get(User, test_user.id)
         client = Client(
             name='Test Client',
-            email='client@example.com',
-            created_by=test_user.id
+            email='client@example.com'
         )
         db.session.add(client)
         db.session.commit()
+        db.session.refresh(client)  # Refresh to keep object in session
         return client
 
 
@@ -73,16 +76,20 @@ def test_client_model(app, test_user):
 def test_project(app, test_user, test_client_model):
     """Create a test project"""
     with app.app_context():
+        # Re-query user and client to get them in this session
+        user = db.session.get(User, test_user.id)
+        client = db.session.get(Client, test_client_model.id)
         project = Project(
             name='Test Project',
-            client_id=test_client_model.id,
-            created_by=test_user.id,
+            client_id=client.id,
             billable=True,
-            hourly_rate=Decimal('100.00'),
-            status='active'
+            hourly_rate=Decimal('100.00')
         )
+        project.created_by = user.id
+        project.status = 'active'
         db.session.add(project)
         db.session.commit()
+        db.session.refresh(project)  # Refresh to keep object in session
         return project
 
 

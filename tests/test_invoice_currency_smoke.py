@@ -37,19 +37,22 @@ def test_invoice_currency_smoke(app):
         # Setup: Create user, client, project
         user = User(username='smokeuser', role='admin', email='smoke@example.com')
         db.session.add(user)
+        db.session.flush()  # Flush to get user.id
         
-        client = Client(name='Smoke Client', email='client@example.com', created_by=1)
+        client = Client(name='Smoke Client', email='client@example.com')
         db.session.add(client)
+        db.session.flush()  # Flush to get client.id
         
         project = Project(
             name='Smoke Project',
-            client_id=1,
-            created_by=1,
+            client_id=client.id,
             billable=True,
-            hourly_rate=Decimal('100.00'),
-            status='active'
+            hourly_rate=Decimal('100.00')
         )
+        project.created_by = user.id
+        project.status = 'active'
         db.session.add(project)
+        db.session.flush()  # Flush to get project.id
         
         # Set currency in settings
         settings = Settings.get_settings()
@@ -82,19 +85,22 @@ def test_pdf_generator_uses_settings_currency(app):
         # Setup
         user = User(username='pdfuser', role='admin', email='pdf@example.com')
         db.session.add(user)
+        db.session.flush()  # Flush to get user.id
         
-        client = Client(name='PDF Client', email='pdf@example.com', created_by=1)
+        client = Client(name='PDF Client', email='pdf@example.com')
         db.session.add(client)
+        db.session.flush()  # Flush to get client.id
         
         project = Project(
             name='PDF Project',
-            client_id=1,
-            created_by=1,
+            client_id=client.id,
             billable=True,
-            hourly_rate=Decimal('150.00'),
-            status='active'
+            hourly_rate=Decimal('150.00')
         )
+        project.created_by = user.id
+        project.status = 'active'
         db.session.add(project)
+        db.session.flush()  # Flush to get project.id
         
         settings = Settings.get_settings()
         settings.currency = 'SEK'
