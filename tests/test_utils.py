@@ -266,6 +266,169 @@ def test_format_money_filter_invalid(app):
         assert result == "not a number"
 
 
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_none(app):
+    """Test timeago filter with None."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        result = filter_func(None)
+        assert result == ""
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_just_now(app):
+    """Test timeago filter with very recent datetime."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime for 30 seconds ago
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now - datetime.timedelta(seconds=30)
+        result = filter_func(dt)
+        assert result == "just now"
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_minutes(app):
+    """Test timeago filter with minutes ago."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime for 5 minutes ago
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now - datetime.timedelta(minutes=5)
+        result = filter_func(dt)
+        assert "minute" in result
+        assert "ago" in result
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_hours(app):
+    """Test timeago filter with hours ago."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime for 3 hours ago
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now - datetime.timedelta(hours=3)
+        result = filter_func(dt)
+        assert "hour" in result
+        assert "ago" in result
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_days(app):
+    """Test timeago filter with days ago."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime for 2 days ago
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now - datetime.timedelta(days=2)
+        result = filter_func(dt)
+        assert "day" in result
+        assert "ago" in result
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_weeks(app):
+    """Test timeago filter with weeks ago."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime for 2 weeks ago
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now - datetime.timedelta(weeks=2)
+        result = filter_func(dt)
+        assert "week" in result
+        assert "ago" in result
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_months(app):
+    """Test timeago filter with months ago."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime for 60 days ago (2 months)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now - datetime.timedelta(days=60)
+        result = filter_func(dt)
+        assert "month" in result
+        assert "ago" in result
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_years(app):
+    """Test timeago filter with years ago."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime for 400 days ago (over a year)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now - datetime.timedelta(days=400)
+        result = filter_func(dt)
+        assert "year" in result
+        assert "ago" in result
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_future(app):
+    """Test timeago filter with future datetime."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create datetime in the future
+        now = datetime.datetime.now(datetime.timezone.utc)
+        dt = now + datetime.timedelta(hours=2)
+        result = filter_func(dt)
+        assert result == "just now"
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_naive_datetime(app):
+    """Test timeago filter with naive datetime (no timezone)."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        # Create naive datetime for 1 hour ago
+        dt = datetime.datetime.now() - datetime.timedelta(hours=1)
+        result = filter_func(dt)
+        # Should still work and convert to UTC
+        assert "ago" in result or result == "just now"
+
+
+@pytest.mark.unit
+@pytest.mark.utils
+def test_timeago_filter_singular_plural(app):
+    """Test timeago filter uses correct singular/plural forms."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get('timeago')
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        # Test singular (1 minute)
+        dt = now - datetime.timedelta(minutes=1)
+        result = filter_func(dt)
+        assert "1 minute ago" in result
+        
+        # Test plural (2 minutes)
+        dt = now - datetime.timedelta(minutes=2)
+        result = filter_func(dt)
+        assert "2 minutes ago" in result
+
+
 # ============================================================================
 # Context Processor Tests
 # ============================================================================
