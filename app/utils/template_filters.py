@@ -104,48 +104,60 @@ def register_template_filters(app):
             return f"{float(value):,.2f}"
         except Exception:
             return str(value)
-    
-    def get_logo_base64(logo_path):
-        """Convert logo file to base64 data URI for PDF embedding"""
-        import os
-        import base64
-        import mimetypes
+
+    @app.template_filter('timeago')
+    def timeago_filter(dt):
+        """Convert a datetime to a 'time ago' string (e.g., '2 hours ago')"""
+        if dt is None:
+            return ""
         
-        if not logo_path:
-            print("DEBUG: logo_path is None or empty")
-            return None
-            
-        if not os.path.exists(logo_path):
-            print(f"DEBUG: Logo file does not exist: {logo_path}")
-            return None
+        # Import here to avoid circular imports
+        from datetime import datetime, timezone
         
-        try:
-            print(f"DEBUG: Reading logo from: {logo_path}")
-            with open(logo_path, 'rb') as logo_file:
-                logo_data = base64.b64encode(logo_file.read()).decode('utf-8')
-            
-            # Detect MIME type
-            mime_type, _ = mimetypes.guess_type(logo_path)
-            if not mime_type:
-                # Try to detect from file extension
-                ext = os.path.splitext(logo_path)[1].lower()
-                mime_map = {
-                    '.png': 'image/png',
-                    '.jpg': 'image/jpeg',
-                    '.jpeg': 'image/jpeg',
-                    '.gif': 'image/gif',
-                    '.svg': 'image/svg+xml',
-                    '.webp': 'image/webp'
-                }
-                mime_type = mime_map.get(ext, 'image/png')
-            
-            print(f"DEBUG: Logo encoded successfully, MIME type: {mime_type}, size: {len(logo_data)} bytes")
-            return f'data:{mime_type};base64,{logo_data}'
-        except Exception as e:
-            print(f"DEBUG: Error encoding logo: {e}")
-            import traceback
-            print(traceback.format_exc())
-            return None
-    
-    # Make get_logo_base64 available in templates as a global function
-    app.jinja_env.globals.update(get_logo_base64=get_logo_base64)
+        # Ensure we're working with a timezone-aware datetime
+        if dt.tzinfo is None:
+            # Assume UTC if no timezone info
+            dt = dt.replace(tzinfo=timezone.utc)
+        
+        # Get current time in UTC
+        now = datetime.now(timezone.utc)
+        
+        # Calculate difference
+        diff = now - dt
+        
+        # Convert to seconds
+        seconds = diff.total_seconds()
+        
+        # Handle future dates
+        if seconds < 0:
+            return "just now"
+        
+        # Calculate time units
+        minutes = seconds / 60
+        hours = minutes / 60
+        days = hours / 24
+        weeks = days / 7
+        months = days / 30
+        years = days / 365
+        
+        # Return appropriate string
+        if seconds < 60:
+            return "just now"
+        elif minutes < 60:
+            m = int(minutes)
+            return f"{m} minute{'s' if m != 1 else ''} ago"
+        elif hours < 24:
+            h = int(hours)
+            return f"{h} hour{'s' if h != 1 else ''} ago"
+        elif days < 7:
+            d = int(days)
+            return f"{d} day{'s' if d != 1 else ''} ago"
+        elif weeks < 4:
+            w = int(weeks)
+            return f"{w} week{'s' if w != 1 else ''} ago"
+        elif months < 12:
+            mo = int(months)
+            return f"{mo} month{'s' if mo != 1 else ''} ago"
+        else:
+            y = int(years)
+            return f"{y} year{'s' if y != 1 else ''} ago"
