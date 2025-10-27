@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Calendar - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}?v=2">
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Calendar Header -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h1 class="text-3xl font-bold">
+                <i class="fas fa-calendar-alt mr-2 text-primary"></i>
+                {{ _('Calendar') }}
+            </h1>
+            
+            <div class="flex flex-wrap gap-3">
+                <!-- View Type Selector -->
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('calendar.view_calendar', view='day', date=current_date.strftime('%Y-%m-%d')) }}" 
+                       class="btn btn-sm {% if view_type == 'day' %}btn-primary{% else %}btn-secondary{% endif %}">
+                        <i class="fas fa-calendar-day mr-1"></i> {{ _('Day') }}
+                    </a>
+                    <a href="{{ url_for('calendar.view_calendar', view='week', date=current_date.strftime('%Y-%m-%d')) }}" 
+                       class="btn btn-sm {% if view_type == 'week' %}btn-primary{% else %}btn-secondary{% endif %}">
+                        <i class="fas fa-calendar-week mr-1"></i> {{ _('Week') }}
+                    </a>
+                    <a href="{{ url_for('calendar.view_calendar', view='month', date=current_date.strftime('%Y-%m-%d')) }}" 
+                       class="btn btn-sm {% if view_type == 'month' %}btn-primary{% else %}btn-secondary{% endif %}">
+                        <i class="fas fa-calendar mr-1"></i> {{ _('Month') }}
+                    </a>
+                </div>
+                
+                <!-- Add Event Button -->
+                <a href="{{ url_for('calendar.new_event', date=current_date.strftime('%Y-%m-%d')) }}" 
+                   class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus mr-2"></i>
+                    {{ _('New Event') }}
+                </a>
+            </div>
+        </div>
+        
+        <!-- Calendar Navigation -->
+        <div class="flex items-center justify-between mt-6">
+            <button id="prevBtn" class="btn btn-sm btn-secondary">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
+            <div class="flex items-center gap-4">
+                <button id="todayBtn" class="btn btn-sm btn-secondary">
+                    {{ _('Today') }}
+                </button>
+                <h2 id="calendarTitle" class="text-2xl font-semibold"></h2>
+            </div>
+            
+            <button id="nextBtn" class="btn btn-sm btn-secondary">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-3 mt-4">
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showEvents" checked class="form-checkbox">
+                <span class="ml-2">{{ _('Events') }}</span>
+            </label>
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showTasks" checked class="form-checkbox">
+                <span class="ml-2">{{ _('Tasks') }}</span>
+            </label>
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showTimeEntries" checked class="form-checkbox">
+                <span class="ml-2">{{ _('Time Entries') }}</span>
+            </label>
+        </div>
+    </div>
+    
+    <!-- Calendar Grid -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6">
+        <div id="calendarContainer" class="calendar-container">
+            <!-- Calendar will be rendered here by JavaScript -->
+            <div class="text-center py-12">
+                <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+                <p class="text-muted">{{ _('Loading calendar...') }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Event Details Modal -->
+    <div id="eventModal" class="modal" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ _('Event Details') }}</h3>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="eventDetails">
+                    <!-- Event details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        {{ _('Close') }}
+                    </button>
+                    <a id="editEventBtn" href="#" class="btn btn-primary">
+                        <i class="fas fa-edit mr-2"></i>{{ _('Edit') }}
+                    </a>
+                    <button id="deleteEventBtn" type="button" class="btn btn-danger">
+                        <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pass data to JavaScript -->
+<script>
+    window.calendarData = {
+        viewType: '{{ view_type }}',
+        currentDate: '{{ current_date.strftime('%Y-%m-%d') }}',
+        apiUrl: '{{ url_for('calendar.get_events') }}',
+        viewUrl: '{{ url_for('calendar.view_calendar') }}',
+        newEventUrl: '{{ url_for('calendar.new_event') }}',
+        editEventUrl: '{{ url_for('calendar.edit_event', event_id=0) }}'.replace('/0', ''),
+        deleteEventUrl: '{{ url_for('calendar.delete_event', event_id=0) }}'.replace('/0', ''),
+        moveEventUrl: '{{ url_for('calendar.move_event', event_id=0) }}'.replace('/0', ''),
+        resizeEventUrl: '{{ url_for('calendar.resize_event', event_id=0) }}'.replace('/0', ''),
+        csrfToken: '{{ csrf_token() }}'
+    };
+</script>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='calendar.js') }}?v=9"></script>
+{% endblock %}
+

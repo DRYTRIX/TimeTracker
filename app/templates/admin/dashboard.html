@@ -18,11 +18,33 @@
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h2 class="text-lg font-semibold mb-4">Admin Sections</h2>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <a href="{{ url_for('admin.list_users') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">Manage Users</a>
-        <a href="{{ url_for('permissions.list_roles') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">Roles & Permissions</a>
-        <a href="{{ url_for('admin.settings') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">Settings</a>
-        <a href="{{ url_for('admin.system_info') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">System Info</a>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ url_for('admin.list_users') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
+            <i class="fas fa-users mb-2"></i>
+            <div>Manage Users</div>
+        </a>
+        <a href="{{ url_for('permissions.list_roles') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
+            <i class="fas fa-shield-alt mb-2"></i>
+            <div>Roles & Permissions</div>
+        </a>
+        <a href="{{ url_for('admin.api_tokens') }}" class="bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700">
+            <i class="fas fa-key mb-2"></i>
+            <div>API Tokens</div>
+            <div class="text-xs mt-1 opacity-90">REST API Access</div>
+        </a>
+        <a href="{{ url_for('admin.email_support') }}" class="bg-purple-600 text-white p-4 rounded-lg text-center hover:bg-purple-700">
+            <i class="fas fa-envelope mb-2"></i>
+            <div>Email Configuration</div>
+            <div class="text-xs mt-1 opacity-90">Test & Configure</div>
+        </a>
+        <a href="{{ url_for('admin.settings') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
+            <i class="fas fa-cog mb-2"></i>
+            <div>Settings</div>
+        </a>
+        <a href="{{ url_for('admin.system_info') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
+            <i class="fas fa-info-circle mb-2"></i>
+            <div>System Info</div>
+        </a>
     </div>
 </div>
 

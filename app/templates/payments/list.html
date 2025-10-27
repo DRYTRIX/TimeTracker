@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Payments</h1>
+        <a href="{{ url_for('payments.create_payment') }}" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors">
+            <i class="fas fa-plus mr-2"></i>Record Payment
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Payments</h3>
+            <p class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{{ summary.total_payments }}</p>
+        </div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Amount</h3>
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">€{{ "%.2f"|format(summary.total_amount) }}</p>
+        </div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Completed</h3>
+            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">{{ summary.completed_count }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">€{{ "%.2f"|format(summary.completed_amount) }}</p>
+        </div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Gateway Fees</h3>
+            <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">€{{ "%.2f"|format(summary.total_fees) }}</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow mb-6">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <select name="status" id="status" class="form-input">
+                    <option value="">All</option>
+                    <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="failed" {% if filters.status == 'failed' %}selected{% endif %}>Failed</option>
+                    <option value="refunded" {% if filters.status == 'refunded' %}selected{% endif %}>Refunded</option>
+                </select>
+            </div>
+            <div>
+                <label for="method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method</label>
+                <select name="method" id="method" class="form-input">
+                    <option value="">All</option>
+                    {% for method in payment_methods %}
+                    <option value="{{ method }}" {% if filters.method == method %}selected{% endif %}>{{ method }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">From Date</label>
+                <input type="date" name="date_from" id="date_from" value="{{ filters.date_from }}" class="form-input">
+            </div>
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">To Date</label>
+                <input type="date" name="date_to" id="date_to" value="{{ filters.date_to }}" class="form-input">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg mr-2">Filter</button>
+                <a href="{{ url_for('payments.list_payments') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Payments Table -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+        {% if payments %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for payment in payments %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">#{{ payment.id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" class="text-primary hover:text-primary-dark">
+                                {{ payment.invoice.invoice_number }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-semibold text-green-600 dark:text-green-400">
+                                {{ payment.amount }} {{ payment.currency or 'EUR' }}
+                            </span>
+                            {% if payment.gateway_fee %}
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block">
+                                Fee: {{ payment.gateway_fee }} {{ payment.currency or 'EUR' }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else 'N/A' }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">
+                                {{ payment.method or 'N/A' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if payment.status == 'completed' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                                Completed
+                            </span>
+                            {% elif payment.status == 'pending' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                                Pending
+                            </span>
+                            {% elif payment.status == 'failed' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                                Failed
+                            </span>
+                            {% elif payment.status == 'refunded' %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100">
+                                Refunded
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="text-primary hover:text-primary-dark mr-3">View</a>
+                            <a href="{{ url_for('payments.edit_payment', payment_id=payment.id) }}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">Edit</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-8 text-center">
+            <p class="text-gray-500 dark:text-gray-400">No payments found.</p>
+            <a href="{{ url_for('payments.create_payment') }}" class="text-primary hover:text-primary-dark mt-2 inline-block">Record your first payment</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

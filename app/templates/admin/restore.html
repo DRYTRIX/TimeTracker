@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Restore Backup - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <div class="flex items-center mb-2">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Restore Backup</h1>
+                <span class="ml-3 px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm font-semibold rounded-full">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>Danger Operation
+                </span>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400">Restore your database from a backup file</p>
+        </div>
+        <a href="{{ url_for('admin.backups_management') }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Backups
+        </a>
+    </div>
+
+    <!-- Critical Warning Banner -->
+    <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
+                    <i class="fas fa-radiation mr-2"></i>Critical Warning
+                </h3>
+                <div class="text-red-700 dark:text-red-300 space-y-1">
+                    <p><strong>⚠️ This will replace ALL current data in your database!</strong></p>
+                    <p>• All current time entries, projects, users, and settings will be overwritten</p>
+                    <p>• Make sure you have a current backup before proceeding</p>
+                    <p>• This action cannot be undone once completed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Display (if restore is running) -->
+    {% if progress %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <i class="fas fa-sync-alt {% if progress.status == 'running' %}fa-spin{% endif %} mr-2"></i>
+            Restore Progress
+        </h2>
+        
+        <div class="mb-4">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
+                <span class="px-3 py-1 rounded-full text-sm font-semibold
+                    {% if progress.status == 'done' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
+                    {% elif progress.status == 'error' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200
+                    {% else %}bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200{% endif %}">
+                    {{ progress.status|title }}
+                </span>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-2">
+                <div class="bg-blue-600 h-4 rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold" 
+                     style="width: {{ progress.percent }}%">
+                    {{ progress.percent }}%
+                </div>
+            </div>
+            
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <i class="fas fa-info-circle mr-1"></i>{{ progress.message }}
+            </p>
+        </div>
+
+        {% if progress.status == 'done' %}
+        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <p class="text-green-800 dark:text-green-200 font-semibold">
+                <i class="fas fa-check-circle mr-2"></i>Restore completed successfully!
+            </p>
+            <p class="text-sm text-green-700 dark:text-green-300 mt-2">
+                Your database has been restored. You may need to log in again.
+            </p>
+            <div class="mt-4">
+                <a href="{{ url_for('main.dashboard') }}" class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-home mr-2"></i>Go to Dashboard
+                </a>
+            </div>
+        </div>
+        {% elif progress.status == 'error' %}
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <p class="text-red-800 dark:text-red-200 font-semibold">
+                <i class="fas fa-times-circle mr-2"></i>Restore failed!
+            </p>
+            <p class="text-sm text-red-700 dark:text-red-300 mt-2">{{ progress.message }}</p>
+            <div class="mt-4">
+                <a href="{{ url_for('admin.restore') }}" class="inline-block bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-redo mr-2"></i>Try Again
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if progress.status == 'running' %}
+        <script>
+        // Auto-refresh every 2 seconds while running
+        setTimeout(function() {
+            window.location.href = "{{ url_for('admin.restore', token=token) }}";
+        }, 2000);
+        </script>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Upload Backup Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-upload mr-2"></i>Upload Backup File
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <form action="{{ url_for('admin.restore') }}" method="POST" enctype="multipart/form-data" id="restoreForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-6">
+                            <label for="backup_file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Select Backup Archive (.zip)
+                            </label>
+                            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-blue-500 transition-colors">
+                                <div class="space-y-1 text-center">
+                                    <i class="fas fa-file-archive text-gray-400 text-5xl mb-3"></i>
+                                    <div class="flex text-sm text-gray-600 dark:text-gray-400">
+                                        <label for="backup_file" class="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                                            <span>Upload a file</span>
+                                            <input id="backup_file" name="backup_file" type="file" accept=".zip" required class="sr-only" onchange="updateFileName(this)">
+                                        </label>
+                                        <p class="pl-1">or drag and drop</p>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        ZIP archive only (created by backup function)
+                                    </p>
+                                    <p id="fileName" class="text-sm font-medium text-gray-900 dark:text-white mt-2"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Confirmation Checkbox -->
+                        <div class="mb-6">
+                            <label class="flex items-start">
+                                <input type="checkbox" id="confirmRestore" required 
+                                       class="mt-1 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500">
+                                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                    I understand that this will <strong class="text-red-600 dark:text-red-400">permanently replace all current data</strong> 
+                                    and I have a recent backup of the current database.
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button type="submit" id="restoreBtn" disabled
+                                    class="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                                <i class="fas fa-undo-alt mr-2"></i>Restore Database
+                            </button>
+                            <a href="{{ url_for('admin.backups_management') }}" 
+                               class="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold transition-colors">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Safety Information Sidebar -->
+        <div class="lg:col-span-1">
+            <!-- Pre-Restore Checklist -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-tasks mr-2"></i>Pre-Restore Checklist
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <ul class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>Create a backup of current data</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>Verify backup file integrity</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>Ensure no users are actively working</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>Stop all running timers</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                            <span>Note current system state</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- What Gets Restored -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-database mr-2"></i>What Gets Restored
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                        <li><i class="fas fa-database text-blue-500 mr-2"></i>Complete database</li>
+                        <li><i class="fas fa-users text-blue-500 mr-2"></i>All users & permissions</li>
+                        <li><i class="fas fa-clock text-blue-500 mr-2"></i>All time entries</li>
+                        <li><i class="fas fa-project-diagram text-blue-500 mr-2"></i>Projects & tasks</li>
+                        <li><i class="fas fa-file-invoice text-blue-500 mr-2"></i>Invoices & expenses</li>
+                        <li><i class="fas fa-cog text-blue-500 mr-2"></i>System settings</li>
+                        <li><i class="fas fa-file-upload text-blue-500 mr-2"></i>Uploaded files</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Post-Restore Steps -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 class="font-semibold text-blue-900 dark:text-blue-300 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>After Restore
+                </h4>
+                <ul class="text-sm text-blue-700 dark:text-blue-400 space-y-1">
+                    <li>• Log in again with your credentials</li>
+                    <li>• Verify data integrity</li>
+                    <li>• Review system settings</li>
+                    <li>• Check user permissions</li>
+                    <li>• Test critical functions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update file name display
+function updateFileName(input) {
+    const fileName = input.files[0]?.name || '';
+    document.getElementById('fileName').textContent = fileName ? `Selected: ${fileName}` : '';
+    
+    // Enable restore button if file is selected and checkbox is checked
+    updateRestoreButton();
+}
+
+// Enable/disable restore button based on confirmation checkbox
+document.getElementById('confirmRestore').addEventListener('change', updateRestoreButton);
+
+function updateRestoreButton() {
+    const fileSelected = document.getElementById('backup_file').files.length > 0;
+    const confirmed = document.getElementById('confirmRestore').checked;
+    document.getElementById('restoreBtn').disabled = !(fileSelected && confirmed);
+}
+
+// Add loading state to form submission
+document.getElementById('restoreForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('restoreBtn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Starting Restore...';
+    btn.disabled = true;
+});
+
+// Drag and drop support
+const dropZone = document.querySelector('input[type="file"]').closest('.border-dashed');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+        dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+    }, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+        dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+    }, false);
+});
+
+dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    document.getElementById('backup_file').files = files;
+    updateFileName(document.getElementById('backup_file'));
+}, false);
+</script>
+{% endblock %}
+

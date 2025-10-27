@@ -42,6 +42,9 @@ class User(UserMixin, db.Model):
     time_rounding_minutes = db.Column(db.Integer, default=1, nullable=False)  # Rounding interval: 1, 5, 10, 15, 30, 60
     time_rounding_method = db.Column(db.String(10), default='nearest', nullable=False)  # 'nearest', 'up', or 'down'
     
+    # Overtime settings
+    standard_hours_per_day = db.Column(db.Float, default=8.0, nullable=False)  # Standard working hours per day for overtime calculation
+    
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     project_costs = db.relationship('ProjectCost', backref='user', lazy='dynamic', cascade='all, delete-orphan')
@@ -53,9 +56,21 @@ class User(UserMixin, db.Model):
         self.role = role
         self.email = (email or None)
         self.full_name = (full_name or None)
+        # Set default for standard_hours_per_day if not set by SQLAlchemy
+        if not hasattr(self, 'standard_hours_per_day') or self.standard_hours_per_day is None:
+            self.standard_hours_per_day = 8.0
     
     def __repr__(self):
         return f'<User {self.username}>'
+    
+    def set_password(self, password):
+        """
+        Stub method for test compatibility.
+        This application uses username-only authentication (or OIDC),
+        so passwords are not actually used or stored.
+        """
+        # No-op: this application doesn't use password authentication
+        pass
     
     @property
     def is_admin(self):

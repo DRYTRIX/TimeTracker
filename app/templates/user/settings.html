@@ -200,6 +200,43 @@
             </div>
         </div>
 
+        <!-- Overtime Settings -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-business-time mr-2"></i>{{ _('Overtime Settings') }}
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {{ _('Set your standard working hours per day. Any time worked beyond this will be counted as overtime.') }}
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="standard_hours_per_day" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Standard Hours Per Day') }}
+                    </label>
+                    <div class="relative">
+                        <input type="number" id="standard_hours_per_day" name="standard_hours_per_day" 
+                               value="{{ user.standard_hours_per_day }}"
+                               min="0.5" max="24" step="0.5"
+                               class="w-full px-3 py-2 pr-16 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        <span class="absolute right-3 top-2.5 text-sm text-gray-500 dark:text-gray-400 pointer-events-none">{{ _('hours') }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Typically 8 hours for a full-time job') }}</p>
+                </div>
+                
+                <div class="flex items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
+                    <div>
+                        <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                            <i class="fas fa-info-circle mr-1"></i>{{ _('How it works') }}
+                        </p>
+                        <p class="text-xs text-blue-800 dark:text-blue-200">
+                            {{ _('If you work more than your standard hours in a day, the extra time will be tracked as overtime in reports and analytics.') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Regional Settings -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">

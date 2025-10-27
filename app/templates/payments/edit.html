@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Edit Payment #{{ payment.id }}</h1>
+        <div class="space-x-2">
+            <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="text-primary hover:text-primary-dark">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Payment
+            </a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+        <form method="POST" action="{{ url_for('payments.edit_payment', payment_id=payment.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Invoice Info (Read-only) -->
+            <div class="mb-6 p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Invoice</h3>
+                <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" class="text-primary hover:text-primary-dark font-semibold">
+                    {{ payment.invoice.invoice_number }} - {{ payment.invoice.client_name }}
+                </a>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Amount -->
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Amount <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="amount" id="amount" step="0.01" min="0.01" required
+                           value="{{ payment.amount }}"
+                           class="form-input">
+                </div>
+
+                <!-- Currency -->
+                <div>
+                    <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                    <input type="text" name="currency" id="currency" maxlength="3"
+                           value="{{ payment.currency or 'EUR' }}"
+                           class="form-input">
+                </div>
+
+                <!-- Payment Date -->
+                <div>
+                    <label for="payment_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Payment Date <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="payment_date" id="payment_date" required
+                           value="{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '' }}"
+                           class="form-input">
+                </div>
+
+                <!-- Payment Method -->
+                <div>
+                    <label for="method" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                    <select name="method" id="method"
+                            class="form-input">
+                        <option value="">Select method</option>
+                        <option value="bank_transfer" {% if payment.method == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
+                        <option value="cash" {% if payment.method == 'cash' %}selected{% endif %}>Cash</option>
+                        <option value="check" {% if payment.method == 'check' %}selected{% endif %}>Check</option>
+                        <option value="credit_card" {% if payment.method == 'credit_card' %}selected{% endif %}>Credit Card</option>
+                        <option value="debit_card" {% if payment.method == 'debit_card' %}selected{% endif %}>Debit Card</option>
+                        <option value="paypal" {% if payment.method == 'paypal' %}selected{% endif %}>PayPal</option>
+                        <option value="stripe" {% if payment.method == 'stripe' %}selected{% endif %}>Stripe</option>
+                        <option value="wire_transfer" {% if payment.method == 'wire_transfer' %}selected{% endif %}>Wire Transfer</option>
+                        <option value="other" {% if payment.method == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                    <select name="status" id="status"
+                            class="form-input">
+                        <option value="completed" {% if payment.status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="pending" {% if payment.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="failed" {% if payment.status == 'failed' %}selected{% endif %}>Failed</option>
+                        <option value="refunded" {% if payment.status == 'refunded' %}selected{% endif %}>Refunded</option>
+                    </select>
+                </div>
+
+                <!-- Reference -->
+                <div>
+                    <label for="reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Reference/Transaction ID</label>
+                    <input type="text" name="reference" id="reference" maxlength="100"
+                           value="{{ payment.reference or '' }}"
+                           class="form-input">
+                </div>
+
+                <!-- Gateway Transaction ID -->
+                <div>
+                    <label for="gateway_transaction_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gateway Transaction ID</label>
+                    <input type="text" name="gateway_transaction_id" id="gateway_transaction_id" maxlength="255"
+                           value="{{ payment.gateway_transaction_id or '' }}"
+                           class="form-input">
+                </div>
+
+                <!-- Gateway Fee -->
+                <div>
+                    <label for="gateway_fee" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gateway Fee</label>
+                    <input type="number" name="gateway_fee" id="gateway_fee" step="0.01" min="0"
+                           value="{{ payment.gateway_fee or '' }}"
+                           class="form-input">
+                </div>
+
+                <!-- Notes -->
+                <div class="md:col-span-2">
+                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                    <textarea name="notes" id="notes" rows="3"
+                              class="form-input">{{ payment.notes or '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-md transition-colors">
+                    <i class="fas fa-save mr-2"></i>Update Payment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

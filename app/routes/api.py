@@ -821,13 +821,22 @@ def bulk_entries_action():
 @api_bp.route('/api/calendar/events')
 @login_required
 def calendar_events():
-    """Return calendar events for the current user in a date range with filtering and color coding."""
+    """Return calendar events, tasks, and time entries for the current user in a date range."""
+    from app.models import CalendarEvent as CalendarEventModel
+    
     start = request.args.get('start')
     end = request.args.get('end')
+    include_tasks = request.args.get('include_tasks', 'true').lower() == 'true'
+    include_time_entries = request.args.get('include_time_entries', 'true').lower() == 'true'
     project_id = request.args.get('project_id', type=int)
     task_id = request.args.get('task_id', type=int)
     tags = request.args.get('tags', '').strip()
-    user_id = request.args.get('user_id', type=int) if current_user.is_admin else None
+    
+    # Get user_id from query param (admins only) or default to current user
+    if current_user.is_admin and request.args.get('user_id'):
+        user_id = request.args.get('user_id', type=int)
+    else:
+        user_id = current_user.id
     
     if not (start and end):
         return jsonify({'error': 'start and end are required'}), 400
@@ -849,26 +858,14 @@ def calendar_events():
     if not (start_dt and end_dt):
         return jsonify({'error': 'Invalid date range'}), 400
 
-    # Build query with filters
-    q = TimeEntry.query
-    if user_id and current_user.is_admin:
-        q = q.filter(TimeEntry.user_id == user_id)
-    else:
-        q = q.filter(TimeEntry.user_id == current_user.id)
-    
-    q = q.filter(TimeEntry.start_time < end_dt, (TimeEntry.end_time.is_(None)) | (TimeEntry.end_time > start_dt))
-    
-    if project_id:
-        q = q.filter(TimeEntry.project_id == project_id)
-    if task_id:
-        q = q.filter(TimeEntry.task_id == task_id)
-    if tags:
-        q = q.filter(TimeEntry.tags.ilike(f'%{tags}%'))
-    
-    items = q.order_by(TimeEntry.start_time.asc()).all()
-
-    events = []
-    now_local = local_now()
+    # Get all calendar items using the new method
+    result = CalendarEventModel.get_events_in_range(
+        user_id=user_id,
+        start_date=start_dt,
+        end_date=end_dt,
+        include_tasks=include_tasks,
+        include_time_entries=include_time_entries
+    )
     
     # Color scheme for projects (deterministic based on project ID)
     def get_project_color(project_id):
@@ -876,44 +873,81 @@ def calendar_events():
             '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
             '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'
         ]
-        return colors[project_id % len(colors)]
+        return colors[project_id % len(colors)] if project_id else '#6b7280'
     
-    for e in items:
-        # Build detailed title
-        title_parts = []
-        if e.project:
-            title_parts.append(e.project.name)
-        if e.task:
-            title_parts.append(f"• {e.task.name}")
-        elif e.notes:
-            note_preview = e.notes[:30] + ('...' if len(e.notes) > 30 else '')
-            title_parts.append(f"• {note_preview}")
+    # Apply filters and format time entries
+    time_entries = []
+    for e in result.get('time_entries', []):
+        # Apply filters
+        if project_id and e.get('projectId') != project_id:
+            continue
+        if task_id and e.get('taskId') != task_id:
+            continue
+        if tags and tags.lower() not in (e.get('notes') or '').lower():
+            continue
         
-        ev = {
-            'id': e.id,
-            'title': ' '.join(title_parts) if title_parts else 'Time Entry',
-            'start': e.start_time.isoformat(),
-            'end': (e.end_time or now_local).isoformat(),
+        time_entries.append({
+            'id': e['id'],
+            'title': e['title'],
+            'start': e['start'],
+            'end': e['end'],
             'editable': True,
             'allDay': False,
-            'backgroundColor': get_project_color(e.project_id) if e.project_id else '#6b7280',
-            'borderColor': get_project_color(e.project_id) if e.project_id else '#6b7280',
+            'backgroundColor': get_project_color(e.get('projectId')),
+            'borderColor': get_project_color(e.get('projectId')),
             'extendedProps': {
-                'project_id': e.project_id,
-                'project_name': e.project.name if e.project else None,
-                'task_id': e.task_id,
-                'task_name': e.task.name if e.task else None,
-                'notes': e.notes,
-                'tags': e.tags,
-                'billable': e.billable,
-                'duration_hours': e.duration_hours,
-                'user_id': e.user_id,
-                'source': e.source
+                **e,
+                'item_type': 'time_entry'
             }
+        })
+    
+    # Format tasks
+    tasks = []
+    for t in result.get('tasks', []):
+        tasks.append({
+            'id': t['id'],
+            'title': t['title'],
+            'start': t['dueDate'],
+            'end': t['dueDate'],
+            'allDay': True,
+            'editable': False,
+            'backgroundColor': '#f59e0b',
+            'borderColor': '#f59e0b',
+            'extendedProps': {
+                **t,
+                'item_type': 'task'
+            }
+        })
+    
+    # Format calendar events
+    events = []
+    for ev in result.get('events', []):
+        events.append({
+            'id': ev['id'],
+            'title': ev['title'],
+            'start': ev['start'],
+            'end': ev['end'],
+            'allDay': ev.get('allDay', False),
+            'editable': True,
+            'backgroundColor': ev.get('color', '#3b82f6'),
+            'borderColor': ev.get('color', '#3b82f6'),
+            'extendedProps': {
+                **ev,
+                'item_type': 'event'
+            }
+        })
+    
+    # Combine all items
+    all_items = events + tasks + time_entries
+    
+    return jsonify({
+        'events': all_items,
+        'summary': {
+            'calendar_events': len(events),
+            'tasks': len(tasks),
+            'time_entries': len(time_entries)
         }
-        events.append(ev)
-
-    return jsonify({'events': events})
+    })
 
 @api_bp.route('/api/calendar/export')
 @login_required

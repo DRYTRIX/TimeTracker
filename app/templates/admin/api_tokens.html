@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}API Tokens - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">API Tokens</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Manage REST API authentication tokens</p>
+        </div>
+        <button onclick="showCreateTokenModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Create Token
+        </button>
+    </div>
+
+    <!-- API Documentation Link -->
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+        <div class="flex items-start">
+            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="font-semibold text-blue-900 dark:text-blue-300">API Documentation</h3>
+                <p class="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                    View the complete REST API documentation at 
+                    <a href="/api/docs" target="_blank" class="underline hover:text-blue-900 dark:hover:text-blue-200">
+                        /api/docs
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tokens List -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Token Prefix</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Scopes</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Last Used</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {% for token in tokens %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ token.name }}</div>
+                        {% if token.description %}
+                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ token.description }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {{ token.user.username }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <code class="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ token.token_prefix }}...</code>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-wrap gap-1">
+                            {% for scope in token.scopes.split(',') if token.scopes %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                {{ scope.strip() }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if token.is_active and (not token.expires_at or token.expires_at > now) %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                            Active
+                        </span>
+                        {% elif token.expires_at and token.expires_at < now %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                            Expired
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                            Inactive
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {% if token.last_used_at %}
+                        {{ token.last_used_at.strftime('%Y-%m-%d %H:%M') }}
+                        <div class="text-xs text-gray-400 dark:text-gray-500">{{ token.usage_count }} uses</div>
+                        {% else %}
+                        <span class="text-gray-400 dark:text-gray-500">Never</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="toggleToken({{ token.id }}, {{ token.is_active|tojson }})" 
+                                class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 mr-3">
+                            {% if token.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                        <button onclick="deleteToken({{ token.id }})" 
+                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if not tokens %}
+        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+            </svg>
+            <p class="mt-2">No API tokens created yet</p>
+            <p class="text-sm mt-1">Create your first token to start using the REST API</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Token Modal -->
+<div id="createTokenModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Create API Token</h3>
+        </div>
+        <form id="createTokenForm" class="px-6 py-4">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name *</label>
+                    <input type="text" name="name" required 
+                           class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">A descriptive name for this token</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                    <textarea name="description" rows="2" 
+                              class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">User *</label>
+                    <select name="user_id" required 
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Scopes *</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:projects" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:projects - View projects</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:projects" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:projects - Create/update projects</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:time_entries" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:time_entries - View time entries</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:time_entries" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:time_entries - Create/update time entries</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:tasks" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:tasks - View tasks</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:tasks" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:tasks - Create/update tasks</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:clients" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:clients - View clients</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:clients" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:clients - Create/update clients</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:reports" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:reports - View reports</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="admin:all" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-red-600 dark:text-red-400 font-medium">admin:all - Full access (use with caution)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Expires In (days)</label>
+                    <input type="number" name="expires_days" min="1" max="3650" 
+                           class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Leave empty for tokens that never expire</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="hideCreateTokenModal()" 
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                    Create Token
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Token Display Modal -->
+<div id="tokenDisplayModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">API Token Created</h3>
+        </div>
+        <div class="px-6 py-4">
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+                <div class="flex">
+                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <div class="text-sm text-yellow-700 dark:text-yellow-400">
+                        <strong>Important:</strong> This is the only time you'll see this token. Copy it now and store it securely.
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your API Token:</label>
+                <div class="flex items-center">
+                    <input type="text" id="newTokenValue" readonly 
+                           class="flex-1 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md font-mono text-sm">
+                    <button onclick="copyToken()" 
+                            class="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-r-md">
+                        Copy
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Usage Examples:</h4>
+                <div class="space-y-2">
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Using Authorization header:</p>
+                        <pre class="text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded overflow-x-auto"><code>curl -H "Authorization: Bearer YOUR_TOKEN" {{ request.url_root }}api/v1/projects</code></pre>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Using X-API-Key header:</p>
+                        <pre class="text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded overflow-x-auto"><code>curl -H "X-API-Key: YOUR_TOKEN" {{ request.url_root }}api/v1/projects</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="hideTokenDisplayModal()" 
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
+                    I've Saved My Token
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showCreateTokenModal() {
+    document.getElementById('createTokenModal').classList.remove('hidden');
+}
+
+function hideCreateTokenModal() {
+    document.getElementById('createTokenModal').classList.add('hidden');
+    document.getElementById('createTokenForm').reset();
+}
+
+function hideTokenDisplayModal() {
+    document.getElementById('tokenDisplayModal').classList.add('hidden');
+    location.reload();
+}
+
+function copyToken() {
+    const input = document.getElementById('newTokenValue');
+    input.select();
+    document.execCommand('copy');
+    alert('Token copied to clipboard!');
+}
+
+document.getElementById('createTokenForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    // Collect selected scopes
+    const scopes = [];
+    document.querySelectorAll('input[name="scopes"]:checked').forEach(cb => {
+        scopes.push(cb.value);
+    });
+    
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        user_id: parseInt(formData.get('user_id')),
+        scopes: scopes.join(','),
+        expires_days: formData.get('expires_days') ? parseInt(formData.get('expires_days')) : null
+    };
+    
+    try {
+        const response = await fetch('/admin/api-tokens', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('newTokenValue').value = result.token;
+            hideCreateTokenModal();
+            document.getElementById('tokenDisplayModal').classList.remove('hidden');
+        } else {
+            alert('Error: ' + (result.error || 'Failed to create token'));
+        }
+    } catch (error) {
+        alert('Error creating token: ' + error.message);
+    }
+});
+
+async function toggleToken(tokenId, isActive) {
+    if (!confirm(`Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this token?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/api-tokens/${tokenId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to toggle token');
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function deleteToken(tokenId) {
+    if (!confirm('Are you sure you want to delete this token? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/api-tokens/${tokenId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to delete token');
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+</script>
+{% endblock %}
+
