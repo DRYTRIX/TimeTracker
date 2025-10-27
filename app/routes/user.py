@@ -97,6 +97,16 @@ def settings():
             if time_rounding_method in ['nearest', 'up', 'down']:
                 current_user.time_rounding_method = time_rounding_method
             
+            # Overtime settings
+            standard_hours_per_day = request.form.get('standard_hours_per_day', type=float)
+            if standard_hours_per_day is not None:
+                # Validate range (0.5 to 24 hours)
+                if 0.5 <= standard_hours_per_day <= 24:
+                    current_user.standard_hours_per_day = standard_hours_per_day
+                else:
+                    flash(_('Standard hours per day must be between 0.5 and 24'), 'error')
+                    return redirect(url_for('user.settings'))
+            
             # Save changes
             if safe_commit(db.session):
                 # Log activity
