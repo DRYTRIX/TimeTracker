@@ -756,6 +756,7 @@ def create_app(config=None):
     from app.routes.analytics import analytics_bp
     from app.routes.tasks import tasks_bp
     from app.routes.invoices import invoices_bp
+    from app.routes.payments import payments_bp
     from app.routes.clients import clients_bp
     from app.routes.client_notes import client_notes_bp
     from app.routes.comments import comments_bp
@@ -783,6 +784,7 @@ def create_app(config=None):
     app.register_blueprint(analytics_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(invoices_bp)
+    app.register_blueprint(payments_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(client_notes_bp)
     app.register_blueprint(comments_bp)

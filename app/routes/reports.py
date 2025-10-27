@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import User, Project, TimeEntry, Settings, Task, ProjectCost, Client
+from app.models import User, Project, TimeEntry, Settings, Task, ProjectCost, Client, Payment, Invoice
 from datetime import datetime, timedelta
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 import csv
 import io
 import pytz
@@ -40,11 +40,31 @@ def reports():
     total_seconds = totals_query.scalar() or 0
     billable_seconds = billable_query.scalar() or 0
 
+    # Get payment statistics (last 30 days)
+    payment_query = db.session.query(
+        func.sum(Payment.amount).label('total_payments'),
+        func.count(Payment.id).label('payment_count'),
+        func.sum(Payment.gateway_fee).label('total_fees')
+    ).filter(
+        Payment.payment_date >= datetime.utcnow() - timedelta(days=30),
+        Payment.status == 'completed'
+    )
+    
+    if not current_user.is_admin:
+        payment_query = payment_query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        )
+    
+    payment_result = payment_query.first()
+    
     summary = {
         'total_hours': round(total_seconds / 3600, 2),
         'billable_hours': round(billable_seconds / 3600, 2),
         'active_projects': Project.query.filter_by(status='active').count(),
         'total_users': User.query.filter_by(is_active=True).count(),
+        'total_payments': float(payment_result.total_payments or 0) if payment_result else 0,
+        'payment_count': payment_result.payment_count or 0 if payment_result else 0,
+        'payment_fees': float(payment_result.total_fees or 0) if payment_result else 0,
     }
 
     recent_entries = entries_query.order_by(TimeEntry.start_time.desc()).limit(10).all()

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Record New Payment</h1>
+        <a href="{{ url_for('payments.list_payments') }}" class="text-primary hover:text-primary-dark">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Payments
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+        <form method="POST" action="{{ url_for('payments.create_payment') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Invoice Selection -->
+                <div class="md:col-span-2">
+                    <label for="invoice_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Invoice <span class="text-red-500">*</span>
+                    </label>
+                    <select name="invoice_id" id="invoice_id" required 
+                            class="form-input"
+                            onchange="updateInvoiceDetails(this)">
+                        <option value="">Select an invoice</option>
+                        {% for invoice in invoices %}
+                        <option value="{{ invoice.id }}" 
+                                data-total="{{ invoice.total_amount }}"
+                                data-paid="{{ invoice.amount_paid or 0 }}"
+                                data-outstanding="{{ invoice.outstanding_amount }}"
+                                data-currency="{{ invoice.currency_code }}"
+                                {% if selected_invoice and selected_invoice.id == invoice.id %}selected{% endif %}>
+                            {{ invoice.invoice_number }} - {{ invoice.client_name }} (Outstanding: {{ invoice.outstanding_amount }} {{ invoice.currency_code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Select the invoice for which you're recording this payment</p>
+                </div>
+
+                <!-- Invoice Details Display -->
+                <div id="invoice-details" class="md:col-span-2 bg-background-light dark:bg-background-dark p-4 rounded-lg" style="display: none;">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Invoice Details</h3>
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-600 dark:text-gray-400">Total Amount:</span>
+                            <span id="invoice-total" class="font-semibold text-gray-900 dark:text-gray-100 ml-2">-</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600 dark:text-gray-400">Already Paid:</span>
+                            <span id="invoice-paid" class="font-semibold text-green-600 dark:text-green-400 ml-2">-</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600 dark:text-gray-400">Outstanding:</span>
+                            <span id="invoice-outstanding" class="font-semibold text-red-600 dark:text-red-400 ml-2">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amount -->
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Amount <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="amount" id="amount" step="0.01" min="0.01" required
+                           value="{{ selected_invoice.outstanding_amount if selected_invoice else '' }}"
+                           class="form-input">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Payment amount</p>
+                </div>
+
+                <!-- Currency -->
+                <div>
+                    <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                    <input type="text" name="currency" id="currency" maxlength="3"
+                           value="{{ selected_invoice.currency_code if selected_invoice else 'EUR' }}"
+                           class="form-input">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">3-letter currency code (e.g., EUR, USD)</p>
+                </div>
+
+                <!-- Payment Date -->
+                <div>
+                    <label for="payment_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Payment Date <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="payment_date" id="payment_date" required
+                           value="{{ today }}"
+                           class="form-input">
+                </div>
+
+                <!-- Payment Method -->
+                <div>
+                    <label for="method" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                    <select name="method" id="method"
+                            class="form-input">
+                        <option value="">Select method</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="cash">Cash</option>
+                        <option value="check">Check</option>
+                        <option value="credit_card">Credit Card</option>
+                        <option value="debit_card">Debit Card</option>
+                        <option value="paypal">PayPal</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="wire_transfer">Wire Transfer</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                    <select name="status" id="status"
+                            class="form-input">
+                        <option value="completed" selected>Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                        <option value="refunded">Refunded</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Payment status</p>
+                </div>
+
+                <!-- Reference -->
+                <div>
+                    <label for="reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Reference/Transaction ID</label>
+                    <input type="text" name="reference" id="reference" maxlength="100"
+                           class="form-input">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Check number, transaction ID, etc.</p>
+                </div>
+
+                <!-- Gateway Transaction ID -->
+                <div>
+                    <label for="gateway_transaction_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gateway Transaction ID</label>
+                    <input type="text" name="gateway_transaction_id" id="gateway_transaction_id" maxlength="255"
+                           class="form-input">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Payment gateway transaction ID</p>
+                </div>
+
+                <!-- Gateway Fee -->
+                <div>
+                    <label for="gateway_fee" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gateway Fee</label>
+                    <input type="number" name="gateway_fee" id="gateway_fee" step="0.01" min="0"
+                           class="form-input">
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Transaction or processing fee</p>
+                </div>
+
+                <!-- Notes -->
+                <div class="md:col-span-2">
+                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                    <textarea name="notes" id="notes" rows="3"
+                              class="form-input"></textarea>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Additional payment notes</p>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{{ url_for('payments.list_payments') }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-md transition-colors">
+                    <i class="fas fa-save mr-2"></i>Record Payment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function updateInvoiceDetails(select) {
+    const selectedOption = select.options[select.selectedIndex];
+    const detailsDiv = document.getElementById('invoice-details');
+    
+    if (selectedOption.value) {
+        const total = selectedOption.dataset.total;
+        const paid = selectedOption.dataset.paid;
+        const outstanding = selectedOption.dataset.outstanding;
+        const currency = selectedOption.dataset.currency;
+        
+        document.getElementById('invoice-total').textContent = `${total} ${currency}`;
+        document.getElementById('invoice-paid').textContent = `${paid} ${currency}`;
+        document.getElementById('invoice-outstanding').textContent = `${outstanding} ${currency}`;
+        
+        // Update amount field with outstanding amount
+        document.getElementById('amount').value = outstanding;
+        document.getElementById('currency').value = currency;
+        
+        detailsDiv.style.display = 'block';
+    } else {
+        detailsDiv.style.display = 'none';
+    }
+}
+
+// Initialize on page load if an invoice is pre-selected
+document.addEventListener('DOMContentLoaded', function() {
+    const invoiceSelect = document.getElementById('invoice_id');
+    if (invoiceSelect.value) {
+        updateInvoiceDetails(invoiceSelect);
+    }
+});
+</script>
+{% endblock %}
+

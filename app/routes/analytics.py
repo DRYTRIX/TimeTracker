@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import User, Project, TimeEntry, Settings, Task
+from app.models import User, Project, TimeEntry, Settings, Task, Payment, Invoice
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract, case
 import calendar
@@ -564,6 +564,25 @@ def summary_with_comparison():
     # Calculate billable percentage
     billable_percentage = round((current_billable / current_hours * 100), 1) if current_hours > 0 else 0
     
+    # Get payment data for the period
+    payment_query = db.session.query(
+        func.sum(Payment.amount).label('total_payments'),
+        func.count(Payment.id).label('payment_count')
+    ).filter(
+        Payment.payment_date >= start_date,
+        Payment.payment_date <= end_date,
+        Payment.status == 'completed'
+    )
+    
+    if not current_user.is_admin:
+        payment_query = payment_query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        )
+    
+    payment_result = payment_query.first()
+    total_payments = float(payment_result.total_payments or 0)
+    payment_count = payment_result.payment_count or 0
+    
     return jsonify({
         'total_hours': current_hours,
         'total_hours_change': round(hours_change, 1),
@@ -573,7 +592,9 @@ def summary_with_comparison():
         'entries_change': round(entries_change, 1),
         'active_projects': active_projects,
         'avg_daily_hours': avg_daily_hours,
-        'billable_percentage': billable_percentage
+        'billable_percentage': billable_percentage,
+        'total_payments': round(total_payments, 2),
+        'payment_count': payment_count
     })
 
 
@@ -866,4 +887,319 @@ def insights():
     
     return jsonify({
         'insights': insights_list
+    })
+
+
+@analytics_bp.route('/api/analytics/payments-over-time')
+@login_required
+def payments_over_time():
+    """Get payments over time"""
+    days = int(request.args.get('days', 30))
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    # Build query
+    query = db.session.query(
+        func.date(Payment.payment_date).label('date'),
+        func.sum(Payment.amount).label('total_amount'),
+        func.count(Payment.id).label('payment_count')
+    ).filter(
+        Payment.payment_date >= start_date,
+        Payment.payment_date <= end_date
+    )
+    
+    if not current_user.is_admin:
+        query = query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        ).distinct()
+    
+    results = query.group_by(func.date(Payment.payment_date)).all()
+    
+    # Create date range and fill missing dates with 0
+    date_data = {}
+    current_date = start_date
+    while current_date <= end_date:
+        date_data[current_date.strftime('%Y-%m-%d')] = 0
+        current_date += timedelta(days=1)
+    
+    # Fill in actual data
+    for date_obj, total_amount, _ in results:
+        if date_obj:
+            if isinstance(date_obj, str):
+                formatted_date = date_obj
+            else:
+                formatted_date = date_obj.strftime('%Y-%m-%d')
+            date_data[formatted_date] = float(total_amount or 0)
+    
+    return jsonify({
+        'labels': list(date_data.keys()),
+        'datasets': [{
+            'label': 'Payments Received',
+            'data': list(date_data.values()),
+            'borderColor': '#10b981',
+            'backgroundColor': 'rgba(16, 185, 129, 0.1)',
+            'tension': 0.4,
+            'fill': True
+        }]
+    })
+
+
+@analytics_bp.route('/api/analytics/payments-by-status')
+@login_required
+def payments_by_status():
+    """Get payment breakdown by status"""
+    days = int(request.args.get('days', 30))
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    query = db.session.query(
+        Payment.status,
+        func.count(Payment.id).label('count'),
+        func.sum(Payment.amount).label('total_amount')
+    ).filter(
+        Payment.payment_date >= start_date,
+        Payment.payment_date <= end_date
+    )
+    
+    if not current_user.is_admin:
+        query = query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        ).distinct()
+    
+    results = query.group_by(Payment.status).all()
+    
+    labels = []
+    counts = []
+    amounts = []
+    colors = {
+        'completed': '#10b981',
+        'pending': '#f59e0b',
+        'failed': '#ef4444',
+        'refunded': '#6b7280'
+    }
+    background_colors = []
+    
+    for status, count, amount in results:
+        labels.append(status.title() if status else 'Unknown')
+        counts.append(count)
+        amounts.append(float(amount or 0))
+        background_colors.append(colors.get(status, '#3b82f6'))
+    
+    return jsonify({
+        'labels': labels,
+        'count_dataset': {
+            'label': 'Payment Count',
+            'data': counts,
+            'backgroundColor': background_colors
+        },
+        'amount_dataset': {
+            'label': 'Total Amount',
+            'data': amounts,
+            'backgroundColor': background_colors
+        }
+    })
+
+
+@analytics_bp.route('/api/analytics/payments-by-method')
+@login_required
+def payments_by_method():
+    """Get payment breakdown by payment method"""
+    days = int(request.args.get('days', 30))
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    query = db.session.query(
+        Payment.method,
+        func.count(Payment.id).label('count'),
+        func.sum(Payment.amount).label('total_amount')
+    ).filter(
+        Payment.payment_date >= start_date,
+        Payment.payment_date <= end_date,
+        Payment.method.isnot(None)
+    )
+    
+    if not current_user.is_admin:
+        query = query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        ).distinct()
+    
+    results = query.group_by(Payment.method).order_by(func.sum(Payment.amount).desc()).all()
+    
+    labels = []
+    amounts = []
+    colors = [
+        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+        '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
+    ]
+    
+    for idx, (method, _, amount) in enumerate(results):
+        labels.append(method.replace('_', ' ').title() if method else 'Other')
+        amounts.append(float(amount or 0))
+    
+    return jsonify({
+        'labels': labels,
+        'datasets': [{
+            'label': 'Amount',
+            'data': amounts,
+            'backgroundColor': colors[:len(labels)],
+            'borderWidth': 2
+        }]
+    })
+
+
+@analytics_bp.route('/api/analytics/payment-summary')
+@login_required
+def payment_summary():
+    """Get payment summary statistics"""
+    days = int(request.args.get('days', 30))
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    # Previous period
+    prev_end_date = start_date - timedelta(days=1)
+    prev_start_date = prev_end_date - timedelta(days=days)
+    
+    # Current period query
+    current_query = db.session.query(
+        func.sum(Payment.amount).label('total_amount'),
+        func.count(Payment.id).label('payment_count'),
+        func.sum(Payment.gateway_fee).label('total_fees'),
+        func.sum(Payment.net_amount).label('total_net')
+    ).filter(
+        Payment.payment_date >= start_date,
+        Payment.payment_date <= end_date
+    )
+    
+    # Previous period query
+    prev_query = db.session.query(
+        func.sum(Payment.amount).label('total_amount'),
+        func.count(Payment.id).label('payment_count')
+    ).filter(
+        Payment.payment_date >= prev_start_date,
+        Payment.payment_date <= prev_end_date
+    )
+    
+    if not current_user.is_admin:
+        current_query = current_query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        )
+        prev_query = prev_query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        )
+    
+    current_result = current_query.first()
+    prev_result = prev_query.first()
+    
+    current_amount = float(current_result.total_amount or 0)
+    prev_amount = float(prev_result.total_amount or 0)
+    amount_change = ((current_amount - prev_amount) / prev_amount * 100) if prev_amount > 0 else 0
+    
+    current_count = current_result.payment_count or 0
+    prev_count = prev_result.payment_count or 0
+    count_change = ((current_count - prev_count) / prev_count * 100) if prev_count > 0 else 0
+    
+    total_fees = float(current_result.total_fees or 0)
+    total_net = float(current_result.total_net or 0)
+    
+    # Get completed vs pending
+    status_query = db.session.query(
+        Payment.status,
+        func.sum(Payment.amount).label('amount')
+    ).filter(
+        Payment.payment_date >= start_date,
+        Payment.payment_date <= end_date
+    )
+    
+    if not current_user.is_admin:
+        status_query = status_query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        )
+    
+    status_results = status_query.group_by(Payment.status).all()
+    
+    completed_amount = 0
+    pending_amount = 0
+    
+    for status, amount in status_results:
+        if status == 'completed':
+            completed_amount = float(amount or 0)
+        elif status == 'pending':
+            pending_amount = float(amount or 0)
+    
+    return jsonify({
+        'total_amount': round(current_amount, 2),
+        'amount_change': round(amount_change, 1),
+        'payment_count': current_count,
+        'count_change': round(count_change, 1),
+        'total_fees': round(total_fees, 2),
+        'total_net': round(total_net, 2),
+        'completed_amount': round(completed_amount, 2),
+        'pending_amount': round(pending_amount, 2),
+        'avg_payment': round(current_amount / current_count, 2) if current_count > 0 else 0
+    })
+
+
+@analytics_bp.route('/api/analytics/revenue-vs-payments')
+@login_required
+def revenue_vs_payments():
+    """Compare potential revenue (from time tracking) with actual payments"""
+    days = int(request.args.get('days', 30))
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    settings = Settings.get_settings()
+    currency = settings.currency
+    
+    # Get billable revenue (potential)
+    revenue_query = db.session.query(
+        func.sum(TimeEntry.duration_seconds).label('total_seconds'),
+        Project.hourly_rate
+    ).join(Project).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_date,
+        TimeEntry.start_time <= end_date,
+        TimeEntry.billable == True,
+        Project.billable == True,
+        Project.hourly_rate.isnot(None)
+    )
+    
+    if not current_user.is_admin:
+        revenue_query = revenue_query.filter(TimeEntry.user_id == current_user.id)
+    
+    revenue_results = revenue_query.group_by(Project.hourly_rate).all()
+    
+    potential_revenue = 0
+    for seconds, rate in revenue_results:
+        if seconds and rate:
+            hours = seconds / 3600
+            potential_revenue += hours * float(rate)
+    
+    # Get actual payments
+    payment_query = db.session.query(
+        func.sum(Payment.amount).label('total_amount')
+    ).filter(
+        Payment.payment_date >= start_date,
+        Payment.payment_date <= end_date,
+        Payment.status == 'completed'
+    )
+    
+    if not current_user.is_admin:
+        payment_query = payment_query.join(Invoice).join(Project).join(TimeEntry).filter(
+            TimeEntry.user_id == current_user.id
+        )
+    
+    actual_payments = payment_query.scalar() or 0
+    actual_payments = float(actual_payments)
+    
+    collection_rate = (actual_payments / potential_revenue * 100) if potential_revenue > 0 else 0
+    outstanding = potential_revenue - actual_payments
+    
+    return jsonify({
+        'potential_revenue': round(potential_revenue, 2),
+        'actual_payments': round(actual_payments, 2),
+        'outstanding': round(outstanding, 2),
+        'collection_rate': round(collection_rate, 1),
+        'currency': currency,
+        'labels': ['Collected', 'Outstanding'],
+        'data': [round(actual_payments, 2), round(outstanding, 2) if outstanding > 0 else 0]
     })
