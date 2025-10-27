@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-4xl">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">{{ event.title }}</h1>
+                {% if event.event_type %}
+                <span class="badge badge-info">{{ event.event_type|title }}</span>
+                {% endif %}
+                {% if event.is_private %}
+                <span class="badge badge-secondary"><i class="fas fa-lock mr-1"></i>Private</span>
+                {% endif %}
+            </div>
+            
+            <div class="flex gap-2">
+                <a href="{{ url_for('calendar.edit_event', event_id=event.id) }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-edit mr-2"></i>{{ _('Edit') }}
+                </a>
+                <form method="POST" action="{{ url_for('calendar.delete_event', event_id=event.id) }}" 
+                      onsubmit="return confirm('{{ _('Are you sure you want to delete this event?') }}');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Event Details -->
+        <div class="space-y-4">
+            <!-- Date and Time -->
+            <div class="flex items-start">
+                <i class="fas fa-clock text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Date & Time') }}</p>
+                    <p class="text-muted">
+                        {% if event.all_day %}
+                        {{ event.start_time.strftime('%A, %B %d, %Y') }}
+                        {% if event.start_time.date() != event.end_time.date() %}
+                        - {{ event.end_time.strftime('%A, %B %d, %Y') }}
+                        {% endif %}
+                        <span class="badge badge-secondary ml-2">All Day</span>
+                        {% else %}
+                        {{ event.start_time.strftime('%A, %B %d, %Y at %I:%M %p') }}
+                        - {{ event.end_time.strftime('%I:%M %p') }}
+                        {% if event.start_time.date() != event.end_time.date() %}
+                        ({{ event.end_time.strftime('%B %d, %Y') }})
+                        {% endif %}
+                        {% endif %}
+                    </p>
+                    <p class="text-sm text-muted">{{ _('Duration') }}: {{ '%.2f'|format(event.duration_hours()) }} hours</p>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            {% if event.description %}
+            <div class="flex items-start">
+                <i class="fas fa-align-left text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Description') }}</p>
+                    <p class="text-muted whitespace-pre-wrap">{{ event.description }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Location -->
+            {% if event.location %}
+            <div class="flex items-start">
+                <i class="fas fa-map-marker-alt text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Location') }}</p>
+                    <p class="text-muted">{{ event.location }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Project -->
+            {% if event.project %}
+            <div class="flex items-start">
+                <i class="fas fa-project-diagram text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Project') }}</p>
+                    <p class="text-muted">
+                        <a href="{{ url_for('projects.view_project', project_id=event.project.id) }}" 
+                           class="text-primary hover:underline">
+                            {{ event.project.name }}
+                        </a>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Task -->
+            {% if event.task %}
+            <div class="flex items-start">
+                <i class="fas fa-tasks text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Task') }}</p>
+                    <p class="text-muted">
+                        <a href="{{ url_for('tasks.view_task', task_id=event.task.id) }}" 
+                           class="text-primary hover:underline">
+                            {{ event.task.name }}
+                        </a>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Client -->
+            {% if event.client %}
+            <div class="flex items-start">
+                <i class="fas fa-user-tie text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Client') }}</p>
+                    <p class="text-muted">
+                        <a href="{{ url_for('clients.view_client', client_id=event.client.id) }}" 
+                           class="text-primary hover:underline">
+                            {{ event.client.name }}
+                        </a>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Reminder -->
+            {% if event.reminder_minutes %}
+            <div class="flex items-start">
+                <i class="fas fa-bell text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Reminder') }}</p>
+                    <p class="text-muted">
+                        {% if event.reminder_minutes < 60 %}
+                        {{ event.reminder_minutes }} {{ _('minutes before') }}
+                        {% elif event.reminder_minutes < 1440 %}
+                        {{ (event.reminder_minutes / 60)|int }} {{ _('hours before') }}
+                        {% else %}
+                        {{ (event.reminder_minutes / 1440)|int }} {{ _('days before') }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Recurring -->
+            {% if event.is_recurring %}
+            <div class="flex items-start">
+                <i class="fas fa-redo text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Recurring') }}</p>
+                    <p class="text-muted">
+                        {% if event.recurrence_rule %}{{ event.recurrence_rule }}{% else %}Yes{% endif %}
+                        {% if event.recurrence_end_date %}
+                        <br>{{ _('Until') }}: {{ event.recurrence_end_date.strftime('%B %d, %Y') }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Created/Updated -->
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-primary mt-1 mr-3 w-5"></i>
+                <div>
+                    <p class="font-semibold">{{ _('Information') }}</p>
+                    <p class="text-sm text-muted">
+                        {{ _('Created') }}: {{ event.created_at.strftime('%B %d, %Y at %I:%M %p') }}<br>
+                        {{ _('Last Updated') }}: {{ event.updated_at.strftime('%B %d, %Y at %I:%M %p') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Back Button -->
+        <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+            <a href="{{ url_for('calendar.view_calendar') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left mr-2"></i>{{ _('Back to Calendar') }}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

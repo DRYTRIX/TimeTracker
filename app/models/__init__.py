@@ -27,6 +27,7 @@ from .weekly_time_goal import WeeklyTimeGoal
 from .expense import Expense
 from .permission import Permission, Role
 from .api_token import ApiToken
+from .calendar_event import CalendarEvent
 
 __all__ = [
     "User",
@@ -63,4 +64,5 @@ __all__ = [
     "Permission",
     "Role",
     "ApiToken",
+    "CalendarEvent",
 ]

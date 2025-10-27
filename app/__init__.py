@@ -768,6 +768,7 @@ def create_app(config=None):
     from app.routes.weekly_goals import weekly_goals_bp
     from app.routes.expenses import expenses_bp
     from app.routes.permissions import permissions_bp
+    from app.routes.calendar import calendar_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -794,6 +795,7 @@ def create_app(config=None):
     app.register_blueprint(weekly_goals_bp)
     app.register_blueprint(expenses_bp)
     app.register_blueprint(permissions_bp)
+    app.register_blueprint(calendar_bp)
 
     # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
     # Only if CSRF is enabled
