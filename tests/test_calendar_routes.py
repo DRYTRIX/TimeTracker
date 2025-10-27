@@ -511,8 +511,13 @@ def test_calendar_shows_tasks(authenticated_client, user, project, app):
         
         assert response.status_code == 200
         data = response.get_json()
-        assert 'tasks' in data
-        assert len(data['tasks']) > 0
+        # The API combines everything into the 'events' array and provides a 'summary'
+        assert 'events' in data
+        assert 'summary' in data
+        assert data['summary']['tasks'] > 0
+        # Check that there's at least one task in the events array
+        task_events = [e for e in data['events'] if e.get('extendedProps', {}).get('item_type') == 'task']
+        assert len(task_events) > 0
 
 
 @pytest.mark.integration

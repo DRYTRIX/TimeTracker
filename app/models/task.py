@@ -30,7 +30,7 @@ class Task(db.Model):
     # comments relationship is defined via backref in Comment model
     
     def __init__(self, project_id, name, description=None, priority='medium', estimated_hours=None, 
-                 due_date=None, assigned_to=None, created_by=None):
+                 due_date=None, assigned_to=None, created_by=None, status='todo'):
         self.project_id = project_id
         self.name = name.strip()
         self.description = description.strip() if description else None
@@ -39,6 +39,7 @@ class Task(db.Model):
         self.due_date = due_date
         self.assigned_to = assigned_to
         self.created_by = created_by
+        self.status = status
     
     def __repr__(self):
         return f'<Task {self.name} ({self.status})>'
