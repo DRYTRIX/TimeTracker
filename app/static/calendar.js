@@ -491,6 +491,7 @@ class Calendar {
     }
     
     async showEventDetails(id, type) {
+        // Navigate to the appropriate detail page
         if (type === 'event') {
             window.location.href = `/calendar/event/${id}`;
         } else if (type === 'task') {
@@ -522,6 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentDate: window.calendarData.currentDate,
             apiUrl: window.calendarData.apiUrl
         });
+        
     }
 });
 

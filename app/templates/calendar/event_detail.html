@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import confirm_dialog %}
 {% block title %}{{ event.title }} - {{ app_name }}{% endblock %}
 
 {% block content %}
@@ -20,12 +21,13 @@
                 <a href="{{ url_for('calendar.edit_event', event_id=event.id) }}" class="btn btn-sm btn-primary">
                     <i class="fas fa-edit mr-2"></i>{{ _('Edit') }}
                 </a>
-                <form method="POST" action="{{ url_for('calendar.delete_event', event_id=event.id) }}" 
-                      onsubmit="return confirm('{{ _('Are you sure you want to delete this event?') }}');">
+                <button type="button" class="btn btn-sm btn-danger" 
+                        onclick="document.getElementById('confirmDeleteEvent-{{ event.id }}').classList.remove('hidden')">
+                    <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
+                </button>
+                <form id="confirmDeleteEvent-{{ event.id }}-form" method="POST" action="{{ url_for('calendar.delete_event', event_id=event.id) }}" class="hidden">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-danger">
-                        <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
-                    </button>
+                    <input type="hidden" name="_method" value="DELETE">
                 </form>
             </div>
         </div>
@@ -182,5 +184,15 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Dialog -->
+{{ confirm_dialog(
+    'confirmDeleteEvent-' ~ event.id,
+    _('Delete Event'),
+    _('Are you sure you want to delete this event? This action cannot be undone.'),
+    _('Delete'),
+    _('Cancel'),
+    'danger'
+) }}
 {% endblock %}
 

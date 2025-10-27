@@ -240,7 +240,7 @@ def update_event(event_id):
         return jsonify({'error': f'Error updating event: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/calendar/events/<int:event_id>', methods=['DELETE'])
+@calendar_bp.route('/api/calendar/events/<int:event_id>', methods=['DELETE', 'POST'])
 @login_required
 def delete_event(event_id):
     """Delete a calendar event"""
@@ -248,12 +248,22 @@ def delete_event(event_id):
     
     # Check if user has permission to delete this event
     if event.user_id != current_user.id and not current_user.is_admin:
+        if request.method == 'POST':
+            flash(_('You do not have permission to delete this event.'), 'error')
+            return redirect(url_for('calendar.view_calendar'))
         return jsonify({'error': 'Permission denied'}), 403
     
     try:
         db.session.delete(event)
         if not safe_commit():
+            if request.method == 'POST':
+                flash(_('Failed to delete event'), 'error')
+                return redirect(url_for('calendar.view_calendar'))
             return jsonify({'error': 'Failed to delete event'}), 500
+        
+        if request.method == 'POST':
+            flash(_('Event deleted successfully'), 'success')
+            return redirect(url_for('calendar.view_calendar'))
         
         return jsonify({
             'success': True,
@@ -262,6 +272,9 @@ def delete_event(event_id):
         
     except Exception as e:
         db.session.rollback()
+        if request.method == 'POST':
+            flash(_('Error deleting event: %(error)s', error=str(e)), 'error')
+            return redirect(url_for('calendar.view_calendar'))
         return jsonify({'error': f'Error deleting event: {str(e)}'}), 500
 
 
