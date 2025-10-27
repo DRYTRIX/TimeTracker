@@ -295,8 +295,8 @@ TimeTracker - Time Tracking & Project Management
         send_email(subject, user.email, text_body, html_body)
 
 
-def test_email_configuration():
-    """Test email configuration and return status
+def check_email_configuration():
+    """Check email configuration and return status
     
     Returns:
         dict: Status information with 'configured', 'settings', 'errors', 'source' keys

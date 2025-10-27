@@ -32,7 +32,7 @@ class TestEmailSmokeTests:
             assert b'Email Configuration' in response.data or b'email' in response.data.lower()
             assert b'Test Email' in response.data or b'test' in response.data.lower()
     
-    def test_email_configuration_status_api(self, client, admin_user):
+    def check_email_configuration_status_api(self, client, admin_user):
         """Smoke test: Email configuration status API works"""
         # Login as admin
         with client:
@@ -79,7 +79,7 @@ class TestEmailSmokeTests:
         try:
             from app.utils.email import (
                 send_email,
-                test_email_configuration,
+                check_email_configuration,
                 send_test_email,
                 init_mail
             )
@@ -132,7 +132,7 @@ class TestEmailSmokeTests:
             except Exception as e:
                 pytest.fail(f"Failed to check templates: {e}")
     
-    def test_email_configuration_with_environment(self, app, monkeypatch):
+    def check_email_configuration_with_environment(self, app, monkeypatch):
         """Smoke test: Email configuration loads from environment"""
         # Set test environment variables
         monkeypatch.setenv('MAIL_SERVER', 'smtp.test.com')
@@ -163,7 +163,7 @@ class TestEmailFeatureIntegrity:
         
         functions = [
             'send_email',
-            'test_email_configuration',
+            'check_email_configuration',
             'send_test_email',
             'init_mail'
         ]

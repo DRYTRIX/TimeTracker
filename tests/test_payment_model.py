@@ -182,8 +182,12 @@ class TestPaymentModel:
     def test_payment_relationship_with_invoice(self, app, test_invoice):
         """Test payment relationship with invoice"""
         with app.app_context():
+            # Re-query invoice to attach to current session
+            from app.models.invoice import Invoice
+            invoice_in_session = Invoice.query.get(test_invoice.id)
+            
             payment = Payment(
-                invoice_id=test_invoice.id,
+                invoice_id=invoice_in_session.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
                 payment_date=date.today(),
@@ -194,11 +198,11 @@ class TestPaymentModel:
             db.session.commit()
             
             # Refresh invoice to get updated relationships
-            db.session.refresh(test_invoice)
+            db.session.refresh(invoice_in_session)
             
             # Verify relationship
-            assert payment.invoice == test_invoice
-            assert payment in test_invoice.payments
+            assert payment.invoice == invoice_in_session
+            assert payment in invoice_in_session.payments
             
             # Cleanup
             db.session.delete(payment)
@@ -207,21 +211,28 @@ class TestPaymentModel:
     def test_payment_relationship_with_user(self, app, test_invoice, test_user):
         """Test payment relationship with user (receiver)"""
         with app.app_context():
+            # Re-query user to attach to current session
+            from app.models.user import User
+            user_in_session = User.query.get(test_user.id)
+            
             payment = Payment(
                 invoice_id=test_invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
                 payment_date=date.today(),
                 status='completed',
-                received_by=test_user.id
+                received_by=user_in_session.id
             )
             
             db.session.add(payment)
             db.session.commit()
             
+            # Refresh user to get updated relationships
+            db.session.refresh(user_in_session)
+            
             # Verify relationship
-            assert payment.receiver == test_user
-            assert payment in test_user.received_payments
+            assert payment.receiver == user_in_session
+            assert payment in user_in_session.received_payments
             
             # Cleanup
             db.session.delete(payment)
@@ -246,8 +257,12 @@ class TestPaymentModel:
     def test_multiple_payments_for_invoice(self, app, test_invoice):
         """Test multiple payments for a single invoice"""
         with app.app_context():
+            # Re-query invoice to attach to current session
+            from app.models.invoice import Invoice
+            invoice_in_session = Invoice.query.get(test_invoice.id)
+            
             payment1 = Payment(
-                invoice_id=test_invoice.id,
+                invoice_id=invoice_in_session.id,
                 amount=Decimal('300.00'),
                 currency='EUR',
                 payment_date=date.today(),
@@ -255,7 +270,7 @@ class TestPaymentModel:
             )
             
             payment2 = Payment(
-                invoice_id=test_invoice.id,
+                invoice_id=invoice_in_session.id,
                 amount=Decimal('200.00'),
                 currency='EUR',
                 payment_date=date.today() + timedelta(days=1),
@@ -266,10 +281,10 @@ class TestPaymentModel:
             db.session.commit()
             
             # Refresh invoice to get updated relationships
-            db.session.refresh(test_invoice)
+            db.session.refresh(invoice_in_session)
             
             # Verify both payments are associated with invoice
-            assert test_invoice.payments.count() == 2
+            assert invoice_in_session.payments.count() == 2
             
             # Cleanup
             db.session.delete(payment1)
