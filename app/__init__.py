@@ -751,9 +751,12 @@ def create_app(config=None):
     from app.routes.reports import reports_bp
     from app.routes.admin import admin_bp
     from app.routes.api import api_bp
+    from app.routes.api_v1 import api_v1_bp
+    from app.routes.api_docs import api_docs_bp, swaggerui_blueprint
     from app.routes.analytics import analytics_bp
     from app.routes.tasks import tasks_bp
     from app.routes.invoices import invoices_bp
+    from app.routes.payments import payments_bp
     from app.routes.clients import clients_bp
     from app.routes.client_notes import client_notes_bp
     from app.routes.comments import comments_bp
@@ -766,6 +769,7 @@ def create_app(config=None):
     from app.routes.weekly_goals import weekly_goals_bp
     from app.routes.expenses import expenses_bp
     from app.routes.permissions import permissions_bp
+    from app.routes.calendar import calendar_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -774,9 +778,13 @@ def create_app(config=None):
     app.register_blueprint(reports_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(api_v1_bp)
+    app.register_blueprint(api_docs_bp)
+    app.register_blueprint(swaggerui_blueprint)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(invoices_bp)
+    app.register_blueprint(payments_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(client_notes_bp)
     app.register_blueprint(comments_bp)
@@ -789,11 +797,14 @@ def create_app(config=None):
     app.register_blueprint(weekly_goals_bp)
     app.register_blueprint(expenses_bp)
     app.register_blueprint(permissions_bp)
+    app.register_blueprint(calendar_bp)
 
-    # Exempt API blueprint from CSRF protection (JSON API uses authentication, not CSRF tokens)
+    # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
     # Only if CSRF is enabled
     if app.config.get('WTF_CSRF_ENABLED'):
         csrf.exempt(api_bp)
+        csrf.exempt(api_v1_bp)
+        csrf.exempt(api_docs_bp)
 
     # Register OAuth OIDC client if enabled
     try:

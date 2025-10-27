@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}{{ _('Edit Event') }}{% else %}{{ _('New Event') }}{% endif %} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-3xl">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold">
+                <i class="fas fa-calendar-plus mr-2 text-primary"></i>
+                {% if edit_mode %}{{ _('Edit Event') }}{% else %}{{ _('New Event') }}{% endif %}
+            </h1>
+        </div>
+        
+        <form id="eventForm" method="POST" action="{% if edit_mode %}{{ url_for('calendar.update_event', event_id=event.id) }}{% else %}{{ url_for('calendar.create_event') }}{% endif %}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Title -->
+            <div class="form-group mb-4">
+                <label for="title" class="form-label required">{{ _('Title') }}</label>
+                <input type="text" 
+                       id="title" 
+                       name="title" 
+                       class="form-control" 
+                       required
+                       value="{% if event %}{{ event.title }}{% endif %}">
+            </div>
+            
+            <!-- Description -->
+            <div class="form-group mb-4">
+                <label for="description" class="form-label">{{ _('Description') }}</label>
+                <textarea id="description" 
+                          name="description" 
+                          class="form-control" 
+                          rows="3">{% if event %}{{ event.description or '' }}{% endif %}</textarea>
+            </div>
+            
+            <!-- Date and Time -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="form-group">
+                    <label for="startDate" class="form-label required">{{ _('Start Date') }}</label>
+                    <input type="date" 
+                           id="startDate" 
+                           name="startDate" 
+                           class="form-control" 
+                           required
+                           value="{% if event %}{{ event.start_time.strftime('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="startTime" class="form-label">{{ _('Start Time') }}</label>
+                    <input type="time" 
+                           id="startTime" 
+                           name="startTime" 
+                           class="form-control"
+                           value="{% if event %}{{ event.start_time.strftime('%H:%M') }}{% elif initial_time %}{{ initial_time.strftime('%H:%M') }}{% else %}09:00{% endif %}">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="form-group">
+                    <label for="endDate" class="form-label required">{{ _('End Date') }}</label>
+                    <input type="date" 
+                           id="endDate" 
+                           name="endDate" 
+                           class="form-control" 
+                           required
+                           value="{% if event %}{{ event.end_time.strftime('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="endTime" class="form-label">{{ _('End Time') }}</label>
+                    <input type="time" 
+                           id="endTime" 
+                           name="endTime" 
+                           class="form-control"
+                           value="{% if event %}{{ event.end_time.strftime('%H:%M') }}{% else %}10:00{% endif %}">
+                </div>
+            </div>
+            
+            <!-- All Day Event -->
+            <div class="form-group mb-4">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" 
+                           id="allDay" 
+                           name="allDay" 
+                           class="form-checkbox"
+                           {% if event and event.all_day %}checked{% endif %}>
+                    <span class="ml-2">{{ _('All Day Event') }}</span>
+                </label>
+            </div>
+            
+            <!-- Location -->
+            <div class="form-group mb-4">
+                <label for="location" class="form-label">{{ _('Location') }}</label>
+                <input type="text" 
+                       id="location" 
+                       name="location" 
+                       class="form-control"
+                       value="{% if event %}{{ event.location or '' }}{% endif %}">
+            </div>
+            
+            <!-- Event Type -->
+            <div class="form-group mb-4">
+                <label for="eventType" class="form-label">{{ _('Event Type') }}</label>
+                <select id="eventType" name="eventType" class="form-control">
+                    <option value="event" {% if event and event.event_type == 'event' %}selected{% endif %}>{{ _('Event') }}</option>
+                    <option value="meeting" {% if event and event.event_type == 'meeting' %}selected{% endif %}>{{ _('Meeting') }}</option>
+                    <option value="appointment" {% if event and event.event_type == 'appointment' %}selected{% endif %}>{{ _('Appointment') }}</option>
+                    <option value="reminder" {% if event and event.event_type == 'reminder' %}selected{% endif %}>{{ _('Reminder') }}</option>
+                    <option value="deadline" {% if event and event.event_type == 'deadline' %}selected{% endif %}>{{ _('Deadline') }}</option>
+                </select>
+            </div>
+            
+            <!-- Associated Project -->
+            <div class="form-group mb-4">
+                <label for="projectId" class="form-label">{{ _('Project') }}</label>
+                <select id="projectId" name="projectId" class="form-control">
+                    <option value="">{{ _('-- None --') }}</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}" {% if event and event.project_id == project.id %}selected{% endif %}>
+                        {{ project.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Associated Task -->
+            <div class="form-group mb-4">
+                <label for="taskId" class="form-label">{{ _('Task') }}</label>
+                <select id="taskId" name="taskId" class="form-control">
+                    <option value="">{{ _('-- None --') }}</option>
+                    {% for task in tasks %}
+                    <option value="{{ task.id }}" {% if event and event.task_id == task.id %}selected{% endif %}>
+                        {{ task.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Associated Client -->
+            <div class="form-group mb-4">
+                <label for="clientId" class="form-label">{{ _('Client') }}</label>
+                <select id="clientId" name="clientId" class="form-control">
+                    <option value="">{{ _('-- None --') }}</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if event and event.client_id == client.id %}selected{% endif %}>
+                        {{ client.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Reminder -->
+            <div class="form-group mb-4">
+                <label for="reminderMinutes" class="form-label">{{ _('Reminder') }}</label>
+                <select id="reminderMinutes" name="reminderMinutes" class="form-control">
+                    <option value="">{{ _('No reminder') }}</option>
+                    <option value="5" {% if event and event.reminder_minutes == 5 %}selected{% endif %}>{{ _('5 minutes before') }}</option>
+                    <option value="15" {% if event and event.reminder_minutes == 15 %}selected{% endif %}>{{ _('15 minutes before') }}</option>
+                    <option value="30" {% if event and event.reminder_minutes == 30 %}selected{% endif %}>{{ _('30 minutes before') }}</option>
+                    <option value="60" {% if event and event.reminder_minutes == 60 %}selected{% endif %}>{{ _('1 hour before') }}</option>
+                    <option value="1440" {% if event and event.reminder_minutes == 1440 %}selected{% endif %}>{{ _('1 day before') }}</option>
+                </select>
+            </div>
+            
+            <!-- Color -->
+            <div class="form-group mb-4">
+                <label for="color" class="form-label">{{ _('Color') }}</label>
+                <div class="flex gap-2 items-center">
+                    <input type="color" 
+                           id="color" 
+                           name="color" 
+                           class="form-control w-20 h-10"
+                           value="{% if event and event.color %}{{ event.color }}{% else %}#3b82f6{% endif %}">
+                    <span class="text-sm text-muted">{{ _('Choose a color for this event') }}</span>
+                </div>
+            </div>
+            
+            <!-- Private Event -->
+            <div class="form-group mb-4">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" 
+                           id="isPrivate" 
+                           name="isPrivate" 
+                           class="form-checkbox"
+                           {% if event and event.is_private %}checked{% endif %}>
+                    <span class="ml-2">{{ _('Private Event') }}</span>
+                </label>
+                <p class="text-sm text-muted mt-1">{{ _('Private events are only visible to you') }}</p>
+            </div>
+            
+            <!-- Recurring Event Section -->
+            <div class="border-t border-border-light dark:border-border-dark pt-4 mt-6 mb-4">
+                <h3 class="text-lg font-semibold mb-3">{{ _('Recurring Event') }}</h3>
+                
+                <div class="form-group mb-4">
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" 
+                               id="isRecurring" 
+                               name="isRecurring" 
+                               class="form-checkbox"
+                               {% if event and event.is_recurring %}checked{% endif %}>
+                        <span class="ml-2">{{ _('This is a recurring event') }}</span>
+                    </label>
+                </div>
+                
+                <div id="recurringOptions" style="{% if not event or not event.is_recurring %}display: none;{% endif %}">
+                    <div class="form-group mb-4">
+                        <label for="recurrenceRule" class="form-label">{{ _('Recurrence Pattern') }}</label>
+                        <input type="text" 
+                               id="recurrenceRule" 
+                               name="recurrenceRule" 
+                               class="form-control"
+                               placeholder="FREQ=WEEKLY;BYDAY=MO,WE,FR"
+                               value="{% if event %}{{ event.recurrence_rule or '' }}{% endif %}">
+                        <p class="text-sm text-muted mt-1">{{ _('Use RRULE format (e.g., FREQ=WEEKLY;BYDAY=MO,WE,FR)') }}</p>
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <label for="recurrenceEndDate" class="form-label">{{ _('Recurrence End Date') }}</label>
+                        <input type="date" 
+                               id="recurrenceEndDate" 
+                               name="recurrenceEndDate" 
+                               class="form-control"
+                               value="{% if event and event.recurrence_end_date %}{{ event.recurrence_end_date.strftime('%Y-%m-%d') }}{% endif %}">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save mr-2"></i>
+                    {% if edit_mode %}{{ _('Update Event') }}{% else %}{{ _('Create Event') }}{% endif %}
+                </button>
+                <a href="{{ url_for('calendar.view_calendar') }}" class="btn btn-secondary">
+                    {{ _('Cancel') }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Show/hide recurring options
+    document.getElementById('isRecurring').addEventListener('change', function() {
+        const recurringOptions = document.getElementById('recurringOptions');
+        recurringOptions.style.display = this.checked ? 'block' : 'none';
+    });
+    
+    // Disable time inputs when all day is checked
+    document.getElementById('allDay').addEventListener('change', function() {
+        const startTime = document.getElementById('startTime');
+        const endTime = document.getElementById('endTime');
+        startTime.disabled = this.checked;
+        endTime.disabled = this.checked;
+    });
+    
+    // Form submission via AJAX
+    document.getElementById('eventForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = {};
+        
+        // Build event data
+        const startDate = formData.get('startDate');
+        const startTime = formData.get('startTime') || '00:00';
+        const endDate = formData.get('endDate');
+        const endTime = formData.get('endTime') || '23:59';
+        
+        data.title = formData.get('title');
+        data.description = formData.get('description') || '';
+        data.start = `${startDate}T${startTime}:00`;
+        data.end = `${endDate}T${endTime}:00`;
+        data.allDay = formData.get('allDay') === 'on';
+        data.location = formData.get('location') || '';
+        data.eventType = formData.get('eventType') || 'event';
+        data.projectId = formData.get('projectId') ? parseInt(formData.get('projectId')) : null;
+        data.taskId = formData.get('taskId') ? parseInt(formData.get('taskId')) : null;
+        data.clientId = formData.get('clientId') ? parseInt(formData.get('clientId')) : null;
+        data.reminderMinutes = formData.get('reminderMinutes') ? parseInt(formData.get('reminderMinutes')) : null;
+        data.color = formData.get('color') || '#3b82f6';
+        data.isPrivate = formData.get('isPrivate') === 'on';
+        data.isRecurring = formData.get('isRecurring') === 'on';
+        data.recurrenceRule = formData.get('recurrenceRule') || '';
+        data.recurrenceEndDate = formData.get('recurrenceEndDate') || null;
+        
+        try {
+            const url = this.action;
+            const method = {% if edit_mode %}'PUT'{% else %}'POST'{% endif %};
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': formData.get('csrf_token')
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                window.location.href = '{{ url_for('calendar.view_calendar') }}';
+            } else {
+                alert(result.error || 'An error occurred');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while saving the event');
+        }
+    });
+</script>
+{% endblock %}
+

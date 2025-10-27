@@ -42,6 +42,16 @@ class Settings(db.Model):
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
     
+    # Email configuration settings (stored in database, takes precedence over environment variables)
+    mail_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable database-backed email config
+    mail_server = db.Column(db.String(255), default='', nullable=True)
+    mail_port = db.Column(db.Integer, default=587, nullable=True)
+    mail_use_tls = db.Column(db.Boolean, default=True, nullable=True)
+    mail_use_ssl = db.Column(db.Boolean, default=False, nullable=True)
+    mail_username = db.Column(db.String(255), default='', nullable=True)
+    mail_password = db.Column(db.String(255), default='', nullable=True)  # Store encrypted in production
+    mail_default_sender = db.Column(db.String(255), default='', nullable=True)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -76,6 +86,16 @@ class Settings(db.Model):
         self.invoice_start_number = kwargs.get('invoice_start_number', 1000)
         self.invoice_terms = kwargs.get('invoice_terms', 'Payment is due within 30 days of invoice date.')
         self.invoice_notes = kwargs.get('invoice_notes', 'Thank you for your business!')
+        
+        # Email configuration defaults
+        self.mail_enabled = kwargs.get('mail_enabled', False)
+        self.mail_server = kwargs.get('mail_server', '')
+        self.mail_port = kwargs.get('mail_port', 587)
+        self.mail_use_tls = kwargs.get('mail_use_tls', True)
+        self.mail_use_ssl = kwargs.get('mail_use_ssl', False)
+        self.mail_username = kwargs.get('mail_username', '')
+        self.mail_password = kwargs.get('mail_password', '')
+        self.mail_default_sender = kwargs.get('mail_default_sender', '')
     
     def __repr__(self):
         return f'<Settings {self.id}>'
@@ -108,6 +128,20 @@ class Settings(db.Model):
         logo_path = self.get_logo_path()
         return logo_path and os.path.exists(logo_path)
     
+    def get_mail_config(self):
+        """Get email configuration, preferring database settings over environment variables"""
+        if self.mail_enabled and self.mail_server:
+            return {
+                'MAIL_SERVER': self.mail_server,
+                'MAIL_PORT': self.mail_port or 587,
+                'MAIL_USE_TLS': self.mail_use_tls if self.mail_use_tls is not None else True,
+                'MAIL_USE_SSL': self.mail_use_ssl if self.mail_use_ssl is not None else False,
+                'MAIL_USERNAME': self.mail_username or None,
+                'MAIL_PASSWORD': self.mail_password or None,
+                'MAIL_DEFAULT_SENDER': self.mail_default_sender or 'noreply@timetracker.local',
+            }
+        return None
+    
     def to_dict(self):
         """Convert settings to dictionary for API responses"""
         return {
@@ -138,6 +172,14 @@ class Settings(db.Model):
             'invoice_pdf_template_html': self.invoice_pdf_template_html,
             'invoice_pdf_template_css': self.invoice_pdf_template_css,
             'allow_analytics': self.allow_analytics,
+            'mail_enabled': self.mail_enabled,
+            'mail_server': self.mail_server,
+            'mail_port': self.mail_port,
+            'mail_use_tls': self.mail_use_tls,
+            'mail_use_ssl': self.mail_use_ssl,
+            'mail_username': self.mail_username,
+            'mail_password_set': bool(self.mail_password),  # Don't expose actual password
+            'mail_default_sender': self.mail_default_sender,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

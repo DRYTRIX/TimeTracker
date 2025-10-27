@@ -1,0 +1,472 @@
+/* Calendar Styles for TimeTracker */
+
+.calendar-container {
+    min-height: 600px;
+}
+
+/* Day View */
+.calendar-day-view {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 1rem;
+}
+
+.time-slots {
+    border-right: 2px solid var(--border-color, #e2e8f0);
+}
+
+.time-slot {
+    height: 60px;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted, #6b7280);
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.events-column {
+    position: relative;
+}
+
+.day-events-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.event-card {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid;
+    background-color: var(--card-bg, #ffffff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.event-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.event-card.event {
+    border-left-color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+.event-card.task {
+    border-left-color: #f59e0b;
+    background-color: #fffbeb;
+}
+
+.event-card.time_entry {
+    border-left-color: #10b981;
+    background-color: #ecfdf5;
+    opacity: 0.9;
+    cursor: default;
+    pointer-events: none;
+}
+
+.event-card.time_entry::before {
+    content: "⏱ ";
+    font-size: 1.1em;
+}
+
+.event-card.task::before {
+    font-size: 1.1em;
+}
+
+.dark .event-card {
+    background-color: var(--card-dark-bg, #1e293b);
+}
+
+.dark .event-card.event {
+    background-color: #1e3a8a;
+}
+
+.dark .event-card.task {
+    background-color: #78350f;
+}
+
+.dark .event-card.time_entry {
+    background-color: #064e3b;
+}
+
+/* Week View */
+.calendar-week-view {
+    overflow-x: auto;
+}
+
+.week-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.week-table th {
+    padding: 1rem;
+    background-color: var(--header-bg, #f9fafb);
+    border: 1px solid var(--border-color, #e2e8f0);
+    font-weight: 600;
+    text-align: center;
+}
+
+.week-table th.today {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.dark .week-table th {
+    background-color: var(--header-dark-bg, #1e293b);
+}
+
+.dark .week-table th.today {
+    background-color: #1e3a8a;
+    color: #93c5fd;
+}
+
+.week-cell {
+    height: 60px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    padding: 0.25rem;
+    vertical-align: top;
+    position: relative;
+}
+
+.week-cell:hover {
+    background-color: var(--hover-bg, #f9fafb);
+}
+
+.dark .week-cell:hover {
+    background-color: var(--hover-dark-bg, #334155);
+}
+
+.event-chip {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.25rem;
+    border-radius: 0.25rem;
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.2s ease;
+}
+
+.event-chip:hover {
+    opacity: 0.85;
+}
+
+.event-chip.time-entry-chip {
+    background-color: #10b981 !important;
+    cursor: default !important;
+    opacity: 0.8 !important;
+    pointer-events: none;
+}
+
+.event-chip.task-chip {
+    background-color: #f59e0b !important;
+    cursor: pointer;
+}
+
+/* Month View */
+.calendar-month-view {
+    overflow-x: auto;
+}
+
+.month-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.month-table th {
+    padding: 0.75rem;
+    background-color: var(--header-bg, #f9fafb);
+    border: 1px solid var(--border-color, #e2e8f0);
+    font-weight: 600;
+    text-align: center;
+}
+
+.dark .month-table th {
+    background-color: var(--header-dark-bg, #1e293b);
+}
+
+.month-cell {
+    height: 120px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    padding: 0.5rem;
+    vertical-align: top;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.month-cell:hover {
+    background-color: var(--hover-bg, #f9fafb);
+}
+
+.dark .month-cell:hover {
+    background-color: var(--hover-dark-bg, #334155);
+}
+
+.month-cell.today {
+    background-color: #dbeafe;
+}
+
+.dark .month-cell.today {
+    background-color: #1e3a8a;
+}
+
+.month-cell.other-month {
+    opacity: 0.4;
+}
+
+.date-number {
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.month-cell.today .date-number {
+    background-color: #3b82f6;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.month-events {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.event-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.2s ease;
+}
+
+.event-badge:hover {
+    opacity: 0.85;
+}
+
+.event-badge.task-badge {
+    background-color: #f59e0b;
+}
+
+.event-badge.time-entry-badge {
+    background-color: #10b981;
+    cursor: default;
+    opacity: 0.8;
+}
+
+.event-badge-more {
+    font-size: 0.7rem;
+    color: var(--text-muted, #6b7280);
+    font-weight: 600;
+    margin-top: 0.25rem;
+    text-align: center;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-dialog {
+    background-color: var(--card-bg, #ffffff);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.dark .modal-dialog {
+    background-color: var(--card-dark-bg, #1e293b);
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted, #6b7280);
+    transition: color 0.2s ease;
+}
+
+.close:hover {
+    color: var(--text-color, #111827);
+}
+
+.dark .close:hover {
+    color: var(--text-dark-color, #f9fafb);
+}
+
+/* Button Group */
+.btn-group {
+    display: inline-flex;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+    margin: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .calendar-day-view {
+        grid-template-columns: 60px 1fr;
+    }
+    
+    .time-slot {
+        font-size: 0.75rem;
+        padding: 0.25rem;
+    }
+    
+    .month-cell {
+        height: 80px;
+        font-size: 0.75rem;
+    }
+    
+    .week-table {
+        min-width: 600px;
+    }
+    
+    .event-badge {
+        font-size: 0.65rem;
+        padding: 0.125rem 0.25rem;
+    }
+}
+
+/* Dark mode adjustments */
+.dark {
+    --border-color: #374151;
+    --header-bg: #1e293b;
+    --header-dark-bg: #0f172a;
+    --card-bg: #1e293b;
+    --card-dark-bg: #0f172a;
+    --hover-bg: #334155;
+    --hover-dark-bg: #1e293b;
+    --text-muted: #9ca3af;
+    --text-color: #f9fafb;
+    --text-dark-color: #e5e7eb;
+}
+
+/* Loading state */
+.calendar-container .text-center {
+    padding: 3rem;
+}
+
+/* Badge styles */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 0.25rem;
+}
+
+.badge-info {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6b7280;
+    color: white;
+}
+
+/* Form styles for calendar forms */
+.form-label.required::after {
+    content: ' *';
+    color: #ef4444;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 0.375rem;
+    background-color: var(--input-bg, #ffffff);
+    color: var(--text-color, #111827);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .form-control {
+    background-color: var(--input-dark-bg, #0f172a);
+    color: var(--text-dark-color, #f9fafb);
+}
+
+.form-checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+

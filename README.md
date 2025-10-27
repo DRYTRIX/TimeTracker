@@ -31,21 +31,36 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Persistent Timers** — Timers keep running even after browser closes
 - **Idle Detection** — Automatic pause after configurable idle time
 - **Manual Entry** — Add historical time entries with notes and tags
-- **Real-time Updates** — See live timer updates across all devices
+- **Bulk Time Entry** — Create multiple entries for consecutive days with weekend skipping
+- **Time Entry Templates** — Save and reuse common time entries for faster logging
+- **Calendar View** — Visual calendar interface for viewing and managing time entries
+- **Real-time Updates** — See live timer updates across all devices via WebSocket
 
 ### 📊 **Project & Task Management**
 - **Unlimited Projects & Tasks** — Organize work your way
-- **Client Management** — Store client details and billing rates
+- **Client Management** — Store client details, contacts, and billing rates
 - **Task Board** — Visual task management with priorities and assignments
+- **Kanban Board** — Drag-and-drop task management with customizable columns
 - **Status Tracking** — Monitor progress from to-do to completion
 - **Estimates vs Actuals** — Track project budgets and burn rates
+- **Task Comments** — Collaborate with threaded comments on tasks
+- **Markdown Support** — Rich text formatting in project and task descriptions
 
 ### 🧾 **Professional Invoicing**
 - **Generate from Time** — Convert tracked hours to invoices automatically
 - **Custom Line Items** — Add manual items for expenses or services
 - **Tax Calculation** — Automatic tax calculations with configurable rates
-- **PDF Export** — Professional invoice templates (coming soon)
+- **PDF Export** — Professional PDF invoice generation with branding
 - **Status Tracking** — Track draft, sent, paid, and overdue invoices
+- **Company Branding** — Add logos and custom company information
+- **Expense Integration** — Include tracked expenses in invoices
+
+### 💰 **Financial Management**
+- **Expense Tracking** — Track business expenses with receipts and categories
+- **Payment Tracking** — Monitor invoice payments and payment methods
+- **Reimbursement Management** — Handle expense approvals and reimbursements
+- **Billable Expenses** — Mark expenses as billable and add to invoices
+- **Multi-Currency** — Support for multiple currencies with conversion
 
 ### 📈 **Analytics & Reporting**
 - **Visual Dashboards** — Charts and graphs for quick insights
@@ -53,14 +68,24 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **CSV Export** — Export data for external analysis
 - **Billable vs Non-billable** — Separate tracking for accurate billing
 - **Custom Date Ranges** — Flexible reporting periods
+- **Saved Filters** — Save frequently used report filters for quick access
+- **User Analytics** — Individual performance metrics and productivity insights
 
 ### 🔐 **Multi-User & Security**
-- **Role-Based Access** — Admin and user roles with appropriate permissions
+- **Role-Based Access Control** — Granular permissions system with custom roles
 - **User Management** — Add team members and manage access
 - **Self-Hosted** — Complete control over your data
-- **Username-Only Login** — Simple authentication for internal use
+- **Flexible Authentication** — Username-only, OIDC/SSO (Azure AD, Authelia, etc.)
 - **Session Management** — Secure cookies and session handling
- - **Profile Pictures** — Users can upload a profile picture in their profile settings
+- **Profile Pictures** — Users can upload profile pictures
+- **API Tokens** — Generate tokens for API access and integrations
+
+### ⌨️ **Productivity Features**
+- **Command Palette** — Keyboard-driven navigation with shortcuts (press `?`)
+- **Keyboard Shortcuts** — Navigate and execute actions without the mouse
+- **Quick Search** — Fast search across projects, tasks, clients, and more (Ctrl+K)
+- **Email Notifications** — Configurable email alerts for tasks, invoices, and more
+- **Weekly Summaries** — Optional weekly time tracking summaries via email
 
 ### 🛠️ **Technical Excellence**
 - **Docker Ready** — Deploy in minutes with Docker Compose
@@ -68,6 +93,9 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Responsive Design** — Works perfectly on desktop, tablet, and mobile
 - **Real-time Sync** — WebSocket support for live updates
 - **Automatic Backups** — Scheduled database backups (configurable)
+- **Progressive Web App** — Install as a mobile app on phones and tablets
+- **Monitoring Stack** — Built-in Prometheus, Grafana, Loki for observability
+- **Internationalization** — Multiple language support (i18n)
 
 ---
 
@@ -161,43 +189,65 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 ## 🚀 Quick Start
 
-### Docker (Recommended)
+### Option 1: Docker with HTTPS (Recommended for Production)
 
-Get TimeTracker running in under 2 minutes:
+Get TimeTracker running in under 2 minutes with automatic HTTPS:
 
 ```bash
 # Clone the repository
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
-# Create your .env from the template and set SECRET_KEY and TZ
+# Create your environment file from the template
 cp env.example .env
-# Edit .env and set a strong SECRET_KEY (python -c "import secrets; print(secrets.token_hex(32))")
 
-# Start with Docker Compose (HTTPS via nginx)
+# IMPORTANT: Edit .env and set a strong SECRET_KEY
+# Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
+# Also set your timezone (TZ) and currency (CURRENCY)
+nano .env  # or use any text editor
+
+# Start with Docker Compose (includes HTTPS via nginx with self-signed cert)
 docker-compose up -d
 
-# Access at https://localhost (self-signed cert)
-
-# Prefer plain HTTP on port 8080?
-# Use the example compose that publishes the app directly:
-# docker-compose -f docker-compose.example.yml up -d
-# Access at http://localhost:8080
+# Access at https://localhost
+# Your browser will warn about the self-signed certificate - that's normal
 ```
-
-See the full Docker Compose setup guide: [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
 
 **First login creates the admin account** — just enter your username!
 
-### Quick Test with SQLite
+**📖 See the complete setup guide:** [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
 
-Want to try it out without setting up a database?
+### Option 2: Docker with Plain HTTP (Development/Testing)
+
+For local development or testing without HTTPS:
 
 ```bash
-docker-compose -f docker-compose.local-test.yml up --build
+# Clone and navigate to the repository
+git clone https://github.com/drytrix/TimeTracker.git
+cd TimeTracker
+
+# Use the example compose file that exposes HTTP directly
+docker-compose -f docker-compose.example.yml up -d
+
+# Access at http://localhost:8080
 ```
 
-No configuration needed — perfect for testing!
+### Option 3: Quick Test with SQLite
+
+Want to try it out without any configuration?
+
+```bash
+# Clone the repository
+git clone https://github.com/drytrix/TimeTracker.git
+cd TimeTracker
+
+# Start with the local test configuration (uses SQLite, no PostgreSQL)
+docker-compose -f docker-compose.local-test.yml up --build
+
+# Access at http://localhost:8080
+```
+
+No database setup or .env file needed — perfect for quick testing!
 
 ---
 
@@ -249,7 +299,10 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Invoice System](docs/INVOICE_FEATURE_README.md)** — Generate professional invoices
 - **[Client Management](docs/CLIENT_MANAGEMENT_README.md)** — Manage client relationships
 - **[Calendar Features](docs/CALENDAR_FEATURES_README.md)** — Calendar and bulk entry features
+- **[Bulk Time Entry](docs/BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
 - **[Command Palette](docs/COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts for power users
+- **[Expense Tracking](docs/EXPENSE_TRACKING.md)** — Track business expenses (if available)
+- **[Role-Based Permissions](docs/PERMISSIONS.md)** — Granular access control (if available)
 
 ### Technical Documentation
 - **[Project Structure](docs/PROJECT_STRUCTURE.md)** — Codebase architecture
@@ -268,29 +321,73 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
 ### Local Development
 ```bash
+# Start with HTTPS (recommended)
+docker-compose up -d
+
+# Or use plain HTTP for development
+docker-compose -f docker-compose.example.yml up -d
+```
+
+### Production Deployment
+
+#### Option 1: Build from Source
+```bash
+# Clone the repository
+git clone https://github.com/drytrix/TimeTracker.git
+cd TimeTracker
+
+# Configure your .env file
+cp env.example .env
+# Edit .env with production settings:
+# - Set a strong SECRET_KEY: python -c "import secrets; print(secrets.token_hex(32))"
+# - Configure TZ (timezone) and CURRENCY
+# - Set PostgreSQL credentials (POSTGRES_PASSWORD, etc.)
+
+# Start the application
 docker-compose up -d
 ```
 
-### Production with PostgreSQL
+#### Option 2: Use Pre-built Images
 ```bash
-# Configure your .env file
-cp env.example .env
-# Edit .env with production settings (set SECRET_KEY, TZ, DB credentials)
-
-# Start with production compose (published image)
+# Use the remote compose file with published images
 docker-compose -f docker-compose.remote.yml up -d
 ```
 
 > **⚠️ Security Note:** Always set a unique `SECRET_KEY` in production! See [CSRF Configuration](docs/CSRF_CONFIGURATION.md) for details.
 
-### Raspberry Pi
-TimeTracker runs perfectly on Raspberry Pi 4 (2GB+):
+### Raspberry Pi Deployment
+TimeTracker runs perfectly on Raspberry Pi 4 (2GB+ RAM):
 ```bash
-# Same commands work on ARM architecture
+# Same Docker commands work on ARM architecture
 docker-compose up -d
 ```
 
-**📖 See [Deployment Guide](docs/DOCKER_PUBLIC_SETUP.md) for detailed instructions**
+### HTTPS Configuration
+
+#### Automatic HTTPS (Easiest)
+```bash
+# Uses self-signed certificates (generated automatically)
+docker-compose up -d
+# Access at https://localhost (accept browser warning)
+```
+
+#### Manual HTTPS with mkcert (No Browser Warnings)
+```bash
+# Use mkcert for locally-trusted certificates
+docker-compose -f docker-compose.https-mkcert.yml up -d
+```
+**📖 See [HTTPS Setup Guide](README_HTTPS.md) for detailed instructions**
+
+### Monitoring & Analytics
+```bash
+# Deploy with full monitoring stack (Prometheus, Grafana, Loki)
+docker-compose up -d
+# Grafana: http://localhost:3000
+# Prometheus: http://localhost:9090
+```
+
+**📖 See [Deployment Guide](docs/DOCKER_PUBLIC_SETUP.md) for detailed instructions**  
+**📖 See [Docker Compose Setup](docs/DOCKER_COMPOSE_SETUP.md) for configuration options**
 
 ---
 
@@ -434,11 +531,19 @@ This starts:
 - 📊 **Advanced Analytics** — More charts and insights
 
 ### Recently Added
-- ✅ **Invoice Generation** — Complete invoicing system
-- ✅ **Task Management** — Full task tracking and management
-- ✅ **Command Palette** — Keyboard-driven navigation
+- ✅ **Invoice Generation** — Complete invoicing system with PDF export
+- ✅ **Task Management** — Full task tracking and management with Kanban board
+- ✅ **Command Palette** — Keyboard-driven navigation (press `?`)
 - ✅ **Calendar View** — Visual time entry calendar
-- ✅ **Bulk Operations** — Bulk time entry creation
+- ✅ **Bulk Time Entry** — Create multiple entries for consecutive days
+- ✅ **Time Entry Templates** — Save and reuse common time entries
+- ✅ **Expense Tracking** — Track business expenses with receipts
+- ✅ **Payment Tracking** — Monitor invoice payments
+- ✅ **Saved Filters** — Save frequently used report filters
+- ✅ **Task Comments** — Collaborate with comments on tasks
+- ✅ **Role-Based Permissions** — Granular access control system
+- ✅ **OIDC/SSO Authentication** — Enterprise authentication support
+- ✅ **Markdown Support** — Rich text in descriptions
 
 ---
 

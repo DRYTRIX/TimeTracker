@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeTracker Email Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #3b82f6;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #3b82f6;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header p {
+            color: #666;
+            margin: 10px 0 0 0;
+            font-size: 14px;
+        }
+        .success-badge {
+            background-color: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        .info-section {
+            background-color: #f9fafb;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-section h2 {
+            margin-top: 0;
+            color: #3b82f6;
+            font-size: 18px;
+        }
+        .info-item {
+            margin: 8px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #4b5563;
+            display: inline-block;
+            min-width: 140px;
+        }
+        .info-value {
+            color: #1f2937;
+            font-family: 'Courier New', monospace;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        .checkmark {
+            font-size: 48px;
+            color: #10b981;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TimeTracker</h1>
+            <p>Email Configuration Test</p>
+        </div>
+        
+        <div class="checkmark">✓</div>
+        
+        <div class="success-badge">
+            Email Configuration Working!
+        </div>
+        
+        <p>Hello,</p>
+        
+        <p>This is a test email from <strong>TimeTracker</strong> to verify that your email configuration is working correctly.</p>
+        
+        <p>If you received this email, congratulations! Your email settings are properly configured and emails are being delivered successfully.</p>
+        
+        <div class="info-section">
+            <h2>Test Details</h2>
+            <div class="info-item">
+                <span class="info-label">Sent at:</span>
+                <span class="info-value">{{ datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') }} UTC</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Sent by:</span>
+                <span class="info-value">{{ sender_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Mail Server:</span>
+                <span class="info-value">{{ mail_server }}:{{ mail_port }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">TLS Enabled:</span>
+                <span class="info-value">{{ 'Yes' if use_tls else 'No' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">SSL Enabled:</span>
+                <span class="info-value">{{ 'Yes' if use_ssl else 'No' }}</span>
+            </div>
+        </div>
+        
+        <p>You can now use email features in TimeTracker, including:</p>
+        <ul>
+            <li>Invoice notifications</li>
+            <li>Task assignment notifications</li>
+            <li>Weekly time summaries</li>
+            <li>Comment mentions</li>
+            <li>System alerts</li>
+        </ul>
+        
+        <div class="footer">
+            <p><strong>TimeTracker</strong> - Time Tracking & Project Management</p>
+            <p>This is an automated test email. Please do not reply to this message.</p>
+        </div>
+    </div>
+</body>
+</html>
+

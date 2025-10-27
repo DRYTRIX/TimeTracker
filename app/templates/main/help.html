@@ -28,8 +28,11 @@
                 <a class="help-link py-1 hover:text-primary" href="#project-management"><i class="fas fa-project-diagram mr-2"></i>{{ _('Project Management') }}</a>
                 <a class="help-link py-1 hover:text-primary" href="#client-management"><i class="fas fa-building mr-2"></i>{{ _('Client Management') }}</a>
                 <a class="help-link py-1 hover:text-primary" href="#task-management"><i class="fas fa-tasks mr-2"></i>{{ _('Task Management') }}</a>
+                <a class="help-link py-1 hover:text-primary" href="#kanban-board"><i class="fas fa-columns mr-2"></i>{{ _('Kanban Board') }}</a>
                 <a class="help-link py-1 hover:text-primary" href="#invoicing"><i class="fas fa-file-invoice-dollar mr-2"></i>{{ _('Invoicing') }}</a>
+                <a class="help-link py-1 hover:text-primary" href="#expenses"><i class="fas fa-receipt mr-2"></i>{{ _('Expenses') }}</a>
                 <a class="help-link py-1 hover:text-primary" href="#reports-analytics"><i class="fas fa-chart-line mr-2"></i>{{ _('Reports & Analytics') }}</a>
+                <a class="help-link py-1 hover:text-primary" href="#productivity"><i class="fas fa-keyboard mr-2"></i>{{ _('Productivity Features') }}</a>
                 {% if current_user.is_admin %}
                 <a class="help-link py-1 hover:text-primary" href="#admin-features"><i class="fas fa-cog mr-2"></i>{{ _('Admin Features') }}</a>
                 {% endif %}
@@ -152,6 +155,23 @@
                         </div>
                     </div>
                 </div>
+            <div class="mt-6">
+                <h4 class="font-semibold mb-2">{{ _('Advanced Time Entry Features') }}</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
+                        <h5 class="font-semibold mb-2"><i class="fas fa-calendar-week text-primary mr-2"></i>{{ _('Bulk Entry') }}</h5>
+                        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Create multiple time entries for consecutive days with the same project and duration. Perfect for regular work patterns.') }}</p>
+                    </div>
+                    <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
+                        <h5 class="font-semibold mb-2"><i class="fas fa-save text-green-600 mr-2"></i>{{ _('Templates') }}</h5>
+                        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Save frequently used time entries as templates for quick reuse. Saves project, task, and notes.') }}</p>
+                    </div>
+                    <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
+                        <h5 class="font-semibold mb-2"><i class="fas fa-calendar text-sky-600 mr-2"></i>{{ _('Calendar View') }}</h5>
+                        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Visualize your time entries on a calendar. Drag-and-drop to reschedule or click dates to add entries.') }}</p>
+                    </div>
+                </div>
+            </div>
             </section>
 
             <!-- Project Management -->
@@ -288,6 +308,104 @@
                                 </ul>
                     </div>
                 </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mt-6">
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Collaboration Features') }}</h4>
+                    <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                        <li><i class="fas fa-comments text-primary mr-2"></i>{{ _('Task Comments - Threaded discussions on tasks') }}</li>
+                        <li><i class="fas fa-markdown text-green-600 mr-2"></i>{{ _('Markdown Support - Rich formatting in descriptions') }}</li>
+                        <li><i class="fas fa-at text-sky-600 mr-2"></i>{{ _('User Mentions - Tag team members (if enabled)') }}</li>
+                        <li><i class="fas fa-paperclip text-amber-600 mr-2"></i>{{ _('File Attachments - Attach files to tasks (if enabled)') }}</li>
+                                </ul>
+                            </div>
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Markdown Formatting') }}</h4>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Task and project descriptions support Markdown:') }}</p>
+                    <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark text-xs">
+                                    <li>{{ _('**Bold**, *Italic*, ~~Strikethrough~~') }}</li>
+                                    <li>{{ _('# Headings, - Lists, [Links](url)') }}</li>
+                                    <li>{{ _('```code blocks```, tables, images') }}</li>
+                                </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Kanban Board -->
+        <section id="kanban-board" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4"><i class="fas fa-columns text-indigo-600 mr-2"></i>{{ _('Kanban Board') }}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Visualize your workflow with a drag-and-drop Kanban board for intuitive task management.') }}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Board Features') }}</h4>
+                    <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                        <li><i class="fas fa-columns text-primary mr-2"></i>{{ _('Customizable columns matching task statuses') }}</li>
+                        <li><i class="fas fa-hand-pointer text-green-600 mr-2"></i>{{ _('Drag-and-drop tasks between columns') }}</li>
+                        <li><i class="fas fa-filter text-sky-600 mr-2"></i>{{ _('Filter by project, user, or priority') }}</li>
+                        <li><i class="fas fa-search text-amber-600 mr-2"></i>{{ _('Quick search across all tasks') }}</li>
+                                </ul>
+                            </div>
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Using the Kanban Board') }}</h4>
+                    <ol class="list-decimal ml-5 space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                                    <li>{{ _('Access from the Tasks menu or project page') }}</li>
+                                    <li>{{ _('Drag tasks to different columns to change status') }}</li>
+                                    <li>{{ _('Click on a task card to view/edit details') }}</li>
+                                    <li>{{ _('Use filters to focus on specific work') }}</li>
+                                </ol>
+                    </div>
+                </div>
+            <div class="mt-4 flex items-start gap-3 p-3 rounded-lg border border-indigo-600/30 bg-indigo-50 dark:bg-indigo-900/20 text-sm">
+                <i class="fas fa-lightbulb text-indigo-600 mt-0.5"></i>
+                <p class="text-text-muted-light dark:text-text-muted-dark"><strong>{{ _('Pro Tip:') }}</strong> {{ _('The Kanban board is perfect for sprint planning and daily standups. Each column represents a stage in your workflow!') }}</p>
+                </div>
+            </section>
+
+            <!-- Expenses -->
+        <section id="expenses" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4"><i class="fas fa-receipt text-purple-600 mr-2"></i>{{ _('Expense Tracking') }}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Track business expenses, manage receipts, and handle reimbursements efficiently.') }}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Expense Features') }}</h4>
+                    <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                        <li><i class="fas fa-folder text-primary mr-2"></i>{{ _('Categorize expenses (travel, meals, supplies, etc.)') }}</li>
+                        <li><i class="fas fa-paperclip text-green-600 mr-2"></i>{{ _('Attach receipt images and documents') }}</li>
+                        <li><i class="fas fa-dollar-sign text-sky-600 mr-2"></i>{{ _('Track amounts, tax, and payment methods') }}</li>
+                        <li><i class="fas fa-check-circle text-amber-600 mr-2"></i>{{ _('Approval workflow for expense requests') }}</li>
+                                </ul>
+                            </div>
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Billing & Reimbursement') }}</h4>
+                    <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                        <li><i class="fas fa-money-bill-wave text-primary mr-2"></i>{{ _('Mark expenses as billable to clients') }}</li>
+                        <li><i class="fas fa-file-invoice text-green-600 mr-2"></i>{{ _('Include expenses in client invoices') }}</li>
+                        <li><i class="fas fa-hand-holding-usd text-sky-600 mr-2"></i>{{ _('Track reimbursement status') }}</li>
+                        <li><i class="fas fa-project-diagram text-amber-600 mr-2"></i>{{ _('Link expenses to specific projects') }}</li>
+                                </ul>
+                    </div>
+                </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6">
+                <div class="text-center p-4 rounded border border-border-light dark:border-border-dark">
+                    <div class="mx-auto mb-2 w-10 h-10 rounded-full flex items-center justify-center bg-purple-600/10"><span class="font-bold text-purple-600">1</span></div>
+                    <h5 class="font-semibold">{{ _('Record Expense') }}</h5>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Enter details and upload receipt') }}</p>
+                    </div>
+                <div class="text-center p-4 rounded border border-border-light dark:border-border-dark">
+                    <div class="mx-auto mb-2 w-10 h-10 rounded-full flex items-center justify-center bg-sky-600/10"><span class="font-bold text-sky-600">2</span></div>
+                    <h5 class="font-semibold">{{ _('Submit for Approval') }}</h5>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Admin reviews and approves') }}</p>
+                </div>
+                <div class="text-center p-4 rounded border border-border-light dark:border-border-dark">
+                    <div class="mx-auto mb-2 w-10 h-10 rounded-full flex items-center justify-center bg-green-600/10"><span class="font-bold text-green-600">3</span></div>
+                    <h5 class="font-semibold">{{ _('Invoice/Reimburse') }}</h5>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Add to invoice or reimburse') }}</p>
+                    </div>
+                <div class="text-center p-4 rounded border border-border-light dark:border-border-dark">
+                    <div class="mx-auto mb-2 w-10 h-10 rounded-full flex items-center justify-center bg-amber-600/10"><span class="font-bold text-amber-600">4</span></div>
+                    <h5 class="font-semibold">{{ _('Track Payment') }}</h5>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Monitor reimbursement status') }}</p>
+                </div>
+                </div>
             </section>
 
             <!-- Invoicing -->
@@ -368,6 +486,7 @@
                         <li><i class="fas fa-project-diagram text-green-600 mr-2"></i>{{ _('Project - Filter by specific projects') }}</li>
                         <li><i class="fas fa-user text-sky-600 mr-2"></i>{{ _('User - Filter by team members') }}</li>
                         <li><i class="fas fa-building text-amber-600 mr-2"></i>{{ _('Client - Filter by client organization') }}</li>
+                        <li><i class="fas fa-save text-purple-600 mr-2"></i>{{ _('Saved Filters - Save frequently used filters') }}</li>
                     </ul>
                 </div>
                 <div>
@@ -380,6 +499,54 @@
                                 </ul>
                     </div>
                 </div>
+            <div class="mt-4 flex items-start gap-3 p-3 rounded-lg border border-purple-600/30 bg-purple-50 dark:bg-purple-900/20 text-sm">
+                <i class="fas fa-lightbulb text-purple-600 mt-0.5"></i>
+                <p class="text-text-muted-light dark:text-text-muted-dark"><strong>{{ _('Pro Tip:') }}</strong> {{ _('Use Saved Filters to quickly access your most common report views. Save filters for weekly reviews, monthly billing, or specific project tracking!') }}</p>
+                </div>
+            </section>
+
+            <!-- Productivity Features -->
+        <section id="productivity" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4"><i class="fas fa-keyboard text-indigo-600 mr-2"></i>{{ _('Productivity Features') }}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Boost your efficiency with keyboard shortcuts, command palette, and automation features.') }}</p>
+            
+            <div class="bg-background-light dark:bg-background-dark/40 p-6 rounded border border-border-light dark:border-border-dark mb-6">
+                <h4 class="font-semibold mb-3 text-center"><i class="fas fa-terminal text-primary mr-2"></i>{{ _('Command Palette') }}</h4>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center mb-4">{{ _('Access any feature instantly without leaving the keyboard') }}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-semibold mb-2">{{ _('Opening the Command Palette') }}</h5>
+                        <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                            <li><kbd class="px-2 py-1 bg-white dark:bg-gray-800 border rounded">?</kbd> {{ _('Press the question mark key') }}</li>
+                            <li><kbd class="px-2 py-1 bg-white dark:bg-gray-800 border rounded">Ctrl+K</kbd> / <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border rounded">Cmd+K</kbd> {{ _('Quick search') }}</li>
+                                        </ul>
+                                    </div>
+                    <div>
+                        <h5 class="font-semibold mb-2">{{ _('Quick Actions') }}</h5>
+                        <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                            <li><kbd class="px-2 py-1 bg-white dark:bg-gray-800 border rounded">g d</kbd> {{ _('Go to Dashboard') }}</li>
+                            <li><kbd class="px-2 py-1 bg-white dark:bg-gray-800 border rounded">g p</kbd> {{ _('Go to Projects') }}</li>
+                            <li><kbd class="px-2 py-1 bg-white dark:bg-gray-800 border rounded">g t</kbd> {{ _('Go to Tasks') }}</li>
+                            <li><kbd class="px-2 py-1 bg-white dark:bg-gray-800 border rounded">n e</kbd> {{ _('New Time Entry') }}</li>
+                        </ul>
+                    </div>
+                                </div>
+                            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
+                    <h5 class="font-semibold mb-2"><i class="fas fa-bolt text-amber-600 mr-2"></i>{{ _('Keyboard Shortcuts') }}</h5>
+                    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Navigate faster with keyboard-driven commands. Press Shift+? to see all shortcuts.') }}</p>
+                </div>
+                <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
+                    <h5 class="font-semibold mb-2"><i class="fas fa-search text-sky-600 mr-2"></i>{{ _('Global Search') }}</h5>
+                    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Quickly find projects, tasks, clients, and time entries from anywhere in the app.') }}</p>
+                </div>
+                <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
+                    <h5 class="font-semibold mb-2"><i class="fas fa-envelope text-green-600 mr-2"></i>{{ _('Email Notifications') }}</h5>
+                    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Get notified about task assignments, overdue invoices, and weekly summaries via email.') }}</p>
+                </div>
+                            </div>
             </section>
 
             {% if current_user.is_admin %}
@@ -390,22 +557,44 @@
                 <div>
                     <h4 class="font-semibold mb-2">{{ _('User Management') }}</h4>
                     <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
-                                    <li>{{ _('Create new users with username-only authentication') }}</li>
-                                    <li>{{ _('Assign user roles (user or admin)') }}</li>
+                                    <li>{{ _('Create new users with flexible authentication') }}</li>
+                                    <li>{{ _('Assign custom roles with specific permissions') }}</li>
                                     <li>{{ _('Activate/deactivate user accounts') }}</li>
                                     <li>{{ _('View user statistics and activity') }}</li>
+                                    <li>{{ _('Generate API tokens for users') }}</li>
                                 </ul>
                             </div>
                 <div>
                     <h4 class="font-semibold mb-2">{{ _('Access Control') }}</h4>
                     <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
-                                    <li>{{ _('Role-based permissions') }}</li>
-                                    <li>{{ _('Admin-only system settings') }}</li>
+                                    <li>{{ _('Granular role-based permissions system') }}</li>
+                                    <li>{{ _('Custom roles with fine-grained access') }}</li>
                                     <li>{{ _('User data access controls') }}</li>
-                                    <li>{{ _('Audit trail for admin actions') }}</li>
+                                    <li>{{ _('OIDC/SSO integration (Azure AD, Authelia, etc.)') }}</li>
+                                    <li>{{ _('API token management for integrations') }}</li>
                                 </ul>
                             </div>
                         </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mt-6">
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Authentication Methods') }}</h4>
+                    <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                        <li><i class="fas fa-user text-primary mr-2"></i>{{ _('Username-only (simple internal use)') }}</li>
+                        <li><i class="fas fa-shield-alt text-green-600 mr-2"></i>{{ _('OIDC/SSO (enterprise authentication)') }}</li>
+                        <li><i class="fas fa-toggle-on text-sky-600 mr-2"></i>{{ _('Both methods simultaneously') }}</li>
+                        <li><i class="fas fa-users text-amber-600 mr-2"></i>{{ _('Automatic role assignment via groups') }}</li>
+                                </ul>
+                            </div>
+                <div>
+                    <h4 class="font-semibold mb-2">{{ _('Role & Permission Management') }}</h4>
+                    <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                        <li><i class="fas fa-user-tag text-primary mr-2"></i>{{ _('Create custom roles beyond Admin/User') }}</li>
+                        <li><i class="fas fa-lock text-green-600 mr-2"></i>{{ _('Set granular permissions per feature') }}</li>
+                        <li><i class="fas fa-users-cog text-sky-600 mr-2"></i>{{ _('Assign users to multiple roles') }}</li>
+                        <li><i class="fas fa-clipboard-check text-amber-600 mr-2"></i>{{ _('View and manage all permissions') }}</li>
+                                </ul>
+                    </div>
+                </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mt-6">
                 <div>
                     <h4 class="font-semibold mb-2">{{ _('General Settings') }}</h4>
@@ -524,6 +713,26 @@
                 <details class="group border border-border-light dark:border-border-dark rounded p-4">
                     <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-mobile-alt mr-2"></i>{{ _('Can I use TimeTracker on my mobile device?') }}</summary>
                     <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Yes! TimeTracker is fully responsive and works great on mobile devices. You can install it as a Progressive Web App (PWA) for a native-like experience. The mobile interface includes a bottom tab bar for easy navigation and touch-optimized controls for time tracking on the go.') }}</p>
+                </details>
+                <details class="group border border-border-light dark:border-border-dark rounded p-4">
+                    <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-keyboard mr-2"></i>{{ _('How do I use the command palette and keyboard shortcuts?') }}</summary>
+                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Press the question mark key (?) to open the command palette. From there, you can type to search for any action or navigation target. Use keyboard sequences like "g d" for Dashboard, "g p" for Projects, or "n e" for New Entry. Press Shift+? to see all available shortcuts. Press Ctrl+K (or Cmd+K on Mac) for quick search.') }}</p>
+                </details>
+                <details class="group border border-border-light dark:border-border-dark rounded p-4">
+                    <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-calendar-week mr-2"></i>{{ _('How do I create bulk time entries for multiple days?') }}</summary>
+                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Navigate to Work → Bulk Time Entry. Select your project, choose a date range, set your daily start and end times, and optionally skip weekends. The system will create identical time entries for each day in the range. This is perfect for logging regular work patterns or filling in past time when you worked consistent hours.') }}</p>
+                </details>
+                <details class="group border border-border-light dark:border-border-dark rounded p-4">
+                    <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-save mr-2"></i>{{ _('What are time entry templates and how do I use them?') }}</summary>
+                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Time entry templates let you save frequently used time entry configurations. When creating a manual time entry, check "Save as Template" to save the project, task, and notes. Later, when creating new entries, you can select a template to quickly fill in these details. Templates are personal and only visible to you.') }}</p>
+                </details>
+                <details class="group border border-border-light dark:border-border-dark rounded p-4">
+                    <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-receipt mr-2"></i>{{ _('How do I track expenses and add them to invoices?') }}</summary>
+                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Go to Expenses → New Expense to record business expenses. Upload receipt images, categorize the expense, and mark it as billable if needed. When creating invoices, you can include these expenses as line items. Expenses support approval workflows, reimbursement tracking, and can be linked to specific projects.') }}</p>
+                </details>
+                <details class="group border border-border-light dark:border-border-dark rounded p-4">
+                    <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-markdown mr-2"></i>{{ _('Can I use Markdown in descriptions?') }}</summary>
+                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Yes! Project and task descriptions support full Markdown formatting. You can use bold, italic, headings, lists, links, code blocks, tables, and images. This allows you to create rich, well-formatted documentation directly in your projects and tasks. The Markdown editor includes a preview mode and supports dark theme.') }}</p>
                 </details>
                 <details class="group border border-border-light dark:border-border-dark rounded p-4">
                     <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-question-circle mr-2"></i>{{ _('Where can I get additional help?') }}</summary>
