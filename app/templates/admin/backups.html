@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Backups Management - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Backups Management</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Create, download, and restore database backups</p>
+        </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- Create Backup -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+                    <i class="fas fa-download text-blue-600 dark:text-blue-400 text-xl"></i>
+                </div>
+                <h2 class="text-xl font-semibold ml-4 text-gray-900 dark:text-white">Create Backup</h2>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Create a new backup of your database. The backup will be downloaded immediately.
+            </p>
+            <form action="{{ url_for('admin.create_backup_manual') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-download mr-2"></i>Create & Download Backup
+                </button>
+            </form>
+        </div>
+
+        <!-- Restore Backup -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+                    <i class="fas fa-upload text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+                <h2 class="text-xl font-semibold ml-4 text-gray-900 dark:text-white">Restore Backup</h2>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Restore your database from a backup file. This will replace all current data.
+            </p>
+            <a href="{{ url_for('admin.restore') }}" class="block w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-center">
+                <i class="fas fa-upload mr-2"></i>Go to Restore Page
+            </a>
+        </div>
+    </div>
+
+    <!-- Existing Backups -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Existing Backups</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Backups stored on the server</p>
+        </div>
+        
+        {% if backups %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Filename</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Size</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for backup in backups %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <i class="fas fa-file-archive text-gray-400 mr-2"></i>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">{{ backup.filename }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {{ backup.created.strftime('%Y-%m-%d %H:%M:%S') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {{ backup.size_mb }} MB
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <a href="{{ url_for('admin.download_backup', filename=backup.filename) }}" 
+                               class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 mr-3">
+                                <i class="fas fa-download mr-1"></i>Download
+                            </a>
+                            <button onclick="confirmRestore('{{ backup.filename }}')" 
+                                    class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200 mr-3">
+                                <i class="fas fa-undo-alt mr-1"></i>Restore
+                            </button>
+                            <button onclick="confirmDelete('{{ backup.filename }}')" 
+                                    class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">
+                                <i class="fas fa-trash mr-1"></i>Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="px-6 py-12 text-center">
+            <i class="fas fa-folder-open text-gray-400 text-5xl mb-4"></i>
+            <p class="text-gray-500 dark:text-gray-400">No backups found</p>
+            <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Create your first backup using the button above</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Information Box -->
+    <div class="mt-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+        <div class="flex">
+            <i class="fas fa-info-circle text-yellow-600 dark:text-yellow-400 text-xl mr-3 mt-0.5"></i>
+            <div>
+                <h3 class="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">Important Information</h3>
+                <ul class="text-sm text-yellow-700 dark:text-yellow-400 space-y-1">
+                    <li><strong>Backup Contents:</strong> Database data, uploaded files, and application settings</li>
+                    <li><strong>Automatic Backups:</strong> Configured in Settings (retention: {{ config.get('BACKUP_RETENTION_DAYS', 30) }} days)</li>
+                    <li><strong>Before Restore:</strong> Always create a backup before restoring to prevent data loss</li>
+                    <li><strong>Storage Location:</strong> Backups are stored in the <code class="bg-yellow-100 dark:bg-yellow-800 px-1 rounded">backups/</code> directory</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Confirmation Modal -->
+<div id="restoreModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-red-600 dark:text-red-400">
+                <i class="fas fa-exclamation-triangle mr-2"></i>Confirm Restore
+            </h3>
+        </div>
+        <div class="px-6 py-4">
+            <p class="text-gray-700 dark:text-gray-300 font-semibold">
+                ⚠️ This will replace ALL current data!
+            </p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                Restoring this backup will permanently overwrite your current database, including all time entries, projects, users, and settings.
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2" id="restoreFilename"></p>
+            <div class="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <p class="text-sm text-red-700 dark:text-red-400 font-semibold">
+                    Make sure you have a recent backup before proceeding!
+                </p>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
+            <button onclick="hideRestoreModal()" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+                Cancel
+            </button>
+            <form id="restoreForm" method="POST" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md">
+                    <i class="fas fa-undo-alt mr-1"></i>Restore Database
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Confirm Deletion</h3>
+        </div>
+        <div class="px-6 py-4">
+            <p class="text-gray-700 dark:text-gray-300">
+                Are you sure you want to delete this backup?
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2" id="deleteFilename"></p>
+            <p class="text-sm text-red-600 dark:text-red-400 mt-3 font-semibold">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                This action cannot be undone.
+            </p>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
+            <button onclick="hideDeleteModal()" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+                Cancel
+            </button>
+            <form id="deleteForm" method="POST" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md">
+                    Delete Backup
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmRestore(filename) {
+    document.getElementById('restoreFilename').textContent = 'File: ' + filename;
+    document.getElementById('restoreForm').action = "{{ url_for('admin.restore', filename='PLACEHOLDER') }}".replace('PLACEHOLDER', filename);
+    document.getElementById('restoreModal').classList.remove('hidden');
+}
+
+function hideRestoreModal() {
+    document.getElementById('restoreModal').classList.add('hidden');
+}
+
+function confirmDelete(filename) {
+    document.getElementById('deleteFilename').textContent = filename;
+    document.getElementById('deleteForm').action = "{{ url_for('admin.delete_backup', filename='PLACEHOLDER') }}".replace('PLACEHOLDER', filename);
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+// Close modals on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideDeleteModal();
+        hideRestoreModal();
+    }
+});
+
+// Add loading state to restore form submission
+document.getElementById('restoreForm').addEventListener('submit', function(e) {
+    const btn = this.querySelector('button[type="submit"]');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Restoring...';
+    btn.disabled = true;
+});
+</script>
+{% endblock %}
+

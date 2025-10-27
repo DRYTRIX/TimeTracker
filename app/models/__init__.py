@@ -26,6 +26,7 @@ from .client_note import ClientNote
 from .weekly_time_goal import WeeklyTimeGoal
 from .expense import Expense
 from .permission import Permission, Role
+from .api_token import ApiToken
 
 __all__ = [
     "User",
@@ -61,4 +62,5 @@ __all__ = [
     "Expense",
     "Permission",
     "Role",
+    "ApiToken",
 ]
