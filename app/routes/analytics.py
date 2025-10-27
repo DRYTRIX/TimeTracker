@@ -309,6 +309,75 @@ def weekly_trends():
         }]
     })
 
+@analytics_bp.route('/api/analytics/overtime')
+@login_required
+def overtime_analytics():
+    """Get overtime statistics for the current user or all users (if admin)"""
+    try:
+        days = int(request.args.get('days', 30))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid days parameter'}), 400
+    
+    from app.utils.overtime import calculate_period_overtime, get_daily_breakdown
+    
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    # If admin, show all users; otherwise show current user only
+    if current_user.is_admin:
+        users = User.query.filter_by(is_active=True).all()
+    else:
+        users = [current_user]
+    
+    # Calculate overtime for each user
+    user_overtime_data = []
+    total_overtime = 0
+    total_regular = 0
+    
+    for user in users:
+        overtime_info = calculate_period_overtime(user, start_date, end_date)
+        if overtime_info['total_hours'] > 0:  # Only include users with tracked time
+            user_overtime_data.append({
+                'username': user.display_name,
+                'regular_hours': overtime_info['regular_hours'],
+                'overtime_hours': overtime_info['overtime_hours'],
+                'total_hours': overtime_info['total_hours'],
+                'days_with_overtime': overtime_info['days_with_overtime']
+            })
+            total_overtime += overtime_info['overtime_hours']
+            total_regular += overtime_info['regular_hours']
+    
+    # Get daily breakdown for chart
+    if not current_user.is_admin:
+        daily_data = get_daily_breakdown(current_user, start_date, end_date)
+    else:
+        # For admin, show aggregated daily data
+        daily_data = []
+    
+    return jsonify({
+        'users': user_overtime_data,
+        'summary': {
+            'total_regular_hours': round(total_regular, 2),
+            'total_overtime_hours': round(total_overtime, 2),
+            'total_hours': round(total_regular + total_overtime, 2),
+            'overtime_percentage': round(
+                (total_overtime / (total_regular + total_overtime) * 100) 
+                if (total_regular + total_overtime) > 0 else 0, 
+                1
+            )
+        },
+        'daily_breakdown': [
+            {
+                'date': day['date_str'],
+                'regular_hours': day['regular_hours'],
+                'overtime_hours': day['overtime_hours'],
+                'total_hours': day['total_hours']
+            }
+            for day in daily_data
+        ]
+    })
+
+
 @analytics_bp.route('/api/analytics/project-efficiency')
 @login_required
 def project_efficiency():

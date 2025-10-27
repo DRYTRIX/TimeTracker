@@ -8,8 +8,10 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">User</label>
-            <select name="user_id" id="user_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
+            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-user mr-1"></i>User
+            </label>
+            <select name="user_id" id="user_id" class="form-input">
                 <option value="">All Users</option>
                 {% for user in users %}
                 <option value="{{ user.id }}" {% if selected_user == user.id %}selected{% endif %}>{{ user.display_name }}</option>
@@ -17,8 +19,10 @@
             </select>
         </div>
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
-            <select name="project_id" id="project_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
+            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-project-diagram mr-1"></i>Project
+            </label>
+            <select name="project_id" id="project_id" class="form-input">
                 <option value="">All Projects</option>
                 {% for project in projects %}
                 <option value="{{ project.id }}" {% if selected_project == project.id %}selected{% endif %}>{{ project.name }}</option>
@@ -26,15 +30,21 @@
             </select>
         </div>
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
-            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
+            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-calendar mr-1"></i>Start Date
+            </label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input">
         </div>
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
-            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600">
+            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-calendar mr-1"></i>End Date
+            </label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input">
         </div>
         <div class="self-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Filter</button>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
         </div>
     </form>
 </div>
@@ -45,22 +55,65 @@
             <tr>
                 <th class="p-2">User</th>
                 <th class="p-2">Total Hours</th>
+                <th class="p-2">Regular Hours</th>
+                <th class="p-2">Overtime Hours</th>
                 <th class="p-2">Billable Hours</th>
+                <th class="p-2">Days with Overtime</th>
             </tr>
         </thead>
         <tbody>
             {% for username, totals in user_totals.items() %}
             <tr class="border-b border-border-light dark:border-border-dark">
                 <td class="p-2">{{ username }}</td>
-                <td class="p-2">{{ "%.2f"|format(totals.hours) }}</td>
+                <td class="p-2 font-semibold">{{ "%.2f"|format(totals.hours) }}</td>
+                <td class="p-2 text-green-600 dark:text-green-400">
+                    {{ "%.2f"|format(totals.regular_hours) if totals.regular_hours is defined else "%.2f"|format(totals.hours) }}
+                </td>
+                <td class="p-2">
+                    {% if totals.overtime_hours is defined and totals.overtime_hours > 0 %}
+                        <span class="text-orange-600 dark:text-orange-400 font-semibold">
+                            <i class="fas fa-business-time mr-1"></i>{{ "%.2f"|format(totals.overtime_hours) }}
+                        </span>
+                    {% else %}
+                        <span class="text-gray-400">0.00</span>
+                    {% endif %}
+                </td>
                 <td class="p-2">{{ "%.2f"|format(totals.billable_hours) }}</td>
+                <td class="p-2 text-center">
+                    {% if totals.days_with_overtime is defined and totals.days_with_overtime > 0 %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                            {{ totals.days_with_overtime }}
+                        </span>
+                    {% else %}
+                        <span class="text-gray-400">-</span>
+                    {% endif %}
+                </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="3" class="p-4 text-center">No data for the selected period.</td>
+                <td colspan="6" class="p-4 text-center">No data for the selected period.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    
+    <!-- Overtime Summary -->
+    {% if user_totals %}
+    <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500 dark:text-blue-400 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">About Overtime Tracking</h3>
+                <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    Overtime is calculated based on each user's standard working hours per day setting. 
+                    Hours worked beyond the standard are counted as overtime. Users can configure their 
+                    standard hours in <a href="{{ url_for('user.settings') }}" class="underline hover:text-blue-900 dark:hover:text-blue-100">Settings</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

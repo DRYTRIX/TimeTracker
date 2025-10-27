@@ -259,12 +259,26 @@ def user_report():
             user_totals[username] = {
                 'hours': 0,
                 'billable_hours': 0,
-                'entries': []
+                'entries': [],
+                'user_obj': entry.user  # Store user object for overtime calculation
             }
         user_totals[username]['hours'] += entry.duration_hours
         if entry.billable:
             user_totals[username]['billable_hours'] += entry.duration_hours
         user_totals[username]['entries'].append(entry)
+
+    # Calculate overtime for each user
+    from app.utils.overtime import calculate_period_overtime
+    for username, data in user_totals.items():
+        if data['user_obj']:
+            overtime_data = calculate_period_overtime(
+                data['user_obj'],
+                start_dt.date(),
+                end_dt.date()
+            )
+            data['regular_hours'] = overtime_data['regular_hours']
+            data['overtime_hours'] = overtime_data['overtime_hours']
+            data['days_with_overtime'] = overtime_data['days_with_overtime']
 
     summary = {
         'total_hours': round(total_hours, 1),
