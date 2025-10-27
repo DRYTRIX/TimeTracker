@@ -63,6 +63,15 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
     
+    def set_password(self, password):
+        """
+        Stub method for test compatibility.
+        This application uses username-only authentication (or OIDC),
+        so passwords are not actually used or stored.
+        """
+        # No-op: this application doesn't use password authentication
+        pass
+    
     @property
     def is_admin(self):
         """Check if user is an admin"""

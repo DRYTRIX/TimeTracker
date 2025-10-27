@@ -47,11 +47,16 @@ def calculate_period_overtime(
     from app import db
     
     # Get all time entries for the period
+    # Convert dates to datetime ranges to include full day
+    from datetime import datetime as dt
+    start_datetime = dt.combine(start_date, dt.min.time())
+    end_datetime = dt.combine(end_date, dt.max.time())
+    
     entries = TimeEntry.query.filter(
         TimeEntry.user_id == user.id,
         TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= start_date,
-        TimeEntry.start_time <= end_date
+        TimeEntry.start_time >= start_datetime,
+        TimeEntry.start_time <= end_datetime
     ).all()
     
     # Group entries by date
@@ -110,11 +115,16 @@ def get_daily_breakdown(
     from app import db
     
     # Get all time entries for the period
+    # Convert dates to datetime ranges to include full day
+    from datetime import datetime as dt
+    start_datetime = dt.combine(start_date, dt.min.time())
+    end_datetime = dt.combine(end_date, dt.max.time())
+    
     entries = TimeEntry.query.filter(
         TimeEntry.user_id == user.id,
         TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= start_date,
-        TimeEntry.start_time <= end_date
+        TimeEntry.start_time >= start_datetime,
+        TimeEntry.start_time <= end_datetime
     ).order_by(TimeEntry.start_time).all()
     
     # Group entries by date
@@ -177,12 +187,16 @@ def get_weekly_overtime_summary(
     end_date = datetime.now().date()
     start_date = end_date - timedelta(weeks=weeks)
     
+    # Convert dates to datetime ranges to include full day
+    start_datetime = datetime.combine(start_date, datetime.min.time())
+    end_datetime = datetime.combine(end_date, datetime.max.time())
+    
     # Get all time entries
     entries = TimeEntry.query.filter(
         TimeEntry.user_id == user.id,
         TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= start_date,
-        TimeEntry.start_time <= end_date
+        TimeEntry.start_time >= start_datetime,
+        TimeEntry.start_time <= end_datetime
     ).all()
     
     # Group by week

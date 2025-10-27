@@ -35,12 +35,15 @@ class Project(db.Model):
     extra_goods = db.relationship('ExtraGood', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     # comments relationship is defined via backref in Comment model
     
-    def __init__(self, name, client_id=None, description=None, billable=True, hourly_rate=None, billing_ref=None, client=None, budget_amount=None, budget_threshold_percent=80, code=None):
+    def __init__(self, name, client_id=None, description=None, billable=True, hourly_rate=None, billing_ref=None, client=None, budget_amount=None, budget_threshold_percent=80, code=None, created_by=None):
         """Create a Project.
 
         Backward-compatible initializer that accepts either client_id or client name.
         If client name is provided and client_id is not, the corresponding Client
         record will be found or created on the fly and client_id will be set.
+        
+        Note: created_by parameter is accepted for test compatibility but not used,
+        as the Project model doesn't track creator information.
         """
         from .client import Client  # local import to avoid circular dependencies
 

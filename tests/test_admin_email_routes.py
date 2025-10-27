@@ -177,25 +177,33 @@ class TestAdminEmailRoutes:
 
 # Fixtures
 @pytest.fixture
-def regular_user(db):
+def regular_user(app):
     """Create a regular user"""
     from app.models import User
-    user = User(username='regular_user', role='user')
-    user.set_password('password')
-    user.is_active = True
-    db.session.add(user)
-    db.session.commit()
-    return user
+    from app import db
+    
+    with app.app_context():
+        user = User(username='regular_user', role='user')
+        user.set_password('password')
+        user.is_active = True
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        return user
 
 
 @pytest.fixture
-def admin_user(db):
+def admin_user(app):
     """Create an admin user"""
     from app.models import User
-    user = User(username='admin', role='admin')
-    user.set_password('password')
-    user.is_active = True
-    db.session.add(user)
-    db.session.commit()
-    return user
+    from app import db
+    
+    with app.app_context():
+        user = User(username='admin', role='admin')
+        user.set_password('password')
+        user.is_active = True
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        return user
 
