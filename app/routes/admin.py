@@ -1185,10 +1185,10 @@ def delete_api_token(token_id):
 @admin_or_permission_required('manage_settings')
 def email_support():
     """Email configuration and testing page"""
-    from app.utils.email import test_email_configuration
+    from app.utils.email import check_email_configuration
     
     # Get email configuration status
-    email_status = test_email_configuration()
+    email_status = check_email_configuration()
     
     # Log dashboard access
     app_module.log_event("admin.email_support_viewed", user_id=current_user.id)
@@ -1241,9 +1241,9 @@ def test_email():
 @admin_or_permission_required('manage_settings')
 def email_config_status():
     """Get current email configuration status (for AJAX polling)"""
-    from app.utils.email import test_email_configuration
+    from app.utils.email import check_email_configuration
     
-    email_status = test_email_configuration()
+    email_status = check_email_configuration()
     return jsonify(email_status), 200
 
 

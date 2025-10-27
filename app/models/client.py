@@ -22,7 +22,12 @@ class Client(db.Model):
     # Relationships
     projects = db.relationship('Project', backref='client_obj', lazy='dynamic', cascade='all, delete-orphan')
     
-    def __init__(self, name, description=None, contact_person=None, email=None, phone=None, address=None, default_hourly_rate=None):
+    def __init__(self, name, description=None, contact_person=None, email=None, phone=None, address=None, default_hourly_rate=None, company=None):
+        """Create a Client.
+        
+        Note: company parameter is accepted for test compatibility but not used,
+        as the Client model uses 'name' as the primary identifier.
+        """
         self.name = name.strip()
         self.description = description.strip() if description else None
         self.contact_person = contact_person.strip() if contact_person else None

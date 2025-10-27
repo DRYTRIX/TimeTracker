@@ -35,7 +35,7 @@ class Project(db.Model):
     extra_goods = db.relationship('ExtraGood', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     # comments relationship is defined via backref in Comment model
     
-    def __init__(self, name, client_id=None, description=None, billable=True, hourly_rate=None, billing_ref=None, client=None, budget_amount=None, budget_threshold_percent=80, code=None, created_by=None):
+    def __init__(self, name, client_id=None, description=None, billable=True, hourly_rate=None, billing_ref=None, client=None, budget_amount=None, budget_threshold_percent=80, code=None, created_by=None, status='active'):
         """Create a Project.
 
         Backward-compatible initializer that accepts either client_id or client name.
@@ -55,6 +55,7 @@ class Project(db.Model):
         self.code = code.strip().upper() if code and code.strip() else None
         self.budget_amount = Decimal(str(budget_amount)) if budget_amount else None
         self.budget_threshold_percent = budget_threshold_percent if budget_threshold_percent else 80
+        self.status = status
 
         resolved_client_id = client_id
         if resolved_client_id is None and client:
