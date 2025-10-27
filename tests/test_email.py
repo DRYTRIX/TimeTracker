@@ -107,7 +107,11 @@ class TestSendEmail:
     
     def test_send_email_no_server(self, app, caplog):
         """Test sending email with no mail server configured"""
+        import logging
         with app.app_context():
+            # Capture logs from Flask app logger
+            caplog.set_level(logging.WARNING, logger='app')
+            
             app.config['MAIL_SERVER'] = None
             
             send_email(
@@ -121,7 +125,11 @@ class TestSendEmail:
     
     def test_send_email_no_recipients(self, app, caplog):
         """Test sending email with no recipients"""
+        import logging
         with app.app_context():
+            # Capture logs from Flask app logger
+            caplog.set_level(logging.WARNING, logger='app')
+            
             app.config['MAIL_SERVER'] = 'smtp.gmail.com'
             
             send_email(
@@ -252,12 +260,13 @@ class TestDatabaseEmailConfiguration:
         with app.app_context():
             from app.models import Settings
             from app.utils.email import init_mail
+            from app import db
             
             settings = Settings.get_settings()
             settings.mail_enabled = True
             settings.mail_server = 'smtp.database.com'
             settings.mail_port = 465
-            app.db.session.commit()
+            db.session.commit()
             
             init_mail(app)
             
@@ -270,12 +279,13 @@ class TestDatabaseEmailConfiguration:
         with app.app_context():
             from app.models import Settings
             from app.utils.email import reload_mail_config
+            from app import db
             
             # Set up database config
             settings = Settings.get_settings()
             settings.mail_enabled = True
             settings.mail_server = 'smtp.reloaded.com'
-            app.db.session.commit()
+            db.session.commit()
             
             # Reload configuration
             success = reload_mail_config(app)
@@ -288,12 +298,13 @@ class TestDatabaseEmailConfiguration:
         with app.app_context():
             from app.models import Settings
             from app.utils.email import test_email_configuration
+            from app import db
             
             # Test with database config
             settings = Settings.get_settings()
             settings.mail_enabled = True
             settings.mail_server = 'smtp.database.com'
-            app.db.session.commit()
+            db.session.commit()
             
             status = test_email_configuration()
             
@@ -302,7 +313,7 @@ class TestDatabaseEmailConfiguration:
             
             # Test with environment config
             settings.mail_enabled = False
-            app.db.session.commit()
+            db.session.commit()
             
             status = test_email_configuration()
             assert status['source'] == 'environment'
