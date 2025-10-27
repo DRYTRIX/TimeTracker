@@ -1176,3 +1176,174 @@ def delete_api_token(token_id):
         db.session.rollback()
         current_app.logger.error(f"Failed to delete API token: {e}")
         return jsonify({'error': 'Failed to delete token'}), 500
+
+
+# ==================== Email Configuration Management ====================
+
+@admin_bp.route('/admin/email')
+@login_required
+@admin_or_permission_required('manage_settings')
+def email_support():
+    """Email configuration and testing page"""
+    from app.utils.email import test_email_configuration
+    
+    # Get email configuration status
+    email_status = test_email_configuration()
+    
+    # Log dashboard access
+    app_module.log_event("admin.email_support_viewed", user_id=current_user.id)
+    app_module.track_event(current_user.id, "admin.email_support_viewed", {})
+    
+    return render_template('admin/email_support.html',
+                         email_status=email_status)
+
+
+@admin_bp.route('/admin/email/test', methods=['POST'])
+@limiter.limit("5 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def test_email():
+    """Send a test email"""
+    from app.utils.email import send_test_email
+    
+    data = request.get_json() or {}
+    recipient = data.get('recipient')
+    
+    if not recipient:
+        current_app.logger.warning(f"[EMAIL TEST API] No recipient provided by user {current_user.username}")
+        return jsonify({'success': False, 'message': 'Recipient email is required'}), 400
+    
+    current_app.logger.info(f"[EMAIL TEST API] Test email request from user {current_user.username} to {recipient}")
+    
+    # Send test email
+    sender_name = current_user.username or 'TimeTracker Admin'
+    success, message = send_test_email(recipient, sender_name)
+    
+    # Log the test
+    current_app.logger.info(f"[EMAIL TEST API] Result: {'SUCCESS' if success else 'FAILED'} - {message}")
+    app_module.log_event("admin.email_test_sent", 
+                        user_id=current_user.id,
+                        recipient=recipient,
+                        success=success)
+    app_module.track_event(current_user.id, "admin.email_test_sent", {
+        'success': success,
+        'configured': success
+    })
+    
+    if success:
+        return jsonify({'success': True, 'message': message}), 200
+    else:
+        return jsonify({'success': False, 'message': message}), 500
+
+
+@admin_bp.route('/admin/email/config-status', methods=['GET'])
+@login_required
+@admin_or_permission_required('manage_settings')
+def email_config_status():
+    """Get current email configuration status (for AJAX polling)"""
+    from app.utils.email import test_email_configuration
+    
+    email_status = test_email_configuration()
+    return jsonify(email_status), 200
+
+
+@admin_bp.route('/admin/email/configure', methods=['POST'])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def save_email_config():
+    """Save email configuration to database"""
+    from app.utils.email import reload_mail_config
+    
+    data = request.get_json() or {}
+    
+    current_app.logger.info(f"[EMAIL CONFIG] Saving email configuration by user {current_user.username}")
+    
+    # Get settings
+    settings = Settings.get_settings()
+    
+    # Update email configuration
+    settings.mail_enabled = data.get('enabled', False)
+    settings.mail_server = data.get('server', '').strip()
+    settings.mail_port = int(data.get('port', 587))
+    settings.mail_use_tls = data.get('use_tls', True)
+    settings.mail_use_ssl = data.get('use_ssl', False)
+    settings.mail_username = data.get('username', '').strip()
+    
+    # Only update password if provided (non-empty)
+    password = data.get('password', '').strip()
+    if password:
+        settings.mail_password = password
+        current_app.logger.info("[EMAIL CONFIG] Password updated")
+    
+    settings.mail_default_sender = data.get('default_sender', '').strip()
+    
+    current_app.logger.info(f"[EMAIL CONFIG] Settings: enabled={settings.mail_enabled}, "
+                           f"server={settings.mail_server}:{settings.mail_port}, "
+                           f"tls={settings.mail_use_tls}, ssl={settings.mail_use_ssl}")
+    
+    # Validate
+    if settings.mail_enabled and not settings.mail_server:
+        current_app.logger.warning("[EMAIL CONFIG] Validation failed: mail server required")
+        return jsonify({
+            'success': False,
+            'message': 'Mail server is required when email is enabled'
+        }), 400
+    
+    if settings.mail_use_tls and settings.mail_use_ssl:
+        current_app.logger.warning("[EMAIL CONFIG] Validation failed: both TLS and SSL enabled")
+        return jsonify({
+            'success': False,
+            'message': 'Cannot use both TLS and SSL. Please choose one.'
+        }), 400
+    
+    # Save to database
+    if not safe_commit('admin_save_email_config'):
+        current_app.logger.error("[EMAIL CONFIG] Failed to save to database")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to save email configuration to database'
+        }), 500
+    
+    current_app.logger.info("[EMAIL CONFIG] ✓ Configuration saved to database")
+    
+    # Reload mail configuration
+    if settings.mail_enabled:
+        current_app.logger.info("[EMAIL CONFIG] Reloading mail configuration...")
+        reload_result = reload_mail_config(current_app._get_current_object())
+        current_app.logger.info(f"[EMAIL CONFIG] Mail config reload: {'SUCCESS' if reload_result else 'FAILED'}")
+    
+    # Log the change
+    app_module.log_event("admin.email_config_saved", 
+                        user_id=current_user.id,
+                        enabled=settings.mail_enabled)
+    app_module.track_event(current_user.id, "admin.email_config_saved", {
+        'enabled': settings.mail_enabled,
+        'source': 'database'
+    })
+    
+    current_app.logger.info("[EMAIL CONFIG] ✓ Email configuration update complete")
+    
+    return jsonify({
+        'success': True,
+        'message': 'Email configuration saved successfully'
+    }), 200
+
+
+@admin_bp.route('/admin/email/get-config', methods=['GET'])
+@login_required
+@admin_or_permission_required('manage_settings')
+def get_email_config():
+    """Get current email configuration from database"""
+    settings = Settings.get_settings()
+    
+    return jsonify({
+        'enabled': settings.mail_enabled,
+        'server': settings.mail_server or '',
+        'port': settings.mail_port or 587,
+        'use_tls': settings.mail_use_tls if settings.mail_use_tls is not None else True,
+        'use_ssl': settings.mail_use_ssl if settings.mail_use_ssl is not None else False,
+        'username': settings.mail_username or '',
+        'password_set': bool(settings.mail_password),
+        'default_sender': settings.mail_default_sender or ''
+    }), 200
