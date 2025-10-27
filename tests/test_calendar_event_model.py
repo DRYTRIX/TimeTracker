@@ -546,8 +546,12 @@ def test_calendar_event_cascade_delete_with_user(app, user):
         start_time = datetime.now()
         end_time = start_time + timedelta(hours=1)
         
+        # Re-query the user to attach to current session
+        from app.models.user import User
+        user_in_session = User.query.get(user.id)
+        
         event = CalendarEvent(
-            user_id=user.id,
+            user_id=user_in_session.id,
             title="Test Event",
             start_time=start_time,
             end_time=end_time,
@@ -559,7 +563,7 @@ def test_calendar_event_cascade_delete_with_user(app, user):
         event_id = event.id
         
         # Delete user
-        db.session.delete(user)
+        db.session.delete(user_in_session)
         db.session.commit()
         
         # Event should be deleted
@@ -645,15 +649,19 @@ def test_calendar_event_user_has_events_relationship(app, user):
     with app.app_context():
         now = datetime.now()
         
+        # Re-query the user to attach to current session
+        from app.models.user import User
+        user_in_session = User.query.get(user.id)
+        
         event1 = CalendarEvent(
-            user_id=user.id,
+            user_id=user_in_session.id,
             title="Event 1",
             start_time=now,
             end_time=now + timedelta(hours=1),
             event_type="event"
         )
         event2 = CalendarEvent(
-            user_id=user.id,
+            user_id=user_in_session.id,
             title="Event 2",
             start_time=now + timedelta(days=1),
             end_time=now + timedelta(days=1, hours=1),
@@ -662,6 +670,6 @@ def test_calendar_event_user_has_events_relationship(app, user):
         db.session.add_all([event1, event2])
         db.session.commit()
         
-        db.session.refresh(user)
-        assert user.calendar_events.count() == 2
+        db.session.refresh(user_in_session)
+        assert user_in_session.calendar_events.count() == 2
 
