@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Email Configuration & Testing') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Configure and test email delivery') }}</p>
+    </div>
+    <div class="mt-4 md:mt-0">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i>{{ _('Back to Admin') }}
+        </a>
+    </div>
+</div>
+
+<!-- Database Configuration Form -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Email Configuration') }}</h2>
+    
+    <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg">
+        <p class="text-sm">
+            <i class="fas fa-info-circle mr-2"></i>
+            {{ _('Configure email settings here to save them in the database. Database settings take precedence over environment variables.') }}
+        </p>
+    </div>
+    
+    <form id="emailConfigForm" class="space-y-4">
+        <!-- Enable Email -->
+        <div class="flex items-center">
+            <input type="checkbox" id="mailEnabled" class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            <label for="mailEnabled" class="ml-2 block text-sm font-semibold text-gray-900 dark:text-gray-300">{{ _('Enable Database Email Configuration') }}</label>
+        </div>
+        
+        <div id="emailConfigFields" class="space-y-4 pl-6">
+            <!-- Mail Server -->
+            <div>
+                <label for="mailServer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Mail Server') }} *</label>
+                <input type="text" id="mailServer" class="form-input" placeholder="smtp.gmail.com" required>
+            </div>
+            
+            <!-- Mail Port -->
+            <div>
+                <label for="mailPort" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Mail Port') }} *</label>
+                <input type="number" id="mailPort" class="form-input" value="587" required>
+            </div>
+            
+            <!-- TLS/SSL -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="mailUseTls" class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" checked>
+                    <label for="mailUseTls" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Use TLS') }}</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="mailUseSsl" class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <label for="mailUseSsl" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Use SSL') }}</label>
+                </div>
+            </div>
+            
+            <!-- Username -->
+            <div>
+                <label for="mailUsername" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Username') }}</label>
+                <input type="text" id="mailUsername" class="form-input" placeholder="your-email@gmail.com">
+            </div>
+            
+            <!-- Password -->
+            <div>
+                <label for="mailPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Password') }}
+                    <span id="passwordStatus" class="text-sm text-gray-500"></span>
+                </label>
+                <input type="password" id="mailPassword" class="form-input" placeholder="{{ _('Leave empty to keep current') }}">
+            </div>
+            
+            <!-- Default Sender -->
+            <div>
+                <label for="mailDefaultSender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Default Sender') }} *</label>
+                <input type="email" id="mailDefaultSender" class="form-input" placeholder="noreply@yourdomain.com" required>
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <div class="flex items-center gap-4">
+            <button type="submit" class="btn btn-primary" id="saveConfigBtn">
+                <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
+            </button>
+            <button type="button" onclick="loadConfig()" class="btn btn-secondary">
+                <i class="fas fa-undo mr-2"></i>{{ _('Reset') }}
+            </button>
+        </div>
+    </form>
+    
+    <!-- Save Result Message -->
+    <div id="saveResult" class="mt-4 hidden"></div>
+</div>
+
+<!-- Configuration Status Card -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">{{ _('Email Configuration Status') }}</h2>
+        <button onclick="refreshStatus()" class="btn btn-sm btn-secondary" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i> {{ _('Refresh') }}
+        </button>
+    </div>
+    
+    <div id="statusContainer">
+        {% if email_status.configured %}
+        <div class="bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 px-4 py-3 rounded relative mb-4" role="alert">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle text-xl mr-3"></i>
+                <div>
+                    <strong class="font-bold">{{ _('Email is configured!') }}</strong>
+                    <span class="block sm:inline">{{ _('Your email settings are properly set up.') }}</span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded relative mb-4" role="alert">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-xl mr-3"></i>
+                <div>
+                    <strong class="font-bold">{{ _('Email is not configured') }}</strong>
+                    <span class="block sm:inline">{{ _('Please configure email settings in your environment variables.') }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Configuration Errors -->
+        {% if email_status.errors %}
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-4 mb-4">
+            <h3 class="text-red-800 dark:text-red-300 font-semibold mb-2">
+                <i class="fas fa-times-circle mr-2"></i>{{ _('Configuration Errors') }}
+            </h3>
+            <ul class="list-disc list-inside text-red-700 dark:text-red-300">
+                {% for error in email_status.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Configuration Warnings -->
+        {% if email_status.warnings %}
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 mb-4">
+            <h3 class="text-yellow-800 dark:text-yellow-300 font-semibold mb-2">
+                <i class="fas fa-exclamation-circle mr-2"></i>{{ _('Configuration Warnings') }}
+            </h3>
+            <ul class="list-disc list-inside text-yellow-700 dark:text-yellow-300">
+                {% for warning in email_status.warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Current Settings -->
+        <div class="bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-lg p-4">
+            <h3 class="font-semibold mb-3">{{ _('Current Email Settings') }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Mail Server') }}:</span>
+                    <span class="font-mono">{{ email_status.settings.server }}</span>
+                </div>
+                <div>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Port') }}:</span>
+                    <span class="font-mono">{{ email_status.settings.port }}</span>
+                </div>
+                <div>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Username') }}:</span>
+                    <span class="font-mono">{{ email_status.settings.username }}</span>
+                </div>
+                <div>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Password Set') }}:</span>
+                    <span class="font-mono">
+                        {% if email_status.settings.password_set %}
+                            <i class="fas fa-check text-green-600"></i> {{ _('Yes') }}
+                        {% else %}
+                            <i class="fas fa-times text-red-600"></i> {{ _('No') }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Use TLS') }}:</span>
+                    <span class="font-mono">{{ email_status.settings.use_tls }}</span>
+                </div>
+                <div>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Use SSL') }}:</span>
+                    <span class="font-mono">{{ email_status.settings.use_ssl }}</span>
+                </div>
+                <div class="md:col-span-2">
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Default Sender') }}:</span>
+                    <span class="font-mono">{{ email_status.settings.default_sender }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Email Card -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Send Test Email') }}</h2>
+    
+    <div id="testEmailForm">
+        <div class="mb-4">
+            <label for="recipientEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {{ _('Recipient Email Address') }}
+            </label>
+            <input 
+                type="email" 
+                id="recipientEmail" 
+                class="form-input md:w-1/2" 
+                placeholder="user@example.com"
+                required
+            >
+        </div>
+        
+        <button onclick="sendTestEmail()" class="btn btn-primary" id="sendTestBtn">
+            <i class="fas fa-paper-plane mr-2"></i>{{ _('Send Test Email') }}
+        </button>
+    </div>
+    
+    <!-- Test Result Message -->
+    <div id="testResult" class="mt-4 hidden"></div>
+</div>
+
+<!-- Configuration Guide Card -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Configuration Guide') }}</h2>
+    
+    <div class="prose dark:prose-invert max-w-none">
+        <p class="mb-4">{{ _('To configure email, set the following environment variables:') }}</p>
+        
+        <div class="bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-lg p-4 mb-4 font-mono text-sm overflow-x-auto">
+            <div># {{ _('Basic SMTP Settings') }}</div>
+            <div>MAIL_SERVER=smtp.gmail.com</div>
+            <div>MAIL_PORT=587</div>
+            <div>MAIL_USE_TLS=true</div>
+            <div>MAIL_USE_SSL=false</div>
+            <div><br></div>
+            <div># {{ _('Authentication') }}</div>
+            <div>MAIL_USERNAME=your-email@gmail.com</div>
+            <div>MAIL_PASSWORD=your-app-password</div>
+            <div><br></div>
+            <div># {{ _('Sender Information') }}</div>
+            <div>MAIL_DEFAULT_SENDER=noreply@yourdomain.com</div>
+        </div>
+        
+        <h3 class="text-base font-semibold mb-2">{{ _('Common SMTP Providers') }}</h3>
+        <ul class="list-disc list-inside space-y-2 mb-4">
+            <li><strong>Gmail:</strong> smtp.gmail.com:587 (TLS) - {{ _('Requires app password') }}</li>
+            <li><strong>Outlook/Office365:</strong> smtp.office365.com:587 (TLS)</li>
+            <li><strong>SendGrid:</strong> smtp.sendgrid.net:587 (TLS)</li>
+            <li><strong>Amazon SES:</strong> email-smtp.[region].amazonaws.com:587 (TLS)</li>
+            <li><strong>Mailgun:</strong> smtp.mailgun.org:587 (TLS)</li>
+        </ul>
+        
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg p-4">
+            <h4 class="font-semibold mb-2">
+                <i class="fas fa-info-circle mr-2"></i>{{ _('Important Notes') }}
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-sm">
+                <li>{{ _('Gmail requires an App Password if 2FA is enabled') }}</li>
+                <li>{{ _('Restart the application after changing email settings') }}</li>
+                <li>{{ _('Check firewall rules if emails are not sending') }}</li>
+                <li>{{ _('For production, use a dedicated email service like SendGrid or Amazon SES') }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load configuration on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadConfig();
+    toggleConfigFields();
+    
+    // Add event listener for enable checkbox
+    document.getElementById('mailEnabled').addEventListener('change', toggleConfigFields);
+});
+
+// Toggle config fields based on enabled checkbox
+function toggleConfigFields() {
+    const enabled = document.getElementById('mailEnabled').checked;
+    const fields = document.getElementById('emailConfigFields');
+    if (enabled) {
+        fields.classList.remove('opacity-50');
+        fields.querySelectorAll('input').forEach(input => input.disabled = false);
+    } else {
+        fields.classList.add('opacity-50');
+        fields.querySelectorAll('input').forEach(input => input.disabled = true);
+    }
+}
+
+// Load configuration from database
+async function loadConfig() {
+    try {
+        const response = await fetch('{{ url_for("admin.get_email_config") }}');
+        const config = await response.json();
+        
+        // Populate form
+        document.getElementById('mailEnabled').checked = config.enabled;
+        document.getElementById('mailServer').value = config.server || '';
+        document.getElementById('mailPort').value = config.port || 587;
+        document.getElementById('mailUseTls').checked = config.use_tls;
+        document.getElementById('mailUseSsl').checked = config.use_ssl;
+        document.getElementById('mailUsername').value = config.username || '';
+        document.getElementById('mailDefaultSender').value = config.default_sender || '';
+        
+        // Show password status
+        const passwordStatus = document.getElementById('passwordStatus');
+        if (config.password_set) {
+            passwordStatus.textContent = '({{ _("password is set") }})';
+            passwordStatus.className = 'text-sm text-green-600';
+        } else {
+            passwordStatus.textContent = '({{ _("no password set") }})';
+            passwordStatus.className = 'text-sm text-gray-500';
+        }
+        
+        toggleConfigFields();
+    } catch (error) {
+        console.error('Failed to load configuration:', error);
+    }
+}
+
+// Save configuration to database
+document.getElementById('emailConfigForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const saveBtn = document.getElementById('saveConfigBtn');
+    const resultDiv = document.getElementById('saveResult');
+    
+    // Collect form data
+    const config = {
+        enabled: document.getElementById('mailEnabled').checked,
+        server: document.getElementById('mailServer').value.trim(),
+        port: parseInt(document.getElementById('mailPort').value),
+        use_tls: document.getElementById('mailUseTls').checked,
+        use_ssl: document.getElementById('mailUseSsl').checked,
+        username: document.getElementById('mailUsername').value.trim(),
+        password: document.getElementById('mailPassword').value,
+        default_sender: document.getElementById('mailDefaultSender').value.trim()
+    };
+    
+    // Disable button and show loading
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Saving...") }}';
+    resultDiv.classList.add('hidden');
+    
+    try {
+        const response = await fetch('{{ url_for("admin.save_email_config") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(config)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSaveResult('success', data.message);
+            // Clear password field after successful save
+            document.getElementById('mailPassword').value = '';
+            // Reload config to update password status
+            loadConfig();
+            // Refresh status and reload page after 1.5 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showSaveResult('error', data.message);
+        }
+    } catch (error) {
+        console.error('Failed to save configuration:', error);
+        showSaveResult('error', '{{ _("Failed to save configuration. Please try again.") }}');
+    } finally {
+        // Re-enable button
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>{{ _("Save Configuration") }}';
+    }
+});
+
+// Show save result message
+function showSaveResult(type, message) {
+    const resultDiv = document.getElementById('saveResult');
+    
+    if (type === 'success') {
+        resultDiv.className = 'mt-4 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 px-4 py-3 rounded relative';
+        resultDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-check-circle text-xl mr-3"></i>
+                <div>
+                    <strong class="font-bold">{{ _("Success!") }}</strong>
+                    <span class="block sm:inline">${message}</span>
+                </div>
+            </div>
+        `;
+    } else {
+        resultDiv.className = 'mt-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded relative';
+        resultDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-circle text-xl mr-3"></i>
+                <div>
+                    <strong class="font-bold">{{ _("Error") }}</strong>
+                    <span class="block sm:inline">${message}</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    resultDiv.classList.remove('hidden');
+}
+
+// Refresh configuration status
+async function refreshStatus() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const icon = refreshBtn.querySelector('i');
+    
+    // Add spinning animation
+    icon.classList.add('fa-spin');
+    refreshBtn.disabled = true;
+    
+    try {
+        const response = await fetch('{{ url_for("admin.email_config_status") }}');
+        const data = await response.json();
+        
+        // Reload the page to show updated status
+        window.location.reload();
+    } catch (error) {
+        console.error('Failed to refresh status:', error);
+        alert('{{ _("Failed to refresh status. Please try again.") }}');
+    } finally {
+        icon.classList.remove('fa-spin');
+        refreshBtn.disabled = false;
+    }
+}
+
+// Send test email
+async function sendTestEmail() {
+    const recipientEmail = document.getElementById('recipientEmail').value.trim();
+    const sendBtn = document.getElementById('sendTestBtn');
+    const resultDiv = document.getElementById('testResult');
+    
+    // Validate email
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+        showResult('error', '{{ _("Please enter a valid email address") }}');
+        return;
+    }
+    
+    // Disable button and show loading
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Sending...") }}';
+    resultDiv.classList.add('hidden');
+    
+    try {
+        const response = await fetch('{{ url_for("admin.test_email") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ recipient: recipientEmail })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showResult('success', data.message);
+        } else {
+            showResult('error', data.message);
+        }
+    } catch (error) {
+        console.error('Failed to send test email:', error);
+        showResult('error', '{{ _("Failed to send test email. Please check your configuration.") }}');
+    } finally {
+        // Re-enable button
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>{{ _("Send Test Email") }}';
+    }
+}
+
+// Show result message
+function showResult(type, message) {
+    const resultDiv = document.getElementById('testResult');
+    
+    if (type === 'success') {
+        resultDiv.className = 'mt-4 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 px-4 py-3 rounded relative';
+        resultDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-check-circle text-xl mr-3"></i>
+                <div>
+                    <strong class="font-bold">{{ _("Success!") }}</strong>
+                    <span class="block sm:inline">${message}</span>
+                </div>
+            </div>
+        `;
+    } else {
+        resultDiv.className = 'mt-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded relative';
+        resultDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-circle text-xl mr-3"></i>
+                <div>
+                    <strong class="font-bold">{{ _("Error") }}</strong>
+                    <span class="block sm:inline">${message}</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    resultDiv.classList.remove('hidden');
+}
+
+// Allow sending with Enter key
+document.getElementById('recipientEmail').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        sendTestEmail();
+    }
+});
+</script>
+
+{% endblock %}
+
