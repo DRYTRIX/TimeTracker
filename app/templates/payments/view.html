@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Payment #{{ payment.id }}</h1>
+        <div class="space-x-2">
+            <a href="{{ url_for('payments.list_payments') }}" class="text-primary hover:text-primary-dark">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Payments
+            </a>
+            <a href="{{ url_for('payments.edit_payment', payment_id=payment.id) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                <i class="fas fa-edit mr-2"></i>Edit
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Payment Info -->
+        <div class="lg:col-span-2 bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Payment Details</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Amount -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Amount</label>
+                    <p class="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {{ payment.amount }} {{ payment.currency or 'EUR' }}
+                    </p>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                    <div class="mt-2">
+                        {% if payment.status == 'completed' %}
+                        <span class="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                            <i class="fas fa-check-circle mr-1"></i>Completed
+                        </span>
+                        {% elif payment.status == 'pending' %}
+                        <span class="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                            <i class="fas fa-clock mr-1"></i>Pending
+                        </span>
+                        {% elif payment.status == 'failed' %}
+                        <span class="px-3 py-1 text-sm font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                            <i class="fas fa-times-circle mr-1"></i>Failed
+                        </span>
+                        {% elif payment.status == 'refunded' %}
+                        <span class="px-3 py-1 text-sm font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100">
+                            <i class="fas fa-undo mr-1"></i>Refunded
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Payment Date -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Payment Date</label>
+                    <p class="text-lg text-gray-900 dark:text-gray-100">
+                        {{ payment.payment_date.strftime('%B %d, %Y') if payment.payment_date else 'N/A' }}
+                    </p>
+                </div>
+
+                <!-- Payment Method -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Payment Method</label>
+                    <p class="text-lg text-gray-900 dark:text-gray-100">
+                        {% if payment.method %}
+                        <i class="fas fa-credit-card mr-2 text-gray-500"></i>{{ payment.method }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if payment.reference %}
+                <!-- Reference -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Reference</label>
+                    <p class="text-lg text-gray-900 dark:text-gray-100">{{ payment.reference }}</p>
+                </div>
+                {% endif %}
+
+                {% if payment.gateway_transaction_id %}
+                <!-- Gateway Transaction ID -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Gateway Transaction ID</label>
+                    <p class="text-sm text-gray-900 dark:text-gray-100 font-mono">{{ payment.gateway_transaction_id }}</p>
+                </div>
+                {% endif %}
+
+                {% if payment.gateway_fee %}
+                <!-- Gateway Fee -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Gateway Fee</label>
+                    <p class="text-lg text-red-600 dark:text-red-400">
+                        {{ payment.gateway_fee }} {{ payment.currency or 'EUR' }}
+                    </p>
+                </div>
+                
+                <!-- Net Amount -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Net Amount</label>
+                    <p class="text-lg text-green-600 dark:text-green-400">
+                        {{ payment.net_amount or payment.amount }} {{ payment.currency or 'EUR' }}
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if payment.received_by %}
+                <!-- Received By -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Received By</label>
+                    <p class="text-lg text-gray-900 dark:text-gray-100">
+                        {{ payment.receiver.username if payment.receiver else 'Unknown' }}
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Created At -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Created</label>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                        {{ payment.created_at.strftime('%B %d, %Y at %I:%M %p') if payment.created_at else 'N/A' }}
+                    </p>
+                </div>
+
+                <!-- Updated At -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Last Updated</label>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                        {{ payment.updated_at.strftime('%B %d, %Y at %I:%M %p') if payment.updated_at else 'N/A' }}
+                    </p>
+                </div>
+            </div>
+
+            {% if payment.notes %}
+            <!-- Notes -->
+            <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Notes</label>
+                <div class="bg-background-light dark:bg-background-dark p-4 rounded-lg">
+                    <p class="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{{ payment.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Invoice Info Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Related Invoice</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Invoice Number</label>
+                        <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" 
+                           class="text-lg font-semibold text-primary hover:text-primary-dark">
+                            {{ payment.invoice.invoice_number }}
+                        </a>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Client</label>
+                        <p class="text-gray-900 dark:text-gray-100">{{ payment.invoice.client_name }}</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Amount</label>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {{ payment.invoice.total_amount }} {{ payment.invoice.currency_code }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Amount Paid</label>
+                        <p class="text-lg font-semibold text-green-600 dark:text-green-400">
+                            {{ payment.invoice.amount_paid or 0 }} {{ payment.invoice.currency_code }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Outstanding</label>
+                        <p class="text-lg font-semibold text-red-600 dark:text-red-400">
+                            {{ payment.invoice.outstanding_amount }} {{ payment.invoice.currency_code }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Payment Status</label>
+                        {% if payment.invoice.payment_status == 'fully_paid' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                            Fully Paid
+                        </span>
+                        {% elif payment.invoice.payment_status == 'partially_paid' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                            Partially Paid
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                            Unpaid
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="pt-4 border-t border-border-light dark:border-border-dark">
+                        <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" 
+                           class="block w-full text-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-file-invoice mr-2"></i>View Invoice
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 mt-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Actions</h3>
+                
+                <div class="space-y-2">
+                    <a href="{{ url_for('payments.edit_payment', payment_id=payment.id) }}" 
+                       class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-edit mr-2"></i>Edit Payment
+                    </a>
+                    
+                    <form id="deletePaymentForm" method="POST" action="{{ url_for('payments.delete_payment', payment_id=payment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="button" onclick="confirmDeletePayment()" class="block w-full text-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-trash mr-2"></i>Delete Payment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+function confirmDeletePayment() {
+    const message = 'Are you sure you want to delete this payment? This will affect the invoice payment status and cannot be undone.';
+    if (window.showConfirm) {
+        window.showConfirm(message, {
+            title: 'Delete Payment',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'danger'
+        }).then(function(confirmed) {
+            if (confirmed) {
+                document.getElementById('deletePaymentForm').submit();
+            }
+        });
+    } else {
+        // Fallback if showConfirm is not available
+        if (confirm(message)) {
+            document.getElementById('deletePaymentForm').submit();
+        }
+    }
+}
+</script>
+{% endblock %}
+

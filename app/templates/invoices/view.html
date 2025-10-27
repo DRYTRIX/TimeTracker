@@ -90,11 +90,92 @@
                 <span>Tax ({{ "%.2f"|format(invoice.tax_rate) }}%)</span>
                 <span>{{ "%.2f"|format(invoice.tax_amount) }} {{ invoice.currency_code }}</span>
             </div>
-            <div class="flex justify-between font-bold text-lg">
+            <div class="flex justify-between font-bold text-lg border-t border-gray-300 dark:border-gray-600 pt-2">
                 <span>Total</span>
                 <span>{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</span>
             </div>
+            <div class="flex justify-between text-green-600 dark:text-green-400 mt-2">
+                <span>Amount Paid</span>
+                <span>{{ "%.2f"|format(invoice.amount_paid or 0) }} {{ invoice.currency_code }}</span>
+            </div>
+            <div class="flex justify-between font-semibold text-red-600 dark:text-red-400 border-t border-gray-300 dark:border-gray-600 pt-2 mt-2">
+                <span>Outstanding</span>
+                <span>{{ "%.2f"|format(invoice.outstanding_amount) }} {{ invoice.currency_code }}</span>
+            </div>
         </div>
     </div>
+
+    <!-- Payment History -->
+    {% if invoice.payments.count() > 0 %}
+    <div class="mt-8 border-t border-gray-300 dark:border-gray-600 pt-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">Payment History</h2>
+            <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+                <i class="fas fa-plus mr-2"></i>Add Payment
+            </a>
+        </div>
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-gray-300 dark:border-gray-600">
+                    <th class="p-2">Date</th>
+                    <th class="p-2">Amount</th>
+                    <th class="p-2">Method</th>
+                    <th class="p-2">Reference</th>
+                    <th class="p-2">Status</th>
+                    <th class="p-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in invoice.payments.order_by('payment_date desc, created_at desc') %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="p-2">{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else 'N/A' }}</td>
+                    <td class="p-2 font-semibold text-green-600 dark:text-green-400">
+                        {{ "%.2f"|format(payment.amount) }} {{ payment.currency or invoice.currency_code }}
+                        {% if payment.gateway_fee %}
+                        <span class="text-xs text-gray-500 dark:text-gray-400">(Fee: {{ "%.2f"|format(payment.gateway_fee) }})</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-2">{{ payment.method or 'N/A' }}</td>
+                    <td class="p-2 text-sm">{{ payment.reference or '-' }}</td>
+                    <td class="p-2">
+                        {% if payment.status == 'completed' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                            Completed
+                        </span>
+                        {% elif payment.status == 'pending' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                            Pending
+                        </span>
+                        {% elif payment.status == 'failed' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                            Failed
+                        </span>
+                        {% elif payment.status == 'refunded' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100">
+                            Refunded
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="p-2">
+                        <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="text-primary hover:text-primary-dark text-sm">
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="mt-8 border-t border-gray-300 dark:border-gray-600 pt-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">Payment History</h2>
+            <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+                <i class="fas fa-plus mr-2"></i>Record First Payment
+            </a>
+        </div>
+        <p class="text-gray-500 dark:text-gray-400 text-center py-4">No payments recorded yet.</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

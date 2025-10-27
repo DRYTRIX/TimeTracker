@@ -126,6 +126,42 @@
     </div>
 </div>
 
+<!-- Charts: Payment Analytics -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="lg:col-span-2 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="font-semibold mb-3"><i class="fas fa-money-bill-wave text-green-600 mr-2"></i>{{ _('Payments Over Time') }}</h3>
+        <div class="relative h-[300px]"><canvas id="paymentsOverTimeChart"></canvas></div>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="font-semibold mb-3"><i class="fas fa-chart-pie text-emerald-600 mr-2"></i>{{ _('Payment Status') }}</h3>
+        <div class="relative h-[300px]"><canvas id="paymentStatusChart"></canvas></div>
+    </div>
+</div>
+
+<!-- Charts: Payment Methods & Revenue Comparison -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="font-semibold mb-3"><i class="fas fa-credit-card text-blue-600 mr-2"></i>{{ _('Payment Methods') }}</h3>
+        <div class="relative h-[300px]"><canvas id="paymentMethodChart"></canvas></div>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="font-semibold mb-3"><i class="fas fa-balance-scale text-indigo-600 mr-2"></i>{{ _('Revenue vs Payments') }}</h3>
+        <div class="relative h-[300px]">
+            <canvas id="revenueVsPaymentsChart"></canvas>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Potential Revenue') }}</div>
+                <div class="text-lg font-semibold text-amber-600" id="potentialRevenue">-</div>
+            </div>
+            <div>
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Collection Rate') }}</div>
+                <div class="text-lg font-semibold text-green-600" id="collectionRate">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Charts: Hours by Project & Weekly Trends -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
@@ -348,6 +384,10 @@ class EnhancedAnalyticsDashboard {
             this.loadBillableChart(),
             this.loadTaskStatusChart(),
             this.loadRevenueChart(),
+            this.loadPaymentsOverTimeChart(),
+            this.loadPaymentStatusChart(),
+            this.loadPaymentMethodChart(),
+            this.loadRevenueVsPaymentsChart(),
             this.loadProjectChart(),
             this.loadWeeklyTrendsChart(),
             this.loadHourlyChart(),
@@ -453,6 +493,170 @@ class EnhancedAnalyticsDashboard {
         if (!data.project_labels || data.project_labels.length === 0) return;
         const ctx = document.getElementById('completionRateChart').getContext('2d');
         this.charts.completionRate = new Chart(ctx, { type: 'bar', data: { labels: data.project_labels, datasets: [{ label: i18n_analytics.completion_rate_label || 'Completion Rate (%)', data: data.project_completion_rates, backgroundColor: 'rgba(16, 185, 129, 0.8)', borderColor: '#10b981', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } } } });
+    }
+
+    async loadPaymentsOverTimeChart() {
+        const response = await fetch(`/api/analytics/payments-over-time?days=${this.timeRange}`);
+        const data = await response.json();
+        const ctx = document.getElementById('paymentsOverTimeChart').getContext('2d');
+        this.charts.paymentsOverTime = new Chart(ctx, {
+            type: 'line',
+            data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        titleColor: '#111827',
+                        bodyColor: '#6b7280',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: (c) => `${this.currency} ${this.formatNumber(c.parsed.y)}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: `Amount (${this.currency})` },
+                        grid: { color: '#f3f4f6' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Date' },
+                        grid: { display: false },
+                        ticks: { maxRotation: 45, minRotation: 45 }
+                    }
+                }
+            }
+        });
+    }
+
+    async loadPaymentStatusChart() {
+        const response = await fetch(`/api/analytics/payments-by-status?days=${this.timeRange}`);
+        const data = await response.json();
+        const ctx = document.getElementById('paymentStatusChart').getContext('2d');
+        this.charts.paymentStatus = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.amount_dataset.data,
+                    backgroundColor: data.amount_dataset.backgroundColor,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        titleColor: '#111827',
+                        bodyColor: '#6b7280',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: (ctx) => {
+                                const label = ctx.label || '';
+                                const value = ctx.parsed || 0;
+                                return `${label}: ${this.currency} ${this.formatNumber(value)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    async loadPaymentMethodChart() {
+        const response = await fetch(`/api/analytics/payments-by-method?days=${this.timeRange}`);
+        const data = await response.json();
+        const ctx = document.getElementById('paymentMethodChart').getContext('2d');
+        this.charts.paymentMethod = new Chart(ctx, {
+            type: 'bar',
+            data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        titleColor: '#111827',
+                        bodyColor: '#6b7280',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: (c) => `${this.currency} ${this.formatNumber(c.parsed.y)}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: `Amount (${this.currency})` }
+                    },
+                    x: {
+                        ticks: { maxRotation: 45, minRotation: 45 }
+                    }
+                }
+            }
+        });
+    }
+
+    async loadRevenueVsPaymentsChart() {
+        const response = await fetch(`/api/analytics/revenue-vs-payments?days=${this.timeRange}`);
+        const data = await response.json();
+        
+        // Update summary stats
+        document.getElementById('potentialRevenue').textContent = `${this.currency} ${this.formatNumber(data.potential_revenue)}`;
+        document.getElementById('collectionRate').textContent = `${data.collection_rate}%`;
+        
+        const ctx = document.getElementById('revenueVsPaymentsChart').getContext('2d');
+        this.charts.revenueVsPayments = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: ['#10b981', '#f59e0b'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        titleColor: '#111827',
+                        bodyColor: '#6b7280',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: (ctx) => {
+                                const label = ctx.label || '';
+                                const value = ctx.parsed || 0;
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${this.currency} ${this.formatNumber(value)} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
     {% if current_user.is_admin %}

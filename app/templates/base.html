@@ -100,7 +100,7 @@
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
                 {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') %}
-                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('expenses.') %}
+                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') %}
                 <div class="flex items-center justify-between mb-4">
@@ -170,12 +170,16 @@
                         <ul id="financeDropdown" class="{% if not finance_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_reports = ep.startswith('reports.') %}
                             {% set nav_active_invoices = ep.startswith('invoices.') %}
+                            {% set nav_active_payments = ep.startswith('payments.') %}
                             {% set nav_active_expenses = ep.startswith('expenses.') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('reports.reports') }}">{{ _('Reports') }}</a>
                             </li>
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">{{ _('Invoices') }}</a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_payments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payments.list_payments') }}">{{ _('Payments') }}</a>
                             </li>
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_expenses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expenses.list_expenses') }}">{{ _('Expenses') }}</a>
