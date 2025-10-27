@@ -100,7 +100,9 @@
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
                 {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') %}
-                {% set insights_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('analytics.') or ep.startswith('expenses.') %}
+                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('expenses.') %}
+                {% set analytics_open = ep.startswith('analytics.') %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -154,16 +156,15 @@
                         </ul>
                     </li>
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('insightsDropdown')" data-dropdown="insightsDropdown" class="w-full flex items-center p-2 rounded-lg {% if insights_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
-                            <i class="fas fa-chart-line w-6 text-center"></i>
-                            <span class="ml-3 sidebar-label">{{ _('Insights') }}</span>
+                        <button onclick="toggleDropdown('financeDropdown')" data-dropdown="financeDropdown" class="w-full flex items-center p-2 rounded-lg {% if finance_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                            <i class="fas fa-dollar-sign w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Finance') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
-                        <ul id="insightsDropdown" class="{% if not insights_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                        <ul id="financeDropdown" class="{% if not finance_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_reports = ep.startswith('reports.') %}
                             {% set nav_active_invoices = ep.startswith('invoices.') %}
                             {% set nav_active_expenses = ep.startswith('expenses.') %}
-                            {% set nav_active_analytics = ep.startswith('analytics.') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('reports.reports') }}">{{ _('Reports') }}</a>
                             </li>
@@ -173,25 +174,59 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_expenses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expenses.list_expenses') }}">{{ _('Expenses') }}</a>
                             </li>
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_analytics %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('analytics.analytics_dashboard') }}">{{ _('Analytics') }}</a>
-                            </li>
                         </ul>
+                    </li>
+                    <li class="mt-2">
+                        <a href="{{ url_for('analytics.analytics_dashboard') }}" class="flex items-center p-2 rounded-lg {% if analytics_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                            <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Analytics') }}</span>
+                        </a>
                     </li>
                     {% if current_user.is_admin or has_any_permission(['view_users', 'manage_settings', 'view_system_info', 'manage_backups']) %}
                     <li class="mt-2">
-                        <a href="{{ url_for('admin.admin_dashboard') }}" class="flex items-center p-2 rounded-lg {% if ep == 'admin.admin_dashboard' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('adminDropdown')" data-dropdown="adminDropdown" class="w-full flex items-center p-2 rounded-lg {% if admin_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-cog w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Admin') }}</span>
-                        </a>
+                            <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
+                        </button>
+                        <ul id="adminDropdown" class="{% if not admin_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.admin_dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.admin_dashboard') }}">{{ _('Dashboard') }}</a>
+                            </li>
+                            {% if current_user.is_admin or has_permission('view_users') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.list_users' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_users') }}">{{ _('Users') }}</a>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">{{ _('API Tokens') }}</a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('permissions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('permissions.list_roles') }}">{{ _('Roles & Permissions') }}</a>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin or has_permission('manage_settings') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">{{ _('Settings') }}</a>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin or has_permission('view_system_info') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.system_info' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.system_info') }}">{{ _('System Info') }}</a>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin or has_permission('manage_backups') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.backups_management' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.backups_management') }}">{{ _('Backups') }}</a>
                     </li>
                     {% endif %}
                     {% if current_user.is_admin or has_permission('manage_oidc') %}
-                    <li class="mt-2">
-                        <a href="{{ url_for('admin.oidc_debug') }}" class="flex items-center p-2 rounded-lg {% if ep == 'admin.oidc_debug' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
-                            <i class="fas fa-shield-alt w-6 text-center"></i>
-                            <span class="ml-3 sidebar-label">OIDC</span>
-                        </a>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.oidc_debug' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.oidc_debug') }}">OIDC</a>
+                            </li>
+                            {% endif %}
+                        </ul>
                     </li>
                     {% endif %}
                 </ul>

@@ -16,6 +16,7 @@ from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
 from app.utils.permissions import admin_or_permission_required
 import threading
 import time
+import shutil
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -690,42 +691,134 @@ def serve_uploaded_logo(filename):
     upload_folder = get_upload_folder()
     return send_from_directory(upload_folder, filename)
 
-@admin_bp.route('/admin/backup', methods=['GET'])
+@admin_bp.route('/admin/backups')
 @login_required
 @admin_or_permission_required('manage_backups')
-def backup():
+def backups_management():
+    """Backups management page"""
+    # Get list of existing backups
+    backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..')), 'backups')
+    backups = []
+    
+    if os.path.exists(backups_dir):
+        for filename in os.listdir(backups_dir):
+            if filename.endswith('.zip') and not filename.startswith('restore_'):
+                filepath = os.path.join(backups_dir, filename)
+                stat = os.stat(filepath)
+                backups.append({
+                    'filename': filename,
+                    'size': stat.st_size,
+                    'created': datetime.fromtimestamp(stat.st_mtime),
+                    'size_mb': round(stat.st_size / (1024 * 1024), 2)
+                })
+    
+    # Sort by creation date (newest first)
+    backups.sort(key=lambda x: x['created'], reverse=True)
+    
+    return render_template('admin/backups.html', backups=backups)
+
+
+@admin_bp.route('/admin/backup/create', methods=['POST'])
+@login_required
+@admin_or_permission_required('manage_backups')
+def create_backup_manual():
     """Create manual backup and return the archive for download."""
     try:
         archive_path = create_backup(current_app)
         if not archive_path or not os.path.exists(archive_path):
             flash('Backup failed: archive not created', 'error')
-            return redirect(url_for('admin.admin_dashboard'))
+            return redirect(url_for('admin.backups_management'))
         # Stream file to user
         return send_file(archive_path, as_attachment=True)
     except Exception as e:
         flash(f'Backup failed: {e}', 'error')
-        return redirect(url_for('admin.admin_dashboard'))
+        return redirect(url_for('admin.backups_management'))
+
+
+@admin_bp.route('/admin/backup/download/<filename>')
+@login_required
+@admin_or_permission_required('manage_backups')
+def download_backup(filename):
+    """Download an existing backup file"""
+    # Security: only allow downloading .zip files, no path traversal
+    filename = secure_filename(filename)
+    if not filename.endswith('.zip'):
+        flash('Invalid file type', 'error')
+        return redirect(url_for('admin.backups_management'))
+    
+    backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..')), 'backups')
+    filepath = os.path.join(backups_dir, filename)
+    
+    if not os.path.exists(filepath):
+        flash('Backup file not found', 'error')
+        return redirect(url_for('admin.backups_management'))
+    
+    return send_file(filepath, as_attachment=True)
+
+
+@admin_bp.route('/admin/backup/delete/<filename>', methods=['POST'])
+@login_required
+@admin_or_permission_required('manage_backups')
+def delete_backup(filename):
+    """Delete a backup file"""
+    # Security: only allow deleting .zip files, no path traversal
+    filename = secure_filename(filename)
+    if not filename.endswith('.zip'):
+        flash('Invalid file type', 'error')
+        return redirect(url_for('admin.backups_management'))
+    
+    backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..')), 'backups')
+    filepath = os.path.join(backups_dir, filename)
+    
+    try:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            flash(f'Backup "{filename}" deleted successfully', 'success')
+        else:
+            flash('Backup file not found', 'error')
+    except Exception as e:
+        flash(f'Failed to delete backup: {e}', 'error')
+    
+    return redirect(url_for('admin.backups_management'))
 
 @admin_bp.route('/admin/restore', methods=['GET', 'POST'])
+@admin_bp.route('/admin/restore/<filename>', methods=['POST'])
 @limiter.limit("3 per minute", methods=["POST"])  # heavy operation
 @login_required
 @admin_or_permission_required('manage_backups')
-def restore():
-    """Restore from an uploaded backup archive."""
+def restore(filename=None):
+    """Restore from an uploaded backup archive or existing backup file."""
     if request.method == 'POST':
-        if 'backup_file' not in request.files or request.files['backup_file'].filename == '':
-            flash('No backup file uploaded', 'error')
-            return redirect(url_for('admin.restore'))
-        file = request.files['backup_file']
-        filename = secure_filename(file.filename)
-        if not filename.lower().endswith('.zip'):
-            flash('Invalid file type. Please upload a .zip backup archive.', 'error')
-            return redirect(url_for('admin.restore'))
-        # Save temporarily under project backups
         backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..')), 'backups')
-        os.makedirs(backups_dir, exist_ok=True)
-        temp_path = os.path.join(backups_dir, f"restore_{uuid.uuid4().hex[:8]}_{filename}")
-        file.save(temp_path)
+        
+        # If restoring from an existing backup file
+        if filename:
+            filename = secure_filename(filename)
+            if not filename.lower().endswith('.zip'):
+                flash('Invalid file type. Please select a .zip backup archive.', 'error')
+                return redirect(url_for('admin.backups_management'))
+            temp_path = os.path.join(backups_dir, filename)
+            if not os.path.exists(temp_path):
+                flash('Backup file not found.', 'error')
+                return redirect(url_for('admin.backups_management'))
+            # Copy to temp location for processing
+            actual_restore_path = os.path.join(backups_dir, f"restore_{uuid.uuid4().hex[:8]}_{filename}")
+            shutil.copy2(temp_path, actual_restore_path)
+            temp_path = actual_restore_path
+        # If uploading a new backup file
+        elif 'backup_file' in request.files and request.files['backup_file'].filename != '':
+            file = request.files['backup_file']
+            uploaded_filename = secure_filename(file.filename)
+            if not uploaded_filename.lower().endswith('.zip'):
+                flash('Invalid file type. Please upload a .zip backup archive.', 'error')
+                return redirect(url_for('admin.restore'))
+            # Save temporarily under project backups
+            os.makedirs(backups_dir, exist_ok=True)
+            temp_path = os.path.join(backups_dir, f"restore_{uuid.uuid4().hex[:8]}_{uploaded_filename}")
+            file.save(temp_path)
+        else:
+            flash('No backup file provided', 'error')
+            return redirect(url_for('admin.restore'))
 
         # Initialize progress state
         token = uuid.uuid4().hex[:8]
@@ -968,3 +1061,118 @@ def oidc_user_detail(user_id):
     user = User.query.get_or_404(user_id)
     
     return render_template('admin/oidc_user_detail.html', user=user)
+
+
+# ==================== API Token Management ====================
+
+@admin_bp.route('/admin/api-tokens')
+@login_required
+@admin_required
+def api_tokens():
+    """API tokens management page"""
+    from app.models import ApiToken
+    
+    tokens = ApiToken.query.order_by(ApiToken.created_at.desc()).all()
+    users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    
+    return render_template('admin/api_tokens.html', 
+                         tokens=tokens, 
+                         users=users,
+                         now=datetime.utcnow())
+
+
+@admin_bp.route('/admin/api-tokens', methods=['POST'])
+@login_required
+@admin_required
+def create_api_token():
+    """Create a new API token"""
+    from app.models import ApiToken
+    
+    data = request.get_json() or {}
+    
+    # Validate input
+    if not data.get('name'):
+        return jsonify({'error': 'Token name is required'}), 400
+    if not data.get('user_id'):
+        return jsonify({'error': 'User ID is required'}), 400
+    if not data.get('scopes'):
+        return jsonify({'error': 'At least one scope is required'}), 400
+    
+    # Verify user exists
+    user = User.query.get(data['user_id'])
+    if not user:
+        return jsonify({'error': 'Invalid user'}), 400
+    
+    # Create token
+    try:
+        api_token, plain_token = ApiToken.create_token(
+            user_id=data['user_id'],
+            name=data['name'],
+            description=data.get('description', ''),
+            scopes=data['scopes'],
+            expires_days=data.get('expires_days')
+        )
+        
+        db.session.add(api_token)
+        db.session.commit()
+        
+        current_app.logger.info(
+            f"API token '{data['name']}' created for user {user.username} by {current_user.username}"
+        )
+        
+        return jsonify({
+            'message': 'API token created successfully',
+            'token': plain_token,
+            'token_id': api_token.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to create API token: {e}")
+        return jsonify({'error': 'Failed to create token'}), 500
+
+
+@admin_bp.route('/admin/api-tokens/<int:token_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_api_token(token_id):
+    """Toggle API token active status"""
+    from app.models import ApiToken
+    
+    token = ApiToken.query.get_or_404(token_id)
+    token.is_active = not token.is_active
+    
+    try:
+        db.session.commit()
+        status = 'activated' if token.is_active else 'deactivated'
+        current_app.logger.info(
+            f"API token '{token.name}' {status} by {current_user.username}"
+        )
+        return jsonify({'message': f'Token {status} successfully'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to toggle API token: {e}")
+        return jsonify({'error': 'Failed to update token'}), 500
+
+
+@admin_bp.route('/admin/api-tokens/<int:token_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_api_token(token_id):
+    """Delete an API token"""
+    from app.models import ApiToken
+    
+    token = ApiToken.query.get_or_404(token_id)
+    token_name = token.name
+    
+    try:
+        db.session.delete(token)
+        db.session.commit()
+        current_app.logger.info(
+            f"API token '{token_name}' deleted by {current_user.username}"
+        )
+        return jsonify({'message': 'Token deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to delete API token: {e}")
+        return jsonify({'error': 'Failed to delete token'}), 500
