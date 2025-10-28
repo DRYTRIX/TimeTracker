@@ -50,7 +50,12 @@ def allowed_logo_file(filename):
 def get_upload_folder():
     """Get the upload folder path for logos"""
     upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'logos')
-    os.makedirs(upload_folder, exist_ok=True)
+    try:
+        os.makedirs(upload_folder, exist_ok=True)
+        current_app.logger.info(f'Logo upload folder ensured: {upload_folder}')
+    except Exception as e:
+        current_app.logger.error(f'Error creating upload folder {upload_folder}: {str(e)}')
+        raise
     return upload_folder
 
 @admin_bp.route('/admin')
@@ -299,6 +304,13 @@ def toggle_telemetry():
     
     return redirect(url_for('admin.telemetry_dashboard'))
 
+
+@admin_bp.route('/admin/clear-cache')
+@login_required
+@admin_or_permission_required('manage_settings')
+def clear_cache():
+    """Cache clearing utility page"""
+    return render_template('admin/clear_cache.html')
 
 @admin_bp.route('/admin/settings', methods=['GET', 'POST'])
 @login_required
@@ -631,6 +643,11 @@ def upload_logo():
         file_path = os.path.join(upload_folder, unique_filename)
         file.save(file_path)
         
+        # Log successful save
+        current_app.logger.info(f'Logo saved successfully: {file_path}')
+        current_app.logger.info(f'File exists check: {os.path.exists(file_path)}')
+        current_app.logger.info(f'File size: {os.path.getsize(file_path) if os.path.exists(file_path) else "N/A"} bytes')
+        
         # Update settings
         settings_obj = Settings.get_settings()
         
@@ -648,7 +665,7 @@ def upload_logo():
             flash('Could not save logo due to a database error. Please check server logs.', 'error')
             return redirect(url_for('admin.settings'))
         
-        flash('Company logo uploaded successfully', 'success')
+        flash('Company logo uploaded successfully! You can see it in the "Current Company Logo" section above. It will appear on invoices and PDF documents.', 'success')
     else:
         flash('Invalid file type. Allowed types: PNG, JPG, JPEG, GIF, SVG, WEBP', 'error')
     
@@ -675,7 +692,7 @@ def remove_logo():
         if not safe_commit('admin_remove_logo'):
             flash('Could not remove logo due to a database error. Please check server logs.', 'error')
             return redirect(url_for('admin.settings'))
-        flash('Company logo removed successfully', 'success')
+        flash('Company logo removed successfully. Upload a new logo in the section below if needed.', 'success')
     else:
         flash('No logo to remove', 'info')
     
@@ -688,8 +705,18 @@ def serve_uploaded_logo(filename):
     This route is intentionally public so logos render on unauthenticated pages
     like the login screen and in favicons.
     """
-    upload_folder = get_upload_folder()
-    return send_from_directory(upload_folder, filename)
+    try:
+        upload_folder = get_upload_folder()
+        file_path = os.path.join(upload_folder, filename)
+        
+        if not os.path.exists(file_path):
+            current_app.logger.error(f'Logo file not found: {file_path}')
+            return 'Logo file not found', 404
+            
+        return send_from_directory(upload_folder, filename)
+    except Exception as e:
+        current_app.logger.error(f'Error serving logo {filename}: {str(e)}')
+        return 'Error serving logo', 500
 
 @admin_bp.route('/admin/backups')
 @login_required
