@@ -59,6 +59,9 @@ def register_context_processors(app):
             env_version = os.getenv('APP_VERSION')
             # If running in GitHub Actions build, prefer tag-like versions
             version_value = env_version or getattr(Config, 'APP_VERSION', None) or 'dev-0'
+            # Strip any leading 'v' prefix to avoid double 'v' in template (e.g., vv3.5.0)
+            if version_value and version_value.startswith('v'):
+                version_value = version_value[1:]
         except Exception:
             version_value = 'dev-0'
         
