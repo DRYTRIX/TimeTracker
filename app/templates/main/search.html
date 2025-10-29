@@ -115,9 +115,22 @@
 // Generic data-confirm handler
 document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('form[data-confirm]').forEach(function(f){
-    f.addEventListener('submit', function(e){
+    f.addEventListener('submit', async function(e){
+      e.preventDefault();
       var msg = f.getAttribute('data-confirm') || '';
-      if (msg && !confirm(msg)) { e.preventDefault(); return false; }
+      if (msg) {
+        const confirmed = await showConfirm(msg, {
+          title: 'Confirm Action',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          variant: 'warning'
+        });
+        if (confirmed) {
+          f.submit();
+        }
+      } else {
+        f.submit();
+      }
     });
   });
 });

@@ -179,7 +179,7 @@ class Invoice(db.Model):
                 self.status = 'sent'
     
     def calculate_totals(self):
-        """Calculate invoice totals from items and extra goods"""
+        """Calculate invoice totals from items, extra goods, and expenses"""
         # Optionally apply tax rules before totals
         try:
             self._apply_tax_rules_if_any()
@@ -187,7 +187,8 @@ class Invoice(db.Model):
             pass
         items_total = sum(item.total_amount for item in self.items)
         goods_total = sum(good.total_amount for good in self.extra_goods)
-        subtotal = items_total + goods_total
+        expenses_total = sum(expense.total_amount for expense in self.expenses)
+        subtotal = items_total + goods_total + expenses_total
         self.subtotal = subtotal
         self.tax_amount = subtotal * (self.tax_rate / 100)
         self.total_amount = subtotal + self.tax_amount

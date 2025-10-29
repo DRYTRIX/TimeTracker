@@ -62,43 +62,56 @@ class InvoicePDFGenerator:
                 css = _render_tpl('invoices/pdf_styles_default.css')
             except Exception:
                 css = self._generate_css()
+        # Import helper functions for template
+        from app.utils.template_filters import get_logo_base64
+        from babel.dates import format_date as babel_format_date
+        
+        def format_date(value, format='medium'):
+            """Format date for template"""
+            if babel_format_date:
+                return babel_format_date(value, format=format)
+            return value.strftime('%Y-%m-%d') if value else ''
+        
+        def format_money(value):
+            """Format money for template"""
+            try:
+                return f"{float(value):,.2f}"
+            except Exception:
+                return str(value)
+        
         try:
             # Render using Flask's Jinja environment to include app filters and _()
             if html_template:
                 from flask import render_template_string
-                html = render_template_string(html_template, invoice=self.invoice, settings=self.settings, Path=Path)
-        except Exception:
+                html = render_template_string(html_template, 
+                                             invoice=self.invoice, 
+                                             settings=self.settings, 
+                                             Path=Path,
+                                             get_logo_base64=get_logo_base64,
+                                             format_date=format_date,
+                                             format_money=format_money,
+                                             now=datetime.now())
+        except Exception as e:
+            # Log the exception for debugging
+            import traceback
+            print(f"Error rendering custom PDF template: {e}")
+            print(traceback.format_exc())
             html = ''
+        
         if not html:
             try:
-                # Import helper functions for template
-                from app.utils.template_filters import get_logo_base64
-                from babel.dates import format_date as babel_format_date
-                
-                def format_date(value, format='medium'):
-                    """Format date for template"""
-                    if babel_format_date:
-                        return babel_format_date(value, format=format)
-                    return value.strftime('%Y-%m-%d') if value else ''
-                
-                def format_money(value):
-                    """Format money for template"""
-                    try:
-                        return f"{float(value):,.2f}"
-                    except Exception:
-                        return str(value)
-                
                 html = render_template('invoices/pdf_default.html', 
                                      invoice=self.invoice, 
                                      settings=self.settings, 
                                      Path=Path,
                                      get_logo_base64=get_logo_base64,
                                      format_date=format_date,
-                                     format_money=format_money)
+                                     format_money=format_money,
+                                     now=datetime.now())
             except Exception as e:
                 # Log the exception for debugging
                 import traceback
-                print(f"Error rendering PDF template: {e}")
+                print(f"Error rendering default PDF template: {e}")
                 print(traceback.format_exc())
                 html = f"<html><body><h1>{_('Invoice')} {self.invoice.invoice_number}</h1></body></html>"
         return html, css

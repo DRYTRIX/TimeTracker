@@ -236,24 +236,16 @@
 
 {% block scripts_extra %}
 <script>
-function confirmDeletePayment() {
+async function confirmDeletePayment() {
     const message = 'Are you sure you want to delete this payment? This will affect the invoice payment status and cannot be undone.';
-    if (window.showConfirm) {
-        window.showConfirm(message, {
-            title: 'Delete Payment',
-            confirmText: 'Delete',
-            cancelText: 'Cancel',
-            variant: 'danger'
-        }).then(function(confirmed) {
-            if (confirmed) {
-                document.getElementById('deletePaymentForm').submit();
-            }
-        });
-    } else {
-        // Fallback if showConfirm is not available
-        if (confirm(message)) {
-            document.getElementById('deletePaymentForm').submit();
-        }
+    const confirmed = await showConfirm(message, {
+        title: 'Delete Payment',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        variant: 'danger'
+    });
+    if (confirmed) {
+        document.getElementById('deletePaymentForm').submit();
     }
 }
 </script>

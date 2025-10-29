@@ -190,9 +190,9 @@
                 <h3 class="text-sm font-semibold text-green-700 dark:text-green-400 mb-1">✓ Current Company Logo</h3>
                 <p class="text-xs text-gray-600 dark:text-gray-400">This logo appears on invoices, PDFs, and other documents</p>
             </div>
-            <form method="POST" action="{{ url_for('admin.remove_logo') }}" class="inline" onsubmit="return confirm('Are you sure you want to remove the company logo?');">
+            <form id="removeLogoForm" method="POST" action="{{ url_for('admin.remove_logo') }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium">
+                <button type="button" class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium" onclick="confirmRemoveLogo()">
                     <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                     </svg>
@@ -274,6 +274,21 @@ function previewLogoBeforeUpload(input) {
         reader.readAsDataURL(input.files[0]);
     } else {
         preview.classList.add('hidden');
+    }
+}
+
+async function confirmRemoveLogo() {
+    const confirmed = await showConfirm(
+        '{{ _("Are you sure you want to remove the company logo?") }}',
+        {
+            title: '{{ _("Remove Logo") }}',
+            confirmText: '{{ _("Remove") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: 'danger'
+        }
+    );
+    if (confirmed) {
+        document.getElementById('removeLogoForm').submit();
     }
 }
 </script>

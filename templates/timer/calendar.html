@@ -841,7 +841,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up edit and delete buttons
     document.getElementById('editEventBtn').href = `/timer/edit/${event.id}`;
     document.getElementById('deleteEventBtn').onclick = async () => {
-      if (confirm('{{ _("Are you sure you want to delete this entry?") }}')) {
+      const confirmed = await showConfirm(
+        '{{ _("Are you sure you want to delete this entry?") }}',
+        {
+          title: '{{ _("Delete Entry") }}',
+          confirmText: '{{ _("Delete") }}',
+          cancelText: '{{ _("Cancel") }}',
+          variant: 'danger'
+        }
+      );
+      if (confirmed) {
         await deleteEvent(event.id);
       }
     };
@@ -1046,7 +1055,16 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   window.deleteRecurring = async function(blockId) {
-    if (!confirm('{{ _("Are you sure you want to delete this recurring block?") }}')) return;
+    const confirmed = await showConfirm(
+      '{{ _("Are you sure you want to delete this recurring block?") }}',
+      {
+        title: '{{ _("Delete Recurring Block") }}',
+        confirmText: '{{ _("Delete") }}',
+        cancelText: '{{ _("Cancel") }}',
+        variant: 'danger'
+      }
+    );
+    if (!confirmed) return;
     
     try {
       const res = await fetch(`/api/recurring-blocks/${blockId}`, { method: 'DELETE' });

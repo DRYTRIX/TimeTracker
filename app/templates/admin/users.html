@@ -101,21 +101,16 @@ function confirmDeleteUser(userId, username, timeEntriesCount) {
     // Show delete confirmation
     const msg = {{ _('Are you sure you want to delete user "{name}"? This action cannot be undone.')|tojson }}.replace('{name}', username);
     
-    if (window.showConfirm) {
-        window.showConfirm(msg, { 
-            title: {{ _('Delete User')|tojson }}, 
-            confirmText: {{ _('Delete')|tojson }}, 
-            variant: 'danger' 
-        }).then(function(ok) {
-            if (ok) {
-                document.getElementById('deleteUserForm-' + userId).submit();
-            }
-        });
-    } else {
-        if (confirm(msg)) {
+    window.showConfirm(msg, { 
+        title: {{ _('Delete User')|tojson }}, 
+        confirmText: {{ _('Delete')|tojson }},
+        cancelText: {{ _('Cancel')|tojson }},
+        variant: 'danger' 
+    }).then(function(ok) {
+        if (ok) {
             document.getElementById('deleteUserForm-' + userId).submit();
         }
-    }
+    });
 }
 </script>
 {% endblock %}

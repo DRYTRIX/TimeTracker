@@ -85,6 +85,7 @@ services:
     volumes:
       - app_data:/data
       - app_logs:/app/logs
+      - app_uploads:/app/app/static/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -178,6 +179,8 @@ volumes:
   app_data:
     driver: local
   app_logs:
+    driver: local
+  app_uploads:
     driver: local
   db_data:
     driver: local

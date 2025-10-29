@@ -220,6 +220,9 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">{{ _('Settings') }}</a>
                             </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">{{ _('PDF Layout') }}</a>
+                            </li>
                             {% endif %}
                             {% if current_user.is_admin or has_permission('view_system_info') %}
                             <li>

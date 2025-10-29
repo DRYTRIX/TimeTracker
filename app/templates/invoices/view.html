@@ -53,6 +53,36 @@
         </table>
     </div>
 
+    {% if invoice.expenses.count() > 0 %}
+    <div class="mt-6">
+        <h2 class="text-lg font-semibold mb-4">Expenses</h2>
+        <table class="w-full text-left">
+            <thead>
+                <tr>
+                    <th class="p-2">Title</th>
+                    <th class="p-2">Description</th>
+                    <th class="p-2">Category</th>
+                    <th class="p-2">Date</th>
+                    <th class="p-2">Vendor</th>
+                    <th class="p-2">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in invoice.expenses %}
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <td class="p-2">{{ expense.title }}</td>
+                    <td class="p-2">{{ expense.description or '-' }}</td>
+                    <td class="p-2">{{ expense.category|capitalize }}</td>
+                    <td class="p-2">{{ expense.expense_date.strftime('%Y-%m-%d') if expense.expense_date else '-' }}</td>
+                    <td class="p-2">{{ expense.vendor or '-' }}</td>
+                    <td class="p-2">{{ "%.2f"|format(expense.total_amount) }} {{ expense.currency_code }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
     {% if invoice.extra_goods.count() > 0 %}
     <div class="mt-6">
         <h2 class="text-lg font-semibold mb-4">Extra Goods</h2>

@@ -975,8 +975,17 @@ function easeOutQuad(t) {
 }
 
 // Global functions for inline event handlers
-function bulkDelete() {
-    if (confirm('Are you sure you want to delete the selected items?')) {
+async function bulkDelete() {
+    const confirmed = await showConfirm(
+        'Are you sure you want to delete the selected items?',
+        {
+            title: 'Delete Items',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'danger'
+        }
+    );
+    if (confirmed) {
         window.toastManager?.success('Items deleted successfully');
         clearSelection();
     }

@@ -340,7 +340,16 @@ document.getElementById('createTokenForm').addEventListener('submit', async (e) 
 });
 
 async function toggleToken(tokenId, isActive) {
-    if (!confirm(`Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this token?`)) {
+    const confirmed = await showConfirm(
+        `{{ _("Are you sure you want to") }} ${isActive ? '{{ _("deactivate") }}' : '{{ _("activate") }}'} {{ _("this token?") }}`,
+        {
+            title: isActive ? '{{ _("Deactivate Token") }}' : '{{ _("Activate Token") }}',
+            confirmText: isActive ? '{{ _("Deactivate") }}' : '{{ _("Activate") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: isActive ? 'warning' : 'primary'
+        }
+    );
+    if (!confirmed) {
         return;
     }
     
@@ -364,7 +373,16 @@ async function toggleToken(tokenId, isActive) {
 }
 
 async function deleteToken(tokenId) {
-    if (!confirm('Are you sure you want to delete this token? This action cannot be undone.')) {
+    const confirmed = await showConfirm(
+        '{{ _("Are you sure you want to delete this token? This action cannot be undone.") }}',
+        {
+            title: '{{ _("Delete Token") }}',
+            confirmText: '{{ _("Delete") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: 'danger'
+        }
+    );
+    if (!confirmed) {
         return;
     }
     
