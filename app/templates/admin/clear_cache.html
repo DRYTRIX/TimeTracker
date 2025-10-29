@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">Clear Cache</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">Force clear browser and ServiceWorker cache</p>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="space-y-6">
+        <!-- ServiceWorker Status -->
+        <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <h2 class="text-lg font-semibold mb-4">ServiceWorker Status</h2>
+            <div id="sw-status" class="p-4 bg-gray-50 dark:bg-gray-800 rounded">
+                <p class="text-sm">Checking ServiceWorker...</p>
+            </div>
+        </div>
+
+        <!-- Cache Actions -->
+        <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <h2 class="text-lg font-semibold mb-4">Clear All Caches</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                This will clear all cached resources including CSS, JavaScript, and images. Use this if you're experiencing issues with outdated content.
+            </p>
+            <button onclick="clearAllCaches()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                Clear All Caches
+            </button>
+            <div id="cache-status" class="mt-4 p-3 rounded hidden"></div>
+        </div>
+
+        <!-- ServiceWorker Actions -->
+        <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <h2 class="text-lg font-semibold mb-4">ServiceWorker Actions</h2>
+            <div class="space-y-3">
+                <button onclick="unregisterSW()" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                    Unregister ServiceWorker
+                </button>
+                <button onclick="updateSW()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium ml-2 transition-colors">
+                    Update ServiceWorker
+                </button>
+            </div>
+            <div id="sw-action-status" class="mt-4 p-3 rounded hidden"></div>
+        </div>
+
+        <!-- Hard Refresh Instructions -->
+        <div>
+            <h2 class="text-lg font-semibold mb-4">Manual Hard Refresh</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                If clearing cache doesn't help, try a hard refresh:
+            </p>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <li><strong>Windows/Linux:</strong> Press <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Ctrl + F5</kbd> or <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Ctrl + Shift + R</kbd></li>
+                <li><strong>Mac:</strong> Press <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Cmd + Shift + R</kbd></li>
+                <li><strong>Chrome DevTools:</strong> Right-click refresh button → "Empty Cache and Hard Reload"</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check ServiceWorker status on load
+async function checkSWStatus() {
+    const statusDiv = document.getElementById('sw-status');
+    
+    if (!('serviceWorker' in navigator)) {
+        statusDiv.innerHTML = '<p class="text-yellow-600">ServiceWorker not supported in this browser</p>';
+        return;
+    }
+    
+    try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        
+        if (!registration) {
+            statusDiv.innerHTML = '<p class="text-green-600">✓ No ServiceWorker registered</p>';
+            return;
+        }
+        
+        const state = registration.active ? registration.active.state : 'none';
+        const scope = registration.scope;
+        
+        statusDiv.innerHTML = `
+            <div class="space-y-2 text-sm">
+                <p><strong>Status:</strong> <span class="text-blue-600">${state}</span></p>
+                <p><strong>Scope:</strong> ${scope}</p>
+                <p><strong>Version:</strong> v1.0.1 (with uploads fix)</p>
+            </div>
+        `;
+    } catch (error) {
+        statusDiv.innerHTML = `<p class="text-red-600">Error checking ServiceWorker: ${error.message}</p>`;
+    }
+}
+
+// Clear all caches
+async function clearAllCaches() {
+    const statusDiv = document.getElementById('cache-status');
+    statusDiv.classList.remove('hidden');
+    statusDiv.className = 'mt-4 p-3 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200';
+    statusDiv.textContent = 'Clearing caches...';
+    
+    try {
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+                registration.active.postMessage({ type: 'CLEAR_CACHE' });
+            }
+        }
+        
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+            
+            statusDiv.className = 'mt-4 p-3 rounded bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200';
+            statusDiv.textContent = `✓ Successfully cleared ${cacheNames.length} cache(s). Refresh the page to see changes.`;
+        } else {
+            statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
+            statusDiv.textContent = 'Cache API not available in this browser';
+        }
+    } catch (error) {
+        statusDiv.className = 'mt-4 p-3 rounded bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200';
+        statusDiv.textContent = `Error clearing caches: ${error.message}`;
+    }
+}
+
+// Unregister ServiceWorker
+async function unregisterSW() {
+    const statusDiv = document.getElementById('sw-action-status');
+    statusDiv.classList.remove('hidden');
+    statusDiv.className = 'mt-4 p-3 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200';
+    statusDiv.textContent = 'Unregistering ServiceWorker...';
+    
+    try {
+        if (!('serviceWorker' in navigator)) {
+            statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
+            statusDiv.textContent = 'ServiceWorker not supported';
+            return;
+        }
+        
+        const registration = await navigator.serviceWorker.getRegistration();
+        
+        if (!registration) {
+            statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
+            statusDiv.textContent = 'No ServiceWorker registered';
+            return;
+        }
+        
+        const success = await registration.unregister();
+        
+        if (success) {
+            statusDiv.className = 'mt-4 p-3 rounded bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200';
+            statusDiv.textContent = '✓ ServiceWorker unregistered successfully. Refresh the page.';
+            setTimeout(() => checkSWStatus(), 1000);
+        } else {
+            statusDiv.className = 'mt-4 p-3 rounded bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200';
+            statusDiv.textContent = 'Failed to unregister ServiceWorker';
+        }
+    } catch (error) {
+        statusDiv.className = 'mt-4 p-3 rounded bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200';
+        statusDiv.textContent = `Error: ${error.message}`;
+    }
+}
+
+// Update ServiceWorker
+async function updateSW() {
+    const statusDiv = document.getElementById('sw-action-status');
+    statusDiv.classList.remove('hidden');
+    statusDiv.className = 'mt-4 p-3 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200';
+    statusDiv.textContent = 'Checking for ServiceWorker updates...';
+    
+    try {
+        if (!('serviceWorker' in navigator)) {
+            statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
+            statusDiv.textContent = 'ServiceWorker not supported';
+            return;
+        }
+        
+        const registration = await navigator.serviceWorker.getRegistration();
+        
+        if (!registration) {
+            statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
+            statusDiv.textContent = 'No ServiceWorker registered';
+            return;
+        }
+        
+        await registration.update();
+        
+        statusDiv.className = 'mt-4 p-3 rounded bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200';
+        statusDiv.textContent = '✓ ServiceWorker update checked. Refresh the page to activate new version.';
+        setTimeout(() => checkSWStatus(), 1000);
+    } catch (error) {
+        statusDiv.className = 'mt-4 p-3 rounded bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200';
+        statusDiv.textContent = `Error: ${error.message}`;
+    }
+}
+
+// Check status on page load
+checkSWStatus();
+</script>
+{% endblock %}
+

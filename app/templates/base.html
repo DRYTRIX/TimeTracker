@@ -90,9 +90,9 @@
         (function(){ try { if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); } } catch(_) {} })();
     </script>
     <a href="#mainContentAnchor" class="sr-only focus:not-sr-only focus-ring absolute left-2 top-2 z-[1000] px-3 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded">Skip to content</a>
-    <div id="appShell" class="flex h-screen">
+    <div id="appShell" class="flex min-h-screen">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden lg:flex transition-all duration-200 ease-in-out relative">
+        <aside id="sidebar" class="w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden lg:flex transition-all duration-200 ease-in-out fixed top-0 left-0 h-screen overflow-y-auto z-10">
             <div class="flex items-center mb-8">
                 <img src="{{ url_for('static', filename='images/drytrix-logo.svg') }}" alt="Logo" class="h-10 w-10 mr-2">
                 <h1 class="text-2xl font-bold text-primary sidebar-header-title"><a href="{{ url_for('main.dashboard') }}" class="no-underline">TimeTracker</a></h1>
@@ -220,6 +220,9 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">{{ _('Settings') }}</a>
                             </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">{{ _('PDF Layout') }}</a>
+                            </li>
                             {% endif %}
                             {% if current_user.is_admin or has_permission('view_system_info') %}
                             <li>
@@ -273,7 +276,7 @@
         </aside>
 
         <!-- Main content -->
-        <div id="mainContent" class="flex-1 flex flex-col transition-all duration-200 ease-in-out">
+        <div id="mainContent" class="flex-1 flex flex-col transition-all duration-200 ease-in-out lg:ml-64">
             <!-- Header -->
             <header class="bg-card-light dark:bg-card-dark p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
                 <!-- Mobile menu button -->
@@ -366,7 +369,7 @@
             </div>
 
             <!-- Main page content -->
-            <main id="mainContentAnchor" class="flex-1 p-6 overflow-y-auto">
+            <main id="mainContentAnchor" class="flex-1 p-6">
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -471,12 +474,18 @@
                     appShell.classList.add('sidebar-collapsed');
                     sidebar.classList.add('w-16');
                     sidebar.classList.remove('w-64');
+                    // Adjust main content margin for collapsed sidebar
+                    main.classList.remove('lg:ml-64');
+                    main.classList.add('lg:ml-16');
                     icon && icon.classList.remove('fa-angles-left');
                     icon && icon.classList.add('fa-angles-right');
                 } else {
                     appShell.classList.remove('sidebar-collapsed');
                     sidebar.classList.remove('w-16');
                     sidebar.classList.add('w-64');
+                    // Adjust main content margin for expanded sidebar
+                    main.classList.remove('lg:ml-16');
+                    main.classList.add('lg:ml-64');
                     icon && icon.classList.remove('fa-angles-right');
                     icon && icon.classList.add('fa-angles-left');
                 }
@@ -500,12 +509,12 @@
                 // On small screens we can temporarily show sidebar as overlay
                 const showing = sidebar.classList.contains('hidden');
                 sidebar.classList.toggle('hidden', !showing);
-                sidebar.classList.toggle('fixed', showing);
-                sidebar.classList.toggle('inset-y-0', showing);
-                sidebar.classList.toggle('z-50', showing);
-                // Position the toggle icon correctly when overlayed
-                const iconBtn = document.getElementById('sidebarCollapseBtn');
-                if (iconBtn){ iconBtn.classList.toggle('right-3', showing); iconBtn.classList.toggle('-right-3', !showing); }
+                // Sidebar is already fixed, just need to adjust z-index for overlay
+                if (showing) {
+                    sidebar.style.zIndex = '50';
+                } else {
+                    sidebar.style.zIndex = '10';
+                }
             });
 
             // Flyout submenu when collapsed
@@ -666,7 +675,43 @@
 
         function toggleDropdown(id) {
             const dropdown = document.getElementById(id);
-            dropdown.classList.toggle('hidden');
+            const isCurrentlyHidden = dropdown.classList.contains('hidden');
+            
+            // Close all other dropdowns in the sidebar (accordion behavior)
+            const allSidebarDropdowns = ['workDropdown', 'financeDropdown', 'adminDropdown'];
+            allSidebarDropdowns.forEach(dropdownId => {
+                if (dropdownId !== id) {
+                    const otherDropdown = document.getElementById(dropdownId);
+                    if (otherDropdown) {
+                        otherDropdown.classList.add('hidden');
+                        // Rotate chevron back for closed dropdowns
+                        const otherBtn = document.querySelector(`[data-dropdown="${dropdownId}"]`);
+                        if (otherBtn) {
+                            const otherChevron = otherBtn.querySelector('.fa-chevron-down');
+                            if (otherChevron) {
+                                otherChevron.style.transform = 'rotate(0deg)';
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Toggle the clicked dropdown
+            if (isCurrentlyHidden) {
+                dropdown.classList.remove('hidden');
+            } else {
+                dropdown.classList.add('hidden');
+            }
+            
+            // Rotate chevron icon for visual feedback
+            const btn = document.querySelector(`[data-dropdown="${id}"]`);
+            if (btn) {
+                const chevron = btn.querySelector('.fa-chevron-down');
+                if (chevron) {
+                    chevron.style.transition = 'transform 0.2s ease';
+                    chevron.style.transform = isCurrentlyHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                }
+            }
         }
     </script>
     

@@ -115,7 +115,11 @@
         <li>{{ _('Columns marked as "Complete" will mark tasks as completed when dragged to that column') }}</li>
         <li>{{ _('Inactive columns are hidden from the kanban board but tasks with that status remain accessible') }}</li>
       </ul>
-<!-- Accessible Tailwind Modal for Delete Confirmation -->
+    </div>
+  </div>
+</div>
+
+<!-- Delete Column Modal -->
 <div id="deleteColumnModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
   <div class="absolute inset-0 bg-black/50" onclick="hideDeleteModal()"></div>
   <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl ring-1 ring-border-light/60 dark:ring-border-dark/60">
@@ -150,46 +154,6 @@
           <i class="fas fa-trash"></i> {{ _('Delete Column') }}
         </button>
       </form>
-    </div>
-  </div>
-</div>
-  </div>
-</div>
-
-<!-- Delete Column Modal -->
-<div class="modal fade" id="deleteColumnModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="fas fa-trash me-2 text-danger"></i>{{ _('Delete Kanban Column') }}
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong>{{ _('Warning:') }}</strong> {{ _('This action cannot be undone.') }}
-        </div>
-        <p>{{ _('Are you sure you want to delete the column') }} <strong id="deleteColumnLabel"></strong>?</p>
-        <p class="text-muted mb-0">
-          <small>{{ _('Key:') }} <code id="deleteColumnKey"></code></small>
-        </p>
-        <p class="text-muted mb-0 mt-2">
-          <small>{{ _('Note: Tasks with this status will remain accessible but the column will no longer appear on the kanban board.') }}</small>
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-1"></i>{{ _('Cancel') }}
-        </button>
-        <form method="POST" id="deleteColumnForm" class="d-inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-danger">
-            <i class="fas fa-trash me-2"></i>{{ _('Delete Column') }}
-          </button>
-        </form>
-      </div>
     </div>
   </div>
 </div>

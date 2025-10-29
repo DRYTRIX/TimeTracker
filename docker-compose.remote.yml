@@ -60,6 +60,7 @@ services:
     ports: []
     volumes:
       - app_data_remote:/data
+      - app_uploads_remote:/app/app/static/uploads
       - ./logs:/app/logs
     depends_on:
       db:
@@ -92,6 +93,8 @@ services:
 
 volumes:
   app_data_remote:
+    driver: local
+  app_uploads_remote:
     driver: local
   db_data_remote:
     driver: local

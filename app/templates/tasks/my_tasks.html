@@ -585,16 +585,20 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     
-    if (filterBody.classList.contains('filter-collapsed')) {
+    const isCollapsed = filterBody.classList.contains('filter-collapsed');
+    
+    if (isCollapsed) {
         // Show filters
         filterBody.classList.remove('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-up';
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
         localStorage.setItem('myTaskFiltersVisible', 'true');
     } else {
         // Hide filters
         filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
         localStorage.setItem('myTaskFiltersVisible', 'false');
     }
@@ -610,8 +614,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const filtersVisible = localStorage.getItem('myTaskFiltersVisible');
     if (filtersVisible === 'false') {
         filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+    } else {
+        // Explicitly set the icon to chevron-up when filter is visible
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
     }
     
     // Add transition class after initial setup

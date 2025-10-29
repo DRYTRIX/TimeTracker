@@ -456,8 +456,17 @@ function customizeShortcut(normalizedKey) {
 }
 
 // Reset to defaults
-function resetToDefaults() {
-    if (confirm('This will reset all keyboard shortcuts to their default values. Continue?')) {
+async function resetToDefaults() {
+    const confirmed = await showConfirm(
+        '{{ _("This will reset all keyboard shortcuts to their default values. Continue?") }}',
+        {
+            title: '{{ _("Reset to Defaults") }}',
+            confirmText: '{{ _("Reset") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: 'warning'
+        }
+    );
+    if (confirmed) {
         localStorage.removeItem('tt_shortcuts_custom_shortcuts');
         localStorage.removeItem('tt_shortcuts_disabled_shortcuts');
         location.reload();

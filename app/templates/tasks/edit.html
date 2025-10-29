@@ -218,9 +218,9 @@
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Current Due Date') }}</small>
                         <div class="flex items-center">
                             <div class="rounded-full flex items-center justify-center mr-2 {% if task.is_overdue %}bg-rose-500/10{% else %}bg-slate-500/10{% endif %}" style="width: 24px; height: 24px;">
-                                <i class="fas fa-calendar {% if task.is_overdue %}text-rose-600{% else %}text-slate-500{% endif %} fa-xs"></i>
+                                <i class="fas fa-calendar {% if task.is_overdue %}text-rose-600 dark:text-rose-400{% else %}text-slate-500 dark:text-slate-400{% endif %} fa-xs"></i>
                             </div>
-                            <span class="{% if task.is_overdue %}text-rose-600 font-semibold{% endif %}">
+                            <span class="{% if task.is_overdue %}text-rose-600 dark:text-rose-400 font-semibold{% endif %}">
                                 {{ task.due_date.strftime('%B %d, %Y') }}
                             </span>
                         </div>
@@ -232,7 +232,7 @@
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Current Estimate') }}</small>
                         <div class="flex items-center">
                             <div class="rounded-full flex items-center justify-center mr-2 bg-amber-500/10" style="width: 24px; height: 24px;">
-                                <i class="fas fa-clock text-amber-600 fa-xs"></i>
+                                <i class="fas fa-clock text-amber-600 dark:text-amber-400 fa-xs"></i>
                             </div>
                             <span>{{ task.estimated_hours }} {{ _('hours') }}</span>
                         </div>

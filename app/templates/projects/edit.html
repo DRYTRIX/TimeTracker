@@ -153,12 +153,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Sync markdown on form submit
-    const form = document.querySelector('form[action*="projects/edit"]') || document.querySelector('form');
-    form && form.addEventListener('submit', function(){
-        if (mdEditor && descriptionInput) {
-            try { descriptionInput.value = mdEditor.getMarkdown(); } catch (err) {}
-        }
-    });
+    const form = document.querySelector('form[action*="/edit"]') || document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(){
+            if (mdEditor && descriptionInput) {
+                try { 
+                    descriptionInput.value = mdEditor.getMarkdown(); 
+                } catch (err) {
+                    console.error('Failed to sync markdown editor:', err);
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

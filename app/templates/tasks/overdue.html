@@ -162,24 +162,42 @@ var i18n_overdue = (function(){
     catch(e) { return {}; }
 })();
 
-function extendDueDates() {
+async function extendDueDates() {
     const newDate = prompt(i18n_overdue.enter_new_due_date || 'Enter new due date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
     if (newDate) {
         var p = i18n_overdue.confirm_extend_prefix || 'Are you sure you want to extend the due date to';
         var s = i18n_overdue.confirm_extend_suffix || 'for all overdue tasks?';
-        if (confirm(p + ' ' + newDate + ' ' + s)) {
+        const confirmed = await showConfirm(
+            p + ' ' + newDate + ' ' + s,
+            {
+                title: 'Extend Due Dates',
+                confirmText: 'Extend',
+                cancelText: 'Cancel',
+                variant: 'primary'
+            }
+        );
+        if (confirmed) {
             // This would need to be implemented with a bulk update endpoint
             alert(i18n_overdue.feature_coming || 'Bulk due date update feature coming soon!');
         }
     }
 }
 
-function adjustPriorities() {
+async function adjustPriorities() {
     const newPriority = prompt(i18n_overdue.enter_new_priority || 'Enter new priority (low/medium/high/urgent):', 'high');
     if (newPriority && ['low', 'medium', 'high', 'urgent'].includes(newPriority.toLowerCase())) {
         var p2 = i18n_overdue.confirm_set_priority_prefix || 'Are you sure you want to set priority to';
         var s2 = i18n_overdue.confirm_set_priority_suffix || 'for all overdue tasks?';
-        if (confirm(p2 + ' ' + newPriority + ' ' + s2)) {
+        const confirmed = await showConfirm(
+            p2 + ' ' + newPriority + ' ' + s2,
+            {
+                title: 'Adjust Priorities',
+                confirmText: 'Update',
+                cancelText: 'Cancel',
+                variant: 'primary'
+            }
+        );
+        if (confirmed) {
             // This would need to be implemented with a bulk update endpoint
             alert(i18n_overdue.feature_priority_coming || 'Bulk priority update feature coming soon!');
         }

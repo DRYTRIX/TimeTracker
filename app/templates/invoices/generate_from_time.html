@@ -57,6 +57,29 @@
                 </div>
 
                 <div class="mb-6">
+                    <h2 class="text-lg font-semibold mb-3">{{ _('Uninvoiced Billable Expenses') }}</h2>
+                    {% if expenses %}
+                    <div class="space-y-2">
+                        {% for expense in expenses %}
+                        <label class="flex items-start gap-3 p-3 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                            <input type="checkbox" class="mt-1" name="expenses[]" value="{{ expense.id }}">
+                            <div class="flex-1 text-sm">
+                                <div class="font-medium">{{ expense.title }} ({{ expense.category|title }}) · {{ '%.2f'|format(expense.total_amount) }} {{ expense.currency_code }}</div>
+                                <div class="text-text-muted-light dark:text-text-muted-dark">
+                                    {{ expense.expense_date.strftime('%Y-%m-%d') }}
+                                    {% if expense.vendor %} · {{ _('Vendor') }}: {{ expense.vendor }}{% endif %}
+                                    {% if expense.description %} · {{ expense.description[:80] }}{% if expense.description|length > 80 %}…{% endif %}{% endif %}
+                                </div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No uninvoiced billable expenses found for this project.') }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-6">
                     <h2 class="text-lg font-semibold mb-3">{{ _('Project Extra Goods') }}</h2>
                     {% if extra_goods %}
                     <div class="space-y-2">
@@ -91,15 +114,17 @@
             <h3 class="text-lg font-semibold mb-3">{{ _('Selection Summary') }}</h3>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available hours') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_hours) }}</span></div>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available costs') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_costs) }} {{ currency }}</span></div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available expenses') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_expenses) }} {{ currency }}</span></div>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available goods') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_goods) }} {{ currency }}</span></div>
         </div>
 
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h3 class="text-lg font-semibold mb-3">{{ _('Tips') }}</h3>
             <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
-                <li>{{ _('You can select multiple time entries, costs, and extra goods.') }}</li>
+                <li>{{ _('You can select multiple time entries, costs, expenses, and extra goods.') }}</li>
                 <li>{{ _('Time entries are grouped by task or project at item creation.') }}</li>
                 <li>{{ _('Costs and extra goods are added as individual invoice items.') }}</li>
+                <li>{{ _('Expenses are linked to the invoice and appear in a separate section.') }}</li>
             </ul>
         </div>
     </div>
@@ -112,10 +137,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('generateFromTimeForm');
     if (!form) return;
     form.addEventListener('submit', function(e) {
-        const anyChecked = form.querySelector('input[name="time_entries[]"]:checked, input[name="project_costs[]"]:checked, input[name="extra_goods[]"]:checked');
+        const anyChecked = form.querySelector('input[name="time_entries[]"]:checked, input[name="project_costs[]"]:checked, input[name="expenses[]"]:checked, input[name="extra_goods[]"]:checked');
         if (!anyChecked) {
             e.preventDefault();
-            try { window.toastManager && window.toastManager.warning('{{ _('Please select at least one time entry, cost, or extra good') }}'); } catch(_) {}
+            try { window.toastManager && window.toastManager.warning('{{ _('Please select at least one time entry, cost, expense, or extra good') }}'); } catch(_) {}
         }
     });
 });

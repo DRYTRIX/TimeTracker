@@ -137,9 +137,9 @@
                         <a href="{{ url_for('permissions.view_role', role_id=role.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
                         {% if not role.is_system_role and (current_user.is_admin or has_permission('manage_roles')) %}
                         <a href="{{ url_for('permissions.edit_role', role_id=role.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>
-                        <form action="{{ url_for('permissions.delete_role', role_id=role.id) }}" method="post" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this role?') }}');">
+                        <form id="deleteRoleForm-{{ role.id }}" action="{{ url_for('permissions.delete_role', role_id=role.id) }}" method="post" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="text-red-600 hover:underline text-sm">{{ _('Delete') }}</button>
+                            <button type="button" onclick="confirmDeleteRole({{ role.id }}, '{{ role.name }}')" class="text-red-600 hover:underline text-sm">{{ _('Delete') }}</button>
                         </form>
                         {% endif %}
                     </div>
@@ -197,5 +197,22 @@
         {{ _('Roles are collections of permissions that can be assigned to users. System roles are predefined and cannot be deleted or renamed, but custom roles can be created for your specific needs.') }}
     </p>
 </div>
+
+<script>
+async function confirmDeleteRole(roleId, roleName) {
+    const confirmed = await showConfirm(
+        '{{ _("Are you sure you want to delete the role") }} "' + roleName + '"?',
+        {
+            title: '{{ _("Delete Role") }}',
+            confirmText: '{{ _("Delete") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: 'danger'
+        }
+    );
+    if (confirmed) {
+        document.getElementById('deleteRoleForm-' + roleId).submit();
+    }
+}
+</script>
 {% endblock %}
 

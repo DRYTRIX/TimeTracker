@@ -168,6 +168,71 @@ def test_create_project_api(authenticated_client, test_client, app):
         assert response.status_code in [200, 201] or response.status_code == 400  # May require CSRF or additional fields
 
 
+@pytest.mark.integration
+@pytest.mark.routes
+def test_edit_project_description(admin_authenticated_client, project, app):
+    """Test that project description changes are saved correctly."""
+    from app.models import Project
+    from app import db
+    
+    with app.app_context():
+        # Get the project ID
+        project_id = project.id
+        
+        # Verify initial description
+        initial_description = project.description or ''
+        
+        # New description to test
+        new_description = 'This is an updated project description with markdown **bold** and *italic* text.'
+        
+        # POST to edit project with updated description
+        response = admin_authenticated_client.post(f'/projects/{project_id}/edit', data={
+            'name': project.name,
+            'client_id': project.client_id,
+            'description': new_description,
+            'billable': 'on' if project.billable else '',
+            'hourly_rate': str(project.hourly_rate) if project.hourly_rate else '',
+            'billing_ref': project.billing_ref or '',
+            'code': project.code or '',
+            'budget_amount': str(project.budget_amount) if project.budget_amount else '',
+            'budget_threshold_percent': str(project.budget_threshold_percent or 80)
+        }, follow_redirects=False)
+        
+        # Should redirect on success
+        assert response.status_code == 302
+        
+        # Verify the description was saved in the database
+        db.session.expire_all()  # Clear session cache
+        updated_project = Project.query.get(project_id)
+        assert updated_project is not None
+        assert updated_project.description == new_description
+        assert updated_project.description != initial_description
+
+
+@pytest.mark.smoke
+@pytest.mark.routes
+def test_project_edit_page_has_markdown_editor(admin_authenticated_client, project, app):
+    """Smoke test: Verify project edit page loads with markdown editor."""
+    with app.app_context():
+        response = admin_authenticated_client.get(f'/projects/{project.id}/edit')
+        assert response.status_code == 200
+        
+        html = response.get_data(as_text=True)
+        
+        # Verify the description textarea is present
+        assert 'id="description"' in html
+        assert 'name="description"' in html
+        
+        # Verify markdown editor div is present
+        assert 'id="description_editor"' in html
+        
+        # Verify ToastUI editor is loaded
+        assert 'toastui-editor' in html.lower() or 'toast.ui' in html.lower()
+        
+        # Verify form submit handler is present to sync markdown editor
+        assert 'descriptionInput.value = mdEditor.getMarkdown()' in html or 'getMarkdown()' in html
+
+
 # ============================================================================
 # Client Routes
 # ============================================================================
