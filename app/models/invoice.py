@@ -134,7 +134,25 @@ class Invoice(db.Model):
             self.payment_status = 'partially_paid'
     
     def record_payment(self, amount, payment_date=None, payment_method=None, payment_reference=None, payment_notes=None):
-        """Record a payment for this invoice"""
+        """
+        DEPRECATED: Record a payment for this invoice.
+        
+        This method is deprecated. Please use the Payment model (app.models.Payment)
+        to record payments instead. The Payment model provides:
+        - Multiple payment tracking per invoice
+        - Payment status management (completed, pending, failed, refunded)
+        - Gateway fee tracking
+        - Better audit trail
+        
+        This method is kept for backwards compatibility only and may be removed in a future version.
+        """
+        import warnings
+        warnings.warn(
+            "Invoice.record_payment() is deprecated. Use the Payment model instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         self.amount_paid = (self.amount_paid or 0) + Decimal(str(amount))
         self.payment_date = payment_date or datetime.utcnow().date()
         if payment_method:

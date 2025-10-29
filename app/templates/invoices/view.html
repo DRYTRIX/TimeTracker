@@ -6,7 +6,7 @@
     <div>
         <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg">Edit</a>
         <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg">Export PDF</a>
-        <a href="{{ url_for('invoices.record_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg">Record Payment</a>
+        <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg">Record Payment</a>
     </div>
 </div>
 

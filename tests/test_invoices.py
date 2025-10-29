@@ -418,7 +418,13 @@ def test_invoice_payment_status_initialization(app, sample_user, sample_project)
     assert invoice.is_partially_paid == False
 
 def test_record_full_payment(app, sample_invoice):
-    """Test recording a full payment."""
+    """
+    Test recording a full payment using the deprecated record_payment method.
+    
+    NOTE: This test uses the deprecated Invoice.record_payment() method for backward
+    compatibility testing. New code should use the Payment model instead.
+    See tests/test_payment_model.py and tests/test_payment_routes.py for Payment model tests.
+    """
     # Set up invoice with items
     item = InvoiceItem(
         invoice_id=sample_invoice.id,
@@ -460,7 +466,12 @@ def test_record_full_payment(app, sample_invoice):
     assert sample_invoice.status == 'paid'
 
 def test_record_partial_payment(app, sample_invoice):
-    """Test recording a partial payment."""
+    """
+    Test recording a partial payment using the deprecated record_payment method.
+    
+    NOTE: This test uses the deprecated Invoice.record_payment() method for backward
+    compatibility testing. New code should use the Payment model instead.
+    """
     # Set up invoice with items
     item = InvoiceItem(
         invoice_id=sample_invoice.id,
@@ -495,7 +506,12 @@ def test_record_partial_payment(app, sample_invoice):
     assert sample_invoice.payment_percentage == 50.0
 
 def test_record_overpayment(app, sample_invoice):
-    """Test recording an overpayment."""
+    """
+    Test recording an overpayment using the deprecated record_payment method.
+    
+    NOTE: This test uses the deprecated Invoice.record_payment() method for backward
+    compatibility testing. New code should use the Payment model instead.
+    """
     # Set up invoice with items
     item = InvoiceItem(
         invoice_id=sample_invoice.id,
@@ -523,7 +539,13 @@ def test_record_overpayment(app, sample_invoice):
     assert sample_invoice.payment_percentage > 100.0
 
 def test_multiple_payments(app, sample_invoice):
-    """Test recording multiple payments."""
+    """
+    Test recording multiple payments using the deprecated record_payment method.
+    
+    NOTE: This test uses the deprecated Invoice.record_payment() method for backward
+    compatibility testing. New code should use the Payment model instead, which
+    provides better support for multiple payments with proper tracking.
+    """
     # Set up invoice with items
     item = InvoiceItem(
         invoice_id=sample_invoice.id,
@@ -598,7 +620,12 @@ def test_update_payment_status_method(app, sample_invoice):
     assert sample_invoice.payment_status == 'overpaid'
 
 def test_invoice_to_dict_includes_payment_fields(app, sample_invoice):
-    """Test that invoice to_dict includes payment tracking fields."""
+    """
+    Test that invoice to_dict includes payment tracking fields.
+    
+    NOTE: This test uses the deprecated Invoice.record_payment() method for backward
+    compatibility testing. New code should use the Payment model instead.
+    """
     # Record a payment
     sample_invoice.record_payment(
         amount=Decimal('500.00'),

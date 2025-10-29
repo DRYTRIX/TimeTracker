@@ -292,63 +292,6 @@ def update_invoice_status(invoice_id):
     
     return jsonify({'success': True, 'status': new_status})
 
-@invoices_bp.route('/invoices/<int:invoice_id>/payment', methods=['GET', 'POST'])
-@login_required
-def record_payment(invoice_id):
-    """Record payment for invoice"""
-    invoice = Invoice.query.get_or_404(invoice_id)
-    
-    # Check access permissions
-    if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to record payment for this invoice', 'error')
-        return redirect(url_for('invoices.list_invoices'))
-    
-    if request.method == 'POST':
-        # Get form data
-        amount = request.form.get('amount', '0').strip()
-        payment_date_str = request.form.get('payment_date', '').strip()
-        payment_method = request.form.get('payment_method', '').strip()
-        payment_reference = request.form.get('payment_reference', '').strip()
-        payment_notes = request.form.get('payment_notes', '').strip()
-        
-        # Validate amount
-        try:
-            amount = Decimal(amount)
-            if amount <= 0:
-                flash('Payment amount must be greater than zero', 'error')
-                return render_template('invoices/record_payment.html', invoice=invoice)
-        except (ValueError, InvalidOperation):
-            flash('Invalid payment amount', 'error')
-            return render_template('invoices/record_payment.html', invoice=invoice)
-        
-        # Validate payment date
-        payment_date = None
-        if payment_date_str:
-            try:
-                payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash('Invalid payment date format', 'error')
-                return render_template('invoices/record_payment.html', invoice=invoice)
-        
-        # Record the payment
-        invoice.record_payment(
-            amount=amount,
-            payment_date=payment_date,
-            payment_method=payment_method if payment_method else None,
-            payment_reference=payment_reference if payment_reference else None,
-            payment_notes=payment_notes if payment_notes else None
-        )
-        
-        if not safe_commit('record_payment', {'invoice_id': invoice.id, 'amount': float(amount)}):
-            flash('Could not record payment due to a database error. Please check server logs.', 'error')
-            return render_template('invoices/record_payment.html', invoice=invoice)
-        
-        flash(f'Payment of {amount} recorded successfully', 'success')
-        return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
-    
-    # GET request - show payment form
-    today = datetime.now().strftime('%Y-%m-%d')
-    return render_template('invoices/record_payment.html', invoice=invoice, today=today)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/delete', methods=['POST'])
 @login_required
