@@ -200,11 +200,14 @@ class TestTelemetryMarker:
         """Test that telemetry shouldn't be sent when marker exists"""
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             marker_path = tmp.name
+        try:
+            with patch.dict(os.environ, {'ENABLE_TELEMETRY': 'true'}):
+                assert should_send_telemetry(marker_path) is False
+        finally:
             try:
-                with patch.dict(os.environ, {'ENABLE_TELEMETRY': 'true'}):
-                    assert should_send_telemetry(marker_path) is False
-            finally:
                 os.unlink(marker_path)
+            except (PermissionError, OSError):
+                pass  # Ignore Windows file permission errors
     
     def test_mark_telemetry_sent_creates_file(self):
         """Test that marking telemetry as sent creates marker file"""
@@ -257,14 +260,17 @@ class TestCheckAndSendTelemetry:
         """Test that telemetry is not sent when already marked as sent"""
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             marker_path = tmp.name
+        try:
+            with patch.dict(os.environ, {
+                'ENABLE_TELEMETRY': 'true',
+                'TELEMETRY_MARKER_FILE': marker_path
+            }):
+                result = check_and_send_telemetry()
+                assert result is False
+                assert not mock_send.called
+        finally:
             try:
-                with patch.dict(os.environ, {
-                    'ENABLE_TELEMETRY': 'true',
-                    'TELEMETRY_MARKER_FILE': marker_path
-                }):
-                    result = check_and_send_telemetry()
-                    assert result is False
-                    assert not mock_send.called
-            finally:
                 os.unlink(marker_path)
+            except (PermissionError, OSError):
+                pass  # Ignore Windows file permission errors
 

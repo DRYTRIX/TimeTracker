@@ -407,14 +407,27 @@
     <script src="{{ url_for('static', filename='enhanced-tables.js') }}"></script>
     <script src="{{ url_for('static', filename='interactions.js') }}"></script>
     <!-- Old command palette and keyboard navigation (restored) -->
-    <script src="{{ url_for('static', filename='commands.js') }}"></script>
+    <script src="{{ url_for('static', filename='commands.js') }}?v=2.0"></script>
     <script>
         // Minimal global shortcuts: Ctrl+/ (focus search), Ctrl+Shift+L (toggle theme), 't' (toggle timer)
         // Note: Ctrl+K is handled by keyboard-shortcuts-advanced.js for command palette
         (function(){
             function isTyping(e){
-                const t = e.target; const tag = (t && t.tagName || '').toLowerCase();
-                return tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable);
+                const t = e.target; 
+                const tag = (t && t.tagName || '').toLowerCase();
+                
+                // Check standard inputs
+                if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) {
+                    return true;
+                }
+                
+                // Check for rich text editors (Toast UI Editor, etc.)
+                const editorSelectors = ['.toastui-editor', '.toastui-editor-contents', '.ProseMirror', '.CodeMirror', '.ql-editor', '.tox-edit-area', '.note-editable', '[contenteditable="true"]', '.toastui-editor-ww-container', '.toastui-editor-md-container'];
+                for (let i = 0; i < editorSelectors.length; i++) {
+                    if (t.closest && t.closest(editorSelectors[i])) return true;
+                }
+                
+                return false;
             }
             document.addEventListener('keydown', (e) => {
                 // Ctrl/Cmd + / -> focus search (removed Ctrl+K to avoid conflict with command palette)
@@ -722,8 +735,8 @@
     <script src="{{ url_for('static', filename='onboarding.js') }}"></script>
     
     <!-- Advanced Features -->
-    <script src="{{ url_for('static', filename='keyboard-shortcuts-advanced.js') }}"></script>
-    <script src="{{ url_for('static', filename='keyboard-shortcuts-enhanced.js') }}"></script>
+    <script src="{{ url_for('static', filename='keyboard-shortcuts-advanced.js') }}?v=2.2"></script>
+    <script src="{{ url_for('static', filename='keyboard-shortcuts-enhanced.js') }}?v=2.2"></script>
     <script src="{{ url_for('static', filename='quick-actions.js') }}"></script>
     <script src="{{ url_for('static', filename='smart-notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='dashboard-widgets.js') }}"></script>

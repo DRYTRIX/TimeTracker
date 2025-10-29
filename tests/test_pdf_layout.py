@@ -99,145 +99,103 @@ def test_pdf_layout_page_requires_admin(client, regular_user):
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_page_accessible_to_admin(client, admin_user):
+def test_pdf_layout_page_accessible_to_admin(admin_authenticated_client):
     """Test that PDF layout page is accessible to admin."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        # Access PDF layout page
-        response = client.get('/admin/pdf-layout')
-        
-        assert response.status_code == 200
-        assert b'PDF Layout Editor' in response.data or b'pdf' in response.data.lower()
+    # Access PDF layout page
+    response = admin_authenticated_client.get('/admin/pdf-layout')
+    
+    assert response.status_code == 200
+    assert b'PDF Layout Editor' in response.data or b'pdf' in response.data.lower()
 
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_save_custom_template(client, admin_user, app):
+def test_pdf_layout_save_custom_template(admin_authenticated_client, app):
     """Test saving custom PDF layout templates."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        custom_html = '<div class="custom-invoice"><h1>{{ invoice.invoice_number }}</h1></div>'
-        custom_css = '.custom-invoice { color: red; }'
-        
-        # Save custom template
-        response = client.post('/admin/pdf-layout', data={
-            'invoice_pdf_template_html': custom_html,
-            'invoice_pdf_template_css': custom_css
-        }, follow_redirects=True)
-        
-        assert response.status_code == 200
-        
-        # Verify settings were saved
-        settings = Settings.get_settings()
-        assert settings.invoice_pdf_template_html == custom_html
-        assert settings.invoice_pdf_template_css == custom_css
+    custom_html = '<div class="custom-invoice"><h1>{{ invoice.invoice_number }}</h1></div>'
+    custom_css = '.custom-invoice { color: red; }'
+    
+    # Save custom template
+    response = admin_authenticated_client.post('/admin/pdf-layout', data={
+        'invoice_pdf_template_html': custom_html,
+        'invoice_pdf_template_css': custom_css
+    }, follow_redirects=True)
+    
+    assert response.status_code == 200
+    
+    # Verify settings were saved
+    settings = Settings.get_settings()
+    assert settings.invoice_pdf_template_html == custom_html
+    assert settings.invoice_pdf_template_css == custom_css
 
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_reset_to_defaults(client, admin_user, app):
+def test_pdf_layout_reset_to_defaults(admin_authenticated_client, app):
     """Test resetting PDF layout to defaults."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        # First, set custom templates
-        settings = Settings.get_settings()
-        settings.invoice_pdf_template_html = '<div>Custom HTML</div>'
-        settings.invoice_pdf_template_css = 'body { color: blue; }'
-        db.session.commit()
-        
-        # Reset to defaults
-        response = client.post('/admin/pdf-layout/reset', follow_redirects=True)
-        
-        assert response.status_code == 200
-        
-        # Verify templates were cleared
-        settings = Settings.get_settings()
-        assert settings.invoice_pdf_template_html == ''
-        assert settings.invoice_pdf_template_css == ''
+    # First, set custom templates
+    settings = Settings.get_settings()
+    settings.invoice_pdf_template_html = '<div>Custom HTML</div>'
+    settings.invoice_pdf_template_css = 'body { color: blue; }'
+    db.session.commit()
+    
+    # Reset to defaults
+    response = admin_authenticated_client.post('/admin/pdf-layout/reset', follow_redirects=True)
+    
+    assert response.status_code == 200
+    
+    # Verify templates were cleared
+    settings = Settings.get_settings()
+    assert settings.invoice_pdf_template_html == ''
+    assert settings.invoice_pdf_template_css == ''
 
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_get_defaults(client, admin_user):
+def test_pdf_layout_get_defaults(admin_authenticated_client):
     """Test getting default PDF layout templates."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        # Get default templates
-        response = client.get('/admin/pdf-layout/default')
-        
-        assert response.status_code == 200
-        assert response.is_json
-        
-        data = response.get_json()
-        assert 'html' in data
-        assert 'css' in data
+    # Get default templates
+    response = admin_authenticated_client.get('/admin/pdf-layout/default')
+    
+    assert response.status_code == 200
+    assert response.is_json
+    
+    data = response.get_json()
+    assert 'html' in data
+    assert 'css' in data
 
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_preview(client, admin_user, sample_invoice):
+def test_pdf_layout_preview(admin_authenticated_client, sample_invoice):
     """Test PDF layout preview functionality."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        # Test preview with custom HTML/CSS
-        response = client.post('/admin/pdf-layout/preview', data={
-            'html': '<h1>Test Invoice {{ invoice.invoice_number }}</h1>',
-            'css': 'h1 { color: red; }',
-            'invoice_id': sample_invoice.id
-        })
-        
-        assert response.status_code == 200
-        # Should return HTML content
-        assert b'Test Invoice' in response.data or b'INV-2024-001' in response.data
+    # Test preview with custom HTML/CSS
+    response = admin_authenticated_client.post('/admin/pdf-layout/preview', data={
+        'html': '<h1>Test Invoice {{ invoice.invoice_number }}</h1>',
+        'css': 'h1 { color: red; }',
+        'invoice_id': sample_invoice.id
+    })
+    
+    assert response.status_code == 200
+    # Should return HTML content
+    assert b'Test Invoice' in response.data or b'INV-2024-001' in response.data
 
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_preview_with_mock_invoice(client, admin_user, app):
+def test_pdf_layout_preview_with_mock_invoice(admin_authenticated_client, app):
     """Test PDF layout preview with mock invoice when no real invoice exists."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        # Delete all invoices
-        Invoice.query.delete()
-        db.session.commit()
-        
-        # Test preview should still work with mock invoice
-        response = client.post('/admin/pdf-layout/preview', data={
-            'html': '<h1>{{ invoice.invoice_number }}</h1>',
-            'css': 'h1 { color: blue; }'
-        })
-        
-        assert response.status_code == 200
+    # Delete all invoices
+    Invoice.query.delete()
+    db.session.commit()
+    
+    # Test preview should still work with mock invoice
+    response = admin_authenticated_client.post('/admin/pdf-layout/preview', data={
+        'html': '<h1>{{ invoice.invoice_number }}</h1>',
+        'css': 'h1 { color: blue; }'
+    })
+    
+    assert response.status_code == 200
 
 
 @pytest.mark.models
@@ -315,40 +273,26 @@ def test_pdf_generation_with_default_template(app, sample_invoice):
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_navigation_link_exists(client, admin_user):
+def test_pdf_layout_navigation_link_exists(admin_authenticated_client):
     """Test that PDF layout link exists in admin navigation."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        # Access admin dashboard or any admin page
-        response = client.get('/admin/settings')
-        
-        assert response.status_code == 200
-        # Should contain link to PDF layout page
-        # The link might be in the navigation or as a menu item
+    # Access admin dashboard or any admin page
+    response = admin_authenticated_client.get('/admin/settings')
+    
+    assert response.status_code == 200
+    # Should contain link to PDF layout page
+    # The link might be in the navigation or as a menu item
 
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_form_csrf_protection(client, admin_user):
+def test_pdf_layout_form_csrf_protection(admin_authenticated_client):
     """Test that PDF layout form has CSRF protection."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
-        })
-        
-        # Get the PDF layout page
-        response = client.get('/admin/pdf-layout')
-        
-        assert response.status_code == 200
-        # Should contain CSRF token
-        assert b'csrf_token' in response.data or b'name="csrf_token"' in response.data
+    # Get the PDF layout page
+    response = admin_authenticated_client.get('/admin/pdf-layout')
+    
+    assert response.status_code == 200
+    # Should contain CSRF token
+    assert b'csrf_token' in response.data or b'name="csrf_token"' in response.data
 
 
 @pytest.mark.integration
@@ -379,26 +323,19 @@ def test_pdf_layout_jinja_variable_rendering(app, sample_invoice):
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_rate_limiting(client, admin_user):
+def test_pdf_layout_rate_limiting(admin_authenticated_client):
     """Test that PDF layout endpoints have rate limiting."""
-    with client:
-        # Login as admin
-        client.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'password123'
+    # Make multiple rapid requests to preview endpoint
+    for i in range(65):  # Exceeds the 60 per minute limit
+        response = admin_authenticated_client.post('/admin/pdf-layout/preview', data={
+            'html': '<h1>Test</h1>',
+            'css': 'h1 { color: red; }'
         })
         
-        # Make multiple rapid requests to preview endpoint
-        for i in range(65):  # Exceeds the 60 per minute limit
-            response = client.post('/admin/pdf-layout/preview', data={
-                'html': '<h1>Test</h1>',
-                'css': 'h1 { color: red; }'
-            })
-            
-            # After 60 requests, should be rate limited
-            if i >= 60:
-                assert response.status_code == 429  # Too Many Requests
-                break
+        # After 60 requests, should be rate limited
+        if i >= 60:
+            assert response.status_code == 429  # Too Many Requests
+            break
 
 
 @pytest.mark.integration

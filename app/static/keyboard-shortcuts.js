@@ -194,29 +194,32 @@
             let sequenceTimer = null;
 
             document.addEventListener('keydown', (e) => {
-                // Ignore if typing in input
-                if (this.isTyping(e)) {
-                    return;
-                }
-
-                // Focus search with Ctrl+K or Cmd+K
+                // Focus search with Ctrl+K or Cmd+K (allowed even in inputs)
                 if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                     e.preventDefault();
                     this.focusSearch();
                     return;
                 }
 
-                // Open command palette with ? (main entry point)
-                if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                // Open command palette with ? (allowed even in inputs, but only if Shift is pressed)
+                if (e.key === '?' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
                     e.preventDefault();
                     this.openCommandPalette();
                     return;
                 }
 
-                // Help with Shift+? (or Ctrl/Cmd+?)
+                // Help with Shift+? (or Ctrl/Cmd+?) (allowed even in inputs)
                 if ((e.key === '?' && e.shiftKey) || (e.key === '/' && e.ctrlKey)) {
                     e.preventDefault();
                     this.showHelp();
+                    return;
+                }
+
+                // Ignore ALL other shortcuts if typing in input
+                if (this.isTyping(e)) {
+                    // Clear any existing key sequence when user starts typing
+                    keySequence = [];
+                    clearTimeout(sequenceTimer);
                     return;
                 }
 
@@ -571,12 +574,53 @@
         isTyping(event) {
             const target = event.target;
             const tagName = target.tagName.toLowerCase();
-            return (
-                tagName === 'input' || 
+            
+            // Debug logging (can be removed after testing)
+            if (window.location.pathname.includes('create') || window.location.pathname.includes('edit')) {
+                console.log('[Keyboard Shortcuts Debug]', {
+                    target: target,
+                    tagName: tagName,
+                    classList: target.classList ? Array.from(target.classList) : [],
+                    isContentEditable: target.isContentEditable,
+                    parentClasses: target.parentElement ? Array.from(target.parentElement.classList || []) : []
+                });
+            }
+            
+            // Check standard input elements
+            if (tagName === 'input' || 
                 tagName === 'textarea' || 
                 tagName === 'select' ||
-                target.isContentEditable
-            );
+                target.isContentEditable) {
+                return true;
+            }
+            
+            // Check for rich text editors (Toast UI Editor, TinyMCE, CodeMirror, etc.)
+            const richEditorSelectors = [
+                '.toastui-editor',
+                '.toastui-editor-contents',
+                '.ProseMirror',
+                '.CodeMirror',
+                '.ql-editor',  // Quill
+                '.tox-edit-area',  // TinyMCE
+                '.note-editable',  // Summernote
+                '[contenteditable="true"]',
+                // Additional Toast UI Editor specific selectors
+                '.toastui-editor-ww-container',
+                '.toastui-editor-md-container',
+                '.te-editor',
+                '.te-ww-container',
+                '.te-md-container'
+            ];
+            
+            // Check if target is within any rich text editor
+            for (const selector of richEditorSelectors) {
+                if (target.closest && target.closest(selector)) {
+                    console.log('[Keyboard Shortcuts] Blocked - inside editor:', selector);
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
         detectKeyboardNavigation() {
