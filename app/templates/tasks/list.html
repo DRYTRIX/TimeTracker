@@ -303,14 +303,21 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    if (filterBody.classList.contains('filter-collapsed')) {
+    
+    const isCollapsed = filterBody.classList.contains('filter-collapsed');
+    
+    if (isCollapsed) {
+        // Show filters
         filterBody.classList.remove('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-up';
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
         localStorage.setItem('taskListFiltersVisible', 'true');
     } else {
+        // Hide filters
         filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
         localStorage.setItem('taskListFiltersVisible', 'false');
     }
@@ -321,11 +328,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
+    
     const filtersVisible = localStorage.getItem('taskListFiltersVisible');
     if (filtersVisible === 'false') {
         filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+    } else {
+        // Explicitly set the icon to chevron-up when filter is visible
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
     
