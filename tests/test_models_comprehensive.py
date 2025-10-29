@@ -513,3 +513,282 @@ def test_time_entry_requires_start_time(app, user, project):
         db.session.add(entry)
         db.session.commit()
 
+
+# ============================================================================
+# User Deletion and Cascading Tests
+# ============================================================================
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_user_deletion_without_relationships(app):
+    """Test that a user without relationships can be deleted."""
+    with app.app_context():
+        # Create a user with no relationships
+        delete_user = User(username='deletable', role='user')
+        delete_user.is_active = True
+        db.session.add(delete_user)
+        db.session.commit()
+        user_id = delete_user.id
+        
+        # Delete the user
+        db.session.delete(delete_user)
+        db.session.commit()
+        
+        # Verify deletion
+        deleted = User.query.get(user_id)
+        assert deleted is None
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_user_deletion_cascades_project_costs(app, test_client):
+    """Test that deleting a user cascades to project costs."""
+    from app.models import ProjectCost
+    from datetime import date
+    
+    with app.app_context():
+        # Create user and project
+        user = User(username='costuser', role='user')
+        user.is_active = True
+        db.session.add(user)
+        
+        project = Project(
+            name='Cost Test Project',
+            client_id=test_client.id,
+            billable=True
+        )
+        db.session.add(project)
+        db.session.commit()
+        
+        # Create project cost
+        cost = ProjectCost(
+            project_id=project.id,
+            user_id=user.id,
+            description='Test expense',
+            category='materials',
+            amount=Decimal('100.00'),
+            cost_date=date.today()
+        )
+        db.session.add(cost)
+        db.session.commit()
+        
+        user_id = user.id
+        cost_id = cost.id
+        
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+        
+        # Verify user is deleted
+        deleted_user = User.query.get(user_id)
+        assert deleted_user is None
+        
+        # Verify project cost is cascaded (deleted)
+        deleted_cost = ProjectCost.query.get(cost_id)
+        assert deleted_cost is None
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_user_deletion_cascades_time_entries(app, test_client):
+    """Test that deleting a user cascades to time entries."""
+    with app.app_context():
+        # Create user and project
+        user = User(username='entryuser', role='user')
+        user.is_active = True
+        db.session.add(user)
+        
+        project = Project(
+            name='Entry Test Project',
+            client_id=test_client.id,
+            billable=True
+        )
+        db.session.add(project)
+        db.session.commit()
+        
+        # Create time entry
+        entry = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=datetime.utcnow(),
+            end_time=datetime.utcnow() + timedelta(hours=1),
+            description='Test entry'
+        )
+        db.session.add(entry)
+        db.session.commit()
+        
+        user_id = user.id
+        entry_id = entry.id
+        
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+        
+        # Verify user is deleted
+        deleted_user = User.query.get(user_id)
+        assert deleted_user is None
+        
+        # Verify time entry is cascaded (deleted)
+        deleted_entry = TimeEntry.query.get(entry_id)
+        assert deleted_entry is None
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_user_deletion_removes_from_favorite_projects(app, test_client):
+    """Test that deleting a user removes them from favorite projects."""
+    with app.app_context():
+        # Create user and project
+        user = User(username='favuser', role='user')
+        user.is_active = True
+        db.session.add(user)
+        
+        project = Project(
+            name='Favorite Test Project',
+            client_id=test_client.id,
+            billable=True
+        )
+        db.session.add(project)
+        db.session.commit()
+        
+        # Add project to favorites
+        user.favorite_projects.append(project)
+        db.session.commit()
+        
+        # Verify favorite was added
+        assert project in user.favorite_projects.all()
+        
+        user_id = user.id
+        project_id = project.id
+        
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+        
+        # Verify user is deleted
+        deleted_user = User.query.get(user_id)
+        assert deleted_user is None
+        
+        # Verify project still exists (favorites are many-to-many)
+        remaining_project = Project.query.get(project_id)
+        assert remaining_project is not None
+        
+        # Verify user is not in project's favorited_by
+        assert user_id not in [u.id for u in remaining_project.favorited_by.all()]
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_user_deletion_preserves_tasks_assigned_to_them(app, test_client):
+    """Test that deleting a user preserves tasks but nullifies assigned_to."""
+    with app.app_context():
+        # Create users and project
+        creator = User(username='creator', role='user')
+        creator.is_active = True
+        assignee = User(username='assignee', role='user')
+        assignee.is_active = True
+        db.session.add_all([creator, assignee])
+        
+        project = Project(
+            name='Task Test Project',
+            client_id=test_client.id,
+            billable=True
+        )
+        db.session.add(project)
+        db.session.commit()
+        
+        # Create task
+        task = Task(
+            project_id=project.id,
+            name='Test Task',
+            description='Test description',
+            created_by=creator.id,
+            assigned_to=assignee.id
+        )
+        db.session.add(task)
+        db.session.commit()
+        
+        assignee_id = assignee.id
+        task_id = task.id
+        
+        # Delete assignee
+        db.session.delete(assignee)
+        db.session.commit()
+        
+        # Verify assignee is deleted
+        deleted_user = User.query.get(assignee_id)
+        assert deleted_user is None
+        
+        # Verify task still exists but assigned_to is nullified
+        remaining_task = Task.query.get(task_id)
+        assert remaining_task is not None
+        assert remaining_task.assigned_to is None
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_user_cannot_be_deleted_if_has_created_tasks(app, test_client):
+    """Test that deleting a user who created tasks cascades properly."""
+    from sqlalchemy.exc import IntegrityError
+    
+    with app.app_context():
+        # Create user and project
+        creator = User(username='taskcreator', role='user')
+        creator.is_active = True
+        db.session.add(creator)
+        
+        project = Project(
+            name='Task Creator Project',
+            client_id=test_client.id,
+            billable=True
+        )
+        db.session.add(project)
+        db.session.commit()
+        
+        # Create task
+        task = Task(
+            project_id=project.id,
+            name='Created Task',
+            description='Test description',
+            created_by=creator.id
+        )
+        db.session.add(task)
+        db.session.commit()
+        
+        creator_id = creator.id
+        
+        # Try to delete creator - should raise IntegrityError because created_by is NOT NULL
+        with pytest.raises(IntegrityError):
+            db.session.delete(creator)
+            db.session.commit()
+        
+        db.session.rollback()
+        
+        # Verify creator still exists
+        still_exists = User.query.get(creator_id)
+        assert still_exists is not None
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_user_deletion_count_check(app):
+    """Test that we can query user count before and after deletion."""
+    with app.app_context():
+        # Get initial count
+        initial_count = User.query.count()
+        
+        # Create and delete a user
+        temp_user = User(username='tempuser', role='user')
+        temp_user.is_active = True
+        db.session.add(temp_user)
+        db.session.commit()
+        
+        # Verify count increased
+        assert User.query.count() == initial_count + 1
+        
+        # Delete user
+        db.session.delete(temp_user)
+        db.session.commit()
+        
+        # Verify count back to initial
+        assert User.query.count() == initial_count

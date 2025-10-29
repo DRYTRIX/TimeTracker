@@ -32,6 +32,7 @@ class Settings(db.Model):
     # PDF template customization
     invoice_pdf_template_html = db.Column(db.Text, default='', nullable=True)
     invoice_pdf_template_css = db.Column(db.Text, default='', nullable=True)
+    invoice_pdf_design_json = db.Column(db.Text, default='', nullable=True)  # Konva.js design state
     
     # Invoice defaults
     invoice_prefix = db.Column(db.String(10), default='INV', nullable=False)
@@ -80,6 +81,7 @@ class Settings(db.Model):
         # PDF template customization
         self.invoice_pdf_template_html = kwargs.get('invoice_pdf_template_html', '')
         self.invoice_pdf_template_css = kwargs.get('invoice_pdf_template_css', '')
+        self.invoice_pdf_design_json = kwargs.get('invoice_pdf_design_json', '')
         
         # Set invoice defaults
         self.invoice_prefix = kwargs.get('invoice_prefix', 'INV')
@@ -171,6 +173,7 @@ class Settings(db.Model):
             'invoice_notes': self.invoice_notes,
             'invoice_pdf_template_html': self.invoice_pdf_template_html,
             'invoice_pdf_template_css': self.invoice_pdf_template_css,
+            'invoice_pdf_design_json': self.invoice_pdf_design_json,
             'allow_analytics': self.allow_analytics,
             'mail_enabled': self.mail_enabled,
             'mail_server': self.mail_server,

@@ -3,10 +3,13 @@
 {% block content %}
 <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">Invoice {{ invoice.invoice_number }}</h1>
-    <div>
-        <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg">Edit</a>
-        <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg">Export PDF</a>
-        <a href="{{ url_for('invoices.record_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg">Record Payment</a>
+    <div class="flex gap-2">
+        <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark">Edit</a>
+        <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-dark">Export PDF</a>
+        <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Record Payment</a>
+        <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+            <i class="fas fa-trash mr-1"></i>Delete
+        </button>
     </div>
 </div>
 
@@ -49,6 +52,36 @@
             </tbody>
         </table>
     </div>
+
+    {% if invoice.expenses.count() > 0 %}
+    <div class="mt-6">
+        <h2 class="text-lg font-semibold mb-4">Expenses</h2>
+        <table class="w-full text-left">
+            <thead>
+                <tr>
+                    <th class="p-2">Title</th>
+                    <th class="p-2">Description</th>
+                    <th class="p-2">Category</th>
+                    <th class="p-2">Date</th>
+                    <th class="p-2">Vendor</th>
+                    <th class="p-2">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in invoice.expenses %}
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <td class="p-2">{{ expense.title }}</td>
+                    <td class="p-2">{{ expense.description or '-' }}</td>
+                    <td class="p-2">{{ expense.category|capitalize }}</td>
+                    <td class="p-2">{{ expense.expense_date.strftime('%Y-%m-%d') if expense.expense_date else '-' }}</td>
+                    <td class="p-2">{{ expense.vendor or '-' }}</td>
+                    <td class="p-2">{{ "%.2f"|format(expense.total_amount) }} {{ expense.currency_code }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 
     {% if invoice.extra_goods.count() > 0 %}
     <div class="mt-6">
@@ -126,7 +159,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for payment in invoice.payments.order_by('payment_date desc, created_at desc') %}
+                {% for payment in invoice.sorted_payments %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td class="p-2">{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else 'N/A' }}</td>
                     <td class="p-2 font-semibold text-green-600 dark:text-green-400">
@@ -178,4 +211,56 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Delete Invoice Modal -->
+<div id="deleteInvoiceModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="absolute inset-0 bg-black/50" onclick="hideDeleteModal()"></div>
+  <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl ring-1 ring-border-light/60 dark:ring-border-dark/60">
+    <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+      <h5 id="deleteModalTitle" class="text-lg font-semibold flex items-center gap-2">
+        <i class="fas fa-trash text-red-500"></i> {{ _('Delete Invoice') }}
+      </h5>
+      <button type="button" class="px-2 py-1 hover:bg-background-light dark:hover:bg-background-dark rounded text-2xl leading-none" aria-label="{{ _('Close') }}" onclick="hideDeleteModal()">&times;</button>
+    </div>
+    <div class="p-4">
+      <div class="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100 rounded-lg p-3 ring-1 ring-yellow-200/60 dark:ring-yellow-700/50 flex items-start gap-2">
+        <i class="fas fa-exclamation-triangle mt-1"></i>
+        <div>
+          <strong>{{ _('Warning:') }}</strong> {{ _('This action cannot be undone.') }}
+        </div>
+      </div>
+      <p class="mt-4">{{ _('Are you sure you want to delete invoice') }} <strong id="deleteInvoiceNumber"></strong>?</p>
+      <p class="text-text-muted-light dark:text-text-muted-dark mt-2">
+        <small>{{ _('All invoice items, extra goods, and payment records associated with this invoice will be permanently deleted.') }}</small>
+      </p>
+    </div>
+    <div class="p-4 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+      <button type="button" class="inline-flex items-center gap-2 px-3 py-2 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark" onclick="hideDeleteModal()">
+        <i class="fas fa-times"></i> {{ _('Cancel') }}
+      </button>
+      <form method="POST" id="deleteInvoiceForm" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600">
+          <i class="fas fa-trash"></i> {{ _('Delete Invoice') }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function showDeleteModal(invoiceId, invoiceNumber) {
+  const numberEl = document.getElementById('deleteInvoiceNumber');
+  const formEl = document.getElementById('deleteInvoiceForm');
+  if (numberEl) numberEl.textContent = invoiceNumber || '';
+  if (formEl) formEl.action = "{{ url_for('invoices.delete_invoice', invoice_id=0) }}".replace('0', invoiceId);
+  const modal = document.getElementById('deleteInvoiceModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+  const modal = document.getElementById('deleteInvoiceModal');
+  if (modal) modal.classList.add('hidden');
+}
+</script>
 {% endblock %}

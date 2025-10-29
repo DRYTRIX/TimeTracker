@@ -33,6 +33,8 @@ services:
     volumes:
       # Mount data directory for SQLite database and uploads
       - app_data_local_test:/data
+      # Mount uploads directory for logos and avatars
+      - app_uploads_local_test:/app/app/static/uploads
       # Mount logs directory for easier debugging
       - ./logs:/app/logs
     restart: unless-stopped
@@ -49,4 +51,6 @@ services:
 
 volumes:
   app_data_local_test:
+    driver: local
+  app_uploads_local_test:
     driver: local

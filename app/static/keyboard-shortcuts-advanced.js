@@ -201,16 +201,32 @@ class KeyboardShortcutManager {
      * Handle key press
      */
     handleKeyPress(e) {
+        // AGGRESSIVE DEBUG LOGGING
+        const debugInfo = {
+            key: e.key,
+            target: e.target,
+            tagName: e.target.tagName,
+            classList: e.target.classList ? Array.from(e.target.classList) : [],
+            isContentEditable: e.target.isContentEditable
+        };
+        console.log('[KS-Advanced] Key pressed:', debugInfo);
+        
         // When palette is open, do not trigger a second open; let commands.js handle focus
         const palette = document.getElementById('commandPaletteModal');
         const paletteOpen = palette && !palette.classList.contains('hidden');
 
-        // Ignore if typing in input/textarea except for allowed global combos
-        if (this.isTyping(e)) {
+        // Check if typing in input field
+        const isTypingInInput = this.isTyping(e);
+        console.log('[KS-Advanced] isTyping result:', isTypingInInput);
+
+        // If typing in input/textarea, ONLY allow specific global combos
+        if (isTypingInInput) {
+            console.log('[KS-Advanced] BLOCKED - User is typing in input field');
             // Allow Ctrl+/ to focus search even when typing
             if ((e.ctrlKey || e.metaKey) && e.key === '/') {
                 e.preventDefault();
                 this.toggleSearch();
+                return;
             }
             // Allow Ctrl+K to open/focus palette even when typing
             else if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
@@ -222,9 +238,20 @@ class KeyboardShortcutManager {
                 } else {
                     this.openCommandPalette();
                 }
+                return;
             }
+            // Allow Shift+? for shortcuts panel
+            else if (e.key === '?' && e.shiftKey) {
+                e.preventDefault();
+                this.showShortcutsPanel();
+                return;
+            }
+            // Block ALL other shortcuts when typing
+            console.log('[KS-Advanced] Blocking shortcut - in input field');
             return;
         }
+        
+        console.log('[KS-Advanced] NOT blocked - processing shortcut');
 
         const key = this.getKeyCombo(e);
         const normalizedKey = this.normalizeKey(key);
@@ -310,40 +337,55 @@ class KeyboardShortcutManager {
     }
 
     /**
-     * Check if user is typing
+     * Check if user is typing in an input field
      */
     isTyping(e) {
         const target = e.target;
         const tagName = target.tagName.toLowerCase();
-        const isInput = tagName === 'input' || tagName === 'textarea' || target.isContentEditable;
         
-        // Don't block anything if not in an input
-        if (!isInput) {
-            return false;
+        console.log('[KS-Advanced isTyping] Checking:', {
+            tagName: tagName,
+            isContentEditable: target.isContentEditable,
+            classList: target.classList ? Array.from(target.classList) : []
+        });
+        
+        // Check standard input elements
+        if (tagName === 'input' || 
+            tagName === 'textarea' || 
+            tagName === 'select' ||
+            target.isContentEditable) {
+            console.log('[KS-Advanced isTyping] TRUE - standard input');
+            return true;
         }
         
-        // Allow Escape in search inputs to close/clear
-        if (target.type === 'search' && e.key === 'Escape') {
-            return false;
+        // Check for rich text editors (Toast UI Editor, TinyMCE, CodeMirror, etc.)
+        const richEditorSelectors = [
+            '.toastui-editor',
+            '.toastui-editor-contents',
+            '.ProseMirror',
+            '.CodeMirror',
+            '.ql-editor',  // Quill
+            '.tox-edit-area',  // TinyMCE
+            '.note-editable',  // Summernote
+            '[contenteditable="true"]',
+            // Additional Toast UI Editor specific selectors
+            '.toastui-editor-ww-container',
+            '.toastui-editor-md-container',
+            '.te-editor',
+            '.te-ww-container',
+            '.te-md-container'
+        ];
+        
+        // Check if target is within any rich text editor
+        for (const selector of richEditorSelectors) {
+            if (target.closest && target.closest(selector)) {
+                console.log('[KS-Advanced isTyping] TRUE - inside editor:', selector);
+                return true;
+            }
         }
         
-        // Allow Ctrl+/ and Cmd+/ even in inputs for search
-        if (e.key === '/' && (e.ctrlKey || e.metaKey)) {
-            return false;
-        }
-        
-        // Allow Ctrl+K and Cmd+K even in inputs for command palette
-        if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
-            return false;
-        }
-        
-        // Allow Shift+? for shortcuts panel
-        if (e.key === '?' && e.shiftKey) {
-            return false;
-        }
-        
-        // Block all other keys when typing
-        return true;
+        console.log('[KS-Advanced isTyping] FALSE - not in input');
+        return false;
     }
 
     /**

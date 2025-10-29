@@ -198,12 +198,11 @@
                                 {{ _('Edit') }}
                             </a>
                             {% if note.can_delete(current_user) %}
-                            <form method="POST" 
+                            <form id="deleteNoteForm-{{ note.id }}" method="POST" 
                                   action="{{ url_for('client_notes.delete_note', client_id=client.id, note_id=note.id) }}" 
-                                  class="inline"
-                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this note?') }}');">
+                                  class="inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="text-sm text-red-600 dark:text-red-400 hover:underline">
+                                <button type="button" onclick="confirmDeleteNote({{ note.id }})" class="text-sm text-red-600 dark:text-red-400 hover:underline">
                                     {{ _('Delete') }}
                                 </button>
                             </form>
@@ -264,6 +263,21 @@ function toggleImportant(noteId, setImportant) {
         console.error('Error:', error);
         alert('{{ _('Error updating note') }}');
     });
+}
+
+async function confirmDeleteNote(noteId) {
+    const confirmed = await showConfirm(
+        '{{ _("Are you sure you want to delete this note?") }}',
+        {
+            title: '{{ _("Delete Note") }}',
+            confirmText: '{{ _("Delete") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: 'danger'
+        }
+    );
+    if (confirmed) {
+        document.getElementById('deleteNoteForm-' + noteId).submit();
+    }
 }
 </script>
 

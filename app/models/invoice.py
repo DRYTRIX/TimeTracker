@@ -121,6 +121,12 @@ class Invoice(db.Model):
             return 0
         return float((self.amount_paid or 0) / self.total_amount * 100)
     
+    @property
+    def sorted_payments(self):
+        """Get payments sorted by payment_date and created_at (newest first)"""
+        from app.models.payments import Payment
+        return self.payments.order_by(Payment.payment_date.desc(), Payment.created_at.desc()).all()
+    
     def update_payment_status(self):
         """Update payment status based on amount paid"""
         if not self.amount_paid or self.amount_paid == 0:
@@ -134,7 +140,25 @@ class Invoice(db.Model):
             self.payment_status = 'partially_paid'
     
     def record_payment(self, amount, payment_date=None, payment_method=None, payment_reference=None, payment_notes=None):
-        """Record a payment for this invoice"""
+        """
+        DEPRECATED: Record a payment for this invoice.
+        
+        This method is deprecated. Please use the Payment model (app.models.Payment)
+        to record payments instead. The Payment model provides:
+        - Multiple payment tracking per invoice
+        - Payment status management (completed, pending, failed, refunded)
+        - Gateway fee tracking
+        - Better audit trail
+        
+        This method is kept for backwards compatibility only and may be removed in a future version.
+        """
+        import warnings
+        warnings.warn(
+            "Invoice.record_payment() is deprecated. Use the Payment model instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         self.amount_paid = (self.amount_paid or 0) + Decimal(str(amount))
         self.payment_date = payment_date or datetime.utcnow().date()
         if payment_method:
@@ -155,7 +179,7 @@ class Invoice(db.Model):
                 self.status = 'sent'
     
     def calculate_totals(self):
-        """Calculate invoice totals from items and extra goods"""
+        """Calculate invoice totals from items, extra goods, and expenses"""
         # Optionally apply tax rules before totals
         try:
             self._apply_tax_rules_if_any()
@@ -163,7 +187,8 @@ class Invoice(db.Model):
             pass
         items_total = sum(item.total_amount for item in self.items)
         goods_total = sum(good.total_amount for good in self.extra_goods)
-        subtotal = items_total + goods_total
+        expenses_total = sum(expense.total_amount for expense in self.expenses)
+        subtotal = items_total + goods_total + expenses_total
         self.subtotal = subtotal
         self.tax_amount = subtotal * (self.tax_rate / 100)
         self.total_amount = subtotal + self.tax_amount

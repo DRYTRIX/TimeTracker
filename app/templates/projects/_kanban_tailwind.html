@@ -45,7 +45,7 @@
                                     {{ task.priority | capitalize }}
                                 </span>
                                 {% if task.due_date %}
-                                <span class="{{ 'text-red-500' if task.is_overdue else '' }}">
+                                <span class="{{ 'text-red-500 dark:text-red-400' if task.is_overdue else '' }}">
                                     <i class="fas fa-calendar-alt mr-1"></i>
                                     {{ task.due_date.strftime('%b %d') }}
                                 </span>

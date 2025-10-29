@@ -33,6 +33,7 @@ services:
       - "8080:8080"
     volumes:
       - app_data_remote_dev:/data
+      - app_uploads_remote_dev:/app/app/static/uploads
       - ./logs:/app/logs
     depends_on:
       db:
@@ -65,6 +66,8 @@ services:
 
 volumes:
   app_data_remote_dev:
+    driver: local
+  app_uploads_remote_dev:
     driver: local
   db_data_remote_dev:
     driver: local

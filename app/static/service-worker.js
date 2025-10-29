@@ -3,7 +3,7 @@
  * Provides offline support and background sync
  */
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.0.1';
 const CACHE_NAME = `timetracker-${CACHE_VERSION}`;
 
 // Resources to cache immediately
@@ -67,6 +67,12 @@ self.addEventListener('fetch', event => {
     
     // Skip cross-origin requests
     if (url.origin !== location.origin) {
+        return;
+    }
+    
+    // Skip caching for uploads directory (user-uploaded content that changes)
+    if (url.pathname.startsWith('/uploads/')) {
+        event.respondWith(fetch(request)); // Always fetch fresh
         return;
     }
     

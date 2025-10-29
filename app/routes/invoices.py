@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import User, Project, TimeEntry, Invoice, InvoiceItem, Settings, RateOverride, ProjectCost, ExtraGood
+from app.models import User, Project, TimeEntry, Invoice, InvoiceItem, Settings, RateOverride, ProjectCost, ExtraGood, Expense
 from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
 import io
@@ -216,6 +216,24 @@ def edit_invoice(invoice_id):
                     flash(f'Invalid quantity or price for item {i+1}', 'error')
                     continue
         
+        # Update expenses
+        expense_ids = request.form.getlist('expense_id[]')
+        
+        # Unlink expenses not in the list
+        for expense in invoice.expenses.all():
+            if str(expense.id) not in expense_ids:
+                expense.unmark_as_invoiced()
+        
+        # Link expenses in the list
+        if expense_ids:
+            for expense_id in expense_ids:
+                try:
+                    expense = Expense.query.get(int(expense_id))
+                    if expense and not expense.invoiced:
+                        expense.mark_as_invoiced(invoice.id)
+                except (ValueError, AttributeError):
+                    continue
+        
         # Update extra goods
         good_ids = request.form.getlist('good_id[]')
         good_names = request.form.getlist('good_name[]')
@@ -292,63 +310,6 @@ def update_invoice_status(invoice_id):
     
     return jsonify({'success': True, 'status': new_status})
 
-@invoices_bp.route('/invoices/<int:invoice_id>/payment', methods=['GET', 'POST'])
-@login_required
-def record_payment(invoice_id):
-    """Record payment for invoice"""
-    invoice = Invoice.query.get_or_404(invoice_id)
-    
-    # Check access permissions
-    if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to record payment for this invoice', 'error')
-        return redirect(url_for('invoices.list_invoices'))
-    
-    if request.method == 'POST':
-        # Get form data
-        amount = request.form.get('amount', '0').strip()
-        payment_date_str = request.form.get('payment_date', '').strip()
-        payment_method = request.form.get('payment_method', '').strip()
-        payment_reference = request.form.get('payment_reference', '').strip()
-        payment_notes = request.form.get('payment_notes', '').strip()
-        
-        # Validate amount
-        try:
-            amount = Decimal(amount)
-            if amount <= 0:
-                flash('Payment amount must be greater than zero', 'error')
-                return render_template('invoices/record_payment.html', invoice=invoice)
-        except (ValueError, InvalidOperation):
-            flash('Invalid payment amount', 'error')
-            return render_template('invoices/record_payment.html', invoice=invoice)
-        
-        # Validate payment date
-        payment_date = None
-        if payment_date_str:
-            try:
-                payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash('Invalid payment date format', 'error')
-                return render_template('invoices/record_payment.html', invoice=invoice)
-        
-        # Record the payment
-        invoice.record_payment(
-            amount=amount,
-            payment_date=payment_date,
-            payment_method=payment_method if payment_method else None,
-            payment_reference=payment_reference if payment_reference else None,
-            payment_notes=payment_notes if payment_notes else None
-        )
-        
-        if not safe_commit('record_payment', {'invoice_id': invoice.id, 'amount': float(amount)}):
-            flash('Could not record payment due to a database error. Please check server logs.', 'error')
-            return render_template('invoices/record_payment.html', invoice=invoice)
-        
-        flash(f'Payment of {amount} recorded successfully', 'success')
-        return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
-    
-    # GET request - show payment form
-    today = datetime.now().strftime('%Y-%m-%d')
-    return render_template('invoices/record_payment.html', invoice=invoice, today=today)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/delete', methods=['POST'])
 @login_required
@@ -382,13 +343,14 @@ def generate_from_time(invoice_id):
         return redirect(url_for('invoices.list_invoices'))
     
     if request.method == 'POST':
-        # Get selected time entries, costs, and extra goods
+        # Get selected time entries, costs, expenses, and extra goods
         selected_entries = request.form.getlist('time_entries[]')
         selected_costs = request.form.getlist('project_costs[]')
+        selected_expenses = request.form.getlist('expenses[]')
         selected_goods = request.form.getlist('extra_goods[]')
         
-        if not selected_entries and not selected_costs and not selected_goods:
-            flash('No time entries, costs, or extra goods selected', 'error')
+        if not selected_entries and not selected_costs and not selected_expenses and not selected_goods:
+            flash('No time entries, costs, expenses, or extra goods selected', 'error')
             return redirect(url_for('invoices.generate_from_time', invoice_id=invoice.id))
         
         # Clear existing items
@@ -453,6 +415,14 @@ def generate_from_time(invoice_id):
                 # Mark cost as invoiced
                 cost.mark_as_invoiced(invoice.id)
         
+        # Process expenses
+        if selected_expenses:
+            expenses = Expense.query.filter(Expense.id.in_(selected_expenses)).all()
+            
+            for expense in expenses:
+                # Mark expense as invoiced (this links it to the invoice)
+                expense.mark_as_invoiced(invoice.id)
+        
         # Process extra goods from project
         if selected_goods:
             goods = ExtraGood.query.filter(ExtraGood.id.in_(selected_goods)).all()
@@ -509,6 +479,9 @@ def generate_from_time(invoice_id):
     # Get uninvoiced billable costs for this project
     unbilled_costs = ProjectCost.get_uninvoiced_costs(invoice.project_id)
     
+    # Get uninvoiced billable expenses for this project
+    unbilled_expenses = Expense.get_uninvoiced_expenses(project_id=invoice.project_id)
+    
     # Get billable extra goods for this project (not yet on an invoice)
     project_goods = ExtraGood.query.filter(
         ExtraGood.project_id == invoice.project_id,
@@ -519,6 +492,7 @@ def generate_from_time(invoice_id):
     # Calculate totals
     total_available_hours = sum(entry.duration_hours for entry in unbilled_entries)
     total_available_costs = sum(float(cost.amount) for cost in unbilled_costs)
+    total_available_expenses = sum(float(expense.total_amount) for expense in unbilled_expenses)
     total_available_goods = sum(float(good.total_amount) for good in project_goods)
     
     # Get currency from settings
@@ -529,9 +503,11 @@ def generate_from_time(invoice_id):
                          invoice=invoice, 
                          time_entries=unbilled_entries,
                          project_costs=unbilled_costs,
+                         expenses=unbilled_expenses,
                          extra_goods=project_goods,
                          total_available_hours=total_available_hours,
                          total_available_costs=total_available_costs,
+                         total_available_expenses=total_available_expenses,
                          total_available_goods=total_available_goods,
                          currency=currency)
 
@@ -566,6 +542,24 @@ def export_invoice_csv(invoice_id):
             float(item.quantity),
             float(item.unit_price),
             float(item.total_amount)
+        ])
+    
+    # Write expenses
+    for expense in invoice.expenses:
+        writer.writerow([
+            f"{expense.title} ({expense.category})",
+            1,
+            float(expense.total_amount),
+            float(expense.total_amount)
+        ])
+    
+    # Write goods
+    for good in invoice.extra_goods:
+        writer.writerow([
+            good.name,
+            float(good.quantity),
+            float(good.unit_price),
+            float(good.total_amount)
         ])
     
     writer.writerow([])

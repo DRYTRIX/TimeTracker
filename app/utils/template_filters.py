@@ -161,3 +161,31 @@ def register_template_filters(app):
         else:
             y = int(years)
             return f"{y} year{'s' if y != 1 else ''} ago"
+
+
+def get_logo_base64(logo_path):
+    """Convert logo file to base64 data URI for PDF embedding"""
+    if not logo_path:
+        return ''
+    
+    import os
+    if not os.path.exists(logo_path):
+        return ''
+    
+    try:
+        import base64
+        import mimetypes
+        
+        with open(logo_path, 'rb') as logo_file:
+            logo_data = base64.b64encode(logo_file.read()).decode('utf-8')
+        
+        # Detect MIME type
+        mime_type, _ = mimetypes.guess_type(logo_path)
+        if not mime_type:
+            # Default to PNG if can't detect
+            mime_type = 'image/png'
+        
+        return f'data:{mime_type};base64,{logo_data}'
+    except Exception as e:
+        print(f"Error converting logo to base64: {e}")
+        return ''

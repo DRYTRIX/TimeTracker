@@ -167,7 +167,7 @@
                         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Save frequently used time entries as templates for quick reuse. Saves project, task, and notes.') }}</p>
                     </div>
                     <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
-                        <h5 class="font-semibold mb-2"><i class="fas fa-calendar text-sky-600 mr-2"></i>{{ _('Calendar View') }}</h5>
+                        <h5 class="font-semibold mb-2"><i class="fas fa-calendar text-sky-600 dark:text-sky-400 mr-2"></i>{{ _('Calendar View') }}</h5>
                         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Visualize your time entries on a calendar. Drag-and-drop to reschedule or click dates to add entries.') }}</p>
                     </div>
                 </div>
@@ -182,9 +182,9 @@
                     <h4 class="font-semibold mb-2">{{ _('Project Information') }}</h4>
                     <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
                         <li><i class="fas fa-tag text-primary mr-2"></i><strong>{{ _('Name') }}:</strong> {{ _('Descriptive project name') }}</li>
-                        <li><i class="fas fa-building text-green-600 mr-2"></i><strong>{{ _('Client') }}:</strong> {{ _('Associated client organization') }}</li>
-                        <li><i class="fas fa-align-left text-sky-600 mr-2"></i><strong>{{ _('Description') }}:</strong> {{ _('Project details and scope') }}</li>
-                        <li><i class="fas fa-calendar text-amber-600 mr-2"></i><strong>{{ _('Status') }}:</strong> {{ _('Active, completed, or archived') }}</li>
+                        <li><i class="fas fa-building text-green-600 dark:text-green-400 mr-2"></i><strong>{{ _('Client') }}:</strong> {{ _('Associated client organization') }}</li>
+                        <li><i class="fas fa-align-left text-sky-600 dark:text-sky-400 mr-2"></i><strong>{{ _('Description') }}:</strong> {{ _('Project details and scope') }}</li>
+                        <li><i class="fas fa-calendar text-amber-600 dark:text-amber-400 mr-2"></i><strong>{{ _('Status') }}:</strong> {{ _('Active, completed, or archived') }}</li>
                                 </ul>
                             </div>
                 <div>
@@ -251,7 +251,7 @@
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Total and active projects') }}</p>
                     </div>
                 <div class="text-center p-4 rounded border border-border-light dark:border-border-dark">
-                    <i class="fas fa-clock text-green-600 mb-2"></i>
+                    <i class="fas fa-clock text-green-600 dark:text-green-400 mb-2"></i>
                     <h5 class="font-semibold">{{ _('Time Tracking') }}</h5>
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Total hours worked') }}</p>
                 </div>
@@ -272,9 +272,9 @@
                     <h4 class="font-semibold mb-2">{{ _('Task Properties') }}</h4>
                     <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
                         <li><i class="fas fa-tag text-primary mr-2"></i><strong>{{ _('Name & Description') }}:</strong> {{ _('Clear task identification') }}</li>
-                        <li><i class="fas fa-flag text-amber-600 mr-2"></i><strong>{{ _('Priority Levels') }}:</strong> {{ _('Low, Medium, High, Urgent') }}</li>
-                        <li><i class="fas fa-calendar text-sky-600 mr-2"></i><strong>{{ _('Due Dates') }}:</strong> {{ _('Deadline tracking') }}</li>
-                        <li><i class="fas fa-user text-green-600 mr-2"></i><strong>{{ _('Assignment') }}:</strong> {{ _('Task ownership') }}</li>
+                        <li><i class="fas fa-flag text-amber-600 dark:text-amber-400 mr-2"></i><strong>{{ _('Priority Levels') }}:</strong> {{ _('Low, Medium, High, Urgent') }}</li>
+                        <li><i class="fas fa-calendar text-sky-600 dark:text-sky-400 mr-2"></i><strong>{{ _('Due Dates') }}:</strong> {{ _('Deadline tracking') }}</li>
+                        <li><i class="fas fa-user text-green-600 dark:text-green-400 mr-2"></i><strong>{{ _('Assignment') }}:</strong> {{ _('Task ownership') }}</li>
                                 </ul>
                             </div>
                 <div>
@@ -424,9 +424,9 @@
                 <div class="bg-background-light dark:bg-background-dark/40 p-4 rounded border border-border-light dark:border-border-dark">
                     <h4 class="font-semibold mb-1">{{ _('Time Integration') }}</h4>
                     <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
-                        <li><i class="fas fa-clock text-amber-600 mr-2"></i>{{ _('Generate from time entries') }}</li>
-                        <li><i class="fas fa-layer-group text-sky-600 mr-2"></i>{{ _('Smart grouping by task/project') }}</li>
-                        <li><i class="fas fa-shield-alt text-green-600 mr-2"></i>{{ _('Prevent double-billing') }}</li>
+                        <li><i class="fas fa-clock text-amber-600 dark:text-amber-400 mr-2"></i>{{ _('Generate from time entries') }}</li>
+                        <li><i class="fas fa-layer-group text-sky-600 dark:text-sky-400 mr-2"></i>{{ _('Smart grouping by task/project') }}</li>
+                        <li><i class="fas fa-shield-alt text-green-600 dark:text-green-400 mr-2"></i>{{ _('Prevent double-billing') }}</li>
                         <li><i class="fas fa-money-bill text-primary mr-2"></i>{{ _('Use project hourly rates') }}</li>
                                 </ul>
                             </div>
@@ -600,9 +600,9 @@
                     <h4 class="font-semibold mb-2">{{ _('General Settings') }}</h4>
                     <ul class="space-y-1 text-text-muted-light dark:text-text-muted-dark">
                         <li><i class="fas fa-globe text-primary mr-2"></i>{{ _('Timezone and locale settings') }}</li>
-                        <li><i class="fas fa-dollar-sign text-green-600 mr-2"></i>{{ _('Currency configuration') }}</li>
-                        <li><i class="fas fa-clock text-sky-600 mr-2"></i>{{ _('Time rounding rules') }}</li>
-                        <li><i class="fas fa-user-plus text-amber-600 mr-2"></i>{{ _('Self-registration settings') }}</li>
+                        <li><i class="fas fa-dollar-sign text-green-600 dark:text-green-400 mr-2"></i>{{ _('Currency configuration') }}</li>
+                        <li><i class="fas fa-clock text-sky-600 dark:text-sky-400 mr-2"></i>{{ _('Time rounding rules') }}</li>
+                        <li><i class="fas fa-user-plus text-amber-600 dark:text-amber-400 mr-2"></i>{{ _('Self-registration settings') }}</li>
                     </ul>
                 </div>
                 <div>

@@ -89,6 +89,28 @@
                         <td class="num">{{ format_money(item.total_amount) }}</td>
                     </tr>
                     {% endfor %}
+                    {% for expense in invoice.expenses %}
+                    <tr>
+                        <td>
+                            {{ expense.title|e }}
+                            {% if expense.description %}
+                                <br><small class="expense-description">{{ expense.description|e }}</small>
+                            {% endif %}
+                            {% if expense.category %}
+                                <br><small class="expense-category">{{ _('Expense') }}: {{ expense.category|title|e }}</small>
+                            {% endif %}
+                            {% if expense.vendor %}
+                                <br><small class="expense-vendor">{{ _('Vendor') }}: {{ expense.vendor|e }}</small>
+                            {% endif %}
+                            {% if expense.expense_date %}
+                                <br><small class="expense-date">{{ _('Date') }}: {{ expense.expense_date.strftime('%Y-%m-%d') }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="num">1</td>
+                        <td class="num">{{ format_money(expense.total_amount) }}</td>
+                        <td class="num">{{ format_money(expense.total_amount) }}</td>
+                    </tr>
+                    {% endfor %}
                     {% for good in invoice.extra_goods %}
                     <tr>
                         <td>

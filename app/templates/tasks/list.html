@@ -262,40 +262,27 @@ function confirmDeleteTask(taskId, taskName, hasTimeEntries) {
     }
     
     const msg = (i18nTasksList.confirm_delete || 'Are you sure you want to delete the task "{name}"?').replace('{name}', taskName);
-    if (window.showConfirm) {
-        window.showConfirm(msg).then(function(ok){
-            if (!ok) return;
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/tasks/${taskId}/delete`;
-            
-            // Add CSRF token
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content') || '';
-            form.appendChild(csrfInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        });
-    } else {
-        if (confirm(msg)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/tasks/${taskId}/delete`;
-            
-            // Add CSRF token
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content') || '';
-            form.appendChild(csrfInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
+    window.showConfirm(msg, {
+        title: '{{ _("Delete Task") }}',
+        confirmText: '{{ _("Delete") }}',
+        cancelText: '{{ _("Cancel") }}',
+        variant: 'danger'
+    }).then(function(ok){
+        if (!ok) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/tasks/${taskId}/delete`;
+        
+        // Add CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content') || '';
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    });
 }
 
 function toggleFilterVisibility() {
@@ -303,14 +290,21 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    if (filterBody.classList.contains('filter-collapsed')) {
+    
+    const isCollapsed = filterBody.classList.contains('filter-collapsed');
+    
+    if (isCollapsed) {
+        // Show filters
         filterBody.classList.remove('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-up';
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
         localStorage.setItem('taskListFiltersVisible', 'true');
     } else {
+        // Hide filters
         filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
         localStorage.setItem('taskListFiltersVisible', 'false');
     }
@@ -321,11 +315,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
+    
     const filtersVisible = localStorage.getItem('taskListFiltersVisible');
     if (filtersVisible === 'false') {
         filterBody.classList.add('filter-collapsed');
-        toggleIcon.className = 'fas fa-chevron-down';
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+    } else {
+        // Explicitly set the icon to chevron-up when filter is visible
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
     

@@ -50,7 +50,12 @@ def allowed_logo_file(filename):
 def get_upload_folder():
     """Get the upload folder path for logos"""
     upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'logos')
-    os.makedirs(upload_folder, exist_ok=True)
+    try:
+        os.makedirs(upload_folder, exist_ok=True)
+        current_app.logger.info(f'Logo upload folder ensured: {upload_folder}')
+    except Exception as e:
+        current_app.logger.error(f'Error creating upload folder {upload_folder}: {str(e)}')
+        raise
     return upload_folder
 
 @admin_bp.route('/admin')
@@ -300,6 +305,13 @@ def toggle_telemetry():
     return redirect(url_for('admin.telemetry_dashboard'))
 
 
+@admin_bp.route('/admin/clear-cache')
+@login_required
+@admin_or_permission_required('manage_settings')
+def clear_cache():
+    """Cache clearing utility page"""
+    return render_template('admin/clear_cache.html')
+
 @admin_bp.route('/admin/settings', methods=['GET', 'POST'])
 @login_required
 @admin_or_permission_required('manage_settings')
@@ -383,8 +395,10 @@ def pdf_layout():
     if request.method == 'POST':
         html_template = request.form.get('invoice_pdf_template_html', '')
         css_template = request.form.get('invoice_pdf_template_css', '')
+        design_json = request.form.get('design_json', '')
         settings_obj.invoice_pdf_template_html = html_template
         settings_obj.invoice_pdf_template_css = css_template
+        settings_obj.invoice_pdf_design_json = design_json
         if not safe_commit('admin_update_pdf_layout'):
             from flask_babel import gettext as _
             flash(_('Could not update PDF layout due to a database error.'), 'error')
@@ -395,6 +409,7 @@ def pdf_layout():
     # Provide initial defaults to the template if no custom HTML/CSS saved
     initial_html = settings_obj.invoice_pdf_template_html or ''
     initial_css = settings_obj.invoice_pdf_template_css or ''
+    design_json = settings_obj.invoice_pdf_design_json or ''
     try:
         if not initial_html:
             env = current_app.jinja_env
@@ -412,7 +427,7 @@ def pdf_layout():
             initial_css = css_src
     except Exception:
         pass
-    return render_template('admin/pdf_layout.html', settings=settings_obj, initial_html=initial_html, initial_css=initial_css)
+    return render_template('admin/pdf_layout.html', settings=settings_obj, initial_html=initial_html, initial_css=initial_css, design_json=design_json)
 
 
 @admin_bp.route('/admin/pdf-layout/reset', methods=['POST'])
@@ -424,6 +439,7 @@ def pdf_layout_reset():
     settings_obj = Settings.get_settings()
     settings_obj.invoice_pdf_template_html = ''
     settings_obj.invoice_pdf_template_css = ''
+    settings_obj.invoice_pdf_design_json = ''
     if not safe_commit('admin_reset_pdf_layout'):
         flash(_('Could not reset PDF layout due to a database error.'), 'error')
     else:
@@ -490,6 +506,7 @@ def pdf_layout_preview():
             client_address='',
             project=SimpleNamespace(name='Sample Project', description=''),
             items=[],
+            extra_goods=[],
             subtotal=0.0,
             tax_rate=0.0,
             tax_amount=0.0,
@@ -507,6 +524,13 @@ def pdf_layout_preview():
             invoice.items = [sample_item]
         except Exception:
             pass
+    
+    # Ensure extra_goods attribute exists
+    try:
+        if not hasattr(invoice, 'extra_goods'):
+            invoice.extra_goods = []
+    except Exception:
+        pass
     # Helper: sanitize Jinja blocks to fix entities/smart quotes inserted by editor
     def _sanitize_jinja_blocks(raw: str) -> str:
         try:
@@ -571,6 +595,24 @@ def pdf_layout_preview():
                 return f"{float(value):,.2f} {settings_obj.currency}"
             except Exception:
                 return f"{value} {settings_obj.currency}"
+        
+        # Helper function for logo - converts to base64 data URI
+        def _get_logo_base64(logo_path):
+            try:
+                if not logo_path or not os.path.exists(logo_path):
+                    return None
+                import base64
+                import mimetypes
+                with open(logo_path, 'rb') as f:
+                    data = base64.b64encode(f.read()).decode('utf-8')
+                mime_type, _ = mimetypes.guess_type(logo_path)
+                if not mime_type:
+                    mime_type = 'image/png'
+                return f'data:{mime_type};base64,{data}'
+            except Exception as e:
+                print(f"Error loading logo: {e}")
+                return None
+        
         body_html = render_template_string(
             sanitized,
             invoice=invoice,
@@ -578,21 +620,24 @@ def pdf_layout_preview():
             Path=_Path,
             format_date=_format_date,
             format_money=_format_money,
+            get_logo_base64=_get_logo_base64,
             item=sample_item,
         )
     except Exception as e:
         body_html = f"<div style='color:red'>Template error: {str(e)}</div>" + sanitized
-    page_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset='UTF-8'>
-        <title>PDF Preview</title>
-        <style>{css}</style>
-    </head>
-    <body>{body_html}</body>
-    </html>
-    """
+    # Build complete HTML page with embedded styles
+    page_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Preview</title>
+    <style>{css}</style>
+</head>
+<body>
+{body_html}
+</body>
+</html>"""
     return page_html
 
 @admin_bp.route('/admin/upload-logo', methods=['POST'])
@@ -631,6 +676,11 @@ def upload_logo():
         file_path = os.path.join(upload_folder, unique_filename)
         file.save(file_path)
         
+        # Log successful save
+        current_app.logger.info(f'Logo saved successfully: {file_path}')
+        current_app.logger.info(f'File exists check: {os.path.exists(file_path)}')
+        current_app.logger.info(f'File size: {os.path.getsize(file_path) if os.path.exists(file_path) else "N/A"} bytes')
+        
         # Update settings
         settings_obj = Settings.get_settings()
         
@@ -648,7 +698,7 @@ def upload_logo():
             flash('Could not save logo due to a database error. Please check server logs.', 'error')
             return redirect(url_for('admin.settings'))
         
-        flash('Company logo uploaded successfully', 'success')
+        flash('Company logo uploaded successfully! You can see it in the "Current Company Logo" section above. It will appear on invoices and PDF documents.', 'success')
     else:
         flash('Invalid file type. Allowed types: PNG, JPG, JPEG, GIF, SVG, WEBP', 'error')
     
@@ -675,7 +725,7 @@ def remove_logo():
         if not safe_commit('admin_remove_logo'):
             flash('Could not remove logo due to a database error. Please check server logs.', 'error')
             return redirect(url_for('admin.settings'))
-        flash('Company logo removed successfully', 'success')
+        flash('Company logo removed successfully. Upload a new logo in the section below if needed.', 'success')
     else:
         flash('No logo to remove', 'info')
     
@@ -688,8 +738,18 @@ def serve_uploaded_logo(filename):
     This route is intentionally public so logos render on unauthenticated pages
     like the login screen and in favicons.
     """
-    upload_folder = get_upload_folder()
-    return send_from_directory(upload_folder, filename)
+    try:
+        upload_folder = get_upload_folder()
+        file_path = os.path.join(upload_folder, filename)
+        
+        if not os.path.exists(file_path):
+            current_app.logger.error(f'Logo file not found: {file_path}')
+            return 'Logo file not found', 404
+            
+        return send_from_directory(upload_folder, filename)
+    except Exception as e:
+        current_app.logger.error(f'Error serving logo {filename}: {str(e)}')
+        return 'Error serving logo', 500
 
 @admin_bp.route('/admin/backups')
 @login_required

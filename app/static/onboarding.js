@@ -353,8 +353,17 @@ class OnboardingManager {
     /**
      * Skip the tour
      */
-    skip() {
-        if (confirm('Are you sure you want to skip the tour? You can restart it later from the Help menu.')) {
+    async skip() {
+        const confirmed = await showConfirm(
+            'Are you sure you want to skip the tour? You can restart it later from the Help menu.',
+            {
+                title: 'Skip Tour',
+                confirmText: 'Skip',
+                cancelText: 'Continue Tour',
+                variant: 'warning'
+            }
+        );
+        if (confirmed) {
             this.complete();
         }
     }
