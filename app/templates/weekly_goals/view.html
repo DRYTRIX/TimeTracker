@@ -40,7 +40,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Actual Hours') }}</h3>
-                <i class="fas fa-clock text-2xl text-green-500"></i>
+                <i class="fas fa-clock text-2xl text-green-500 dark:text-green-400"></i>
             </div>
             <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ goal.actual_hours }}h</p>
         </div>
@@ -49,13 +49,13 @@
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Status') }}</h3>
                 {% if goal.status == 'completed' %}
-                <i class="fas fa-check-circle text-2xl text-green-500"></i>
+                <i class="fas fa-check-circle text-2xl text-green-500 dark:text-green-400"></i>
                 {% elif goal.status == 'active' %}
-                <i class="fas fa-clock text-2xl text-blue-500"></i>
+                <i class="fas fa-clock text-2xl text-blue-500 dark:text-blue-400"></i>
                 {% elif goal.status == 'failed' %}
-                <i class="fas fa-times-circle text-2xl text-red-500"></i>
+                <i class="fas fa-times-circle text-2xl text-red-500 dark:text-red-400"></i>
                 {% else %}
-                <i class="fas fa-ban text-2xl text-gray-500"></i>
+                <i class="fas fa-ban text-2xl text-gray-500 dark:text-gray-400"></i>
                 {% endif %}
             </div>
             {% if goal.status == 'completed' %}
