@@ -126,7 +126,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for payment in invoice.payments.order_by('payment_date desc, created_at desc') %}
+                {% for payment in invoice.sorted_payments %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td class="p-2">{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else 'N/A' }}</td>
                     <td class="p-2 font-semibold text-green-600 dark:text-green-400">

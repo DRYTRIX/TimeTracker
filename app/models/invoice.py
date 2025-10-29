@@ -121,6 +121,12 @@ class Invoice(db.Model):
             return 0
         return float((self.amount_paid or 0) / self.total_amount * 100)
     
+    @property
+    def sorted_payments(self):
+        """Get payments sorted by payment_date and created_at (newest first)"""
+        from app.models.payments import Payment
+        return self.payments.order_by(Payment.payment_date.desc(), Payment.created_at.desc()).all()
+    
     def update_payment_status(self):
         """Update payment status based on amount paid"""
         if not self.amount_paid or self.amount_paid == 0:

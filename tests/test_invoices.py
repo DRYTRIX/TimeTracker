@@ -656,6 +656,108 @@ def test_invoice_to_dict_includes_payment_fields(app, sample_invoice):
     assert invoice_dict['amount_paid'] == 500.00
 
 
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_sorted_payments_property(app, sample_invoice, sample_user):
+    """Test that the sorted_payments property returns payments in correct order."""
+    from app.models.payments import Payment
+    
+    # Create multiple payments with different dates
+    payment1 = Payment(
+        invoice_id=sample_invoice.id,
+        amount=Decimal('100.00'),
+        payment_date=date(2024, 1, 1),
+        method='bank_transfer',
+        received_by=sample_user.id
+    )
+    
+    payment2 = Payment(
+        invoice_id=sample_invoice.id,
+        amount=Decimal('200.00'),
+        payment_date=date(2024, 1, 15),
+        method='credit_card',
+        received_by=sample_user.id
+    )
+    
+    payment3 = Payment(
+        invoice_id=sample_invoice.id,
+        amount=Decimal('150.00'),
+        payment_date=date(2024, 1, 10),
+        method='cash',
+        received_by=sample_user.id
+    )
+    
+    db.session.add_all([payment1, payment2, payment3])
+    db.session.commit()
+    
+    # Get sorted payments
+    sorted_payments = sample_invoice.sorted_payments
+    
+    # Verify that payments are sorted by payment_date descending
+    assert len(sorted_payments) == 3
+    assert sorted_payments[0].payment_date == date(2024, 1, 15)  # Newest first
+    assert sorted_payments[0].amount == Decimal('200.00')
+    assert sorted_payments[1].payment_date == date(2024, 1, 10)
+    assert sorted_payments[1].amount == Decimal('150.00')
+    assert sorted_payments[2].payment_date == date(2024, 1, 1)  # Oldest last
+    assert sorted_payments[2].amount == Decimal('100.00')
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_sorted_payments_with_same_date(app, sample_invoice, sample_user):
+    """Test that sorted_payments handles payments with same payment_date correctly."""
+    from app.models.payments import Payment
+    import time
+    
+    # Create payments with the same payment_date but different created_at times
+    same_date = date.today()
+    
+    payment1 = Payment(
+        invoice_id=sample_invoice.id,
+        amount=Decimal('100.00'),
+        payment_date=same_date,
+        method='bank_transfer',
+        received_by=sample_user.id
+    )
+    db.session.add(payment1)
+    db.session.commit()
+    
+    # Small delay to ensure different created_at
+    time.sleep(0.01)
+    
+    payment2 = Payment(
+        invoice_id=sample_invoice.id,
+        amount=Decimal('200.00'),
+        payment_date=same_date,
+        method='credit_card',
+        received_by=sample_user.id
+    )
+    db.session.add(payment2)
+    db.session.commit()
+    
+    # Get sorted payments
+    sorted_payments = sample_invoice.sorted_payments
+    
+    # Verify that both payments are returned and sorted by created_at (newest first)
+    assert len(sorted_payments) == 2
+    # The most recently created payment should be first
+    assert sorted_payments[0].amount == Decimal('200.00')
+    assert sorted_payments[1].amount == Decimal('100.00')
+
+
+@pytest.mark.smoke
+@pytest.mark.invoices
+def test_invoice_sorted_payments_empty(app, sample_invoice):
+    """Test that sorted_payments returns empty list for invoice without payments."""
+    # Get sorted payments
+    sorted_payments = sample_invoice.sorted_payments
+    
+    # Verify that empty list is returned
+    assert len(sorted_payments) == 0
+    assert sorted_payments == []
+
+
 # ===============================================
 # Extra Goods PDF Export Tests
 # ===============================================
