@@ -395,6 +395,8 @@
          * Handle key down event
          */
         handleKeyDown(e) {
+            console.log('[KS-Enhanced] Key pressed:', e.key);
+            
             // Track pressed keys
             this.pressedKeys.add(e.key.toLowerCase());
 
@@ -404,16 +406,23 @@
                 return;
             }
 
-            // Skip if typing in input (except for allowed combos)
-            if (this.isTypingContext(e)) {
-                // Allow specific combos even in inputs
-                const combo = this.getKeyCombo(e);
+            // Check if typing in input first
+            const isTyping = this.isTypingContext(e);
+            const combo = this.getKeyCombo(e);
+            
+            console.log('[KS-Enhanced] isTyping:', isTyping, 'combo:', combo);
+
+            // If typing in input, ONLY allow specific combos
+            if (isTyping) {
                 if (!this.isAllowedInInput(combo)) {
+                    console.log('[KS-Enhanced] BLOCKED - typing in input, not allowed combo');
+                    // Clear any key sequence when user is typing
+                    this.resetSequence();
                     return;
                 }
+                console.log('[KS-Enhanced] Allowed combo in input:', combo);
             }
 
-            const combo = this.getKeyCombo(e);
             const normalizedCombo = this.normalizeKeys(combo);
 
             // Check for custom shortcut override
@@ -450,9 +459,12 @@
                 }
             }
 
-            // Handle key sequences (like 'g d')
-            if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+            // Handle key sequences (like 'g d') - but NOT if typing in input
+            if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && !isTyping) {
+                console.log('[KS-Enhanced] Processing sequence for key:', e.key);
                 this.handleSequence(e);
+            } else {
+                console.log('[KS-Enhanced] NOT processing sequence - modifiers or typing');
             }
         }
 
@@ -467,7 +479,11 @@
          * Handle key sequences like 'g d' or 'g p'
          */
         handleSequence(e) {
-            if (this.isTypingContext(e)) return;
+            // Double-check: should never be called if typing, but just in case
+            if (this.isTypingContext(e)) {
+                this.resetSequence();
+                return;
+            }
 
             clearTimeout(this.sequenceTimeout);
             
@@ -540,10 +556,41 @@
         isTypingContext(e) {
             const target = e.target;
             const tagName = target.tagName.toLowerCase();
-            return tagName === 'input' || 
-                   tagName === 'textarea' || 
-                   tagName === 'select' ||
-                   target.isContentEditable;
+            
+            // Check standard input elements
+            if (tagName === 'input' || 
+                tagName === 'textarea' || 
+                tagName === 'select' ||
+                target.isContentEditable) {
+                return true;
+            }
+            
+            // Check for rich text editors (Toast UI Editor, TinyMCE, CodeMirror, etc.)
+            const richEditorSelectors = [
+                '.toastui-editor',
+                '.toastui-editor-contents',
+                '.ProseMirror',
+                '.CodeMirror',
+                '.ql-editor',  // Quill
+                '.tox-edit-area',  // TinyMCE
+                '.note-editable',  // Summernote
+                '[contenteditable="true"]',
+                // Additional Toast UI Editor specific selectors
+                '.toastui-editor-ww-container',
+                '.toastui-editor-md-container',
+                '.te-editor',
+                '.te-ww-container',
+                '.te-md-container'
+            ];
+            
+            // Check if target is within any rich text editor
+            for (const selector of richEditorSelectors) {
+                if (target.closest && target.closest(selector)) {
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
         /**

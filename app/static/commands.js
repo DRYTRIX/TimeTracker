@@ -158,8 +158,8 @@
   }
 
   function onKeyDown(ev){
-    // Check if typing in input field
-    if (['input','textarea'].includes(ev.target.tagName.toLowerCase())) return;
+    // Check if typing in input field or editor
+    if (isTypingInField(ev)) return;
     
     // Note: ? key (Shift+/) is now handled by keyboard-shortcuts-advanced.js for shortcuts panel
     // Command palette is opened with Ctrl+K
@@ -172,11 +172,49 @@
   let seq = [];
   let seqTimer = null;
   function resetSeq(){ seq = []; if (seqTimer) { clearTimeout(seqTimer); seqTimer = null; } }
+  
+  // Check if user is typing in input field or rich text editor
+  function isTypingInField(ev){
+    const target = ev.target;
+    const tag = (target.tagName || '').toLowerCase();
+    
+    // Check standard inputs
+    if (['input','textarea','select'].includes(tag) || target.isContentEditable) {
+      return true;
+    }
+    
+    // Check for rich text editors (Toast UI Editor, etc.)
+    const editorSelectors = [
+      '.toastui-editor', '.toastui-editor-contents', '.ProseMirror', 
+      '.CodeMirror', '.ql-editor', '.tox-edit-area', '.note-editable',
+      '[contenteditable="true"]', '.toastui-editor-ww-container', 
+      '.toastui-editor-md-container'
+    ];
+    
+    for (let i = 0; i < editorSelectors.length; i++) {
+      if (target.closest && target.closest(editorSelectors[i])) {
+        console.log('[Commands.js] Blocked - inside editor:', editorSelectors[i]);
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
   function sequenceHandler(ev){
     if (ev.repeat) return;
     const key = ev.key.toLowerCase();
-    if (['input','textarea'].includes(ev.target.tagName.toLowerCase())) return; // ignore typing fields
+    
+    // Check if typing in any input field or editor
+    if (isTypingInField(ev)) {
+      console.log('[Commands.js] Blocked - user is typing');
+      resetSeq(); // Clear any partial sequence
+      return;
+    }
+    
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return; // only plain keys
+    
+    console.log('[Commands.js] Processing key in sequence:', key, 'current seq:', seq);
     seq.push(key);
     if (seq.length > 2) seq.shift();
     if (seq.length === 1 && seq[0] === 'g'){
@@ -185,6 +223,7 @@
     }
     if (seq.length === 2 && seq[0] === 'g'){
       const second = seq[1];
+      console.log('[Commands.js] Executing navigation for g +', second);
       resetSeq();
       if (second === 'd') return nav('/');
       if (second === 'p') return nav('/projects');

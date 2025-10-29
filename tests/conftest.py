@@ -32,6 +32,7 @@ def app_config():
         'SERVER_NAME': 'localhost:5000',
         'APPLICATION_ROOT': '/',
         'PREFERRED_URL_SCHEME': 'http',
+        'SESSION_COOKIE_HTTPONLY': True,
     }
 
 

@@ -12,9 +12,8 @@ from app.models import Invoice, InvoiceItem, Expense, User, Project, Client
 def test_user(app):
     """Create a test user"""
     with app.app_context():
-        user = User(username='testuser', email='test@example.com')
+        user = User(username='testuser', email='test@example.com', role='admin')
         user.set_password('testpass')
-        user.is_admin = True  # Set after initialization
         db.session.add(user)
         db.session.commit()
         yield user

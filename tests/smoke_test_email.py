@@ -11,68 +11,45 @@ from flask import url_for
 class TestEmailSmokeTests:
     """Smoke tests for email feature integration"""
     
-    def test_email_support_page_loads(self, client, admin_user):
+    def test_email_support_page_loads(self, admin_authenticated_client):
         """Smoke test: Email support page loads without errors"""
-        # Login as admin
-        with client:
-            login_response = client.post('/auth/login', data={
-                'username': admin_user.username,
-                'password': 'password'
-            }, follow_redirects=True)
-            
-            assert login_response.status_code == 200
-            
-            # Access email support page
-            response = client.get('/admin/email')
-            
-            # Page should load successfully
-            assert response.status_code == 200
-            
-            # Check for key elements
-            assert b'Email Configuration' in response.data or b'email' in response.data.lower()
-            assert b'Test Email' in response.data or b'test' in response.data.lower()
+        # Access email support page
+        response = admin_authenticated_client.get('/admin/email')
+        
+        # Page should load successfully
+        assert response.status_code == 200
+        
+        # Check for key elements
+        assert b'Email Configuration' in response.data or b'email' in response.data.lower()
+        assert b'Test Email' in response.data or b'test' in response.data.lower()
     
-    def check_email_configuration_status_api(self, client, admin_user):
+    def check_email_configuration_status_api(self, admin_authenticated_client):
         """Smoke test: Email configuration status API works"""
-        # Login as admin
-        with client:
-            client.post('/auth/login', data={
-                'username': admin_user.username,
-                'password': 'password'
-            }, follow_redirects=True)
-            
-            # Get configuration status
-            response = client.get('/admin/email/config-status')
-            
-            # API should respond successfully
-            assert response.status_code == 200
-            
-            # Response should be JSON
-            data = response.get_json()
-            assert data is not None
-            
-            # Should contain required fields
-            assert 'configured' in data
-            assert 'settings' in data
-            assert 'errors' in data
-            assert 'warnings' in data
+        # Get configuration status
+        response = admin_authenticated_client.get('/admin/email/config-status')
+        
+        # API should respond successfully
+        assert response.status_code == 200
+        
+        # Response should be JSON
+        data = response.get_json()
+        assert data is not None
+        
+        # Should contain required fields
+        assert 'configured' in data
+        assert 'settings' in data
+        assert 'errors' in data
+        assert 'warnings' in data
     
-    def test_admin_dashboard_integration(self, client, admin_user):
+    def test_admin_dashboard_integration(self, admin_authenticated_client):
         """Smoke test: Email feature integrates with admin dashboard"""
-        # Login as admin
-        with client:
-            client.post('/auth/login', data={
-                'username': admin_user.username,
-                'password': 'password'
-            }, follow_redirects=True)
-            
-            # Access admin dashboard
-            response = client.get('/admin')
-            
-            assert response.status_code == 200
-            
-            # Admin dashboard should load successfully
-            assert b'Admin' in response.data
+        # Access admin dashboard
+        response = admin_authenticated_client.get('/admin')
+        
+        assert response.status_code == 200
+        
+        # Admin dashboard should load successfully
+        assert b'Admin' in response.data
     
     def test_email_utilities_importable(self):
         """Smoke test: Email utilities can be imported"""
@@ -185,17 +162,4 @@ class TestEmailFeatureIntegrity:
         # Check that it has route decorator (will be wrapped)
         # This is a basic check - the route should be registered
         assert callable(email_support)
-
-
-# Fixtures
-@pytest.fixture
-def admin_user(db):
-    """Create an admin user for testing"""
-    from app.models import User
-    user = User(username='admin_smoke', role='admin')
-    user.set_password('password')
-    user.is_active = True
-    db.session.add(user)
-    db.session.commit()
-    return user
 
