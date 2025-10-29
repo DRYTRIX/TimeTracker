@@ -1044,3 +1044,559 @@ def test_pdf_export_fallback_with_extra_goods_smoke(app, sample_invoice, sample_
     assert pdf_bytes is not None
     assert len(pdf_bytes) > 0
     assert pdf_bytes[:4] == b'%PDF'  # PDF magic number
+
+
+# ===============================================
+# Invoice Deletion Tests
+# ===============================================
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_deletion_basic(app, sample_invoice):
+    """Test that an invoice can be deleted."""
+    invoice_id = sample_invoice.id
+    invoice_number = sample_invoice.invoice_number
+    
+    # Verify invoice exists
+    assert Invoice.query.get(invoice_id) is not None
+    
+    # Delete invoice
+    db.session.delete(sample_invoice)
+    db.session.commit()
+    
+    # Verify invoice is deleted
+    assert Invoice.query.get(invoice_id) is None
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_deletion_cascades_to_items(app, sample_invoice):
+    """Test that deleting an invoice also deletes its items (cascade)."""
+    # Add items to invoice
+    items = [
+        InvoiceItem(
+            invoice_id=sample_invoice.id,
+            description='Development work',
+            quantity=Decimal('10.00'),
+            unit_price=Decimal('75.00')
+        ),
+        InvoiceItem(
+            invoice_id=sample_invoice.id,
+            description='Design work',
+            quantity=Decimal('5.00'),
+            unit_price=Decimal('100.00')
+        )
+    ]
+    
+    for item in items:
+        db.session.add(item)
+    db.session.commit()
+    
+    # Store item IDs
+    item_ids = [item.id for item in items]
+    invoice_id = sample_invoice.id
+    
+    # Verify items exist
+    for item_id in item_ids:
+        assert InvoiceItem.query.get(item_id) is not None
+    
+    # Delete invoice
+    db.session.delete(sample_invoice)
+    db.session.commit()
+    
+    # Verify invoice is deleted
+    assert Invoice.query.get(invoice_id) is None
+    
+    # Verify items are also deleted (cascade)
+    for item_id in item_ids:
+        assert InvoiceItem.query.get(item_id) is None
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_deletion_cascades_to_extra_goods(app, sample_invoice, sample_user):
+    """Test that deleting an invoice also deletes its extra goods (cascade)."""
+    # Add extra goods to invoice
+    goods = [
+        ExtraGood(
+            name='Product A',
+            category='product',
+            quantity=Decimal('2.00'),
+            unit_price=Decimal('50.00'),
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        ),
+        ExtraGood(
+            name='Service B',
+            category='service',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('100.00'),
+            created_by=sample_user.id,
+            invoice_id=sample_invoice.id
+        )
+    ]
+    
+    for good in goods:
+        db.session.add(good)
+    db.session.commit()
+    
+    # Store good IDs
+    good_ids = [good.id for good in goods]
+    invoice_id = sample_invoice.id
+    
+    # Verify goods exist
+    for good_id in good_ids:
+        assert ExtraGood.query.get(good_id) is not None
+    
+    # Delete invoice
+    db.session.delete(sample_invoice)
+    db.session.commit()
+    
+    # Verify invoice is deleted
+    assert Invoice.query.get(invoice_id) is None
+    
+    # Verify goods are also deleted (cascade)
+    for good_id in good_ids:
+        assert ExtraGood.query.get(good_id) is None
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_deletion_cascades_to_payments(app, sample_invoice, sample_user):
+    """Test that deleting an invoice also deletes its payments (cascade)."""
+    from app.models.payments import Payment
+    
+    # Add payments to invoice
+    payments = [
+        Payment(
+            invoice_id=sample_invoice.id,
+            amount=Decimal('100.00'),
+            payment_date=date.today(),
+            method='bank_transfer',
+            received_by=sample_user.id
+        ),
+        Payment(
+            invoice_id=sample_invoice.id,
+            amount=Decimal('200.00'),
+            payment_date=date.today(),
+            method='credit_card',
+            received_by=sample_user.id
+        )
+    ]
+    
+    for payment in payments:
+        db.session.add(payment)
+    db.session.commit()
+    
+    # Store payment IDs
+    payment_ids = [payment.id for payment in payments]
+    invoice_id = sample_invoice.id
+    
+    # Verify payments exist
+    for payment_id in payment_ids:
+        assert Payment.query.get(payment_id) is not None
+    
+    # Delete invoice
+    db.session.delete(sample_invoice)
+    db.session.commit()
+    
+    # Verify invoice is deleted
+    assert Invoice.query.get(invoice_id) is None
+    
+    # Verify payments are also deleted (cascade)
+    for payment_id in payment_ids:
+        assert Payment.query.get(payment_id) is None
+
+
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_invoice_deletion_with_all_related_data(app, sample_invoice, sample_user):
+    """Test that deleting an invoice with all related data works correctly."""
+    # Add items
+    item = InvoiceItem(
+        invoice_id=sample_invoice.id,
+        description='Development work',
+        quantity=Decimal('10.00'),
+        unit_price=Decimal('75.00')
+    )
+    db.session.add(item)
+    
+    # Add extra goods
+    good = ExtraGood(
+        name='Product A',
+        category='product',
+        quantity=Decimal('1.00'),
+        unit_price=Decimal('100.00'),
+        created_by=sample_user.id,
+        invoice_id=sample_invoice.id
+    )
+    db.session.add(good)
+    
+    # Add payment
+    from app.models.payments import Payment
+    payment = Payment(
+        invoice_id=sample_invoice.id,
+        amount=Decimal('500.00'),
+        payment_date=date.today(),
+        method='bank_transfer',
+        received_by=sample_user.id
+    )
+    db.session.add(payment)
+    db.session.commit()
+    
+    # Store IDs
+    invoice_id = sample_invoice.id
+    item_id = item.id
+    good_id = good.id
+    payment_id = payment.id
+    
+    # Verify all exist
+    assert Invoice.query.get(invoice_id) is not None
+    assert InvoiceItem.query.get(item_id) is not None
+    assert ExtraGood.query.get(good_id) is not None
+    assert Payment.query.get(payment_id) is not None
+    
+    # Delete invoice
+    db.session.delete(sample_invoice)
+    db.session.commit()
+    
+    # Verify all are deleted
+    assert Invoice.query.get(invoice_id) is None
+    assert InvoiceItem.query.get(item_id) is None
+    assert ExtraGood.query.get(good_id) is None
+    assert Payment.query.get(payment_id) is None
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+def test_delete_invoice_route_success(app, client, user, project):
+    """Test that the delete invoice route works correctly."""
+    from app.models import Client
+    
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+    
+    # Create client and invoice
+    cl = Client(name='Delete Test Client', email='delete@test.com')
+    db.session.add(cl)
+    db.session.commit()
+    
+    inv = Invoice(
+        invoice_number='INV-DELETE-001',
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=30),
+        created_by=user.id
+    )
+    db.session.add(inv)
+    db.session.commit()
+    
+    invoice_id = inv.id
+    
+    # Delete invoice via route
+    resp = client.post(f'/invoices/{invoice_id}/delete', follow_redirects=True)
+    
+    # Verify redirect to list page
+    assert resp.status_code == 200
+    
+    # Verify invoice is deleted
+    assert Invoice.query.get(invoice_id) is None
+    
+    # Verify success message in response
+    html = resp.get_data(as_text=True)
+    assert 'deleted successfully' in html
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+def test_delete_invoice_route_permission_denied(app, client, user, project):
+    """Test that users cannot delete invoices they don't own."""
+    from app.models import Client
+    
+    # Create another user
+    other_user = User(username='otheruser', role='user')
+    db.session.add(other_user)
+    db.session.commit()
+    
+    # Create client and invoice owned by other_user
+    cl = Client(name='Permission Test Client', email='perm@test.com')
+    db.session.add(cl)
+    db.session.commit()
+    
+    inv = Invoice(
+        invoice_number='INV-PERM-001',
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=30),
+        created_by=other_user.id  # Owned by other_user
+    )
+    db.session.add(inv)
+    db.session.commit()
+    
+    invoice_id = inv.id
+    
+    # Authenticate as regular user
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+    
+    # Try to delete invoice
+    resp = client.post(f'/invoices/{invoice_id}/delete', follow_redirects=True)
+    
+    # Verify error message
+    html = resp.get_data(as_text=True)
+    assert 'permission' in html.lower()
+    
+    # Verify invoice still exists
+    assert Invoice.query.get(invoice_id) is not None
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+def test_delete_invoice_route_admin_can_delete_any(app, client, user, project):
+    """Test that admins can delete any invoice."""
+    from app.models import Client
+    
+    # Create another user
+    other_user = User(username='otheruseradmin', role='user')
+    db.session.add(other_user)
+    db.session.commit()
+    
+    # Create client and invoice owned by other_user
+    cl = Client(name='Admin Delete Test Client', email='admin@test.com')
+    db.session.add(cl)
+    db.session.commit()
+    
+    inv = Invoice(
+        invoice_number='INV-ADMIN-001',
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=30),
+        created_by=other_user.id  # Owned by other_user
+    )
+    db.session.add(inv)
+    db.session.commit()
+    
+    invoice_id = inv.id
+    
+    # Make user an admin
+    user.role = 'admin'
+    db.session.commit()
+    
+    # Authenticate as admin
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+    
+    # Delete invoice as admin
+    resp = client.post(f'/invoices/{invoice_id}/delete', follow_redirects=True)
+    
+    # Verify success
+    assert resp.status_code == 200
+    
+    # Verify invoice is deleted
+    assert Invoice.query.get(invoice_id) is None
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+def test_delete_invoice_route_not_found(app, client, user):
+    """Test that deleting a non-existent invoice returns 404."""
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+    
+    # Try to delete non-existent invoice
+    resp = client.post('/invoices/99999/delete')
+    
+    # Verify 404
+    assert resp.status_code == 404
+
+
+@pytest.mark.smoke
+@pytest.mark.invoices
+def test_invoice_view_has_delete_button(app, client, user, project):
+    """Smoke test: Verify that the invoice view page has a delete button."""
+    from app.models import Client
+    
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+    
+    # Create client and invoice
+    cl = Client(name='Delete Button Test Client', email='button@test.com')
+    db.session.add(cl)
+    db.session.commit()
+    
+    inv = Invoice(
+        invoice_number='INV-BUTTON-001',
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=30),
+        created_by=user.id
+    )
+    db.session.add(inv)
+    db.session.commit()
+    
+    # Visit invoice view page
+    resp = client.get(f'/invoices/{inv.id}')
+    assert resp.status_code == 200
+    
+    html = resp.get_data(as_text=True)
+    
+    # Verify delete button exists
+    assert 'delete' in html.lower()
+    # Check for modal elements
+    assert 'deleteInvoiceModal' in html
+    assert f"showDeleteModal('{inv.id}'" in html or f'showDeleteModal("{inv.id}"' in html
+    assert 'Warning:' in html or 'warning' in html.lower()
+    # Verify the JavaScript function exists
+    assert 'function showDeleteModal' in html
+    assert 'deleteInvoiceForm' in html
+
+
+@pytest.mark.smoke
+@pytest.mark.invoices
+def test_invoice_list_has_delete_buttons(app, client, user, project):
+    """Smoke test: Verify that the invoice list page has delete buttons."""
+    from app.models import Client
+    
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+    
+    # Create client and invoices
+    cl = Client(name='List Delete Test Client', email='listdelete@test.com')
+    db.session.add(cl)
+    db.session.commit()
+    
+    invoices = [
+        Invoice(
+            invoice_number=f'INV-LIST-{i:03d}',
+            project_id=project.id,
+            client_name=cl.name,
+            client_id=cl.id,
+            due_date=date.today() + timedelta(days=30),
+            created_by=user.id
+        )
+        for i in range(1, 4)
+    ]
+    
+    for inv in invoices:
+        db.session.add(inv)
+    db.session.commit()
+    
+    # Visit invoice list page
+    resp = client.get('/invoices')
+    assert resp.status_code == 200
+    
+    html = resp.get_data(as_text=True)
+    
+    # Verify delete buttons exist for each invoice
+    for inv in invoices:
+        assert f"showDeleteModal('{inv.id}'" in html
+    
+    # Verify modal exists
+    assert 'deleteInvoiceModal' in html
+    assert 'showDeleteModal' in html
+
+
+@pytest.mark.smoke
+@pytest.mark.invoices
+def test_delete_invoice_with_complex_data_smoke(app, client, user, project):
+    """Smoke test: Delete an invoice with items, goods, and payments."""
+    from app.models import Client
+    from app.models.payments import Payment
+    
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+    
+    # Create client and invoice
+    cl = Client(name='Complex Delete Test', email='complex@test.com')
+    db.session.add(cl)
+    db.session.commit()
+    
+    inv = Invoice(
+        invoice_number='INV-COMPLEX-001',
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=30),
+        created_by=user.id
+    )
+    db.session.add(inv)
+    db.session.commit()
+    
+    # Add items
+    items = [
+        InvoiceItem(
+            invoice_id=inv.id,
+            description=f'Item {i}',
+            quantity=Decimal('5.00'),
+            unit_price=Decimal('50.00')
+        )
+        for i in range(1, 4)
+    ]
+    for item in items:
+        db.session.add(item)
+    
+    # Add extra goods
+    goods = [
+        ExtraGood(
+            name=f'Good {i}',
+            category='product',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('100.00'),
+            created_by=user.id,
+            invoice_id=inv.id
+        )
+        for i in range(1, 3)
+    ]
+    for good in goods:
+        db.session.add(good)
+    
+    # Add payments
+    payments = [
+        Payment(
+            invoice_id=inv.id,
+            amount=Decimal('100.00'),
+            payment_date=date.today(),
+            method='bank_transfer',
+            received_by=user.id
+        ),
+        Payment(
+            invoice_id=inv.id,
+            amount=Decimal('200.00'),
+            payment_date=date.today(),
+            method='credit_card',
+            received_by=user.id
+        )
+    ]
+    for payment in payments:
+        db.session.add(payment)
+    
+    db.session.commit()
+    
+    invoice_id = inv.id
+    
+    # Delete invoice
+    resp = client.post(f'/invoices/{invoice_id}/delete', follow_redirects=True)
+    
+    # Verify success
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert 'deleted successfully' in html.lower()
+    
+    # Verify invoice and all related data are deleted
+    assert Invoice.query.get(invoice_id) is None
