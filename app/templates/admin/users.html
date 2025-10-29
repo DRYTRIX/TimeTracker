@@ -62,6 +62,12 @@
                     <div class="flex gap-2">
                         <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>
                         <a href="{{ url_for('permissions.manage_user_roles', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('Roles') }}</a>
+                        {% if user.id != current_user.id %}
+                        <button type="button" onclick="confirmDeleteUser('{{ user.id }}', '{{ user.username }}', {{ user.time_entries.count() }})" class="text-red-600 hover:text-red-800 text-sm">{{ _('Delete') }}</button>
+                        <form id="deleteUserForm-{{ user.id }}" method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="hidden">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        </form>
+                        {% endif %}
                     </div>
                 </td>
             </tr>
@@ -73,4 +79,43 @@
         </tbody>
     </table>
 </div>
+
+<script>
+function confirmDeleteUser(userId, username, timeEntriesCount) {
+    // Check if user has time entries
+    if (timeEntriesCount > 0) {
+        const msg = {{ _('Cannot delete user "{name}" because they have {count} time entries. Users with existing time entries cannot be deleted.')|tojson }}.replace('{name}', username).replace('{count}', timeEntriesCount);
+        if (window.showConfirm) {
+            window.showConfirm(msg, { 
+                title: {{ _('Cannot Delete User')|tojson }}, 
+                confirmText: {{ _('OK')|tojson }}, 
+                variant: 'warning',
+                showCancel: false
+            });
+        } else {
+            alert(msg);
+        }
+        return false;
+    }
+    
+    // Show delete confirmation
+    const msg = {{ _('Are you sure you want to delete user "{name}"? This action cannot be undone.')|tojson }}.replace('{name}', username);
+    
+    if (window.showConfirm) {
+        window.showConfirm(msg, { 
+            title: {{ _('Delete User')|tojson }}, 
+            confirmText: {{ _('Delete')|tojson }}, 
+            variant: 'danger' 
+        }).then(function(ok) {
+            if (ok) {
+                document.getElementById('deleteUserForm-' + userId).submit();
+            }
+        });
+    } else {
+        if (confirm(msg)) {
+            document.getElementById('deleteUserForm-' + userId).submit();
+        }
+    }
+}
+</script>
 {% endblock %}
