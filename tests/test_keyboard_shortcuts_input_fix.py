@@ -8,17 +8,18 @@ when typing in input fields, textareas, or other editable elements.
 import pytest
 from flask import url_for
 from app import db
-from app.models import User, Project
+from app.models import User, Project, Client
 
 
 class TestKeyboardShortcutsInputFix:
     """Test keyboard shortcuts behavior in input fields."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, authenticated_client, user):
+    def setup(self, admin_authenticated_client, admin_user, test_client):
         """Set up test fixtures."""
-        self.client = authenticated_client
-        self.user = user
+        self.client = admin_authenticated_client
+        self.user = admin_user
+        self.test_client = test_client
 
     def test_create_project_page_loads(self):
         """Test that create project page loads successfully."""
@@ -32,7 +33,8 @@ class TestKeyboardShortcutsInputFix:
             'name': 'Program Development',
             'description': 'A program for testing',
             'status': 'active',
-            'hourly_rate': '50.00'
+            'hourly_rate': '50.00',
+            'client_id': self.test_client.id
         }, follow_redirects=True)
         
         # Should successfully create the project
@@ -50,7 +52,7 @@ class TestKeyboardShortcutsInputFix:
         project = Project(
             name='Test Project',
             description='Test',
-            created_by=self.user.id,
+            client_id=self.test_client.id,
             status='active'
         )
         db.session.add(project)
@@ -81,7 +83,8 @@ class TestKeyboardShortcutsInputFix:
                 'name': name,
                 'description': f'Testing {name}',
                 'status': 'active',
-                'hourly_rate': '50.00'
+                'hourly_rate': '50.00',
+                'client_id': self.test_client.id
             }, follow_redirects=True)
             
             # Should successfully create without triggering shortcuts
@@ -208,10 +211,11 @@ class TestKeyboardShortcutsBugScenarios:
     """Test specific bug scenarios reported by users."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, authenticated_client, user):
+    def setup(self, admin_authenticated_client, admin_user, test_client):
         """Set up test fixtures."""
-        self.client = authenticated_client
-        self.user = user
+        self.client = admin_authenticated_client
+        self.user = admin_user
+        self.test_client = test_client
 
     def test_reported_bug_typing_program(self):
         """
@@ -226,7 +230,8 @@ class TestKeyboardShortcutsBugScenarios:
             'name': 'New program',
             'description': 'program for programming',
             'status': 'active',
-            'hourly_rate': '75.00'
+            'hourly_rate': '75.00',
+            'client_id': self.test_client.id
         }, follow_redirects=True)
         
         # Should create project successfully without being redirected to reports
@@ -257,7 +262,8 @@ class TestKeyboardShortcutsBugScenarios:
             'name': test_text,
             'description': 'This project has: goals, graphics, great progress, grand ideas',
             'status': 'active',
-            'hourly_rate': '60.00'
+            'hourly_rate': '60.00',
+            'client_id': self.test_client.id
         }, follow_redirects=True)
         
         assert response.status_code == 200
@@ -267,7 +273,7 @@ class TestKeyboardShortcutsBugScenarios:
         assert project is not None
 
 
-def test_smoke_keyboard_shortcuts_on_multiple_pages(authenticated_client):
+def test_smoke_keyboard_shortcuts_on_multiple_pages(admin_authenticated_client):
     """
     Smoke test: Verify keyboard shortcuts don't interfere on multiple pages.
     
@@ -283,7 +289,7 @@ def test_smoke_keyboard_shortcuts_on_multiple_pages(authenticated_client):
     ]
     
     for page in pages_with_inputs:
-        response = authenticated_client.get(page)
+        response = admin_authenticated_client.get(page)
         # Should load successfully (200) or redirect to valid page (302)
         assert response.status_code in [200, 302, 404], \
             f"Page {page} returned unexpected status: {response.status_code}"
