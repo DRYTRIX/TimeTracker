@@ -9,6 +9,7 @@ import io
 import csv
 import json
 from app.utils.db import safe_commit
+from app.utils.excel_export import create_invoices_list_excel
 from app.utils.posthog_funnels import (
     track_invoice_page_viewed,
     track_invoice_project_selected,
@@ -684,3 +685,34 @@ def duplicate_invoice(invoice_id):
     
     flash(f'Invoice {new_invoice_number} created as duplicate', 'success')
     return redirect(url_for('invoices.edit_invoice', invoice_id=new_invoice.id))
+
+
+@invoices_bp.route('/invoices/export/excel')
+@login_required
+def export_invoices_excel():
+    """Export invoice list as Excel file"""
+    # Get invoices (scope by user unless admin)
+    if current_user.is_admin:
+        invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
+    else:
+        invoices = Invoice.query.filter_by(created_by=current_user.id).order_by(Invoice.created_at.desc()).all()
+    
+    # Create Excel file
+    output, filename = create_invoices_list_excel(invoices)
+    
+    # Track Excel export event
+    log_event("export.excel", 
+             user_id=current_user.id, 
+             export_type="invoices_list",
+             num_rows=len(invoices))
+    track_event(current_user.id, "export.excel", {
+        "export_type": "invoices_list",
+        "num_rows": len(invoices)
+    })
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )

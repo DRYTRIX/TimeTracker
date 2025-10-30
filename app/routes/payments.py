@@ -6,7 +6,9 @@ from app.models import Payment, Invoice, User, Client
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 from sqlalchemy import func, and_, or_
+from flask import send_file
 from app.utils.db import safe_commit
+from app.utils.excel_export import create_payments_list_excel
 
 payments_bp = Blueprint('payments', __name__)
 
@@ -468,6 +470,74 @@ def payment_stats():
         stats['by_month'][month_key]['amount'] += float(payment.amount)
     
     return jsonify(stats)
+
+
+@payments_bp.route('/payments/export/excel')
+@login_required
+def export_payments_excel():
+    """Export payments list as Excel file"""
+    # Get filter parameters
+    status_filter = request.args.get('status', '')
+    method_filter = request.args.get('method', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    invoice_id = request.args.get('invoice_id', type=int)
+    
+    # Base query
+    query = Payment.query
+    
+    # Apply filters based on user role
+    if not current_user.is_admin:
+        # Regular users can only see payments for their own invoices
+        query = query.join(Invoice).filter(Invoice.created_by == current_user.id)
+    
+    # Apply additional filters
+    if status_filter:
+        query = query.filter(Payment.status == status_filter)
+    
+    if method_filter:
+        query = query.filter(Payment.method == method_filter)
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+            query = query.filter(Payment.payment_date >= date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            query = query.filter(Payment.payment_date <= date_to_obj)
+        except ValueError:
+            pass
+    
+    if invoice_id:
+        query = query.filter(Payment.invoice_id == invoice_id)
+    
+    # Get payments
+    payments = query.order_by(Payment.payment_date.desc()).all()
+    
+    # Create Excel file
+    output, filename = create_payments_list_excel(payments)
+    
+    # Track Excel export event
+    log_event("export.excel", 
+             user_id=current_user.id, 
+             export_type="payments_list",
+             num_rows=len(payments))
+    track_event(current_user.id, "export.excel", {
+        "export_type": "payments_list",
+        "num_rows": len(payments)
+    })
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
 
 def get_user_invoices():
     """Get invoices accessible by current user"""
