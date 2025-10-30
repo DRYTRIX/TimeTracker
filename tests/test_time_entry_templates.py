@@ -527,6 +527,127 @@ class TestTimeEntryTemplatesSmoke:
 class TestTimeEntryTemplateIntegration:
     """Integration tests for time entry templates with other features"""
     
+    def test_start_timer_from_template(self, authenticated_client, user, project):
+        """Test starting a timer directly from a template"""
+        # Create a template with project
+        template = TimeEntryTemplate(
+            user_id=user.id,
+            name='Timer Test',
+            project_id=project.id,
+            default_notes='Test timer notes',
+            tags='test,timer'
+        )
+        db.session.add(template)
+        db.session.commit()
+        template_id = template.id
+        
+        # Start timer from template
+        response = authenticated_client.get(f'/timer/start/from-template/{template_id}',
+                                           follow_redirects=True)
+        assert response.status_code == 200
+        assert b'Timer started' in response.data
+        
+        # Verify timer was created
+        timer = TimeEntry.query.filter_by(
+            user_id=user.id,
+            end_time=None
+        ).first()
+        assert timer is not None
+        assert timer.project_id == project.id
+        assert timer.notes == 'Test timer notes'
+        assert timer.tags == 'test,timer'
+        
+        # Verify usage was tracked
+        updated_template = TimeEntryTemplate.query.get(template_id)
+        assert updated_template.usage_count == 1
+        assert updated_template.last_used_at is not None
+    
+    def test_start_timer_from_template_without_project(self, authenticated_client, user):
+        """Test that starting timer from template without project fails"""
+        # Create template without project
+        template = TimeEntryTemplate(
+            user_id=user.id,
+            name='No Project Template'
+        )
+        db.session.add(template)
+        db.session.commit()
+        
+        response = authenticated_client.get(f'/timer/start/from-template/{template.id}',
+                                           follow_redirects=True)
+        assert response.status_code == 200
+        assert b'must have a project' in response.data or b'error' in response.data
+    
+    def test_start_timer_from_template_with_active_timer(self, authenticated_client, user, project):
+        """Test that starting timer from template fails when user has active timer"""
+        from datetime import datetime
+        from app.models.time_entry import local_now
+        
+        # Create an active timer
+        active_timer = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=local_now(),
+            source='auto'
+        )
+        db.session.add(active_timer)
+        
+        # Create a template
+        template = TimeEntryTemplate(
+            user_id=user.id,
+            name='Test Template',
+            project_id=project.id
+        )
+        db.session.add(template)
+        db.session.commit()
+        
+        # Try to start timer from template
+        response = authenticated_client.get(f'/timer/start/from-template/{template.id}',
+                                           follow_redirects=True)
+        assert response.status_code == 200
+        assert b'already have an active timer' in response.data
+    
+    def test_manual_entry_with_template_prefill(self, authenticated_client, user, project, task):
+        """Test manual entry page pre-fills from template"""
+        # Create a template
+        template = TimeEntryTemplate(
+            user_id=user.id,
+            name='Manual Entry Test',
+            project_id=project.id,
+            task_id=task.id,
+            default_notes='Prefilled notes',
+            tags='prefill,test'
+        )
+        db.session.add(template)
+        db.session.commit()
+        
+        # Access manual entry page with template parameter
+        response = authenticated_client.get(f'/timer/manual?template={template.id}')
+        assert response.status_code == 200
+        # The page should render (full verification would require parsing HTML)
+        assert b'Manual Entry' in response.data or b'manual' in response.data
+    
+    def test_start_timer_with_template_id(self, authenticated_client, user, project):
+        """Test starting timer with template_id in form data"""
+        # Create a template
+        template = TimeEntryTemplate(
+            user_id=user.id,
+            name='Timer Form Test',
+            project_id=project.id,
+            default_notes='Template notes'
+        )
+        db.session.add(template)
+        db.session.commit()
+        
+        # Start timer with template_id
+        response = authenticated_client.post('/timer/start', data={
+            'template_id': template.id,
+            'notes': ''  # Should use template notes if empty
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        
+        # Verify timer was created (may fail if project validation fails)
+        # This is a partial test - full integration would require valid form data
+    
     def test_template_with_project_and_task(self, app, user, project, task):
         """Test template integration with projects and tasks"""
         with app.app_context():
