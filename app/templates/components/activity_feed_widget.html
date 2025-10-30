@@ -1,0 +1,412 @@
+<!-- Activity Feed Widget -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">
+            <i class="fas fa-stream mr-2"></i>
+            {{ _('Recent Activity') }}
+        </h2>
+        <div class="flex items-center gap-2">
+            <!-- Filter dropdown -->
+            <div class="relative">
+                <button onclick="toggleFilterDropdown()" id="filter-dropdown-btn" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition relative">
+                    <i class="fas fa-filter"></i>
+                    <span id="filter-indicator" class="hidden absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
+                </button>
+                <div id="filter-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-10 border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
+                    <div class="p-2">
+                        <button id="filter-all" onclick="filterActivities('all'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded font-medium flex items-center justify-between">
+                            <span><i class="fas fa-list text-gray-500 w-4"></i> {{ _('All Activities') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                        <div class="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+                        <button id="filter-project" onclick="filterActivities('project'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-between">
+                            <span><i class="fas fa-folder text-blue-500 w-4"></i> {{ _('Projects') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                        <button id="filter-task" onclick="filterActivities('task'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-between">
+                            <span><i class="fas fa-tasks text-green-500 w-4"></i> {{ _('Tasks') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                        <button id="filter-time_entry" onclick="filterActivities('time_entry'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-between">
+                            <span><i class="fas fa-clock text-purple-500 w-4"></i> {{ _('Time Entries') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                        <button id="filter-time_entry_template" onclick="filterActivities('time_entry_template'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-between">
+                            <span><i class="fas fa-clock text-teal-500 w-4"></i> {{ _('Time Templates') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                        <button id="filter-invoice" onclick="filterActivities('invoice'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-between">
+                            <span><i class="fas fa-file-invoice text-yellow-500 w-4"></i> {{ _('Invoices') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                        <button id="filter-client" onclick="filterActivities('client'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-between">
+                            <span><i class="fas fa-user-tie text-indigo-500 w-4"></i> {{ _('Clients') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                        <button id="filter-user" onclick="filterActivities('user'); closeFilterDropdown();" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-between">
+                            <span><i class="fas fa-user text-pink-500 w-4"></i> {{ _('Users') }}</span>
+                            <i class="fas fa-check text-primary hidden filter-check"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="refreshActivityFeed()" id="refresh-activity-btn" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="activity-feed-container">
+        {% if recent_activities %}
+        <div class="space-y-3">
+            {% for activity in recent_activities %}
+            <div class="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+                <div class="flex-shrink-0 mt-1">
+                    <i class="{{ activity.get_icon() }}"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm">
+                                <span class="font-medium text-text-light dark:text-text-dark">
+                                    {{ activity.user.display_name if activity.user.display_name else activity.user.username }}
+                                </span>
+                                <span class="text-text-muted-light dark:text-text-muted-dark">
+                                    {{ activity.description }}
+                                </span>
+                            </p>
+                            {% if activity.extra_data %}
+                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {% if activity.extra_data.old_status and activity.extra_data.new_status %}
+                                <span class="inline-flex items-center gap-1">
+                                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{{ activity.extra_data.old_status }}</span>
+                                    <i class="fas fa-arrow-right text-xs"></i>
+                                    <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">{{ activity.extra_data.new_status }}</span>
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="text-xs text-gray-500 dark:text-gray-400" title="{{ activity.created_at.strftime('%Y-%m-%d %H:%M:%S') }}">
+                                {{ activity.created_at|timeago if activity.created_at else '' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
+            <i class="fas fa-stream text-4xl mb-3 opacity-50"></i>
+            <p class="text-sm">{{ _('No recent activity') }}</p>
+            <p class="text-xs mt-1">{{ _('Activity will appear here as you work') }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="load-more-container" class="mt-4 pt-4 border-t border-border-light dark:border-border-dark" {% if not recent_activities %}style="display: none;"{% endif %}>
+        <button onclick="loadMoreActivities()" id="load-more-activities" class="text-sm text-primary hover:text-primary-dark transition w-full text-center">
+            {{ _('Load More') }} <i class="fas fa-chevron-down ml-1"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+let activityPage = 1;
+let activityFilter = ''; // Empty string means show all
+const activityLimit = 10;
+
+function toggleFilterDropdown() {
+    const dropdown = document.getElementById('filter-dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('hidden');
+    }
+}
+
+function closeFilterDropdown() {
+    const dropdown = document.getElementById('filter-dropdown');
+    if (dropdown) {
+        dropdown.classList.add('hidden');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('filter-dropdown');
+    const btn = document.getElementById('filter-dropdown-btn');
+    if (dropdown && btn && !dropdown.contains(event.target) && !btn.contains(event.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
+
+function filterActivities(entityType) {
+    console.log('Filtering activities by:', entityType);
+    activityFilter = entityType === 'all' ? '' : entityType;
+    activityPage = 1;
+    
+    // Update visual indicators
+    updateFilterIndicators(entityType);
+    
+    loadActivities(false).catch(error => {
+        console.error('Filter failed:', error);
+    });
+}
+
+function updateFilterIndicators(activeFilter) {
+    // Hide all checkmarks
+    document.querySelectorAll('.filter-check').forEach(check => {
+        check.classList.add('hidden');
+    });
+    
+    // Show checkmark for active filter
+    const filterButton = document.getElementById(`filter-${activeFilter}`);
+    if (filterButton) {
+        const checkmark = filterButton.querySelector('.filter-check');
+        if (checkmark) {
+            checkmark.classList.remove('hidden');
+        }
+    }
+    
+    // Show/hide filter indicator dot
+    const indicator = document.getElementById('filter-indicator');
+    if (indicator) {
+        if (activeFilter === 'all' || activeFilter === '') {
+            indicator.classList.add('hidden');
+        } else {
+            indicator.classList.remove('hidden');
+        }
+    }
+}
+
+function refreshActivityFeed() {
+    const btn = document.getElementById('refresh-activity-btn');
+    if (btn) {
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.classList.add('fa-spin');
+        }
+    }
+    activityPage = 1;
+    loadActivities(false).finally(() => {
+        const btn = document.getElementById('refresh-activity-btn');
+        if (btn) {
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-spin');
+            }
+        }
+    });
+}
+
+function loadMoreActivities() {
+    activityPage++;
+    loadActivities(true);
+}
+
+async function loadActivities(append = false) {
+    const container = document.getElementById('activity-feed-container');
+    if (!container) {
+        console.error('Activity feed container not found');
+        return Promise.resolve();
+    }
+    
+    const loadMoreBtn = document.getElementById('load-more-activities');
+    const loadMoreContainer = document.getElementById('load-more-container');
+    
+    if (loadMoreBtn) {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ _('Loading...') }}';
+    }
+    
+    try {
+        let url = `/api/activities?limit=${activityLimit}&page=${activityPage}`;
+        // Only add entity_type filter if it's not empty
+        if (activityFilter && activityFilter !== 'all') {
+            url += `&entity_type=${activityFilter}`;
+        }
+        
+        console.log('Fetching activities from:', url);
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            console.error('API response not OK:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('Error details:', errorText);
+            throw new Error(`Failed to fetch activities: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Received activities:', data);
+        
+        // Debug: Log entity types of received activities
+        if (data.activities && data.activities.length > 0) {
+            const entityTypes = data.activities.map(a => a.entity_type);
+            console.log('Entity types in response:', entityTypes);
+        } else {
+            console.log('No activities received from API');
+        }
+        
+        if (!append) {
+            container.innerHTML = '';
+        }
+        
+        if (data.activities && data.activities.length > 0) {
+            const activityHTML = data.activities.map(activity => createActivityHTML(activity)).join('');
+            
+            if (append) {
+                const spacer = container.querySelector('.space-y-3');
+                if (spacer) {
+                    spacer.insertAdjacentHTML('beforeend', activityHTML);
+                } else {
+                    container.innerHTML = '<div class="space-y-3">' + activityHTML + '</div>';
+                }
+            } else {
+                container.innerHTML = '<div class="space-y-3">' + activityHTML + '</div>';
+            }
+            
+            // Show/hide load more button and container
+            if (loadMoreContainer) {
+                if (data.has_next) {
+                    loadMoreContainer.style.display = 'block';
+                    if (loadMoreBtn) {
+                        loadMoreBtn.disabled = false;
+                        loadMoreBtn.innerHTML = '{{ _('Load More') }} <i class="fas fa-chevron-down ml-1"></i>';
+                    }
+                } else {
+                    loadMoreContainer.style.display = 'none';
+                }
+            }
+        } else if (!append) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
+                    <i class="fas fa-stream text-4xl mb-3 opacity-50"></i>
+                    <p class="text-sm">{{ _('No recent activity') }}</p>
+                    <p class="text-xs mt-1">{{ _('Activity will appear here as you work') }}</p>
+                </div>
+            `;
+            if (loadMoreContainer) {
+                loadMoreContainer.style.display = 'none';
+            }
+        } else {
+            // If appending and no results, hide the load more button
+            if (loadMoreContainer) {
+                loadMoreContainer.style.display = 'none';
+            }
+        }
+        
+        return Promise.resolve();
+    } catch (error) {
+        console.error('Error loading activities:', error);
+        if (!append) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-red-600 dark:text-red-400">
+                    <i class="fas fa-exclamation-triangle text-4xl mb-3"></i>
+                    <p class="text-sm">{{ _('Failed to load activities') }}</p>
+                    <p class="text-xs mt-2">${error.message}</p>
+                </div>
+            `;
+        }
+        if (loadMoreBtn) {
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.innerHTML = '{{ _('Load More') }} <i class="fas fa-chevron-down ml-1"></i>';
+        }
+        return Promise.reject(error);
+    }
+}
+
+function createActivityHTML(activity) {
+    const icon = getActivityIcon(activity.action);
+    const displayName = activity.display_name || activity.username || 'Unknown';
+    const timeAgo = formatTimeAgo(new Date(activity.created_at));
+    const fullTime = new Date(activity.created_at).toLocaleString();
+    
+    let extraDataHTML = '';
+    if (activity.extra_data && activity.extra_data.old_status && activity.extra_data.new_status) {
+        extraDataHTML = `
+            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <span class="inline-flex items-center gap-1">
+                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">${activity.extra_data.old_status}</span>
+                    <i class="fas fa-arrow-right text-xs"></i>
+                    <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">${activity.extra_data.new_status}</span>
+                </span>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+            <div class="flex-shrink-0 mt-1">
+                <i class="${icon}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm">
+                            <span class="font-medium text-text-light dark:text-text-dark">${escapeHtml(displayName)}</span>
+                            <span class="text-text-muted-light dark:text-text-muted-dark">${escapeHtml(activity.description)}</span>
+                        </p>
+                        ${extraDataHTML}
+                    </div>
+                    <div class="flex-shrink-0">
+                        <span class="text-xs text-gray-500 dark:text-gray-400" title="${fullTime}">${timeAgo}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getActivityIcon(action) {
+    const icons = {
+        'created': 'fas fa-plus-circle text-green-500',
+        'updated': 'fas fa-edit text-blue-500',
+        'deleted': 'fas fa-trash text-red-500',
+        'started': 'fas fa-play text-green-500',
+        'stopped': 'fas fa-stop text-red-500',
+        'completed': 'fas fa-check-circle text-green-500',
+        'assigned': 'fas fa-user-plus text-blue-500',
+        'commented': 'fas fa-comment text-gray-500',
+        'sent': 'fas fa-paper-plane text-blue-500',
+        'paid': 'fas fa-dollar-sign text-green-500',
+        'archived': 'fas fa-archive text-gray-500',
+        'unarchived': 'fas fa-box-open text-blue-500',
+        'status_changed': 'fas fa-exchange-alt text-blue-500'
+    };
+    return icons[action] || 'fas fa-circle text-gray-500';
+}
+
+function formatTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+    if (seconds < 604800) return Math.floor(seconds / 86400) + 'd ago';
+    return date.toLocaleDateString();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize filter indicators on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateFilterIndicators('all');
+});
+
+// Auto-refresh activity feed every 30 seconds
+setInterval(() => {
+    if (activityPage === 1) {
+        refreshActivityFeed();
+    }
+}, 30000);
+</script>
+

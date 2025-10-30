@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
-from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate
+from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity
 from datetime import datetime, timedelta
 import pytz
 from app import db, track_page_view
@@ -84,6 +84,12 @@ def dashboard():
     templates = TimeEntryTemplate.query.filter_by(
         user_id=current_user.id
     ).order_by(desc(TimeEntryTemplate.last_used_at)).limit(5).all()
+    
+    # Get recent activities for activity feed widget
+    recent_activities = Activity.get_recent(
+        user_id=None if current_user.is_admin else current_user.id,
+        limit=10
+    )
 
     return render_template('main/dashboard.html',
                          active_timer=active_timer,
@@ -94,7 +100,8 @@ def dashboard():
                          month_hours=month_hours,
                          top_projects=top_projects,
                          current_week_goal=current_week_goal,
-                         templates=templates)
+                         templates=templates,
+                         recent_activities=recent_activities)
 
 @main_bp.route('/_health')
 def health_check():

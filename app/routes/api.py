@@ -1298,6 +1298,172 @@ def serve_editor_image(filename):
     folder = get_editor_upload_folder()
     return send_from_directory(folder, filename)
 
+# ================================
+# Activity Feed API
+# ================================
+
+@api_bp.route('/api/activities')
+@login_required
+def get_activities():
+    """Get recent activities with filtering"""
+    from app.models import Activity
+    from sqlalchemy import and_
+    
+    # Get query parameters
+    limit = request.args.get('limit', 50, type=int)
+    page = request.args.get('page', 1, type=int)
+    user_id = request.args.get('user_id', type=int)
+    entity_type = request.args.get('entity_type', '').strip()
+    action = request.args.get('action', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    
+    # Build query
+    query = Activity.query
+    
+    # Filter by user (admins can see all, users see only their own)
+    if not current_user.is_admin:
+        query = query.filter_by(user_id=current_user.id)
+    elif user_id:
+        query = query.filter_by(user_id=user_id)
+    
+    # Filter by entity type
+    if entity_type:
+        query = query.filter_by(entity_type=entity_type)
+    
+    # Filter by action
+    if action:
+        query = query.filter_by(action=action)
+    
+    # Filter by date range
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            query = query.filter(Activity.created_at >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            query = query.filter(Activity.created_at <= end_dt)
+        except ValueError:
+            pass
+    
+    # Get total count
+    total = query.count()
+    
+    # Apply ordering and pagination
+    activities = query.order_by(Activity.created_at.desc()).paginate(
+        page=page,
+        per_page=limit,
+        error_out=False
+    )
+    
+    return jsonify({
+        'activities': [a.to_dict() for a in activities.items],
+        'total': total,
+        'pages': activities.pages,
+        'current_page': activities.page,
+        'has_next': activities.has_next,
+        'has_prev': activities.has_prev
+    })
+
+@api_bp.route('/api/activities/stats')
+@login_required
+def get_activity_stats():
+    """Get activity statistics"""
+    from app.models import Activity
+    from sqlalchemy import func
+    
+    # Get date range (default to last 7 days)
+    days = request.args.get('days', 7, type=int)
+    since = datetime.utcnow() - timedelta(days=days)
+    
+    # Build base query
+    query = Activity.query.filter(Activity.created_at >= since)
+    
+    # Filter by user if not admin
+    if not current_user.is_admin:
+        query = query.filter_by(user_id=current_user.id)
+    
+    # Get counts by entity type
+    entity_counts = db.session.query(
+        Activity.entity_type,
+        func.count(Activity.id).label('count')
+    ).filter(Activity.created_at >= since)
+    
+    if not current_user.is_admin:
+        entity_counts = entity_counts.filter_by(user_id=current_user.id)
+    
+    entity_counts = entity_counts.group_by(Activity.entity_type).all()
+    
+    # Get counts by action
+    action_counts = db.session.query(
+        Activity.action,
+        func.count(Activity.id).label('count')
+    ).filter(Activity.created_at >= since)
+    
+    if not current_user.is_admin:
+        action_counts = action_counts.filter_by(user_id=current_user.id)
+    
+    action_counts = action_counts.group_by(Activity.action).all()
+    
+    # Get most active users (admins only)
+    user_activity = []
+    if current_user.is_admin:
+        user_activity = db.session.query(
+            User.username,
+            User.display_name,
+            func.count(Activity.id).label('count')
+        ).join(
+            Activity, User.id == Activity.user_id
+        ).filter(
+            Activity.created_at >= since
+        ).group_by(
+            User.id, User.username, User.display_name
+        ).order_by(
+            func.count(Activity.id).desc()
+        ).limit(10).all()
+    
+    return jsonify({
+        'total_activities': query.count(),
+        'entity_counts': {entity: count for entity, count in entity_counts},
+        'action_counts': {action: count for action, count in action_counts},
+        'user_activity': [
+            {'username': u[0], 'display_name': u[1], 'count': u[2]}
+            for u in user_activity
+        ],
+        'period_days': days
+    })
+
+@api_bp.route('/api/templates/<int:template_id>')
+@login_required
+def get_template(template_id):
+    """Get a time entry template by ID"""
+    template = TimeEntryTemplate.query.get_or_404(template_id)
+    
+    # Check permissions
+    if template.user_id != current_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    return jsonify(template.to_dict())
+
+@api_bp.route('/api/templates/<int:template_id>/use', methods=['POST'])
+@login_required
+def mark_template_used(template_id):
+    """Mark a template as used (updates last_used_at)"""
+    template = TimeEntryTemplate.query.get_or_404(template_id)
+    
+    # Check permissions
+    if template.user_id != current_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    template.last_used_at = datetime.utcnow()
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
 # WebSocket event handlers
 @socketio.on('connect')
 def handle_connect():

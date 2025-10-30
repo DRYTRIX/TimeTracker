@@ -3,7 +3,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db
-from app.models import Task, Project, User, TimeEntry, TaskActivity, KanbanColumn
+from app.models import Task, Project, User, TimeEntry, TaskActivity, KanbanColumn, Activity
 from datetime import datetime, date
 from decimal import Decimal
 from app.utils.db import safe_commit
@@ -167,6 +167,19 @@ def create_task():
             "project_id": project_id,
             "priority": priority
         })
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='created',
+            entity_type='task',
+            entity_id=task.id,
+            entity_name=task.name,
+            description=f'Created task "{task.name}" in project "{project.name}"',
+            extra_data={'project_id': project_id, 'priority': priority},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
         
         flash(f'Task "{name}" created successfully', 'success')
         return redirect(url_for('tasks.view_task', task_id=task.id))
@@ -335,6 +348,18 @@ def edit_task(task_id):
             "project_id": task.project_id
         })
         
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='updated',
+            entity_type='task',
+            entity_id=task.id,
+            entity_name=task.name,
+            description=f'Updated task "{task.name}"',
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash(f'Task "{name}" updated successfully', 'success')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
@@ -494,10 +519,23 @@ def delete_task(task_id):
     task_name = task.name
     task_id_for_log = task.id
     project_id_for_log = task.project_id
+    
+    # Log activity before deletion
+    Activity.log(
+        user_id=current_user.id,
+        action='deleted',
+        entity_type='task',
+        entity_id=task_id_for_log,
+        entity_name=task_name,
+        description=f'Deleted task "{task_name}"',
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    
     db.session.delete(task)
-    if not safe_commit('delete_task', {'task_id': task.id}):
+    if not safe_commit('delete_task', {'task_id': task_id_for_log}):
         flash('Could not delete task due to a database error. Please check server logs.', 'error')
-        return redirect(url_for('tasks.view_task', task_id=task.id))
+        return redirect(url_for('tasks.view_task', task_id=task_id_for_log))
     
     # Log task deletion
     app_module.log_event("task.deleted", user_id=current_user.id, task_id=task_id_for_log, project_id=project_id_for_log)
