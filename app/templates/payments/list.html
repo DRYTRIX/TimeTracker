@@ -5,9 +5,15 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Payments</h1>
-        <a href="{{ url_for('payments.create_payment') }}" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors">
-            <i class="fas fa-plus mr-2"></i>Record Payment
-        </a>
+        <div class="flex gap-2">
+            <a href="{{ url_for('payments.export_payments_excel', status=filters.status, method=filters.method, date_from=filters.date_from, date_to=filters.date_to) }}" 
+               class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
+                <i class="fas fa-file-excel mr-2"></i>Export to Excel
+            </a>
+            <a href="{{ url_for('payments.create_payment') }}" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors">
+                <i class="fas fa-plus mr-2"></i>Record Payment
+            </a>
+        </div>
     </div>
 
     <!-- Summary Cards -->
