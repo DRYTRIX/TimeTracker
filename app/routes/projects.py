@@ -415,6 +415,18 @@ def edit_project(project_id):
             flash('Could not update project due to a database error. Please check server logs.', 'error')
             return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
         
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='updated',
+            entity_type='project',
+            entity_id=project.id,
+            entity_name=project.name,
+            description=f'Updated project "{project.name}"',
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash(f'Project "{name}" updated successfully', 'success')
         return redirect(url_for('projects.view_project', project_id=project.id))
     
@@ -560,10 +572,24 @@ def delete_project(project_id):
         return redirect(url_for('projects.view_project', project_id=project_id))
     
     project_name = project.name
+    project_id_copy = project.id
+    
+    # Log activity before deletion
+    Activity.log(
+        user_id=current_user.id,
+        action='deleted',
+        entity_type='project',
+        entity_id=project_id_copy,
+        entity_name=project_name,
+        description=f'Deleted project "{project_name}"',
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    
     db.session.delete(project)
-    if not safe_commit('delete_project', {'project_id': project.id}):
+    if not safe_commit('delete_project', {'project_id': project_id_copy}):
         flash('Could not delete project due to a database error. Please check server logs.', 'error')
-        return redirect(url_for('projects.view_project', project_id=project.id))
+        return redirect(url_for('projects.view_project', project_id=project_id_copy))
     
     flash(f'Project "{project_name}" deleted successfully', 'success')
     return redirect(url_for('projects.list_projects'))

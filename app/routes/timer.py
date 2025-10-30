@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, socketio, log_event, track_event
-from app.models import User, Project, TimeEntry, Task, Settings
+from app.models import User, Project, TimeEntry, Task, Settings, Activity
 from app.utils.timezone import parse_local_datetime, utc_to_local
 from datetime import datetime
 import json
@@ -106,6 +106,19 @@ def start_timer():
         "task_id": task_id,
         "has_description": bool(notes)
     })
+    
+    # Log activity
+    Activity.log(
+        user_id=current_user.id,
+        action='started',
+        entity_type='time_entry',
+        entity_id=new_timer.id,
+        entity_name=f'{project.name}' + (f' - {task.name}' if task else ''),
+        description=f'Started timer for {project.name}' + (f' - {task.name}' if task else ''),
+        extra_data={'project_id': project_id, 'task_id': task_id},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
     
     # Check if this is user's first timer (onboarding milestone)
     timer_count = TimeEntry.query.filter_by(
@@ -305,6 +318,21 @@ def stop_timer():
             "task_id": active_timer.task_id,
             "duration_seconds": duration_seconds
         })
+        
+        # Log activity
+        project_name = active_timer.project.name if active_timer.project else 'No project'
+        task_name = active_timer.task.name if active_timer.task else None
+        Activity.log(
+            user_id=current_user.id,
+            action='stopped',
+            entity_type='time_entry',
+            entity_id=active_timer.id,
+            entity_name=f'{project_name}' + (f' - {task_name}' if task_name else ''),
+            description=f'Stopped timer for {project_name}' + (f' - {task_name}' if task_name else '') + f' - Duration: {active_timer.duration_formatted}',
+            extra_data={'duration_hours': active_timer.duration_hours, 'project_id': active_timer.project_id, 'task_id': active_timer.task_id},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
         
         # Check if this is user's first completed time entry (onboarding milestone)
         entry_count = TimeEntry.query.filter_by(
