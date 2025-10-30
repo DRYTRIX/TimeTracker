@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, make_response, Response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
@@ -7,6 +7,8 @@ from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
+import csv
+import io
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
     track_project_setup_started,
@@ -85,6 +87,100 @@ def list_projects():
         clients=client_list,
         favorite_project_ids=favorite_project_ids,
         favorites_only=favorites_only
+    )
+
+@projects_bp.route('/projects/export')
+@login_required
+def export_projects():
+    """Export projects to CSV"""
+    status = request.args.get('status', 'active')
+    client_name = request.args.get('client', '').strip()
+    search = request.args.get('search', '').strip()
+    favorites_only = request.args.get('favorites', '').lower() == 'true'
+    
+    query = Project.query
+    
+    # Filter by favorites if requested
+    if favorites_only:
+        query = query.join(
+            UserFavoriteProject,
+            db.and_(
+                UserFavoriteProject.project_id == Project.id,
+                UserFavoriteProject.user_id == current_user.id
+            )
+        )
+    
+    # Filter by status
+    if status == 'active':
+        query = query.filter(Project.status == 'active')
+    elif status == 'archived':
+        query = query.filter(Project.status == 'archived')
+    elif status == 'inactive':
+        query = query.filter(Project.status == 'inactive')
+    
+    if client_name:
+        query = query.join(Client).filter(Client.name == client_name)
+    
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Project.name.ilike(like),
+                Project.description.ilike(like)
+            )
+        )
+    
+    projects = query.order_by(Project.name).all()
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'ID',
+        'Name',
+        'Code',
+        'Client',
+        'Description',
+        'Status',
+        'Billable',
+        'Hourly Rate',
+        'Budget Amount',
+        'Budget Threshold %',
+        'Estimated Hours',
+        'Billing Reference',
+        'Created At',
+        'Updated At'
+    ])
+    
+    # Write project data
+    for project in projects:
+        writer.writerow([
+            project.id,
+            project.name,
+            project.code or '',
+            project.client if project.client else '',
+            project.description or '',
+            project.status,
+            'Yes' if project.billable else 'No',
+            project.hourly_rate or '',
+            project.budget_amount or '',
+            project.budget_threshold_percent or '',
+            project.estimated_hours or '',
+            project.billing_ref or '',
+            project.created_at.strftime('%Y-%m-%d %H:%M:%S') if project.created_at else '',
+            project.updated_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(project, 'updated_at') and project.updated_at else ''
+        ])
+    
+    # Create response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment; filename=projects_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        }
     )
 
 @projects_bp.route('/projects/create', methods=['GET', 'POST'])
