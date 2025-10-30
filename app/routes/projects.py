@@ -425,6 +425,185 @@ def view_project(project_id):
     resp.headers['Expires'] = '0'
     return resp
 
+@projects_bp.route('/projects/<int:project_id>/dashboard')
+@login_required
+def project_dashboard(project_id):
+    """Project dashboard with comprehensive analytics and visualizations"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Track page view
+    from app import track_page_view
+    track_page_view("project_dashboard")
+    
+    # Get time period filter (default to all time)
+    from datetime import datetime, timedelta
+    period = request.args.get('period', 'all')
+    start_date = None
+    end_date = None
+    
+    if period == 'week':
+        start_date = datetime.now() - timedelta(days=7)
+    elif period == 'month':
+        start_date = datetime.now() - timedelta(days=30)
+    elif period == '3months':
+        start_date = datetime.now() - timedelta(days=90)
+    elif period == 'year':
+        start_date = datetime.now() - timedelta(days=365)
+    
+    # === Budget vs Actual ===
+    budget_data = {
+        'budget_amount': float(project.budget_amount) if project.budget_amount else 0,
+        'consumed_amount': project.budget_consumed_amount,
+        'remaining_amount': float(project.budget_amount or 0) - project.budget_consumed_amount,
+        'percentage': round((project.budget_consumed_amount / float(project.budget_amount or 1)) * 100, 1) if project.budget_amount else 0,
+        'threshold_exceeded': project.budget_threshold_exceeded,
+        'estimated_hours': project.estimated_hours or 0,
+        'actual_hours': project.actual_hours,
+        'remaining_hours': (project.estimated_hours or 0) - project.actual_hours,
+        'hours_percentage': round((project.actual_hours / (project.estimated_hours or 1)) * 100, 1) if project.estimated_hours else 0
+    }
+    
+    # === Task Statistics ===
+    all_tasks = project.tasks.all()
+    task_stats = {
+        'total': len(all_tasks),
+        'by_status': {},
+        'completed': 0,
+        'in_progress': 0,
+        'todo': 0,
+        'completion_rate': 0,
+        'overdue': 0
+    }
+    
+    for task in all_tasks:
+        status = task.status
+        task_stats['by_status'][status] = task_stats['by_status'].get(status, 0) + 1
+        if status == 'done':
+            task_stats['completed'] += 1
+        elif status == 'in_progress':
+            task_stats['in_progress'] += 1
+        elif status == 'todo':
+            task_stats['todo'] += 1
+        if task.is_overdue:
+            task_stats['overdue'] += 1
+    
+    if task_stats['total'] > 0:
+        task_stats['completion_rate'] = round((task_stats['completed'] / task_stats['total']) * 100, 1)
+    
+    # === Team Member Contributions ===
+    user_totals = project.get_user_totals(start_date=start_date, end_date=end_date)
+    
+    # Get time entries per user with additional stats
+    from app.models import User
+    team_contributions = []
+    for user_data in user_totals:
+        username = user_data['username']
+        total_hours = user_data['total_hours']
+        
+        # Get user object
+        user = User.query.filter(
+            db.or_(
+                User.username == username,
+                User.full_name == username
+            )
+        ).first()
+        
+        if user:
+            # Count entries for this user
+            entry_count = project.time_entries.filter(
+                TimeEntry.user_id == user.id,
+                TimeEntry.end_time.isnot(None)
+            )
+            if start_date:
+                entry_count = entry_count.filter(TimeEntry.start_time >= start_date)
+            if end_date:
+                entry_count = entry_count.filter(TimeEntry.start_time <= end_date)
+            entry_count = entry_count.count()
+            
+            # Count tasks assigned to this user
+            task_count = project.tasks.filter_by(assigned_to=user.id).count()
+            
+            team_contributions.append({
+                'username': username,
+                'total_hours': total_hours,
+                'entry_count': entry_count,
+                'task_count': task_count,
+                'percentage': round((total_hours / project.total_hours * 100), 1) if project.total_hours > 0 else 0
+            })
+    
+    # Sort by total hours descending
+    team_contributions.sort(key=lambda x: x['total_hours'], reverse=True)
+    
+    # === Recent Activity ===
+    recent_activities = Activity.query.filter(
+        Activity.entity_type.in_(['project', 'task', 'time_entry']),
+        db.or_(
+            Activity.entity_id == project_id,
+            db.and_(
+                Activity.entity_type == 'task',
+                Activity.entity_id.in_([t.id for t in all_tasks])
+            )
+        )
+    ).order_by(Activity.created_at.desc()).limit(20).all()
+    
+    # Filter to only project-related activities
+    project_activities = []
+    for activity in recent_activities:
+        if activity.entity_type == 'project' and activity.entity_id == project_id:
+            project_activities.append(activity)
+        elif activity.entity_type == 'task':
+            # Check if task belongs to this project
+            task = Task.query.get(activity.entity_id)
+            if task and task.project_id == project_id:
+                project_activities.append(activity)
+    
+    # === Time Tracking Timeline (last 30 days) ===
+    from sqlalchemy import func
+    timeline_data = []
+    if start_date or period != 'all':
+        timeline_start = start_date or (datetime.now() - timedelta(days=30))
+        
+        # Group time entries by date
+        daily_hours = db.session.query(
+            func.date(TimeEntry.start_time).label('date'),
+            func.sum(TimeEntry.duration_seconds).label('total_seconds')
+        ).filter(
+            TimeEntry.project_id == project_id,
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= timeline_start
+        ).group_by(func.date(TimeEntry.start_time)).order_by('date').all()
+        
+        timeline_data = [
+            {
+                'date': str(date),
+                'hours': round(total_seconds / 3600, 2)
+            }
+            for date, total_seconds in daily_hours
+        ]
+    
+    # === Cost Breakdown ===
+    cost_data = {
+        'total_costs': project.total_costs,
+        'billable_costs': project.total_billable_costs,
+        'by_category': {}
+    }
+    
+    if hasattr(ProjectCost, 'get_costs_by_category'):
+        cost_breakdown = ProjectCost.get_costs_by_category(project_id, start_date, end_date)
+        cost_data['by_category'] = cost_breakdown
+    
+    return render_template(
+        'projects/dashboard.html',
+        project=project,
+        budget_data=budget_data,
+        task_stats=task_stats,
+        team_contributions=team_contributions,
+        recent_activities=project_activities[:10],
+        timeline_data=timeline_data,
+        cost_data=cost_data,
+        period=period
+    )
+
 @projects_bp.route('/projects/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required
 @admin_or_permission_required('edit_projects')
