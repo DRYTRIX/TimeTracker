@@ -32,24 +32,29 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ clients|length }} client{{ 's' if clients|length != 1 else '' }} found
         </h3>
-        {% if current_user.is_admin %}
-        <div class="relative">
-            <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'clientsBulkMenu')" disabled>
-                <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
-            </button>
-            <ul id="clientsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg">
-                <li><a class="block px-4 py-2 text-sm" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
-                <li><a class="block px-4 py-2 text-sm" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
-                <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
-                <li><a class="block px-4 py-2 text-sm text-rose-600" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
-            </ul>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('clients.export_clients', status=status, search=search) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="Export to CSV">
+                <i class="fas fa-download mr-1"></i> Export
+            </a>
+            {% if current_user.is_admin %}
+            <div class="relative">
+                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'clientsBulkMenu')" disabled>
+                    <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
+                </button>
+                <ul id="clientsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 z-50 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg">
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
+                    <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
+                    <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
+                </ul>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
     <table class="w-full text-left">
         <thead class="border-b border-border-light dark:border-border-dark">
