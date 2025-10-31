@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ current_locale or 'en' }}">
+<html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,6 +30,20 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='keyboard-shortcuts.css') }}">
     <style>
+        /* RTL Support */
+        html[dir="rtl"] {
+            direction: rtl;
+        }
+        html[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+        html[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+        html[dir="rtl"] .text-left { text-align: right; }
+        html[dir="rtl"] .text-right { text-align: left; }
+        html[dir="rtl"] #sidebar { left: auto; right: 0; }
+        html[dir="rtl"] #mainContent { margin-left: 0; margin-right: 16rem; }
+        @media (max-width: 1024px) {
+            html[dir="rtl"] #mainContent { margin-right: 0; }
+        }
+        
         /* Minimal styles to properly align enhanced search UI */
         .search-enhanced .search-input-wrapper { position: relative; }
         .search-enhanced .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #A0AEC0; pointer-events: none; }
@@ -82,6 +96,51 @@
         }
         {% endif %}
     </script>
+    
+    <!-- i18n translations for JavaScript -->
+    <script>
+        window.i18n = {
+            toast: {
+                success: '{{ _("Success") }}',
+                error: '{{ _("Error") }}',
+                warning: '{{ _("Warning") }}',
+                info: '{{ _("Information") }}'
+            },
+            common: {
+                loading: '{{ _("Loading...") }}',
+                saving: '{{ _("Saving...") }}',
+                deleting: '{{ _("Deleting...") }}',
+                cancel: '{{ _("Cancel") }}',
+                confirm: '{{ _("Confirm") }}',
+                close: '{{ _("Close") }}',
+                save: '{{ _("Save") }}',
+                delete: '{{ _("Delete") }}',
+                edit: '{{ _("Edit") }}',
+                add: '{{ _("Add") }}',
+                remove: '{{ _("Remove") }}',
+                yes: '{{ _("Yes") }}',
+                no: '{{ _("No") }}',
+                ok: '{{ _("OK") }}'
+            },
+            messages: {
+                confirmDelete: '{{ _("Are you sure you want to delete this?") }}',
+                unsavedChanges: '{{ _("You have unsaved changes. Are you sure you want to leave?") }}',
+                operationFailed: '{{ _("Operation failed") }}',
+                operationSuccess: '{{ _("Operation completed successfully") }}',
+                noItemsSelected: '{{ _("No items selected") }}',
+                invalidInput: '{{ _("Invalid input") }}',
+                requiredField: '{{ _("This field is required") }}',
+                noActiveTimer: '{{ _("No active timer") }}',
+                timerStopped: '{{ _("Timer stopped") }}',
+                timerStopFailed: '{{ _("Failed to stop timer") }}',
+                errorStoppingTimer: '{{ _("Error stopping timer") }}',
+                noFormToSave: '{{ _("No form to save") }}',
+                noTimerFound: '{{ _("No timer found") }}',
+                timerStoppedInactivity: '{{ _("Timer stopped due to inactivity") }}'
+            }
+        };
+    </script>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
@@ -394,15 +453,19 @@
 
                     <!-- Language Switcher -->
                     <div class="relative z-50">
-                        <button onclick="toggleDropdown('langDropdown')" class="flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdown">
+                        <button onclick="toggleDropdown('langDropdown')" class="flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdown" title="{{ _('Change language') }}">
                             <i class="fas fa-globe"></i>
+                            <span class="ml-2 hidden lg:inline">{{ current_language_label }}</span>
                         </button>
-                        <ul id="langDropdown" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg">
-                            <li class="dropdown-header p-2 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Language') }}</li>
-                            {% for code, label in config['LANGUAGES'].items() %}
+                        <ul id="langDropdown" class="hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg max-h-96 overflow-y-auto">
+                            <li class="px-4 py-2 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider border-b border-border-light dark:border-border-dark">{{ _('Language') }}</li>
+                            {% for code, label in available_languages.items() %}
                             <li>
-                                <a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="{{ url_for('main.set_language') }}?lang={{ code }}">
-                                    {{ label }}
+                                <a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between" href="{{ url_for('user.set_language_direct', language=code) }}">
+                                    <span>{{ label }}</span>
+                                    {% if code == current_language_code %}
+                                    <i class="fas fa-check text-primary"></i>
+                                    {% endif %}
                                 </a>
                             </li>
                             {% endfor %}

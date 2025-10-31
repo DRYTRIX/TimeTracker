@@ -861,8 +861,13 @@ def create_app(config=None):
 
     # Register context processors
     from app.utils.context_processors import register_context_processors
-
+    
     register_context_processors(app)
+    
+    # Register i18n template filters
+    from app.utils.i18n_helpers import register_i18n_filters
+    
+    register_i18n_filters(app)
 
     # (translations compiled and directories set before Babel init)
 

@@ -213,3 +213,63 @@ def set_theme():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@user_bp.route('/api/language', methods=['POST'])
+@login_required
+def set_language():
+    """Quick API endpoint to set language (for language switcher)"""
+    from flask import current_app, session
+    
+    try:
+        data = request.get_json()
+        language = data.get('language')
+        
+        # Get available languages from config
+        available_languages = current_app.config.get('LANGUAGES', {})
+        
+        if language in available_languages:
+            # Update user preference
+            current_user.preferred_language = language
+            db.session.commit()
+            
+            # Also set in session for immediate effect
+            session['preferred_language'] = language
+            
+            return jsonify({
+                'success': True,
+                'language': language,
+                'message': _('Language updated successfully')
+            })
+        
+        return jsonify({'error': _('Invalid language')}), 400
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@user_bp.route('/set-language/<language>')
+def set_language_direct(language):
+    """Direct route to set language (for non-JS fallback)"""
+    from flask import current_app, session
+    
+    # Get available languages from config
+    available_languages = current_app.config.get('LANGUAGES', {})
+    
+    if language in available_languages:
+        # Set in session for immediate effect
+        session['preferred_language'] = language
+        
+        # If user is logged in, update their preference
+        if current_user.is_authenticated:
+            current_user.preferred_language = language
+            db.session.commit()
+            flash(_('Language updated to %(language)s', language=available_languages[language]), 'success')
+        
+        # Redirect back to referring page or dashboard
+        next_page = request.referrer or url_for('main.dashboard')
+        return redirect(next_page)
+    
+    flash(_('Invalid language'), 'error')
+    return redirect(url_for('main.dashboard'))
+

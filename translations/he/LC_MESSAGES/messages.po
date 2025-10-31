@@ -1,0 +1,481 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: TimeTracker\n"
+"Language: he\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Navigation and Common
+msgid "Time Tracker"
+msgstr "מעקב זמן"
+
+msgid "Dashboard"
+msgstr "לוח בקרה"
+
+msgid "Projects"
+msgstr "פרויקטים"
+
+msgid "Clients"
+msgstr "לקוחות"
+
+msgid "Tasks"
+msgstr "משימות"
+
+msgid "Log Time"
+msgstr "רישום זמן"
+
+msgid "Bulk Time Entry"
+msgstr "הזנה קבוצתית"
+
+msgid "Calendar"
+msgstr "לוח שנה"
+
+msgid "Reports"
+msgstr "דוחות"
+
+msgid "Invoices"
+msgstr "חשבוניות"
+
+msgid "Analytics"
+msgstr "אנליטיקה"
+
+msgid "Admin"
+msgstr "מנהל"
+
+msgid "Profile"
+msgstr "פרופיל"
+
+msgid "Logout"
+msgstr "התנתק"
+
+msgid "Language"
+msgstr "שפה"
+
+msgid "Home"
+msgstr "בית"
+
+msgid "Log"
+msgstr "יומן"
+
+msgid "About"
+msgstr "אודות"
+
+msgid "Help"
+msgstr "עזרה"
+
+msgid "Buy me a coffee"
+msgstr "קנה לי קפה"
+
+msgid "All rights reserved."
+msgstr "כל הזכויות שמורות."
+
+msgid "Skip to content"
+msgstr "דלג לתוכן"
+
+msgid "Work"
+msgstr "עבודה"
+
+msgid "Insights"
+msgstr "תובנות"
+
+msgid "Search"
+msgstr "חיפוש"
+
+msgid "Open Command Palette"
+msgstr "פתח לוח פקודות"
+
+msgid "Ctrl"
+msgstr "Ctrl"
+
+msgid "Keyboard Shortcuts"
+msgstr "קיצורי מקלדת"
+
+msgid "Install App"
+msgstr "התקן אפליקציה"
+
+msgid "App installed"
+msgstr "האפליקציה הותקנה"
+
+msgid "Close"
+msgstr "סגור"
+
+msgid "Cancel"
+msgstr "ביטול"
+
+msgid "Confirm"
+msgstr "אישור"
+
+msgid "Please confirm"
+msgstr "נא לאשר"
+
+# Dashboard
+msgid "Welcome back,"
+msgstr "ברוך שובך,"
+
+msgid "h today"
+msgstr "ש היום"
+
+msgid "Timer Status"
+msgstr "מצב טיימר"
+
+msgid "Timer Running"
+msgstr "הטיימר פועל"
+
+msgid "No Active Timer"
+msgstr "אין טיימר פעיל"
+
+msgid "Choose a project or one of its tasks to start tracking."
+msgstr "בחר פרויקט או אחת ממשימותיו כדי להתחיל במעקב."
+
+msgid "Idle"
+msgstr "לא פעיל"
+
+msgid "Started at"
+msgstr "התחיל ב"
+
+msgid "Stop Timer"
+msgstr "עצור טיימר"
+
+msgid "Start Timer"
+msgstr "התחל טיימר"
+
+msgid "Hours Today"
+msgstr "שעות היום"
+
+msgid "Hours This Week"
+msgstr "שעות השבוע"
+
+msgid "Hours This Month"
+msgstr "שעות החודש"
+
+msgid "Quick Actions"
+msgstr "פעולות מהירות"
+
+msgid "Manual entry"
+msgstr "הזנה ידנית"
+
+msgid "Bulk Entry"
+msgstr "הזנה קבוצתית"
+
+msgid "Multi-day time entry"
+msgstr "הזנת זמן רב-יומית"
+
+msgid "Manage projects"
+msgstr "נהל פרויקטים"
+
+msgid "View analytics"
+msgstr "צפה באנליטיקה"
+
+msgid "Find entries"
+msgstr "מצא רשומות"
+
+msgid "Today by Task"
+msgstr "היום לפי משימה"
+
+msgid "Loading..."
+msgstr "טוען..."
+
+msgid "Recent Entries"
+msgstr "רשומות אחרונות"
+
+msgid "View All"
+msgstr "צפה בהכל"
+
+msgid "Select all"
+msgstr "בחר הכל"
+
+msgid "Delete"
+msgstr "מחק"
+
+msgid "Set Billable"
+msgstr "סמן כחיוב"
+
+msgid "Set Non-billable"
+msgstr "סמן כללא חיוב"
+
+msgid "Project"
+msgstr "פרויקט"
+
+msgid "Duration"
+msgstr "משך"
+
+msgid "Date"
+msgstr "תאריך"
+
+msgid "Notes"
+msgstr "הערות"
+
+msgid "Actions"
+msgstr "פעולות"
+
+msgid "No notes"
+msgstr "אין הערות"
+
+msgid "Edit entry"
+msgstr "ערוך רשומה"
+
+msgid "Delete entry"
+msgstr "מחק רשומה"
+
+msgid "No recent entries"
+msgstr "אין רשומות אחרונות"
+
+msgid "Start tracking your time to see entries here"
+msgstr "התחל לעקוב אחר הזמן שלך כדי לראות רשומות כאן"
+
+msgid "Log Your First Entry"
+msgstr "רשום את הרשומה הראשונה שלך"
+
+msgid "Select Project"
+msgstr "בחר פרויקט"
+
+msgid "Choose a project..."
+msgstr "בחר פרויקט..."
+
+msgid "Select Task (Optional)"
+msgstr "בחר משימה (אופציונלי)"
+
+msgid "Choose a task..."
+msgstr "בחר משימה..."
+
+msgid "Tasks list updates after choosing a project. Leave empty to log at project level."
+msgstr "רשימת המשימות מתעדכנת לאחר בחירת פרויקט. השאר ריק לרישום ברמת הפרויקט."
+
+msgid "Notes (Optional)"
+msgstr "הערות (אופציונלי)"
+
+msgid "What are you working on?"
+msgstr "על מה אתה עובד?"
+
+msgid "Delete Time Entry"
+msgstr "מחק רשומת זמן"
+
+msgid "Warning:"
+msgstr "אזהרה:"
+
+msgid "This action cannot be undone."
+msgstr "לא ניתן לבטל פעולה זו."
+
+msgid "Are you sure you want to delete the time entry for"
+msgstr "האם אתה בטוח שברצונך למחוק את רשומת הזמן עבור"
+
+msgid "Duration:"
+msgstr "משך:"
+
+msgid "Delete Entry"
+msgstr "מחק רשומה"
+
+msgid "Please select a project"
+msgstr "נא לבחור פרויקט"
+
+msgid "Starting..."
+msgstr "מתחיל..."
+
+msgid "Deleting..."
+msgstr "מוחק..."
+
+msgid "No time tracked yet today"
+msgstr "עדיין לא נעקב זמן היום"
+
+msgid "h"
+msgstr "ש"
+
+msgid "Bulk action completed"
+msgstr "פעולה קבוצתית הושלמה"
+
+msgid "Bulk action failed"
+msgstr "פעולה קבוצתית נכשלה"
+
+# Login
+msgid "Login"
+msgstr "התחבר"
+
+msgid "Company Logo"
+msgstr "לוגו החברה"
+
+msgid "DryTrix Logo"
+msgstr "לוגו DryTrix"
+
+msgid "TimeTracker"
+msgstr "TimeTracker"
+
+msgid "Professional Time Management"
+msgstr "ניהול זמן מקצועי"
+
+msgid "Sign in to your account to start tracking your time"
+msgstr "היכנס לחשבונך כדי להתחיל לעקוב אחר הזמן שלך"
+
+msgid "Welcome to TimeTracker"
+msgstr "ברוך הבא ל-TimeTracker"
+
+msgid "Powered by"
+msgstr "מופעל על ידי"
+
+msgid "Enter your username to start tracking time"
+msgstr "הזן את שם המשתמש שלך כדי להתחיל לעקוב אחר הזמן"
+
+msgid "Username"
+msgstr "שם משתמש"
+
+msgid "Enter your username"
+msgstr "הזן את שם המשתמש שלך"
+
+msgid "Sign In"
+msgstr "היכנס"
+
+msgid "Signing in..."
+msgstr "מתחבר..."
+
+msgid "Continue"
+msgstr "המשך"
+
+msgid "or"
+msgstr "או"
+
+msgid "Sign in with SSO"
+msgstr "היכנס עם SSO"
+
+msgid "Internal Tool"
+msgstr "כלי פנימי"
+
+msgid "Internal Tool:"
+msgstr "כלי פנימי:"
+
+msgid "This is a private time tracking application for internal use only."
+msgstr "זהו אפליקציית מעקב זמן פרטית לשימוש פנימי בלבד."
+
+msgid "New users will be created automatically"
+msgstr "משתמשים חדשים ייווצרו אוטומטית"
+
+msgid "Version"
+msgstr "גרסה"
+
+msgid "Please enter a username"
+msgstr "נא להזין שם משתמש"
+
+msgid "Signing in..."
+msgstr "מתחבר..."
+
+# Tasks
+msgid "Board"
+msgstr "לוח"
+
+msgid "Table"
+msgstr "טבלה"
+
+msgid "New Task"
+msgstr "משימה חדשה"
+
+msgid "Plan and track work"
+msgstr "תכנן ועקוב אחר עבודה"
+
+msgid "total"
+msgstr "סה״כ"
+
+msgid "To Do"
+msgstr "לביצוע"
+
+msgid "In Progress"
+msgstr "בתהליך"
+
+msgid "Review"
+msgstr "סקירה"
+
+msgid "Completed"
+msgstr "הושלם"
+
+msgid "Filter Tasks"
+msgstr "סנן משימות"
+
+msgid "Toggle Filters"
+msgstr "החלף מסננים"
+
+msgid "Task name or description"
+msgstr "שם המשימה או תיאור"
+
+msgid "Status"
+msgstr "סטטוס"
+
+msgid "All Statuses"
+msgstr "כל הסטטוסים"
+
+msgid "Done"
+msgstr "בוצע"
+
+msgid "Cancelled"
+msgstr "בוטל"
+
+msgid "Priority"
+msgstr "עדיפות"
+
+msgid "All Priorities"
+msgstr "כל העדיפויות"
+
+msgid "Low"
+msgstr "נמוכה"
+
+msgid "Medium"
+msgstr "בינונית"
+
+msgid "High"
+msgstr "גבוהה"
+
+msgid "Urgent"
+msgstr "דחוף"
+
+msgid "All Projects"
+msgstr "כל הפרויקטים"
+
+# Command Palette
+msgid "Command Palette"
+msgstr "לוח פקודות"
+
+msgid "Type a command or search..."
+msgstr "הקלד פקודה או חפש..."
+
+# Socket.IO messages
+msgid "Timer started for"
+msgstr "טיימר התחיל עבור"
+
+msgid "Timer stopped. Duration:"
+msgstr "טיימר הופסק. משך:"
+
+# Theme toggle
+msgid "Switch to light mode"
+msgstr "עבור למצב בהיר"
+
+msgid "Switch to dark mode"
+msgstr "עבור למצב כהה"
+
+msgid "Light mode"
+msgstr "מצב בהיר"
+
+msgid "Dark mode"
+msgstr "מצב כהה"
+
+# Mobile
+msgid "Log time"
+msgstr "רשום זמן"
+
+# About page
+msgid "About TimeTracker"
+msgstr "אודות TimeTracker"
+
+msgid "Developed by DryTrix"
+msgstr "פותח על ידי DryTrix"
+
+msgid "What is"
+msgstr "מה זה"
+
+msgid "A simple, efficient time tracking solution for teams and individuals."
+msgstr "פתרון פשוט ויעיל למעקב זמן לצוותים ויחידים."
+
+msgid "It provides a simple and intuitive interface for tracking time spent on various projects and tasks."
+msgstr "הוא מספק ממשק פשוט ואינטואיטיבי למעקב אחר הזמן שמושקע בפרויקטים ומשימות שונים."
+
+msgid "%(app)s is a web-based time tracking application designed for internal use within organizations."
+msgstr "%(app)s הוא אפליקציית מעקב זמן מבוססת אינטרנט המיועדת לשימוש פנימי בתוך ארגונים."
+
+msgid "Learn more about "
+msgstr "למד עוד על "
+
