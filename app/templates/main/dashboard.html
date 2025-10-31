@@ -74,6 +74,9 @@
                             <td class="p-4">{{ entry.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td class="p-4">
                                 <div class="flex gap-2">
+                                    <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Resume - Start a new timer with same properties') }}">
+                                        <i class="fas fa-play"></i>
+                                    </a>
                                     <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary-dark" title="{{ _('Edit entry') }}">
                                         <i class="fas fa-edit"></i>
                                     </a>

@@ -910,3 +910,121 @@ def duplicate_timer(timer_id):
                          prefill_billable=timer.billable,
                          is_duplicate=True,
                          original_entry=timer)
+
+@timer_bp.route('/timer/resume/<int:timer_id>')
+@login_required
+def resume_timer(timer_id):
+    """Resume an existing time entry - starts a new active timer with same properties"""
+    timer = TimeEntry.query.get_or_404(timer_id)
+    
+    # Check if user can resume this timer
+    if timer.user_id != current_user.id and not current_user.is_admin:
+        flash('You can only resume your own timers', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Check if user already has an active timer
+    active_timer = current_user.active_timer
+    if active_timer:
+        flash('You already have an active timer. Stop it before resuming another one.', 'error')
+        current_app.logger.info("Resume timer blocked: user already has an active timer")
+        return redirect(url_for('main.dashboard'))
+    
+    # Check if project is still active
+    project = Project.query.get(timer.project_id)
+    if not project:
+        flash(_('Project no longer exists'), 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    if project.status == 'archived':
+        flash(_('Cannot start timer for an archived project. Please unarchive the project first.'), 'error')
+        return redirect(url_for('main.dashboard'))
+    elif project.status != 'active':
+        flash(_('Cannot start timer for an inactive project'), 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Validate task if it exists
+    if timer.task_id:
+        task = Task.query.filter_by(id=timer.task_id, project_id=timer.project_id).first()
+        if not task:
+            # Task was deleted, continue without it
+            task_id = None
+        else:
+            task_id = timer.task_id
+    else:
+        task_id = None
+    
+    # Create new timer with copied properties
+    from app.models.time_entry import local_now
+    new_timer = TimeEntry(
+        user_id=current_user.id,
+        project_id=timer.project_id,
+        task_id=task_id,
+        start_time=local_now(),
+        notes=timer.notes,
+        tags=timer.tags,
+        source='auto',
+        billable=timer.billable
+    )
+    
+    db.session.add(new_timer)
+    if not safe_commit('resume_timer', {'user_id': current_user.id, 'original_timer_id': timer_id, 'project_id': timer.project_id}):
+        flash('Could not resume timer due to a database error. Please check server logs.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    current_app.logger.info("Resumed timer id=%s from original timer=%s for user=%s project_id=%s", 
+                           new_timer.id, timer_id, current_user.username, timer.project_id)
+    
+    # Track timer resumed event
+    log_event("timer.resumed", 
+             user_id=current_user.id, 
+             time_entry_id=new_timer.id,
+             original_timer_id=timer_id,
+             project_id=timer.project_id,
+             task_id=task_id,
+             description=timer.notes)
+    track_event(current_user.id, "timer.resumed", {
+        "time_entry_id": new_timer.id,
+        "original_timer_id": timer_id,
+        "project_id": timer.project_id,
+        "task_id": task_id,
+        "has_notes": bool(timer.notes),
+        "has_tags": bool(timer.tags)
+    })
+    
+    # Log activity
+    project_name = project.name
+    task = Task.query.get(task_id) if task_id else None
+    task_name = task.name if task else None
+    Activity.log(
+        user_id=current_user.id,
+        action='started',
+        entity_type='time_entry',
+        entity_id=new_timer.id,
+        entity_name=f'{project_name}' + (f' - {task_name}' if task_name else ''),
+        description=f'Resumed timer for {project_name}' + (f' - {task_name}' if task_name else ''),
+        extra_data={'project_id': timer.project_id, 'task_id': task_id, 'resumed_from': timer_id},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    
+    # Emit WebSocket event for real-time updates
+    try:
+        payload = {
+            'user_id': current_user.id,
+            'timer_id': new_timer.id,
+            'project_name': project_name,
+            'start_time': new_timer.start_time.isoformat()
+        }
+        if task_id:
+            payload['task_id'] = task_id
+            payload['task_name'] = task_name
+        socketio.emit('timer_started', payload)
+    except Exception as e:
+        current_app.logger.warning("Socket emit failed for timer_resumed: %s", e)
+    
+    if task_name:
+        flash(f'Timer resumed for {project_name} - {task_name}', 'success')
+    else:
+        flash(f'Timer resumed for {project_name}', 'success')
+    
+    return redirect(url_for('main.dashboard'))
