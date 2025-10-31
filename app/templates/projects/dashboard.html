@@ -19,8 +19,15 @@
             <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Project Dashboard & Analytics') }}</p>
         </div>
         
-        <!-- Time Period Filter -->
-        <div class="mt-4 md:mt-0">
+        <!-- Actions and Time Period Filter -->
+        <div class="mt-4 md:mt-0 flex gap-3 flex-wrap">
+            {% if project.budget_amount %}
+            <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
+               class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-lg">
+                <i class="fas fa-wallet"></i>
+                {{ _('Budget Analysis') }}
+            </a>
+            {% endif %}
             <select id="periodFilter" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2" onchange="window.location.href='?period='+this.value">
                 <option value="all" {% if period == 'all' %}selected{% endif %}>{{ _('All Time') }}</option>
                 <option value="week" {% if period == 'week' %}selected{% endif %}>{{ _('Last 7 Days') }}</option>

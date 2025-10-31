@@ -4,8 +4,9 @@ import logging
 from datetime import datetime, timedelta
 from flask import current_app
 from app import db
-from app.models import Invoice, User, TimeEntry
+from app.models import Invoice, User, TimeEntry, Project, BudgetAlert
 from app.utils.email import send_overdue_invoice_notification, send_weekly_summary
+from app.utils.budget_forecasting import check_budget_alerts
 
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,52 @@ def send_weekly_summaries():
         return 0
 
 
+def check_project_budget_alerts():
+    """Check all active projects for budget alerts
+    
+    This task should be run periodically (e.g., every 6 hours) to check
+    project budgets and create alerts when thresholds are exceeded.
+    """
+    try:
+        logger.info("Checking project budget alerts...")
+        
+        # Get all active projects with budgets
+        projects = Project.query.filter(
+            Project.budget_amount.isnot(None),
+            Project.status == 'active'
+        ).all()
+        
+        logger.info(f"Found {len(projects)} active projects with budgets")
+        
+        total_alerts_created = 0
+        for project in projects:
+            try:
+                # Check for budget alerts
+                alerts_to_create = check_budget_alerts(project.id)
+                
+                # Create alerts
+                for alert_data in alerts_to_create:
+                    alert = BudgetAlert.create_alert(
+                        project_id=alert_data['project_id'],
+                        alert_type=alert_data['type'],
+                        budget_consumed_percent=alert_data['budget_consumed_percent'],
+                        budget_amount=alert_data['budget_amount'],
+                        consumed_amount=alert_data['consumed_amount']
+                    )
+                    total_alerts_created += 1
+                    logger.info(f"Created {alert_data['type']} alert for project {project.name}")
+            
+            except Exception as e:
+                logger.error(f"Error checking budget alerts for project {project.id}: {e}")
+        
+        logger.info(f"Created {total_alerts_created} budget alerts")
+        return total_alerts_created
+    
+    except Exception as e:
+        logger.error(f"Error checking project budget alerts: {e}")
+        return 0
+
+
 def register_scheduled_tasks(scheduler):
     """Register all scheduled tasks with APScheduler
     
@@ -173,6 +220,18 @@ def register_scheduled_tasks(scheduler):
             replace_existing=True
         )
         logger.info("Registered weekly summaries task")
+        
+        # Check budget alerts every 6 hours
+        scheduler.add_job(
+            func=check_project_budget_alerts,
+            trigger='cron',
+            hour='*/6',
+            minute=0,
+            id='check_budget_alerts',
+            name='Check project budget alerts',
+            replace_existing=True
+        )
+        logger.info("Registered budget alerts check task")
         
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")

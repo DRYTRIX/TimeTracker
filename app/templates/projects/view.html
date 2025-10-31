@@ -13,13 +13,19 @@
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.client.name }}</p>
     </div>
     {% if current_user.is_admin or has_any_permission(['edit_projects', 'archive_projects']) %}
-    <div class="flex gap-2">
-        <a href="{{ url_for('projects.project_dashboard', project_id=project.id) }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2">
+    <div class="flex gap-2 flex-wrap">
+        <a href="{{ url_for('projects.project_dashboard', project_id=project.id) }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition">
             <i class="fas fa-chart-line"></i>
             {{ _('Dashboard') }}
         </a>
+        {% if project.budget_amount %}
+        <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition shadow-lg">
+            <i class="fas fa-wallet"></i>
+            {{ _('Budget Analysis') }}
+        </a>
+        {% endif %}
         {% if current_user.is_admin or has_permission('edit_projects') %}
-        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Project') }}</a>
+        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0 transition">{{ _('Edit Project') }}</a>
         {% endif %}
         {% if current_user.is_admin or has_permission('edit_projects') %}
         {% if project.status == 'active' %}
@@ -114,6 +120,91 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Budget Overview Card -->
+        {% if project.budget_amount %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold flex items-center">
+                    <i class="fas fa-wallet mr-2 text-green-500"></i>
+                    {{ _('Budget Overview') }}
+                </h2>
+                <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
+                   class="text-primary hover:text-primary-dark text-sm flex items-center gap-1 transition">
+                    {{ _('Details') }} <i class="fas fa-arrow-right text-xs"></i>
+                </a>
+            </div>
+            
+            {% set consumed_amount = project.budget_consumed_amount|float if project.budget_consumed_amount else 0.0 %}
+            {% set budget_amt = project.budget_amount|float %}
+            {% set remaining = budget_amt - consumed_amount %}
+            {% set percentage = (consumed_amount / budget_amt * 100) if budget_amt > 0 else 0 %}
+            {% set threshold = project.budget_threshold_percent or 80 %}
+            
+            <!-- Budget Progress Bar -->
+            <div class="mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Budget Used') }}</span>
+                    <span class="font-semibold">{{ "%.1f"|format(percentage) }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                    <div class="h-full {% if percentage >= 100 %}bg-gradient-to-r from-red-500 to-pink-600{% elif percentage >= threshold %}bg-gradient-to-r from-yellow-400 to-orange-500{% else %}bg-gradient-to-r from-green-500 to-emerald-600{% endif %} transition-all duration-300 rounded-full"
+                         style="width: {{ [percentage, 100]|min }}%">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Budget Stats Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Budget') }}</div>
+                    <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${{ "%.2f"|format(budget_amt) }}</div>
+                </div>
+                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Consumed') }}</div>
+                    <div class="text-lg font-bold text-amber-600 dark:text-amber-400">${{ "%.2f"|format(consumed_amount) }}</div>
+                </div>
+                <div class="{% if remaining >= 0 %}bg-green-50 dark:bg-green-900/20{% else %}bg-red-50 dark:bg-red-900/20{% endif %} p-3 rounded-lg">
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Remaining') }}</div>
+                    <div class="text-lg font-bold {% if remaining >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                        ${{ "%.2f"|format(remaining|abs) }}
+                        {% if remaining < 0 %}<span class="text-xs">{{ _('over') }}</span>{% endif %}
+                    </div>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Status') }}</div>
+                    <div class="flex items-center gap-1">
+                        {% if percentage >= 100 %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ _('Over') }}
+                        </span>
+                        {% elif percentage >= threshold %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>{{ _('Critical') }}
+                        </span>
+                        {% elif percentage >= (threshold * 0.8) %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                            <i class="fas fa-info-circle mr-1"></i>{{ _('Warning') }}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                            <i class="fas fa-check-circle mr-1"></i>{{ _('Healthy') }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Action Button -->
+            <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+                <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
+                   class="block w-full text-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg transition shadow-md hover:shadow-lg">
+                    <i class="fas fa-chart-line mr-2"></i>{{ _('View Full Budget Analysis') }}
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h2 class="text-lg font-semibold mb-4">User Contributions</h2>
             <ul>
