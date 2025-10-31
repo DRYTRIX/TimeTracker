@@ -1437,33 +1437,6 @@ def get_activity_stats():
         'period_days': days
     })
 
-@api_bp.route('/api/templates/<int:template_id>')
-@login_required
-def get_template(template_id):
-    """Get a time entry template by ID"""
-    template = TimeEntryTemplate.query.get_or_404(template_id)
-    
-    # Check permissions
-    if template.user_id != current_user.id:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    return jsonify(template.to_dict())
-
-@api_bp.route('/api/templates/<int:template_id>/use', methods=['POST'])
-@login_required
-def mark_template_used(template_id):
-    """Mark a template as used (updates last_used_at)"""
-    template = TimeEntryTemplate.query.get_or_404(template_id)
-    
-    # Check permissions
-    if template.user_id != current_user.id:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    template.last_used_at = datetime.utcnow()
-    db.session.commit()
-    
-    return jsonify({'success': True})
-
 # WebSocket event handlers
 @socketio.on('connect')
 def handle_connect():

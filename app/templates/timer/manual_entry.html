@@ -156,32 +156,35 @@ document.addEventListener('DOMContentLoaded', async function(){
     }
 
     // Apply Time Entry Template if provided via sessionStorage or query param
-    try {
-        let tpl = null;
-        const raw = sessionStorage.getItem('activeTemplate');
-        if (raw) {
-            try { tpl = JSON.parse(raw); } catch(_) { tpl = null; }
-        }
-        if (!tpl) {
-            const params = new URLSearchParams(window.location.search);
-            const tplId = params.get('template');
-            if (tplId) {
-                try {
-                    const resp = await fetch(`/api/templates/${tplId}`);
-                    if (resp.ok) tpl = await resp.json();
-                } catch(_) {}
+    // Skip template application when duplicating an entry to preserve the original entry's task
+    const isDuplicating = {{ 'true' if is_duplicate else 'false' }};
+    if (!isDuplicating) {
+        try {
+            let tpl = null;
+            const raw = sessionStorage.getItem('activeTemplate');
+            if (raw) {
+                try { tpl = JSON.parse(raw); } catch(_) { tpl = null; }
             }
-        }
-        if (tpl && typeof tpl === 'object') {
-            // Preselect project and task
-            if (tpl.project_id && projectSelect) {
-                projectSelect.value = String(tpl.project_id);
-                // Preselect task after load
-                if (taskSelect) {
-                    taskSelect.setAttribute('data-selected-task-id', tpl.task_id ? String(tpl.task_id) : '');
+            if (!tpl) {
+                const params = new URLSearchParams(window.location.search);
+                const tplId = params.get('template');
+                if (tplId) {
+                    try {
+                        const resp = await fetch(`/api/templates/${tplId}`);
+                        if (resp.ok) tpl = await resp.json();
+                    } catch(_) {}
                 }
-                await loadTasks(projectSelect.value);
             }
+            if (tpl && typeof tpl === 'object') {
+                // Preselect project and task
+                if (tpl.project_id && projectSelect) {
+                    projectSelect.value = String(tpl.project_id);
+                    // Preselect task after load
+                    if (taskSelect) {
+                        taskSelect.setAttribute('data-selected-task-id', tpl.task_id ? String(tpl.task_id) : '');
+                    }
+                    await loadTasks(projectSelect.value);
+                }
 
             // Notes, tags, billable
             const notes = document.getElementById('notes');
@@ -217,10 +220,11 @@ document.addEventListener('DOMContentLoaded', async function(){
                 }
             }
 
-            // Clear after applying so it does not persist
-            try { sessionStorage.removeItem('activeTemplate'); } catch(_) {}
-        }
-    } catch(_) {}
+                // Clear after applying so it does not persist
+                try { sessionStorage.removeItem('activeTemplate'); } catch(_) {}
+            }
+        } catch(_) {}
+    }
 });
 </script>
 {% endblock %}
