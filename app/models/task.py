@@ -26,7 +26,7 @@ class Task(db.Model):
     # project relationship is defined via backref in Project model
     assigned_user = db.relationship('User', foreign_keys=[assigned_to], backref='assigned_tasks')
     creator = db.relationship('User', foreign_keys=[created_by], backref='created_tasks')
-    time_entries = db.relationship('TimeEntry', backref='task', lazy='dynamic')
+    time_entries = db.relationship('TimeEntry', backref='task', lazy='dynamic', passive_deletes=True)
     # comments relationship is defined via backref in Comment model
     
     def __init__(self, project_id, name, description=None, priority='medium', estimated_hours=None, 
