@@ -1,10 +1,19 @@
 {% extends "base.html" %}
 {% from "components/cards.html" import info_card %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Reports</h1>
-</div>
+{% set breadcrumbs = [
+    {'text': 'Reports'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-chart-bar',
+    title_text='Reports',
+    subtitle_text='View comprehensive reports and analytics for your time tracking data',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     {{ info_card("Total Hours", "%.2f"|format(summary.total_hours), "All time") }}

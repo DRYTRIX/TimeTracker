@@ -99,10 +99,11 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') %}
-                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') or ep.startswith('weekly_goals.') %}
+                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or ep.startswith('per_diem.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
-                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) %}
+                {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -117,12 +118,6 @@
                         </a>
                     </li>
                     <li class="mt-2">
-                        <a href="{{ url_for('weekly_goals.index') }}" class="flex items-center p-2 rounded-lg {% if ep.startswith('weekly_goals.') %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
-                            <i class="fas fa-bullseye w-6 text-center"></i>
-                            <span class="ml-3 sidebar-label">{{ _('Weekly Goals') }}</span>
-                        </a>
-                    </li>
-                    <li class="mt-2">
                         <a href="{{ url_for('calendar.view_calendar') }}" class="flex items-center p-2 rounded-lg {% if ep.startswith('calendar.') %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-calendar-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Calendar') }}</span>
@@ -131,40 +126,58 @@
                     <li class="mt-2">
                         <button onclick="toggleDropdown('workDropdown')" data-dropdown="workDropdown" class="w-full flex items-center p-2 rounded-lg {% if work_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-briefcase w-6 text-center"></i>
-                            <span class="ml-3 sidebar-label">{{ _('Work') }}</span>
+                            <span class="ml-3 sidebar-label">{{ _('Time Tracking') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                 <ul id="workDropdown" class="{% if not work_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            {% set nav_active_timer = ep.startswith('timer.') %}
                             {% set nav_active_projects = ep.startswith('projects.') %}
                             {% set nav_active_clients = ep.startswith('clients.') %}
                             {% set nav_active_tasks = ep.startswith('tasks.') %}
-                            {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
                             {% set nav_active_kanban = ep.startswith('kanban.') %}
-                            {% set nav_active_timer = ep.startswith('timer.') %}
+                            {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
+                            {% set nav_active_goals = ep.startswith('weekly_goals.') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_projects %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('projects.list_projects') }}">{{ _('Projects') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_timer %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
+                                    <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_clients %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('clients.list_clients') }}">{{ _('Clients') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_projects %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('projects.list_projects') }}">
+                                    <i class="fas fa-folder w-4 mr-2"></i>{{ _('Projects') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_tasks %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('tasks.list_tasks') }}">{{ _('Tasks') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_clients %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('clients.list_clients') }}">
+                                    <i class="fas fa-users w-4 mr-2"></i>{{ _('Clients') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">{{ _('Time Entry Templates') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_tasks %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('tasks.list_tasks') }}">
+                                    <i class="fas fa-tasks w-4 mr-2"></i>{{ _('Tasks') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_kanban %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('kanban.board') }}">{{ _('Kanban') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_kanban %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('kanban.board') }}">
+                                    <i class="fas fa-columns w-4 mr-2"></i>{{ _('Kanban Board') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_timer %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">{{ _('Log Time') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_goals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('weekly_goals.index') }}">
+                                    <i class="fas fa-bullseye w-4 mr-2"></i>{{ _('Weekly Goals') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
+                                    <i class="fas fa-file-lines w-4 mr-2"></i>{{ _('Templates') }}
+                                </a>
                             </li>
                         </ul>
                     </li>
                     <li class="mt-2">
                         <button onclick="toggleDropdown('financeDropdown')" data-dropdown="financeDropdown" class="w-full flex items-center p-2 rounded-lg {% if finance_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-dollar-sign w-6 text-center"></i>
-                            <span class="ml-3 sidebar-label">{{ _('Finance') }}</span>
+                            <span class="ml-3 sidebar-label">{{ _('Finance & Expenses') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                         <ul id="financeDropdown" class="{% if not finance_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
@@ -172,21 +185,43 @@
                             {% set nav_active_invoices = ep.startswith('invoices.') %}
                             {% set nav_active_payments = ep.startswith('payments.') %}
                             {% set nav_active_expenses = ep.startswith('expenses.') %}
+                            {% set nav_active_mileage = ep.startswith('mileage.') %}
+                            {% set nav_active_perdiem = ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates') %}
                             {% set nav_active_budget = ep.startswith('budget_alerts.') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('reports.reports') }}">{{ _('Reports') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('reports.reports') }}">
+                                    <i class="fas fa-chart-bar w-4 mr-2"></i>{{ _('Reports') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">{{ _('Invoices') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
+                                    <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoices') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_payments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payments.list_payments') }}">{{ _('Payments') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_payments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payments.list_payments') }}">
+                                    <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payments') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_expenses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expenses.list_expenses') }}">{{ _('Expenses') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_expenses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expenses.list_expenses') }}">
+                                    <i class="fas fa-receipt w-4 mr-2"></i>{{ _('Expenses') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_budget %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('budget_alerts.budget_dashboard') }}">{{ _('Budget Alerts') }}</a>
+                                <a class="block px-2 py-1 rounded {% if nav_active_mileage %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('mileage.list_mileage') }}">
+                                    <i class="fas fa-car w-4 mr-2"></i>{{ _('Mileage') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_perdiem %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_per_diem') }}">
+                                    <i class="fas fa-utensils w-4 mr-2"></i>{{ _('Per Diem') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_budget %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('budget_alerts.budget_dashboard') }}">
+                                    <i class="fas fa-exclamation-triangle w-4 mr-2"></i>{{ _('Budget Alerts') }}
+                                </a>
                             </li>
                         </ul>
                     </li>
@@ -195,6 +230,27 @@
                             <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Analytics') }}</span>
                         </a>
+                    </li>
+                    <li class="mt-2">
+                        <button onclick="toggleDropdown('toolsDropdown')" data-dropdown="toolsDropdown" class="w-full flex items-center p-2 rounded-lg {% if tools_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                            <i class="fas fa-tools w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Tools & Data') }}</span>
+                            <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
+                        </button>
+                        <ul id="toolsDropdown" class="{% if not tools_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            {% set nav_active_import_export = ep.startswith('import_export.') %}
+                            {% set nav_active_filters = ep.startswith('saved_filters.') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_import_export %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('import_export.import_export_page') }}">
+                                    <i class="fas fa-exchange-alt w-4 mr-2"></i>{{ _('Import / Export') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_filters %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('saved_filters.list_filters') }}">
+                                    <i class="fas fa-filter w-4 mr-2"></i>{{ _('Saved Filters') }}
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     {% if current_user.is_admin or has_any_permission(['view_users', 'manage_settings', 'view_system_info', 'manage_backups']) %}
                     <li class="mt-2">
@@ -205,48 +261,70 @@
                         </button>
                         <ul id="adminDropdown" class="{% if not admin_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.admin_dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.admin_dashboard') }}">{{ _('Dashboard') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.admin_dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.admin_dashboard') }}">
+                                    <i class="fas fa-tachometer-alt w-4 mr-2"></i>{{ _('Admin Dashboard') }}
+                                </a>
                             </li>
                             {% if current_user.is_admin or has_permission('view_users') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.list_users' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_users') }}">{{ _('Users') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.list_users' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_users') }}">
+                                    <i class="fas fa-users-cog w-4 mr-2"></i>{{ _('Users') }}
+                                </a>
                             </li>
                             {% endif %}
                             {% if current_user.is_admin %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">{{ _('API Tokens') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">
+                                    <i class="fas fa-key w-4 mr-2"></i>{{ _('API Tokens') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('permissions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('permissions.list_roles') }}">{{ _('Roles & Permissions') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('permissions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('permissions.list_roles') }}">
+                                    <i class="fas fa-shield-alt w-4 mr-2"></i>{{ _('Roles & Permissions') }}
+                                </a>
                             </li>
                             {% endif %}
                             {% if current_user.is_admin or has_permission('manage_settings') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">{{ _('Settings') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">
+                                    <i class="fas fa-sliders-h w-4 mr-2"></i>{{ _('System Settings') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">{{ _('PDF Layout') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
+                                    <i class="fas fa-file-pdf w-4 mr-2"></i>{{ _('PDF Layout') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'expense_categories.list_categories' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expense_categories.list_categories') }}">{{ _('Expense Categories') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'expense_categories.list_categories' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expense_categories.list_categories') }}">
+                                    <i class="fas fa-tags w-4 mr-2"></i>{{ _('Expense Categories') }}
+                                </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'per_diem.list_rates' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_rates') }}">{{ _('Per Diem Rates') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'per_diem.list_rates' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_rates') }}">
+                                    <i class="fas fa-list-ul w-4 mr-2"></i>{{ _('Per Diem Rates') }}
+                                </a>
                             </li>
                             {% endif %}
                             {% if current_user.is_admin or has_permission('view_system_info') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.system_info' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.system_info') }}">{{ _('System Info') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.system_info' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.system_info') }}">
+                                    <i class="fas fa-info-circle w-4 mr-2"></i>{{ _('System Info') }}
+                                </a>
                             </li>
                             {% endif %}
                             {% if current_user.is_admin or has_permission('manage_backups') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.backups_management' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.backups_management') }}">{{ _('Backups') }}</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.backups_management' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.backups_management') }}">
+                                    <i class="fas fa-database w-4 mr-2"></i>{{ _('Backups') }}
+                                </a>
                     </li>
                     {% endif %}
                     {% if current_user.is_admin or has_permission('manage_oidc') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.oidc_debug' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.oidc_debug') }}">OIDC</a>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.oidc_debug' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.oidc_debug') }}">
+                                    <i class="fas fa-lock w-4 mr-2"></i>{{ _('OIDC Settings') }}
+                                </a>
                             </li>
                             {% endif %}
                         </ul>
@@ -359,8 +437,8 @@
                                 <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ current_user.display_name if current_user.is_authenticated else _('Guest') }}</div>
                                 <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ current_user.email if current_user.is_authenticated else '' }}</div>
                             </li>
-                            <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('Profile') }}</a></li>
-                            <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('Settings') }}</a></li>
+                            <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('My Profile') }}</a></li>
+                            <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('My Settings') }}</a></li>
                             <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
                         </ul>
                     </div>

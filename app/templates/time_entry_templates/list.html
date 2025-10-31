@@ -1,20 +1,20 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block title %}Time Entry Templates - {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Time Entry Templates</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">Create reusable templates for quick time entries</p>
-        </div>
-        <a href="{{ url_for('time_entry_templates.create_template') }}" 
-           class="btn btn-primary">
-            <i class="fas fa-plus mr-2"></i> New Template
-        </a>
-    </div>
+{% set breadcrumbs = [
+    {'text': 'Time Entry Templates'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-lines',
+    title_text='Time Entry Templates',
+    subtitle_text='Create reusable templates for quick time entries',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("time_entry_templates.create_template") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Template</a>'
+) }}
 
     {% if templates %}
     <!-- Templates Grid -->

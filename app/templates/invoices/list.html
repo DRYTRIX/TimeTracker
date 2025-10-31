@@ -1,16 +1,23 @@
 {% extends "base.html" %}
 {% from "components/cards.html" import info_card %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Invoices</h1>
-    <div class="flex gap-2">
-        <a href="{{ url_for('invoices.export_invoices_excel') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
-            <i class="fas fa-file-excel mr-2"></i>Export to Excel
-        </a>
-        <a href="{{ url_for('invoices.create_invoice') }}" class="bg-primary text-white px-4 py-2 rounded-lg">Create Invoice</a>
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': 'Invoices'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-invoice',
+    title_text='Invoices',
+    subtitle_text='Create and manage invoices for your clients',
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<div class="flex gap-2">'
+        +   '<a href="' + url_for("invoices.export_invoices_excel") + '" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center"><i class="fas fa-file-excel mr-2"></i>Export to Excel</a>'
+        +   '<a href="' + url_for("invoices.create_invoice") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Invoice</a>'
+        + '</div>'
+) }}
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     {{ info_card("Total Invoiced", "%.2f"|format(summary.total_amount), "All time") }}
