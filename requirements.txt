@@ -71,3 +71,6 @@ posthog==3.1.0
 flask-swagger-ui==5.21.0
 apispec==6.3.0
 marshmallow==3.20.1
+
+# OCR for receipt scanning
+pytesseract==0.3.10

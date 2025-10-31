@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Mileage', 'url': url_for('mileage.list_mileage')},
+    {'text': 'Mileage #' + mileage.id|string}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-car',
+    title_text='Mileage Entry #' + mileage.id|string,
+    subtitle_text=mileage.purpose,
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("mileage.edit_mileage", mileage_id=mileage.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>Edit</a>' if current_user.is_admin or mileage.user_id == current_user.id else ''
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Trip Details -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-route mr-2"></i>Trip Details
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Trip Date</p>
+                    <p class="font-semibold">{{ mileage.trip_date.strftime('%Y-%m-%d') if mileage.trip_date else (mileage.date.strftime('%Y-%m-%d') if mileage.date else '-') }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">User</p>
+                    <p class="font-semibold">{{ mileage.user.full_name if mileage.user and mileage.user.full_name else (mileage.user.username if mileage.user else '-') }}</p>
+                </div>
+                
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Purpose</p>
+                    <p class="font-semibold">{{ mileage.purpose }}</p>
+                </div>
+                
+                {% if mileage.description %}
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Description</p>
+                    <p class="font-semibold">{{ mileage.description }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Route</p>
+                    <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-map-marker-alt text-green-500 mr-2"></i>
+                                <span class="font-semibold">{{ mileage.start_location }}</span>
+                            </div>
+                            <div class="flex items-center ml-1">
+                                <i class="fas fa-arrow-down text-gray-400 text-sm mr-2"></i>
+                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ '%.2f'|format(mileage.distance_km) }} km</span>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <i class="fas fa-map-marker-alt text-red-500 mr-2"></i>
+                                <span class="font-semibold">{{ mileage.end_location }}</span>
+                            </div>
+                        </div>
+                        {% if mileage.is_round_trip %}
+                        <div class="ml-4 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-semibold">
+                            Round Trip
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Distance</p>
+                    <p class="font-semibold text-lg">{{ '%.2f'|format(mileage.distance_km) }} km</p>
+                    {% if mileage.is_round_trip %}
+                    <p class="text-xs text-gray-500">Total: {{ '%.2f'|format(mileage.distance_km * 2) }} km</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Rate per km</p>
+                    <p class="font-semibold text-lg">{{ mileage.currency_code or 'EUR' }} {{ '%.2f'|format(mileage.rate_per_km) }}</p>
+                </div>
+                
+                <div class="col-span-2 mt-2">
+                    <div class="p-4 bg-primary/10 rounded-lg">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Amount</p>
+                        <p class="font-bold text-2xl text-primary">{{ mileage.currency_code or 'EUR' }} {{ '%.2f'|format(mileage.total_amount or (mileage.calculated_amount or 0)) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vehicle Information -->
+        {% if mileage.vehicle_type or mileage.vehicle_description or mileage.license_plate %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-car mr-2"></i>Vehicle Information
+            </h3>
+            
+            <div class="grid grid-cols-3 gap-4">
+                {% if mileage.vehicle_type %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Type</p>
+                    <p class="font-semibold">{{ mileage.vehicle_type|title }}</p>
+                </div>
+                {% endif %}
+                
+                {% if mileage.vehicle_description %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Make/Model</p>
+                    <p class="font-semibold">{{ mileage.vehicle_description }}</p>
+                </div>
+                {% endif %}
+                
+                {% if mileage.license_plate %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">License Plate</p>
+                    <p class="font-semibold">{{ mileage.license_plate }}</p>
+                </div>
+                {% endif %}
+                
+                {% if mileage.start_odometer and mileage.end_odometer %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Start Odometer</p>
+                    <p class="font-semibold">{{ mileage.start_odometer }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">End Odometer</p>
+                    <p class="font-semibold">{{ mileage.end_odometer }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Association -->
+        {% if mileage.project or mileage.client %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-project-diagram mr-2"></i>Association
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+                {% if mileage.project %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Project</p>
+                    <a href="{{ url_for('projects.view_project', project_id=mileage.project_id) }}" class="text-primary hover:underline font-semibold">
+                        {{ mileage.project.name }}
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if mileage.client %}
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Client</p>
+                    <a href="{{ url_for('clients.view_client', client_id=mileage.client_id) }}" class="text-primary hover:underline font-semibold">
+                        {{ mileage.client.name }}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Notes -->
+        {% if mileage.notes %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-sticky-note mr-2"></i>Notes
+            </h3>
+            <p class="text-gray-700 dark:text-gray-300">{{ mileage.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Status -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Status
+            </h3>
+            
+            <div class="mb-4">
+                {% if mileage.status == 'pending' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-semibold">
+                    <i class="fas fa-clock mr-1"></i>Pending Approval
+                </span>
+                {% elif mileage.status == 'approved' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 font-semibold">
+                    <i class="fas fa-check-circle mr-1"></i>Approved
+                </span>
+                {% elif mileage.status == 'rejected' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 font-semibold">
+                    <i class="fas fa-times-circle mr-1"></i>Rejected
+                </span>
+                {% elif mileage.status == 'reimbursed' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-semibold">
+                    <i class="fas fa-money-bill mr-1"></i>Reimbursed
+                </span>
+                {% endif %}
+            </div>
+            
+            {% if mileage.approved_by %}
+            <div class="mt-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{% if mileage.status == 'approved' %}Approved By{% else %}Reviewed By{% endif %}</p>
+                <p class="font-semibold">{{ mileage.approver.full_name if mileage.approver and mileage.approver.full_name else (mileage.approver.username if mileage.approver else '-') }}</p>
+                {% if mileage.approved_at %}
+                <p class="text-xs text-gray-500 mt-1">{{ mileage.approved_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if mileage.status == 'rejected' and mileage.rejection_reason %}
+            <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <p class="text-sm text-red-800 dark:text-red-200">
+                    <strong>Rejection Reason:</strong><br>
+                    {{ mileage.rejection_reason }}
+                </p>
+            </div>
+            {% endif %}
+            
+            {% if mileage.approval_notes %}
+            <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Approval Notes:</strong><br>
+                    {{ mileage.approval_notes }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Actions for Admin -->
+        {% if current_user.is_admin and mileage.status == 'pending' %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-gavel mr-2"></i>Admin Actions
+            </h3>
+            
+            <form method="POST" action="{{ url_for('mileage.approve_mileage', mileage_id=mileage.id) }}" class="mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <textarea name="approval_notes" placeholder="Optional approval notes..." rows="2" 
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-2 text-sm dark:bg-gray-700"></textarea>
+                <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>Approve
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('mileage.reject_mileage', mileage_id=mileage.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <textarea name="rejection_reason" placeholder="Rejection reason (required)" rows="2" required
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-2 text-sm dark:bg-gray-700"></textarea>
+                <button type="submit" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Reject
+                </button>
+            </form>
+        </div>
+        {% endif %}
+        
+        {% if current_user.is_admin and mileage.status == 'approved' %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-money-bill mr-2"></i>Reimbursement
+            </h3>
+            
+            <form method="POST" action="{{ url_for('mileage.mark_reimbursed', mileage_id=mileage.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>Mark as Reimbursed
+                </button>
+            </form>
+        </div>
+        {% endif %}
+        
+        <!-- Metadata -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-clock mr-2"></i>Metadata
+            </h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Created</p>
+                    <p class="font-semibold text-sm">{{ mileage.created_at.strftime('%Y-%m-%d %H:%M') if mileage.created_at else '-' }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Last Updated</p>
+                    <p class="font-semibold text-sm">{{ mileage.updated_at.strftime('%Y-%m-%d %H:%M') if mileage.updated_at else '-' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

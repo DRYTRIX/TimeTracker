@@ -102,7 +102,7 @@
                 {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
-                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -222,6 +222,12 @@
                             </li>
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">{{ _('PDF Layout') }}</a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'expense_categories.list_categories' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expense_categories.list_categories') }}">{{ _('Expense Categories') }}</a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'per_diem.list_rates' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_rates') }}">{{ _('Per Diem Rates') }}</a>
                             </li>
                             {% endif %}
                             {% if current_user.is_admin or has_permission('view_system_info') %}

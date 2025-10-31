@@ -6,10 +6,12 @@ from app.models import Expense, Project, Client, User
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app.utils.db import safe_commit
+from app.utils.ocr import scan_receipt, get_suggested_expense_data, is_ocr_available
 import csv
 import io
 import os
 from werkzeug.utils import secure_filename
+import json
 
 expenses_bp = Blueprint('expenses', __name__)
 
@@ -882,4 +884,265 @@ def api_get_expense(expense_id):
         return jsonify({'error': 'Permission denied'}), 403
     
     return jsonify(expense.to_dict())
+
+
+@expenses_bp.route('/api/expenses/scan-receipt', methods=['POST'])
+@login_required
+def api_scan_receipt():
+    """API endpoint to scan a receipt image using OCR"""
+    if not is_ocr_available():
+        return jsonify({
+            'error': 'OCR not available',
+            'message': 'Please install Tesseract OCR and pytesseract'
+        }), 503
+    
+    # Check if file is in request
+    if 'receipt_file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['receipt_file']
+    
+    if not file or not file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type'}), 400
+    
+    try:
+        # Save file temporarily
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"temp_{timestamp}_{filename}"
+        
+        temp_dir = os.path.join(current_app.root_path, '..', 'uploads', 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_path = os.path.join(temp_dir, filename)
+        file.save(temp_path)
+        
+        # Scan receipt
+        ocr_lang = request.form.get('lang', 'eng')
+        receipt_data = scan_receipt(temp_path, lang=ocr_lang)
+        
+        # Get suggested expense data
+        suggestions = get_suggested_expense_data(receipt_data)
+        
+        # Clean up temp file
+        try:
+            os.remove(temp_path)
+        except Exception:
+            pass
+        
+        # Log event
+        log_event('receipt_scanned', user_id=current_user.id)
+        track_event(current_user.id, 'receipt.scanned', {
+            'has_amount': bool(receipt_data.get('total')),
+            'has_vendor': bool(receipt_data.get('vendor')),
+            'has_date': bool(receipt_data.get('date'))
+        })
+        
+        return jsonify({
+            'success': True,
+            'receipt_data': receipt_data,
+            'suggestions': suggestions
+        })
+    
+    except Exception as e:
+        current_app.logger.error(f"Error scanning receipt: {e}")
+        return jsonify({
+            'error': 'Failed to scan receipt',
+            'message': str(e)
+        }), 500
+
+
+@expenses_bp.route('/expenses/scan-receipt', methods=['GET', 'POST'])
+@login_required
+def scan_receipt_page():
+    """Page for scanning receipts with OCR"""
+    if request.method == 'GET':
+        return render_template('expenses/scan_receipt.html', ocr_available=is_ocr_available())
+    
+    # POST - handle receipt scanning
+    if not is_ocr_available():
+        flash(_('OCR is not available. Please contact your administrator.'), 'error')
+        return redirect(url_for('expenses.scan_receipt_page'))
+    
+    if 'receipt_file' not in request.files:
+        flash(_('No file provided'), 'error')
+        return redirect(url_for('expenses.scan_receipt_page'))
+    
+    file = request.files['receipt_file']
+    
+    if not file or not file.filename:
+        flash(_('No file selected'), 'error')
+        return redirect(url_for('expenses.scan_receipt_page'))
+    
+    if not allowed_file(file.filename):
+        flash(_('Invalid file type. Allowed types: png, jpg, jpeg, gif, pdf'), 'error')
+        return redirect(url_for('expenses.scan_receipt_page'))
+    
+    try:
+        # Save file temporarily
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        temp_filename = f"temp_{timestamp}_{filename}"
+        
+        temp_dir = os.path.join(current_app.root_path, '..', 'uploads', 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_path = os.path.join(temp_dir, temp_filename)
+        file.save(temp_path)
+        
+        # Scan receipt
+        ocr_lang = request.form.get('lang', 'eng')
+        receipt_data = scan_receipt(temp_path, lang=ocr_lang)
+        
+        # Get suggested expense data
+        suggestions = get_suggested_expense_data(receipt_data)
+        
+        # Save receipt permanently
+        filename = f"{timestamp}_{filename}"
+        upload_dir = os.path.join(current_app.root_path, '..', UPLOAD_FOLDER)
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        permanent_path = os.path.join(upload_dir, filename)
+        os.rename(temp_path, permanent_path)
+        
+        receipt_path = os.path.join(UPLOAD_FOLDER, filename)
+        
+        # Store OCR data in session for use in expense creation
+        from flask import session
+        session['scanned_receipt'] = {
+            'receipt_path': receipt_path,
+            'receipt_data': receipt_data,
+            'suggestions': suggestions
+        }
+        
+        # Log event
+        log_event('receipt_scanned', user_id=current_user.id)
+        track_event(current_user.id, 'receipt.scanned', {
+            'has_amount': bool(receipt_data.get('total')),
+            'has_vendor': bool(receipt_data.get('vendor')),
+            'has_date': bool(receipt_data.get('date'))
+        })
+        
+        flash(_('Receipt scanned successfully! You can now create an expense with the extracted data.'), 'success')
+        return redirect(url_for('expenses.create_expense_from_scan'))
+    
+    except Exception as e:
+        current_app.logger.error(f"Error scanning receipt: {e}")
+        flash(_('Error scanning receipt. Please try again or enter the expense manually.'), 'error')
+        return redirect(url_for('expenses.scan_receipt_page'))
+
+
+@expenses_bp.route('/expenses/create-from-scan', methods=['GET', 'POST'])
+@login_required
+def create_expense_from_scan():
+    """Create expense from scanned receipt data"""
+    from flask import session
+    
+    scanned_data = session.get('scanned_receipt')
+    
+    if not scanned_data:
+        flash(_('No scanned receipt data found. Please scan a receipt first.'), 'error')
+        return redirect(url_for('expenses.scan_receipt_page'))
+    
+    if request.method == 'GET':
+        # Get data for form
+        projects = Project.query.filter_by(status='active').order_by(Project.name).all()
+        clients = Client.get_active_clients()
+        categories = Expense.get_expense_categories()
+        payment_methods = Expense.get_payment_methods()
+        
+        return render_template(
+            'expenses/create_from_scan.html',
+            expense=None,
+            projects=projects,
+            clients=clients,
+            categories=categories,
+            payment_methods=payment_methods,
+            suggestions=scanned_data.get('suggestions', {}),
+            receipt_data=scanned_data.get('receipt_data', {})
+        )
+    
+    # POST - create the expense
+    try:
+        # Get form data (similar to create_expense)
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+        amount = request.form.get('amount', '0').strip()
+        currency_code = request.form.get('currency_code', 'EUR').strip()
+        tax_amount = request.form.get('tax_amount', '0').strip()
+        expense_date = request.form.get('expense_date', '').strip()
+        
+        # Validate required fields
+        if not all([title, category, amount, expense_date]):
+            flash(_('Please fill in all required fields'), 'error')
+            return redirect(url_for('expenses.create_expense_from_scan'))
+        
+        # Parse date
+        try:
+            expense_date_obj = datetime.strptime(expense_date, '%Y-%m-%d').date()
+        except ValueError:
+            flash(_('Invalid date format'), 'error')
+            return redirect(url_for('expenses.create_expense_from_scan'))
+        
+        # Parse amounts
+        try:
+            amount_decimal = Decimal(amount)
+            tax_amount_decimal = Decimal(tax_amount) if tax_amount else Decimal('0')
+        except (ValueError, Decimal.InvalidOperation):
+            flash(_('Invalid amount format'), 'error')
+            return redirect(url_for('expenses.create_expense_from_scan'))
+        
+        # Create expense with OCR data
+        expense = Expense(
+            user_id=current_user.id,
+            title=title,
+            category=category,
+            amount=amount_decimal,
+            expense_date=expense_date_obj,
+            description=description,
+            currency_code=currency_code,
+            tax_amount=tax_amount_decimal,
+            project_id=request.form.get('project_id', type=int),
+            client_id=request.form.get('client_id', type=int),
+            payment_method=request.form.get('payment_method', '').strip(),
+            vendor=request.form.get('vendor', '').strip(),
+            receipt_number=request.form.get('receipt_number', '').strip(),
+            receipt_path=scanned_data.get('receipt_path'),
+            notes=request.form.get('notes', '').strip(),
+            tags=request.form.get('tags', '').strip(),
+            billable=request.form.get('billable') == 'on',
+            reimbursable=request.form.get('reimbursable') == 'on'
+        )
+        
+        # Store OCR data as JSON
+        if scanned_data.get('receipt_data'):
+            # expense.ocr_data = json.dumps(scanned_data['receipt_data'])  # Uncomment after migration
+            pass
+        
+        db.session.add(expense)
+        
+        if safe_commit(db):
+            # Clear scanned data from session
+            session.pop('scanned_receipt', None)
+            
+            flash(_('Expense created successfully from scanned receipt'), 'success')
+            log_event('expense_created_from_scan', user_id=current_user.id, expense_id=expense.id)
+            track_event(current_user.id, 'expense.created_from_scan', {
+                'expense_id': expense.id,
+                'category': category,
+                'amount': float(amount_decimal)
+            })
+            return redirect(url_for('expenses.view_expense', expense_id=expense.id))
+        else:
+            flash(_('Error creating expense'), 'error')
+            return redirect(url_for('expenses.create_expense_from_scan'))
+    
+    except Exception as e:
+        current_app.logger.error(f"Error creating expense from scan: {e}")
+        flash(_('Error creating expense'), 'error')
+        return redirect(url_for('expenses.create_expense_from_scan'))
 
