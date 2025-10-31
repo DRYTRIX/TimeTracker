@@ -18,7 +18,7 @@ class TimeEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False, index=True)
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id', ondelete='SET NULL'), nullable=True, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True, index=True)
     start_time = db.Column(db.DateTime, nullable=False, index=True)
     end_time = db.Column(db.DateTime, nullable=True, index=True)
     duration_seconds = db.Column(db.Integer, nullable=True)
