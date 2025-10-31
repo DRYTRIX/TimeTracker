@@ -63,7 +63,8 @@ def test_resume_timer_with_task(app, user, project):
             name="Test Task",
             project_id=project.id,
             status='in_progress',
-            priority='medium'
+            priority='medium',
+            created_by=user.id
         )
         db.session.add(task)
         db.session.commit()
@@ -224,11 +225,8 @@ def test_resume_timer_blocks_if_active_timer_exists(client, user, project):
 @pytest.mark.routes
 def test_resume_timer_fails_for_archived_project(client, user, project):
     """Test that resume fails if project is archived"""
+    # Set up data in app context
     with client.application.app_context():
-        # Set up authenticated session
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
-        
         # Create a completed time entry
         timer = TimeEntry(
             user_id=user.id,
@@ -245,13 +243,18 @@ def test_resume_timer_fails_for_archived_project(client, user, project):
         # Archive the project
         project.status = 'archived'
         db.session.commit()
-        
-        # Try to resume the timer
-        response = client.get(f'/timer/resume/{timer_id}', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'archived project' in response.data
-        
-        # Verify no new timer was created
+    
+    # Set up authenticated session
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+    
+    # Try to resume the timer (this creates a new context and session)
+    response = client.get(f'/timer/resume/{timer_id}', follow_redirects=True)
+    assert response.status_code == 200
+    assert b'archived project' in response.data
+    
+    # Verify no new timer was created
+    with client.application.app_context():
         active_timers = TimeEntry.query.filter_by(
             user_id=user.id,
             end_time=None
@@ -304,17 +307,15 @@ def test_resume_timer_permission_check(client, user, project):
 @pytest.mark.routes
 def test_resume_timer_handles_deleted_task(client, user, project):
     """Test that resume works even if task was deleted"""
+    # Set up data in app context
     with client.application.app_context():
-        # Set up authenticated session
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
-        
         # Create a task
         task = Task(
             name="Temporary Task",
             project_id=project.id,
             status='in_progress',
-            priority='medium'
+            priority='medium',
+            created_by=user.id
         )
         db.session.add(task)
         db.session.commit()
@@ -337,12 +338,17 @@ def test_resume_timer_handles_deleted_task(client, user, project):
         # Delete the task
         db.session.delete(task)
         db.session.commit()
-        
-        # Resume the timer (should work without task)
-        response = client.get(f'/timer/resume/{timer_id}', follow_redirects=True)
-        assert response.status_code == 200
-        
-        # Verify new timer was created without task
+    
+    # Set up authenticated session
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+    
+    # Resume the timer (should work without task)
+    response = client.get(f'/timer/resume/{timer_id}', follow_redirects=True)
+    assert response.status_code == 200
+    
+    # Verify new timer was created without task
+    with client.application.app_context():
         active_timer = TimeEntry.query.filter_by(
             user_id=user.id,
             end_time=None
