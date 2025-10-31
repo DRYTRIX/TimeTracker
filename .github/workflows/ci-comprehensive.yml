@@ -283,13 +283,13 @@ jobs:
             -e FLASK_ENV="development" \
             timetracker-test:pr-${{ github.event.pull_request.number || 'dev' }}
           
-          # Wait for container to be ready
-          for i in {1..30}; do
+          # Wait for container to be ready (increased timeout for migrations)
+          for i in {1..60}; do
             if curl -f http://localhost:8080/_health >/dev/null 2>&1; then
               echo "✅ Container health check passed"
               break
             fi
-            echo "⏳ Waiting for container... ($i/30)"
+            echo "⏳ Waiting for container... ($i/60)"
             sleep 2
           done
           
