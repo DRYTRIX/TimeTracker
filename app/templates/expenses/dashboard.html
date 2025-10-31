@@ -57,10 +57,10 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                <p class="text-3xl font-bold text-green-600">{{ '€%.2f'|format(total_amount) }}</p>
+                <p class="text-3xl font-bold text-green-600">{{ currency|currency_symbol }}{{ '%.2f'|format(total_amount) }}</p>
             </div>
             <div class="text-green-500 text-4xl">
-                <i class="fas fa-euro-sign"></i>
+                <i class="fas {{ currency|currency_icon }}"></i>
             </div>
         </div>
     </div>
@@ -148,7 +148,7 @@
                         <span class="text-sm font-medium">{{ stat.category|title }}</span>
                     </div>
                     <div class="text-right">
-                        <div class="font-bold">{{ '€%.2f'|format(stat.total_amount) }}</div>
+                        <div class="font-bold">{{ currency|currency_symbol }}{{ '%.2f'|format(stat.total_amount) }}</div>
                         <div class="text-xs text-gray-500">{{ stat.count }} items</div>
                     </div>
                 </div>
