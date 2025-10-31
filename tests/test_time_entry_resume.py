@@ -141,8 +141,9 @@ def test_resume_timer_without_task(app, user, project):
 def test_resume_timer_route(client, user, project):
     """Test the resume timer route"""
     with client.application.app_context():
-        # Login
-        client.post('/auth/login', data={'username': user.username}, follow_redirects=True)
+        # Set up authenticated session
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user.id)
         
         # Create a completed time entry
         original_timer = TimeEntry(
@@ -183,8 +184,9 @@ def test_resume_timer_route(client, user, project):
 def test_resume_timer_blocks_if_active_timer_exists(client, user, project):
     """Test that resume is blocked if user already has an active timer"""
     with client.application.app_context():
-        # Login
-        client.post('/auth/login', data={'username': user.username}, follow_redirects=True)
+        # Set up authenticated session
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user.id)
         
         # Create a completed time entry
         completed_timer = TimeEntry(
@@ -223,8 +225,9 @@ def test_resume_timer_blocks_if_active_timer_exists(client, user, project):
 def test_resume_timer_fails_for_archived_project(client, user, project):
     """Test that resume fails if project is archived"""
     with client.application.app_context():
-        # Login
-        client.post('/auth/login', data={'username': user.username}, follow_redirects=True)
+        # Set up authenticated session
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user.id)
         
         # Create a completed time entry
         timer = TimeEntry(
@@ -263,6 +266,7 @@ def test_resume_timer_permission_check(client, user, project):
     with client.application.app_context():
         # Create another user
         other_user = User(username='otheruser', role='user')
+        other_user.is_active = True  # Set after creation
         db.session.add(other_user)
         db.session.commit()
         
@@ -279,8 +283,9 @@ def test_resume_timer_permission_check(client, user, project):
         db.session.commit()
         timer_id = other_timer.id
         
-        # Login as first user
-        client.post('/auth/login', data={'username': user.username}, follow_redirects=True)
+        # Set up authenticated session as first user
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user.id)
         
         # Try to resume other user's timer
         response = client.get(f'/timer/resume/{timer_id}', follow_redirects=True)
@@ -300,8 +305,9 @@ def test_resume_timer_permission_check(client, user, project):
 def test_resume_timer_handles_deleted_task(client, user, project):
     """Test that resume works even if task was deleted"""
     with client.application.app_context():
-        # Login
-        client.post('/auth/login', data={'username': user.username}, follow_redirects=True)
+        # Set up authenticated session
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user.id)
         
         # Create a task
         task = Task(
@@ -351,8 +357,9 @@ def test_resume_timer_handles_deleted_task(client, user, project):
 def test_resume_timer_smoke(client, user, project):
     """Smoke test for resume timer functionality"""
     with client.application.app_context():
-        # Login
-        client.post('/auth/login', data={'username': user.username}, follow_redirects=True)
+        # Set up authenticated session
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user.id)
         
         # Create and complete a time entry
         timer = TimeEntry(

@@ -17,7 +17,8 @@ from flask_login import login_user
 @pytest.fixture
 def admin_user(app):
     """Create an admin user for testing."""
-    user = User(username='admin', role='admin', is_active=True)
+    user = User(username='admin', role='admin')
+    user.is_active = True  # Set after creation
     user.set_password('test123')
     db.session.add(user)
     db.session.commit()
@@ -219,12 +220,6 @@ def test_currency_injected_in_template_context(app, usd_settings):
 @pytest.mark.routes
 def test_reports_page_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_payment):
     """Test that Reports page displays USD symbol instead of hardcoded Euro."""
-    # Log in first
-    response = test_client_with_auth.post('/auth/login', data={
-        'username': 'admin',
-        'password': 'test123'
-    }, follow_redirects=True)
-    
     # Access reports page
     response = test_client_with_auth.get('/reports')
     assert response.status_code == 200
@@ -247,12 +242,6 @@ def test_reports_page_displays_usd(test_client_with_auth, admin_user, usd_settin
 @pytest.mark.routes
 def test_payments_page_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_payment):
     """Test that Payments list page displays USD symbol instead of hardcoded Euro."""
-    # Log in first
-    response = test_client_with_auth.post('/auth/login', data={
-        'username': 'admin',
-        'password': 'test123'
-    }, follow_redirects=True)
-    
     # Access payments page
     response = test_client_with_auth.get('/payments')
     assert response.status_code == 200
@@ -270,12 +259,6 @@ def test_payments_page_displays_usd(test_client_with_auth, admin_user, usd_setti
 @pytest.mark.routes
 def test_expenses_list_page_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_expense):
     """Test that Expenses list page displays USD symbol instead of hardcoded Euro."""
-    # Log in first
-    response = test_client_with_auth.post('/auth/login', data={
-        'username': 'admin',
-        'password': 'test123'
-    }, follow_redirects=True)
-    
     # Access expenses page
     response = test_client_with_auth.get('/expenses')
     assert response.status_code == 200
@@ -293,12 +276,6 @@ def test_expenses_list_page_displays_usd(test_client_with_auth, admin_user, usd_
 @pytest.mark.routes
 def test_expenses_dashboard_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_expense):
     """Test that Expenses dashboard displays USD symbol instead of hardcoded Euro."""
-    # Log in first
-    response = test_client_with_auth.post('/auth/login', data={
-        'username': 'admin',
-        'password': 'test123'
-    }, follow_redirects=True)
-    
     # Access expenses dashboard
     response = test_client_with_auth.get('/expenses/dashboard')
     assert response.status_code == 200
@@ -353,12 +330,6 @@ def test_settings_currency_can_be_changed(app):
 def test_currency_consistency_across_pages(test_client_with_auth, admin_user, usd_settings, 
                                            sample_payment, sample_expense):
     """Test that currency is consistent across all finance pages."""
-    # Log in first
-    response = test_client_with_auth.post('/auth/login', data={
-        'username': 'admin',
-        'password': 'test123'
-    }, follow_redirects=True)
-    
     pages_to_check = [
         '/reports',
         '/payments',
@@ -405,12 +376,6 @@ def test_payments_with_different_currencies(app, test_client_with_auth, admin_us
         
         db.session.add_all([payment_usd, payment_eur])
         db.session.commit()
-        
-        # Log in
-        response = test_client_with_auth.post('/auth/login', data={
-            'username': 'admin',
-            'password': 'test123'
-        }, follow_redirects=True)
         
         # Access payments page
         response = test_client_with_auth.get('/payments')
