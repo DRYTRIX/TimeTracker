@@ -52,15 +52,15 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Export to CSV">
+            <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="Export to CSV">
                 <i class="fas fa-download mr-1"></i> Export
-            </button>
+            </a>
             {% if current_user.is_admin %}
             <div class="relative">
                 <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'projectsBulkMenu')" disabled>

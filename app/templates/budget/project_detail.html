@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+{% from "components/cards.html" import info_card, stat_card %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ project.name }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Budget Analysis & Forecasting') }}</p>
+    </div>
+    <div class="flex gap-2 mt-2 md:mt-0">
+        <a href="{{ url_for('budget_alerts.budget_dashboard') }}" 
+           class="bg-card-light dark:bg-card-dark px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <i class="fas fa-arrow-left"></i> {{ _('Back to Dashboard') }}
+        </a>
+        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+           class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition">
+            <i class="fas fa-eye"></i> {{ _('View Project') }}
+        </a>
+    </div>
+</div>
+
+<!-- Budget Status Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Total Budget -->
+    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            <i class="fas fa-wallet fa-2x opacity-80"></i>
+        </div>
+        <h3 class="text-3xl font-bold">${{ "%.2f"|format(budget_status.budget_amount) }}</h3>
+        <p class="text-sm opacity-90">{{ _('Total Budget') }}</p>
+    </div>
+    
+    <!-- Consumed -->
+    <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            <i class="fas fa-chart-pie fa-2x opacity-80"></i>
+        </div>
+        <h3 class="text-3xl font-bold">${{ "%.2f"|format(budget_status.consumed_amount) }}</h3>
+        <p class="text-sm opacity-90">{{ _('Consumed') }} ({{ "%.1f"|format(budget_status.consumed_percentage) }}%)</p>
+    </div>
+    
+    <!-- Remaining -->
+    <div class="bg-gradient-to-br {% if budget_status.remaining_amount >= 0 %}from-green-500 to-emerald-600{% else %}from-red-500 to-pink-600{% endif %} p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            <i class="fas fa-piggy-bank fa-2x opacity-80"></i>
+        </div>
+        <h3 class="text-3xl font-bold">${{ "%.2f"|format(budget_status.remaining_amount|abs) }}</h3>
+        <p class="text-sm opacity-90">{% if budget_status.remaining_amount >= 0 %}{{ _('Remaining') }}{% else %}{{ _('Over Budget') }}{% endif %}</p>
+    </div>
+    
+    <!-- Status -->
+    <div class="bg-gradient-to-br {% if budget_status.status == 'over_budget' %}from-red-500 to-pink-600{% elif budget_status.status == 'critical' %}from-orange-500 to-amber-600{% elif budget_status.status == 'warning' %}from-yellow-400 to-amber-500{% else %}from-green-500 to-emerald-600{% endif %} p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            {% if budget_status.status == 'over_budget' %}
+            <i class="fas fa-exclamation-circle fa-2x opacity-80"></i>
+            {% elif budget_status.status == 'critical' %}
+            <i class="fas fa-exclamation-triangle fa-2x opacity-80"></i>
+            {% elif budget_status.status == 'warning' %}
+            <i class="fas fa-info-circle fa-2x opacity-80"></i>
+            {% else %}
+            <i class="fas fa-check-circle fa-2x opacity-80"></i>
+            {% endif %}
+        </div>
+        <h3 class="text-2xl font-bold">
+            {% if budget_status.status == 'over_budget' %}{{ _('Over Budget') }}
+            {% elif budget_status.status == 'critical' %}{{ _('Critical') }}
+            {% elif budget_status.status == 'warning' %}{{ _('Warning') }}
+            {% else %}{{ _('Healthy') }}{% endif %}
+        </h3>
+        <p class="text-sm opacity-90">{{ _('Status') }}</p>
+    </div>
+</div>
+
+<!-- Burn Rate & Completion Estimate -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Burn Rate Analysis -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+        <h2 class="text-lg font-semibold mb-4 flex items-center">
+            <i class="fas fa-fire mr-2 text-orange-500"></i>
+            {{ _('Burn Rate Analysis') }}
+        </h2>
+        {% if burn_rate %}
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Daily Burn Rate') }}</h6>
+                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">${{ "%.2f"|format(burn_rate.daily_burn_rate) }}</p>
+            </div>
+            <div class="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg">
+                <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Weekly Burn Rate') }}</h6>
+                <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">${{ "%.2f"|format(burn_rate.weekly_burn_rate) }}</p>
+            </div>
+            <div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Monthly Burn Rate') }}</h6>
+                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">${{ "%.2f"|format(burn_rate.monthly_burn_rate) }}</p>
+            </div>
+            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Period Total') }}</h6>
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">${{ "%.2f"|format(burn_rate.period_total) }}</p>
+            </div>
+        </div>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-4">
+            <i class="far fa-clock mr-1"></i>
+            {{ _('Based on last') }} {{ burn_rate.period_days }} {{ _('days') }}
+        </p>
+        {% else %}
+        <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">
+            <i class="fas fa-info-circle fa-2x mb-2"></i><br>
+            {{ _('No burn rate data available') }}
+        </p>
+        {% endif %}
+    </div>
+    
+    <!-- Completion Estimate -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+        <h2 class="text-lg font-semibold mb-4 flex items-center">
+            <i class="fas fa-calendar-check mr-2 text-green-500"></i>
+            {{ _('Completion Estimate') }}
+        </h2>
+        {% if completion_estimate %}
+            {% if completion_estimate.estimated_completion_date %}
+            <div class="text-center mb-4">
+                <h6 class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Estimated Completion Date') }}</h6>
+                <h2 class="text-3xl font-bold {% if completion_estimate.days_remaining < 30 %}text-red-600 dark:text-red-400{% elif completion_estimate.days_remaining < 60 %}text-yellow-600 dark:text-yellow-400{% else %}text-green-600 dark:text-green-400{% endif %} mb-2">
+                    {{ completion_estimate.estimated_completion_date }}
+                </h2>
+                <p class="text-xl">
+                    <span class="font-semibold">{{ completion_estimate.days_remaining }}</span> 
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('days remaining') }}</span>
+                </p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Confidence Level') }}</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if completion_estimate.confidence == 'high' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400{% elif completion_estimate.confidence == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400{% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                        {{ completion_estimate.confidence|upper }}
+                    </span>
+                </div>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ completion_estimate.message }}</p>
+            </div>
+            {% else %}
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 text-2xl mb-2"></i>
+                <p class="text-sm">{{ completion_estimate.message }}</p>
+            </div>
+            {% endif %}
+        {% else %}
+        <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">
+            <i class="fas fa-info-circle fa-2x mb-2"></i><br>
+            {{ _('No completion estimate available') }}
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Cost Trends Chart -->
+{% if cost_trends and cost_trends.periods %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card mb-6">
+    <h2 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-chart-area mr-2 text-purple-500"></i>
+        {{ _('Cost Trend Analysis') }}
+    </h2>
+    <div class="flex flex-wrap gap-3 mb-4">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {% if cost_trends.trend_direction == 'increasing' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400{% elif cost_trends.trend_direction == 'decreasing' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400{% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+            <i class="fas {% if cost_trends.trend_direction == 'increasing' %}fa-arrow-up{% elif cost_trends.trend_direction == 'decreasing' %}fa-arrow-down{% else %}fa-minus{% endif %} mr-2"></i>
+            {{ _('Trend') }}: {{ cost_trends.trend_direction|upper }}
+        </span>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+            {{ _('Average') }}: ${{ "%.2f"|format(cost_trends.average_cost_per_period) }}
+        </span>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+            {{ _('Change') }}: {{ "%.1f"|format(cost_trends.trend_percentage) }}%
+        </span>
+    </div>
+    <div class="chart-container" style="position: relative; height: 300px;">
+        <canvas id="costTrendChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<!-- Resource Allocation -->
+{% if resource_allocation and resource_allocation.users %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card mb-6">
+    <h2 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-users mr-2 text-cyan-500"></i>
+        {{ _('Resource Allocation') }}
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <h6 class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Hours') }}</h6>
+            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ "%.2f"|format(resource_allocation.total_hours) }}</p>
+        </div>
+        <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+            <h6 class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Cost') }}</h6>
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400">${{ "%.2f"|format(resource_allocation.total_cost) }}</p>
+        </div>
+        <div class="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg">
+            <h6 class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Hourly Rate') }}</h6>
+            <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">${{ "%.2f"|format(resource_allocation.hourly_rate) }}</p>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-4">{{ _('Team Member') }}</th>
+                    <th class="p-4">{{ _('Hours') }}</th>
+                    <th class="p-4">{{ _('Cost') }}</th>
+                    <th class="p-4">{{ _('Hours %') }}</th>
+                    <th class="p-4">{{ _('Cost %') }}</th>
+                    <th class="p-4">{{ _('Entries') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in resource_allocation.users %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                    <td class="p-4">
+                        <strong>{{ user.username }}</strong>
+                    </td>
+                    <td class="p-4">{{ "%.2f"|format(user.hours) }}</td>
+                    <td class="p-4">${{ "%.2f"|format(user.cost) }}</td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-grow bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden" style="min-width: 100px;">
+                                <div class="h-full bg-cyan-500 rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold"
+                                     style="width: {{ user.hours_percentage }}%">
+                                    {{ "%.1f"|format(user.hours_percentage) }}%
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-grow bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden" style="min-width: 100px;">
+                                <div class="h-full bg-green-500 rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold"
+                                     style="width: {{ user.cost_percentage }}%">
+                                    {{ "%.1f"|format(user.cost_percentage) }}%
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            {{ user.entry_count }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Active Alerts for this Project -->
+{% if alerts %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+    <h2 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-bell mr-2 text-red-500"></i>
+        {{ _('Active Alerts') }}
+    </h2>
+    <div class="space-y-3">
+        {% for alert in alerts %}
+        <div id="alert-{{ alert.id }}" class="p-4 rounded-lg border {% if alert.alert_level == 'critical' %}bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700{% elif alert.alert_level == 'warning' %}bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700{% else %}bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700{% endif %}">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-grow">
+                    <div class="flex items-center mb-1">
+                        {% if alert.alert_level == 'critical' %}
+                        <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 mr-2"></i>
+                        {% elif alert.alert_level == 'warning' %}
+                        <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 mr-2"></i>
+                        {% else %}
+                        <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mr-2"></i>
+                        {% endif %}
+                        <h3 class="font-semibold">{{ alert.alert_type|replace('_', ' ')|title }}</h3>
+                    </div>
+                    <p class="text-sm mb-2">{{ alert.message }}</p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                        <i class="far fa-clock mr-1"></i>
+                        {{ _('Created') }}: {{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </p>
+                </div>
+                <button class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition flex-shrink-0 acknowledge-alert" 
+                        data-alert-id="{{ alert.id }}">
+                    <i class="fas fa-check"></i> {{ _('Acknowledge') }}
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Cost Trend Chart
+    {% if cost_trends and cost_trends.periods %}
+    const ctx = document.getElementById('costTrendChart').getContext('2d');
+    
+    // Check if dark mode is enabled
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#9ca3af' : '#6b7280';
+    const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
+    
+    const costTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ cost_trends.periods|map(attribute='period')|list|tojson }},
+            datasets: [{
+                label: '{{ _("Cost") }}',
+                data: {{ cost_trends.periods|map(attribute='cost')|list|tojson }},
+                borderColor: 'rgb(139, 92, 246)',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgb(139, 92, 246)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: textColor,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '{{ _("Cost") }}: $' + context.parsed.y.toFixed(2);
+                        }
+                    },
+                    backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                    titleColor: textColor,
+                    bodyColor: textColor,
+                    borderColor: gridColor,
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        },
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // Acknowledge alert handlers
+    document.querySelectorAll('.acknowledge-alert').forEach(button => {
+        button.addEventListener('click', function() {
+            const alertId = this.dataset.alertId;
+            acknowledgeAlert(alertId);
+        });
+    });
+    
+    function acknowledgeAlert(alertId) {
+        fetch(`/api/budget/alerts/${alertId}/acknowledge`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                // Remove alert from list with animation
+                const alertElement = document.getElementById(`alert-${alertId}`);
+                if (alertElement) {
+                    alertElement.style.opacity = '0';
+                    alertElement.style.transform = 'translateX(20px)';
+                    alertElement.style.transition = 'all 0.3s ease';
+                    setTimeout(() => alertElement.remove(), 300);
+                }
+                
+                // Show success notification
+                showNotification('{{ _("Alert acknowledged successfully") }}', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('{{ _("Failed to acknowledge alert") }}', 'error');
+        });
+    }
+    
+    function showNotification(message, type) {
+        // Create toast notification
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

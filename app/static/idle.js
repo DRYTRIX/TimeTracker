@@ -31,7 +31,7 @@
   async function stopAt(ts){
     try {
       const r = await fetch('/api/timer/stop_at', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stop_time: new Date(ts).toISOString() }) });
-      if (r.ok){ showToast('Timer stopped due to inactivity', 'warning'); location.reload(); }
+      if (r.ok){ showToast(window.i18n?.messages?.timerStoppedInactivity || 'Timer stopped due to inactivity', 'warning'); location.reload(); }
     } catch(e) {}
   }
 

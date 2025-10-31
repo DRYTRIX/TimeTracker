@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">
+                    <i class="fas fa-arrow-left mr-1"></i>{{ _('Back to Project') }}
+                </a>
+            </div>
+            <h1 class="text-3xl font-bold flex items-center gap-2">
+                <i class="fas fa-chart-line text-primary"></i>
+                <span>{{ project.name }}</span>
+                {% if project.code_display %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ project.code_display }}</span>
+                {% endif %}
+            </h1>
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Project Dashboard & Analytics') }}</p>
+        </div>
+        
+        <!-- Actions and Time Period Filter -->
+        <div class="mt-4 md:mt-0 flex gap-3 flex-wrap">
+            {% if project.budget_amount %}
+            <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
+               class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-lg">
+                <i class="fas fa-wallet"></i>
+                {{ _('Budget Analysis') }}
+            </a>
+            {% endif %}
+            <select id="periodFilter" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2" onchange="window.location.href='?period='+this.value">
+                <option value="all" {% if period == 'all' %}selected{% endif %}>{{ _('All Time') }}</option>
+                <option value="week" {% if period == 'week' %}selected{% endif %}>{{ _('Last 7 Days') }}</option>
+                <option value="month" {% if period == 'month' %}selected{% endif %}>{{ _('Last 30 Days') }}</option>
+                <option value="3months" {% if period == '3months' %}selected{% endif %}>{{ _('Last 3 Months') }}</option>
+                <option value="year" {% if period == 'year' %}selected{% endif %}>{{ _('Last Year') }}</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics Overview -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Total Hours -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Total Hours') }}</p>
+                <p class="text-3xl font-bold mt-2">{{ "%.1f"|format(project.total_hours) }}</p>
+                {% if budget_data.estimated_hours > 0 %}
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ _('of') }} {{ "%.0f"|format(budget_data.estimated_hours) }} {{ _('estimated') }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="text-4xl text-blue-500">
+                <i class="fas fa-clock"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Budget Consumed -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Budget Used') }}</p>
+                <p class="text-3xl font-bold mt-2">{{ "%.0f"|format(budget_data.consumed_amount) }}</p>
+                {% if budget_data.budget_amount > 0 %}
+                <p class="text-xs {% if budget_data.threshold_exceeded %}text-red-500{% else %}text-text-muted-light dark:text-text-muted-dark{% endif %} mt-1">
+                    {{ "%.1f"|format(budget_data.percentage) }}% {{ _('of budget') }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="text-4xl {% if budget_data.threshold_exceeded %}text-red-500{% else %}text-green-500{% endif %}">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Task Completion -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Tasks Complete') }}</p>
+                <p class="text-3xl font-bold mt-2">{{ task_stats.completed }}/{{ task_stats.total }}</p>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ "%.1f"|format(task_stats.completion_rate) }}% {{ _('completion') }}
+                </p>
+            </div>
+            <div class="text-4xl text-purple-500">
+                <i class="fas fa-tasks"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Team Size -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Team Members') }}</p>
+                <p class="text-3xl font-bold mt-2">{{ team_contributions|length }}</p>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('contributing') }}</p>
+            </div>
+            <div class="text-4xl text-orange-500">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Budget vs Actual Chart -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-bar text-primary"></i>
+            {{ _('Budget vs. Actual') }}
+        </h2>
+        {% if budget_data.budget_amount > 0 %}
+        <div class="h-64">
+            <canvas id="budgetChart"></canvas>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Budget') }}</p>
+                <p class="text-lg font-semibold">{{ "%.2f"|format(budget_data.budget_amount) }}</p>
+            </div>
+            <div>
+                <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Remaining') }}</p>
+                <p class="text-lg font-semibold {% if budget_data.remaining_amount < 0 %}text-red-500{% else %}text-green-500{% endif %}">
+                    {{ "%.2f"|format(budget_data.remaining_amount) }}
+                </p>
+            </div>
+        </div>
+        {% else %}
+        <div class="h-64 flex items-center justify-center text-text-muted-light dark:text-text-muted-dark">
+            <div class="text-center">
+                <i class="fas fa-info-circle text-4xl mb-4"></i>
+                <p>{{ _('No budget set for this project') }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Task Status Distribution -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-pie text-primary"></i>
+            {{ _('Task Status Distribution') }}
+        </h2>
+        {% if task_stats.total > 0 %}
+        <div class="h-64">
+            <canvas id="taskStatusChart"></canvas>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+            {% for status, count in task_stats.by_status.items() %}
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: {{ {'todo': '#6B7280', 'in_progress': '#3B82F6', 'review': '#F59E0B', 'done': '#10B981', 'cancelled': '#EF4444'}.get(status, '#6B7280') }}"></div>
+                <span>{{ status.replace('_', ' ').title() }}: {{ count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="h-64 flex items-center justify-center text-text-muted-light dark:text-text-muted-dark">
+            <div class="text-center">
+                <i class="fas fa-tasks text-4xl mb-4"></i>
+                <p>{{ _('No tasks created yet') }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Team Contributions Chart -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-user-friends text-primary"></i>
+            {{ _('Team Member Contributions') }}
+        </h2>
+        {% if team_contributions %}
+        <div class="h-64">
+            <canvas id="teamChart"></canvas>
+        </div>
+        <div class="mt-4 space-y-2">
+            {% for member in team_contributions[:5] %}
+            <div class="flex items-center justify-between text-sm">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-primary"></div>
+                    <span>{{ member.username }}</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ "%.1f"|format(member.total_hours) }}h</span>
+                    <span class="font-semibold">{{ "%.1f"|format(member.percentage) }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="h-64 flex items-center justify-center text-text-muted-light dark:text-text-muted-dark">
+            <div class="text-center">
+                <i class="fas fa-users text-4xl mb-4"></i>
+                <p>{{ _('No time entries recorded yet') }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Time Tracking Timeline -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-line text-primary"></i>
+            {{ _('Time Tracking Timeline') }}
+        </h2>
+        {% if timeline_data %}
+        <div class="h-64">
+            <canvas id="timelineChart"></canvas>
+        </div>
+        {% else %}
+        <div class="h-64 flex items-center justify-center text-text-muted-light dark:text-text-muted-dark">
+            <div class="text-center">
+                <i class="fas fa-calendar-alt text-4xl mb-4"></i>
+                <p>{{ _('Select a time period to view timeline') }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Activity and Team Details -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Recent Activity -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-history text-primary"></i>
+            {{ _('Recent Activity') }}
+        </h2>
+        {% if recent_activities %}
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for activity in recent_activities %}
+            <div class="flex items-start gap-3 p-3 bg-bg-light dark:bg-bg-dark rounded-lg">
+                <div class="flex-shrink-0 mt-1">
+                    <i class="{{ activity.get_icon() }}"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm">
+                        <span class="font-medium">{{ activity.user.display_name if activity.user.full_name else activity.user.username }}</span>
+                        {{ activity.description or (activity.action + ' ' + activity.entity_type) }}
+                    </p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {{ activity.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="flex items-center justify-center py-12 text-text-muted-light dark:text-text-muted-dark">
+            <div class="text-center">
+                <i class="fas fa-history text-4xl mb-4"></i>
+                <p>{{ _('No recent activity') }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Team Member Details -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-users text-primary"></i>
+            {{ _('Team Member Details') }}
+        </h2>
+        {% if team_contributions %}
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for member in team_contributions %}
+            <div class="p-4 bg-bg-light dark:bg-bg-dark rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-medium">{{ member.username }}</h3>
+                    <span class="text-sm font-semibold text-primary">{{ "%.1f"|format(member.total_hours) }}h</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <div>
+                        <i class="fas fa-clock mr-1"></i>
+                        {{ member.entry_count }} {{ _('entries') }}
+                    </div>
+                    <div>
+                        <i class="fas fa-tasks mr-1"></i>
+                        {{ member.task_count }} {{ _('tasks') }}
+                    </div>
+                    <div>
+                        <i class="fas fa-percentage mr-1"></i>
+                        {{ "%.1f"|format(member.percentage) }}%
+                    </div>
+                </div>
+                <!-- Progress bar -->
+                <div class="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div class="bg-primary h-2 rounded-full" style="width: {{ member.percentage }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="flex items-center justify-center py-12 text-text-muted-light dark:text-text-muted-dark">
+            <div class="text-center">
+                <i class="fas fa-user-slash text-4xl mb-4"></i>
+                <p>{{ _('No team members have logged time yet') }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Additional Stats -->
+{% if task_stats.overdue > 0 %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+    <div class="flex items-center gap-3">
+        <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+        <div>
+            <h3 class="font-semibold text-red-800 dark:text-red-200">{{ _('Attention Required') }}</h3>
+            <p class="text-sm text-red-700 dark:text-red-300">
+                {{ task_stats.overdue }} {{ _('task(s) are overdue') }}
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart.js Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+{% autoescape false %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme-aware colors
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#E5E7EB' : '#1F2937';
+    const gridColor = isDark ? '#374151' : '#E5E7EB';
+    
+    // Common chart options
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: {
+                    color: textColor
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: textColor },
+                grid: { color: gridColor }
+            },
+            y: {
+                ticks: { color: textColor },
+                grid: { color: gridColor }
+            }
+        }
+    };
+    
+    {% if budget_data.budget_amount > 0 %}
+    // Budget Chart
+    const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+    new Chart(budgetCtx, {
+        type: 'bar',
+        data: {
+            labels: [{{ _("Budget")|tojson }}, {{ _("Consumed")|tojson }}, {{ _("Remaining")|tojson }}],
+            datasets: [{
+                label: {{ _("Amount")|tojson }},
+                data: [
+                    {{ budget_data.budget_amount }},
+                    {{ budget_data.consumed_amount }},
+                    {{ budget_data.remaining_amount }}
+                ],
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.5)',
+                    {% if budget_data.threshold_exceeded %}'rgba(239, 68, 68, 0.5)'{% else %}'rgba(16, 185, 129, 0.5)'{% endif %},
+                    {% if budget_data.remaining_amount < 0 %}'rgba(239, 68, 68, 0.5)'{% else %}'rgba(34, 197, 94, 0.5)'{% endif %}
+                ],
+                borderColor: [
+                    'rgb(59, 130, 246)',
+                    {% if budget_data.threshold_exceeded %}'rgb(239, 68, 68)'{% else %}'rgb(16, 185, 129)'{% endif %},
+                    {% if budget_data.remaining_amount < 0 %}'rgb(239, 68, 68)'{% else %}'rgb(34, 197, 94)'{% endif %}
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                legend: { display: false }
+            }
+        }
+    });
+    {% endif %}
+    
+    {% if task_stats.total > 0 %}
+    // Task Status Chart
+    const taskStatusCtx = document.getElementById('taskStatusChart').getContext('2d');
+    new Chart(taskStatusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for status in task_stats.by_status.keys() %}
+                {{ status.replace("_", " ").title()|tojson }}{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for count in task_stats.by_status.values() %}
+                    {{ count }}{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    {% for status in task_stats.by_status.keys() %}
+                    {{ {'todo': "'rgba(107, 114, 128, 0.8)'", 'in_progress': "'rgba(59, 130, 246, 0.8)'", 'review': "'rgba(245, 158, 11, 0.8)'", 'done': "'rgba(16, 185, 129, 0.8)'", 'cancelled': "'rgba(239, 68, 68, 0.8)'"}.get(status, "'rgba(107, 114, 128, 0.8)'") }}{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: textColor }
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    {% if team_contributions %}
+    // Team Contributions Chart
+    const teamCtx = document.getElementById('teamChart').getContext('2d');
+    new Chart(teamCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for member in team_contributions[:10] %}
+                {{ member.username|tojson }}{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: {{ _("Hours")|tojson }},
+                data: [
+                    {% for member in team_contributions[:10] %}
+                    {{ member.total_hours }}{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(139, 92, 246, 0.5)',
+                borderColor: 'rgb(139, 92, 246)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            plugins: {
+                ...commonOptions.plugins,
+                legend: { display: false }
+            }
+        }
+    });
+    {% endif %}
+    
+    {% if timeline_data %}
+    // Timeline Chart
+    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    new Chart(timelineCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for entry in timeline_data %}
+                {{ entry.date|tojson }}{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: {{ _("Hours")|tojson }},
+                data: [
+                    {% for entry in timeline_data %}
+                    {{ entry.hours }}{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                legend: { display: false }
+            }
+        }
+    });
+    {% endif %}
+});
+{% endautoescape %}
+</script>
+{% endblock %}
+

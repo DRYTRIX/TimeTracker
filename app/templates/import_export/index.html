@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+
+{% block title %}{{ _('Import/Export Data') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Import/Export')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-exchange-alt',
+    title_text=_('Import/Export Data'),
+    subtitle_text=_('Import data from other time trackers or export your data for GDPR compliance and backups'),
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Import Section -->
+        <div class="space-y-6">
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-file-import mr-2"></i>{{ _('Import Data') }}
+                </h2>
+
+                <!-- CSV Import -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from a CSV file') }}</p>
+                    
+                    <div class="flex items-center space-x-3">
+                        <label for="csv-file" class="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                            <i class="fas fa-upload mr-2"></i>{{ _('Choose CSV File') }}
+                        </label>
+                        <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCsvUpload(this)">
+                        <a href="/api/import/template/csv" class="text-blue-600 hover:underline text-sm">
+                            <i class="fas fa-download mr-1"></i>{{ _('Download Template') }}
+                        </a>
+                    </div>
+                    <div id="csv-upload-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
+                <!-- Toggl Import -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Import from Toggl Track') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from Toggl Track') }}</p>
+                    
+                    <button onclick="showTogglImportForm()" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
+                        <i class="fas fa-clock mr-2"></i>{{ _('Import from Toggl') }}
+                    </button>
+                </div>
+
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
+                <!-- Harvest Import -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Import from Harvest') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from Harvest') }}</p>
+                    
+                    <button onclick="showHarvestImportForm()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition">
+                        <i class="fas fa-clock mr-2"></i>{{ _('Import from Harvest') }}
+                    </button>
+                </div>
+
+                {% if current_user.is_admin %}
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
+                <!-- Restore Backup -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Restore from Backup') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Restore data from a backup file') }}</p>
+                    
+                    <label for="backup-file" class="cursor-pointer bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition inline-block">
+                        <i class="fas fa-file-upload mr-2"></i>{{ _('Restore Backup') }}
+                    </label>
+                    <input type="file" id="backup-file" accept=".json" class="hidden" onchange="handleBackupRestore(this)">
+                    <div id="backup-restore-status" class="mt-2 text-sm"></div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Import History -->
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-history mr-2"></i>{{ _('Import History') }}
+                </h2>
+                <div id="import-history" class="space-y-2">
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">{{ _('Loading...') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="space-y-6">
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-file-export mr-2"></i>{{ _('Export Data') }}
+                </h2>
+
+                <!-- GDPR Export -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Full Data Export (GDPR)') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Export all your personal data') }}</p>
+                    
+                    <div class="flex space-x-3">
+                        <button onclick="exportGdpr('json')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                            <i class="fas fa-file-code mr-2"></i>{{ _('Export as JSON') }}
+                        </button>
+                        <button onclick="exportGdpr('zip')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                            <i class="fas fa-file-archive mr-2"></i>{{ _('Export as ZIP') }}
+                        </button>
+                    </div>
+                    <div id="gdpr-export-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
+                <!-- Filtered Export -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Filtered Export') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Export specific data with filters') }}</p>
+                    
+                    <button onclick="showFilteredExportForm()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                        <i class="fas fa-filter mr-2"></i>{{ _('Export with Filters') }}
+                    </button>
+                </div>
+
+                {% if current_user.is_admin %}
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
+                <!-- Create Backup -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Create Backup') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Create a full database backup') }}</p>
+                    
+                    <button onclick="createBackup()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">
+                        <i class="fas fa-database mr-2"></i>{{ _('Create Backup') }}
+                    </button>
+                    <div id="backup-create-status" class="mt-2 text-sm"></div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Export History -->
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-history mr-2"></i>{{ _('Export History') }}
+                </h2>
+                <div id="export-history" class="space-y-2">
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">{{ _('Loading...') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toggl Import Modal -->
+<div id="toggl-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">{{ _('Import from Toggl Track') }}</h3>
+        
+        <form id="toggl-form" onsubmit="submitTogglImport(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('API Token') }}</label>
+                <input type="text" name="api_token" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Workspace ID') }}</label>
+                <input type="text" name="workspace_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                <input type="date" name="start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                <input type="date" name="end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="submit" class="flex-1 bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
+                    {{ _('Import') }}
+                </button>
+                <button type="button" onclick="hideTogglImportForm()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white px-4 py-2 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition">
+                    {{ _('Cancel') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Harvest Import Modal -->
+<div id="harvest-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">{{ _('Import from Harvest') }}</h3>
+        
+        <form id="harvest-form" onsubmit="submitHarvestImport(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Account ID') }}</label>
+                <input type="text" name="account_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('API Token') }}</label>
+                <input type="text" name="api_token" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                <input type="date" name="start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                <input type="date" name="end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="submit" class="flex-1 bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition">
+                    {{ _('Import') }}
+                </button>
+                <button type="button" onclick="hideHarvestImportForm()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white px-4 py-2 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition">
+                    {{ _('Cancel') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// CSV Upload
+async function handleCsvUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const statusEl = document.getElementById('csv-upload-status');
+    statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Uploading...</span>';
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('/api/import/csv', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            statusEl.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Import successful: ${data.summary.successful} records imported</span>`;
+            loadImportHistory();
+        } else {
+            statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${data.error}</span>`;
+        }
+    } catch (error) {
+        statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
+    }
+    
+    input.value = '';
+}
+
+// Toggl Import
+function showTogglImportForm() {
+    document.getElementById('toggl-modal').classList.remove('hidden');
+}
+
+function hideTogglImportForm() {
+    document.getElementById('toggl-modal').classList.add('hidden');
+}
+
+async function submitTogglImport(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const data = {
+        api_token: formData.get('api_token'),
+        workspace_id: formData.get('workspace_id'),
+        start_date: formData.get('start_date'),
+        end_date: formData.get('end_date')
+    };
+    
+    try {
+        const response = await fetch('/api/import/toggl', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(`Import successful: ${result.summary.successful} records imported`);
+            hideTogglImportForm();
+            loadImportHistory();
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
+}
+
+// Harvest Import
+function showHarvestImportForm() {
+    document.getElementById('harvest-modal').classList.remove('hidden');
+}
+
+function hideHarvestImportForm() {
+    document.getElementById('harvest-modal').classList.add('hidden');
+}
+
+async function submitHarvestImport(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const data = {
+        account_id: formData.get('account_id'),
+        api_token: formData.get('api_token'),
+        start_date: formData.get('start_date'),
+        end_date: formData.get('end_date')
+    };
+    
+    try {
+        const response = await fetch('/api/import/harvest', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(`Import successful: ${result.summary.successful} records imported`);
+            hideHarvestImportForm();
+            loadImportHistory();
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
+}
+
+// GDPR Export
+async function exportGdpr(format) {
+    const statusEl = document.getElementById('gdpr-export-status');
+    statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Exporting...</span>';
+    
+    try {
+        const response = await fetch('/api/export/gdpr', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({format})
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            statusEl.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Export ready! <a href="${data.download_url}" class="underline">Download</a></span>`;
+            loadExportHistory();
+        } else {
+            statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${data.error}</span>`;
+        }
+    } catch (error) {
+        statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
+    }
+}
+
+// Create Backup
+async function createBackup() {
+    const statusEl = document.getElementById('backup-create-status');
+    statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Creating backup...</span>';
+    
+    try {
+        const response = await fetch('/api/export/backup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            statusEl.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Backup ready! <a href="${data.download_url}" class="underline">Download</a></span>`;
+            loadExportHistory();
+        } else {
+            statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${data.error}</span>`;
+        }
+    } catch (error) {
+        statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
+    }
+}
+
+// Backup Restore
+async function handleBackupRestore(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (!confirm('Are you sure you want to restore from this backup? This may overwrite existing data.')) {
+        input.value = '';
+        return;
+    }
+    
+    const statusEl = document.getElementById('backup-restore-status');
+    statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Restoring...</span>';
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('/api/backup/restore', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            statusEl.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Restore successful</span>';
+            loadImportHistory();
+        } else {
+            statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${data.error}</span>`;
+        }
+    } catch (error) {
+        statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
+    }
+    
+    input.value = '';
+}
+
+// Load Import History
+async function loadImportHistory() {
+    const container = document.getElementById('import-history');
+    
+    try {
+        const response = await fetch('/api/import/history');
+        const data = await response.json();
+        
+        if (data.imports.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm">No import history</p>';
+            return;
+        }
+        
+        container.innerHTML = data.imports.map(imp => `
+            <div class="border border-gray-200 dark:border-gray-700 rounded p-3">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="font-medium text-gray-900 dark:text-white">${imp.import_type.toUpperCase()}</span>
+                        <span class="ml-2 px-2 py-1 text-xs rounded ${getStatusClass(imp.status)}">${imp.status}</span>
+                    </div>
+                    <span class="text-xs text-gray-500">${new Date(imp.started_at).toLocaleString()}</span>
+                </div>
+                ${imp.status === 'completed' || imp.status === 'partial' ? `
+                <div class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    ${imp.successful_records}/${imp.total_records} records imported
+                </div>
+                ` : ''}
+            </div>
+        `).join('');
+    } catch (error) {
+        container.innerHTML = '<p class="text-red-500 text-sm">Error loading history</p>';
+    }
+}
+
+// Load Export History
+async function loadExportHistory() {
+    const container = document.getElementById('export-history');
+    
+    try {
+        const response = await fetch('/api/export/history');
+        const data = await response.json();
+        
+        if (data.exports.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm">No export history</p>';
+            return;
+        }
+        
+        container.innerHTML = data.exports.map(exp => `
+            <div class="border border-gray-200 dark:border-gray-700 rounded p-3">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="font-medium text-gray-900 dark:text-white">${exp.export_type.toUpperCase()}</span>
+                        <span class="ml-2 px-2 py-1 text-xs rounded ${getStatusClass(exp.status)}">${exp.status}</span>
+                    </div>
+                    <span class="text-xs text-gray-500">${new Date(exp.created_at).toLocaleString()}</span>
+                </div>
+                ${exp.status === 'completed' && !exp.is_expired ? `
+                <div class="mt-2">
+                    <a href="/api/export/download/${exp.id}" class="text-blue-600 hover:underline text-sm">
+                        <i class="fas fa-download mr-1"></i>Download
+                    </a>
+                </div>
+                ` : ''}
+                ${exp.is_expired ? '<div class="mt-1 text-xs text-red-500">Expired</div>' : ''}
+            </div>
+        `).join('');
+    } catch (error) {
+        container.innerHTML = '<p class="text-red-500 text-sm">Error loading history</p>';
+    }
+}
+
+function getStatusClass(status) {
+    const classes = {
+        'pending': 'bg-gray-200 text-gray-800',
+        'processing': 'bg-blue-200 text-blue-800',
+        'completed': 'bg-green-200 text-green-800',
+        'partial': 'bg-yellow-200 text-yellow-800',
+        'failed': 'bg-red-200 text-red-800'
+    };
+    return classes[status] || 'bg-gray-200 text-gray-800';
+}
+
+function showFilteredExportForm() {
+    alert('Filtered export form - to be implemented with custom date/project filters');
+}
+
+// Load histories on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadImportHistory();
+    loadExportHistory();
+});
+</script>
+{% endblock %}
+

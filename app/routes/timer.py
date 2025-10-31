@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, socketio, log_event, track_event
-from app.models import User, Project, TimeEntry, Task, Settings
+from app.models import User, Project, TimeEntry, Task, Settings, Activity
 from app.utils.timezone import parse_local_datetime, utc_to_local
 from datetime import datetime
 import json
@@ -21,7 +21,27 @@ def start_timer():
     project_id = request.form.get('project_id', type=int)
     task_id = request.form.get('task_id', type=int)
     notes = request.form.get('notes', '').strip()
-    current_app.logger.info("POST /timer/start user=%s project_id=%s task_id=%s", current_user.username, project_id, task_id)
+    template_id = request.form.get('template_id', type=int)
+    current_app.logger.info("POST /timer/start user=%s project_id=%s task_id=%s template_id=%s", current_user.username, project_id, task_id, template_id)
+    
+    # Load template data if template_id is provided
+    if template_id:
+        from app.models import TimeEntryTemplate
+        template = TimeEntryTemplate.query.filter_by(
+            id=template_id,
+            user_id=current_user.id
+        ).first()
+        if template:
+            # Override with template values if not explicitly set
+            if not project_id and template.project_id:
+                project_id = template.project_id
+            if not task_id and template.task_id:
+                task_id = template.task_id
+            if not notes and template.default_notes:
+                notes = template.default_notes
+            # Mark template as used
+            template.record_usage()
+            db.session.commit()
     
     if not project_id:
         flash('Project is required', 'error')
@@ -87,6 +107,19 @@ def start_timer():
         "has_description": bool(notes)
     })
     
+    # Log activity
+    Activity.log(
+        user_id=current_user.id,
+        action='started',
+        entity_type='time_entry',
+        entity_id=new_timer.id,
+        entity_name=f'{project.name}' + (f' - {task.name}' if task else ''),
+        description=f'Started timer for {project.name}' + (f' - {task.name}' if task else ''),
+        extra_data={'project_id': project_id, 'task_id': task_id},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    
     # Check if this is user's first timer (onboarding milestone)
     timer_count = TimeEntry.query.filter_by(
         user_id=current_user.id,
@@ -119,6 +152,72 @@ def start_timer():
         flash(f'Timer started for {project.name} - {task.name}', 'success')
     else:
         flash(f'Timer started for {project.name}', 'success')
+    return redirect(url_for('main.dashboard'))
+
+@timer_bp.route('/timer/start/from-template/<int:template_id>', methods=['GET', 'POST'])
+@login_required
+def start_timer_from_template(template_id):
+    """Start a timer directly from a template"""
+    from app.models import TimeEntryTemplate
+    
+    # Load template
+    template = TimeEntryTemplate.query.filter_by(
+        id=template_id,
+        user_id=current_user.id
+    ).first_or_404()
+    
+    # Check if user already has an active timer
+    active_timer = current_user.active_timer
+    if active_timer:
+        flash('You already have an active timer. Stop it before starting a new one.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Validate template has required data
+    if not template.project_id:
+        flash('Template must have a project to start a timer', 'error')
+        return redirect(url_for('time_entry_templates.list_templates'))
+    
+    # Check if project is active
+    project = Project.query.get(template.project_id)
+    if not project or project.status != 'active':
+        flash('Cannot start timer for this project', 'error')
+        return redirect(url_for('time_entry_templates.list_templates'))
+    
+    # Create new timer from template
+    from app.models.time_entry import local_now
+    new_timer = TimeEntry(
+        user_id=current_user.id,
+        project_id=template.project_id,
+        task_id=template.task_id,
+        start_time=local_now(),
+        notes=template.default_notes,
+        tags=template.tags,
+        source='auto',
+        billable=template.billable
+    )
+    
+    db.session.add(new_timer)
+    
+    # Mark template as used
+    template.record_usage()
+    
+    if not safe_commit('start_timer_from_template', {'template_id': template_id}):
+        flash('Could not start timer due to a database error. Please check server logs.', 'error')
+        return redirect(url_for('time_entry_templates.list_templates'))
+    
+    # Track events
+    log_event("timer.started.from_template", 
+             user_id=current_user.id, 
+             template_id=template_id,
+             project_id=template.project_id)
+    track_event(current_user.id, "timer.started.from_template", {
+        "template_id": template_id,
+        "template_name": template.name,
+        "project_id": template.project_id,
+        "has_task": bool(template.task_id)
+    })
+    
+    flash(f'Timer started from template "{template.name}"', 'success')
     return redirect(url_for('main.dashboard'))
 
 @timer_bp.route('/timer/start/<int:project_id>')
@@ -219,6 +318,21 @@ def stop_timer():
             "task_id": active_timer.task_id,
             "duration_seconds": duration_seconds
         })
+        
+        # Log activity
+        project_name = active_timer.project.name if active_timer.project else 'No project'
+        task_name = active_timer.task.name if active_timer.task else None
+        Activity.log(
+            user_id=current_user.id,
+            action='stopped',
+            entity_type='time_entry',
+            entity_id=active_timer.id,
+            entity_name=f'{project_name}' + (f' - {task_name}' if task_name else ''),
+            description=f'Stopped timer for {project_name}' + (f' - {task_name}' if task_name else '') + f' - Duration: {active_timer.duration_formatted}',
+            extra_data={'duration_hours': active_timer.duration_hours, 'project_id': active_timer.project_id, 'task_id': active_timer.task_id},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
         
         # Check if this is user's first completed time entry (onboarding milestone)
         entry_count = TimeEntry.query.filter_by(
@@ -425,6 +539,29 @@ def manual_entry():
     # Get project_id and task_id from query parameters for pre-filling
     project_id = request.args.get('project_id', type=int)
     task_id = request.args.get('task_id', type=int)
+    template_id = request.args.get('template', type=int)
+    
+    # Load template data if template_id is provided
+    template_data = None
+    if template_id:
+        from app.models import TimeEntryTemplate
+        template = TimeEntryTemplate.query.filter_by(
+            id=template_id,
+            user_id=current_user.id
+        ).first()
+        if template:
+            template_data = {
+                'project_id': template.project_id,
+                'task_id': template.task_id,
+                'notes': template.default_notes,
+                'tags': template.tags,
+                'billable': template.billable
+            }
+            # Override with template values if not explicitly set
+            if not project_id and template.project_id:
+                project_id = template.project_id
+            if not task_id and template.task_id:
+                task_id = template.task_id
     
     if request.method == 'POST':
         project_id = request.form.get('project_id', type=int)
@@ -441,24 +578,24 @@ def manual_entry():
         if not all([project_id, start_date, start_time, end_date, end_time]):
             flash('All fields are required', 'error')
             return render_template('timer/manual_entry.html', projects=active_projects, 
-                                selected_project_id=project_id, selected_task_id=task_id)
+                                selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
         # Check if project exists
         project = Project.query.get(project_id)
         if not project:
             flash(_('Invalid project selected'), 'error')
             return render_template('timer/manual_entry.html', projects=active_projects,
-                                selected_project_id=project_id, selected_task_id=task_id)
+                                selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
         # Check if project is active (not archived or inactive)
         if project.status == 'archived':
             flash(_('Cannot create time entries for an archived project. Please unarchive the project first.'), 'error')
             return render_template('timer/manual_entry.html', projects=active_projects,
-                                selected_project_id=project_id, selected_task_id=task_id)
+                                selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         elif project.status != 'active':
             flash(_('Cannot create time entries for an inactive project'), 'error')
             return render_template('timer/manual_entry.html', projects=active_projects,
-                                selected_project_id=project_id, selected_task_id=task_id)
+                                selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
         # Validate task if provided
         if task_id:
@@ -466,7 +603,7 @@ def manual_entry():
             if not task:
                 flash('Invalid task selected', 'error')
                 return render_template('timer/manual_entry.html', projects=active_projects,
-                                    selected_project_id=project_id, selected_task_id=task_id)
+                                    selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
         # Parse datetime with timezone awareness
         try:
@@ -475,13 +612,13 @@ def manual_entry():
         except ValueError:
             flash('Invalid date/time format', 'error')
             return render_template('timer/manual_entry.html', projects=active_projects,
-                                selected_project_id=project_id, selected_task_id=task_id)
+                                selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
         # Validate time range
         if end_time_parsed <= start_time_parsed:
             flash('End time must be after start time', 'error')
             return render_template('timer/manual_entry.html', projects=active_projects,
-                                selected_project_id=project_id, selected_task_id=task_id)
+                                selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
         # Create manual entry
         entry = TimeEntry(
@@ -500,7 +637,7 @@ def manual_entry():
         if not safe_commit('manual_entry', {'user_id': current_user.id, 'project_id': project_id, 'task_id': task_id}):
             flash('Could not create manual entry due to a database error. Please check server logs.', 'error')
             return render_template('timer/manual_entry.html', projects=active_projects, 
-                                selected_project_id=project_id, selected_task_id=task_id)
+                                selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
         if task_id:
             task = Task.query.get(task_id)
@@ -512,7 +649,7 @@ def manual_entry():
         return redirect(url_for('main.dashboard'))
     
     return render_template('timer/manual_entry.html', projects=active_projects, 
-                         selected_project_id=project_id, selected_task_id=task_id)
+                         selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
 
 @timer_bp.route('/timer/manual/<int:project_id>')
 @login_required
@@ -773,3 +910,121 @@ def duplicate_timer(timer_id):
                          prefill_billable=timer.billable,
                          is_duplicate=True,
                          original_entry=timer)
+
+@timer_bp.route('/timer/resume/<int:timer_id>')
+@login_required
+def resume_timer(timer_id):
+    """Resume an existing time entry - starts a new active timer with same properties"""
+    timer = TimeEntry.query.get_or_404(timer_id)
+    
+    # Check if user can resume this timer
+    if timer.user_id != current_user.id and not current_user.is_admin:
+        flash('You can only resume your own timers', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Check if user already has an active timer
+    active_timer = current_user.active_timer
+    if active_timer:
+        flash('You already have an active timer. Stop it before resuming another one.', 'error')
+        current_app.logger.info("Resume timer blocked: user already has an active timer")
+        return redirect(url_for('main.dashboard'))
+    
+    # Check if project is still active
+    project = Project.query.get(timer.project_id)
+    if not project:
+        flash(_('Project no longer exists'), 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    if project.status == 'archived':
+        flash(_('Cannot start timer for an archived project. Please unarchive the project first.'), 'error')
+        return redirect(url_for('main.dashboard'))
+    elif project.status != 'active':
+        flash(_('Cannot start timer for an inactive project'), 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Validate task if it exists
+    if timer.task_id:
+        task = Task.query.filter_by(id=timer.task_id, project_id=timer.project_id).first()
+        if not task:
+            # Task was deleted, continue without it
+            task_id = None
+        else:
+            task_id = timer.task_id
+    else:
+        task_id = None
+    
+    # Create new timer with copied properties
+    from app.models.time_entry import local_now
+    new_timer = TimeEntry(
+        user_id=current_user.id,
+        project_id=timer.project_id,
+        task_id=task_id,
+        start_time=local_now(),
+        notes=timer.notes,
+        tags=timer.tags,
+        source='auto',
+        billable=timer.billable
+    )
+    
+    db.session.add(new_timer)
+    if not safe_commit('resume_timer', {'user_id': current_user.id, 'original_timer_id': timer_id, 'project_id': timer.project_id}):
+        flash('Could not resume timer due to a database error. Please check server logs.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    current_app.logger.info("Resumed timer id=%s from original timer=%s for user=%s project_id=%s", 
+                           new_timer.id, timer_id, current_user.username, timer.project_id)
+    
+    # Track timer resumed event
+    log_event("timer.resumed", 
+             user_id=current_user.id, 
+             time_entry_id=new_timer.id,
+             original_timer_id=timer_id,
+             project_id=timer.project_id,
+             task_id=task_id,
+             description=timer.notes)
+    track_event(current_user.id, "timer.resumed", {
+        "time_entry_id": new_timer.id,
+        "original_timer_id": timer_id,
+        "project_id": timer.project_id,
+        "task_id": task_id,
+        "has_notes": bool(timer.notes),
+        "has_tags": bool(timer.tags)
+    })
+    
+    # Log activity
+    project_name = project.name
+    task = Task.query.get(task_id) if task_id else None
+    task_name = task.name if task else None
+    Activity.log(
+        user_id=current_user.id,
+        action='started',
+        entity_type='time_entry',
+        entity_id=new_timer.id,
+        entity_name=f'{project_name}' + (f' - {task_name}' if task_name else ''),
+        description=f'Resumed timer for {project_name}' + (f' - {task_name}' if task_name else ''),
+        extra_data={'project_id': timer.project_id, 'task_id': task_id, 'resumed_from': timer_id},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    
+    # Emit WebSocket event for real-time updates
+    try:
+        payload = {
+            'user_id': current_user.id,
+            'timer_id': new_timer.id,
+            'project_name': project_name,
+            'start_time': new_timer.start_time.isoformat()
+        }
+        if task_id:
+            payload['task_id'] = task_id
+            payload['task_name'] = task_name
+        socketio.emit('timer_started', payload)
+    except Exception as e:
+        current_app.logger.warning("Socket emit failed for timer_resumed: %s", e)
+    
+    if task_name:
+        flash(f'Timer resumed for {project_name} - {task_name}', 'success')
+    else:
+        flash(f'Timer resumed for {project_name}', 'success')
+    
+    return redirect(url_for('main.dashboard'))

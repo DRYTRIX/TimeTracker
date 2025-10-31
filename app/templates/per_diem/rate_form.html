@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Per Diem', 'url': url_for('per_diem.list_per_diem')},
+    {'text': 'Rates', 'url': url_for('per_diem.list_rates')},
+    {'text': 'Edit' if rate else 'New'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-list-alt',
+    title_text=('Edit Per Diem Rate' if rate else 'New Per Diem Rate'),
+    subtitle_text=('Update rate details' if rate else 'Create a new per diem rate'),
+    breadcrumbs=breadcrumbs
+) %}
+
+<div class="max-w-4xl mx-auto">
+    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Location Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-map-marker-alt mr-2"></i>Location
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="country" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Country Code <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="country" id="country" required
+                           value="{{ rate.country if rate else '' }}"
+                           placeholder="e.g., DE, US, GB"
+                           maxlength="2"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        City (optional)
+                    </label>
+                    <input type="text" name="city" id="city"
+                           value="{{ rate.city if rate and rate.city else '' }}"
+                           placeholder="e.g., Berlin"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rate Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-euro-sign mr-2"></i>Rates
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="full_day_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Full Day Rate <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="full_day_rate" id="full_day_rate" step="0.01" required
+                           value="{{ rate.full_day_rate if rate else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="half_day_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Half Day Rate <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="half_day_rate" id="half_day_rate" step="0.01" required
+                           value="{{ rate.half_day_rate if rate else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Currency
+                    </label>
+                    <select name="currency_code" id="currency_code"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="EUR" {% if not rate or rate.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
+                        <option value="USD" {% if rate and rate.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="GBP" {% if rate and rate.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="breakfast_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Breakfast Deduction
+                    </label>
+                    <input type="number" name="breakfast_rate" id="breakfast_rate" step="0.01"
+                           value="{{ rate.breakfast_rate if rate and rate.breakfast_rate else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="lunch_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Lunch Deduction
+                    </label>
+                    <input type="number" name="lunch_rate" id="lunch_rate" step="0.01"
+                           value="{{ rate.lunch_rate if rate and rate.lunch_rate else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="dinner_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Dinner Deduction
+                    </label>
+                    <input type="number" name="dinner_rate" id="dinner_rate" step="0.01"
+                           value="{{ rate.dinner_rate if rate and rate.dinner_rate else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Effective Period -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-calendar mr-2"></i>Effective Period
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="effective_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Effective From <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="effective_from" id="effective_from" required
+                           value="{{ rate.effective_from.strftime('%Y-%m-%d') if rate else '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="effective_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Effective To (optional)
+                    </label>
+                    <input type="date" name="effective_to" id="effective_to"
+                           value="{{ rate.effective_to.strftime('%Y-%m-%d') if rate and rate.effective_to else '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notes -->
+        <div class="mb-6">
+            <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes
+            </label>
+            <textarea name="notes" id="notes" rows="3"
+                      placeholder="Additional notes about this rate..."
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ rate.notes if rate else '' }}</textarea>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+            <a href="{{ url_for('per_diem.list_rates') }}" 
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i class="fas fa-times mr-2"></i>Cancel
+            </a>
+            
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ 'Update Rate' if rate else 'Create Rate' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+

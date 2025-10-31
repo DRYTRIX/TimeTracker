@@ -1,16 +1,20 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block title %}Saved Filters - {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Saved Filters</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">Quick access to your commonly used filters</p>
-        </div>
-    </div>
+{% set breadcrumbs = [
+    {'text': 'Saved Filters'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-filter',
+    title_text='Saved Filters',
+    subtitle_text='Quick access to your commonly used filters',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
 
     {% if filters %}
     <!-- Grouped Filters -->
@@ -95,7 +99,7 @@
         <p class="text-gray-600 dark:text-gray-400 mb-6">
             Save filters from Reports or Tasks pages for quick access
         </p>
-        <a href="{{ url_for('reports.index') }}" 
+        <a href="{{ url_for('reports.reports') }}" 
            class="btn btn-primary">
             <i class="fas fa-chart-bar mr-2"></i> Go to Reports
         </a>
@@ -114,7 +118,7 @@ function applyFilter(filterId, scope) {
             
             switch(scope) {
                 case 'reports':
-                    targetUrl = '{{ url_for("reports.index") }}';
+                    targetUrl = '{{ url_for("reports.reports") }}';
                     break;
                 case 'tasks':
                     targetUrl = '{{ url_for("tasks.list_tasks") }}';
@@ -123,7 +127,7 @@ function applyFilter(filterId, scope) {
                     targetUrl = '{{ url_for("projects.list_projects") }}';
                     break;
                 case 'time_entries':
-                    targetUrl = '{{ url_for("timer.timer") }}';
+                    targetUrl = '{{ url_for("timer.manual_entry") }}';
                     break;
                 default:
                     targetUrl = '/';

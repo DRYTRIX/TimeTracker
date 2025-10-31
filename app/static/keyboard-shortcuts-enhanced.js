@@ -726,12 +726,12 @@
                 });
                 
                 if (res.ok) {
-                    this.showToast('Timer stopped', 'info');
+                    this.showToast(window.i18n?.messages?.timerStopped || 'Timer stopped', 'info');
                 } else {
-                    this.showToast('Failed to stop timer', 'warning');
+                    this.showToast(window.i18n?.messages?.timerStopFailed || 'Failed to stop timer', 'warning');
                 }
             } catch (e) {
-                this.showToast('Error stopping timer', 'danger');
+                this.showToast(window.i18n?.messages?.errorStoppingTimer || 'Error stopping timer', 'danger');
             }
         }
 
@@ -785,7 +785,7 @@
             if (form) {
                 form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
             } else {
-                this.showToast('No form to save', 'warning');
+                this.showToast(window.i18n?.messages?.noFormToSave || 'No form to save', 'warning');
             }
         }
 

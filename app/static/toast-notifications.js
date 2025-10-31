@@ -226,6 +226,14 @@ class ToastNotificationManager {
     }
 
     getDefaultTitle(type) {
+        // Try to get translated titles from window.i18n if available
+        // These are injected by the backend in base template
+        if (window.i18n && window.i18n.toast) {
+            const titles = window.i18n.toast;
+            return titles[type] || titles.info || 'Information';
+        }
+        
+        // Fallback to English if translations not loaded
         const titles = {
             success: 'Success',
             error: 'Error',

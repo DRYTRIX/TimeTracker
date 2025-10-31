@@ -1,26 +1,36 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block title %}{{ _('Analytics Dashboard') }} - {{ app_name }}{% endblock %}
 
 {% block content %}
+{% set breadcrumbs = [
+    {'text': _('Analytics')}
+] %}
+
+{% set analytics_actions %}
+<div class="flex items-center gap-2">
+    <select id="timeRange" class="bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 px-3 text-sm text-text-light dark:text-text-dark">
+        <option value="7">{{ _('Last 7 days') }}</option>
+        <option value="30" selected>{{ _('Last 30 days') }}</option>
+        <option value="90">{{ _('Last 90 days') }}</option>
+        <option value="365">{{ _('Last year') }}</option>
+    </select>
+    <button id="refreshCharts" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-sync-alt mr-2"></i> {{ _('Refresh') }}
+    </button>
+</div>
+{% endset %}
+
+{{ page_header(
+    icon_class='fas fa-chart-line',
+    title_text=_('Analytics Dashboard'),
+    subtitle_text=_('Key metrics and insights about your time tracking'),
+    breadcrumbs=breadcrumbs,
+    actions_html=analytics_actions
+) }}
+
 <div class="container-fluid">
-    {% from "_components.html" import page_header %}
-    <div class="row">
-        <div class="col-12">
-            {% set actions %}
-            <select id="timeRange" class="form-select form-select-sm" style="width: auto;">
-                <option value="7">{{ _('Last 7 days') }}</option>
-                <option value="30" selected>{{ _('Last 30 days') }}</option>
-                <option value="90">{{ _('Last 90 days') }}</option>
-                <option value="365">{{ _('Last year') }}</option>
-            </select>
-            <button id="refreshCharts" class="btn btn-outline-light btn-sm">
-                <i class="fas fa-sync-alt"></i> {{ _('Refresh') }}
-            </button>
-            {% endset %}
-            {{ page_header('fas fa-chart-line', _('Analytics Dashboard'), _('Key metrics and insights'), actions) }}
-        </div>
-    </div>
 
     <!-- Summary Cards -->
     <div class="row mb-4">

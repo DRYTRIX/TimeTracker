@@ -50,16 +50,16 @@
   async function stopTimerQuick(){
     try {
       const active = await getActiveTimer();
-      if (!active) { showToast('No active timer', 'warning'); return; }
+      if (!active) { showToast(window.i18n?.messages?.noActiveTimer || 'No active timer', 'warning'); return; }
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       const res = await fetch('/timer/stop', { method: 'POST', headers: { 'X-CSRF-Token': token }, credentials: 'same-origin' });
       if (res.ok) {
-        showToast('Timer stopped', 'info');
+        showToast(window.i18n?.messages?.timerStopped || 'Timer stopped', 'info');
       } else {
-        showToast('Failed to stop timer', 'danger');
+        showToast(window.i18n?.messages?.timerStopFailed || 'Failed to stop timer', 'danger');
       }
     } catch(e) {
-      showToast('Failed to stop timer', 'danger');
+      showToast(window.i18n?.messages?.timerStopFailed || 'Failed to stop timer', 'danger');
     }
   }
 

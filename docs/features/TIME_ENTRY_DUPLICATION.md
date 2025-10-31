@@ -215,6 +215,7 @@ POST /api/timer/duplicate/<id>
 **Issue**: Task not pre-selected after duplication
 - **Cause**: Tasks are loaded dynamically via JavaScript
 - **Solution**: Wait for the page to fully load; the task should auto-select
+- **Note**: This issue has been resolved in the latest version - template code no longer interferes with task pre-selection during duplication
 
 **Issue**: Cannot duplicate inactive project entry
 - **Cause**: Project status changed to inactive after entry creation
@@ -225,6 +226,11 @@ POST /api/timer/duplicate/<id>
 - **Solution**: Only duplicate your own entries, or request admin assistance
 
 ## Changelog
+
+### Version 1.1 (2025-10-31)
+- **Bug Fix**: Fixed issue where duplicated time entries with assigned tasks would not have the task pre-selected
+- **Technical**: Template application code now properly checks for duplication mode and doesn't interfere with pre-filled task data
+- **Testing**: Added comprehensive test to ensure task pre-selection is preserved during duplication
 
 ### Version 1.0 (2024-10-23)
 - Initial implementation of time entry duplication

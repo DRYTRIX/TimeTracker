@@ -74,6 +74,10 @@ def register_context_processors(app):
         short_locale = (current_locale.split('_', 1)[0] if current_locale else 'en')
         available_languages = current_app.config.get('LANGUAGES', {}) or {}
         current_language_label = available_languages.get(short_locale, short_locale.upper())
+        
+        # Check if current language is RTL
+        rtl_languages = current_app.config.get('RTL_LANGUAGES', set())
+        is_rtl = short_locale in rtl_languages
 
         return {
             'app_name': 'Time Tracker',
@@ -83,6 +87,8 @@ def register_context_processors(app):
             'current_locale': current_locale,
             'current_language_code': short_locale,
             'current_language_label': current_language_label,
+            'is_rtl': is_rtl,
+            'available_languages': available_languages,
             'config': current_app.config
         }
     

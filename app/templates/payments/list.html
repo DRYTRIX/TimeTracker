@@ -1,14 +1,22 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Payments</h1>
-        <a href="{{ url_for('payments.create_payment') }}" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors">
-            <i class="fas fa-plus mr-2"></i>Record Payment
-        </a>
-    </div>
+{% set breadcrumbs = [
+    {'text': 'Payments'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-credit-card',
+    title_text='Payments',
+    subtitle_text='Track and record payments from clients',
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<div class="flex gap-2">'
+        +   '<a href="' + url_for("payments.export_payments_excel", status=filters.status, method=filters.method, date_from=filters.date_from, date_to=filters.date_to) + '" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center"><i class="fas fa-file-excel mr-2"></i>Export to Excel</a>'
+        +   '<a href="' + url_for("payments.create_payment") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Record Payment</a>'
+        + '</div>'
+) }}
 
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -18,16 +26,16 @@
         </div>
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Amount</h3>
-            <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">€{{ "%.2f"|format(summary.total_amount) }}</p>
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_amount) }}</p>
         </div>
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Completed</h3>
             <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">{{ summary.completed_count }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">€{{ "%.2f"|format(summary.completed_amount) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.completed_amount) }}</p>
         </div>
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Gateway Fees</h3>
-            <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">€{{ "%.2f"|format(summary.total_fees) }}</p>
+            <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_fees) }}</p>
         </div>
     </div>
 

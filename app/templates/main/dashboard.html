@@ -74,6 +74,9 @@
                             <td class="p-4">{{ entry.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td class="p-4">
                                 <div class="flex gap-2">
+                                    <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Resume - Start a new timer with same properties') }}">
+                                        <i class="fas fa-play"></i>
+                                    </a>
                                     <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary-dark" title="{{ _('Edit entry') }}">
                                         <i class="fas fa-edit"></i>
                                     </a>
@@ -177,6 +180,9 @@
                 {% endfor %}
             </ul>
         </div>
+
+        <!-- Activity Feed Widget -->
+        {% include 'components/activity_feed_widget.html' %}
     </div>
     <!-- Delete Entry Confirmation Dialogs -->
     {% for entry in recent_entries %}
@@ -222,6 +228,35 @@
                         <label for="startTimerNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes (optional)') }}</label>
                         <textarea id="startTimerNotes" name="notes" rows="3" class="form-input" placeholder="{{ _('What are you working on?') }}"></textarea>
                     </div>
+                    {% if templates %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Or use a template') }}</label>
+                        <div class="space-y-2">
+                            {% for template in templates %}
+                            <button type="button" 
+                                    onclick="applyTemplate({{ template.id }})"
+                                    class="w-full text-left p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="font-medium text-sm">{{ template.name }}</div>
+                                        {% if template.project %}
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            <i class="fas fa-folder"></i> {{ template.project.name }}
+                                            {% if template.task %} → {{ template.task.name }}{% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <i class="fas fa-chevron-right text-gray-400"></i>
+                                </div>
+                            </button>
+                            {% endfor %}
+                            <a href="{{ url_for('time_entry_templates.list_templates') }}" 
+                               class="block text-center text-sm text-blue-600 dark:text-blue-400 hover:underline pt-2">
+                                {{ _('View all templates') }} →
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Start') }}</button>
@@ -280,6 +315,56 @@
                 });
             }
         }
+        
+        // Template application function
+        window.applyTemplate = async function(templateId) {
+            try {
+                const response = await fetch(`/api/templates/${templateId}`, { credentials: 'same-origin' });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const template = await response.json();
+                
+                // Get form elements (re-select to avoid scope issues)
+                const projectSelect = document.getElementById('startTimerProject');
+                const taskSelect = document.getElementById('startTimerTask');
+                const notesField = document.getElementById('startTimerNotes');
+                
+                if (!projectSelect || !taskSelect || !notesField) {
+                    throw new Error('Form elements not found');
+                }
+                
+                // Apply template values to form
+                if (template.project_id) {
+                    projectSelect.value = template.project_id;
+                    // Trigger change event to load tasks
+                    projectSelect.dispatchEvent(new Event('change'));
+                    
+                    // Wait a bit for tasks to load, then select task
+                    setTimeout(() => {
+                        if (template.task_id) {
+                            taskSelect.value = template.task_id;
+                        }
+                    }, 300);
+                }
+                if (template.default_notes) {
+                    notesField.value = template.default_notes;
+                }
+                
+                // Mark template as used
+                fetch(`/api/templates/${templateId}/use`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                }).catch(() => {});  // Silently fail if marking fails
+                
+            } catch (error) {
+                console.error('Error applying template:', error);
+                alert('Failed to apply template. Please try again.');
+            }
+        };
     });
 </script>
 {% endblock %}

@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Expense Categories', 'url': url_for('expense_categories.list_categories')},
+    {'text': category.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-tags',
+    title_text=category.name,
+    subtitle_text=category.description if category.description else 'Expense Category Details',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("expense_categories.edit_category", category_id=category.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>Edit Category</a>'
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Category Details -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Basic Information -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Basic Information
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Category Name</p>
+                    <div class="flex items-center">
+                        {% if category.icon %}
+                        <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full mr-3" style="{% if category.color %}background-color: {{ category.color }}20;{% else %}background-color: #f3f4f6;{% endif %}">
+                            <i class="{{ category.icon }} {% if category.color %}text-[{{ category.color }}]{% else %}text-gray-600{% endif %}"></i>
+                        </div>
+                        {% endif %}
+                        <p class="font-semibold">{{ category.name }}</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Code</p>
+                    <p class="font-semibold">{{ category.code if category.code else '-' }}</p>
+                </div>
+                
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Description</p>
+                    <p class="font-semibold">{{ category.description if category.description else '-' }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Status</p>
+                    {% if category.is_active %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        Active
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                        Inactive
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Default Tax Rate</p>
+                    <p class="font-semibold">{{ '%.2f'|format(category.default_tax_rate) if category.default_tax_rate else '-' }}%</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Budget Information -->
+        {% if category.monthly_budget or category.quarterly_budget or category.yearly_budget %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-chart-pie mr-2"></i>Budget & Utilization
+            </h3>
+            
+            <div class="space-y-4">
+                {% if category.monthly_budget %}
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium">Monthly Budget</span>
+                        <span class="text-sm font-semibold">€{{ '%.2f'|format(category.monthly_budget) }}</span>
+                    </div>
+                    {% if monthly_utilization is defined %}
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div class="{% if monthly_utilization >= category.budget_threshold_percent %}bg-red-500{% elif monthly_utilization >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [monthly_utilization, 100]|min }}%">
+                            {{ monthly_utilization }}%
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if category.quarterly_budget %}
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium">Quarterly Budget</span>
+                        <span class="text-sm font-semibold">€{{ '%.2f'|format(category.quarterly_budget) }}</span>
+                    </div>
+                    {% if quarterly_utilization is defined %}
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div class="{% if quarterly_utilization >= category.budget_threshold_percent %}bg-red-500{% elif quarterly_utilization >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [quarterly_utilization, 100]|min }}%">
+                            {{ quarterly_utilization }}%
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if category.yearly_budget %}
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium">Yearly Budget</span>
+                        <span class="text-sm font-semibold">€{{ '%.2f'|format(category.yearly_budget) }}</span>
+                    </div>
+                    {% if yearly_utilization is defined %}
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div class="{% if yearly_utilization >= category.budget_threshold_percent %}bg-red-500{% elif yearly_utilization >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [yearly_utilization, 100]|min }}%">
+                            {{ yearly_utilization }}%
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <strong>Alert Threshold:</strong> {{ category.budget_threshold_percent }}%
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Settings -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-cog mr-2"></i>Settings
+            </h3>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm">Requires Receipt</span>
+                    {% if category.requires_receipt %}
+                    <span class="text-green-600"><i class="fas fa-check-circle"></i> Yes</span>
+                    {% else %}
+                    <span class="text-gray-500"><i class="fas fa-times-circle"></i> No</span>
+                    {% endif %}
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-sm">Requires Approval</span>
+                    {% if category.requires_approval %}
+                    <span class="text-green-600"><i class="fas fa-check-circle"></i> Yes</span>
+                    {% else %}
+                    <span class="text-gray-500"><i class="fas fa-times-circle"></i> No</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Metadata -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-clock mr-2"></i>Metadata
+            </h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Created</p>
+                    <p class="font-semibold text-sm">{{ category.created_at.strftime('%Y-%m-%d %H:%M') if category.created_at else '-' }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Last Updated</p>
+                    <p class="font-semibold text-sm">{{ category.updated_at.strftime('%Y-%m-%d %H:%M') if category.updated_at else '-' }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-tools mr-2"></i>Actions
+            </h3>
+            
+            <div class="space-y-2">
+                <a href="{{ url_for('expense_categories.edit_category', category_id=category.id) }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
+                    <i class="fas fa-edit mr-2"></i>Edit Category
+                </a>
+                
+                <form method="POST" action="{{ url_for('expense_categories.delete_category', category_id=category.id) }}" onsubmit="return confirm('Are you sure you want to deactivate this category?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="block w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-ban mr-2"></i>Deactivate
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

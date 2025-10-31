@@ -1,12 +1,19 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{% if is_duplicate %}Duplicate Time Entry{% else %}Log Time Manually{% endif %}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{% if is_duplicate %}Create a copy of a previous entry with new times.{% else %}Create a new time entry.{% endif %}</p>
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': 'Time Tracking'},
+    {'text': 'Log Time' if not is_duplicate else 'Duplicate Entry'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-clock',
+    title_text='Duplicate Time Entry' if is_duplicate else 'Log Time Manually',
+    subtitle_text='Create a copy of a previous entry with new times' if is_duplicate else 'Create a new time entry',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
 
 {% if is_duplicate and original_entry %}
 <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 max-w-3xl mx-auto">
@@ -149,32 +156,35 @@ document.addEventListener('DOMContentLoaded', async function(){
     }
 
     // Apply Time Entry Template if provided via sessionStorage or query param
-    try {
-        let tpl = null;
-        const raw = sessionStorage.getItem('activeTemplate');
-        if (raw) {
-            try { tpl = JSON.parse(raw); } catch(_) { tpl = null; }
-        }
-        if (!tpl) {
-            const params = new URLSearchParams(window.location.search);
-            const tplId = params.get('template');
-            if (tplId) {
-                try {
-                    const resp = await fetch(`/api/templates/${tplId}`);
-                    if (resp.ok) tpl = await resp.json();
-                } catch(_) {}
+    // Skip template application when duplicating an entry to preserve the original entry's task
+    const isDuplicating = {{ 'true' if is_duplicate else 'false' }};
+    if (!isDuplicating) {
+        try {
+            let tpl = null;
+            const raw = sessionStorage.getItem('activeTemplate');
+            if (raw) {
+                try { tpl = JSON.parse(raw); } catch(_) { tpl = null; }
             }
-        }
-        if (tpl && typeof tpl === 'object') {
-            // Preselect project and task
-            if (tpl.project_id && projectSelect) {
-                projectSelect.value = String(tpl.project_id);
-                // Preselect task after load
-                if (taskSelect) {
-                    taskSelect.setAttribute('data-selected-task-id', tpl.task_id ? String(tpl.task_id) : '');
+            if (!tpl) {
+                const params = new URLSearchParams(window.location.search);
+                const tplId = params.get('template');
+                if (tplId) {
+                    try {
+                        const resp = await fetch(`/api/templates/${tplId}`);
+                        if (resp.ok) tpl = await resp.json();
+                    } catch(_) {}
                 }
-                await loadTasks(projectSelect.value);
             }
+            if (tpl && typeof tpl === 'object') {
+                // Preselect project and task
+                if (tpl.project_id && projectSelect) {
+                    projectSelect.value = String(tpl.project_id);
+                    // Preselect task after load
+                    if (taskSelect) {
+                        taskSelect.setAttribute('data-selected-task-id', tpl.task_id ? String(tpl.task_id) : '');
+                    }
+                    await loadTasks(projectSelect.value);
+                }
 
             // Notes, tags, billable
             const notes = document.getElementById('notes');
@@ -210,10 +220,11 @@ document.addEventListener('DOMContentLoaded', async function(){
                 }
             }
 
-            // Clear after applying so it does not persist
-            try { sessionStorage.removeItem('activeTemplate'); } catch(_) {}
-        }
-    } catch(_) {}
+                // Clear after applying so it does not persist
+                try { sessionStorage.removeItem('activeTemplate'); } catch(_) {}
+            }
+        } catch(_) {}
+    }
 });
 </script>
 {% endblock %}

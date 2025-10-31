@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Per Diem', 'url': url_for('per_diem.list_per_diem')},
+    {'text': 'Claim #' + per_diem.id|string}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-money-bill-alt',
+    title_text='Per Diem Claim #' + per_diem.id|string,
+    subtitle_text=per_diem.trip_purpose,
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("per_diem.edit_per_diem", per_diem_id=per_diem.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>Edit</a>' if current_user.is_admin or per_diem.user_id == current_user.id else ''
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Claim Details -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Claim Details
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Period</p>
+                    <p class="font-semibold">{{ per_diem.start_date.strftime('%Y-%m-%d') }} to {{ per_diem.end_date.strftime('%Y-%m-%d') }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Location</p>
+                    <p class="font-semibold">{{ per_diem.city + ', ' if per_diem.city else '' }}{{ per_diem.country }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Full Days</p>
+                    <p class="font-semibold">{{ per_diem.full_days }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Half Days</p>
+                    <p class="font-semibold">{{ per_diem.half_days }}</p>
+                </div>
+                
+                <div class="col-span-2 mt-2">
+                    <div class="p-4 bg-primary/10 rounded-lg">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Amount</p>
+                        <p class="font-bold text-2xl text-primary">{{ per_diem.currency_code or 'EUR' }} {{ '%.2f'|format(per_diem.calculated_amount or 0) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Status -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Status
+            </h3>
+            
+            <div class="mb-4">
+                {% if per_diem.status == 'pending' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-semibold">
+                    <i class="fas fa-clock mr-1"></i>Pending
+                </span>
+                {% elif per_diem.status == 'approved' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 font-semibold">
+                    <i class="fas fa-check-circle mr-1"></i>Approved
+                </span>
+                {% elif per_diem.status == 'rejected' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 font-semibold">
+                    <i class="fas fa-times-circle mr-1"></i>Rejected
+                </span>
+                {% elif per_diem.status == 'reimbursed' %}
+                <span class="px-3 py-2 text-sm rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-semibold">
+                    <i class="fas fa-money-bill mr-1"></i>Reimbursed
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Admin Actions -->
+        {% if current_user.is_admin and per_diem.status == 'pending' %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-gavel mr-2"></i>Admin Actions
+            </h3>
+            
+            <form method="POST" action="{{ url_for('per_diem.approve_per_diem', per_diem_id=per_diem.id) }}" class="mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>Approve
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('per_diem.reject_per_diem', per_diem_id=per_diem.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <textarea name="rejection_reason" placeholder="Rejection reason (required)" rows="2" required
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-2 text-sm dark:bg-gray-700"></textarea>
+                <button type="submit" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Reject
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+

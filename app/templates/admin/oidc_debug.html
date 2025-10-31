@@ -1,27 +1,28 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block title %}{{ _('OIDC Debug Dashboard') }} - {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold"><i class="fas fa-shield-alt mr-2"></i>{{ _('OIDC Debug Dashboard') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Inspect configuration, provider metadata and OIDC users') }}</p>
-    </div>
-    <div class="mt-3 md:mt-0">
-        <a href="{{ url_for('admin.admin_dashboard') }}" class="px-3 py-2 rounded-lg border border-border-light dark:border-border-dark text-sm hover:bg-background-light dark:hover:bg-background-dark">
-            <i class="fas fa-arrow-left mr-1"></i>{{ _('Back to Dashboard') }}
-        </a>
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('OIDC Settings')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-shield-alt',
+    title_text=_('OIDC Debug Dashboard'),
+    subtitle_text=_('Inspect configuration, provider metadata and OIDC users'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("admin.oidc_test") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-vial mr-2"></i>' + _('Test Configuration') + '</a>'
+) }}
 
 <!-- Configuration and Claims -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- OIDC Configuration -->
     <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow">
-        <div class="flex items-center justify-between mb-4">
+        <div class="mb-4">
             <h2 class="text-lg font-semibold"><i class="fas fa-cog mr-2"></i>{{ _('OIDC Configuration') }}</h2>
-            <a href="{{ url_for('admin.oidc_test') }}" class="px-3 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90"><i class="fas fa-vial mr-1"></i>{{ _('Test Configuration') }}</a>
         </div>
         <div class="divide-y divide-border-light dark:divide-border-dark">
             <div class="py-2 flex items-start justify-between gap-6 text-sm">

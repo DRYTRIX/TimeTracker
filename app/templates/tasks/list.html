@@ -90,20 +90,24 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ tasks|length }} task{{ 's' if tasks|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Export to CSV">
+            <a href="{{ url_for('tasks.export_tasks', status=status, priority=priority, project_id=project_id, assigned_to=assigned_to, search=search, overdue=overdue) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="Export to CSV">
                 <i class="fas fa-download mr-1"></i> Export
-            </button>
+            </a>
             <div class="relative">
                 <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'tasksBulkMenu')" disabled>
                     <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
                 </button>
-                <ul id="tasksBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg">
+                <ul id="tasksBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusDialog()"><i class="fas fa-tasks mr-2"></i>Change Status</a></li>
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkAssignDialog()"><i class="fas fa-user mr-2"></i>Assign To</a></li>
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkProjectDialog()"><i class="fas fa-folder mr-2"></i>Move to Project</a></li>
+                    <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
                     <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
                 </ul>
             </div>
@@ -187,20 +191,121 @@
     </table>
 </div>
 
-<!-- Bulk Delete Form (hidden) -->
+<!-- Bulk Operations Forms (hidden) -->
 <form id="confirmBulkDelete-form" method="POST" action="{{ url_for('tasks.bulk_delete_tasks') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
 
+<form id="bulkStatusForm" method="POST" action="{{ url_for('tasks.bulk_update_status') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="status" id="bulkStatusValue">
+</form>
+
+<form id="bulkAssignForm" method="POST" action="{{ url_for('tasks.bulk_assign_tasks') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="assigned_to" id="bulkAssignValue">
+</form>
+
+<form id="bulkProjectForm" method="POST" action="{{ url_for('tasks.bulk_move_project') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="project_id" id="bulkProjectValue">
+</form>
+
 <!-- Bulk Delete Confirmation Dialog -->
-{{ confirm_dialog(
-    'confirmBulkDelete',
-    'Delete Selected Tasks',
-    'Are you sure you want to delete the selected tasks? This action cannot be undone. Tasks with existing time entries will be skipped.',
-    'Delete',
-    'Cancel',
-    'danger'
-) }}
+<div id="confirmBulkDelete" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
+        <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
+            <div class="flex items-start mb-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+                    </div>
+                </div>
+                <div class="ml-4 flex-1">
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">Delete Selected Tasks</h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Are you sure you want to delete the selected tasks? This action cannot be undone. Tasks with existing time entries will be skipped.</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkDeleteDialog()">
+                    Cancel
+                </button>
+                <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="submitBulkDelete()">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Status Change Dialog -->
+<div id="bulkStatusDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4">Change Status for Selected Tasks</h3>
+            <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
+            <select id="bulkStatusSelect" class="form-input w-full mb-4">
+                <option value="">-- Select Status --</option>
+                {% if kanban_columns %}
+                    {% for column in kanban_columns %}
+                    <option value="{{ column.status_key }}">{{ column.name }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="review">Review</option>
+                    <option value="done">Done</option>
+                    <option value="cancelled">Cancelled</option>
+                {% endif %}
+            </select>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeBulkStatusDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                <button type="button" onclick="submitBulkStatus()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">Update Status</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Assign Dialog -->
+<div id="bulkAssignDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4">Assign Selected Tasks</h3>
+            <label for="bulkAssignSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select User</label>
+            <select id="bulkAssignSelect" class="form-input w-full mb-4">
+                <option value="">-- Select User --</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.display_name }}</option>
+                {% endfor %}
+            </select>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeBulkAssignDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                <button type="button" onclick="submitBulkAssign()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">Assign Tasks</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Move to Project Dialog -->
+<div id="bulkProjectDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4">Move Selected Tasks to Project</h3>
+            <label for="bulkProjectSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Project</label>
+            <select id="bulkProjectSelect" class="form-input w-full mb-4">
+                <option value="">-- Select Project --</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.name }}</option>
+                {% endfor %}
+            </select>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeBulkProjectDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                <button type="button" onclick="submitBulkProject()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">Move Tasks</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
@@ -247,6 +352,138 @@ function updateBulkDeleteButton() {
 function showBulkDeleteConfirm() {
     document.getElementById('confirmBulkDelete').classList.remove('hidden');
     return false;
+}
+
+function closeBulkDeleteDialog() {
+    document.getElementById('confirmBulkDelete').classList.add('hidden');
+}
+
+function submitBulkDelete() {
+    const form = document.getElementById('confirmBulkDelete-form');
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected task IDs to form
+    const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'task_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Submit the form
+    form.submit();
+}
+
+// Bulk status change functions
+function showBulkStatusDialog() {
+    document.getElementById('bulkStatusDialog').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkStatusDialog() {
+    document.getElementById('bulkStatusDialog').classList.add('hidden');
+}
+
+function submitBulkStatus() {
+    const status = document.getElementById('bulkStatusSelect').value;
+    if (!status) {
+        alert('Please select a status');
+        return;
+    }
+    
+    const form = document.getElementById('bulkStatusForm');
+    document.getElementById('bulkStatusValue').value = status;
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected task IDs to form
+    const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'task_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    form.submit();
+}
+
+// Bulk assign functions
+function showBulkAssignDialog() {
+    document.getElementById('bulkAssignDialog').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkAssignDialog() {
+    document.getElementById('bulkAssignDialog').classList.add('hidden');
+}
+
+function submitBulkAssign() {
+    const assignedTo = document.getElementById('bulkAssignSelect').value;
+    if (!assignedTo) {
+        alert('Please select a user');
+        return;
+    }
+    
+    const form = document.getElementById('bulkAssignForm');
+    document.getElementById('bulkAssignValue').value = assignedTo;
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected task IDs to form
+    const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'task_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    form.submit();
+}
+
+// Bulk move to project functions
+function showBulkProjectDialog() {
+    document.getElementById('bulkProjectDialog').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkProjectDialog() {
+    document.getElementById('bulkProjectDialog').classList.add('hidden');
+}
+
+function submitBulkProject() {
+    const projectId = document.getElementById('bulkProjectSelect').value;
+    if (!projectId) {
+        alert('Please select a project');
+        return;
+    }
+    
+    const form = document.getElementById('bulkProjectForm');
+    document.getElementById('bulkProjectValue').value = projectId;
+    
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected task IDs to form
+    const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'task_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    form.submit();
 }
 
 // Delete task confirmation (single)
@@ -330,32 +567,6 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleButton.title = '{{ _('Hide Filters') }}';
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
-    
-    // Handle bulk delete confirmation
-    const form = document.getElementById('confirmBulkDelete-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            // Prevent default to add task IDs first
-            e.preventDefault();
-            
-            const checkboxes = document.querySelectorAll('.task-checkbox:checked');
-            
-            // Clear existing hidden inputs
-            form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
-            
-            // Add selected task IDs to form
-            checkboxes.forEach(cb => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'task_ids[]';
-                input.value = cb.value;
-                form.appendChild(input);
-            });
-            
-            // Now submit the form
-            form.submit();
-        });
-    }
 });
 </script>
 {% endblock %}

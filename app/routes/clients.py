@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
@@ -8,6 +8,8 @@ from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
+import csv
+import io
 
 clients_bp = Blueprint('clients', __name__)
 
@@ -430,6 +432,82 @@ def bulk_status_change():
         flash('No clients were updated', 'info')
     
     return redirect(url_for('clients.list_clients'))
+
+@clients_bp.route('/clients/export')
+@login_required
+def export_clients():
+    """Export clients to CSV"""
+    status = request.args.get('status', 'active')
+    search = request.args.get('search', '').strip()
+    
+    query = Client.query
+    if status == 'active':
+        query = query.filter_by(status='active')
+    elif status == 'inactive':
+        query = query.filter_by(status='inactive')
+    
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Client.name.ilike(like),
+                Client.description.ilike(like),
+                Client.contact_person.ilike(like),
+                Client.email.ilike(like)
+            )
+        )
+    
+    clients = query.order_by(Client.name).all()
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'ID',
+        'Name',
+        'Description',
+        'Contact Person',
+        'Email',
+        'Phone',
+        'Address',
+        'Default Hourly Rate',
+        'Status',
+        'Active Projects',
+        'Total Projects',
+        'Created At',
+        'Updated At'
+    ])
+    
+    # Write client data
+    for client in clients:
+        writer.writerow([
+            client.id,
+            client.name,
+            client.description or '',
+            client.contact_person or '',
+            client.email or '',
+            client.phone or '',
+            client.address or '',
+            client.default_hourly_rate or '',
+            client.status,
+            client.active_projects,
+            client.total_projects,
+            client.created_at.strftime('%Y-%m-%d %H:%M:%S') if client.created_at else '',
+            client.updated_at.strftime('%Y-%m-%d %H:%M:%S') if client.updated_at else ''
+        ])
+    
+    # Create response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment; filename=clients_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        }
+    )
+
 
 @clients_bp.route('/api/clients')
 @login_required

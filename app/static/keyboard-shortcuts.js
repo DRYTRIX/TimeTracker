@@ -494,7 +494,7 @@
             if (timerBtn) {
                 timerBtn.click();
             } else {
-                window.TimeTrackerUI.showToast('No timer found', 'warning');
+                window.TimeTrackerUI.showToast(window.i18n?.messages?.noTimerFound || 'No timer found', 'warning');
             }
         }
 

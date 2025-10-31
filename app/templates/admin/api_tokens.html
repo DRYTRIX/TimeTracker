@@ -1,21 +1,21 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block title %}API Tokens - Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">API Tokens</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">Manage REST API authentication tokens</p>
-        </div>
-        <button onclick="showCreateTokenModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Create Token
-        </button>
-    </div>
+{% set breadcrumbs = [
+    {'text': 'Admin', 'url': url_for('admin.admin_dashboard')},
+    {'text': 'API Tokens'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-key',
+    title_text='API Tokens',
+    subtitle_text='Manage REST API authentication tokens',
+    breadcrumbs=breadcrumbs,
+    actions_html='<button onclick="showCreateTokenModal()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Token</button>'
+) }}
 
     <!-- API Documentation Link -->
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">

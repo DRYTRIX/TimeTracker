@@ -432,7 +432,8 @@ TimeTracker - Time Tracking & Project Management
                 mail_server=current_app.config.get('MAIL_SERVER'),
                 mail_port=current_app.config.get('MAIL_PORT'),
                 use_tls=current_app.config.get('MAIL_USE_TLS'),
-                use_ssl=current_app.config.get('MAIL_USE_SSL')
+                use_ssl=current_app.config.get('MAIL_USE_SSL'),
+                datetime=datetime
             )
             current_app.logger.info("[EMAIL TEST] HTML template rendered successfully")
         except Exception as template_error:

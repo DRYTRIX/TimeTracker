@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Expense Categories', 'url': url_for('expense_categories.list_categories')},
+    {'text': 'Edit' if category else 'New'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-tags',
+    title_text=('Edit Expense Category' if category else 'New Expense Category'),
+    subtitle_text=('Update category details' if category else 'Create a new expense category'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="max-w-4xl mx-auto">
+    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Basic Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Basic Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Category Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="name" id="name" required
+                           value="{{ category.name if category else '' }}"
+                           placeholder="e.g., Travel, Meals, Office Supplies"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Code
+                    </label>
+                    <input type="text" name="code" id="code"
+                           value="{{ category.code if category else '' }}"
+                           placeholder="e.g., TRAVEL, MEALS"
+                           maxlength="20"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Description
+                    </label>
+                    <textarea name="description" id="description" rows="3"
+                              placeholder="Brief description of this category..."
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ category.description if category else '' }}</textarea>
+                </div>
+                
+                <div>
+                    <label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Color
+                    </label>
+                    <input type="color" name="color" id="color"
+                           value="{{ category.color if category else '#3B82F6' }}"
+                           class="h-10 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+                
+                <div>
+                    <label for="icon" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Icon (Font Awesome class)
+                    </label>
+                    <input type="text" name="icon" id="icon"
+                           value="{{ category.icon if category else '' }}"
+                           placeholder="e.g., fa-plane, fa-utensils"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Budget Settings -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-chart-pie mr-2"></i>Budget Settings
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="monthly_budget" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Monthly Budget
+                    </label>
+                    <input type="number" name="monthly_budget" id="monthly_budget" step="0.01"
+                           value="{{ category.monthly_budget if category and category.monthly_budget else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="quarterly_budget" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Quarterly Budget
+                    </label>
+                    <input type="number" name="quarterly_budget" id="quarterly_budget" step="0.01"
+                           value="{{ category.quarterly_budget if category and category.quarterly_budget else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="yearly_budget" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Yearly Budget
+                    </label>
+                    <input type="number" name="yearly_budget" id="yearly_budget" step="0.01"
+                           value="{{ category.yearly_budget if category and category.yearly_budget else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="budget_threshold_percent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Alert Threshold (%)
+                    </label>
+                    <input type="number" name="budget_threshold_percent" id="budget_threshold_percent"
+                           value="{{ category.budget_threshold_percent if category else '80' }}"
+                           min="0" max="100"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                    <p class="text-xs text-gray-500 mt-1">Alert when budget utilization reaches this percentage</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Category Settings -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-cog mr-2"></i>Category Settings
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="default_tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Default Tax Rate (%)
+                    </label>
+                    <input type="number" name="default_tax_rate" id="default_tax_rate" step="0.01"
+                           value="{{ category.default_tax_rate if category and category.default_tax_rate else '' }}"
+                           placeholder="e.g., 19.00"
+                           min="0" max="100"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+            
+            <div class="mt-4 space-y-3">
+                <div class="flex items-center">
+                    <input type="checkbox" name="requires_receipt" id="requires_receipt"
+                           {% if not category or category.requires_receipt %}checked{% endif %}
+                           class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="requires_receipt" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Requires Receipt</strong>
+                        <span class="block text-xs text-gray-500">Expenses in this category must have an attached receipt</span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="checkbox" name="requires_approval" id="requires_approval"
+                           {% if not category or category.requires_approval %}checked{% endif %}
+                           class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="requires_approval" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Requires Approval</strong>
+                        <span class="block text-xs text-gray-500">Expenses in this category must be approved by an administrator</span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="is_active"
+                           {% if not category or category.is_active %}checked{% endif %}
+                           class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="is_active" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Active</strong>
+                        <span class="block text-xs text-gray-500">Only active categories are available for selection</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+            <a href="{{ url_for('expense_categories.list_categories') }}" 
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i class="fas fa-times mr-2"></i>Cancel
+            </a>
+            
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ 'Update Category' if category else 'Create Category' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+

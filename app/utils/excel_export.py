@@ -296,3 +296,232 @@ def create_invoice_excel(invoice, items):
     filename = f'invoice_{invoice.invoice_number}.xlsx'
     return output, filename
 
+
+def create_invoices_list_excel(invoices):
+    """Create Excel file for invoice list
+    
+    Args:
+        invoices: List of Invoice objects
+        
+    Returns:
+        tuple: (BytesIO object with Excel file, filename)
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Invoices"
+    
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Headers
+    headers = [
+        'Invoice Number', 'Client Name', 'Project', 'Issue Date', 'Due Date',
+        'Status', 'Payment Status', 'Subtotal', 'Tax Rate (%)', 'Tax Amount',
+        'Total Amount', 'Amount Paid', 'Outstanding', 'Currency', 'Created By', 'Created At'
+    ]
+    
+    # Write headers with styling
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = border
+    
+    # Write data
+    for row_num, invoice in enumerate(invoices, 2):
+        data = [
+            invoice.invoice_number,
+            invoice.client_name or 'N/A',
+            invoice.project.name if invoice.project else 'N/A',
+            invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else '',
+            invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else '',
+            invoice.status or 'draft',
+            invoice.payment_status or 'unpaid',
+            float(invoice.subtotal or 0),
+            float(invoice.tax_rate or 0),
+            float(invoice.tax_amount or 0),
+            float(invoice.total_amount or 0),
+            float(invoice.amount_paid or 0),
+            float(invoice.outstanding_amount or 0),
+            invoice.currency_code or 'USD',
+            invoice.creator.display_name if invoice.creator else 'Unknown',
+            invoice.created_at.strftime('%Y-%m-%d %H:%M') if invoice.created_at else ''
+        ]
+        
+        for col_num, value in enumerate(data, 1):
+            cell = ws.cell(row=row_num, column=col_num, value=value)
+            cell.border = border
+            
+            # Format number columns
+            if col_num in [8, 10, 11, 12, 13]:  # Money columns
+                if isinstance(value, (int, float)):
+                    cell.number_format = '#,##0.00'
+            elif col_num == 9:  # Tax rate percentage
+                if isinstance(value, (int, float)):
+                    cell.number_format = '0.00'
+    
+    # Auto-adjust column widths
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)  # Cap at 50
+        ws.column_dimensions[column].width = adjusted_width
+    
+    # Add summary at the bottom
+    last_row = len(invoices) + 2
+    ws.cell(row=last_row + 1, column=1, value="Summary")
+    ws.cell(row=last_row + 1, column=1).font = Font(bold=True)
+    
+    total_invoiced = sum(float(inv.total_amount or 0) for inv in invoices)
+    total_paid = sum(float(inv.amount_paid or 0) for inv in invoices)
+    total_outstanding = sum(float(inv.outstanding_amount or 0) for inv in invoices)
+    
+    ws.cell(row=last_row + 2, column=1, value="Total Invoiced:")
+    ws.cell(row=last_row + 2, column=2, value=total_invoiced).number_format = '#,##0.00'
+    ws.cell(row=last_row + 3, column=1, value="Total Paid:")
+    ws.cell(row=last_row + 3, column=2, value=total_paid).number_format = '#,##0.00'
+    ws.cell(row=last_row + 4, column=1, value="Total Outstanding:")
+    ws.cell(row=last_row + 4, column=2, value=total_outstanding).number_format = '#,##0.00'
+    ws.cell(row=last_row + 5, column=1, value="Total Invoices:")
+    ws.cell(row=last_row + 5, column=2, value=len(invoices))
+    
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Generate filename
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'invoices_list_{timestamp}.xlsx'
+    
+    return output, filename
+
+
+def create_payments_list_excel(payments):
+    """Create Excel file for payment list
+    
+    Args:
+        payments: List of Payment objects
+        
+    Returns:
+        tuple: (BytesIO object with Excel file, filename)
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Payments"
+    
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Headers
+    headers = [
+        'Payment ID', 'Invoice Number', 'Client Name', 'Amount', 'Currency',
+        'Gateway Fee', 'Net Amount', 'Payment Date', 'Method', 'Reference',
+        'Status', 'Received By', 'Gateway Transaction ID', 'Notes', 'Created At'
+    ]
+    
+    # Write headers with styling
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = border
+    
+    # Write data
+    for row_num, payment in enumerate(payments, 2):
+        data = [
+            payment.id,
+            payment.invoice.invoice_number if payment.invoice else 'N/A',
+            payment.invoice.client_name if payment.invoice else 'N/A',
+            float(payment.amount or 0),
+            payment.currency or 'EUR',
+            float(payment.gateway_fee or 0),
+            float(payment.net_amount or payment.amount or 0),
+            payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '',
+            payment.method or 'N/A',
+            payment.reference or '',
+            payment.status or 'completed',
+            payment.receiver.display_name if payment.receiver else 'N/A',
+            payment.gateway_transaction_id or '',
+            payment.notes or '',
+            payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else ''
+        ]
+        
+        for col_num, value in enumerate(data, 1):
+            cell = ws.cell(row=row_num, column=col_num, value=value)
+            cell.border = border
+            
+            # Format number columns
+            if col_num in [4, 6, 7]:  # Money columns
+                if isinstance(value, (int, float)):
+                    cell.number_format = '#,##0.00'
+    
+    # Auto-adjust column widths
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)  # Cap at 50
+        ws.column_dimensions[column].width = adjusted_width
+    
+    # Add summary at the bottom
+    last_row = len(payments) + 2
+    ws.cell(row=last_row + 1, column=1, value="Summary")
+    ws.cell(row=last_row + 1, column=1).font = Font(bold=True)
+    
+    total_amount = sum(float(p.amount or 0) for p in payments)
+    total_fees = sum(float(p.gateway_fee or 0) for p in payments if p.gateway_fee)
+    total_net = sum(float(p.net_amount or p.amount or 0) for p in payments)
+    completed_count = sum(1 for p in payments if p.status == 'completed')
+    
+    ws.cell(row=last_row + 2, column=1, value="Total Amount:")
+    ws.cell(row=last_row + 2, column=2, value=total_amount).number_format = '#,##0.00'
+    ws.cell(row=last_row + 3, column=1, value="Total Gateway Fees:")
+    ws.cell(row=last_row + 3, column=2, value=total_fees).number_format = '#,##0.00'
+    ws.cell(row=last_row + 4, column=1, value="Total Net Amount:")
+    ws.cell(row=last_row + 4, column=2, value=total_net).number_format = '#,##0.00'
+    ws.cell(row=last_row + 5, column=1, value="Total Payments:")
+    ws.cell(row=last_row + 5, column=2, value=len(payments))
+    ws.cell(row=last_row + 6, column=1, value="Completed Payments:")
+    ws.cell(row=last_row + 6, column=2, value=completed_count)
+    
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Generate filename
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'payments_list_{timestamp}.xlsx'
+    
+    return output, filename
+

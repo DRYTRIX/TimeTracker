@@ -11,7 +11,12 @@
     title_text='Expenses',
     subtitle_text='Track and manage business expenses',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("expenses.create_expense") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Expense</a>'
+    actions_html=''
+        + '<div class="flex gap-2">'
+        +   '<a href="' + url_for("expenses.create_expense") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Expense</a>'
+        +   '<a href="' + url_for("mileage.create_mileage") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-car mr-2"></i>New Mileage</a>'
+        +   '<a href="' + url_for("per_diem.create_per_diem") + '" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"><i class="fas fa-money-bill-alt mr-2"></i>New Per Diem</a>'
+        + '</div>'
 ) }}
 
 <!-- Summary Stats -->
@@ -32,10 +37,10 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                <p class="text-2xl font-bold">{{ '€%.2f'|format(total_amount) }}</p>
+                <p class="text-2xl font-bold">{{ currency|currency_symbol }}{{ '%.2f'|format(total_amount) }}</p>
             </div>
             <div class="text-green-500 text-3xl">
-                <i class="fas fa-euro-sign"></i>
+                <i class="fas {{ currency|currency_icon }}"></i>
             </div>
         </div>
     </div>
