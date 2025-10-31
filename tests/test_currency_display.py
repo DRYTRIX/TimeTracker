@@ -74,11 +74,12 @@ def sample_invoice(app, sample_project, admin_user, sample_client):
     invoice = Invoice(
         invoice_number='INV-TEST-001',
         project_id=sample_project.id,
-        client_id=sample_client.id,
+        client_name=sample_client.name,
         due_date=date.today() + timedelta(days=30),
         created_by=admin_user.id,
+        client_id=sample_client.id,
         status='sent',
-        currency='USD'
+        currency_code='USD'
     )
     db.session.add(invoice)
     db.session.commit()
@@ -107,12 +108,12 @@ def sample_expense(app, admin_user, sample_project):
     """Create a sample expense."""
     expense = Expense(
         user_id=admin_user.id,
-        project_id=sample_project.id,
         title='Test Expense',
         category='travel',
+        amount=Decimal('250.00'),
         expense_date=date.today(),
+        project_id=sample_project.id,
         currency_code='USD',
-        total_amount=Decimal('250.00'),
         status='approved'
     )
     db.session.add(expense)
