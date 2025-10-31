@@ -11,6 +11,9 @@ from .payments import Payment, CreditNote, InvoiceReminderSchedule
 from .reporting import SavedReportView, ReportEmailSchedule
 from .client import Client
 from .task_activity import TaskActivity
+from .expense_category import ExpenseCategory
+from .mileage import Mileage
+from .per_diem import PerDiem, PerDiemRate
 from .extra_good import ExtraGood
 from .comment import Comment
 from .focus_session import FocusSession

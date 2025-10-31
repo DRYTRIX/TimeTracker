@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Mileage', 'url': url_for('mileage.list_mileage')},
+    {'text': 'Edit' if mileage else 'New'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-car',
+    title_text=('Edit Mileage Entry' if mileage else 'New Mileage Entry'),
+    subtitle_text=('Update mileage details' if mileage else 'Record a new vehicle mileage entry'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="max-w-4xl mx-auto">
+    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Trip Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Trip Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="trip_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Trip Date <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="trip_date" id="trip_date" required
+                           value="{{ mileage.trip_date.strftime('%Y-%m-%d') if mileage else '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Currency
+                    </label>
+                    <select name="currency_code" id="currency_code"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="EUR" {% if not mileage or mileage.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
+                        <option value="USD" {% if mileage and mileage.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="GBP" {% if mileage and mileage.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                    </select>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="purpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Purpose <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="purpose" id="purpose" required
+                           value="{{ mileage.purpose if mileage else '' }}"
+                           placeholder="e.g., Client meeting, Site visit"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Description
+                    </label>
+                    <textarea name="description" id="description" rows="2"
+                              placeholder="Additional details..."
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ mileage.description if mileage else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Route Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-route mr-2"></i>Route Details
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="start_location" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Start Location <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="start_location" id="start_location" required
+                           value="{{ mileage.start_location if mileage else '' }}"
+                           placeholder="e.g., Office, Home"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="end_location" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        End Location <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="end_location" id="end_location" required
+                           value="{{ mileage.end_location if mileage else '' }}"
+                           placeholder="e.g., Client site, Airport"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="distance_km" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Distance (km) <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="distance_km" id="distance_km" step="0.01" required
+                           value="{{ mileage.distance_km if mileage else '' }}"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="rate_per_km" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Rate per km <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="rate_per_km" id="rate_per_km" step="0.01" required
+                           value="{{ mileage.rate_per_km if mileage else (default_rates.car if default_rates else '0.30') }}"
+                           placeholder="0.30"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                    <p class="text-xs text-gray-500 mt-1">Standard rate: €0.30/km</p>
+                </div>
+                
+                <div>
+                    <label for="start_odometer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Start Odometer (optional)
+                    </label>
+                    <input type="number" name="start_odometer" id="start_odometer" step="1"
+                           value="{{ mileage.start_odometer if mileage and mileage.start_odometer else '' }}"
+                           placeholder="e.g., 12345"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="end_odometer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        End Odometer (optional)
+                    </label>
+                    <input type="number" name="end_odometer" id="end_odometer" step="1"
+                           value="{{ mileage.end_odometer if mileage and mileage.end_odometer else '' }}"
+                           placeholder="e.g., 12400"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div class="md:col-span-2 flex items-center">
+                    <input type="checkbox" name="is_round_trip" id="is_round_trip"
+                           {% if mileage and mileage.is_round_trip %}checked{% endif %}
+                           class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="is_round_trip" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Round Trip</strong>
+                        <span class="block text-xs text-gray-500">Double the distance for return journey</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-calculator mr-1"></i>
+                    <strong>Calculated Amount:</strong> <span id="calculated_amount">0.00</span> <span id="amount_currency">EUR</span>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Vehicle Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-car mr-2"></i>Vehicle Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="vehicle_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Vehicle Type
+                    </label>
+                    <select name="vehicle_type" id="vehicle_type"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">Select Type</option>
+                        <option value="car" {% if mileage and mileage.vehicle_type == 'car' %}selected{% endif %}>Car</option>
+                        <option value="motorcycle" {% if mileage and mileage.vehicle_type == 'motorcycle' %}selected{% endif %}>Motorcycle</option>
+                        <option value="van" {% if mileage and mileage.vehicle_type == 'van' %}selected{% endif %}>Van</option>
+                        <option value="truck" {% if mileage and mileage.vehicle_type == 'truck' %}selected{% endif %}>Truck</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="vehicle_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Vehicle Make/Model
+                    </label>
+                    <input type="text" name="vehicle_description" id="vehicle_description"
+                           value="{{ mileage.vehicle_description if mileage and mileage.vehicle_description else '' }}"
+                           placeholder="e.g., VW Golf"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="license_plate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        License Plate
+                    </label>
+                    <input type="text" name="license_plate" id="license_plate"
+                           value="{{ mileage.license_plate if mileage and mileage.license_plate else '' }}"
+                           placeholder="e.g., ABC-123"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Project & Client -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-project-diagram mr-2"></i>Association
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Project
+                    </label>
+                    <select name="project_id" id="project_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">No Project</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if mileage and mileage.project_id == project.id %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Client
+                    </label>
+                    <select name="client_id" id="client_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">No Client</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}" {% if mileage and mileage.client_id == client.id %}selected{% endif %}>
+                            {{ client.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notes -->
+        <div class="mb-6">
+            <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes
+            </label>
+            <textarea name="notes" id="notes" rows="3"
+                      placeholder="Additional notes..."
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ mileage.notes if mileage else '' }}</textarea>
+        </div>
+        
+        <!-- Create Expense Option -->
+        {% if not mileage %}
+        <div class="mb-6">
+            <div class="flex items-center">
+                <input type="checkbox" name="create_expense" id="create_expense" checked
+                       class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                <label for="create_expense" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    <strong>Create linked expense entry</strong>
+                    <span class="block text-xs text-gray-500">Automatically create an expense record for this mileage</span>
+                </label>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+            <a href="{{ url_for('mileage.view_mileage', mileage_id=mileage.id) if mileage else url_for('mileage.list_mileage') }}" 
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i class="fas fa-times mr-2"></i>Cancel
+            </a>
+            
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ 'Update Mileage' if mileage else 'Create Mileage Entry' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Calculate and display amount
+function updateAmount() {
+    const distance = parseFloat(document.getElementById('distance_km').value) || 0;
+    const rate = parseFloat(document.getElementById('rate_per_km').value) || 0;
+    const isRoundTrip = document.getElementById('is_round_trip').checked;
+    const currency = document.getElementById('currency_code').value;
+    
+    let amount = distance * rate;
+    if (isRoundTrip) {
+        amount *= 2;
+    }
+    
+    document.getElementById('calculated_amount').textContent = amount.toFixed(2);
+    document.getElementById('amount_currency').textContent = currency;
+}
+
+document.getElementById('distance_km').addEventListener('input', updateAmount);
+document.getElementById('rate_per_km').addEventListener('input', updateAmount);
+document.getElementById('is_round_trip').addEventListener('change', updateAmount);
+document.getElementById('currency_code').addEventListener('change', updateAmount);
+
+// Set default trip date to today if creating new
+{% if not mileage %}
+document.getElementById('trip_date').value = new Date().toISOString().split('T')[0];
+{% endif %}
+
+// Initial calculation
+updateAmount();
+</script>
+
+{% endblock %}
+

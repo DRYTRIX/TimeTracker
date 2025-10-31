@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Per Diem', 'url': url_for('per_diem.list_per_diem')},
+    {'text': 'Edit' if per_diem else 'New'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-money-bill-alt',
+    title_text=('Edit Per Diem Claim' if per_diem else 'New Per Diem Claim'),
+    subtitle_text=('Update claim details' if per_diem else 'Create a new per diem claim'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="max-w-4xl mx-auto">
+    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Trip Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>Trip Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="trip_purpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Trip Purpose <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="trip_purpose" id="trip_purpose" required
+                           value="{{ per_diem.trip_purpose if per_diem else '' }}"
+                           placeholder="e.g., Business trip to Berlin"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Start Date <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="start_date" id="start_date" required
+                           value="{{ per_diem.start_date.strftime('%Y-%m-%d') if per_diem else '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        End Date <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="end_date" id="end_date" required
+                           value="{{ per_diem.end_date.strftime('%Y-%m-%d') if per_diem else '' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="country" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Country <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="country" id="country" required
+                           value="{{ per_diem.country if per_diem else '' }}"
+                           placeholder="e.g., DE, US, GB"
+                           maxlength="2"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        City
+                    </label>
+                    <input type="text" name="city" id="city"
+                           value="{{ per_diem.city if per_diem and per_diem.city else '' }}"
+                           placeholder="e.g., Berlin"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Days Calculation -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-calendar mr-2"></i>Days Calculation
+            </h3>
+            
+            <div class="mb-4">
+                <div class="flex items-center">
+                    <input type="checkbox" name="auto_calculate_days" id="auto_calculate_days" checked
+                           class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="auto_calculate_days" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        <strong>Auto-calculate days from dates</strong>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="full_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Full Days
+                    </label>
+                    <input type="number" name="full_days" id="full_days" min="0"
+                           value="{{ per_diem.full_days if per_diem else '0' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="half_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Half Days
+                    </label>
+                    <input type="number" name="half_days" id="half_days" min="0"
+                           value="{{ per_diem.half_days if per_diem else '0' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Meal Deductions -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-utensils mr-2"></i>Provided Meals (Deductions)
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="breakfast_provided" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Breakfasts Provided
+                    </label>
+                    <input type="number" name="breakfast_provided" id="breakfast_provided" min="0"
+                           value="{{ per_diem.breakfast_provided if per_diem else '0' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="lunch_provided" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Lunches Provided
+                    </label>
+                    <input type="number" name="lunch_provided" id="lunch_provided" min="0"
+                           value="{{ per_diem.lunch_provided if per_diem else '0' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label for="dinner_provided" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Dinners Provided
+                    </label>
+                    <input type="number" name="dinner_provided" id="dinner_provided" min="0"
+                           value="{{ per_diem.dinner_provided if per_diem else '0' }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Project & Client -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-project-diagram mr-2"></i>Association
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Project
+                    </label>
+                    <select name="project_id" id="project_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">No Project</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if per_diem and per_diem.project_id == project.id %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Client
+                    </label>
+                    <select name="client_id" id="client_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                        <option value="">No Client</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}" {% if per_diem and per_diem.client_id == client.id %}selected{% endif %}>
+                            {{ client.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notes -->
+        <div class="mb-6">
+            <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes
+            </label>
+            <textarea name="notes" id="notes" rows="3"
+                      placeholder="Additional notes..."
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ per_diem.notes if per_diem else '' }}</textarea>
+        </div>
+        
+        <!-- Create Expense Option -->
+        {% if not per_diem %}
+        <div class="mb-6">
+            <div class="flex items-center">
+                <input type="checkbox" name="create_expense" id="create_expense" checked
+                       class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                <label for="create_expense" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    <strong>Create linked expense entry</strong>
+                    <span class="block text-xs text-gray-500">Automatically create an expense record for this per diem</span>
+                </label>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+            <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=per_diem.id) if per_diem else url_for('per_diem.list_per_diem') }}" 
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i class="fas fa-times mr-2"></i>Cancel
+            </a>
+            
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ 'Update Claim' if per_diem else 'Create Claim' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
