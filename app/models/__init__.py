@@ -31,6 +31,7 @@ from .expense import Expense
 from .permission import Permission, Role
 from .api_token import ApiToken
 from .calendar_event import CalendarEvent
+from .budget_alert import BudgetAlert
 
 __all__ = [
     "User",
@@ -68,4 +69,5 @@ __all__ = [
     "Role",
     "ApiToken",
     "CalendarEvent",
+    "BudgetAlert",
 ]

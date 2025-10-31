@@ -773,6 +773,7 @@ def create_app(config=None):
     from app.routes.expense_categories import expense_categories_bp
     from app.routes.mileage import mileage_bp
     from app.routes.per_diem import per_diem_bp
+    from app.routes.budget_alerts import budget_alerts_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -804,6 +805,7 @@ def create_app(config=None):
     app.register_blueprint(expense_categories_bp)
     app.register_blueprint(mileage_bp)
     app.register_blueprint(per_diem_bp)
+    app.register_blueprint(budget_alerts_bp)
 
     # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
     # Only if CSRF is enabled
