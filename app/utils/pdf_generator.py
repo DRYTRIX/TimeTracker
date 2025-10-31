@@ -79,12 +79,58 @@ class InvoicePDFGenerator:
             except Exception:
                 return str(value)
         
+        # Convert lazy='dynamic' relationships to lists for template rendering
+        # This ensures {% for item in invoice.items %} works correctly
+        try:
+            if hasattr(self.invoice.items, 'all'):
+                # It's a SQLAlchemy Query object - need to call .all()
+                invoice_items = self.invoice.items.all()
+            else:
+                # Already a list or other iterable
+                invoice_items = list(self.invoice.items) if self.invoice.items else []
+        except Exception:
+            invoice_items = []
+        
+        try:
+            if hasattr(self.invoice.extra_goods, 'all'):
+                # It's a SQLAlchemy Query object - need to call .all()
+                invoice_extra_goods = self.invoice.extra_goods.all()
+            else:
+                # Already a list or other iterable
+                invoice_extra_goods = list(self.invoice.extra_goods) if self.invoice.extra_goods else []
+        except Exception:
+            invoice_extra_goods = []
+        
+        # Create a wrapper object that has the converted lists
+        from types import SimpleNamespace
+        invoice_data = SimpleNamespace()
+        # Copy all attributes from original invoice
+        for attr in dir(self.invoice):
+            if not attr.startswith('_'):
+                try:
+                    setattr(invoice_data, attr, getattr(self.invoice, attr))
+                except Exception:
+                    pass
+        # Override with converted lists
+        invoice_data.items = invoice_items
+        invoice_data.extra_goods = invoice_extra_goods
+        
+        # Convert expenses from Query to list
+        try:
+            if hasattr(self.invoice, 'expenses') and hasattr(self.invoice.expenses, 'all'):
+                invoice_expenses = self.invoice.expenses.all()
+            else:
+                invoice_expenses = list(self.invoice.expenses) if self.invoice.expenses else []
+        except Exception:
+            invoice_expenses = []
+        invoice_data.expenses = invoice_expenses
+        
         try:
             # Render using Flask's Jinja environment to include app filters and _()
             if html_template:
                 from flask import render_template_string
                 html = render_template_string(html_template, 
-                                             invoice=self.invoice, 
+                                             invoice=invoice_data,  # Use wrapped object with lists
                                              settings=self.settings, 
                                              Path=Path,
                                              get_logo_base64=get_logo_base64,
@@ -101,7 +147,7 @@ class InvoicePDFGenerator:
         if not html:
             try:
                 html = render_template('invoices/pdf_default.html', 
-                                     invoice=self.invoice, 
+                                     invoice=invoice_data,  # Use wrapped object with lists
                                      settings=self.settings, 
                                      Path=Path,
                                      get_logo_base64=get_logo_base64,

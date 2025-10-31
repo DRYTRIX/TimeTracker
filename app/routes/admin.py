@@ -396,6 +396,7 @@ def pdf_layout():
         html_template = request.form.get('invoice_pdf_template_html', '')
         css_template = request.form.get('invoice_pdf_template_css', '')
         design_json = request.form.get('design_json', '')
+        
         settings_obj.invoice_pdf_template_html = html_template
         settings_obj.invoice_pdf_template_css = css_template
         settings_obj.invoice_pdf_design_json = design_json
@@ -437,6 +438,7 @@ def pdf_layout():
 def pdf_layout_reset():
     """Reset PDF layout to defaults (clear custom templates)."""
     settings_obj = Settings.get_settings()
+    
     settings_obj.invoice_pdf_template_html = ''
     settings_obj.invoice_pdf_template_css = ''
     settings_obj.invoice_pdf_design_json = ''
@@ -445,6 +447,55 @@ def pdf_layout_reset():
     else:
         flash(_('PDF layout reset to defaults'), 'success')
     return redirect(url_for('admin.pdf_layout'))
+
+
+@admin_bp.route('/admin/pdf-layout/debug', methods=['GET'])
+@login_required
+@admin_or_permission_required('manage_settings')
+def pdf_layout_debug():
+    """Debug endpoint to show what's saved in the database"""
+    settings_obj = Settings.get_settings()
+    
+    html = settings_obj.invoice_pdf_template_html or ''
+    css = settings_obj.invoice_pdf_template_css or ''
+    design_json = settings_obj.invoice_pdf_design_json or ''
+    
+    # Check for bugs
+    has_all_bug = 'invoice.items.all()' in html
+    has_if_bug = 'invoice.items and invoice.items.all()' in html
+    
+    # Get invoice info for testing
+    from app.models import Invoice
+    test_invoice = Invoice.query.order_by(Invoice.id.desc()).first()
+    
+    debug_info = {
+        'saved_template': {
+            'html_length': len(html),
+            'css_length': len(css),
+            'design_json_length': len(design_json),
+            'has_html': bool(html),
+            'has_bugs': has_all_bug or has_if_bug,
+            'bugs_found': []
+        },
+        'test_invoice': {
+            'exists': test_invoice is not None,
+            'invoice_number': test_invoice.invoice_number if test_invoice else None,
+            'items_count': test_invoice.items.count() if test_invoice else 0,
+        }
+    }
+    
+    if has_all_bug:
+        debug_info['saved_template']['bugs_found'].append('invoice.items.all() found in template')
+    if has_if_bug:
+        debug_info['saved_template']['bugs_found'].append('invoice.items and invoice.items.all() found in template')
+    
+    # Show snippets of problematic code
+    if has_all_bug or has_if_bug:
+        import re
+        matches = re.finditer(r'.{0,50}invoice\.items\.all\(\).{0,50}', html)
+        debug_info['saved_template']['bug_snippets'] = [m.group() for m in matches]
+    
+    return jsonify(debug_info)
 
 
 @admin_bp.route('/admin/pdf-layout/default', methods=['GET'])
@@ -516,21 +567,77 @@ def pdf_layout_preview():
         )
     # Ensure at least one sample item to avoid undefined 'item' in templates that reference it outside loops
     sample_item = SimpleNamespace(description='Sample item', quantity=1.0, unit_price=0.0, total_amount=0.0, time_entry_ids='')
-    try:
-        if not getattr(invoice, 'items', None):
-            invoice.items = [sample_item]
-    except Exception:
+    
+    # Create a wrapper object with converted Query objects to lists
+    # We can't modify SQLAlchemy model attributes directly, so we create a wrapper
+    invoice_wrapper = SimpleNamespace()
+    
+    # Copy all simple attributes from the invoice
+    for attr in ['id', 'invoice_number', 'project_id', 'client_name', 'client_email', 
+                 'client_address', 'client_id', 'issue_date', 'due_date', 'status',
+                 'subtotal', 'tax_rate', 'tax_amount', 'total_amount', 'currency_code',
+                 'notes', 'terms', 'payment_date', 'payment_method', 'payment_reference',
+                 'payment_notes', 'amount_paid', 'payment_status', 'created_by',
+                 'created_at', 'updated_at']:
         try:
-            invoice.items = [sample_item]
-        except Exception:
+            setattr(invoice_wrapper, attr, getattr(invoice, attr))
+        except AttributeError:
             pass
     
-    # Ensure extra_goods attribute exists
+    # Copy relationship attributes (project, client)
     try:
-        if not hasattr(invoice, 'extra_goods'):
-            invoice.extra_goods = []
+        invoice_wrapper.project = invoice.project
+    except:
+        invoice_wrapper.project = SimpleNamespace(name='Sample Project', description='')
+    
+    try:
+        invoice_wrapper.client = invoice.client
+    except:
+        invoice_wrapper.client = None
+    
+    # Convert items from Query to list
+    try:
+        if hasattr(invoice, 'items') and hasattr(invoice.items, 'all'):
+            # It's a SQLAlchemy Query object - call .all() to get list
+            items_list = invoice.items.all()
+            if not items_list:
+                # No items in database, add sample
+                items_list = [sample_item]
+            invoice_wrapper.items = items_list
+        elif hasattr(invoice, 'items') and isinstance(invoice.items, list):
+            # Already a list
+            invoice_wrapper.items = invoice.items if invoice.items else [sample_item]
+        else:
+            # Fallback
+            invoice_wrapper.items = [sample_item]
+    except Exception as e:
+        print(f"Error converting invoice items: {e}")
+        invoice_wrapper.items = [sample_item]
+    
+    # Convert extra_goods from Query to list
+    try:
+        if hasattr(invoice, 'extra_goods') and hasattr(invoice.extra_goods, 'all'):
+            invoice_wrapper.extra_goods = invoice.extra_goods.all()
+        elif hasattr(invoice, 'extra_goods') and isinstance(invoice.extra_goods, list):
+            invoice_wrapper.extra_goods = invoice.extra_goods
+        else:
+            invoice_wrapper.extra_goods = []
     except Exception:
-        pass
+        invoice_wrapper.extra_goods = []
+    
+    # Convert expenses from Query to list
+    try:
+        if hasattr(invoice, 'expenses') and hasattr(invoice.expenses, 'all'):
+            invoice_wrapper.expenses = invoice.expenses.all()
+        elif hasattr(invoice, 'expenses') and isinstance(invoice.expenses, list):
+            invoice_wrapper.expenses = invoice.expenses
+        else:
+            invoice_wrapper.expenses = []
+    except Exception:
+        invoice_wrapper.expenses = []
+    
+    # Use the wrapper instead of the original invoice
+    invoice = invoice_wrapper
     # Helper: sanitize Jinja blocks to fix entities/smart quotes inserted by editor
     def _sanitize_jinja_blocks(raw: str) -> str:
         try:
@@ -624,7 +731,9 @@ def pdf_layout_preview():
             item=sample_item,
         )
     except Exception as e:
-        body_html = f"<div style='color:red'>Template error: {str(e)}</div>" + sanitized
+        import traceback
+        error_details = traceback.format_exc()
+        body_html = f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>" + sanitized
     # Build complete HTML page with embedded styles
     page_html = f"""<!DOCTYPE html>
 <html>

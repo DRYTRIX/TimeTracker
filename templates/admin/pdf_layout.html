@@ -412,6 +412,10 @@
     <button id="btn-code" type="button" class="btn btn-secondary">
         <i class="fas fa-code mr-2"></i>{{ _('View Code') }}
     </button>
+    <label class="inline-flex items-center ml-4">
+        <input type="checkbox" id="snap-to-grid" class="mr-2" checked>
+        <span>{{ _('Snap to Grid (10px)') }}</span>
+    </label>
     <form id="form-reset" method="POST" action="{{ url_for('admin.pdf_layout_reset') }}" class="inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="button" onclick="confirmResetPdfLayout()" class="btn btn-danger">
@@ -545,6 +549,10 @@
             <div class="element-item" data-type="items-table">
                 <i class="fas fa-table"></i>
                 <span>{{ _('Items Table') }}</span>
+            </div>
+            <div class="element-item" data-type="expenses-table">
+                <i class="fas fa-table"></i>
+                <span>{{ _('Expenses Table') }}</span>
             </div>
             <div class="element-item" data-type="subtotal">
                 <i class="fas fa-coins"></i>
@@ -822,7 +830,7 @@
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Invoice Items Loop') }}</div>
                     <div class="variable-item" data-variable="for-loop-start">
-                        <div class="variable-name">{{ '{%' }} for item in invoice.items.all() {{ '%}' }}</div>
+                        <div class="variable-name">{{ '{%' }} for item in invoice.items {{ '%}' }}</div>
                         <div class="variable-desc">{{ _('Loop through invoice items') }}</div>
                     </div>
                     <div class="variable-item" data-variable="item.description">
@@ -996,8 +1004,10 @@ function initializePDFEditor() {
     // Store elements for export
     const elements = [];
     let selectedElement = null;
+    let snapToGrid = true;
+    const gridSize = 10;
     
-    // Add background
+    // Add background with grid
     let background = new Konva.Rect({
         x: 0,
         y: 0,
@@ -1007,6 +1017,43 @@ function initializePDFEditor() {
         name: 'background'
     });
     layer.add(background);
+    
+    // Add grid lines
+    function drawGrid() {
+        // Remove old grid if exists
+        layer.find('.grid-line').forEach(line => line.destroy());
+        
+        // Draw vertical lines
+        for (let i = 0; i < width / gridSize; i++) {
+            const line = new Konva.Line({
+                points: [i * gridSize, 0, i * gridSize, height],
+                stroke: '#e0e0e0',
+                strokeWidth: i % 5 === 0 ? 0.5 : 0.25,
+                name: 'grid-line',
+                listening: false
+            });
+            layer.add(line);
+            line.moveToBottom();
+        }
+        
+        // Draw horizontal lines
+        for (let i = 0; i < height / gridSize; i++) {
+            const line = new Konva.Line({
+                points: [0, i * gridSize, width, i * gridSize],
+                stroke: '#e0e0e0',
+                strokeWidth: i % 5 === 0 ? 0.5 : 0.25,
+                name: 'grid-line',
+                listening: false
+            });
+            layer.add(line);
+            line.moveToBottom();
+        }
+        
+        background.moveToBottom();
+        layer.draw();
+    }
+    
+    drawGrid();
     
     // Element templates
     {% raw %}
@@ -1118,7 +1165,7 @@ function initializePDFEditor() {
             // Handle special loop variables
             if (variable === 'for-loop-start') {
                 {% raw %}
-                text = '{% for item in invoice.items.all() %}';
+                text = '{% for item in invoice.items %}';
                 {% endraw %}
             } else if (variable === 'for-loop-end') {
                 {% raw %}
@@ -1254,6 +1301,11 @@ function initializePDFEditor() {
             return;
         }
         
+            if (type === 'expenses-table') {
+                addExpensesTable(x, y);
+            return;
+        }
+        
         // Handle text-based elements
         if (!template) return;
         
@@ -1302,7 +1354,7 @@ function initializePDFEditor() {
         {% raw %}
         const items = new Konva.Text({
             y: 25,
-            text: '{% for item in invoice.items.all() %}\\n{{ item.description }} | {{ item.quantity }} | {{ format_money(item.unit_price) }} | {{ format_money(item.total_amount) }}\\n{% endfor %}',
+            text: '{% for item in invoice.items %}\\n{{ item.description }} | {{ item.quantity }} | {{ format_money(item.unit_price) }} | {{ format_money(item.total_amount) }}\\n{% endfor %}',
             fontSize: 11,
             fill: 'black',
             width: 500
@@ -1316,11 +1368,73 @@ function initializePDFEditor() {
         layer.draw();
     }
     
+    function addExpensesTable(x, y) {
+        const tableGroup = new Konva.Group({
+            x: x,
+            y: y,
+            draggable: true,
+            name: 'expenses-table'
+        });
+        
+        const header = new Konva.Text({
+            text: 'Expense | Date | Category | Amount',
+            fontSize: 12,
+            fontStyle: 'bold',
+            fill: '#856404',
+            width: 500
+        });
+        
+        const line = new Konva.Line({
+            points: [0, 20, 500, 20],
+            stroke: '#856404',
+            strokeWidth: 1
+        });
+        
+        {% raw %}
+        const items = new Konva.Text({
+            y: 25,
+            text: '{% for expense in invoice.expenses %}\\n{{ expense.title }} | {{ expense.expense_date }} | {{ expense.category }} | {{ format_money(expense.total_amount) }}\\n{% endfor %}',
+            fontSize: 11,
+            fill: '#856404',
+            width: 500
+        });
+        {% endraw %}
+        
+        tableGroup.add(header, line, items);
+        layer.add(tableGroup);
+        elements.push({ type: 'expenses-table', node: tableGroup });
+        setupSelection(tableGroup);
+        layer.draw();
+    }
+    
     function setupSelection(node) {
         node.on('click', function() {
             selectElement(node);
         });
+        
+        // Add snap to grid on drag
+        node.on('dragmove', function() {
+            if (snapToGrid) {
+                node.position({
+                    x: Math.round(node.x() / gridSize) * gridSize,
+                    y: Math.round(node.y() / gridSize) * gridSize
+                });
+            }
+        });
+        
+        node.on('dragend', function() {
+            // Update properties panel if visible
+            const propX = document.getElementById('prop-x');
+            const propY = document.getElementById('prop-y');
+            if (propX) propX.value = Math.round(node.x());
+            if (propY) propY.value = Math.round(node.y());
+        });
     }
+    
+    // Snap to grid toggle
+    document.getElementById('snap-to-grid')?.addEventListener('change', function(e) {
+        snapToGrid = e.target.checked;
+    });
     
     function selectElement(node) {
         // Remove previous selection
@@ -1597,11 +1711,6 @@ function initializePDFEditor() {
     document.getElementById('btn-preview').addEventListener('click', function() {
         const { html, css } = generateCode();
         
-        // Debug logging
-        console.log('=== GENERATING PREVIEW ===');
-        console.log('Has Items Table:', html.includes('<!-- Items Table Start -->'));
-        console.log('Has Jinja2 loop:', html.includes('{' + '% for item in invoice.items'));
-        
         const loading = document.getElementById('preview-loading');
         loading.classList.add('active');
         
@@ -1630,7 +1739,7 @@ function initializePDFEditor() {
     function generateCode() {
         let bodyContent = '';
         
-        layer.children.forEach(child => {
+        layer.children.forEach((child, index) => {
             if (child === background || child.className === 'Transformer') return;
             
             const attrs = child.attrs;
@@ -1687,24 +1796,24 @@ function initializePDFEditor() {
                     
                     bodyContent += `  <hr class="line-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${width}px;border:none;border-top:${strokeWidth}px solid ${stroke};margin:0;opacity:${opacity}">\n`;
                 }
-            } else if (child.className === 'Group') {
+            } else if (child.className === 'Group' || child.constructor.name === 'Group' || child.children) {
+                // It's a Group element (check multiple ways since className might be undefined after JSON restore)
                 // Check if this is a table by looking at the group's name
-                let isTable = child.attrs.name === 'items-table';
+                let isItemsTable = child.attrs.name === 'items-table';
+                let isExpensesTable = child.attrs.name === 'expenses-table';
                 
                 // Fallback: Check if group has multiple children (header, line, items) - likely a table
-                if (!isTable && child.children && child.children.length >= 3) {
+                if (!isItemsTable && !isExpensesTable && child.children && child.children.length >= 3) {
                     const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
                     const hasLine = child.children.some(c => c.className === 'Line');
                     if (hasTextChildren && hasLine) {
                         console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
-                        isTable = true;
+                        isItemsTable = true;
                     }
                 }
                 
-                if (isTable) {
-                    // Generate proper HTML table
-                    console.log('✓ Rendering items table at position', x, y);
-                    console.log('Table group attrs:', child.attrs);
+                if (isItemsTable) {
+                    // Generate proper HTML table for invoice items
                     bodyContent += `  <!-- Items Table Start -->\n`;
                     bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;">\n`;
@@ -1718,8 +1827,8 @@ function initializePDFEditor() {
                     bodyContent += `      </thead>\n`;
                     bodyContent += `      <tbody>\n`;
                     {% raw %}
-                    bodyContent += `        {% if invoice.items and invoice.items.all() %}\n`;
-                    bodyContent += `        {% for item in invoice.items.all() %}\n`;
+                    bodyContent += `        {% if invoice.items %}\n`;
+                    bodyContent += `        {% for item in invoice.items %}\n`;
                     bodyContent += `        <tr style="border-bottom:1px solid #ddd;">\n`;
                     bodyContent += `          <td style="padding:10px;vertical-align:top;">{{ item.description }}</td>\n`;
                     bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;">{{ item.quantity }}</td>\n`;
@@ -1737,6 +1846,40 @@ function initializePDFEditor() {
                     bodyContent += `    </table>\n`;
                     bodyContent += `  </div>\n`;
                     bodyContent += `  <!-- Items Table End -->\n`;
+                } else if (isExpensesTable) {
+                    // Generate proper HTML table for project expenses
+                    bodyContent += `  <!-- Expenses Table Start -->\n`;
+                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
+                    bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fffbf0;">\n`;
+                    bodyContent += `      <thead>\n`;
+                    bodyContent += `        <tr style="background-color:#fff3cd;border-bottom:2px solid #856404;">\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:#856404;">Expense</th>\n`;
+                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:100px;color:#856404;">Date</th>\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">Category</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">Amount</th>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `      </thead>\n`;
+                    bodyContent += `      <tbody>\n`;
+                    {% raw %}
+                    bodyContent += `        {% if invoice.expenses %}\n`;
+                    bodyContent += `        {% for expense in invoice.expenses %}\n`;
+                    bodyContent += `        <tr style="border-bottom:1px solid #f0e5c1;">\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.title }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;color:#856404;">{{ expense.expense_date }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.category }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;color:#856404;">{{ format_money(expense.total_amount) }}</td>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `        {% endfor %}\n`;
+                    bodyContent += `        {% else %}\n`;
+                    bodyContent += `        <tr>\n`;
+                    bodyContent += `          <td colspan="4" style="padding:10px;text-align:center;color:#999;">No expenses</td>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `        {% endif %}\n`;
+                    {% endraw %}
+                    bodyContent += `      </tbody>\n`;
+                    bodyContent += `    </table>\n`;
+                    bodyContent += `  </div>\n`;
+                    bodyContent += `  <!-- Expenses Table End -->\n`;
                 } else {
                     // Regular group (not a table)
                     bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity}">\n`;
