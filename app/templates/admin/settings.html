@@ -1,12 +1,19 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">Settings</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">Configure system-wide application settings.</p>
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': 'Admin', 'url': url_for('admin.admin_dashboard')},
+    {'text': 'System Settings'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-sliders-h',
+    title_text='System Settings',
+    subtitle_text='Configure system-wide application settings',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
 
 <!-- Main Settings Form -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">

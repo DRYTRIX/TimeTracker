@@ -1,12 +1,19 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{% if is_duplicate %}Duplicate Time Entry{% else %}Log Time Manually{% endif %}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{% if is_duplicate %}Create a copy of a previous entry with new times.{% else %}Create a new time entry.{% endif %}</p>
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': 'Time Tracking'},
+    {'text': 'Log Time' if not is_duplicate else 'Duplicate Entry'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-clock',
+    title_text='Duplicate Time Entry' if is_duplicate else 'Log Time Manually',
+    subtitle_text='Create a copy of a previous entry with new times' if is_duplicate else 'Create a new time entry',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
 
 {% if is_duplicate and original_entry %}
 <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 max-w-3xl mx-auto">

@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+
 {% block title %}Calendar - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
@@ -6,16 +8,21 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <!-- Calendar Header -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 mb-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <h1 class="text-3xl font-bold">
-                <i class="fas fa-calendar-alt mr-2 text-primary"></i>
-                {{ _('Calendar') }}
-            </h1>
-            
-            <div class="flex flex-wrap gap-3">
+{% set breadcrumbs = [
+    {'text': _('Calendar')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-calendar-alt',
+    title_text=_('Calendar'),
+    subtitle_text=_('View and manage your events, tasks, and time entries'),
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div class="flex flex-wrap gap-3">
                 <!-- View Type Selector -->
                 <div class="btn-group" role="group">
                     <a href="{{ url_for('calendar.view_calendar', view='day', date=current_date.strftime('%Y-%m-%d')) }}" 

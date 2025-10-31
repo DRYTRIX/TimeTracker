@@ -1,18 +1,23 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ _('Roles & Permissions') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Manage roles and their permissions') }}</p>
-    </div>
-    <div class="flex gap-2 mt-4 md:mt-0">
-        <a href="{{ url_for('permissions.list_permissions') }}" class="bg-secondary text-white px-4 py-2 rounded-lg">{{ _('View Permissions') }}</a>
-        {% if current_user.is_admin or has_permission('manage_roles') %}
-        <a href="{{ url_for('permissions.create_role') }}" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Create Role') }}</a>
-        {% endif %}
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('Roles & Permissions')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-shield-alt',
+    title_text=_('Roles & Permissions'),
+    subtitle_text=_('Manage roles and their permissions'),
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<div class="flex gap-2">'
+        +   '<a href="' + url_for("permissions.list_permissions") + '" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">' + _('View Permissions') + '</a>'
+        +   ('<a href="' + url_for("permissions.create_role") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('Create Role') + '</a>' if (current_user.is_admin or has_permission('manage_roles')) else '')
+        + '</div>'
+) }}
 
 <!-- Statistics Summary -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

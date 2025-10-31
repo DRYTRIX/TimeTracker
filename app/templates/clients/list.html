@@ -1,15 +1,18 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">Clients</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">Manage your clients here.</p>
-    </div>
-    {% if current_user.is_admin or has_permission('create_clients') %}
-    <a href="{{ url_for('clients.create_client') }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Create Client</a>
-    {% endif %}
-</div>
+{% set breadcrumbs = [
+    {'text': 'Clients'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-users',
+    title_text='Clients',
+    subtitle_text='Manage your clients here',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("clients.create_client") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Client</a>' if (current_user.is_admin or has_permission('create_clients')) else None
+) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h2 class="text-lg font-semibold mb-4">Filter Clients</h2>

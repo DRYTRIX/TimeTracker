@@ -1,21 +1,23 @@
 {% extends "base.html" %}
 {% from "components/cards.html" import info_card, stat_card %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ _('Budget Alerts & Forecasting') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Monitor project budgets and forecast completion') }}</p>
-    </div>
-    <div class="flex gap-2 mt-2 md:mt-0">
-        <a href="{{ url_for('reports.reports') }}" class="bg-card-light dark:bg-card-dark px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-            <i class="fas fa-chart-bar"></i> {{ _('Reports') }}
-        </a>
-        <button id="refreshData" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition">
-            <i class="fas fa-sync-alt"></i> {{ _('Refresh') }}
-        </button>
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': _('Budget Alerts')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-exclamation-triangle',
+    title_text=_('Budget Alerts & Forecasting'),
+    subtitle_text=_('Monitor project budgets and forecast completion'),
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<div class="flex gap-2">'
+        +   '<a href="' + url_for("reports.reports") + '" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"><i class="fas fa-chart-bar mr-2"></i>' + _('Reports') + '</a>'
+        +   '<button id="refreshData" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-sync-alt mr-2"></i>' + _('Refresh') + '</button>'
+        + '</div>'
+) }}
 
 <!-- Alert Summary Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
