@@ -1,0 +1,218 @@
+/* RTL (Right-to-Left) Language Support */
+/* This file provides comprehensive RTL support for Arabic, Hebrew, and other RTL languages */
+
+html[dir="rtl"] {
+    direction: rtl;
+}
+
+/* Margin and Padding Reversals */
+html[dir="rtl"] .ml-1 { margin-left: 0; margin-right: 0.25rem; }
+html[dir="rtl"] .mr-1 { margin-right: 0; margin-left: 0.25rem; }
+html[dir="rtl"] .ml-2 { margin-left: 0; margin-right: 0.5rem; }
+html[dir="rtl"] .mr-2 { margin-right: 0; margin-left: 0.5rem; }
+html[dir="rtl"] .ml-3 { margin-left: 0; margin-right: 0.75rem; }
+html[dir="rtl"] .mr-3 { margin-right: 0; margin-left: 0.75rem; }
+html[dir="rtl"] .ml-4 { margin-left: 0; margin-right: 1rem; }
+html[dir="rtl"] .mr-4 { margin-right: 0; margin-left: 1rem; }
+html[dir="rtl"] .ml-6 { margin-left: 0; margin-right: 1.5rem; }
+html[dir="rtl"] .mr-6 { margin-right: 0; margin-left: 1.5rem; }
+html[dir="rtl"] .ml-8 { margin-left: 0; margin-right: 2rem; }
+html[dir="rtl"] .mr-8 { margin-right: 0; margin-left: 2rem; }
+html[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+html[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+
+html[dir="rtl"] .pl-1 { padding-left: 0; padding-right: 0.25rem; }
+html[dir="rtl"] .pr-1 { padding-right: 0; padding-left: 0.25rem; }
+html[dir="rtl"] .pl-2 { padding-left: 0; padding-right: 0.5rem; }
+html[dir="rtl"] .pr-2 { padding-right: 0; padding-left: 0.5rem; }
+html[dir="rtl"] .pl-3 { padding-left: 0; padding-right: 0.75rem; }
+html[dir="rtl"] .pr-3 { padding-right: 0; padding-left: 0.75rem; }
+html[dir="rtl"] .pl-4 { padding-left: 0; padding-right: 1rem; }
+html[dir="rtl"] .pr-4 { padding-right: 0; padding-left: 1rem; }
+html[dir="rtl"] .pl-10 { padding-left: 0; padding-right: 2.5rem; }
+html[dir="rtl"] .pr-10 { padding-right: 0; padding-left: 2.5rem; }
+html[dir="rtl"] .pr-14 { padding-right: 0; padding-left: 3.5rem; }
+
+/* Text Alignment */
+html[dir="rtl"] .text-left { text-align: right; }
+html[dir="rtl"] .text-right { text-align: left; }
+
+/* Positioning */
+html[dir="rtl"] .left-0 { left: auto; right: 0; }
+html[dir="rtl"] .right-0 { right: auto; left: 0; }
+html[dir="rtl"] .left-2 { left: auto; right: 0.5rem; }
+html[dir="rtl"] .right-2 { right: auto; left: 0.5rem; }
+
+/* Sidebar Adjustments */
+html[dir="rtl"] #sidebar { 
+    left: auto; 
+    right: 0; 
+}
+
+html[dir="rtl"] #mainContent { 
+    margin-left: 0; 
+    margin-right: 16rem; 
+}
+
+html[dir="rtl"] .sidebar-collapsed #sidebar {
+    right: -12rem;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 1024px) {
+    html[dir="rtl"] #mainContent { 
+        margin-right: 0; 
+    }
+}
+
+/* Border Radius Reversals */
+html[dir="rtl"] .rounded-l { border-radius: 0 0.25rem 0.25rem 0; }
+html[dir="rtl"] .rounded-r { border-radius: 0.25rem 0 0 0.25rem; }
+html[dir="rtl"] .rounded-tl { border-top-left-radius: 0; border-top-right-radius: 0.25rem; }
+html[dir="rtl"] .rounded-tr { border-top-right-radius: 0; border-top-left-radius: 0.25rem; }
+html[dir="rtl"] .rounded-bl { border-bottom-left-radius: 0; border-bottom-right-radius: 0.25rem; }
+html[dir="rtl"] .rounded-br { border-bottom-right-radius: 0; border-bottom-left-radius: 0.25rem; }
+
+/* Border Reversals */
+html[dir="rtl"] .border-l { border-left: 0; border-right: 1px solid; }
+html[dir="rtl"] .border-r { border-right: 0; border-left: 1px solid; }
+
+/* Transform Reversals */
+html[dir="rtl"] .rotate-90 { transform: rotate(-90deg); }
+html[dir="rtl"] .rotate-180 { transform: rotate(-180deg); }
+html[dir="rtl"] .rotate-270 { transform: rotate(-270deg); }
+
+/* Flex Direction */
+html[dir="rtl"] .flex-row { flex-direction: row-reverse; }
+html[dir="rtl"] .flex-row-reverse { flex-direction: row; }
+
+/* Icons and Chevrons */
+html[dir="rtl"] .fa-chevron-left::before { content: "\f054"; } /* chevron-right */
+html[dir="rtl"] .fa-chevron-right::before { content: "\f053"; } /* chevron-left */
+html[dir="rtl"] .fa-arrow-left::before { content: "\f061"; } /* arrow-right */
+html[dir="rtl"] .fa-arrow-right::before { content: "\f060"; } /* arrow-left */
+
+/* Dropdown Menus */
+html[dir="rtl"] .dropdown-menu {
+    left: auto;
+    right: 0;
+}
+
+html[dir="rtl"] [id$="Dropdown"] {
+    left: auto;
+    right: 0;
+}
+
+/* Search and Input Fields */
+html[dir="rtl"] .search-enhanced .search-icon {
+    left: auto;
+    right: 0.75rem;
+}
+
+html[dir="rtl"] .search-enhanced .search-actions {
+    right: auto;
+    left: 0.5rem;
+}
+
+/* Forms */
+html[dir="rtl"] input[type="text"],
+html[dir="rtl"] input[type="email"],
+html[dir="rtl"] input[type="password"],
+html[dir="rtl"] input[type="number"],
+html[dir="rtl"] input[type="search"],
+html[dir="rtl"] textarea,
+html[dir="rtl"] select {
+    text-align: right;
+}
+
+/* Tables */
+html[dir="rtl"] table {
+    direction: rtl;
+}
+
+html[dir="rtl"] th,
+html[dir="rtl"] td {
+    text-align: right;
+}
+
+/* Tooltips */
+html[dir="rtl"] .tooltip {
+    direction: rtl;
+}
+
+/* Cards and Containers */
+html[dir="rtl"] .card {
+    direction: rtl;
+}
+
+/* Buttons with Icons */
+html[dir="rtl"] .btn i {
+    margin-left: 0.5rem;
+    margin-right: 0;
+}
+
+html[dir="rtl"] .btn i:first-child {
+    margin-left: 0;
+    margin-right: 0.5rem;
+}
+
+html[dir="rtl"] .btn i:last-child {
+    margin-right: 0;
+    margin-left: 0.5rem;
+}
+
+/* Calendar and Date Pickers */
+html[dir="rtl"] .calendar,
+html[dir="rtl"] .datepicker {
+    direction: rtl;
+}
+
+/* Progress Bars */
+html[dir="rtl"] .progress-bar {
+    direction: rtl;
+}
+
+/* Breadcrumbs */
+html[dir="rtl"] .breadcrumb-item + .breadcrumb-item::before {
+    padding-right: 0;
+    padding-left: 0.5rem;
+    content: "\\";
+}
+
+/* Navigation */
+html[dir="rtl"] nav ul {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+html[dir="rtl"] nav li {
+    text-align: right;
+}
+
+/* Modal Dialogs */
+html[dir="rtl"] .modal {
+    direction: rtl;
+}
+
+html[dir="rtl"] .modal-header,
+html[dir="rtl"] .modal-body,
+html[dir="rtl"] .modal-footer {
+    text-align: right;
+}
+
+/* Alerts and Notifications */
+html[dir="rtl"] .alert {
+    direction: rtl;
+    text-align: right;
+}
+
+html[dir="rtl"] .toast-notification {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Badges */
+html[dir="rtl"] .badge {
+    direction: rtl;
+}
+

@@ -118,7 +118,12 @@ class Config:
         'fr': 'Français',
         'it': 'Italiano',
         'fi': 'Suomi',
+        'es': 'Español',
+        'ar': 'العربية',
+        'he': 'עברית',
     }
+    # RTL languages
+    RTL_LANGUAGES = {'ar', 'he'}
     BABEL_DEFAULT_LOCALE = os.getenv('DEFAULT_LOCALE', 'en')
     # Comma-separated list of translation directories relative to instance root
     BABEL_TRANSLATION_DIRECTORIES = os.getenv('BABEL_TRANSLATION_DIRECTORIES', 'translations')
