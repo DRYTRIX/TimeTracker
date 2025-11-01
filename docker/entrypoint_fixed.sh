@@ -323,12 +323,17 @@ execute_fresh_init() {
             
             # Apply any pending migrations
             log "Applying pending migrations..."
-            if ! flask db upgrade; then
+            
+            # Capture output to a temporary file so we can show it if migration fails
+            MIGRATION_OUTPUT=$(mktemp)
+            if ! flask db upgrade 2>&1 | tee "$MIGRATION_OUTPUT"; then
                 log "✗ Migration application failed"
                 log "Error details:"
-                flask db upgrade 2>&1 | head -20
+                cat "$MIGRATION_OUTPUT"
+                rm -f "$MIGRATION_OUTPUT"
                 return 1
             fi
+            rm -f "$MIGRATION_OUTPUT"
             log "✓ Migrations applied"
             
             # Wait a moment for tables to be fully committed
@@ -370,12 +375,15 @@ execute_fresh_init() {
     
     # Apply migration
     log "Applying initial migration..."
-    if ! flask db upgrade; then
+    MIGRATION_OUTPUT=$(mktemp)
+    if ! flask db upgrade 2>&1 | tee "$MIGRATION_OUTPUT"; then
         log "✗ Initial migration application failed"
         log "Error details:"
-        flask db upgrade 2>&1 | head -20
+        cat "$MIGRATION_OUTPUT"
+        rm -f "$MIGRATION_OUTPUT"
         return 1
     fi
+    rm -f "$MIGRATION_OUTPUT"
     log "✓ Initial migration applied"
     
     return 0
@@ -391,12 +399,15 @@ execute_check_migrations() {
     log "Current migration revision: $current_revision"
     
     # Check for pending migrations
-    if ! flask db upgrade; then
+    MIGRATION_OUTPUT=$(mktemp)
+    if ! flask db upgrade 2>&1 | tee "$MIGRATION_OUTPUT"; then
         log "✗ Migration check failed"
         log "Error details:"
-        flask db upgrade 2>&1 | head -20
+        cat "$MIGRATION_OUTPUT"
+        rm -f "$MIGRATION_OUTPUT"
         return 1
     fi
+    rm -f "$MIGRATION_OUTPUT"
     log "✓ Migrations checked and applied"
     
     return 0
