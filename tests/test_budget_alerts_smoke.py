@@ -30,7 +30,7 @@ def regular_user(app):
 @pytest.fixture
 def client_obj(app):
     """Create a test client"""
-    client = Client(name="Smoke Test Client", status="active")
+    client = Client(name="Smoke Test Client")
     db.session.add(client)
     db.session.commit()
     return client
