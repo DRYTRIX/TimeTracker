@@ -63,7 +63,8 @@ class TestLocaleSelection:
         db.session.commit()
         
         # Login as user
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Check that locale is set to user's preference
         with client.application.test_request_context():
@@ -105,7 +106,8 @@ class TestLanguageSwitching:
     def test_set_language_direct_route(self, client, test_user):
         """Test direct language switching route"""
         # Login first
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Switch to Spanish
         response = client.get('/set-language/es', follow_redirects=False)
@@ -124,7 +126,8 @@ class TestLanguageSwitching:
     def test_set_language_api_endpoint(self, client, test_user):
         """Test API endpoint for language switching"""
         # Login first
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Switch to Arabic via API
         response = client.post(
@@ -145,7 +148,8 @@ class TestLanguageSwitching:
     def test_set_invalid_language(self, client, test_user):
         """Test that invalid languages are rejected"""
         # Login first
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Try to set invalid language
         response = client.post(
@@ -161,14 +165,16 @@ class TestLanguageSwitching:
     def test_language_persists_across_sessions(self, client, test_user):
         """Test that language preference persists across sessions"""
         # Login and set language
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         client.get('/set-language/de', follow_redirects=True)
         
         # Logout
         client.get('/auth/logout', follow_redirects=True)
         
         # Login again
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Check that language preference is still set
         db.session.refresh(test_user)
@@ -185,12 +191,14 @@ class TestRTLSupport:
         db.session.commit()
         
         # Login
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Get dashboard
         response = client.get('/dashboard')
         
         # Check that page includes RTL directive
+        assert response.status_code == 200
         assert b'dir="rtl"' in response.data or b"dir='rtl'" in response.data
     
     def test_rtl_detection_for_hebrew(self, client, test_user):
@@ -200,12 +208,14 @@ class TestRTLSupport:
         db.session.commit()
         
         # Login
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Get dashboard
         response = client.get('/dashboard')
         
         # Check that page includes RTL directive
+        assert response.status_code == 200
         assert b'dir="rtl"' in response.data or b"dir='rtl'" in response.data
     
     def test_ltr_for_english(self, client, test_user):
@@ -215,12 +225,14 @@ class TestRTLSupport:
         db.session.commit()
         
         # Login
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Get dashboard
         response = client.get('/dashboard')
         
         # Check that page includes LTR directive
+        assert response.status_code == 200
         assert b'dir="ltr"' in response.data or b"dir='ltr'" in response.data
 
 
@@ -254,22 +266,26 @@ class TestLanguageSelectorUI:
     def test_language_selector_in_header(self, client, test_user):
         """Test that language selector appears in header"""
         # Login
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Get dashboard
         response = client.get('/dashboard')
         
         # Check that language selector is present
+        assert response.status_code == 200
         assert b'langDropdown' in response.data or b'lang-dropdown' in response.data.lower()
         assert b'fa-globe' in response.data or b'globe' in response.data.lower()
     
     def test_language_list_contains_all_languages(self, client, test_user):
         """Test that language selector contains all available languages"""
         # Login
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Get dashboard
         response = client.get('/dashboard')
+        assert response.status_code == 200
         response_text = response.data.decode('utf-8')
         
         # Check for language names in the page
@@ -284,7 +300,8 @@ class TestUserSettingsLanguage:
     def test_language_setting_in_user_settings(self, client, test_user):
         """Test that language setting is available in user settings"""
         # Login
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Get settings page
         response = client.get('/settings')
@@ -296,7 +313,8 @@ class TestUserSettingsLanguage:
     def test_save_language_in_user_settings(self, client, test_user):
         """Test saving language preference in user settings"""
         # Login
-        client.post('/auth/login', data={'username': test_user.username}, follow_redirects=True)
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(test_user.id)
         
         # Update settings with language
         response = client.post('/settings', data={
@@ -306,6 +324,7 @@ class TestUserSettingsLanguage:
         }, follow_redirects=True)
         
         # Check that setting was saved
+        assert response.status_code == 200
         db.session.refresh(test_user)
         assert test_user.preferred_language == 'fr'
 
@@ -314,8 +333,8 @@ class TestUserSettingsLanguage:
 def test_user(client):
     """Create a test user"""
     with client.application.app_context():
-        user = User(username='testuser')
-        user.role = 'user'
+        user = User(username='testuser', role='user')
+        user.is_active = True
         db.session.add(user)
         db.session.commit()
         yield user

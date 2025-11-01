@@ -10,7 +10,7 @@ from app.models import BudgetAlert, Project, User, Client
 @pytest.fixture
 def client_obj(app):
     """Create a test client"""
-    client = Client(name="Test Client", status="active")
+    client = Client(name="Test Client")
     db.session.add(client)
     db.session.commit()
     return client
