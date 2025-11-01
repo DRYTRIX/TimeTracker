@@ -181,29 +181,65 @@ def upgrade():
     current_tables = inspector.get_table_names()
     
     if 'expense_categories' in current_tables:
-        # Use INSERT OR IGNORE for SQLite compatibility
-        op.execute("""
-            INSERT OR IGNORE INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
-            VALUES 
-                ('Travel', 'TRAVEL', '#4CAF50', '✈️', 1, 1, 1),
-                ('Meals', 'MEALS', '#FF9800', '🍽️', 1, 0, 1),
-                ('Accommodation', 'ACCOM', '#2196F3', '🏨', 1, 1, 1),
-                ('Office Supplies', 'OFFICE', '#9C27B0', '📎', 0, 0, 1),
-                ('Equipment', 'EQUIP', '#F44336', '💻', 1, 1, 1),
-                ('Mileage', 'MILE', '#00BCD4', '🚗', 0, 0, 1),
-                ('Per Diem', 'PERDIEM', '#8BC34A', '📅', 0, 0, 1)
-        """)
+        # Use database-specific syntax for upsert
+        is_postgresql = conn.dialect.name == 'postgresql'
+        
+        if is_postgresql:
+            # PostgreSQL syntax
+            op.execute("""
+                INSERT INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
+                VALUES 
+                    ('Travel', 'TRAVEL', '#4CAF50', '✈️', true, true, true),
+                    ('Meals', 'MEALS', '#FF9800', '🍽️', true, false, true),
+                    ('Accommodation', 'ACCOM', '#2196F3', '🏨', true, true, true),
+                    ('Office Supplies', 'OFFICE', '#9C27B0', '📎', false, false, true),
+                    ('Equipment', 'EQUIP', '#F44336', '💻', true, true, true),
+                    ('Mileage', 'MILE', '#00BCD4', '🚗', false, false, true),
+                    ('Per Diem', 'PERDIEM', '#8BC34A', '📅', false, false, true)
+                ON CONFLICT (name) DO NOTHING
+            """)
+        else:
+            # SQLite syntax
+            op.execute("""
+                INSERT OR IGNORE INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
+                VALUES 
+                    ('Travel', 'TRAVEL', '#4CAF50', '✈️', 1, 1, 1),
+                    ('Meals', 'MEALS', '#FF9800', '🍽️', 1, 0, 1),
+                    ('Accommodation', 'ACCOM', '#2196F3', '🏨', 1, 1, 1),
+                    ('Office Supplies', 'OFFICE', '#9C27B0', '📎', 0, 0, 1),
+                    ('Equipment', 'EQUIP', '#F44336', '💻', 1, 1, 1),
+                    ('Mileage', 'MILE', '#00BCD4', '🚗', 0, 0, 1),
+                    ('Per Diem', 'PERDIEM', '#8BC34A', '📅', 0, 0, 1)
+            """)
     
     # Insert default per diem rates (idempotent)
     if 'per_diem_rates' in current_tables:
-        op.execute("""
-            INSERT OR IGNORE INTO per_diem_rates (country_code, location, rate_per_day, breakfast_deduction, lunch_deduction, dinner_deduction, valid_from, currency_code, is_active)
-            VALUES 
-                ('US', 'General', 55.00, 13.00, 16.00, 26.00, '2025-01-01', 'USD', 1),
-                ('GB', 'General', 45.00, 10.00, 13.00, 22.00, '2025-01-01', 'GBP', 1),
-                ('DE', 'General', 24.00, 5.00, 8.00, 11.00, '2025-01-01', 'EUR', 1),
-                ('FR', 'General', 20.00, 4.00, 7.00, 9.00, '2025-01-01', 'EUR', 1)
-        """)
+        # Check if any records exist to avoid duplicates
+        result = conn.execute(sa.text("SELECT COUNT(*) FROM per_diem_rates"))
+        count = result.scalar()
+        
+        if count == 0:
+            # Only insert if table is empty
+            if is_postgresql:
+                # PostgreSQL syntax
+                op.execute("""
+                    INSERT INTO per_diem_rates (country_code, location, rate_per_day, breakfast_deduction, lunch_deduction, dinner_deduction, valid_from, currency_code, is_active)
+                    VALUES 
+                        ('US', 'General', 55.00, 13.00, 16.00, 26.00, '2025-01-01', 'USD', true),
+                        ('GB', 'General', 45.00, 10.00, 13.00, 22.00, '2025-01-01', 'GBP', true),
+                        ('DE', 'General', 24.00, 5.00, 8.00, 11.00, '2025-01-01', 'EUR', true),
+                        ('FR', 'General', 20.00, 4.00, 7.00, 9.00, '2025-01-01', 'EUR', true)
+                """)
+            else:
+                # SQLite syntax
+                op.execute("""
+                    INSERT INTO per_diem_rates (country_code, location, rate_per_day, breakfast_deduction, lunch_deduction, dinner_deduction, valid_from, currency_code, is_active)
+                    VALUES 
+                        ('US', 'General', 55.00, 13.00, 16.00, 26.00, '2025-01-01', 'USD', 1),
+                        ('GB', 'General', 45.00, 10.00, 13.00, 22.00, '2025-01-01', 'GBP', 1),
+                        ('DE', 'General', 24.00, 5.00, 8.00, 11.00, '2025-01-01', 'EUR', 1),
+                        ('FR', 'General', 20.00, 4.00, 7.00, 9.00, '2025-01-01', 'EUR', 1)
+                """)
 
 
 def downgrade():
