@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from app import db
 
 class BudgetAlert(db.Model):
@@ -26,7 +26,7 @@ class BudgetAlert(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     
     # Relationships
-    # project relationship defined via backref
+    project = db.relationship('Project', backref=db.backref('budget_alerts', lazy='dynamic'))
     
     def __init__(self, project_id, alert_type, alert_level, budget_consumed_percent, 
                  budget_amount, consumed_amount, message):
@@ -98,7 +98,7 @@ class BudgetAlert(db.Model):
             alert_type=alert_type,
             is_acknowledged=False
         ).filter(
-            cls.created_at >= datetime.utcnow() - datetime.timedelta(hours=24)
+            cls.created_at >= datetime.utcnow() - timedelta(hours=24)
         ).first()
         
         if recent_alert:

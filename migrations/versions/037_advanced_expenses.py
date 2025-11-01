@@ -174,29 +174,30 @@ def upgrade():
         if 'fk_per_diems_expense' not in per_diems_fks:
             op.create_foreign_key('fk_per_diems_expense', 'per_diems', 'expenses', ['expense_id'], ['id'])
     
-    # Insert default expense categories
-    op.execute("""
-        INSERT INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
-        VALUES 
-            ('Travel', 'TRAVEL', '#4CAF50', '✈️', true, true, true),
-            ('Meals', 'MEALS', '#FF9800', '🍽️', true, false, true),
-            ('Accommodation', 'ACCOM', '#2196F3', '🏨', true, true, true),
-            ('Office Supplies', 'OFFICE', '#9C27B0', '📎', false, false, true),
-            ('Equipment', 'EQUIP', '#F44336', '💻', true, true, true),
-            ('Mileage', 'MILE', '#00BCD4', '🚗', false, false, true),
-            ('Per Diem', 'PERDIEM', '#8BC34A', '📅', false, false, true)
-        ON CONFLICT (name) DO NOTHING
-    """)
+    # Insert default expense categories (idempotent)
+    if 'expense_categories' in existing_tables:
+        # Use INSERT OR IGNORE for SQLite compatibility
+        op.execute("""
+            INSERT OR IGNORE INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
+            VALUES 
+                ('Travel', 'TRAVEL', '#4CAF50', '✈️', 1, 1, 1),
+                ('Meals', 'MEALS', '#FF9800', '🍽️', 1, 0, 1),
+                ('Accommodation', 'ACCOM', '#2196F3', '🏨', 1, 1, 1),
+                ('Office Supplies', 'OFFICE', '#9C27B0', '📎', 0, 0, 1),
+                ('Equipment', 'EQUIP', '#F44336', '💻', 1, 1, 1),
+                ('Mileage', 'MILE', '#00BCD4', '🚗', 0, 0, 1),
+                ('Per Diem', 'PERDIEM', '#8BC34A', '📅', 0, 0, 1)
+        """)
     
     # Insert default per diem rates (idempotent)
     if 'per_diem_rates' in existing_tables:
         op.execute("""
             INSERT OR IGNORE INTO per_diem_rates (country_code, location, rate_per_day, breakfast_deduction, lunch_deduction, dinner_deduction, valid_from, currency_code, is_active)
             VALUES 
-                ('US', 'General', 55.00, 13.00, 16.00, 26.00, '2025-01-01', 'USD', true),
-                ('GB', 'General', 45.00, 10.00, 13.00, 22.00, '2025-01-01', 'GBP', true),
-                ('DE', 'General', 24.00, 5.00, 8.00, 11.00, '2025-01-01', 'EUR', true),
-                ('FR', 'General', 20.00, 4.00, 7.00, 9.00, '2025-01-01', 'EUR', true)
+                ('US', 'General', 55.00, 13.00, 16.00, 26.00, '2025-01-01', 'USD', 1),
+                ('GB', 'General', 45.00, 10.00, 13.00, 22.00, '2025-01-01', 'GBP', 1),
+                ('DE', 'General', 24.00, 5.00, 8.00, 11.00, '2025-01-01', 'EUR', 1),
+                ('FR', 'General', 20.00, 4.00, 7.00, 9.00, '2025-01-01', 'EUR', 1)
         """)
 
 

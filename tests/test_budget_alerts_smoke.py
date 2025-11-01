@@ -56,8 +56,7 @@ def project_with_budget(app, client_obj):
 def test_budget_dashboard_loads(client, app, admin_user, project_with_budget):
     """Test that the budget dashboard page loads"""
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get('/budget/dashboard')
     assert response.status_code == 200
@@ -67,8 +66,7 @@ def test_budget_dashboard_loads(client, app, admin_user, project_with_budget):
 def test_project_budget_detail_loads(client, app, admin_user, project_with_budget):
     """Test that the project budget detail page loads"""
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get(f'/budget/project/{project_with_budget.id}')
     assert response.status_code == 200
@@ -92,8 +90,7 @@ def test_burn_rate_api_endpoint(client, app, admin_user, project_with_budget, re
     db.session.commit()
     
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get(f'/api/budget/burn-rate/{project_with_budget.id}')
     assert response.status_code == 200
@@ -108,8 +105,7 @@ def test_burn_rate_api_endpoint(client, app, admin_user, project_with_budget, re
 def test_completion_estimate_api_endpoint(client, app, admin_user, project_with_budget):
     """Test the completion estimate API endpoint"""
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get(f'/api/budget/completion-estimate/{project_with_budget.id}')
     assert response.status_code == 200
@@ -137,8 +133,7 @@ def test_resource_allocation_api_endpoint(client, app, admin_user, project_with_
     db.session.commit()
     
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get(f'/api/budget/resource-allocation/{project_with_budget.id}')
     assert response.status_code == 200
@@ -166,8 +161,7 @@ def test_cost_trends_api_endpoint(client, app, admin_user, project_with_budget, 
     db.session.commit()
     
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get(f'/api/budget/cost-trends/{project_with_budget.id}?granularity=week')
     assert response.status_code == 200
@@ -181,8 +175,7 @@ def test_cost_trends_api_endpoint(client, app, admin_user, project_with_budget, 
 def test_budget_status_api_endpoint(client, app, admin_user, project_with_budget):
     """Test the budget status API endpoint"""
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get(f'/api/budget/status/{project_with_budget.id}')
     assert response.status_code == 200
@@ -211,8 +204,7 @@ def test_alerts_api_endpoint(client, app, admin_user, project_with_budget):
     db.session.commit()
     
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get('/api/budget/alerts')
     assert response.status_code == 200
@@ -239,8 +231,7 @@ def test_acknowledge_alert_api_endpoint(client, app, admin_user, project_with_bu
     db.session.commit()
     
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.post(f'/api/budget/alerts/{alert.id}/acknowledge')
     assert response.status_code == 200
@@ -272,8 +263,7 @@ def test_check_alerts_api_endpoint(client, app, admin_user, project_with_budget,
     db.session.commit()
     
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.post(f'/api/budget/check-alerts/{project_with_budget.id}')
     assert response.status_code == 200
@@ -286,8 +276,7 @@ def test_check_alerts_api_endpoint(client, app, admin_user, project_with_budget,
 def test_budget_summary_api_endpoint(client, app, admin_user, project_with_budget):
     """Test the budget summary API endpoint"""
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     response = client.get('/api/budget/summary')
     assert response.status_code == 200
@@ -306,8 +295,7 @@ def test_budget_summary_api_endpoint(client, app, admin_user, project_with_budge
 def test_non_admin_cannot_check_alerts(client, app, regular_user, project_with_budget):
     """Test that non-admin users cannot manually check alerts"""
     with client.session_transaction() as sess:
-        sess['user_id'] = regular_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(regular_user.id)
     
     response = client.post(f'/api/budget/check-alerts/{project_with_budget.id}')
     assert response.status_code == 403
@@ -424,8 +412,7 @@ def test_project_without_budget_handling(client, app, admin_user, client_obj):
     db.session.commit()
     
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     # Try to access budget details
     response = client.get(f'/budget/project/{project.id}')
@@ -436,8 +423,7 @@ def test_project_without_budget_handling(client, app, admin_user, client_obj):
 def test_end_to_end_budget_workflow(client, app, admin_user, project_with_budget, regular_user):
     """Test complete budget monitoring workflow"""
     with client.session_transaction() as sess:
-        sess['user_id'] = admin_user.id
-        sess['_fresh'] = True
+        sess['_user_id'] = str(admin_user.id)
     
     # 1. View dashboard
     response = client.get('/budget/dashboard')
