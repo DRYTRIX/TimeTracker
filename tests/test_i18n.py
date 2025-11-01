@@ -338,7 +338,9 @@ def test_user(client):
         db.session.add(user)
         db.session.commit()
         yield user
-        # Cleanup
+        # Cleanup - delete related activities first to avoid constraint violations
+        from app.models import Activity
+        Activity.query.filter_by(user_id=user.id).delete()
         db.session.delete(user)
         db.session.commit()
 
