@@ -276,28 +276,78 @@ jobs:
       
       - name: Test Docker container startup
         run: |
-          docker run -d --name test-container \
+          # Start container
+          CONTAINER_ID=$(docker run -d --name test-container \
             -p 8080:8080 \
             -e DATABASE_URL="sqlite:////app/test.db" \
             -e SECRET_KEY="test-secret-key-for-ci-only-$(openssl rand -hex 32)" \
             -e FLASK_ENV="development" \
-            timetracker-test:pr-${{ github.event.pull_request.number || 'dev' }}
+            timetracker-test:pr-${{ github.event.pull_request.number || 'dev' }})
+          
+          echo "🐳 Started container: $CONTAINER_ID"
           
           # Wait for container to be ready (increased timeout for migrations)
+          HEALTH_CHECK_PASSED=false
           for i in {1..60}; do
+            # Check if container is still running
+            if ! docker ps -q --filter "name=test-container" | grep -q .; then
+              echo "❌ Container exited unexpectedly!"
+              echo ""
+              echo "📋 Container logs:"
+              docker logs test-container
+              echo ""
+              echo "🔍 Container status:"
+              docker ps -a --filter "name=test-container"
+              exit 1
+            fi
+            
+            # Try health check
             if curl -f http://localhost:8080/_health >/dev/null 2>&1; then
-              echo "✅ Container health check passed"
+              echo "✅ Container health check passed (attempt $i/60)"
+              HEALTH_CHECK_PASSED=true
               break
             fi
-            echo "⏳ Waiting for container... ($i/60)"
+            
+            # Show progress
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "⏳ Still waiting for container... ($i/60)"
+              echo "📊 Last 10 log lines:"
+              docker logs --tail 10 test-container
+            else
+              echo "⏳ Waiting for container... ($i/60)"
+            fi
+            
             sleep 2
           done
           
-          # Show logs
+          # Show full logs for debugging
+          echo ""
+          echo "📋 Full container logs:"
           docker logs test-container
+          echo ""
           
-          # Final health check
-          curl -f http://localhost:8080/_health || exit 1
+          # Check if health check passed
+          if [ "$HEALTH_CHECK_PASSED" = false ]; then
+            echo "❌ Health check never passed after 120 seconds"
+            echo ""
+            echo "🔍 Container inspect:"
+            docker inspect test-container
+            echo ""
+            echo "🔍 Container status:"
+            docker ps -a --filter "name=test-container"
+            exit 1
+          fi
+          
+          # Final health check with detailed output
+          echo "🔍 Final health check:"
+          curl -v http://localhost:8080/_health || {
+            echo "❌ Final health check failed"
+            echo "📋 Latest logs:"
+            docker logs --tail 50 test-container
+            exit 1
+          }
+          
+          echo "✅ Docker container test completed successfully"
           
           # Cleanup
           docker stop test-container
