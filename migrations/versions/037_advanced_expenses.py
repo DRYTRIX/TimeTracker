@@ -175,7 +175,12 @@ def upgrade():
             op.create_foreign_key('fk_per_diems_expense', 'per_diems', 'expenses', ['expense_id'], ['id'])
     
     # Insert default expense categories (idempotent)
-    if 'expense_categories' in existing_tables:
+    # Re-check table existence since tables may have been created in this migration
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    current_tables = inspector.get_table_names()
+    
+    if 'expense_categories' in current_tables:
         # Use INSERT OR IGNORE for SQLite compatibility
         op.execute("""
             INSERT OR IGNORE INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
@@ -190,7 +195,7 @@ def upgrade():
         """)
     
     # Insert default per diem rates (idempotent)
-    if 'per_diem_rates' in existing_tables:
+    if 'per_diem_rates' in current_tables:
         op.execute("""
             INSERT OR IGNORE INTO per_diem_rates (country_code, location, rate_per_day, breakfast_deduction, lunch_deduction, dinner_deduction, valid_from, currency_code, is_active)
             VALUES 
