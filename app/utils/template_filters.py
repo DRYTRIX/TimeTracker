@@ -162,6 +162,62 @@ def register_template_filters(app):
             y = int(years)
             return f"{y} year{'s' if y != 1 else ''} ago"
 
+    @app.template_filter('currency_symbol')
+    def currency_symbol_filter(currency_code):
+        """Convert currency code to symbol"""
+        if not currency_code:
+            return '$'
+        
+        currency_symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'CNY': '¥',
+            'INR': '₹',
+            'AUD': 'A$',
+            'CAD': 'C$',
+            'CHF': 'CHF',
+            'SEK': 'kr',
+            'NOK': 'kr',
+            'DKK': 'kr',
+            'PLN': 'zł',
+            'CZK': 'Kč',
+            'RUB': '₽',
+            'BRL': 'R$',
+            'ZAR': 'R',
+            'MXN': 'MX$',
+            'SGD': 'S$',
+            'HKD': 'HK$',
+            'NZD': 'NZ$',
+            'KRW': '₩',
+            'TRY': '₺',
+            'AED': 'د.إ',
+            'SAR': '﷼',
+        }
+        
+        return currency_symbols.get(currency_code.upper(), currency_code)
+    
+    @app.template_filter('currency_icon')
+    def currency_icon_filter(currency_code):
+        """Convert currency code to FontAwesome icon class"""
+        if not currency_code:
+            return 'fa-dollar-sign'
+        
+        currency_icons = {
+            'USD': 'fa-dollar-sign',
+            'EUR': 'fa-euro-sign',
+            'GBP': 'fa-pound-sign',
+            'JPY': 'fa-yen-sign',
+            'CNY': 'fa-yen-sign',
+            'INR': 'fa-rupee-sign',
+            'RUB': 'fa-ruble-sign',
+            'BRL': 'fa-dollar-sign',
+            'TRY': 'fa-lira-sign',
+        }
+        
+        return currency_icons.get(currency_code.upper(), 'fa-dollar-sign')
+
 
 def get_logo_base64(logo_path):
     """Convert logo file to base64 data URI for PDF embedding"""

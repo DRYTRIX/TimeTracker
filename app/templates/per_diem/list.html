@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Per Diem'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-money-bill-alt',
+    title_text='Per Diem Claims',
+    subtitle_text='Manage daily allowance claims',
+    breadcrumbs=breadcrumbs,
+    actions_html='<div class="flex gap-2"><a href="' + url_for("per_diem.list_rates") + '" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"><i class="fas fa-list-alt mr-2"></i>Manage Rates</a><a href="' + url_for("per_diem.create_per_diem") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Claim</a></div>'
+) }}
+
+<!-- Summary Stats -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Total Claims</p>
+                <p class="text-2xl font-bold">{{ pagination.total if pagination else (per_diem_claims|length) }}</p>
+            </div>
+            <div class="text-primary text-3xl">
+                <i class="fas fa-list"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
+                <p class="text-2xl font-bold">€{{ '%.2f'|format(total_amount) }}</p>
+            </div>
+            <div class="text-green-500 text-3xl">
+                <i class="fas fa-euro-sign"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Form -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">Filter Claims</h2>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All Statuses</option>
+                <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="reimbursed" {% if status == 'reimbursed' %}selected{% endif %}>Reimbursed</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+            <select name="project_id" id="project_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                <option value="">All Projects</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div>
+            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" 
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+        </div>
+        
+        <div>
+            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" 
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+        </div>
+        
+        <div class="flex items-end gap-2 md:col-span-2 lg:col-span-4">
+            <button type="submit" class="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
+            <a href="{{ url_for('per_diem.list_per_diem') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <i class="fas fa-times"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Claims Table -->
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Period</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Purpose</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Days</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {% if per_diem_claims %}
+                    {% for claim in per_diem_claims %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {{ claim.start_date.strftime('%Y-%m-%d') }}<br>
+                            <span class="text-xs text-gray-500">to {{ claim.end_date.strftime('%Y-%m-%d') }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=claim.id) }}" class="text-primary hover:underline font-medium">
+                                {{ claim.trip_purpose }}
+                            </a>
+                            {% if claim.project %}
+                            <div class="text-xs text-gray-500">{{ claim.project.name }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            {{ claim.city + ', ' if claim.city else '' }}{{ claim.country }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {{ claim.total_days if claim.total_days else ((claim.full_days or 0) + (claim.half_days or 0) * 0.5) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            {{ claim.currency_code or 'EUR' }} {{ '%.2f'|format(claim.calculated_amount or 0) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if claim.status == 'pending' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                Pending
+                            </span>
+                            {% elif claim.status == 'approved' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                Approved
+                            </span>
+                            {% elif claim.status == 'rejected' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                Rejected
+                            </span>
+                            {% elif claim.status == 'reimbursed' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                Reimbursed
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=claim.id) }}" class="text-primary hover:text-primary/80" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.is_admin or claim.user_id == current_user.id %}
+                                <a href="{{ url_for('per_diem.edit_per_diem', per_diem_id=claim.id) }}" class="text-blue-600 hover:text-blue-800" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-money-bill-alt text-4xl mb-2 opacity-50"></i>
+                            <p>No per diem claims found</p>
+                            <a href="{{ url_for('per_diem.create_per_diem') }}" class="text-primary hover:underline mt-2 inline-block">
+                                Create your first claim
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+

@@ -458,3 +458,25 @@ def test_duplicate_entry_from_inactive_project(app, user, authenticated_client):
         # Both acceptable since the route exists and handles the request
         assert response.status_code in [200, 302]
 
+
+@pytest.mark.integration
+@pytest.mark.routes
+def test_duplicate_with_task_not_overridden_by_template_code(authenticated_client, time_entry_with_all_fields, task, app):
+    """Test that duplicating an entry with a task preserves task selection despite template code."""
+    with app.app_context():
+        response = authenticated_client.get(f'/timer/duplicate/{time_entry_with_all_fields.id}')
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        
+        # Verify the duplicate flag is set to true in JavaScript
+        assert 'const isDuplicating = true;' in html or 'isDuplicating = true' in html
+        
+        # Verify the task ID is set in the data attribute
+        assert f'data-selected-task-id="{task.id}"' in html
+        
+        # Verify template code is wrapped in isDuplicating check
+        assert 'if (!isDuplicating)' in html
+        
+        # Verify the is_duplicate flag is set
+        assert 'Duplicating entry' in html or 'Duplicate Time Entry' in html
+

@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="mb-6">
-    <a href="{{ url_for('permissions.list_roles') }}" class="text-primary hover:underline flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-        </svg>
-        {{ _('Back to Roles') }}
-    </a>
-</div>
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('Roles & Permissions'), 'url': url_for('permissions.list_roles')},
+    {'text': _('System Permissions')}
+] %}
 
-<div class="mb-6">
-    <h1 class="text-2xl font-bold">{{ _('System Permissions') }}</h1>
-    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('All available permissions in the system') }}</p>
-</div>
+{{ page_header(
+    icon_class='fas fa-lock',
+    title_text=_('System Permissions'),
+    subtitle_text=_('All available permissions in the system'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("permissions.list_roles") + '" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"><i class="fas fa-arrow-left mr-2"></i>' + _('Back to Roles') + '</a>'
+) }}
 
 <div class="space-y-6">
     {% for category, permissions in permissions_by_category.items() %}

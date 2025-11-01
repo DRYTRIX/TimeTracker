@@ -770,6 +770,11 @@ def create_app(config=None):
     from app.routes.expenses import expenses_bp
     from app.routes.permissions import permissions_bp
     from app.routes.calendar import calendar_bp
+    from app.routes.expense_categories import expense_categories_bp
+    from app.routes.mileage import mileage_bp
+    from app.routes.per_diem import per_diem_bp
+    from app.routes.budget_alerts import budget_alerts_bp
+    from app.routes.import_export import import_export_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -798,6 +803,11 @@ def create_app(config=None):
     app.register_blueprint(expenses_bp)
     app.register_blueprint(permissions_bp)
     app.register_blueprint(calendar_bp)
+    app.register_blueprint(expense_categories_bp)
+    app.register_blueprint(mileage_bp)
+    app.register_blueprint(per_diem_bp)
+    app.register_blueprint(budget_alerts_bp)
+    app.register_blueprint(import_export_bp)
 
     # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
     # Only if CSRF is enabled
@@ -851,8 +861,13 @@ def create_app(config=None):
 
     # Register context processors
     from app.utils.context_processors import register_context_processors
-
+    
     register_context_processors(app)
+    
+    # Register i18n template filters
+    from app.utils.i18n_helpers import register_i18n_filters
+    
+    register_i18n_filters(app)
 
     # (translations compiled and directories set before Babel init)
 

@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% from "components/cards.html" import info_card, stat_card %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Budget Alerts')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-exclamation-triangle',
+    title_text=_('Budget Alerts & Forecasting'),
+    subtitle_text=_('Monitor project budgets and forecast completion'),
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<div class="flex gap-2">'
+        +   '<a href="' + url_for("reports.reports") + '" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"><i class="fas fa-chart-bar mr-2"></i>' + _('Reports') + '</a>'
+        +   '<button id="refreshData" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-sync-alt mr-2"></i>' + _('Refresh') + '</button>'
+        + '</div>'
+) }}
+
+<!-- Alert Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Unacknowledged Alerts -->
+    <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            <i class="fas fa-bell fa-2x opacity-80"></i>
+        </div>
+        <h3 class="text-3xl font-bold" id="totalUnacknowledged">{{ alert_stats.total_unacknowledged }}</h3>
+        <p class="text-sm opacity-90">{{ _('Unacknowledged Alerts') }}</p>
+    </div>
+    
+    <!-- Critical Alerts -->
+    <div class="bg-gradient-to-br from-red-500 to-pink-600 p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            <i class="fas fa-exclamation-circle fa-2x opacity-80"></i>
+        </div>
+        <h3 class="text-3xl font-bold" id="criticalAlerts">{{ alert_stats.critical_alerts }}</h3>
+        <p class="text-sm opacity-90">{{ _('Critical Alerts') }}</p>
+    </div>
+    
+    <!-- Projects with Budgets -->
+    <div class="bg-gradient-to-br from-blue-500 to-cyan-600 p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            <i class="fas fa-project-diagram fa-2x opacity-80"></i>
+        </div>
+        <h3 class="text-3xl font-bold" id="totalProjects">{{ projects|length }}</h3>
+        <p class="text-sm opacity-90">{{ _('Projects with Budgets') }}</p>
+    </div>
+    
+    <!-- Warning Alerts -->
+    <div class="bg-gradient-to-br from-amber-400 to-yellow-500 p-6 rounded-lg shadow-lg animated-card text-white">
+        <div class="flex items-center justify-between mb-2">
+            <i class="fas fa-fire fa-2x opacity-80"></i>
+        </div>
+        <h3 class="text-3xl font-bold" id="warningAlerts">{{ alert_stats.warning_alerts }}</h3>
+        <p class="text-sm opacity-90">{{ _('Warning Alerts') }}</p>
+    </div>
+</div>
+
+<!-- Active Alerts Section -->
+{% if active_alerts %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card mb-6">
+    <h2 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-bell mr-2 text-primary"></i>
+        {{ _('Active Alerts') }}
+    </h2>
+    <div class="space-y-3">
+        {% for alert in active_alerts %}
+        <div id="alert-{{ alert.id }}" class="p-4 rounded-lg border {% if alert.alert_level == 'critical' %}bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700{% elif alert.alert_level == 'warning' %}bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700{% else %}bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700{% endif %}">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-grow">
+                    <div class="flex items-center mb-1">
+                        {% if alert.alert_level == 'critical' %}
+                        <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 mr-2"></i>
+                        {% elif alert.alert_level == 'warning' %}
+                        <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 mr-2"></i>
+                        {% else %}
+                        <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mr-2"></i>
+                        {% endif %}
+                        <h3 class="font-semibold">{{ alert.project.name }}</h3>
+                    </div>
+                    <p class="text-sm mb-2">{{ alert.message }}</p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                        <i class="far fa-clock mr-1"></i>
+                        {{ _('Created') }}: {{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </p>
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                    <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=alert.project_id) }}" 
+                       class="bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-dark transition">
+                        <i class="fas fa-eye"></i> {{ _('View') }}
+                    </a>
+                    <button class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition acknowledge-alert" 
+                            data-alert-id="{{ alert.id }}">
+                        <i class="fas fa-check"></i> {{ _('Acknowledge') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Project Budget Status -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+    <h2 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-tasks mr-2 text-primary"></i>
+        {{ _('Project Budget Status') }}
+    </h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left" id="projectBudgetTable">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-4">{{ _('Project') }}</th>
+                    <th class="p-4">{{ _('Budget') }}</th>
+                    <th class="p-4">{{ _('Consumed') }}</th>
+                    <th class="p-4">{{ _('Remaining') }}</th>
+                    <th class="p-4">{{ _('Progress') }}</th>
+                    <th class="p-4">{{ _('Status') }}</th>
+                    <th class="p-4">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                    <td class="p-4">
+                        <strong>{{ project.project_name }}</strong>
+                    </td>
+                    <td class="p-4">${{ "%.2f"|format(project.budget_amount) }}</td>
+                    <td class="p-4">${{ "%.2f"|format(project.consumed_amount) }}</td>
+                    <td class="p-4">
+                        {% if project.remaining_amount >= 0 %}
+                        <span class="text-green-600 dark:text-green-400">${{ "%.2f"|format(project.remaining_amount) }}</span>
+                        {% else %}
+                        <span class="text-red-600 dark:text-red-400">${{ "%.2f"|format(project.remaining_amount|abs) }} {{ _('over') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-grow bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden" style="min-width: 150px;">
+                                <div class="h-full {% if project.consumed_percentage >= 100 %}bg-red-500{% elif project.consumed_percentage >= project.threshold_percent %}bg-yellow-500{% else %}bg-green-500{% endif %} rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold"
+                                     style="width: {{ [project.consumed_percentage, 100]|min }}%">
+                                    {{ "%.1f"|format(project.consumed_percentage) }}%
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        {% if project.status == 'over_budget' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ _('Over Budget') }}
+                        </span>
+                        {% elif project.status == 'critical' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>{{ _('Critical') }}
+                        </span>
+                        {% elif project.status == 'warning' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                            <i class="fas fa-info-circle mr-1"></i>{{ _('Warning') }}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            <i class="fas fa-check-circle mr-1"></i>{{ _('Healthy') }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">
+                        <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.project_id) }}" 
+                           class="bg-primary text-white px-3 py-1.5 rounded text-sm hover:bg-primary-dark transition">
+                            <i class="fas fa-chart-line"></i> {{ _('Details') }}
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-text-muted-light dark:text-text-muted-dark">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>{{ _('No projects with budgets found') }}</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DataTable if available
+    if (typeof $.fn.dataTable !== 'undefined') {
+        $('#projectBudgetTable').DataTable({
+            order: [[4, 'desc']], // Sort by progress descending
+            pageLength: 25,
+            language: {
+                emptyTable: "{{ _('No projects with budgets found') }}"
+            }
+        });
+    }
+    
+    // Acknowledge alert handlers
+    document.querySelectorAll('.acknowledge-alert').forEach(button => {
+        button.addEventListener('click', function() {
+            const alertId = this.dataset.alertId;
+            acknowledgeAlert(alertId);
+        });
+    });
+    
+    function acknowledgeAlert(alertId) {
+        fetch(`/api/budget/alerts/${alertId}/acknowledge`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                // Remove alert from list with animation
+                const alertElement = document.getElementById(`alert-${alertId}`);
+                if (alertElement) {
+                    alertElement.style.opacity = '0';
+                    alertElement.style.transform = 'translateX(20px)';
+                    alertElement.style.transition = 'all 0.3s ease';
+                    setTimeout(() => alertElement.remove(), 300);
+                }
+                
+                // Update counters
+                const unacknowledgedCount = document.getElementById('totalUnacknowledged');
+                if (unacknowledgedCount) {
+                    unacknowledgedCount.textContent = Math.max(0, parseInt(unacknowledgedCount.textContent) - 1);
+                }
+                
+                // Show success notification
+                showNotification('{{ _("Alert acknowledged successfully") }}', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('{{ _("Failed to acknowledge alert") }}', 'error');
+        });
+    }
+    
+    // Refresh button handler
+    document.getElementById('refreshData')?.addEventListener('click', function() {
+        this.querySelector('i').classList.add('fa-spin');
+        location.reload();
+    });
+    
+    function showNotification(message, type) {
+        // Create toast notification
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

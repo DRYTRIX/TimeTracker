@@ -11,6 +11,9 @@ from .payments import Payment, CreditNote, InvoiceReminderSchedule
 from .reporting import SavedReportView, ReportEmailSchedule
 from .client import Client
 from .task_activity import TaskActivity
+from .expense_category import ExpenseCategory
+from .mileage import Mileage
+from .per_diem import PerDiem, PerDiemRate
 from .extra_good import ExtraGood
 from .comment import Comment
 from .focus_session import FocusSession
@@ -28,6 +31,8 @@ from .expense import Expense
 from .permission import Permission, Role
 from .api_token import ApiToken
 from .calendar_event import CalendarEvent
+from .budget_alert import BudgetAlert
+from .import_export import DataImport, DataExport
 
 __all__ = [
     "User",
@@ -65,4 +70,7 @@ __all__ = [
     "Role",
     "ApiToken",
     "CalendarEvent",
+    "BudgetAlert",
+    "DataImport",
+    "DataExport",
 ]

@@ -14,7 +14,7 @@ def main():
     run(['pybabel', 'extract', '-F', 'babel.cfg', '-o', 'messages.pot', '.'])
 
     # Initialize languages if not already
-    languages = ['en', 'nl', 'de', 'fr', 'it', 'fi']
+    languages = ['en', 'nl', 'de', 'fr', 'it', 'fi', 'es', 'ar', 'he']
     for lang in languages:
         po_dir = os.path.join('translations', lang, 'LC_MESSAGES')
         po_path = os.path.join(po_dir, 'messages.po')

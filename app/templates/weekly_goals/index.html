@@ -1,24 +1,20 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block title %}{{ _('Weekly Time Goals') }} - {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                <i class="fas fa-bullseye mr-2 text-blue-600"></i>
-                {{ _('Weekly Time Goals') }}
-            </h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">
-                {{ _('Set and track your weekly hour targets') }}
-            </p>
-        </div>
-        <a href="{{ url_for('weekly_goals.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus mr-2"></i> {{ _('New Goal') }}
-        </a>
-    </div>
+{% set breadcrumbs = [
+    {'text': _('Weekly Goals')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bullseye',
+    title_text=_('Weekly Time Goals'),
+    subtitle_text=_('Set and track your weekly hour targets'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("weekly_goals.create") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Goal') + '</a>'
+) }}
 
     <!-- Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

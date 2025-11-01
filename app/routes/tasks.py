@@ -1,13 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response, Response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db
-from app.models import Task, Project, User, TimeEntry, TaskActivity, KanbanColumn
+from app.models import Task, Project, User, TimeEntry, TaskActivity, KanbanColumn, Activity
 from datetime import datetime, date
 from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.timezone import now_in_app_timezone
+import csv
+import io
 
 tasks_bp = Blueprint('tasks', __name__)
 
@@ -167,6 +169,19 @@ def create_task():
             "project_id": project_id,
             "priority": priority
         })
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='created',
+            entity_type='task',
+            entity_id=task.id,
+            entity_name=task.name,
+            description=f'Created task "{task.name}" in project "{project.name}"',
+            extra_data={'project_id': project_id, 'priority': priority},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
         
         flash(f'Task "{name}" created successfully', 'success')
         return redirect(url_for('tasks.view_task', task_id=task.id))
@@ -335,6 +350,18 @@ def edit_task(task_id):
             "project_id": task.project_id
         })
         
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action='updated',
+            entity_type='task',
+            entity_id=task.id,
+            entity_name=task.name,
+            description=f'Updated task "{task.name}"',
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash(f'Task "{name}" updated successfully', 'success')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
@@ -494,10 +521,23 @@ def delete_task(task_id):
     task_name = task.name
     task_id_for_log = task.id
     project_id_for_log = task.project_id
+    
+    # Log activity before deletion
+    Activity.log(
+        user_id=current_user.id,
+        action='deleted',
+        entity_type='task',
+        entity_id=task_id_for_log,
+        entity_name=task_name,
+        description=f'Deleted task "{task_name}"',
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    
     db.session.delete(task)
-    if not safe_commit('delete_task', {'task_id': task.id}):
+    if not safe_commit('delete_task', {'task_id': task_id_for_log}):
         flash('Could not delete task due to a database error. Please check server logs.', 'error')
-        return redirect(url_for('tasks.view_task', task_id=task.id))
+        return redirect(url_for('tasks.view_task', task_id=task_id_for_log))
     
     # Log task deletion
     app_module.log_event("task.deleted", user_id=current_user.id, task_id=task_id_for_log, project_id=project_id_for_log)
@@ -732,6 +772,181 @@ def bulk_assign_tasks():
         flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
     
     return redirect(url_for('tasks.list_tasks'))
+
+
+@tasks_bp.route('/tasks/bulk-move-project', methods=['POST'])
+@login_required
+def bulk_move_project():
+    """Move multiple tasks to a different project"""
+    task_ids = request.form.getlist('task_ids[]')
+    new_project_id = request.form.get('project_id', type=int)
+    
+    if not task_ids:
+        flash('No tasks selected', 'warning')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    if not new_project_id:
+        flash('No project selected', 'error')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    # Verify project exists and is active
+    new_project = Project.query.filter_by(id=new_project_id, status='active').first()
+    if not new_project:
+        flash('Invalid project selected', 'error')
+        return redirect(url_for('tasks.list_tasks'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for task_id_str in task_ids:
+        try:
+            task_id = int(task_id_str)
+            task = Task.query.get(task_id)
+            
+            if not task:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and task.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            
+            # Update task project
+            old_project_id = task.project_id
+            task.project_id = new_project_id
+            
+            # Update related time entries to match the new project
+            for entry in task.time_entries.all():
+                entry.project_id = new_project_id
+            
+            # Log activity
+            db.session.add(TaskActivity(
+                task_id=task.id,
+                user_id=current_user.id,
+                event='project_change',
+                details=f"Project changed from {old_project_id} to {new_project_id}"
+            ))
+            
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit('bulk_move_project', {'count': updated_count, 'project_id': new_project_id}):
+            flash('Could not move tasks due to a database error', 'error')
+            return redirect(url_for('tasks.list_tasks'))
+        
+        flash(f'Successfully moved {updated_count} task{"s" if updated_count != 1 else ""} to {new_project.name}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
+    
+    return redirect(url_for('tasks.list_tasks'))
+
+
+@tasks_bp.route('/tasks/export')
+@login_required
+def export_tasks():
+    """Export tasks to CSV"""
+    # Get the same filters as the list view
+    status = request.args.get('status', '')
+    priority = request.args.get('priority', '')
+    project_id = request.args.get('project_id', type=int)
+    assigned_to = request.args.get('assigned_to', type=int)
+    search = request.args.get('search', '').strip()
+    overdue_param = request.args.get('overdue', '').strip().lower()
+    overdue = overdue_param in ['1', 'true', 'on', 'yes']
+    
+    query = Task.query
+    
+    # Apply filters (same as list_tasks)
+    if status:
+        query = query.filter_by(status=status)
+    
+    if priority:
+        query = query.filter_by(priority=priority)
+    
+    if project_id:
+        query = query.filter_by(project_id=project_id)
+    
+    if assigned_to:
+        query = query.filter_by(assigned_to=assigned_to)
+    
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Task.name.ilike(like),
+                Task.description.ilike(like)
+            )
+        )
+    
+    # Overdue filter
+    if overdue:
+        today_local = now_in_app_timezone().date()
+        query = query.filter(
+            Task.due_date < today_local,
+            Task.status.in_(['todo', 'in_progress', 'review'])
+        )
+    
+    # Show user's tasks first, then others
+    if not current_user.is_admin:
+        query = query.filter(
+            db.or_(
+                Task.assigned_to == current_user.id,
+                Task.created_by == current_user.id
+            )
+        )
+    
+    tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'ID',
+        'Name',
+        'Description',
+        'Project',
+        'Status',
+        'Priority',
+        'Assigned To',
+        'Created By',
+        'Due Date',
+        'Estimated Hours',
+        'Created At',
+        'Updated At'
+    ])
+    
+    # Write task data
+    for task in tasks:
+        writer.writerow([
+            task.id,
+            task.name,
+            task.description or '',
+            task.project.name if task.project else '',
+            task.status,
+            task.priority,
+            task.assigned_user.display_name if task.assigned_user else '',
+            task.creator.display_name if task.creator else '',
+            task.due_date.strftime('%Y-%m-%d') if task.due_date else '',
+            task.estimated_hours or '',
+            task.created_at.strftime('%Y-%m-%d %H:%M:%S') if task.created_at else '',
+            task.updated_at.strftime('%Y-%m-%d %H:%M:%S') if task.updated_at else ''
+        ])
+    
+    # Create response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment; filename=tasks_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        }
+    )
 
 
 @tasks_bp.route('/tasks/my-tasks')

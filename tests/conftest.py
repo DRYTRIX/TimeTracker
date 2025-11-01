@@ -516,6 +516,12 @@ def test_client_obj(test_client):
 
 
 @pytest.fixture
+def test_user(user):
+    """Alias for user fixture"""
+    return user
+
+
+@pytest.fixture
 def auth_user(user):
     """Alias for user fixture"""
     return user

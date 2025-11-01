@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 {% from "components/cards.html" import info_card %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">System Information</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">Key metrics and statistics about the application.</p>
-    </div>
-</div>
+{% set breadcrumbs = [
+    {'text': 'Admin', 'url': url_for('admin.admin_dashboard')},
+    {'text': 'System Information'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-info-circle',
+    title_text='System Information',
+    subtitle_text='Key metrics and statistics about the application',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
     {{ info_card("Total Users", total_users, "All time") }}
