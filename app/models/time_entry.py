@@ -93,9 +93,11 @@ class TimeEntry(db.Model):
         if not self.duration_seconds:
             return "00:00:00"
         
-        hours = self.duration_seconds // 3600
-        minutes = (self.duration_seconds % 3600) // 60
-        seconds = self.duration_seconds % 60
+        # Convert to int to ensure integer values for formatting
+        total_seconds = int(self.duration_seconds)
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
         
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
     
