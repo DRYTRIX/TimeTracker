@@ -744,7 +744,7 @@ def export_project_excel():
         if project.id not in projects_map:
             projects_map[project.id] = {
                 'name': project.name,
-                'client': project.client.name if project.client else '',
+                'client': project.client if project.client else '',
                 'total_hours': 0,
                 'billable_hours': 0,
                 'hourly_rate': float(project.hourly_rate) if project.hourly_rate else 0,

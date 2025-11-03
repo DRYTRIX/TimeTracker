@@ -54,7 +54,7 @@ def create_time_entries_excel(entries, filename_prefix='timetracker_export'):
             entry.id,
             entry.user.display_name if entry.user else 'Unknown',
             entry.project.name if entry.project else 'N/A',
-            entry.project.client.name if (entry.project and entry.project.client) else 'N/A',
+            entry.project.client if (entry.project and entry.project.client) else 'N/A',
             entry.task.name if entry.task else 'N/A',
             entry.start_time.isoformat() if entry.start_time else '',
             entry.end_time.isoformat() if entry.end_time else '',
