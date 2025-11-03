@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='timetracker',
-    version='3.6.0',
+    version='3.7.0',
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
