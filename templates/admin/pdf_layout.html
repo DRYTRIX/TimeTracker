@@ -198,17 +198,94 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    padding: 1rem;
     padding-bottom: 1rem;
     border-bottom: 2px solid #e5e7eb;
+    background: #f9fafb;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.dark .canvas-header {
+    background: #374151;
+    border-bottom-color: #4b5563;
+}
+
+.dark .canvas-header h3 {
+    color: #f9fafb;
 }
 
 .canvas-header h3 {
     font-size: 1rem;
     font-weight: 600;
+    color: #1f2937;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin: 0;
+}
+
+.canvas-header-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.page-size-selector-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-size-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .page-size-label {
+        color: #d1d5db;
+    }
+}
+
+.page-size-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: white;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dark .page-size-select {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .page-size-select:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+}
+
+.dark .page-size-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.page-size-select:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+}
+
+.page-size-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .canvas-toolbar {
@@ -221,9 +298,21 @@
     border-radius: 0.5rem;
     border: 1px solid #e5e7eb;
     background: white;
+    color: #1f2937;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.875rem;
+}
+
+.dark .canvas-toolbar button {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .canvas-toolbar button:hover {
+    background: #4b5563;
+    border-color: #667eea;
 }
 
 .canvas-toolbar button:hover {
@@ -240,34 +329,112 @@
     overflow: auto;
 }
 
-/* Preview Panel */
-.preview-panel {
-    background: white;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    max-height: 700px;
+/* Preview Modal */
+.preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
 }
 
-.preview-panel h3 {
-    font-size: 1rem;
-    font-weight: 600;
+.preview-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+}
+
+.preview-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dark .preview-modal-content {
+    background: #1f2937;
+    color: #f9fafb;
+}
+
+.preview-modal-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin: 0 0 1rem 0;
-    padding-bottom: 1rem;
+    justify-content: space-between;
+    padding: 1.5rem;
     border-bottom: 2px solid #e5e7eb;
 }
 
-#preview-frame {
+.dark .preview-modal-header {
+    border-bottom-color: #4b5563;
+}
+
+.preview-modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: #1f2937;
+}
+
+.dark .preview-modal-header h3 {
+    color: #f9fafb;
+}
+
+.preview-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.preview-modal-close:hover {
+    color: #1f2937;
+}
+
+.dark .preview-modal-close {
+    color: #9ca3af;
+}
+
+.dark .preview-modal-close:hover {
+    color: #f9fafb;
+}
+
+.preview-modal-body {
     flex: 1;
-    border: 1px solid #e5e7eb;
+    position: relative;
+    padding: 1.5rem;
+    overflow: auto;
+    min-height: 600px;
+    max-height: calc(90vh - 80px);
+}
+
+#preview-frame {
+    width: 100%;
+    min-height: 600px;
+    border: none;
     border-radius: 0.5rem;
     background: white;
-    width: 100%;
+}
+
+.dark #preview-frame {
+    background: #374151;
 }
 
 .preview-loading {
@@ -282,6 +449,11 @@
     align-items: center;
     justify-content: center;
     z-index: 10;
+    border-radius: 0.5rem;
+}
+
+.dark .preview-loading {
+    background: rgba(31, 41, 55, 0.95);
 }
 
 .preview-loading.active {
@@ -311,12 +483,23 @@
     overflow-y: auto;
 }
 
+.dark .properties-panel {
+    background: #1f2937;
+    color: #f9fafb;
+}
+
+.dark .properties-panel h3 {
+    color: #f9fafb;
+    border-bottom-color: #4b5563;
+}
+
 .properties-panel h3 {
     font-size: 1rem;
     font-weight: 600;
     margin: 0 0 1rem 0;
     padding-bottom: 1rem;
     border-bottom: 2px solid #e5e7eb;
+    color: #1f2937;
 }
 
 .property-group {
@@ -330,12 +513,34 @@
     color: #374151;
 }
 
+.dark .property-label {
+    color: #d1d5db;
+}
+
 .property-input {
     width: 100%;
     padding: 0.5rem;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
     font-size: 0.875rem;
+    background: white;
+    color: #1f2937;
+}
+
+.dark .property-input {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .property-input:disabled {
+    background: #1f2937;
+    color: #6b7280;
+}
+
+.dark .property-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
 
 .property-input:focus {
@@ -344,12 +549,61 @@
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.property-input:disabled {
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
 /* Action Bar */
 .action-bar {
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
+}
+
+/* Button dark mode support */
+.dark .btn {
+    color: #f9fafb;
+}
+
+.dark .btn-secondary {
+    background: #4b5563;
+    border-color: #6b7280;
+    color: #f9fafb;
+}
+
+.dark .btn-secondary:hover {
+    background: #6b7280;
+    border-color: #9ca3af;
+}
+
+.dark .btn-primary {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.dark .btn-primary:hover {
+    background: #5568d3;
+}
+
+.dark .btn-info {
+    background: #0ea5e9;
+    border-color: #0ea5e9;
+}
+
+.dark .btn-info:hover {
+    background: #0284c7;
+}
+
+.dark .btn-danger {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+
+.dark .btn-danger:hover {
+    background: #dc2626;
 }
 
 /* Info Box */
@@ -865,16 +1119,37 @@
                 <i class="fas fa-palette"></i>
                 {{ _('Design Canvas') }}
             </h3>
-            <div class="canvas-toolbar">
-                <button type="button" id="btn-zoom-in" title="{{ _('Zoom In') }}">
-                    <i class="fas fa-search-plus"></i>
-                </button>
-                <button type="button" id="btn-zoom-out" title="{{ _('Zoom Out') }}">
-                    <i class="fas fa-search-minus"></i>
-                </button>
-                <button type="button" id="btn-delete" title="{{ _('Delete Selected') }}">
-                    <i class="fas fa-trash"></i>
-                </button>
+            <div class="canvas-header-controls">
+                <div class="page-size-selector-group">
+                    <label class="page-size-label">{{ _('Page Size:') }}</label>
+                    <select id="page-size-selector" class="page-size-select">
+                        {% if all_templates %}
+                            {% for template in all_templates %}
+                                <option value="{{ template.page_size }}" {% if template.page_size == page_size %}selected{% endif %}>
+                                    {{ template.page_size }}
+                                </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="A4" {% if page_size == 'A4' %}selected{% endif %}>A4</option>
+                            <option value="Letter" {% if page_size == 'Letter' %}selected{% endif %}>Letter</option>
+                            <option value="Legal" {% if page_size == 'Legal' %}selected{% endif %}>Legal</option>
+                            <option value="A3" {% if page_size == 'A3' %}selected{% endif %}>A3</option>
+                            <option value="A5" {% if page_size == 'A5' %}selected{% endif %}>A5</option>
+                            <option value="Tabloid" {% if page_size == 'Tabloid' %}selected{% endif %}>Tabloid</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="canvas-toolbar">
+                    <button type="button" id="btn-zoom-in" title="{{ _('Zoom In') }}">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button type="button" id="btn-zoom-out" title="{{ _('Zoom Out') }}">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button type="button" id="btn-delete" title="{{ _('Delete Selected') }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </div>
         </div>
         <div id="canvas-container"></div>
@@ -889,18 +1164,27 @@
         <div id="properties-content">
             <p class="text-sm text-gray-500 italic">{{ _('Select an element to edit its properties') }}</p>
         </div>
-        
-        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e5e7eb;">
-            <h4 class="text-sm font-semibold mb-3">{{ _('Preview') }}</h4>
-            <div style="position: relative; height: 300px;">
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="preview-modal" style="display: none;">
+    <div class="preview-modal-overlay" id="preview-modal-overlay"></div>
+    <div class="preview-modal-content">
+        <div class="preview-modal-header">
+            <h3>{{ _('PDF Preview') }}</h3>
+            <button class="preview-modal-close" id="preview-modal-close" type="button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="preview-modal-body">
             <div class="preview-loading" id="preview-loading">
                 <div class="text-center">
                     <div class="spinner mb-3"></div>
                     <p class="text-sm text-gray-600 font-medium">{{ _('Generating...') }}</p>
                 </div>
             </div>
-                <iframe id="preview-frame" style="width: 100%; height: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem;"></iframe>
-            </div>
+            <iframe id="preview-frame" style="width: 100%; height: 100%; border: none; border-radius: 0.5rem;"></iframe>
         </div>
     </div>
 </div>
@@ -908,6 +1192,7 @@
 <!-- Hidden Save Form -->
 <form id="form-save" method="POST" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="page_size" id="save-page-size" value="{{ page_size }}">
     <textarea id="save-html" name="invoice_pdf_template_html"></textarea>
     <textarea id="save-css" name="invoice_pdf_template_css"></textarea>
     <textarea id="save-json" name="design_json"></textarea>
@@ -947,6 +1232,17 @@ const CSRF_TOKEN = {{ csrf_token()|tojson }};
 const PREVIEW_URL = {{ url_for('admin.pdf_layout_preview')|tojson }};
 const LOGO_URL = {{ (settings.get_logo_url() if settings.has_logo() else '')|tojson }};
 const SAVED_DESIGN_JSON = {{ (design_json if design_json else '')|tojson }};
+const CURRENT_PAGE_SIZE = {{ page_size|tojson }};
+
+// Page size dimensions in pixels at 72 DPI
+const PAGE_SIZE_DIMENSIONS = {
+    'A4': { width: 595, height: 842 },
+    'Letter': { width: 612, height: 792 },
+    'Legal': { width: 612, height: 1008 },
+    'A3': { width: 842, height: 1191 },
+    'A5': { width: 420, height: 595 },
+    'Tabloid': { width: 792, height: 1224 }
+};
 
 // Wait for Konva.js to load
 let konvaLoadAttempts = 0;
@@ -988,8 +1284,10 @@ function initializePDFEditor() {
     
     // Initialize Konva Stage
     const container = document.getElementById('canvas-container');
-    const width = 595; // A4 width in pixels at 72dpi
-    const height = 842; // A4 height in pixels
+    const currentSize = CURRENT_PAGE_SIZE || 'A4';
+    const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+    const width = dimensions.width;
+    const height = dimensions.height;
     
     let stage = new Konva.Stage({
         container: 'canvas-container',
@@ -1020,13 +1318,17 @@ function initializePDFEditor() {
     
     // Add grid lines
     function drawGrid() {
+        // Get current stage dimensions
+        const stageWidth = stage.width();
+        const stageHeight = stage.height();
+        
         // Remove old grid if exists
         layer.find('.grid-line').forEach(line => line.destroy());
         
         // Draw vertical lines
-        for (let i = 0; i < width / gridSize; i++) {
+        for (let i = 0; i < stageWidth / gridSize; i++) {
             const line = new Konva.Line({
-                points: [i * gridSize, 0, i * gridSize, height],
+                points: [i * gridSize, 0, i * gridSize, stageHeight],
                 stroke: '#e0e0e0',
                 strokeWidth: i % 5 === 0 ? 0.5 : 0.25,
                 name: 'grid-line',
@@ -1037,9 +1339,9 @@ function initializePDFEditor() {
         }
         
         // Draw horizontal lines
-        for (let i = 0; i < height / gridSize; i++) {
+        for (let i = 0; i < stageHeight / gridSize; i++) {
             const line = new Konva.Line({
-                points: [0, i * gridSize, width, i * gridSize],
+                points: [0, i * gridSize, stageWidth, i * gridSize],
                 stroke: '#e0e0e0',
                 strokeWidth: i % 5 === 0 ? 0.5 : 0.25,
                 name: 'grid-line',
@@ -1049,7 +1351,9 @@ function initializePDFEditor() {
             line.moveToBottom();
         }
         
-        background.moveToBottom();
+        if (background) {
+            background.moveToBottom();
+        }
         layer.draw();
     }
     
@@ -1708,11 +2012,40 @@ function initializePDFEditor() {
     });
     
     // Generate preview
+    const previewModal = document.getElementById('preview-modal');
+    const previewModalOverlay = document.getElementById('preview-modal-overlay');
+    const previewModalClose = document.getElementById('preview-modal-close');
+    
+    function openPreviewModal() {
+        previewModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closePreviewModal() {
+        previewModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    
+    previewModalOverlay.addEventListener('click', closePreviewModal);
+    previewModalClose.addEventListener('click', closePreviewModal);
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && previewModal.style.display === 'block') {
+            closePreviewModal();
+        }
+    });
+    
     document.getElementById('btn-preview').addEventListener('click', function() {
         const { html, css } = generateCode();
         
+        openPreviewModal();
+        
         const loading = document.getElementById('preview-loading');
+        const frame = document.getElementById('preview-frame');
+        
         loading.classList.add('active');
+        frame.style.display = 'none';
         
         const fd = new FormData();
         fd.append('html', html);
@@ -1722,16 +2055,17 @@ function initializePDFEditor() {
         fetch(PREVIEW_URL, { method: 'POST', body: fd })
             .then(r => r.text())
             .then(html => {
-                const frame = document.getElementById('preview-frame');
                 const doc = frame.contentDocument || frame.contentWindow.document;
                 doc.open();
                 doc.write(html);
                 doc.close();
                 loading.classList.remove('active');
+                frame.style.display = 'block';
             })
             .catch(err => {
                 loading.classList.remove('active');
                 alert('Preview error: ' + err.message);
+                closePreviewModal();
             });
     });
     
@@ -1896,6 +2230,12 @@ function initializePDFEditor() {
             }
         });
         
+        // Get dimensions for current page size
+        const currentSizeHtml = CURRENT_PAGE_SIZE || 'A4';
+        const dimensionsHtml = PAGE_SIZE_DIMENSIONS[currentSizeHtml] || PAGE_SIZE_DIMENSIONS['A4'];
+        const widthPxHtml = dimensionsHtml.width;
+        const heightPxHtml = dimensionsHtml.height;
+        
         // Wrap in complete HTML document for proper PDF rendering
         const html = `<!DOCTYPE html>
 <html>
@@ -1904,7 +2244,7 @@ function initializePDFEditor() {
     <title>Invoice</title>
     <style>
         @page {
-            size: A4;
+            size: ${currentSizeHtml};
             margin: 0;
         }
         body {
@@ -1914,8 +2254,8 @@ function initializePDFEditor() {
         }
         .invoice-wrapper {
             position: relative;
-            width: 595px;
-            min-height: 842px;
+            width: ${widthPxHtml}px;
+            min-height: ${heightPxHtml}px;
             background: white;
             padding: 20px;
             box-sizing: border-box;
@@ -1956,8 +2296,14 @@ ${bodyContent}</div>
 </body>
 </html>`;
         
+        // Get dimensions for current page size
+        const currentSize = CURRENT_PAGE_SIZE || 'A4';
+        const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+        const widthPx = dimensions.width;
+        const heightPx = dimensions.height;
+        
         const css = `@page {
-    size: A4;
+    size: ${currentSize};
     margin: 0;
 }
 body {
@@ -1967,8 +2313,8 @@ body {
 }
 .invoice-wrapper {
     position: relative;
-    width: 595px;
-    min-height: 842px;
+    width: ${widthPx}px;
+    min-height: ${heightPx}px;
     background: white;
     padding: 20px;
     box-sizing: border-box;
@@ -2029,6 +2375,34 @@ table tr:last-child td {
         document.getElementById('code-modal').classList.add('hidden');
     });
     
+    // Page size selector handler
+    const pageSizeSelector = document.getElementById('page-size-selector');
+    if (pageSizeSelector) {
+        // Set the current page size in the dropdown
+        if (CURRENT_PAGE_SIZE) {
+            pageSizeSelector.value = CURRENT_PAGE_SIZE;
+        }
+        
+        pageSizeSelector.addEventListener('change', async function() {
+            const newSize = this.value;
+            const confirmed = await showConfirm(
+                'Switching page size will reload the template. Any unsaved changes will be lost. Continue?',
+                {
+                    title: 'Switch Page Size',
+                    confirmText: 'Continue',
+                    cancelText: 'Cancel',
+                    variant: 'warning'
+                }
+            );
+            if (confirmed) {
+                window.location.href = '{{ url_for("admin.pdf_layout") }}?size=' + encodeURIComponent(newSize);
+            } else {
+                // Reset to current size
+                this.value = CURRENT_PAGE_SIZE || 'A4';
+            }
+        });
+    }
+    
     // Save
     document.getElementById('btn-save').addEventListener('click', function() {
         const { html, css } = generateCode();
@@ -2039,6 +2413,7 @@ table tr:last-child td {
         console.log('Has Items Table:', html.includes('<!-- Items Table Start -->'));
         console.log('Has Jinja2 loop:', html.includes('{' + '% for item in invoice.items'));
         console.log('Number of elements:', layer.children.length);
+        console.log('Page size:', CURRENT_PAGE_SIZE);
         
         // Log all Groups to see if items-table is there
         layer.children.forEach((child, idx) => {
@@ -2050,6 +2425,7 @@ table tr:last-child td {
         document.getElementById('save-html').value = html;
         document.getElementById('save-css').value = css;
         document.getElementById('save-json').value = JSON.stringify(stage.toJSON());
+        document.getElementById('save-page-size').value = CURRENT_PAGE_SIZE || pageSizeSelector.value;
         document.getElementById('form-save').submit();
     });
     
@@ -2233,30 +2609,67 @@ table tr:last-child td {
             try {
                 const savedJson = JSON.parse(SAVED_DESIGN_JSON);
                 
+                // Get current page size dimensions
+                const currentSize = CURRENT_PAGE_SIZE || 'A4';
+                const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+                
+                // Update saved JSON dimensions to match current page size
+                if (savedJson.attrs) {
+                    savedJson.attrs.width = dimensions.width;
+                    savedJson.attrs.height = dimensions.height;
+                }
+                
                 // Clear current layer
                 layer.destroyChildren();
                 
                 // Recreate stage from saved JSON
                 const restoredStage = Konva.Node.create(savedJson, 'canvas-container');
                 
+                // Ensure stage has correct dimensions
+                restoredStage.width(dimensions.width);
+                restoredStage.height(dimensions.height);
+                
                 // Replace current stage
                 stage.destroy();
                 stage = restoredStage;
                 layer = stage.children[0];
                 
-                // Find background by name
-                background = layer.findOne('[name="background"]') || layer.children[0];
+                // Find or create background by name and resize it
+                background = layer.findOne('[name="background"]');
+                if (background) {
+                    if (background.className === 'Rect') {
+                        background.width(dimensions.width);
+                        background.height(dimensions.height);
+                    }
+                } else {
+                    // Create background if it doesn't exist
+                    background = new Konva.Rect({
+                        x: 0,
+                        y: 0,
+                        width: dimensions.width,
+                        height: dimensions.height,
+                        fill: 'white',
+                        name: 'background'
+                    });
+                    layer.add(background);
+                    background.moveToBottom();
+                }
                 
-                // Re-setup selections for all elements
+                // Redraw grid for new size
+                drawGrid();
+                
+                // Re-setup selections for all elements (skip background and grid lines)
                 layer.children.forEach(child => {
-                    if (child !== background && child.className !== 'Transformer') {
+                    if (child !== background && 
+                        child.className !== 'Transformer' && 
+                        !(child.className === 'Line' && child.attrs.name === 'grid-line')) {
                         setupSelection(child);
                         elements.push({ type: child.attrs.name || child.className, node: child });
                     }
                 });
                 
                 layer.draw();
-                console.log('✅ Saved design loaded successfully');
+                console.log('✅ Saved design loaded successfully for size:', currentSize);
             } catch (error) {
                 console.error('Failed to load saved design:', error);
                 console.log('Loading default layout instead...');

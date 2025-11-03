@@ -3,14 +3,42 @@
 {% block content %}
 <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">Invoice {{ invoice.invoice_number }}</h1>
-    <div class="flex gap-2">
+    <div class="flex gap-2 items-center">
         <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark">Edit</a>
-        <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-dark">Export PDF</a>
+        <div class="flex gap-2 items-center">
+            <select id="pdf-size-selector" class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option value="A4">A4</option>
+                <option value="Letter">Letter</option>
+                <option value="Legal">Legal</option>
+                <option value="A3">A3</option>
+                <option value="A5">A5</option>
+                <option value="Tabloid">Tabloid</option>
+            </select>
+            <a id="export-pdf-link" href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-dark">Export PDF</a>
+        </div>
         <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Record Payment</a>
         <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
             <i class="fas fa-trash mr-1"></i>Delete
         </button>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sizeSelector = document.getElementById('pdf-size-selector');
+            const exportLink = document.getElementById('export-pdf-link');
+            if (sizeSelector && exportLink) {
+                // Initialize export link with default size (A4)
+                const defaultSize = sizeSelector.value || 'A4';
+                const baseUrl = "{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}";
+                exportLink.href = baseUrl + '?size=' + defaultSize;
+                
+                // Update export link when size changes
+                sizeSelector.addEventListener('change', function() {
+                    const size = this.value;
+                    exportLink.href = baseUrl + '?size=' + size;
+                });
+            }
+        });
+    </script>
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
