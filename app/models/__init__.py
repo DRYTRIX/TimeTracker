@@ -33,6 +33,7 @@ from .api_token import ApiToken
 from .calendar_event import CalendarEvent
 from .budget_alert import BudgetAlert
 from .import_export import DataImport, DataExport
+from .invoice_pdf_template import InvoicePDFTemplate
 
 __all__ = [
     "User",
@@ -73,4 +74,5 @@ __all__ = [
     "BudgetAlert",
     "DataImport",
     "DataExport",
+    "InvoicePDFTemplate",
 ]

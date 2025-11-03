@@ -583,17 +583,43 @@ def export_invoice_csv(invoice_id):
 @invoices_bp.route('/invoices/<int:invoice_id>/export/pdf')
 @login_required
 def export_invoice_pdf(invoice_id):
-    """Export invoice as PDF"""
+    """Export invoice as PDF with optional page size selection"""
+    # Debug logging - output to stdout for Docker
+    import sys
+    print(f"\n{'='*80}", file=sys.stdout, flush=True)
+    print(f"INVOICE EXPORT ROUTE CALLED - Invoice ID: {invoice_id}", file=sys.stdout, flush=True)
+    print(f"{'='*80}", file=sys.stdout, flush=True)
+    
     invoice = Invoice.query.get_or_404(invoice_id)
+    print(f"[ROUTE DEBUG] Invoice found: {invoice.invoice_number}", file=sys.stdout, flush=True)
+    
     if not current_user.is_admin and invoice.created_by != current_user.id:
+        print(f"[ROUTE DEBUG] Permission denied", file=sys.stdout, flush=True)
         flash(_('You do not have permission to export this invoice'), 'error')
         return redirect(request.referrer or url_for('invoices.list_invoices'))
+    
+    # Get page size from query parameter, default to A4
+    page_size = request.args.get('size', 'A4')
+    print(f"[ROUTE DEBUG] Page size from request: '{page_size}'", file=sys.stdout, flush=True)
+    
+    # Validate page size
+    valid_sizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid']
+    if page_size not in valid_sizes:
+        print(f"[ROUTE DEBUG] Invalid page size, defaulting to A4", file=sys.stdout, flush=True)
+        page_size = 'A4'
+    
+    print(f"[ROUTE DEBUG] Final page size: '{page_size}'", file=sys.stdout, flush=True)
+    print(f"[ROUTE DEBUG] Calling InvoicePDFGenerator.generate_pdf()...", file=sys.stdout, flush=True)
+    
     try:
         from app.utils.pdf_generator import InvoicePDFGenerator
         settings = Settings.get_settings()
-        pdf_generator = InvoicePDFGenerator(invoice, settings=settings)
+        print(f"[ROUTE DEBUG] Creating InvoicePDFGenerator with page_size='{page_size}'", file=sys.stdout, flush=True)
+        pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
+        print(f"[ROUTE DEBUG] Calling pdf_generator.generate_pdf()...", file=sys.stdout, flush=True)
         pdf_bytes = pdf_generator.generate_pdf()
-        filename = f'invoice_{invoice.invoice_number}.pdf'
+        print(f"[ROUTE DEBUG] PDF generated successfully, size: {len(pdf_bytes)} bytes", file=sys.stdout, flush=True)
+        filename = f'invoice_{invoice.invoice_number}_{page_size}.pdf'
         return send_file(
             io.BytesIO(pdf_bytes),
             mimetype='application/pdf',
@@ -601,12 +627,19 @@ def export_invoice_pdf(invoice_id):
             download_name=filename
         )
     except Exception as e:
+        import sys
+        import traceback
+        print(f"[ROUTE DEBUG] Exception in PDF generation: {e}", file=sys.stdout, flush=True)
+        print(f"[ROUTE DEBUG] Traceback:", file=sys.stdout, flush=True)
+        print(traceback.format_exc(), file=sys.stdout, flush=True)
         try:
+            print(f"[ROUTE DEBUG] Falling back to InvoicePDFGeneratorFallback", file=sys.stdout, flush=True)
             from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
             settings = Settings.get_settings()
             pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
             pdf_bytes = pdf_generator.generate_pdf()
-            filename = f'invoice_{invoice.invoice_number}.pdf'
+            print(f"[ROUTE DEBUG] Fallback PDF generated successfully", file=sys.stdout, flush=True)
+            filename = f'invoice_{invoice.invoice_number}_{page_size}.pdf'
             return send_file(
                 io.BytesIO(pdf_bytes),
                 mimetype='application/pdf',

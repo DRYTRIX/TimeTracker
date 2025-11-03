@@ -390,27 +390,62 @@ def settings():
 @login_required
 @admin_or_permission_required('manage_settings')
 def pdf_layout():
-    """Edit PDF invoice layout template (HTML and CSS)."""
-    settings_obj = Settings.get_settings()
+    """Edit PDF invoice layout template (HTML and CSS) by page size."""
+    from app.models import InvoicePDFTemplate
+    
+    # Get page size from query parameter or form, default to A4
+    page_size = request.args.get('size', request.form.get('page_size', 'A4'))
+    
+    # Ensure valid page size
+    valid_sizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid']
+    if page_size not in valid_sizes:
+        page_size = 'A4'
+    
+    # Get or create template for this page size
+    template = InvoicePDFTemplate.get_template(page_size)
+    
     if request.method == 'POST':
         html_template = request.form.get('invoice_pdf_template_html', '')
         css_template = request.form.get('invoice_pdf_template_css', '')
         design_json = request.form.get('design_json', '')
         
-        settings_obj.invoice_pdf_template_html = html_template
-        settings_obj.invoice_pdf_template_css = css_template
-        settings_obj.invoice_pdf_design_json = design_json
+        # Update template
+        template.template_html = html_template
+        template.template_css = css_template
+        template.design_json = design_json
+        template.updated_at = datetime.utcnow()
+        
+        # For backwards compatibility, also update Settings when saving A4 (default)
+        if page_size == 'A4':
+            settings_obj = Settings.get_settings()
+            settings_obj.invoice_pdf_template_html = html_template
+            settings_obj.invoice_pdf_template_css = css_template
+            settings_obj.invoice_pdf_design_json = design_json
+        
         if not safe_commit('admin_update_pdf_layout'):
             from flask_babel import gettext as _
             flash(_('Could not update PDF layout due to a database error.'), 'error')
         else:
             from flask_babel import gettext as _
             flash(_('PDF layout updated successfully'), 'success')
-        return redirect(url_for('admin.pdf_layout'))
+        return redirect(url_for('admin.pdf_layout', size=page_size))
+    
+    # Get all templates for dropdown
+    all_templates = InvoicePDFTemplate.get_all_templates()
+    
     # Provide initial defaults to the template if no custom HTML/CSS saved
-    initial_html = settings_obj.invoice_pdf_template_html or ''
-    initial_css = settings_obj.invoice_pdf_template_css or ''
-    design_json = settings_obj.invoice_pdf_design_json or ''
+    initial_html = template.template_html or ''
+    initial_css = template.template_css or ''
+    design_json = template.design_json or ''
+    
+    # Fallback to legacy Settings if template is empty
+    if not initial_html and not initial_css:
+        settings_obj = Settings.get_settings()
+        initial_html = settings_obj.invoice_pdf_template_html or ''
+        initial_css = settings_obj.invoice_pdf_template_css or ''
+        design_json = settings_obj.invoice_pdf_design_json or ''
+    
+    # Load default template if still empty
     try:
         if not initial_html:
             env = current_app.jinja_env
@@ -428,7 +463,14 @@ def pdf_layout():
             initial_css = css_src
     except Exception:
         pass
-    return render_template('admin/pdf_layout.html', settings=settings_obj, initial_html=initial_html, initial_css=initial_css, design_json=design_json)
+    
+    return render_template('admin/pdf_layout.html', 
+                         settings=Settings.get_settings(), 
+                         initial_html=initial_html, 
+                         initial_css=initial_css, 
+                         design_json=design_json,
+                         page_size=page_size,
+                         all_templates=all_templates)
 
 
 @admin_bp.route('/admin/pdf-layout/reset', methods=['POST'])

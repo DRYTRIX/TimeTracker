@@ -10,7 +10,7 @@
             <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200" title="{{ _('Project Code') }}">{{ project.code_display }}</span>
             {% endif %}
         </h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.client.name }}</p>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.client }}</p>
     </div>
     {% if current_user.is_admin or has_any_permission(['edit_projects', 'archive_projects']) %}
     <div class="flex gap-2 flex-wrap">

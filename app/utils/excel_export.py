@@ -54,7 +54,7 @@ def create_time_entries_excel(entries, filename_prefix='timetracker_export'):
             entry.id,
             entry.user.display_name if entry.user else 'Unknown',
             entry.project.name if entry.project else 'N/A',
-            entry.project.client.name if (entry.project and entry.project.client) else 'N/A',
+            entry.project.client if (entry.project and entry.project.client) else 'N/A',
             entry.task.name if entry.task else 'N/A',
             entry.start_time.isoformat() if entry.start_time else '',
             entry.end_time.isoformat() if entry.end_time else '',
@@ -76,9 +76,10 @@ def create_time_entries_excel(entries, filename_prefix='timetracker_export'):
                 cell.number_format = '0.00'
     
     # Auto-adjust column widths
-    for col in ws.columns:
+    for col_idx, col in enumerate(ws.columns, 1):
         max_length = 0
-        column = col[0].column_letter
+        # Get column letter - use column index (1-based) to avoid MergedCell issues
+        column = get_column_letter(col_idx)
         for cell in col:
             try:
                 if len(str(cell.value)) > max_length:
@@ -183,9 +184,11 @@ def create_project_report_excel(projects_data, start_date, end_date):
                 cell.number_format = '#,##0.00'
     
     # Auto-adjust columns
-    for col in ws.columns:
+    for col_idx, col in enumerate(ws.columns, 1):
         max_length = 0
-        column = col[0].column_letter
+        # Get column letter - use column index (1-based) to avoid MergedCell issues
+        # MergedCell objects don't have column_letter attribute
+        column = get_column_letter(col_idx)
         for cell in col:
             try:
                 if len(str(cell.value)) > max_length:
@@ -370,9 +373,10 @@ def create_invoices_list_excel(invoices):
                     cell.number_format = '0.00'
     
     # Auto-adjust column widths
-    for col in ws.columns:
+    for col_idx, col in enumerate(ws.columns, 1):
         max_length = 0
-        column = col[0].column_letter
+        # Get column letter - use column index (1-based) to avoid MergedCell issues
+        column = get_column_letter(col_idx)
         for cell in col:
             try:
                 if len(str(cell.value)) > max_length:
@@ -481,9 +485,10 @@ def create_payments_list_excel(payments):
                     cell.number_format = '#,##0.00'
     
     # Auto-adjust column widths
-    for col in ws.columns:
+    for col_idx, col in enumerate(ws.columns, 1):
         max_length = 0
-        column = col[0].column_letter
+        # Get column letter - use column index (1-based) to avoid MergedCell issues
+        column = get_column_letter(col_idx)
         for cell in col:
             try:
                 if len(str(cell.value)) > max_length:
