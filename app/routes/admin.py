@@ -415,6 +415,13 @@ def pdf_layout():
         template.design_json = design_json
         template.updated_at = datetime.utcnow()
         
+        # For backwards compatibility, also update Settings when saving A4 (default)
+        if page_size == 'A4':
+            settings_obj = Settings.get_settings()
+            settings_obj.invoice_pdf_template_html = html_template
+            settings_obj.invoice_pdf_template_css = css_template
+            settings_obj.invoice_pdf_design_json = design_json
+        
         if not safe_commit('admin_update_pdf_layout'):
             from flask_babel import gettext as _
             flash(_('Could not update PDF layout due to a database error.'), 'error')
