@@ -14,6 +14,14 @@ from werkzeug.utils import secure_filename
 
 api_bp = Blueprint('api', __name__)
 
+@api_bp.route('/api/health')
+def health_check():
+    """Health check endpoint for monitoring and error handling"""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
 @api_bp.route('/api/timer/status')
 @login_required
 def timer_status():
@@ -1469,7 +1477,8 @@ def activity_timeline():
     for activity in activities:
         activities_data.append({
             'id': activity.id,
-            'type': activity.activity_type or 'default',
+            'type': activity.entity_type or 'default',
+            'action': activity.action or 'unknown',
             'description': activity.description or 'Activity',
             'created_at': activity.created_at.isoformat() if activity.created_at else None
         })
