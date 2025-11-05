@@ -7,16 +7,22 @@
     {'text': 'Rates', 'url': url_for('per_diem.list_rates')},
     {'text': 'Edit' if rate else 'New'}
 ] %}
+{% set page_title = 'Edit Per Diem Rate' if rate else 'New Per Diem Rate' %}
+{% set page_subtitle = 'Update rate details' if rate else 'Create a new per diem rate' %}
 
 {{ page_header(
     icon_class='fas fa-list-alt',
-    title_text=('Edit Per Diem Rate' if rate else 'New Per Diem Rate'),
-    subtitle_text=('Update rate details' if rate else 'Create a new per diem rate'),
+    title_text=page_title,
+    subtitle_text=page_subtitle,
     breadcrumbs=breadcrumbs
-) %}
+) }}
 
 <div class="max-w-4xl mx-auto">
-    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if rate %}
+    <form method="POST" action="{{ url_for('per_diem.edit_rate', rate_id=rate.id) }}" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget">
+    {% else %}
+    <form method="POST" action="{{ url_for('per_diem.create_rate') }}" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget">
+    {% endif %}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <!-- Location Information -->
@@ -160,11 +166,11 @@
         <!-- Actions -->
         <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
             <a href="{{ url_for('per_diem.list_rates') }}" 
-               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-smooth btn-press">
                 <i class="fas fa-times mr-2"></i>Cancel
             </a>
             
-            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-smooth btn-press shadow-md" data-show-success="true">
                 <i class="fas fa-save mr-2"></i>{{ 'Update Rate' if rate else 'Create Rate' }}
             </button>
         </div>

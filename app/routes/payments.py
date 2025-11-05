@@ -405,6 +405,139 @@ def delete_payment(payment_id):
     flash('Payment deleted successfully', 'success')
     return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
 
+@payments_bp.route('/payments/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_payments():
+    """Delete multiple payments at once"""
+    payment_ids = request.form.getlist('payment_ids[]')
+    
+    if not payment_ids:
+        flash('No payments selected for deletion', 'warning')
+        return redirect(url_for('payments.list_payments'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for payment_id_str in payment_ids:
+        try:
+            payment_id = int(payment_id_str)
+            payment = Payment.query.get(payment_id)
+            
+            if not payment:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and payment.invoice.created_by != current_user.id:
+                skipped_count += 1
+                errors.append(f"Payment #{payment_id_str}: No permission")
+                continue
+            
+            # Store info for invoice update
+            invoice = payment.invoice
+            amount = payment.amount
+            status = payment.status
+            
+            # Update invoice payment tracking if payment was completed
+            if status == 'completed':
+                invoice.amount_paid = max(Decimal('0'), (invoice.amount_paid or Decimal('0')) - amount)
+                invoice.update_payment_status()
+                
+                # Update invoice status if no longer paid
+                if invoice.status == 'paid' and invoice.payment_status != 'fully_paid':
+                    invoice.status = 'sent'
+            
+            db.session.delete(payment)
+            deleted_count += 1
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {payment_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit('bulk_delete_payments', {'count': deleted_count}):
+            flash('Could not delete payments due to a database error. Please check server logs.', 'error')
+            return redirect(url_for('payments.list_payments'))
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(f'Successfully deleted {deleted_count} payment{"s" if deleted_count != 1 else ""}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} payment{"s" if skipped_count != 1 else ""}: {"; ".join(errors[:3])}', 'warning')
+    
+    return redirect(url_for('payments.list_payments'))
+
+@payments_bp.route('/payments/bulk-status', methods=['POST'])
+@login_required
+def bulk_update_status():
+    """Update status for multiple payments at once"""
+    payment_ids = request.form.getlist('payment_ids[]')
+    new_status = request.form.get('status', '').strip()
+    
+    if not payment_ids:
+        flash('No payments selected', 'warning')
+        return redirect(url_for('payments.list_payments'))
+    
+    # Validate status
+    valid_statuses = ['completed', 'pending', 'failed', 'refunded']
+    if not new_status or new_status not in valid_statuses:
+        flash('Invalid status value', 'error')
+        return redirect(url_for('payments.list_payments'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for payment_id_str in payment_ids:
+        try:
+            payment_id = int(payment_id_str)
+            payment = Payment.query.get(payment_id)
+            
+            if not payment:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and payment.invoice.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            
+            old_status = payment.status
+            payment.status = new_status
+            
+            # Update invoice payment tracking if status changed to/from completed
+            invoice = payment.invoice
+            if old_status == 'completed' and new_status != 'completed':
+                # Payment was completed but now isn't - subtract from invoice
+                invoice.amount_paid = max(Decimal('0'), (invoice.amount_paid or Decimal('0')) - payment.amount)
+                invoice.update_payment_status()
+            elif old_status != 'completed' and new_status == 'completed':
+                # Payment is now completed - add to invoice
+                invoice.amount_paid = (invoice.amount_paid or Decimal('0')) + payment.amount
+                invoice.update_payment_status()
+            
+            # Update invoice status if no longer paid
+            if old_status == 'completed' and new_status != 'completed':
+                if invoice.status == 'paid' and invoice.payment_status != 'fully_paid':
+                    invoice.status = 'sent'
+            
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit('bulk_update_payment_status', {'count': updated_count, 'status': new_status}):
+            flash('Could not update payments due to a database error', 'error')
+            return redirect(url_for('payments.list_payments'))
+        
+        flash(f'Successfully updated {updated_count} payment{"s" if updated_count != 1 else ""} to {new_status}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} payment{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
+    
+    return redirect(url_for('payments.list_payments'))
+
 @payments_bp.route('/api/payments/stats')
 @login_required
 def payment_stats():

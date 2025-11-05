@@ -14,7 +14,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <form method="POST" action="{{ url_for('projects.create_project') }}" novalidate id="createProjectForm">
+            <form method="POST" action="{{ url_for('projects.create_project') }}" novalidate id="createProjectForm" data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

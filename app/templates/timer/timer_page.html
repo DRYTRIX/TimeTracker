@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Timer'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-stopwatch',
+    title_text='Timer',
+    subtitle_text='Track your time with a visual timer',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Timer Section -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Visual Timer with Progress Ring -->
+        <div class="bg-card-light dark:bg-card-dark p-8 rounded-lg shadow-md">
+            {% if active_timer %}
+            <div class="flex flex-col items-center justify-center">
+                <!-- Progress Ring -->
+                <div class="relative w-64 h-64 mb-6">
+                    <svg class="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+                        <!-- Background circle -->
+                        <circle cx="50" cy="50" r="45" stroke="currentColor" 
+                                class="text-gray-200 dark:text-gray-700" 
+                                stroke-width="8" fill="none" />
+                        <!-- Progress circle -->
+                        {% set elapsed_seconds = active_timer.current_duration_seconds %}
+                        {% set max_seconds = 8 * 3600 %}
+                        {% set progress = (elapsed_seconds / max_seconds * 100) if max_seconds > 0 else 0 %}
+                        {% set circumference = 2 * 3.14159 * 45 %}
+                        {% set stroke_dashoffset = circumference - (progress / 100 * circumference) %}
+                        <circle cx="50" cy="50" r="45" stroke="currentColor" 
+                                class="text-primary transition-all duration-1000" 
+                                stroke-width="8" fill="none"
+                                stroke-dasharray="{{ circumference }}"
+                                stroke-dashoffset="{{ stroke_dashoffset }}"
+                                id="timer-progress-ring" />
+                    </svg>
+                    <!-- Timer Display -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <div class="text-4xl font-bold text-text-light dark:text-text-dark mb-2" id="timer-display">
+                            {{ active_timer.duration_formatted }}
+                        </div>
+                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ active_timer.project.name }}
+                            {% if active_timer.task %}
+                                - {{ active_timer.task.name }}
+                            {% endif %}
+                        </div>
+                        {% if active_timer.notes %}
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2 max-w-xs text-center">
+                            {{ active_timer.notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Timer Controls -->
+                <div class="flex gap-4">
+                    <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors shadow-md">
+                            <i class="fas fa-stop mr-2"></i>Stop Timer
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Duration Estimation -->
+                <div class="mt-6 p-4 bg-background-light dark:bg-background-dark rounded-lg w-full max-w-md">
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">Estimated Completion</h3>
+                    <div class="text-lg font-semibold text-text-light dark:text-text-dark" id="estimated-completion">
+                        Calculating...
+                    </div>
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        Based on average session duration
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- No Active Timer -->
+            <div class="flex flex-col items-center justify-center py-12">
+                <div class="w-64 h-64 mb-6 flex items-center justify-center">
+                    <svg class="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" stroke="currentColor" 
+                                class="text-gray-200 dark:text-gray-700" 
+                                stroke-width="8" fill="none" />
+                    </svg>
+                    <div class="absolute text-4xl font-bold text-text-muted-light dark:text-text-muted-dark">
+                        00:00:00
+                    </div>
+                </div>
+                <p class="text-text-muted-light dark:text-text-muted-dark mb-6">No active timer. Start one below!</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Quick Project/Task Selection -->
+        {% if not active_timer %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Start New Timer</h2>
+            <form action="{{ url_for('timer.start_timer') }}" method="POST" id="timer-start-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Project <span class="text-red-500">*</span>
+                        </label>
+                        <select name="project_id" id="project_id" class="form-input w-full" required>
+                            <option value="">Select a project...</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}">{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Task <span class="text-text-muted-light dark:text-text-muted-dark">(Optional)</span>
+                        </label>
+                        <select name="task_id" id="task_id" class="form-input w-full">
+                            <option value="">No task</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Notes <span class="text-text-muted-light dark:text-text-muted-dark">(Optional)</span>
+                        </label>
+                        <textarea name="notes" id="notes" rows="3" class="form-input w-full" placeholder="Add notes about what you're working on..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-md w-full">
+                        <i class="fas fa-play mr-2"></i>Start Timer
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Recent Projects Quick Access -->
+        {% if recent_projects %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Recent Projects</h2>
+            <div class="space-y-2">
+                {% for project in recent_projects %}
+                <button type="button" 
+                        onclick="selectRecentProject({{ project.id }}, '{{ project.name|e }}')"
+                        class="w-full text-left px-4 py-3 rounded-lg bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <div class="font-medium text-text-light dark:text-text-dark">{{ project.name }}</div>
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {% if project.client %}{{ project.client }}{% endif %}
+                    </div>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Quick Stats -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Today's Stats</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-text-muted-light dark:text-text-muted-dark">Total Hours</span>
+                    <span class="text-lg font-semibold text-text-light dark:text-text-dark" id="today-total-hours">—</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-text-muted-light dark:text-text-muted-dark">Active Timer</span>
+                    <span class="text-lg font-semibold {% if active_timer %}text-green-600{% else %}text-text-muted-light dark:text-text-muted-dark{% endif %}">
+                        {% if active_timer %}Running{% else %}Stopped{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+// Load tasks when project is selected
+document.getElementById('project_id')?.addEventListener('change', function() {
+    const projectId = this.value;
+    const taskSelect = document.getElementById('task_id');
+    
+    if (!projectId) {
+        taskSelect.innerHTML = '<option value="">No task</option>';
+        return;
+    }
+    
+    // Fetch tasks for selected project
+    fetch(`/api/tasks?project_id=${projectId}`)
+        .then(response => response.json())
+        .then(data => {
+            taskSelect.innerHTML = '<option value="">No task</option>';
+            data.tasks.forEach(task => {
+                const option = document.createElement('option');
+                option.value = task.id;
+                option.textContent = task.name;
+                taskSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading tasks:', error);
+        });
+});
+
+// Select recent project
+function selectRecentProject(projectId, projectName) {
+    const projectSelect = document.getElementById('project_id');
+    if (projectSelect) {
+        projectSelect.value = projectId;
+        projectSelect.dispatchEvent(new Event('change'));
+    }
+}
+
+// Update timer display every second
+{% if active_timer %}
+let timerInterval;
+let startTime = new Date('{{ active_timer.start_time.isoformat() }}').getTime();
+
+function updateTimer() {
+    const now = new Date().getTime();
+    const elapsed = Math.floor((now - startTime) / 1000);
+    
+    const hours = Math.floor(elapsed / 3600);
+    const minutes = Math.floor((elapsed % 3600) / 60);
+    const seconds = elapsed % 60;
+    
+    const display = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    const timerDisplay = document.getElementById('timer-display');
+    if (timerDisplay) {
+        timerDisplay.textContent = display;
+    }
+    
+    // Update progress ring
+    const maxSeconds = 8 * 3600; // 8 hours
+    const progress = Math.min((elapsed / maxSeconds) * 100, 100);
+    const circumference = 2 * Math.PI * 45;
+    const strokeDashoffset = circumference - (progress / 100 * circumference);
+    const progressRing = document.getElementById('timer-progress-ring');
+    if (progressRing) {
+        progressRing.style.strokeDashoffset = strokeDashoffset;
+    }
+    
+    // Update estimated completion
+    updateEstimatedCompletion(elapsed);
+}
+
+function updateEstimatedCompletion(elapsedSeconds) {
+    // Simple estimation: assume average session is 2 hours
+    // This could be improved with historical data
+    const avgSessionSeconds = 2 * 3600;
+    const estimatedTotal = avgSessionSeconds;
+    const remaining = Math.max(0, estimatedTotal - elapsedSeconds);
+    
+    if (remaining > 0) {
+        const hours = Math.floor(remaining / 3600);
+        const minutes = Math.floor((remaining % 3600) / 60);
+        const completionEl = document.getElementById('estimated-completion');
+        if (completionEl) {
+            completionEl.textContent = `${hours}h ${minutes}m remaining`;
+        }
+    } else {
+        const completionEl = document.getElementById('estimated-completion');
+        if (completionEl) {
+            completionEl.textContent = 'Session complete';
+        }
+    }
+}
+
+// Start timer update
+timerInterval = setInterval(updateTimer, 1000);
+updateTimer(); // Initial update
+
+// Load today's total hours
+fetch('/api/timer/status')
+    .then(response => response.json())
+    .then(data => {
+        // You might want to add an API endpoint for today's hours
+        // For now, we'll just show the active timer status
+    })
+    .catch(error => {
+        console.error('Error loading timer status:', error);
+    });
+{% endif %}
+</script>
+{% endblock %}

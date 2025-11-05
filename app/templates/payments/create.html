@@ -12,7 +12,7 @@
 
     <!-- Form -->
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
-        <form method="POST" action="{{ url_for('payments.create_payment') }}">
+        <form method="POST" action="{{ url_for('payments.create_payment') }}" novalidate data-validate-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

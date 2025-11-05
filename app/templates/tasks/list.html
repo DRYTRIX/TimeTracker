@@ -11,7 +11,7 @@
     title_text='Tasks',
     subtitle_text='Manage your tasks here',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("tasks.create_task") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Task</a>'
+    actions_html='<a href="' + url_for("tasks.create_task") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors btn-press shadow-md"><i class="fas fa-plus mr-2"></i>Create Task</a>'
 ) }}
 
 <!-- Task Summary Cards -->
@@ -100,7 +100,7 @@
                 <i class="fas fa-download mr-1"></i> Export
             </a>
             <div class="relative">
-                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'tasksBulkMenu')" disabled>
+                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60 btn-press transition-smooth" onclick="openMenu(this, 'tasksBulkMenu')" disabled>
                     <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
                 </button>
                 <ul id="tasksBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
@@ -113,7 +113,7 @@
             </div>
         </div>
     </div>
-    <table class="table table-zebra w-full text-left">
+    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
                 <th class="p-4 w-12">
@@ -130,9 +130,9 @@
         </thead>
         <tbody>
             {% for task in tasks %}
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-context-menu='[{"label": "View", "icon": "fas fa-eye", "action": {"type": "view", "url": "{{ url_for('tasks.view_task', task_id=task.id) }}"}}, {"label": "Edit", "icon": "fas fa-edit", "action": {"type": "edit", "url": "{{ url_for('tasks.edit_task', task_id=task.id) }}"}}, {"label": "Duplicate", "icon": "fas fa-copy", "action": {"type": "duplicate", "url": "{{ url_for('tasks.duplicate_task', task_id=task.id) }}"}}, {"separator": true}, {"label": "Delete", "icon": "fas fa-trash", "danger": true, "action": {"type": "delete", "url": "{{ url_for('tasks.delete_task', task_id=task.id) }}", "confirm": "Are you sure you want to delete this task?"}}]'>
                 <td class="p-4">
-                    <input type="checkbox" class="task-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ task.id }}" onchange="updateBulkDeleteButton()">
+                    <input type="checkbox" class="task-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-all" value="{{ task.id }}" onchange="updateBulkDeleteButton()">
                 </td>
                 <td class="p-4">{{ task.name }}</td>
                 <td class="p-4">{{ task.project.name }}</td>
@@ -146,17 +146,18 @@
                 </td>
                 <td class="p-4">
                     {% set s = task.status %}
-                    {% set scls = {'todo':'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                                   'in_progress':'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-                                   'review':'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-                                   'done':'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-                                   'cancelled':'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}[s] if s in ['todo','in_progress','review','done','cancelled'] else 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %}
+                    {% set statusColors = {'todo': 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                                           'in_progress': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+                                           'review': 'status-pending',
+                                           'done': 'status-active',
+                                           'cancelled': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'} %}
+                    {% set scls = statusColors.get(s, 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300') %}
                     <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ scls }}">{{ task.status_display }}</span>
                 </td>
                 <td class="p-4 table-number">
                     {% if task.due_date %}
                         {% set overdue = task.is_overdue %}
-                        <span class="chip whitespace-nowrap {{ 'chip-danger' if overdue else 'chip-neutral' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</span>
+                        <span class="chip whitespace-nowrap {{ 'status-overdue' if overdue else 'chip-neutral' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
@@ -178,14 +179,18 @@
     {% if not tasks %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-        <a href="{{ url_for('tasks.create_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            <i class="fas fa-plus mr-2"></i>Create Your First Task
-        </a>
+                    <a href="{{ url_for('tasks.create_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors btn-press shadow-md">
+                        <i class="fas fa-plus mr-2"></i>Create Your First Task
+                    </a>
         <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}
-    {{ empty_state('fas fa-tasks', 'No Tasks Found', 'Get started by creating your first task to organize your work and track progress.', actions) }}
+    {% if search or status or priority or project_id or assigned_to %}
+        {{ empty_state('fas fa-search', 'No Tasks Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new task that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-tasks', 'No Tasks Yet', 'Tasks help you break down projects into manageable pieces. Create your first task to get started organizing your work!', actions, type='no-data') }}
+    {% endif %}
     {% endif %}
         </tbody>
     </table>

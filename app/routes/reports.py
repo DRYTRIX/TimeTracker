@@ -73,7 +73,87 @@ def reports():
     log_event("report.viewed", user_id=current_user.id, report_type="summary")
     track_event(current_user.id, "report.viewed", {"report_type": "summary"})
 
-    return render_template('reports/index.html', summary=summary, recent_entries=recent_entries)
+    # Get comparison data for this month vs last month
+    now = datetime.utcnow()
+    this_month_start = datetime(now.year, now.month, 1)
+    last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
+    last_month_end = this_month_start - timedelta(seconds=1)
+    
+    # Get hours for this month
+    this_month_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= this_month_start,
+        TimeEntry.start_time <= now
+    )
+    if not current_user.is_admin:
+        this_month_query = this_month_query.filter(TimeEntry.user_id == current_user.id)
+    this_month_seconds = this_month_query.scalar() or 0
+    
+    # Get hours for last month
+    last_month_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= last_month_start,
+        TimeEntry.start_time <= last_month_end
+    )
+    if not current_user.is_admin:
+        last_month_query = last_month_query.filter(TimeEntry.user_id == current_user.id)
+    last_month_seconds = last_month_query.scalar() or 0
+    
+    comparison = {
+        'this_month': {'hours': round(this_month_seconds / 3600, 2)},
+        'last_month': {'hours': round(last_month_seconds / 3600, 2)},
+        'change': ((this_month_seconds - last_month_seconds) / last_month_seconds * 100) if last_month_seconds > 0 else 0
+    }
+    
+    return render_template('reports/index.html', summary=summary, recent_entries=recent_entries, comparison=comparison)
+
+@reports_bp.route('/reports/comparison')
+@login_required
+def comparison_view():
+    """Get comparison data for reports"""
+    period = request.args.get('period', 'month')
+    now = datetime.utcnow()
+    
+    if period == 'month':
+        # This month vs last month
+        this_period_start = datetime(now.year, now.month, 1)
+        last_period_start = (this_period_start - timedelta(days=1)).replace(day=1)
+        last_period_end = this_period_start - timedelta(seconds=1)
+    else:  # year
+        # This year vs last year
+        this_period_start = datetime(now.year, 1, 1)
+        last_period_start = datetime(now.year - 1, 1, 1)
+        last_period_end = datetime(now.year, 1, 1) - timedelta(seconds=1)
+    
+    # Get hours for current period
+    current_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= this_period_start,
+        TimeEntry.start_time <= now
+    )
+    if not current_user.is_admin:
+        current_query = current_query.filter(TimeEntry.user_id == current_user.id)
+    current_seconds = current_query.scalar() or 0
+    
+    # Get hours for previous period
+    previous_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= last_period_start,
+        TimeEntry.start_time <= last_period_end
+    )
+    if not current_user.is_admin:
+        previous_query = previous_query.filter(TimeEntry.user_id == current_user.id)
+    previous_seconds = previous_query.scalar() or 0
+    
+    current_hours = round(current_seconds / 3600, 2)
+    previous_hours = round(previous_seconds / 3600, 2)
+    change = ((current_hours - previous_hours) / previous_hours * 100) if previous_hours > 0 else 0
+    
+    return jsonify({
+        'current': {'hours': current_hours},
+        'previous': {'hours': previous_hours},
+        'change': round(change, 1)
+    })
 
 @reports_bp.route('/reports/project')
 @login_required

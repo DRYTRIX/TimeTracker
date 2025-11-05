@@ -32,7 +32,7 @@
 {% endif %}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-3xl mx-auto">
-    <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off">
+    <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off" novalidate data-validate-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

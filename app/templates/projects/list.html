@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge, empty_state, loading_spinner, progress_indicator %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -15,7 +15,13 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">Filter Projects</h2>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Filter Projects</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+        </button>
+    </div>
+    <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-filter-form>
         <div>
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
@@ -46,10 +52,11 @@
                 <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
             </select>
         </div>
-        <div class="self-end">
+        <div class="col-span-full flex justify-end">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
         </div>
     </form>
+    </div>
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
@@ -58,15 +65,27 @@
             {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="Export to CSV">
-                <i class="fas fa-download mr-1"></i> Export
+            <!-- View Toggle -->
+            <div class="flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-1">
+                <button type="button" id="listViewBtn" onclick="setViewMode('list')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn active" data-view="list" title="List View">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button type="button" id="gridViewBtn" onclick="setViewMode('grid')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn" data-view="grid" title="Grid View">
+                    <i class="fas fa-th"></i>
+                </button>
+            </div>
+            <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" 
+               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
+               title="Export to CSV"
+               onclick="showExportLoading(this); return true;">
+                <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
             </a>
             {% if current_user.is_admin %}
             <div class="relative">
                 <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'projectsBulkMenu')" disabled>
                     <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
                 </button>
-                <ul id="projectsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 z-50 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg max-h-64 overflow-y-auto">
+                <ul id="projectsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkArchiveDialog()"><i class="fas fa-archive mr-2 text-gray-600"></i>Archive</a></li>
@@ -77,11 +96,14 @@
             {% endif %}
         </div>
     </div>
-    <table class="w-full text-left">
+    
+    <!-- List View -->
+    <div id="listView" class="view-container">
+    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin %}
-                <th class="p-4 w-10">
+                <th class="p-4 w-12">
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllProjects()">
                 </th>
                 {% endif %}
@@ -97,7 +119,7 @@
         </thead>
         <tbody>
             {% for project in projects %}
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
                 {% if current_user.is_admin %}
                 <td class="p-4">
                     <input type="checkbox" class="project-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ project.id }}" onchange="updateBulkDeleteButton()">
@@ -118,18 +140,18 @@
                 <td class="p-4">{{ project.client }}</td>
                 <td class="p-4">
                     {% if project.status == 'active' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
                     {% elif project.status == 'inactive' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Inactive</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Inactive</span>
                     {% else %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Archived</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Archived</span>
                     {% endif %}
                 </td>
                 <td class="p-4">
                     {% if project.billable %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Billable</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Billable</span>
                     {% else %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Non‑billable</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Non-billable</span>
                     {% endif %}
                 </td>
                 <td class="p-4">
@@ -151,7 +173,7 @@
                         {% else %}
                             {% set badge_classes = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' %}
                         {% endif %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ badge_classes }}">{{ pct|round(0) }}%</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ badge_classes }}">{{ pct|round(0) }}%</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
@@ -164,6 +186,150 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    </div>
+    
+    <!-- Grid View -->
+    <div id="gridView" class="view-container hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for project in projects %}
+            <div class="project-card bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:shadow-lg transition-all duration-200 relative overflow-hidden group">
+                <!-- Quick Actions on Hover -->
+                <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div class="flex gap-1">
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+                           class="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" 
+                           title="View Project">
+                            <i class="fas fa-eye text-xs"></i>
+                        </a>
+                        {% if current_user.is_admin or has_permission('edit_projects') %}
+                        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" 
+                           class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" 
+                           title="Edit Project">
+                            <i class="fas fa-edit text-xs"></i>
+                        </a>
+                        {% endif %}
+                        <button type="button" 
+                                class="favorite-btn p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors" 
+                                data-project-id="{{ project.id }}"
+                                data-is-favorited="{{ 'true' if (favorite_project_ids and project.id in favorite_project_ids) else 'false' }}"
+                                onclick="toggleFavorite({{ project.id }}, this)"
+                                title="{{ 'Remove from favorites' if (favorite_project_ids and project.id in favorite_project_ids) else 'Add to favorites' }}">
+                            <i class="{{ 'fas' if (favorite_project_ids and project.id in favorite_project_ids) else 'far' }} fa-star text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Project Header -->
+                <div class="p-6 pb-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex-1 pr-2">
+                            {{ project.name }}
+                        </h3>
+                        <!-- Status Badge -->
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap
+                            {% if project.status == 'active' %}
+                                bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                            {% elif project.status == 'inactive' %}
+                                bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                            {% else %}
+                                bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200
+                            {% endif %}">
+                            {{ project.status|title }}
+                        </span>
+                    </div>
+                    
+                    {% if project.client %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                        <i class="fas fa-building mr-1"></i>{{ project.client }}
+                    </p>
+                    {% endif %}
+                    
+                    {% if project.description %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4 line-clamp-2">
+                        {{ project.description }}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Progress Indicators -->
+                <div class="px-6 pb-4 space-y-3">
+                    {% if project.budget_amount %}
+                        {% set consumed = (project.budget_consumed_amount or 0.0) %}
+                        {% set total = project.budget_amount|float %}
+                        {% set pct = (consumed / total * 100) if total > 0 else 0 %}
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Budget</span>
+                                <span class="text-xs font-semibold 
+                                    {% if pct >= 90 %}text-red-600
+                                    {% elif pct >= 70 %}text-amber-600
+                                    {% else %}text-green-600{% endif %}">
+                                    {{ pct|round(0) }}%
+                                </span>
+                            </div>
+                            <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-300
+                                    {% if pct >= 90 %}bg-red-500
+                                    {% elif pct >= 70 %}bg-amber-500
+                                    {% else %}bg-green-500{% endif %}" 
+                                    style="width: {{ [pct,100]|min }}%">
+                                </div>
+                            </div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ "%.2f"|format(consumed) }} / {{ "%.2f"|format(total) }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Hours Progress -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Hours</span>
+                            <span class="text-xs font-semibold text-text-light dark:text-text-dark">
+                                {{ "%.1f"|format(project.total_hours) }}h
+                            </span>
+                        </div>
+                        {% if project.estimated_hours %}
+                            {% set hours_pct = (project.total_hours / project.estimated_hours * 100) if project.estimated_hours > 0 else 0 %}
+                            <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-primary rounded-full transition-all duration-300" 
+                                    style="width: {{ [hours_pct,100]|min }}%">
+                                </div>
+                            </div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ "%.1f"|format(project.total_hours) }} / {{ "%.1f"|format(project.estimated_hours) }}h
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Project Footer -->
+                <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 text-sm">
+                            {% if project.billable %}
+                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                                <i class="fas fa-dollar-sign mr-1"></i>Billable
+                            </span>
+                            {% endif %}
+                            {% if project.hourly_rate %}
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                                {{ '%.2f'|format(project.hourly_rate|float) }}/h
+                            </span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+                           class="text-primary hover:text-primary/80 text-sm font-medium">
+                            View <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
     {% if not projects %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
@@ -176,12 +342,71 @@
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}
-    {{ empty_state('fas fa-folder-open', 'No Projects Found', 'Projects help you organize your work. Create your first project to get started tracking time.', actions) }}
+    {% if search or request.args.get('client') or request.args.get('status') != 'all' %}
+        {{ empty_state('fas fa-search', 'No Projects Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new project that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-folder-open', 'No Projects Yet', 'Projects help you organize your work and track time efficiently. Create your first project to get started!', actions, type='no-data') }}
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts_extra %}
+<style>
+.filter-collapsed { display: none !important; }
+.filter-toggle-transition { transition: all 0.3s ease-in-out; }
+.view-container { display: block; }
+.view-container.hidden { display: none; }
+.view-mode-btn.active {
+    background-color: rgb(59 130 246);
+    color: white;
+}
+.view-mode-btn:not(.active) {
+    background-color: transparent;
+    color: inherit;
+}
+.view-mode-btn:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.dark .view-mode-btn:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+.project-card {
+    transition: transform 0.2s ease-in-out;
+}
+.project-card:hover {
+    transform: translateY(-2px);
+}
+</style>
+<script>
+// View mode toggle
+function setViewMode(mode) {
+    const listView = document.getElementById('listView');
+    const gridView = document.getElementById('gridView');
+    const listBtn = document.getElementById('listViewBtn');
+    const gridBtn = document.getElementById('gridViewBtn');
+    
+    if (mode === 'list') {
+        listView.classList.remove('hidden');
+        gridView.classList.add('hidden');
+        listBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        localStorage.setItem('projectsViewMode', 'list');
+    } else {
+        listView.classList.add('hidden');
+        gridView.classList.remove('hidden');
+        listBtn.classList.remove('active');
+        gridBtn.classList.add('active');
+        localStorage.setItem('projectsViewMode', 'grid');
+    }
+}
+
+// Load saved view mode
+document.addEventListener('DOMContentLoaded', function() {
+    const savedMode = localStorage.getItem('projectsViewMode') || 'list';
+    setViewMode(savedMode);
+});
+</script>
 <form id="bulkStatusChange-form" method="POST" action="{{ url_for('projects.bulk_status_change') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="new_status" id="bulkNewStatus" value="">
@@ -191,6 +416,53 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
 <script>
+function toggleFilterVisibility() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const isCollapsed = filterBody.classList.contains('filter-collapsed');
+    
+    if (isCollapsed) {
+        // Show filters
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+        localStorage.setItem('projectListFiltersVisible', 'true');
+    } else {
+        // Hide filters
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+        localStorage.setItem('projectListFiltersVisible', 'false');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const filtersVisible = localStorage.getItem('projectListFiltersVisible');
+    if (filtersVisible === 'false') {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+    } else {
+        // Explicitly set the icon to chevron-up when filter is visible
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+    }
+    setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
+});
+
 function toggleAllProjects(){
     const selectAll = document.getElementById('selectAll');
     document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = !!(selectAll && selectAll.checked));
@@ -314,7 +586,35 @@ function submitBulkStatusChange(){
     document.querySelectorAll('.project-checkbox:checked').forEach(cb => {
         const i = document.createElement('input'); i.type='hidden'; i.name='project_ids[]'; i.value=cb.value; form.appendChild(i);
     });
+    
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    if (btn) {
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
     form.submit();
+}
+
+// Export loading state
+function showExportLoading(link) {
+    const originalHTML = link.innerHTML;
+    link.classList.add('pointer-events-none', 'opacity-60');
+    link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
+    
+    // Reset after 5 seconds (fallback)
+    setTimeout(() => {
+        link.innerHTML = originalHTML;
+        link.classList.remove('pointer-events-none', 'opacity-60');
+    }, 5000);
 }
 
 // Favorite project functionality
