@@ -1,5 +1,5 @@
 <!-- Keyboard Shortcuts Help Modal -->
-<!-- Triggered by Shift+? -->
+<!-- Triggered by Shift+? or clicking the help indicator -->
 
 <div id="keyboardShortcutsModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen px-4">
@@ -172,6 +172,34 @@
                     </div>
                 </div>
 
+                <!-- Bulk Actions -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-check-square mr-2 text-indigo-600"></i>
+                        Bulk Actions
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Select All</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                <span class="platform-key">Ctrl</span> A
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Delete Selected</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                Delete
+                            </kbd>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                            <span class="text-gray-700 dark:text-gray-300">Right-Click Menu</span>
+                            <kbd class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                                Right Click
+                            </kbd>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Tips -->
                 <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                     <h4 class="font-semibold text-blue-900 dark:text-blue-200 mb-2">
@@ -182,6 +210,8 @@
                         <li>• Use sequence shortcuts like <kbd class="px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">g d</kbd> for quick navigation (type 'g' then 'd')</li>
                         <li>• Most forms can be submitted with <kbd class="px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">Ctrl Enter</kbd></li>
                         <li>• Press <kbd class="px-2 py-0.5 bg-white dark:bg-gray-800 rounded text-xs">Esc</kbd> to close any modal or dropdown</li>
+                        <li>• Right-click on any list item to see context menu options</li>
+                        <li>• Look for the help indicator in the bottom-right corner</li>
                     </ul>
                 </div>
             </div>

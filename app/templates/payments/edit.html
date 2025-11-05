@@ -14,7 +14,7 @@
 
     <!-- Form -->
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
-        <form method="POST" action="{{ url_for('payments.edit_payment', payment_id=payment.id) }}">
+        <form method="POST" action="{{ url_for('payments.edit_payment', payment_id=payment.id) }}" novalidate data-validate-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <!-- Invoice Info (Read-only) -->

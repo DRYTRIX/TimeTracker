@@ -55,8 +55,14 @@
 
 <!-- Filter Form -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">Filter Mileage</h2>
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Filter Mileage</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+        </button>
+    </div>
+    <div id="filterBody">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-filter-form>
         <div>
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" 
@@ -107,7 +113,7 @@
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
         </div>
         
-        <div class="flex items-end gap-2 md:col-span-2">
+        <div class="flex items-end gap-2 col-span-full md:col-span-2">
             <button type="submit" class="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-filter mr-2"></i>Filter
             </button>
@@ -116,99 +122,371 @@
             </a>
         </div>
     </form>
+    </div>
 </div>
 
 <!-- Mileage Table -->
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-800">
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-visible">
+    <div class="flex justify-between items-center mb-4 p-6 pb-0">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+            {{ mileage_entries|length }} entr{{ 'ies' if mileage_entries|length != 1 else 'y' }} found
+        </h3>
+        <div class="flex items-center gap-2">
+            {% if current_user.is_admin %}
+            <div class="relative">
+                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'mileageBulkMenu')" disabled>
+                    <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
+                </button>
+                <ul id="mileageBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusDialog()"><i class="fas fa-tasks mr-2"></i>Change Status</a></li>
+                    <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
+                    <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="overflow-x-auto p-6 pt-4">
+        <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+            <thead class="border-b border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Purpose</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Route</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Distance</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    {% if current_user.is_admin %}
+                    <th class="p-4 w-12">
+                        <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllMileage()">
+                    </th>
+                    {% endif %}
+                    <th class="p-4" data-sortable>Date</th>
+                    <th class="p-4" data-sortable>Purpose</th>
+                    <th class="p-4" data-sortable>Route</th>
+                    <th class="p-4 table-number" data-sortable>Distance</th>
+                    <th class="p-4 table-number" data-sortable>Amount</th>
+                    <th class="p-4" data-sortable>Status</th>
+                    <th class="p-4">Actions</th>
                 </tr>
             </thead>
-            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
                 {% if mileage_entries %}
                     {% for entry in mileage_entries %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            {{ entry.date.strftime('%Y-%m-%d') if entry.date else (entry.trip_date.strftime('%Y-%m-%d') if entry.trip_date else '-') }}
+                    <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                        {% if current_user.is_admin %}
+                        <td class="p-4">
+                            <input type="checkbox" class="mileage-entry-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ entry.id }}" onchange="updateBulkDeleteButton()">
                         </td>
-                        <td class="px-6 py-4 text-sm">
+                        {% endif %}
+                        <td class="p-4 whitespace-nowrap">{{ entry.date.strftime('%Y-%m-%d') if entry.date else (entry.trip_date.strftime('%Y-%m-%d') if entry.trip_date else '—') }}</td>
+                        <td class="p-4">
                             <a href="{{ url_for('mileage.view_mileage', mileage_id=entry.id) }}" class="text-primary hover:underline font-medium">
                                 {{ entry.purpose }}
                             </a>
                             {% if entry.project %}
-                            <div class="text-xs text-gray-500">{{ entry.project.name }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ entry.project.name }}</div>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 text-sm">
+                        <td class="p-4">
                             <div class="flex flex-col">
-                                <span class="text-gray-600">{{ entry.start_location }}</span>
-                                <i class="fas fa-arrow-down text-xs text-gray-400 my-1"></i>
-                                <span class="text-gray-600">{{ entry.end_location }}</span>
+                                <span class="text-gray-600 dark:text-gray-400">{{ entry.start_location }}</span>
+                                <i class="fas fa-arrow-down text-xs text-gray-400 dark:text-gray-500 my-1"></i>
+                                <span class="text-gray-600 dark:text-gray-400">{{ entry.end_location }}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {{ '%.2f'|format(entry.distance_km) }} km
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {{ entry.currency_code or 'EUR' }} {{ '%.2f'|format(entry.total_amount or (entry.calculated_amount or 0)) }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="p-4 table-number font-medium">{{ '%.2f'|format(entry.distance_km) }} km</td>
+                        <td class="p-4 table-number font-medium">{{ entry.currency_code or 'EUR' }} {{ '%.2f'|format(entry.total_amount or (entry.calculated_amount or 0)) }}</td>
+                        <td class="p-4">
                             {% if entry.status == 'pending' %}
-                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                Pending
-                            </span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending</span>
                             {% elif entry.status == 'approved' %}
-                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                Approved
-                            </span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Approved</span>
                             {% elif entry.status == 'rejected' %}
-                            <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                Rejected
-                            </span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Rejected</span>
                             {% elif entry.status == 'reimbursed' %}
-                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                Reimbursed
-                            </span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Reimbursed</span>
+                            {% else %}
+                            <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ entry.status|title }}</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex items-center justify-end gap-2">
-                                <a href="{{ url_for('mileage.view_mileage', mileage_id=entry.id) }}" class="text-primary hover:text-primary/80" title="View">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if current_user.is_admin or entry.user_id == current_user.id %}
-                                <a href="{{ url_for('mileage.edit_mileage', mileage_id=entry.id) }}" class="text-blue-600 hover:text-blue-800" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
-                            </div>
+                        <td class="p-4">
+                            <a href="{{ url_for('mileage.view_mileage', mileage_id=entry.id) }}" class="text-primary hover:underline">View</a>
                         </td>
                     </tr>
                     {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
-                            <i class="fas fa-car text-4xl mb-2 opacity-50"></i>
-                            <p>No mileage entries found</p>
-                            <a href="{{ url_for('mileage.create_mileage') }}" class="text-primary hover:underline mt-2 inline-block">
-                                Create your first mileage entry
-                            </a>
-                        </td>
-                    </tr>
                 {% endif %}
             </tbody>
         </table>
+        {% if not mileage_entries %}
+        {% from "components/ui.html" import empty_state %}
+        {% set actions %}
+            <a href="{{ url_for('mileage.create_mileage') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus mr-2"></i>Create Your First Mileage Entry
+            </a>
+            <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <i class="fas fa-question-circle mr-2"></i>Learn More
+            </a>
+        {% endset %}
+        {% if request.args.get('search') or request.args.get('status') %}
+            {{ empty_state('fas fa-search', 'No Mileage Entries Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new mileage entry that matches your criteria.', actions, type='no-results') }}
+        {% else %}
+            {{ empty_state('fas fa-car', 'No Mileage Entries Yet', 'Track your business travel mileage for reimbursement. Create your first mileage entry to get started!', actions, type='no-data') }}
+        {% endif %}
+        {% endif %}
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts_extra %}
+<style>
+.filter-collapsed { display: none !important; }
+.filter-toggle-transition { transition: all 0.3s ease-in-out; }
+</style>
+<script>
+function toggleFilterVisibility() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const isCollapsed = filterBody.classList.contains('filter-collapsed');
+    
+    if (isCollapsed) {
+        // Show filters
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+        localStorage.setItem('mileageListFiltersVisible', 'true');
+    } else {
+        // Hide filters
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+        localStorage.setItem('mileageListFiltersVisible', 'false');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const filtersVisible = localStorage.getItem('mileageListFiltersVisible');
+    if (filtersVisible === 'false') {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+    } else {
+        // Explicitly set the icon to chevron-up when filter is visible
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+    }
+    setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
+});
+
+{% if current_user.is_admin %}
+<!-- Bulk Operations Forms (hidden) -->
+<form id="confirmBulkDelete-form" method="POST" action="{{ url_for('mileage.bulk_delete_mileage') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<form id="bulkStatusForm" method="POST" action="{{ url_for('mileage.bulk_update_status') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="status" id="bulkStatusValue">
+</form>
+
+// Bulk actions for mileage
+function toggleAllMileage() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.mileage-entry-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton() {
+    const checkboxes = document.querySelectorAll('.mileage-entry-checkbox:checked');
+    const count = checkboxes.length;
+    const btn = document.getElementById('bulkActionsBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (countSpan) countSpan.textContent = count;
+    if (btn) btn.disabled = count === 0;
+}
+
+function closeAllMenus() {
+    document.querySelectorAll('.bulk-menu').forEach(m => m.classList.add('hidden'));
+}
+
+function openMenu(triggerEl, menuId) {
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const willOpen = menu.classList.contains('hidden');
+    closeAllMenus();
+    if (!willOpen) return;
+    
+    menu.style.top = '';
+    menu.style.bottom = '';
+    const rect = triggerEl.getBoundingClientRect();
+    const menuHeight = menu.offsetHeight || 200;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    if (spaceBelow < menuHeight + 16 && spaceAbove > menuHeight + 16) {
+        menu.style.bottom = 'calc(100% + 8px)';
+    } else {
+        menu.style.top = 'calc(100% + 8px)';
+    }
+    menu.classList.remove('hidden');
+}
+
+document.addEventListener('click', function(e) {
+    const insideTrigger = e.target.closest('#bulkActionsBtn');
+    const insideMenu = e.target.closest('#mileageBulkMenu');
+    if (!insideTrigger && !insideMenu) {
+        closeAllMenus();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeAllMenus();
+});
+
+function showBulkDeleteConfirm() {
+    const count = document.querySelectorAll('.mileage-entry-checkbox:checked').length;
+    if (count === 0) return false;
+    document.getElementById('confirmBulkDelete').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkDeleteDialog() {
+    document.getElementById('confirmBulkDelete').classList.add('hidden');
+}
+
+function submitBulkDelete() {
+    const form = document.getElementById('confirmBulkDelete-form');
+    if (!form) return;
+    
+    form.querySelectorAll('input[name="mileage_ids[]"]').forEach(input => input.remove());
+    
+    const checkboxes = document.querySelectorAll('.mileage-entry-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one mileage entry to delete.');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    let originalHTML = '';
+    if (btn) {
+        originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'mileage_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Check if form action is set (not just "#" or current page)
+    const formAction = form.getAttribute('action') || form.action;
+    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
+        form.submit();
+    } else {
+        alert('Bulk delete functionality is not yet implemented. Backend routes need to be created.');
+        // Reset button state
+        if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+        return false;
+    }
+}
+
+function showBulkStatusDialog() {
+    document.getElementById('bulkStatusDialog').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkStatusDialog() {
+    document.getElementById('bulkStatusDialog').classList.add('hidden');
+}
+
+function submitBulkStatus() {
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    if (!statusSelect) return;
+    
+    const status = statusSelect.value;
+    if (!status) {
+        alert('Please select a status');
+        return;
+    }
+    
+    const form = document.getElementById('bulkStatusForm');
+    if (!form) return;
+    
+    const statusValueInput = document.getElementById('bulkStatusValue');
+    if (statusValueInput) {
+        statusValueInput.value = status;
+    }
+    
+    form.querySelectorAll('input[name="mileage_ids[]"]').forEach(input => input.remove());
+    
+    const checkboxes = document.querySelectorAll('.mileage-entry-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one mileage entry to update.');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    let originalHTML = '';
+    if (btn) {
+        originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'mileage_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Check if form action is set (not just "#" or current page)
+    const formAction = form.getAttribute('action') || form.action;
+    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
+        form.submit();
+    } else {
+        alert('Bulk status update functionality is not yet implemented. Backend routes need to be created.');
+        // Reset button state
+        if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+        return false;
+    }
+}
+{% endif %}
+
+</script>
 {% endblock %}
 

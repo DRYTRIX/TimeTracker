@@ -12,7 +12,7 @@
     title_text='Per Diem Rates',
     subtitle_text='Manage per diem rates by location',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("per_diem.create_rate") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Rate</a>'
+    actions_html='<a href="' + url_for("per_diem.create_rate") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-smooth btn-press shadow-md"><i class="fas fa-plus mr-2"></i>New Rate</a>'
 ) }}
 
 <!-- Rates Table -->
@@ -27,12 +27,13 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Currency</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Effective From</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {% if rates %}
                     {% for rate in rates %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-context-menu='[{"label": "Edit", "icon": "fas fa-edit", "action": {"type": "edit", "url": "{{ url_for('per_diem.edit_rate', rate_id=rate.id) }}"}}, {"separator": true}, {"label": "Delete", "icon": "fas fa-trash", "danger": true, "action": {"type": "delete", "url": "{{ url_for('per_diem.delete_rate', rate_id=rate.id) }}", "confirm": "Are you sure you want to delete this per diem rate?"}}]'>
                         <td class="px-6 py-4 text-sm">
                             <div class="font-medium">{{ rate.city + ', ' if rate.city else '' }}{{ rate.country }}</div>
                         </td>
@@ -62,11 +63,31 @@
                             </span>
                             {% endif %}
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('per_diem.edit_rate', rate_id=rate.id) }}" 
+                                   class="text-primary hover:text-primary-dark transition-smooth btn-press" 
+                                   title="{{ _('Edit') }}">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('per_diem.delete_rate', rate_id=rate.id) }}" 
+                                      class="inline" 
+                                      id="deleteRateForm-{{ rate.id }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="button" 
+                                            onclick="deleteRate({{ rate.id }})"
+                                            class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-smooth action-danger btn-press" 
+                                            title="{{ _('Delete') }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
                             <i class="fas fa-list-alt text-4xl mb-2 opacity-50"></i>
                             <p>No per diem rates found</p>
                             <a href="{{ url_for('per_diem.create_rate') }}" class="text-primary hover:underline mt-2 inline-block">
@@ -80,5 +101,28 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+function deleteRate(rateId) {
+    if (window.showConfirm) {
+        window.showConfirm('{{ _("Are you sure you want to delete this per diem rate?") }}', {
+            title: '{{ _("Delete Per Diem Rate") }}',
+            confirmText: '{{ _("Delete") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: 'danger'
+        }).then(function(confirmed) {
+            if (confirmed) {
+                document.getElementById('deleteRateForm-' + rateId).submit();
+            }
+        });
+    } else {
+        if (confirm('{{ _("Are you sure you want to delete this per diem rate?") }}')) {
+            document.getElementById('deleteRateForm-' + rateId).submit();
+        }
+    }
+}
+</script>
 {% endblock %}
 

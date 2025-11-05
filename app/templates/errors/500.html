@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Server Error') }} - {{ app_name }}{% endblock %}
+{% block title %}{{ error_info.title if error_info else _('Server Error') }} - {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-3 px-md-4">
@@ -9,16 +9,16 @@
             <div class="py-5">
                 <i class="fas fa-bug fa-5x text-danger mb-4"></i>
                 <h1 class="display-4 text-muted">500</h1>
-                <h2 class="h4 mb-3">{{ _('Server Error') }}</h2>
+                <h2 class="h4 mb-3">{{ error_info.title if error_info else _('Server Error') }}</h2>
                 <p class="text-muted mb-4">
-                    {{ _('Something went wrong on our end. Please try again later.') }}
+                    {{ error_info.message if error_info else _('Something went wrong on our end. Please try again later.') }}
                 </p>
                 <div class="d-grid gap-2 d-md-block">
-                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
-                        <i class="fas fa-home"></i> {{ _('Go to Dashboard') }}
-                    </a>
-                    <a href="javascript:location.reload()" class="btn btn-outline-secondary">
+                    <button onclick="location.reload()" class="btn btn-primary mb-2">
                         <i class="fas fa-redo"></i> {{ _('Try Again') }}
+                    </button>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> {{ _('Go to Dashboard') }}
                     </a>
                 </div>
             </div>

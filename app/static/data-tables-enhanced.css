@@ -1,0 +1,260 @@
+/**
+ * Data Tables Enhanced Styles
+ * Sticky headers, sort indicators, pagination, and column visibility
+ */
+
+/* Sticky Header Styles */
+.table-scroll-container {
+    position: relative;
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+table thead.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+    transition: box-shadow 0.2s ease;
+}
+
+.dark table thead.sticky-header {
+    background: #1f2937;
+}
+
+table thead.sticky-header.sticky-active {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark table thead.sticky-header.sticky-active {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Sortable Column Styles */
+table th.sortable-column {
+    position: relative;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+table th.sortable-column:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark table th.sortable-column:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+table th.sortable-column:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+}
+
+/* Sort Indicator */
+.sort-indicator {
+    display: inline-block;
+    margin-left: 0.5rem;
+    color: #9ca3af;
+    font-size: 0.75rem;
+    transition: color 0.2s ease;
+}
+
+.dark .sort-indicator {
+    color: #6b7280;
+}
+
+.sort-indicator.active {
+    color: #3b82f6;
+}
+
+.dark .sort-indicator.active {
+    color: #60a5fa;
+}
+
+table th.sortable-column:hover .sort-indicator {
+    color: #3b82f6;
+}
+
+.dark table th.sortable-column:hover .sort-indicator {
+    color: #60a5fa;
+}
+
+/* Column Visibility Dropdown */
+.column-visibility-dropdown {
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.column-visibility-dropdown label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.column-visibility-dropdown label:hover {
+    background-color: #f3f4f6;
+}
+
+.dark .column-visibility-dropdown label:hover {
+    background-color: #374151;
+}
+
+/* Pagination Styles */
+.table-pagination-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.dark .table-pagination-container {
+    border-top-color: #4b5563;
+}
+
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 0.375rem;
+}
+
+.dark .pagination-btn {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #e5e7eb;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.dark .pagination-btn:hover:not(:disabled) {
+    background: #374151;
+    border-color: #6b7280;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.dark .pagination-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+/* Page Size Selector */
+.table-page-size-select {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.dark .table-page-size-select {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #e5e7eb;
+}
+
+.table-page-size-select:hover {
+    border-color: #9ca3af;
+}
+
+.dark .table-page-size-select:hover {
+    border-color: #6b7280;
+}
+
+.table-page-size-select:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Table Toolbar */
+.table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.table-toolbar-left,
+.table-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-pagination-container {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .table-pagination-container > div:first-child {
+        width: 100%;
+    }
+    
+    .table-pagination-container > div:last-child {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .pagination-btn {
+        min-width: 2rem;
+        height: 2rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Accessibility improvements */
+table th.sortable-column[aria-label] {
+    cursor: pointer;
+}
+
+table th.sortable-column:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+    border-radius: 0.25rem;
+}
+
+/* Smooth transitions for column visibility */
+table th,
+table td {
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+table th[style*="display: none"],
+table td[style*="display: none"] {
+    display: none !important;
+}
+

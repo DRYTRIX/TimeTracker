@@ -26,9 +26,12 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='form-bridge.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='form-validation.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='enhanced-ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='data-tables-enhanced.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='keyboard-shortcuts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='ui-enhancements.css') }}">
     <style>
         /* RTL Support */
         html[dir="rtl"] {
@@ -159,10 +162,10 @@
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
                 {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') or ep.startswith('weekly_goals.') %}
-                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or ep.startswith('per_diem.') %}
+                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
-                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -554,6 +557,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <!-- Enhanced UI scripts -->
     <script src="{{ url_for('static', filename='enhanced-search.js') }}"></script>
+    <script src="{{ url_for('static', filename='form-validation.js') }}"></script>
     <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='enhanced-tables.js') }}"></script>
     <script src="{{ url_for('static', filename='interactions.js') }}"></script>
@@ -884,6 +888,9 @@
     <script src="{{ url_for('static', filename='charts.js') }}"></script>
     <script src="{{ url_for('static', filename='enhanced-ui.js') }}"></script>
     <script src="{{ url_for('static', filename='onboarding.js') }}"></script>
+    <script src="{{ url_for('static', filename='onboarding-enhanced.js') }}"></script>
+    <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
+    <script src="{{ url_for('static', filename='ui-enhancements.js') }}"></script>
     
     <!-- Advanced Features -->
     <script src="{{ url_for('static', filename='keyboard-shortcuts-advanced.js') }}?v=2.2"></script>
@@ -891,6 +898,7 @@
     <script src="{{ url_for('static', filename='quick-actions.js') }}"></script>
     <script src="{{ url_for('static', filename='smart-notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='dashboard-widgets.js') }}"></script>
+    <script src="{{ url_for('static', filename='dashboard-enhancements.js') }}"></script>
     
     <!-- PWA Registration -->
     <script>
@@ -1071,6 +1079,7 @@
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
     </script>
     
+    <script src="{{ url_for('static', filename='data-tables-enhanced.js') }}"></script>
     {% block scripts_extra %}{% endblock %}
 </body>
 </html>
