@@ -15,7 +15,13 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">Filter Projects</h2>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Filter Projects</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+        </button>
+    </div>
+    <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-filter-form>
         <div>
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
@@ -46,10 +52,11 @@
                 <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
             </select>
         </div>
-        <div class="self-end">
+        <div class="col-span-full flex justify-end">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
         </div>
     </form>
+    </div>
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
@@ -66,7 +73,7 @@
                 <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'projectsBulkMenu')" disabled>
                     <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
                 </button>
-                <ul id="projectsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 z-50 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg max-h-64 overflow-y-auto">
+                <ul id="projectsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkArchiveDialog()"><i class="fas fa-archive mr-2 text-gray-600"></i>Archive</a></li>
@@ -77,11 +84,11 @@
             {% endif %}
         </div>
     </div>
-    <table class="w-full text-left">
+    <table class="table table-zebra w-full text-left">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin %}
-                <th class="p-4 w-10">
+                <th class="p-4 w-12">
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllProjects()">
                 </th>
                 {% endif %}
@@ -97,7 +104,7 @@
         </thead>
         <tbody>
             {% for project in projects %}
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
                 {% if current_user.is_admin %}
                 <td class="p-4">
                     <input type="checkbox" class="project-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ project.id }}" onchange="updateBulkDeleteButton()">
@@ -118,18 +125,18 @@
                 <td class="p-4">{{ project.client }}</td>
                 <td class="p-4">
                     {% if project.status == 'active' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
                     {% elif project.status == 'inactive' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Inactive</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Inactive</span>
                     {% else %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Archived</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Archived</span>
                     {% endif %}
                 </td>
                 <td class="p-4">
                     {% if project.billable %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Billable</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Billable</span>
                     {% else %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Non‑billable</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Non-billable</span>
                     {% endif %}
                 </td>
                 <td class="p-4">
@@ -151,7 +158,7 @@
                         {% else %}
                             {% set badge_classes = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' %}
                         {% endif %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ badge_classes }}">{{ pct|round(0) }}%</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ badge_classes }}">{{ pct|round(0) }}%</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
@@ -182,6 +189,10 @@
 {% endblock %}
 
 {% block scripts_extra %}
+<style>
+.filter-collapsed { display: none !important; }
+.filter-toggle-transition { transition: all 0.3s ease-in-out; }
+</style>
 <form id="bulkStatusChange-form" method="POST" action="{{ url_for('projects.bulk_status_change') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="new_status" id="bulkNewStatus" value="">
@@ -191,6 +202,53 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
 <script>
+function toggleFilterVisibility() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const isCollapsed = filterBody.classList.contains('filter-collapsed');
+    
+    if (isCollapsed) {
+        // Show filters
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+        localStorage.setItem('projectListFiltersVisible', 'true');
+    } else {
+        // Hide filters
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+        localStorage.setItem('projectListFiltersVisible', 'false');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const filtersVisible = localStorage.getItem('projectListFiltersVisible');
+    if (filtersVisible === 'false') {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+    } else {
+        // Explicitly set the icon to chevron-up when filter is visible
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+    }
+    setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
+});
+
 function toggleAllProjects(){
     const selectAll = document.getElementById('selectAll');
     document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = !!(selectAll && selectAll.checked));
