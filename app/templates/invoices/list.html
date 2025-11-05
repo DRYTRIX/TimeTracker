@@ -202,11 +202,8 @@
                                 <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-download mr-2"></i>Download PDF
                                 </a>
-                                <hr class="my-1 border-border-light dark:border-border-dark">
-                                <a href="{{ url_for('invoices.send_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <i class="fas fa-envelope mr-2"></i>Send Email
-                                </a>
                                 {% if current_user.is_admin %}
+                                <hr class="my-1 border-border-light dark:border-border-dark">
                                 <button type="button" onclick="showDeleteModal({{ invoice.id }}, '{{ invoice.invoice_number }}')" class="w-full text-left block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-trash mr-2"></i>Delete
                                 </button>
