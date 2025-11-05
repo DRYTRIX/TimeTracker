@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
 from app.models import User, Project, TimeEntry, Settings, Task, ProjectCost, Client, Payment, Invoice
