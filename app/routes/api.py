@@ -14,6 +14,14 @@ from werkzeug.utils import secure_filename
 
 api_bp = Blueprint('api', __name__)
 
+@api_bp.route('/api/health')
+def health_check():
+    """Health check endpoint for monitoring and error handling"""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
 @api_bp.route('/api/timer/status')
 @login_required
 def timer_status():
@@ -1367,6 +1375,117 @@ def get_activities():
         'current_page': activities.page,
         'has_next': activities.has_next,
         'has_prev': activities.has_prev
+    })
+
+@api_bp.route('/api/dashboard/stats')
+@login_required
+def dashboard_stats():
+    """Get dashboard statistics for real-time updates"""
+    from app.models import TimeEntry
+    from datetime import datetime, timedelta
+    
+    today = datetime.utcnow().date()
+    week_start = today - timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+    
+    today_hours = TimeEntry.get_total_hours_for_period(
+        start_date=today,
+        user_id=current_user.id
+    )
+    
+    week_hours = TimeEntry.get_total_hours_for_period(
+        start_date=week_start,
+        user_id=current_user.id
+    )
+    
+    month_hours = TimeEntry.get_total_hours_for_period(
+        start_date=month_start,
+        user_id=current_user.id
+    )
+    
+    return jsonify({
+        'success': True,
+        'today_hours': float(today_hours),
+        'week_hours': float(week_hours),
+        'month_hours': float(month_hours)
+    })
+
+@api_bp.route('/api/dashboard/sparklines')
+@login_required
+def dashboard_sparklines():
+    """Get sparkline data for dashboard widgets"""
+    from app.models import TimeEntry
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    
+    # Get last 7 days of data
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    
+    # Get daily totals for last 7 days
+    daily_totals = db.session.query(
+        func.date(TimeEntry.start_time).label('date'),
+        func.sum(TimeEntry.duration_seconds).label('total_seconds')
+    ).filter(
+        TimeEntry.user_id == current_user.id,
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= seven_days_ago
+    ).group_by(
+        func.date(TimeEntry.start_time)
+    ).order_by(
+        func.date(TimeEntry.start_time)
+    ).all()
+    
+    # Convert to hours and create array
+    hours_data = []
+    for i in range(7):
+        date = datetime.utcnow().date() - timedelta(days=6-i)
+        matching = next((d for d in daily_totals if d.date == date), None)
+        if matching:
+            # total_seconds is already in seconds (Integer), convert to hours
+            hours = (matching.total_seconds or 0) / 3600.0
+        else:
+            hours = 0
+        hours_data.append(round(hours, 1))
+    
+    return jsonify({
+        'success': True,
+        'today': hours_data,
+        'week': hours_data,  # Same data for now
+        'month': hours_data   # Same data for now
+    })
+
+@api_bp.route('/api/activity/timeline')
+@login_required
+def activity_timeline():
+    """Get activity timeline for dashboard"""
+    from app.models import Activity
+    from datetime import datetime, timedelta
+    
+    # Get activities from last 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    query = Activity.query.filter(
+        Activity.created_at >= seven_days_ago
+    )
+    
+    # Filter by user if not admin
+    if not current_user.is_admin:
+        query = query.filter_by(user_id=current_user.id)
+    
+    activities = query.order_by(Activity.created_at.desc()).limit(20).all()
+    
+    activities_data = []
+    for activity in activities:
+        activities_data.append({
+            'id': activity.id,
+            'type': activity.entity_type or 'default',
+            'action': activity.action or 'unknown',
+            'description': activity.description or 'Activity',
+            'created_at': activity.created_at.isoformat() if activity.created_at else None
+        })
+    
+    return jsonify({
+        'success': True,
+        'activities': activities_data
     })
 
 @api_bp.route('/api/activities/stats')

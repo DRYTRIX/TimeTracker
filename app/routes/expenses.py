@@ -534,6 +534,123 @@ def delete_expense(expense_id):
     
     return redirect(url_for('expenses.list_expenses'))
 
+@expenses_bp.route('/expenses/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_expenses():
+    """Delete multiple expenses at once"""
+    expense_ids = request.form.getlist('expense_ids[]')
+    
+    if not expense_ids:
+        flash(_('No expenses selected for deletion'), 'warning')
+        return redirect(url_for('expenses.list_expenses'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for expense_id_str in expense_ids:
+        try:
+            expense_id = int(expense_id_str)
+            expense = Expense.query.get(expense_id)
+            
+            if not expense:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and expense.user_id != current_user.id:
+                skipped_count += 1
+                errors.append(f"'{expense.title or expense_id_str}': No permission")
+                continue
+            
+            # Cannot delete approved or invoiced expenses without admin privileges
+            if not current_user.is_admin and (expense.status == 'approved' or expense.invoiced):
+                skipped_count += 1
+                errors.append(f"'{expense.title or expense_id_str}': Approved or invoiced")
+                continue
+            
+            # Delete receipt file if exists
+            if expense.receipt_path:
+                file_path = os.path.join(current_app.root_path, '..', expense.receipt_path)
+                if os.path.exists(file_path):
+                    try:
+                        os.remove(file_path)
+                    except Exception:
+                        pass
+            
+            expense_title = expense.title or str(expense_id)
+            db.session.delete(expense)
+            deleted_count += 1
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {expense_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit(db):
+            flash(_('Could not delete expenses due to a database error. Please check server logs.'), 'error')
+            return redirect(url_for('expenses.list_expenses'))
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(_('Successfully deleted %(count)d expense(s)', count=deleted_count), 'success')
+    
+    if skipped_count > 0:
+        flash(_('Skipped %(count)d expense(s): %(errors)s', count=skipped_count, errors="; ".join(errors[:3])), 'warning')
+    
+    return redirect(url_for('expenses.list_expenses'))
+
+@expenses_bp.route('/expenses/bulk-status', methods=['POST'])
+@login_required
+def bulk_update_status():
+    """Update status for multiple expenses at once"""
+    expense_ids = request.form.getlist('expense_ids[]')
+    new_status = request.form.get('status', '').strip()
+    
+    if not expense_ids:
+        flash(_('No expenses selected'), 'warning')
+        return redirect(url_for('expenses.list_expenses'))
+    
+    # Validate status
+    valid_statuses = ['pending', 'approved', 'rejected', 'reimbursed']
+    if not new_status or new_status not in valid_statuses:
+        flash(_('Invalid status value'), 'error')
+        return redirect(url_for('expenses.list_expenses'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for expense_id_str in expense_ids:
+        try:
+            expense_id = int(expense_id_str)
+            expense = Expense.query.get(expense_id)
+            
+            if not expense:
+                continue
+            
+            # Check permissions - non-admin users can only update their own expenses
+            if not current_user.is_admin and expense.user_id != current_user.id:
+                skipped_count += 1
+                continue
+            
+            expense.status = new_status
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit(db):
+            flash(_('Could not update expenses due to a database error'), 'error')
+            return redirect(url_for('expenses.list_expenses'))
+        
+        flash(_('Successfully updated %(count)d expense(s) to %(status)s', count=updated_count, status=new_status), 'success')
+    
+    if skipped_count > 0:
+        flash(_('Skipped %(count)d expense(s) (no permission)', count=skipped_count), 'warning')
+    
+    return redirect(url_for('expenses.list_expenses'))
+
 
 @expenses_bp.route('/expenses/<int:expense_id>/approve', methods=['POST'])
 @login_required

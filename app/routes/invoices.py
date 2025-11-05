@@ -26,21 +26,61 @@ def list_invoices():
     # Track invoice page viewed
     track_invoice_page_viewed(current_user.id)
     
-    # Get invoices (scope by user unless admin)
-    if current_user.is_admin:
-        invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
-    else:
-        invoices = Invoice.query.filter_by(created_by=current_user.id).order_by(Invoice.created_at.desc()).all()
+    # Get filter parameters
+    status = request.args.get('status', '').strip()
+    payment_status = request.args.get('payment_status', '').strip()
+    search_query = request.args.get('search', '').strip()
     
-    # Get summary statistics
-    total_invoices = len(invoices)
-    total_amount = sum(invoice.total_amount for invoice in invoices)
+    # Build query
+    if current_user.is_admin:
+        query = Invoice.query
+    else:
+        query = Invoice.query.filter_by(created_by=current_user.id)
+    
+    # Apply status filter
+    if status:
+        query = query.filter(Invoice.status == status)
+    
+    # Apply payment status filter
+    if payment_status:
+        query = query.filter(Invoice.payment_status == payment_status)
+    
+    # Apply search filter
+    if search_query:
+        like = f"%{search_query}%"
+        query = query.filter(
+            db.or_(
+                Invoice.invoice_number.ilike(like),
+                Invoice.client_name.ilike(like)
+            )
+        )
+    
+    # Get invoices
+    invoices = query.order_by(Invoice.created_at.desc()).all()
+    
+    # Calculate overdue status for each invoice
+    today = date.today()
+    for invoice in invoices:
+        # Always set _is_overdue attribute to avoid template errors
+        if invoice.due_date and invoice.due_date < today and invoice.payment_status != 'fully_paid' and invoice.status != 'paid':
+            invoice._is_overdue = True
+        else:
+            invoice._is_overdue = False
+    
+    # Get summary statistics (from all invoices, not filtered)
+    if current_user.is_admin:
+        all_invoices = Invoice.query.all()
+    else:
+        all_invoices = Invoice.query.filter_by(created_by=current_user.id).all()
+    
+    total_invoices = len(all_invoices)
+    total_amount = sum(invoice.total_amount for invoice in all_invoices)
     
     # Use payment tracking for more accurate statistics
-    actual_paid_amount = sum(invoice.amount_paid or 0 for invoice in invoices)
-    fully_paid_amount = sum(invoice.total_amount for invoice in invoices if invoice.payment_status == 'fully_paid')
-    partially_paid_amount = sum(invoice.amount_paid or 0 for invoice in invoices if invoice.payment_status == 'partially_paid')
-    overdue_amount = sum(invoice.outstanding_amount for invoice in invoices if invoice.status == 'overdue')
+    actual_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices)
+    fully_paid_amount = sum(invoice.total_amount for invoice in all_invoices if invoice.payment_status == 'fully_paid')
+    partially_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices if invoice.payment_status == 'partially_paid')
+    overdue_amount = sum(invoice.outstanding_amount for invoice in all_invoices if invoice.status == 'overdue')
     
     summary = {
         'total_invoices': total_invoices,
@@ -330,6 +370,116 @@ def delete_invoice(invoice_id):
         return redirect(url_for('invoices.list_invoices'))
     
     flash(f'Invoice {invoice_number} deleted successfully', 'success')
+    return redirect(url_for('invoices.list_invoices'))
+
+@invoices_bp.route('/invoices/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_invoices():
+    """Delete multiple invoices at once"""
+    invoice_ids = request.form.getlist('invoice_ids[]')
+    
+    if not invoice_ids:
+        flash('No invoices selected for deletion', 'warning')
+        return redirect(url_for('invoices.list_invoices'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for invoice_id_str in invoice_ids:
+        try:
+            invoice_id = int(invoice_id_str)
+            invoice = Invoice.query.get(invoice_id)
+            
+            if not invoice:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and invoice.created_by != current_user.id:
+                skipped_count += 1
+                errors.append(f"'{invoice.invoice_number}': No permission")
+                continue
+            
+            invoice_number = invoice.invoice_number
+            db.session.delete(invoice)
+            deleted_count += 1
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {invoice_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit('bulk_delete_invoices', {'count': deleted_count}):
+            flash('Could not delete invoices due to a database error. Please check server logs.', 'error')
+            return redirect(url_for('invoices.list_invoices'))
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(f'Successfully deleted {deleted_count} invoice{"s" if deleted_count != 1 else ""}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} invoice{"s" if skipped_count != 1 else ""}: {"; ".join(errors[:3])}', 'warning')
+    
+    return redirect(url_for('invoices.list_invoices'))
+
+@invoices_bp.route('/invoices/bulk-status', methods=['POST'])
+@login_required
+def bulk_update_status():
+    """Update status for multiple invoices at once"""
+    invoice_ids = request.form.getlist('invoice_ids[]')
+    new_status = request.form.get('status', '').strip()
+    
+    if not invoice_ids:
+        flash('No invoices selected', 'warning')
+        return redirect(url_for('invoices.list_invoices'))
+    
+    # Validate status
+    valid_statuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled']
+    if not new_status or new_status not in valid_statuses:
+        flash('Invalid status value', 'error')
+        return redirect(url_for('invoices.list_invoices'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for invoice_id_str in invoice_ids:
+        try:
+            invoice_id = int(invoice_id_str)
+            invoice = Invoice.query.get(invoice_id)
+            
+            if not invoice:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and invoice.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            
+            invoice.status = new_status
+            
+            # Auto-update payment status if marking as paid
+            if new_status == 'paid' and invoice.payment_status != 'fully_paid':
+                invoice.amount_paid = invoice.total_amount
+                invoice.payment_status = 'fully_paid'
+                if not invoice.payment_date:
+                    invoice.payment_date = datetime.utcnow().date()
+            
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit('bulk_update_invoice_status', {'count': updated_count, 'status': new_status}):
+            flash('Could not update invoices due to a database error', 'error')
+            return redirect(url_for('invoices.list_invoices'))
+        
+        flash(f'Successfully updated {updated_count} invoice{"s" if updated_count != 1 else ""} to {new_status}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} invoice{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
+    
     return redirect(url_for('invoices.list_invoices'))
 
 @invoices_bp.route('/invoices/<int:invoice_id>/generate-from-time', methods=['GET', 'POST'])

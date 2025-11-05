@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ error.code }} {{ error.name }} - {{ app_name }}{% endblock %}
+{% block title %}{{ error_info.title if error_info else error.code }} {{ error.name }} - {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
@@ -13,21 +13,39 @@
                     </h4>
                 </div>
                 <div class="card-body text-center">
-                    <h5 class="card-title">{{ error.name }}</h5>
+                    <h5 class="card-title">{{ error_info.title if error_info else error.name }}</h5>
                     <p class="card-text">
-                        {% if error.description %}
-                            {{ error.description }}
-                        {% else %}
-                            {{ _('An error occurred while processing your request.') }}
-                        {% endif %}
+                        {{ error_info.message if error_info else (error.description if error.description else _('An error occurred while processing your request.')) }}
                     </p>
                     <div class="mt-4">
-                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
-                            <i class="fas fa-home"></i> {{ _('Go to Dashboard') }}
-                        </a>
-                        <button onclick="history.back()" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> {{ _('Go Back') }}
-                        </button>
+                        {% if error_info and error_info.recovery %}
+                            {% for action in error_info.recovery %}
+                                {% if 'Dashboard' in action %}
+                                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary mb-2">
+                                        <i class="fas fa-home"></i> {{ _('Go to Dashboard') }}
+                                    </a>
+                                {% elif 'Back' in action %}
+                                    <button onclick="history.back()" class="btn btn-secondary mb-2">
+                                        <i class="fas fa-arrow-left"></i> {{ _('Go Back') }}
+                                    </button>
+                                {% elif 'Refresh' in action %}
+                                    <button onclick="location.reload()" class="btn btn-primary mb-2">
+                                        <i class="fas fa-redo"></i> {{ _('Refresh Page') }}
+                                    </button>
+                                {% elif 'Login' in action %}
+                                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary mb-2">
+                                        <i class="fas fa-sign-in-alt"></i> {{ _('Go to Login') }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary mb-2">
+                                <i class="fas fa-home"></i> {{ _('Go to Dashboard') }}
+                            </a>
+                            <button onclick="history.back()" class="btn btn-secondary mb-2">
+                                <i class="fas fa-arrow-left"></i> {{ _('Go Back') }}
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>

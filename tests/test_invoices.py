@@ -1465,13 +1465,13 @@ def test_invoice_view_has_delete_button(app, client, user, project):
 
 @pytest.mark.smoke
 @pytest.mark.invoices
-def test_invoice_list_has_delete_buttons(app, client, user, project):
+def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     """Smoke test: Verify that the invoice list page has delete buttons."""
     from app.models import Client
     
-    # Authenticate
+    # Authenticate as admin
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(user.id)
+        sess['_user_id'] = str(admin_user.id)
         sess['_fresh'] = True
     
     # Create client and invoices
@@ -1486,7 +1486,7 @@ def test_invoice_list_has_delete_buttons(app, client, user, project):
             client_name=cl.name,
             client_id=cl.id,
             due_date=date.today() + timedelta(days=30),
-            created_by=user.id
+            created_by=admin_user.id
         )
         for i in range(1, 4)
     ]
@@ -1503,7 +1503,7 @@ def test_invoice_list_has_delete_buttons(app, client, user, project):
     
     # Verify delete buttons exist for each invoice
     for inv in invoices:
-        assert f"showDeleteModal('{inv.id}'" in html
+        assert f"showDeleteModal({inv.id}" in html
     
     # Verify modal exists
     assert 'deleteInvoiceModal' in html

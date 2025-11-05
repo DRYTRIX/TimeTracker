@@ -41,7 +41,14 @@
 
     <!-- Filters -->
     <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow mb-6">
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">Filter Payments</h2>
+            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+                <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+            </button>
+        </div>
+        <div id="filterBody">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-filter-form>
             <div>
                 <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                 <select name="status" id="status" class="form-input">
@@ -69,91 +76,445 @@
                 <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">To Date</label>
                 <input type="date" name="date_to" id="date_to" value="{{ filters.date_to }}" class="form-input">
             </div>
-            <div class="flex items-end">
-                <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg mr-2">Filter</button>
+            <div class="flex items-end col-span-full justify-end gap-2">
+                <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg">Filter</button>
                 <a href="{{ url_for('payments.list_payments') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">Clear</a>
             </div>
         </form>
+        </div>
     </div>
 
     <!-- Payments Table -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
-        {% if payments %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-900">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-visible">
+        <div class="flex justify-between items-center mb-4 p-6 pb-0">
+            <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+                {{ payments|length }} payment{{ 's' if payments|length != 1 else '' }} found
+            </h3>
+            <div class="flex items-center gap-2">
+                <a href="{{ url_for('payments.export_payments_excel', status=filters.status, method=filters.method, date_from=filters.date_from, date_to=filters.date_to) }}" 
+                   class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
+                   title="Export to Excel"
+                   onclick="showExportLoading(this); return true;">
+                    <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
+                </a>
+                {% if current_user.is_admin %}
+                <div class="relative">
+                    <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'paymentsBulkMenu')" disabled>
+                        <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
+                    </button>
+                    <ul id="paymentsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                        <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusDialog()"><i class="fas fa-tasks mr-2"></i>Change Status</a></li>
+                        <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
+                        <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="overflow-x-auto p-6 pt-4">
+            <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+                <thead class="border-b border-border-light dark:border-border-dark">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                        {% if current_user.is_admin %}
+                        <th class="p-4 w-12">
+                            <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllPayments()">
+                        </th>
+                        {% endif %}
+                        <th class="p-4" data-sortable>ID</th>
+                        <th class="p-4" data-sortable>Invoice</th>
+                        <th class="p-4 table-number" data-sortable>Amount</th>
+                        <th class="p-4" data-sortable>Date</th>
+                        <th class="p-4" data-sortable>Method</th>
+                        <th class="p-4" data-sortable>Status</th>
+                        <th class="p-4">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for payment in payments %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">#{{ payment.id }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" class="text-primary hover:text-primary-dark">
-                                {{ payment.invoice.invoice_number }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm font-semibold text-green-600 dark:text-green-400">
-                                {{ payment.amount }} {{ payment.currency or 'EUR' }}
-                            </span>
-                            {% if payment.gateway_fee %}
-                            <span class="text-xs text-gray-500 dark:text-gray-400 block">
-                                Fee: {{ payment.gateway_fee }} {{ payment.currency or 'EUR' }}
-                            </span>
+                <tbody>
+                    {% if payments %}
+                        {% for payment in payments %}
+                        <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                            {% if current_user.is_admin %}
+                            <td class="p-4">
+                                <input type="checkbox" class="payment-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ payment.id }}" onchange="updateBulkDeleteButton()">
+                            </td>
                             {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else 'N/A' }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">
-                                {{ payment.method or 'N/A' }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            {% if payment.status == 'completed' %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                                Completed
-                            </span>
-                            {% elif payment.status == 'pending' %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
-                                Pending
-                            </span>
-                            {% elif payment.status == 'failed' %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
-                                Failed
-                            </span>
-                            {% elif payment.status == 'refunded' %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100">
-                                Refunded
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="text-primary hover:text-primary-dark mr-3">View</a>
-                            <a href="{{ url_for('payments.edit_payment', payment_id=payment.id) }}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">Edit</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                            <td class="p-4 font-medium">#{{ payment.id }}</td>
+                            <td class="p-4">
+                                <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" class="text-primary hover:underline">
+                                    {{ payment.invoice.invoice_number }}
+                                </a>
+                            </td>
+                            <td class="p-4 table-number">
+                                <span class="font-semibold text-green-600 dark:text-green-400">
+                                    {{ payment.amount }} {{ payment.currency or 'EUR' }}
+                                </span>
+                                {% if payment.gateway_fee %}
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Fee: {{ payment.gateway_fee }} {{ payment.currency or 'EUR' }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="p-4">{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '—' }}</td>
+                            <td class="p-4">{{ payment.method or '—' }}</td>
+                            <td class="p-4">
+                                {% if payment.status == 'completed' %}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Completed</span>
+                                {% elif payment.status == 'pending' %}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">Pending</span>
+                                {% elif payment.status == 'failed' %}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">Failed</span>
+                                {% elif payment.status == 'refunded' %}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100">Refunded</span>
+                                {% else %}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ payment.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4">
+                                <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="text-primary hover:underline">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
                 </tbody>
             </table>
+            {% if not payments %}
+            {% from "components/ui.html" import empty_state %}
+            {% set actions %}
+                <a href="{{ url_for('payments.create_payment') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Record Your First Payment
+                </a>
+                <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-question-circle mr-2"></i>Learn More
+                </a>
+            {% endset %}
+            {% if filters.status or filters.method or filters.date_from or filters.date_to %}
+                {{ empty_state('fas fa-search', 'No Payments Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or record a new payment that matches your criteria.', actions, type='no-results') }}
+            {% else %}
+                {{ empty_state('fas fa-credit-card', 'No Payments Yet', 'Track payments received from clients to manage your cash flow. Record your first payment to get started!', actions, type='no-data') }}
+            {% endif %}
+            {% endif %}
         </div>
-        {% else %}
-        <div class="p-8 text-center">
-            <p class="text-gray-500 dark:text-gray-400">No payments found.</p>
-            <a href="{{ url_for('payments.create_payment') }}" class="text-primary hover:text-primary-dark mt-2 inline-block">Record your first payment</a>
-        </div>
-        {% endif %}
     </div>
-</div>
+
+ {% if current_user.is_admin %}
+ <!-- Bulk Operations Forms (hidden) -->
+ <form id="confirmBulkDelete-form" method="POST" action="{{ url_for('payments.bulk_delete_payments') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<form id="bulkStatusForm" method="POST" action="{{ url_for('payments.bulk_update_status') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="status" id="bulkStatusValue">
+</form>
+ 
+ <!-- Bulk Delete Confirmation Dialog -->
+ <div id="confirmBulkDelete" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+     <div class="flex items-center justify-center min-h-screen px-4">
+         <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
+         <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
+             <div class="flex items-start mb-4">
+                 <div class="flex-shrink-0">
+                     <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                         <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+                     </div>
+                 </div>
+                 <div class="ml-4 flex-1">
+                     <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">Delete Selected Payments</h3>
+                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Are you sure you want to delete the selected payments? This action cannot be undone.</p>
+                 </div>
+             </div>
+             <div class="flex justify-end gap-3 mt-6">
+                 <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkDeleteDialog()">
+                     Cancel
+                 </button>
+                 <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="submitBulkDelete()">
+                     Delete
+                 </button>
+             </div>
+         </div>
+     </div>
+ </div>
+ 
+ <!-- Bulk Status Change Dialog -->
+ <div id="bulkStatusDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+         <div class="p-6">
+             <h3 class="text-lg font-semibold mb-4">Change Status for Selected Payments</h3>
+             <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
+             <select id="bulkStatusSelect" class="form-input w-full mb-4">
+                 <option value="">-- Select Status --</option>
+                 <option value="completed">Completed</option>
+                 <option value="pending">Pending</option>
+                 <option value="failed">Failed</option>
+                 <option value="refunded">Refunded</option>
+             </select>
+             <div class="flex justify-end gap-2">
+                 <button type="button" onclick="closeBulkStatusDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                 <button type="button" onclick="submitBulkStatus()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">Update Status</button>
+             </div>
+         </div>
+     </div>
+ </div>
+ {% endif %}
+
+ {% endblock %}
+
+{% block scripts_extra %}
+<style>
+.filter-collapsed { display: none !important; }
+.filter-toggle-transition { transition: all 0.3s ease-in-out; }
+</style>
+<script>
+function toggleFilterVisibility() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const isCollapsed = filterBody.classList.contains('filter-collapsed');
+    
+    if (isCollapsed) {
+        // Show filters
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+        localStorage.setItem('paymentListFiltersVisible', 'true');
+    } else {
+        // Hide filters
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+        localStorage.setItem('paymentListFiltersVisible', 'false');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const filterBody = document.getElementById('filterBody');
+    const toggleIcon = document.getElementById('filterToggleIcon');
+    const toggleButton = document.getElementById('toggleFilters');
+    if (!filterBody || !toggleIcon || !toggleButton) return;
+    
+    const filtersVisible = localStorage.getItem('paymentListFiltersVisible');
+    if (filtersVisible === 'false') {
+        filterBody.classList.add('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        toggleButton.title = '{{ _('Show Filters') }}';
+    } else {
+        // Explicitly set the icon to chevron-up when filter is visible
+        filterBody.classList.remove('filter-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        toggleButton.title = '{{ _('Hide Filters') }}';
+    }
+    setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
+});
+
+{% if current_user.is_admin %}
+// Bulk actions for payments
+function toggleAllPayments() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.payment-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton() {
+    const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
+    const count = checkboxes.length;
+    const btn = document.getElementById('bulkActionsBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (countSpan) countSpan.textContent = count;
+    if (btn) btn.disabled = count === 0;
+}
+
+function closeAllMenus() {
+    document.querySelectorAll('.bulk-menu').forEach(m => m.classList.add('hidden'));
+}
+
+function openMenu(triggerEl, menuId) {
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const willOpen = menu.classList.contains('hidden');
+    closeAllMenus();
+    if (!willOpen) return;
+    
+    menu.style.top = '';
+    menu.style.bottom = '';
+    const rect = triggerEl.getBoundingClientRect();
+    const menuHeight = menu.offsetHeight || 200;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    if (spaceBelow < menuHeight + 16 && spaceAbove > menuHeight + 16) {
+        menu.style.bottom = 'calc(100% + 8px)';
+    } else {
+        menu.style.top = 'calc(100% + 8px)';
+    }
+    menu.classList.remove('hidden');
+}
+
+document.addEventListener('click', function(e) {
+    const insideTrigger = e.target.closest('#bulkActionsBtn');
+    const insideMenu = e.target.closest('#paymentsBulkMenu');
+    if (!insideTrigger && !insideMenu) {
+        closeAllMenus();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeAllMenus();
+});
+
+function showBulkDeleteConfirm() {
+    const count = document.querySelectorAll('.payment-checkbox:checked').length;
+    if (count === 0) return false;
+    document.getElementById('confirmBulkDelete').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkDeleteDialog() {
+    document.getElementById('confirmBulkDelete').classList.add('hidden');
+}
+
+function submitBulkDelete() {
+    const form = document.getElementById('confirmBulkDelete-form');
+    if (!form) return;
+    
+    form.querySelectorAll('input[name="payment_ids[]"]').forEach(input => input.remove());
+    
+    const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one payment to delete.');
+        return;
+    }
+    
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'payment_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    let originalHTML = '';
+    if (btn) {
+        originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
+    // Check if form action is set (not just "#" or current page)
+    const formAction = form.getAttribute('action') || form.action;
+    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
+        form.submit();
+    } else {
+        alert('Bulk delete functionality is not yet implemented. Backend routes need to be created.');
+        // Reset button state
+        if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+        return false;
+    }
+}
+
+function showBulkStatusDialog() {
+    document.getElementById('bulkStatusDialog').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkStatusDialog() {
+    document.getElementById('bulkStatusDialog').classList.add('hidden');
+}
+
+function submitBulkStatus() {
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    if (!statusSelect) return;
+    
+    const status = statusSelect.value;
+    if (!status) {
+        alert('Please select a status');
+        return;
+    }
+    
+    const form = document.getElementById('bulkStatusForm');
+    if (!form) return;
+    
+    const statusValueInput = document.getElementById('bulkStatusValue');
+    if (statusValueInput) {
+        statusValueInput.value = status;
+    }
+    
+    form.querySelectorAll('input[name="payment_ids[]"]').forEach(input => input.remove());
+    
+    const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one payment to update.');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    let originalHTML = '';
+    if (btn) {
+        originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'payment_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    // Check if form action is set (not just "#" or current page)
+    const formAction = form.getAttribute('action') || form.action;
+    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
+        form.submit();
+    } else {
+        alert('Bulk status update functionality is not yet implemented. Backend routes need to be created.');
+        // Reset button state
+        if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+        return false;
+    }
+}
+
+// Export loading state
+function showExportLoading(link) {
+    const originalHTML = link.innerHTML;
+    link.classList.add('pointer-events-none', 'opacity-60');
+    link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
+    
+    // Reset after 5 seconds (fallback)
+    setTimeout(() => {
+        link.innerHTML = originalHTML;
+        link.classList.remove('pointer-events-none', 'opacity-60');
+    }, 5000);
+}
+{% endif %}
+</script>
 {% endblock %}
 

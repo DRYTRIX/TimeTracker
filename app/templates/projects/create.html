@@ -14,7 +14,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <form method="POST" action="{{ url_for('projects.create_project') }}" novalidate id="createProjectForm">
+            <form method="POST" action="{{ url_for('projects.create_project') }}" novalidate id="createProjectForm" data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -291,9 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Autosave
         const autosaveKey = 'tt-project-create-description';
-        if (!descriptionInput.value) {
+        // Only restore from localStorage if we have form data (validation error), not on fresh page load
+        const hasFormData = descriptionInput.value || nameInput.value || clientSelect.value;
+        if (!descriptionInput.value && hasFormData) {
             const cached = localStorage.getItem(autosaveKey);
             if (cached) { try { mdEditor.setMarkdown(cached); } catch(e) {} }
+        } else if (!hasFormData) {
+            // Clear localStorage on fresh page load to prevent persisting previous values
+            try { localStorage.removeItem(autosaveKey); } catch (e) {}
         }
         mdEditor.on && mdEditor.on('change', () => {
             try { localStorage.setItem(autosaveKey, mdEditor.getMarkdown()); } catch (e) {}

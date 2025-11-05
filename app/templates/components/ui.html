@@ -114,7 +114,7 @@
 {# ============================================
    EMPTY STATES
    ============================================ #}
-{% macro empty_state(icon_class, title, message, actions_html=None, type="default") %}
+{% macro empty_state(icon_class, title, message, actions_html=None, type="default", illustration=None) %}
 {% set type_colors = {
     'default': 'primary',
     'no-data': 'gray-500',
@@ -125,9 +125,15 @@
 } %}
 {% set color = type_colors.get(type, 'primary') %}
 <div class="text-center py-12 px-4 fade-in-up">
+    {% if illustration %}
+    <div class="mb-6">
+        {{ illustration|safe }}
+    </div>
+    {% else %}
     <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-{{ color }}/10 dark:bg-{{ color }}/20 mb-6 animate-float">
         <i class="{{ icon_class }} text-{{ color }} text-4xl"></i>
     </div>
+    {% endif %}
     <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">{{ _(title) }}</h3>
     <p class="text-text-muted-light dark:text-text-muted-dark max-w-md mx-auto mb-6">{{ _(message) }}</p>
     {% if actions_html %}
@@ -141,13 +147,45 @@
 {# ============================================
    LOADING STATES
    ============================================ #}
-{% macro loading_spinner(size="md", text=None) %}
+{% macro loading_spinner(size="md", text=None, context=None) %}
 {% set size_classes = {'sm': 'w-6 h-6', 'md': 'w-10 h-10', 'lg': 'w-16 h-16'} %}
+{% set context_icons = {
+    'export': 'fas fa-download',
+    'delete': 'fas fa-trash',
+    'save': 'fas fa-save',
+    'load': 'fas fa-spinner',
+    'bulk': 'fas fa-tasks'
+} %}
 <div class="text-center">
+    {% if context and context in context_icons %}
+    <div class="relative inline-block">
+        <div class="{{ size_classes.get(size, 'w-10 h-10') }} border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+        <i class="{{ context_icons[context] }} absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-primary text-sm"></i>
+    </div>
+    {% else %}
     <div class="inline-block {{ size_classes.get(size, 'w-10 h-10') }} border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+    {% endif %}
     {% if text %}
     <p class="mt-3 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _(text) }}</p>
     {% endif %}
+</div>
+{% endmacro %}
+
+{% macro progress_indicator(text, percentage=None, show_percentage=True) %}
+<div class="space-y-2">
+    {% if text %}
+    <div class="flex items-center justify-between text-sm">
+        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _(text) }}</span>
+        {% if show_percentage and percentage is not none %}
+        <span class="font-medium text-primary">{{ percentage }}%</span>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+        <div class="h-full bg-primary rounded-full transition-all duration-300 {% if percentage is none %}animate-pulse{% endif %}" 
+             style="{% if percentage is not none %}width: {{ percentage }}%{% else %}width: 100%; animation: progress-indeterminate 2s ease-in-out infinite;{% endif %}">
+        </div>
+    </div>
 </div>
 {% endmacro %}
 
@@ -155,26 +193,58 @@
 <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 animate-pulse">
     <div class="flex items-start justify-between">
         <div class="flex-1 space-y-3">
-            <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
-            <div class="h-8 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
-            <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
+            <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+            <div class="h-8 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/3"></div>
         </div>
-        <div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
+        <div class="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
     </div>
 </div>
 {% endmacro %}
 
-{% macro skeleton_table(rows=5, cols=4) %}
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 animate-pulse">
-    <div class="space-y-4">
-        {% for i in range(rows) %}
-        <div class="grid grid-cols-{{ cols }} gap-4">
+{% macro skeleton_table(rows=5, cols=4, show_checkbox=False) %}
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm overflow-hidden animate-pulse">
+    <!-- Table Header -->
+    <div class="border-b border-border-light dark:border-border-dark p-4">
+        <div class="grid grid-cols-{{ cols + (1 if show_checkbox else 0) }} gap-4">
+            {% if show_checkbox %}
+            <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded w-4"></div>
+            {% endif %}
             {% for j in range(cols) %}
-            <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded"></div>
             {% endfor %}
+        </div>
+    </div>
+    <!-- Table Rows -->
+    <div class="divide-y divide-border-light dark:divide-border-dark">
+        {% for i in range(rows) %}
+        <div class="p-4">
+            <div class="grid grid-cols-{{ cols + (1 if show_checkbox else 0) }} gap-4">
+                {% if show_checkbox %}
+                <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded w-4"></div>
+                {% endif %}
+                {% for j in range(cols) %}
+                <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded {% if j == 0 %}w-3/4{% elif j == cols - 1 %}w-1/2{% else %}w-full{% endif %}"></div>
+                {% endfor %}
+            </div>
         </div>
         {% endfor %}
     </div>
+</div>
+{% endmacro %}
+
+{% macro skeleton_list(items=5) %}
+<div class="space-y-3 animate-pulse">
+    {% for i in range(items) %}
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-4 flex items-center gap-4">
+        <div class="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+        <div class="flex-1 space-y-2">
+            <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+        </div>
+        <div class="w-20 h-6 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+    </div>
+    {% endfor %}
 </div>
 {% endmacro %}
 
