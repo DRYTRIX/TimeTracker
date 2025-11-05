@@ -217,7 +217,26 @@
                 </span>
             </div>
             <div id="activityTimeline" class="activity-timeline">
-                <!-- Activity items will be loaded here -->
+                {% if recent_activities %}
+                    {% for activity in recent_activities %}
+                        <div class="activity-timeline-item">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                    <i class="fas fa-circle text-sm text-blue-600 dark:text-blue-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm text-text-light dark:text-text-dark">{{ activity.description or 'Activity' }}</p>
+                                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ activity.created_at|local_datetime_short }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
+                        <i class="fas fa-inbox text-4xl mb-4 opacity-50"></i>
+                        <p>No recent activity</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

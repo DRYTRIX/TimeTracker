@@ -22,9 +22,9 @@ def test_onboarding_manager_exists():
 
 @pytest.mark.unit
 @pytest.mark.onboarding
-def test_onboarding_js_loaded(client):
+def test_onboarding_js_loaded(authenticated_client):
     """Test that onboarding JavaScript is loaded in base template"""
-    response = client.get('/login')
+    response = authenticated_client.get('/dashboard')
     assert response.status_code == 200
     # Check that onboarding-enhanced.js is included
     assert b'onboarding-enhanced.js' in response.data
@@ -113,9 +113,9 @@ def test_onboarding_files_exist():
 
 @pytest.mark.unit
 @pytest.mark.onboarding
-def test_onboarding_base_template_integration(client):
+def test_onboarding_base_template_integration(authenticated_client):
     """Test that onboarding scripts are included in base template"""
-    response = client.get('/login')
+    response = authenticated_client.get('/dashboard')
     assert response.status_code == 200
     html = response.data.decode('utf-8')
     

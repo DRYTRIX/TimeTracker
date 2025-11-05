@@ -142,9 +142,9 @@ def test_graceful_degradation():
 
 @pytest.mark.unit
 @pytest.mark.error_handling
-def test_error_handling_js_loaded(client):
+def test_error_handling_js_loaded(authenticated_client):
     """Test that error handling JavaScript is loaded in base template"""
-    response = client.get('/login')
+    response = authenticated_client.get('/dashboard')
     assert response.status_code == 200
     # Check that error-handling-enhanced.js is included
     assert b'error-handling-enhanced.js' in response.data

@@ -22,7 +22,7 @@ def get_user_friendly_message(status_code, error_description=None):
         },
         404: {
             'title': 'Page Not Found',
-            'message': 'The page or resource you\'re looking for doesn\'t exist.',
+            'message': 'The page or resource you\'re looking for was not found.',
             'recovery': ['Go to Dashboard', 'Go Back']
         },
         409: {
