@@ -199,7 +199,7 @@
                                 <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-edit mr-2"></i>Edit
                                 </a>
-                                <a href="{{ url_for('invoices.download_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-download mr-2"></i>Download PDF
                                 </a>
                                 <hr class="my-1 border-border-light dark:border-border-dark">

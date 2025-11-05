@@ -134,7 +134,6 @@
             <select id="exportFormat" class="form-input w-full mb-3">
                 <option value="csv">CSV</option>
                 <option value="excel">Excel</option>
-                <option value="pdf">PDF</option>
             </select>
             <button type="button" onclick="exportReport()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-download mr-2"></i>Export Report
@@ -317,8 +316,6 @@ function exportReport() {
         url = `{{ url_for('reports.export_csv') }}`;
     } else if (format === 'excel') {
         url = `{{ url_for('reports.export_excel') }}`;
-    } else if (format === 'pdf') {
-        url = `{{ url_for('reports.export_pdf') }}`;
     }
     
     if (startDate && endDate) {
