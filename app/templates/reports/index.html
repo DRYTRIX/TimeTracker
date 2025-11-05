@@ -57,18 +57,124 @@
     </div>
 </div>
 
+<!-- Date Range Presets and Comparison View -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">Date Range & Comparison</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Date Range Presets -->
+        <div>
+            <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-3">Quick Date Ranges</h3>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="setDateRange('today')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-calendar-day mr-1"></i>Today
+                </button>
+                <button type="button" onclick="setDateRange('week')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-calendar-week mr-1"></i>This Week
+                </button>
+                <button type="button" onclick="setDateRange('month')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-calendar-alt mr-1"></i>This Month
+                </button>
+                <button type="button" onclick="setDateRange('year')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-calendar mr-1"></i>This Year
+                </button>
+            </div>
+            <div class="mt-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Custom Range</label>
+                <div class="flex gap-2">
+                    <input type="date" id="startDate" class="form-input flex-1">
+                    <input type="date" id="endDate" class="form-input flex-1">
+                    <button type="button" onclick="applyCustomDateRange()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comparison View -->
+        <div>
+            <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-3">Comparison View</h3>
+            <div class="space-y-3">
+                <button type="button" onclick="showComparisonView('month')" class="w-full px-4 py-3 rounded-lg text-left bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-medium text-text-light dark:text-text-dark">This Month vs Last Month</div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Compare current month with previous month</div>
+                        </div>
+                        <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark"></i>
+                    </div>
+                </button>
+                <button type="button" onclick="showComparisonView('year')" class="w-full px-4 py-3 rounded-lg text-left bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-medium text-text-light dark:text-text-dark">This Year vs Last Year</div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Compare current year with previous year</div>
+                        </div>
+                        <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark"></i>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comparison Results (hidden by default) -->
+    <div id="comparisonResults" class="hidden mt-6 p-4 bg-background-light dark:bg-background-dark rounded-lg">
+        <h3 class="text-md font-semibold mb-4">Comparison Results</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="comparisonStats">
+            <!-- Comparison stats will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Export Format Selection -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">Export Reports</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
+            <h3 class="font-medium mb-2">Export Format</h3>
+            <select id="exportFormat" class="form-input w-full mb-3">
+                <option value="csv">CSV</option>
+                <option value="excel">Excel</option>
+                <option value="pdf">PDF</option>
+            </select>
+            <button type="button" onclick="exportReport()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-download mr-2"></i>Export Report
+            </button>
+        </div>
+        <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
+            <h3 class="font-medium mb-2">Scheduled Reports</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">Set up automatic report generation</p>
+            <button type="button" onclick="showScheduledReportsModal()" class="w-full bg-secondary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-clock mr-2"></i>Manage Scheduled Reports
+            </button>
+        </div>
+        <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
+            <h3 class="font-medium mb-2">Quick Actions</h3>
+            <div class="space-y-2">
+                <a href="{{ url_for('reports.export_form') }}" class="block w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
+                    <i class="fas fa-file-csv mr-2"></i>CSV Export
+                </a>
+                <a href="{{ url_for('reports.export_excel') }}" class="block w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-center">
+                    <i class="fas fa-file-excel mr-2"></i>Excel Export
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h2 class="text-lg font-semibold mb-4">Report Types</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="{{ url_for('reports.project_report') }}" class="bg-primary text-white p-4 rounded-lg text-center">Project Report</a>
-        <a href="{{ url_for('reports.user_report') }}" class="bg-primary text-white p-4 rounded-lg text-center">User Report</a>
-        <a href="{{ url_for('reports.summary_report') }}" class="bg-primary text-white p-4 rounded-lg text-center">Summary Report</a>
-        <a href="{{ url_for('reports.task_report') }}" class="bg-primary text-white p-4 rounded-lg text-center">Task Report</a>
-        <a href="{{ url_for('reports.export_form') }}" class="bg-secondary text-white p-4 rounded-lg text-center hover:bg-indigo-700 transition">
-            <i class="fas fa-file-csv mr-2"></i>Export CSV
+        <a href="{{ url_for('reports.project_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-project-diagram mr-2"></i>Project Report
         </a>
-        <a href="{{ url_for('reports.export_excel') }}" class="bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700">
-            <i class="fas fa-file-excel mr-2"></i>Export Excel
+        <a href="{{ url_for('reports.user_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-users mr-2"></i>User Report
+        </a>
+        <a href="{{ url_for('reports.summary_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-chart-bar mr-2"></i>Summary Report
+        </a>
+        <a href="{{ url_for('reports.task_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-tasks mr-2"></i>Task Report
         </a>
     </div>
 </div>
@@ -98,4 +204,158 @@
         </tbody>
     </table>
 </div>
+
+<!-- Scheduled Reports Modal -->
+<div id="scheduledReportsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Scheduled Reports</h3>
+                <button type="button" onclick="hideScheduledReportsModal()" class="text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="scheduledReportsList" class="space-y-3">
+                <!-- Scheduled reports will be loaded here -->
+                <p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">No scheduled reports yet.</p>
+            </div>
+            <div class="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
+                <button type="button" onclick="showAddScheduledReportForm()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Add Scheduled Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+// Date range presets
+function setDateRange(preset) {
+    const today = new Date();
+    let startDate, endDate;
+    
+    switch(preset) {
+        case 'today':
+            startDate = endDate = today;
+            break;
+        case 'week':
+            const dayOfWeek = today.getDay();
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            startDate = new Date(today.setDate(diff));
+            endDate = new Date();
+            break;
+        case 'month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date();
+            break;
+        case 'year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            endDate = new Date();
+            break;
+    }
+    
+    document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+    document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+    
+    // Apply to current report
+    applyCustomDateRange();
+}
+
+function applyCustomDateRange() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (startDate && endDate) {
+        // Redirect to project report with date range
+        window.location.href = `{{ url_for('reports.project_report') }}?start_date=${startDate}&end_date=${endDate}`;
+    }
+}
+
+// Comparison view
+function showComparisonView(period) {
+    fetch(`/reports/comparison?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('comparisonResults');
+            const statsDiv = document.getElementById('comparisonStats');
+            
+            statsDiv.innerHTML = `
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-primary">${data.current.hours.toFixed(1)}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">Current Period Hours</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold ${data.change >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        ${data.change >= 0 ? '+' : ''}${data.change.toFixed(1)}%
+                    </div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">Change</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-text-light dark:text-text-dark">${data.previous.hours.toFixed(1)}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">Previous Period Hours</div>
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error loading comparison:', error);
+            alert('Failed to load comparison data');
+        });
+}
+
+// Export report
+function exportReport() {
+    const format = document.getElementById('exportFormat').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    let url = '';
+    if (format === 'csv') {
+        url = `{{ url_for('reports.export_csv') }}`;
+    } else if (format === 'excel') {
+        url = `{{ url_for('reports.export_excel') }}`;
+    } else if (format === 'pdf') {
+        url = `{{ url_for('reports.export_pdf') }}`;
+    }
+    
+    if (startDate && endDate) {
+        url += `?start_date=${startDate}&end_date=${endDate}`;
+    }
+    
+    window.location.href = url;
+}
+
+// Scheduled reports
+function showScheduledReportsModal() {
+    document.getElementById('scheduledReportsModal').classList.remove('hidden');
+    loadScheduledReports();
+}
+
+function hideScheduledReportsModal() {
+    document.getElementById('scheduledReportsModal').classList.add('hidden');
+}
+
+function loadScheduledReports() {
+    // This would fetch scheduled reports from the backend
+    // For now, just show empty state
+}
+
+function showAddScheduledReportForm() {
+    // This would show a form to add a new scheduled report
+    alert('Scheduled report creation feature will be implemented in the backend');
+}
+
+// Initialize date inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    
+    document.getElementById('startDate').value = weekStart.toISOString().split('T')[0];
+    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+});
+</script>
 {% endblock %}

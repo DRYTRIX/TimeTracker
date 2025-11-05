@@ -89,10 +89,25 @@ def list_mileage():
     clients = Client.get_active_clients()
     
     # Calculate totals
+    start_date_obj = None
+    end_date_obj = None
+    
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
     total_distance = Mileage.get_total_distance(
         user_id=None if current_user.is_admin else current_user.id,
-        start_date=datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None,
-        end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None
+        start_date=start_date_obj,
+        end_date=end_date_obj
     )
     
     total_amount_query = db.session.query(
@@ -319,6 +334,110 @@ def delete_mileage(mileage_id):
     except Exception as e:
         current_app.logger.error(f"Error deleting mileage entry: {e}")
         flash(_('Error deleting mileage entry'), 'error')
+    
+    return redirect(url_for('mileage.list_mileage'))
+
+@mileage_bp.route('/mileage/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_mileage():
+    """Delete multiple mileage entries at once"""
+    mileage_ids = request.form.getlist('mileage_ids[]')
+    
+    if not mileage_ids:
+        flash(_('No mileage entries selected for deletion'), 'warning')
+        return redirect(url_for('mileage.list_mileage'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for mileage_id_str in mileage_ids:
+        try:
+            mileage_id = int(mileage_id_str)
+            mileage = Mileage.query.get(mileage_id)
+            
+            if not mileage:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and mileage.user_id != current_user.id:
+                skipped_count += 1
+                errors.append(f"Mileage #{mileage_id_str}: No permission")
+                continue
+            
+            db.session.delete(mileage)
+            deleted_count += 1
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {mileage_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit(db):
+            flash(_('Could not delete mileage entries due to a database error. Please check server logs.'), 'error')
+            return redirect(url_for('mileage.list_mileage'))
+        
+        log_event('mileage_bulk_deleted', user_id=current_user.id, count=deleted_count)
+        track_event(current_user.id, 'mileage.bulk_deleted', {'count': deleted_count})
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(_('Successfully deleted %(count)d mileage entr%(plural)s', count=deleted_count, plural='y' if deleted_count == 1 else 'ies'), 'success')
+    
+    if skipped_count > 0:
+        flash(_('Skipped %(count)d mileage entr%(plural)s: %(errors)s', count=skipped_count, plural='y' if skipped_count == 1 else 'ies', errors="; ".join(errors[:3])), 'warning')
+    
+    return redirect(url_for('mileage.list_mileage'))
+
+@mileage_bp.route('/mileage/bulk-status', methods=['POST'])
+@login_required
+def bulk_update_status():
+    """Update status for multiple mileage entries at once"""
+    mileage_ids = request.form.getlist('mileage_ids[]')
+    new_status = request.form.get('status', '').strip()
+    
+    if not mileage_ids:
+        flash(_('No mileage entries selected'), 'warning')
+        return redirect(url_for('mileage.list_mileage'))
+    
+    # Validate status
+    valid_statuses = ['pending', 'approved', 'rejected', 'reimbursed']
+    if not new_status or new_status not in valid_statuses:
+        flash(_('Invalid status value'), 'error')
+        return redirect(url_for('mileage.list_mileage'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for mileage_id_str in mileage_ids:
+        try:
+            mileage_id = int(mileage_id_str)
+            mileage = Mileage.query.get(mileage_id)
+            
+            if not mileage:
+                continue
+            
+            # Check permissions - non-admin users can only update their own entries
+            if not current_user.is_admin and mileage.user_id != current_user.id:
+                skipped_count += 1
+                continue
+            
+            mileage.status = new_status
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit(db):
+            flash(_('Could not update mileage entries due to a database error'), 'error')
+            return redirect(url_for('mileage.list_mileage'))
+        
+        flash(_('Successfully updated %(count)d mileage entr%(plural)s to %(status)s', count=updated_count, plural='y' if updated_count == 1 else 'ies', status=new_status), 'success')
+    
+    if skipped_count > 0:
+        flash(_('Skipped %(count)d mileage entr%(plural)s (no permission)', count=skipped_count, plural='y' if skipped_count == 1 else 'ies'), 'warning')
     
     return redirect(url_for('mileage.list_mileage'))
 

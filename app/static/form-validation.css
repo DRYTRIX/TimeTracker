@@ -1,0 +1,297 @@
+/**
+ * Form Validation Styles
+ * Provides visual indicators for required/optional fields and validation states
+ */
+
+/* Required field indicator - more subtle */
+.required-indicator {
+    color: #EF4444; /* red-500 */
+    font-weight: 500; /* lighter weight */
+    margin-left: 0.25rem;
+    font-size: 0.875em; /* slightly smaller */
+    opacity: 0.8;
+}
+
+.dark .required-indicator {
+    color: #F87171; /* red-400 */
+    opacity: 0.9;
+}
+
+/* Optional field indicator */
+.optional-indicator {
+    color: #6B7280; /* gray-500 */
+    font-size: 0.75rem;
+    font-weight: 400;
+    margin-left: 0.25rem;
+    font-style: italic;
+}
+
+.dark .optional-indicator {
+    color: #9CA3AF; /* gray-400 */
+}
+
+/* Field states */
+.field-required {
+    border-left: 3px solid transparent;
+}
+
+.field-optional {
+    border-left: 3px solid transparent;
+}
+
+/* Valid state - more subtle */
+.is-valid,
+input.is-valid,
+select.is-valid,
+textarea.is-valid {
+    border-color: #6EE7B7; /* green-300 - softer */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%236EE7B7' d='m2.3 6.73.94-.94 1.56 1.56 4.94-4.94.94.94-5.9 5.9z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 0.875rem 0.875rem;
+    padding-right: 2rem;
+}
+
+.is-valid:focus {
+    border-color: #6EE7B7;
+    box-shadow: 0 0 0 2px rgba(110, 231, 183, 0.08); /* very subtle green */
+}
+
+.dark .is-valid {
+    border-color: #10B981; /* green-500 - slightly more visible in dark mode */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2310B981' d='m2.3 6.73.94-.94 1.56 1.56 4.94-4.94.94.94-5.9 5.9z'/%3e%3c/svg%3e");
+}
+
+.dark .is-valid:focus {
+    border-color: #10B981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+/* Invalid state - more subtle */
+.is-invalid,
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+    border-color: #FCA5A5; /* red-300 - softer */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none'%3e%3ccircle cx='6' cy='6' r='4.5' stroke='%23FCA5A5' stroke-width='0.8'/%3e%3cpath stroke='%23FCA5A5' stroke-linecap='round' d='m5.8 3.6.4.4.4-.4m0 4.8-.4-.4-.4.4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 0.875rem 0.875rem;
+    padding-right: 2rem;
+}
+
+.is-invalid:focus {
+    border-color: #FCA5A5;
+    box-shadow: 0 0 0 2px rgba(252, 165, 165, 0.08); /* very subtle red */
+}
+
+.dark .is-invalid {
+    border-color: #EF4444; /* red-500 - slightly more visible in dark mode */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none'%3e%3ccircle cx='6' cy='6' r='4.5' stroke='%23EF4444' stroke-width='0.8'/%3e%3cpath stroke='%23EF4444' stroke-linecap='round' d='m5.8 3.6.4.4.4-.4m0 4.8-.4-.4-.4.4'/%3e%3c/svg%3e");
+}
+
+.dark .is-invalid:focus {
+    border-color: #EF4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+/* Error message container */
+.field-message {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    min-height: 0;
+    overflow: visible;
+}
+
+.field-message.hidden {
+    display: none !important;
+    visibility: hidden;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.field-error {
+    color: #DC2626; /* red-600 */
+    opacity: 0.85;
+    font-size: 0.8125rem; /* slightly smaller */
+}
+
+.field-error::before {
+    content: '⚠';
+    font-size: 0.875rem; /* smaller icon */
+    margin-right: 0.375rem;
+    opacity: 0.8;
+}
+
+.dark .field-error {
+    color: #F87171; /* red-400 */
+    opacity: 0.9;
+}
+
+/* Success message container - more subtle */
+.field-success {
+    color: #059669; /* green-600 */
+    opacity: 0.75;
+    font-size: 0.8125rem; /* slightly smaller */
+}
+
+.field-success::before {
+    content: '✓';
+    font-size: 0.875rem; /* smaller icon */
+    margin-right: 0.375rem;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.dark .field-success {
+    color: #34D399; /* green-400 */
+    opacity: 0.85;
+}
+
+/* Form-level error message */
+.form-error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: #FEF2F2; /* red-50 */
+    border: 1px solid #FECACA; /* red-200 */
+    border-radius: 0.5rem;
+    color: #991B1B; /* red-800 */
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.form-error-message::before {
+    content: '⚠';
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.form-error-message.hidden {
+    display: none;
+}
+
+.dark .form-error-message {
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #F87171; /* red-400 */
+}
+
+/* Form group styling */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group.has-error .form-control,
+.form-group.has-error .form-select {
+    border-color: #EF4444;
+}
+
+.form-group.has-success .form-control,
+.form-group.has-success .form-select {
+    border-color: #10B981;
+}
+
+/* Label styling for required/optional fields */
+label.field-required::after {
+    content: ' *';
+    color: #EF4444;
+    font-weight: 600;
+}
+
+label.field-optional::after {
+    content: ' (optional)';
+    color: #6B7280;
+    font-size: 0.875rem;
+    font-weight: 400;
+    font-style: italic;
+}
+
+.dark label.field-optional::after {
+    color: #9CA3AF;
+}
+
+/* Accessibility improvements */
+.field-message[role="alert"] {
+    font-weight: 500;
+}
+
+/* Smooth transitions */
+input,
+select,
+textarea {
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.is-valid,
+.is-invalid {
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-image 0.2s ease-in-out;
+}
+
+/* Focus states */
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+}
+
+/* Ensure icons don't overlap with text - only apply if not already padded */
+input[type="text"].is-valid:not([class*="pr-"]),
+input[type="email"].is-valid:not([class*="pr-"]),
+input[type="tel"].is-valid:not([class*="pr-"]),
+input[type="number"].is-valid:not([class*="pr-"]),
+input[type="date"].is-valid:not([class*="pr-"]),
+input[type="url"].is-valid:not([class*="pr-"]),
+select.is-valid:not([class*="pr-"]) {
+    padding-right: 2rem;
+}
+
+input[type="text"].is-invalid:not([class*="pr-"]),
+input[type="email"].is-invalid:not([class*="pr-"]),
+input[type="tel"].is-invalid:not([class*="pr-"]),
+input[type="number"].is-invalid:not([class*="pr-"]),
+input[type="date"].is-invalid:not([class*="pr-"]),
+input[type="url"].is-invalid:not([class*="pr-"]),
+select.is-invalid:not([class*="pr-"]) {
+    padding-right: 2rem;
+}
+
+/* Textarea specific adjustments */
+textarea.is-valid,
+textarea.is-invalid {
+    background-position: top right;
+    background-size: 1.25rem 1.25rem;
+    padding-top: 0.75rem;
+    padding-right: 2.5rem;
+}
+
+/* Checkbox and radio button styling */
+input[type="checkbox"].is-invalid,
+input[type="radio"].is-invalid {
+    border-color: #EF4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+input[type="checkbox"].is-valid,
+input[type="radio"].is-valid {
+    border-color: #10B981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.dark input[type="checkbox"].is-invalid,
+.dark input[type="radio"].is-invalid {
+    border-color: #F87171;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+}
+
+.dark input[type="checkbox"].is-valid,
+.dark input[type="radio"].is-valid {
+    border-color: #34D399;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+}
+

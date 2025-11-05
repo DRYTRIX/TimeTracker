@@ -27,6 +27,7 @@ budget_alerts_bp = Blueprint('budget_alerts', __name__)
 def budget_dashboard():
     """Budget alerts and forecasting dashboard"""
     # Get projects with budgets
+    user_project_ids = None
     if current_user.is_admin:
         projects = Project.query.filter(
             Project.budget_amount.isnot(None),
@@ -37,10 +38,10 @@ def budget_dashboard():
         from sqlalchemy import distinct
         from app.models import TimeEntry
         
-        user_project_ids = db.session.query(distinct(TimeEntry.project_id)).filter(
+        user_project_ids_result = db.session.query(distinct(TimeEntry.project_id)).filter(
             TimeEntry.user_id == current_user.id
         ).all()
-        user_project_ids = [pid[0] for pid in user_project_ids]
+        user_project_ids = [pid[0] for pid in user_project_ids_result]
         
         projects = Project.query.filter(
             Project.id.in_(user_project_ids),
@@ -60,10 +61,13 @@ def budget_dashboard():
         active_alerts = BudgetAlert.get_active_alerts(acknowledged=False)
     else:
         # For non-admin, get alerts for their projects
-        active_alerts = BudgetAlert.query.filter(
-            BudgetAlert.is_acknowledged == False,
-            BudgetAlert.project_id.in_(user_project_ids)
-        ).order_by(BudgetAlert.created_at.desc()).all()
+        if user_project_ids:
+            active_alerts = BudgetAlert.query.filter(
+                BudgetAlert.is_acknowledged == False,
+                BudgetAlert.project_id.in_(user_project_ids)
+            ).order_by(BudgetAlert.created_at.desc()).all()
+        else:
+            active_alerts = []
     
     # Get alert statistics
     alert_stats = {
