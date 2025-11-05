@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='form-bridge.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='form-validation.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='enhanced-ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='data-tables-enhanced.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='keyboard-shortcuts.css') }}">
     <style>
@@ -1073,6 +1074,7 @@
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
     </script>
     
+    <script src="{{ url_for('static', filename='data-tables-enhanced.js') }}"></script>
     {% block scripts_extra %}{% endblock %}
 </body>
 </html>
