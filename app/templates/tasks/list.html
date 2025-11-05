@@ -185,7 +185,11 @@
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}
-    {{ empty_state('fas fa-tasks', 'No Tasks Found', 'Get started by creating your first task to organize your work and track progress.', actions) }}
+    {% if search or status or priority or project_id or assigned_to %}
+        {{ empty_state('fas fa-search', 'No Tasks Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new task that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-tasks', 'No Tasks Yet', 'Tasks help you break down projects into manageable pieces. Create your first task to get started organizing your work!', actions, type='no-data') }}
+    {% endif %}
     {% endif %}
         </tbody>
     </table>

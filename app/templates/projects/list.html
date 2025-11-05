@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge, empty_state, loading_spinner, progress_indicator %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -65,8 +65,11 @@
             {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="Export to CSV">
-                <i class="fas fa-download mr-1"></i> Export
+            <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" 
+               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
+               title="Export to CSV"
+               onclick="showExportLoading(this); return true;">
+                <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
             </a>
             {% if current_user.is_admin %}
             <div class="relative">
@@ -183,7 +186,11 @@
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}
-    {{ empty_state('fas fa-folder-open', 'No Projects Found', 'Projects help you organize your work. Create your first project to get started tracking time.', actions) }}
+    {% if search or request.args.get('client') or request.args.get('status') != 'all' %}
+        {{ empty_state('fas fa-search', 'No Projects Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new project that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-folder-open', 'No Projects Yet', 'Projects help you organize your work and track time efficiently. Create your first project to get started!', actions, type='no-data') }}
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}
@@ -372,7 +379,35 @@ function submitBulkStatusChange(){
     document.querySelectorAll('.project-checkbox:checked').forEach(cb => {
         const i = document.createElement('input'); i.type='hidden'; i.name='project_ids[]'; i.value=cb.value; form.appendChild(i);
     });
+    
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    if (btn) {
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
     form.submit();
+}
+
+// Export loading state
+function showExportLoading(link) {
+    const originalHTML = link.innerHTML;
+    link.classList.add('pointer-events-none', 'opacity-60');
+    link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
+    
+    // Reset after 5 seconds (fallback)
+    setTimeout(() => {
+        link.innerHTML = originalHTML;
+        link.classList.remove('pointer-events-none', 'opacity-60');
+    }, 5000);
 }
 
 // Favorite project functionality

@@ -724,3 +724,31 @@
 .toastui-editor-contents code { background: #F7F9FB; color: #1F2937; padding: 0.1rem 0.3rem; border-radius: 4px; }
 .dark .toastui-editor-contents code { background: #1F2937; color: #E5E7EB; }
 
+/* Progress Indicator Animation */
+@keyframes progress-indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+

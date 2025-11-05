@@ -332,6 +332,116 @@ def delete_invoice(invoice_id):
     flash(f'Invoice {invoice_number} deleted successfully', 'success')
     return redirect(url_for('invoices.list_invoices'))
 
+@invoices_bp.route('/invoices/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_invoices():
+    """Delete multiple invoices at once"""
+    invoice_ids = request.form.getlist('invoice_ids[]')
+    
+    if not invoice_ids:
+        flash('No invoices selected for deletion', 'warning')
+        return redirect(url_for('invoices.list_invoices'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for invoice_id_str in invoice_ids:
+        try:
+            invoice_id = int(invoice_id_str)
+            invoice = Invoice.query.get(invoice_id)
+            
+            if not invoice:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and invoice.created_by != current_user.id:
+                skipped_count += 1
+                errors.append(f"'{invoice.invoice_number}': No permission")
+                continue
+            
+            invoice_number = invoice.invoice_number
+            db.session.delete(invoice)
+            deleted_count += 1
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {invoice_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit('bulk_delete_invoices', {'count': deleted_count}):
+            flash('Could not delete invoices due to a database error. Please check server logs.', 'error')
+            return redirect(url_for('invoices.list_invoices'))
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(f'Successfully deleted {deleted_count} invoice{"s" if deleted_count != 1 else ""}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} invoice{"s" if skipped_count != 1 else ""}: {"; ".join(errors[:3])}', 'warning')
+    
+    return redirect(url_for('invoices.list_invoices'))
+
+@invoices_bp.route('/invoices/bulk-status', methods=['POST'])
+@login_required
+def bulk_update_status():
+    """Update status for multiple invoices at once"""
+    invoice_ids = request.form.getlist('invoice_ids[]')
+    new_status = request.form.get('status', '').strip()
+    
+    if not invoice_ids:
+        flash('No invoices selected', 'warning')
+        return redirect(url_for('invoices.list_invoices'))
+    
+    # Validate status
+    valid_statuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled']
+    if not new_status or new_status not in valid_statuses:
+        flash('Invalid status value', 'error')
+        return redirect(url_for('invoices.list_invoices'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for invoice_id_str in invoice_ids:
+        try:
+            invoice_id = int(invoice_id_str)
+            invoice = Invoice.query.get(invoice_id)
+            
+            if not invoice:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and invoice.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            
+            invoice.status = new_status
+            
+            # Auto-update payment status if marking as paid
+            if new_status == 'paid' and invoice.payment_status != 'fully_paid':
+                invoice.amount_paid = invoice.total_amount
+                invoice.payment_status = 'fully_paid'
+                if not invoice.payment_date:
+                    invoice.payment_date = datetime.utcnow().date()
+            
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit('bulk_update_invoice_status', {'count': updated_count, 'status': new_status}):
+            flash('Could not update invoices due to a database error', 'error')
+            return redirect(url_for('invoices.list_invoices'))
+        
+        flash(f'Successfully updated {updated_count} invoice{"s" if updated_count != 1 else ""} to {new_status}', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} invoice{"s" if skipped_count != 1 else ""} (no permission)', 'warning')
+    
+    return redirect(url_for('invoices.list_invoices'))
+
 @invoices_bp.route('/invoices/<int:invoice_id>/generate-from-time', methods=['GET', 'POST'])
 @login_required
 def generate_from_time(invoice_id):

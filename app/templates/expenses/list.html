@@ -168,11 +168,11 @@
 {% if current_user.is_admin %}
 <!-- Bulk Operations Forms (hidden) -->
 <!-- Note: Bulk operations routes need to be implemented in the backend -->
-<form id="confirmBulkDelete-form" method="POST" action="#" class="hidden">
+<form id="confirmBulkDelete-form" method="POST" action="{{ url_for('expenses.bulk_delete_expenses') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
 
-<form id="bulkStatusForm" method="POST" action="#" class="hidden">
+<form id="bulkStatusForm" method="POST" action="{{ url_for('expenses.bulk_update_status') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="status" id="bulkStatusValue">
 </form>
@@ -234,8 +234,11 @@
             {{ expenses|length }} expense{{ 's' if expenses|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('expenses.export_expenses', **request.args) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="Export to CSV">
-                <i class="fas fa-download mr-1"></i> Export
+            <a href="{{ url_for('expenses.export_expenses', **request.args) }}" 
+               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
+               title="Export to CSV"
+               onclick="showExportLoading(this); return true;">
+                <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
             </a>
             {% if current_user.is_admin %}
             <div class="relative">
@@ -338,7 +341,11 @@
                 <i class="fas fa-question-circle mr-2"></i>Learn More
             </a>
         {% endset %}
-        {{ empty_state('fas fa-receipt', 'No Expenses Found', 'Get started by creating your first expense entry.', actions) }}
+        {% if request.args.get('search') or request.args.get('category') or request.args.get('status') %}
+            {{ empty_state('fas fa-search', 'No Expenses Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new expense that matches your criteria.', actions, type='no-results') }}
+        {% else %}
+            {{ empty_state('fas fa-receipt', 'No Expenses Yet', 'Track your business expenses to keep accurate financial records. Create your first expense entry to get started!', actions, type='no-data') }}
+        {% endif %}
         {% endif %}
     </div>
     
@@ -530,9 +537,16 @@ function closeBulkDeleteDialog() {
 
 function submitBulkDelete() {
     const form = document.getElementById('confirmBulkDelete-form');
+    if (!form) return;
+    
     form.querySelectorAll('input[name="expense_ids[]"]').forEach(input => input.remove());
     
     const checkboxes = document.querySelectorAll('.expense-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one expense to delete.');
+        return;
+    }
+    
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -541,7 +555,33 @@ function submitBulkDelete() {
         form.appendChild(input);
     });
     
-    form.submit();
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    if (btn) {
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
+    // Check if form action is set (not just "#" or current page)
+    const formAction = form.getAttribute('action') || form.action;
+    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
+        form.submit();
+    } else {
+        alert('Bulk delete functionality is not yet implemented. Backend routes need to be created.');
+        // Reset button state
+        if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+        return false;
+    }
 }
 
 function showBulkStatusDialog() {
@@ -554,20 +594,48 @@ function closeBulkStatusDialog() {
 }
 
 function submitBulkStatus() {
-    const status = document.getElementById('bulkStatusSelect').value;
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    if (!statusSelect) return;
+    
+    const status = statusSelect.value;
     if (!status) {
         alert('Please select a status');
         return;
     }
     
     const form = document.getElementById('bulkStatusForm');
-    document.getElementById('bulkStatusValue').value = status;
+    if (!form) return;
+    
+    const statusValueInput = document.getElementById('bulkStatusValue');
+    if (statusValueInput) {
+        statusValueInput.value = status;
+    }
     
     // Clear existing hidden inputs
     form.querySelectorAll('input[name="expense_ids[]"]').forEach(input => input.remove());
     
     // Add selected expense IDs to form
     const checkboxes = document.querySelectorAll('.expense-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one expense to update.');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    let originalHTML = '';
+    if (btn) {
+        originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+    
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -576,7 +644,32 @@ function submitBulkStatus() {
         form.appendChild(input);
     });
     
-    form.submit();
+    // Check if form action is set (not just "#" or current page)
+    const formAction = form.getAttribute('action') || form.action;
+    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
+        form.submit();
+    } else {
+        alert('Bulk status update functionality is not yet implemented. Backend routes need to be created.');
+        // Reset button state
+        if (btn) {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+        return false;
+    }
+}
+
+// Export loading state
+function showExportLoading(link) {
+    const originalHTML = link.innerHTML;
+    link.classList.add('pointer-events-none', 'opacity-60');
+    link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
+    
+    // Reset after 5 seconds (fallback)
+    setTimeout(() => {
+        link.innerHTML = originalHTML;
+        link.classList.remove('pointer-events-none', 'opacity-60');
+    }, 5000);
 }
 {% endif %}
 </script>

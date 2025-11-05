@@ -123,7 +123,11 @@
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}
-    {{ empty_state('fas fa-users', 'No Clients Found', 'Get started by creating your first client to organize your projects.', actions) }}
+    {% if search or status != 'active' %}
+        {{ empty_state('fas fa-search', 'No Clients Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new client that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-users', 'No Clients Yet', 'Clients help you organize your projects and manage relationships. Create your first client to get started!', actions, type='no-data') }}
+    {% endif %}
     {% endif %}
 </div>
 

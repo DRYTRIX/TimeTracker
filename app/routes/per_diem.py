@@ -343,6 +343,110 @@ def delete_per_diem(per_diem_id):
     
     return redirect(url_for('per_diem.list_per_diem'))
 
+@per_diem_bp.route('/per-diem/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_per_diem():
+    """Delete multiple per diem claims at once"""
+    per_diem_ids = request.form.getlist('per_diem_ids[]')
+    
+    if not per_diem_ids:
+        flash(_('No per diem claims selected for deletion'), 'warning')
+        return redirect(url_for('per_diem.list_per_diem'))
+    
+    deleted_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for per_diem_id_str in per_diem_ids:
+        try:
+            per_diem_id = int(per_diem_id_str)
+            per_diem = PerDiem.query.get(per_diem_id)
+            
+            if not per_diem:
+                continue
+            
+            # Check permissions
+            if not current_user.is_admin and per_diem.user_id != current_user.id:
+                skipped_count += 1
+                errors.append(f"Per diem #{per_diem_id_str}: No permission")
+                continue
+            
+            db.session.delete(per_diem)
+            deleted_count += 1
+            
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"ID {per_diem_id_str}: {str(e)}")
+    
+    # Commit all deletions
+    if deleted_count > 0:
+        if not safe_commit(db):
+            flash(_('Could not delete per diem claims due to a database error. Please check server logs.'), 'error')
+            return redirect(url_for('per_diem.list_per_diem'))
+        
+        log_event('per_diem_bulk_deleted', user_id=current_user.id, count=deleted_count)
+        track_event(current_user.id, 'per_diem.bulk_deleted', {'count': deleted_count})
+    
+    # Show appropriate messages
+    if deleted_count > 0:
+        flash(_('Successfully deleted %(count)d per diem claim(s)', count=deleted_count), 'success')
+    
+    if skipped_count > 0:
+        flash(_('Skipped %(count)d per diem claim(s): %(errors)s', count=skipped_count, errors="; ".join(errors[:3])), 'warning')
+    
+    return redirect(url_for('per_diem.list_per_diem'))
+
+@per_diem_bp.route('/per-diem/bulk-status', methods=['POST'])
+@login_required
+def bulk_update_status():
+    """Update status for multiple per diem claims at once"""
+    per_diem_ids = request.form.getlist('per_diem_ids[]')
+    new_status = request.form.get('status', '').strip()
+    
+    if not per_diem_ids:
+        flash(_('No per diem claims selected'), 'warning')
+        return redirect(url_for('per_diem.list_per_diem'))
+    
+    # Validate status
+    valid_statuses = ['pending', 'approved', 'rejected', 'reimbursed']
+    if not new_status or new_status not in valid_statuses:
+        flash(_('Invalid status value'), 'error')
+        return redirect(url_for('per_diem.list_per_diem'))
+    
+    updated_count = 0
+    skipped_count = 0
+    
+    for per_diem_id_str in per_diem_ids:
+        try:
+            per_diem_id = int(per_diem_id_str)
+            per_diem = PerDiem.query.get(per_diem_id)
+            
+            if not per_diem:
+                continue
+            
+            # Check permissions - non-admin users can only update their own claims
+            if not current_user.is_admin and per_diem.user_id != current_user.id:
+                skipped_count += 1
+                continue
+            
+            per_diem.status = new_status
+            updated_count += 1
+            
+        except Exception:
+            skipped_count += 1
+    
+    if updated_count > 0:
+        if not safe_commit(db):
+            flash(_('Could not update per diem claims due to a database error'), 'error')
+            return redirect(url_for('per_diem.list_per_diem'))
+        
+        flash(_('Successfully updated %(count)d per diem claim(s) to %(status)s', count=updated_count, status=new_status), 'success')
+    
+    if skipped_count > 0:
+        flash(_('Skipped %(count)d per diem claim(s) (no permission)', count=skipped_count), 'warning')
+    
+    return redirect(url_for('per_diem.list_per_diem'))
+
 
 @per_diem_bp.route('/per-diem/<int:per_diem_id>/approve', methods=['POST'])
 @login_required
