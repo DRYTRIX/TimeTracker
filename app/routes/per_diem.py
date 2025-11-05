@@ -581,6 +581,88 @@ def create_rate():
         return redirect(url_for('per_diem.create_rate'))
 
 
+@per_diem_bp.route('/per-diem/rates/<int:rate_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_or_permission_required('per_diem_rates.edit')
+def edit_rate(rate_id):
+    """Edit an existing per diem rate"""
+    rate = PerDiemRate.query.get_or_404(rate_id)
+    
+    if request.method == 'GET':
+        return render_template('per_diem/rate_form.html', rate=rate)
+    
+    try:
+        country = request.form.get('country', '').strip()
+        full_day_rate = request.form.get('full_day_rate', '').strip()
+        half_day_rate = request.form.get('half_day_rate', '').strip()
+        effective_from = request.form.get('effective_from', '').strip()
+        
+        if not all([country, full_day_rate, half_day_rate, effective_from]):
+            flash(_('Please fill in all required fields'), 'error')
+            return redirect(url_for('per_diem.edit_rate', rate_id=rate_id))
+        
+        # Update rate fields
+        rate.country = country
+        rate.city = request.form.get('city') or None
+        rate.full_day_rate = Decimal(full_day_rate)
+        rate.half_day_rate = Decimal(half_day_rate)
+        rate.breakfast_rate = Decimal(request.form.get('breakfast_rate')) if request.form.get('breakfast_rate') else None
+        rate.lunch_rate = Decimal(request.form.get('lunch_rate')) if request.form.get('lunch_rate') else None
+        rate.dinner_rate = Decimal(request.form.get('dinner_rate')) if request.form.get('dinner_rate') else None
+        rate.incidental_rate = Decimal(request.form.get('incidental_rate')) if request.form.get('incidental_rate') else None
+        rate.currency_code = request.form.get('currency_code', 'EUR')
+        rate.effective_from = datetime.strptime(effective_from, '%Y-%m-%d').date()
+        rate.effective_to = datetime.strptime(request.form.get('effective_to'), '%Y-%m-%d').date() if request.form.get('effective_to') else None
+        rate.notes = request.form.get('notes')
+        # updated_at is automatically updated by the model's onupdate
+        
+        if safe_commit('edit_per_diem_rate', {'rate_id': rate.id}):
+            flash(_('Per diem rate updated successfully'), 'success')
+            log_event('per_diem_rate_updated', user_id=current_user.id, rate_id=rate.id)
+            track_event(current_user.id, 'per_diem_rate.updated', {'rate_id': rate.id})
+            return redirect(url_for('per_diem.list_rates'))
+        else:
+            flash(_('Error updating per diem rate'), 'error')
+            return redirect(url_for('per_diem.edit_rate', rate_id=rate_id))
+    
+    except Exception as e:
+        current_app.logger.error(f"Error updating per diem rate: {e}")
+        flash(_('Error updating per diem rate'), 'error')
+        return redirect(url_for('per_diem.edit_rate', rate_id=rate_id))
+
+
+@per_diem_bp.route('/per-diem/rates/<int:rate_id>/delete', methods=['POST'])
+@login_required
+@admin_or_permission_required('per_diem_rates.delete')
+def delete_rate(rate_id):
+    """Delete a per diem rate"""
+    rate = PerDiemRate.query.get_or_404(rate_id)
+    
+    try:
+        # Check if rate is being used by any per diem claims
+        from app.models import PerDiem
+        claims_using_rate = PerDiem.query.filter_by(per_diem_rate_id=rate_id).count()
+        
+        if claims_using_rate > 0:
+            flash(_('Cannot delete rate: It is being used by %(count)d per diem claim(s). Deactivate it instead.', count=claims_using_rate), 'error')
+            return redirect(url_for('per_diem.list_rates'))
+        
+        db.session.delete(rate)
+        
+        if safe_commit('delete_per_diem_rate', {'rate_id': rate_id}):
+            flash(_('Per diem rate deleted successfully'), 'success')
+            log_event('per_diem_rate_deleted', user_id=current_user.id, rate_id=rate_id)
+            track_event(current_user.id, 'per_diem_rate.deleted', {'rate_id': rate_id})
+        else:
+            flash(_('Error deleting per diem rate'), 'error')
+    
+    except Exception as e:
+        current_app.logger.error(f"Error deleting per diem rate: {e}")
+        flash(_('Error deleting per diem rate'), 'error')
+    
+    return redirect(url_for('per_diem.list_rates'))
+
+
 # API endpoints
 @per_diem_bp.route('/api/per-diem', methods=['GET'])
 @login_required
