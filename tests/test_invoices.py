@@ -1503,7 +1503,7 @@ def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     
     # Verify delete buttons exist for each invoice
     for inv in invoices:
-        assert f"showDeleteModal('{inv.id}'" in html
+        assert f"showDeleteModal({inv.id}" in html
     
     # Verify modal exists
     assert 'deleteInvoiceModal' in html
