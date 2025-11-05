@@ -26,21 +26,61 @@ def list_invoices():
     # Track invoice page viewed
     track_invoice_page_viewed(current_user.id)
     
-    # Get invoices (scope by user unless admin)
-    if current_user.is_admin:
-        invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
-    else:
-        invoices = Invoice.query.filter_by(created_by=current_user.id).order_by(Invoice.created_at.desc()).all()
+    # Get filter parameters
+    status = request.args.get('status', '').strip()
+    payment_status = request.args.get('payment_status', '').strip()
+    search_query = request.args.get('search', '').strip()
     
-    # Get summary statistics
-    total_invoices = len(invoices)
-    total_amount = sum(invoice.total_amount for invoice in invoices)
+    # Build query
+    if current_user.is_admin:
+        query = Invoice.query
+    else:
+        query = Invoice.query.filter_by(created_by=current_user.id)
+    
+    # Apply status filter
+    if status:
+        query = query.filter(Invoice.status == status)
+    
+    # Apply payment status filter
+    if payment_status:
+        query = query.filter(Invoice.payment_status == payment_status)
+    
+    # Apply search filter
+    if search_query:
+        like = f"%{search_query}%"
+        query = query.filter(
+            db.or_(
+                Invoice.invoice_number.ilike(like),
+                Invoice.client_name.ilike(like)
+            )
+        )
+    
+    # Get invoices
+    invoices = query.order_by(Invoice.created_at.desc()).all()
+    
+    # Calculate overdue status for each invoice
+    today = date.today()
+    for invoice in invoices:
+        # Always set _is_overdue attribute to avoid template errors
+        if invoice.due_date and invoice.due_date < today and invoice.payment_status != 'fully_paid' and invoice.status != 'paid':
+            invoice._is_overdue = True
+        else:
+            invoice._is_overdue = False
+    
+    # Get summary statistics (from all invoices, not filtered)
+    if current_user.is_admin:
+        all_invoices = Invoice.query.all()
+    else:
+        all_invoices = Invoice.query.filter_by(created_by=current_user.id).all()
+    
+    total_invoices = len(all_invoices)
+    total_amount = sum(invoice.total_amount for invoice in all_invoices)
     
     # Use payment tracking for more accurate statistics
-    actual_paid_amount = sum(invoice.amount_paid or 0 for invoice in invoices)
-    fully_paid_amount = sum(invoice.total_amount for invoice in invoices if invoice.payment_status == 'fully_paid')
-    partially_paid_amount = sum(invoice.amount_paid or 0 for invoice in invoices if invoice.payment_status == 'partially_paid')
-    overdue_amount = sum(invoice.outstanding_amount for invoice in invoices if invoice.status == 'overdue')
+    actual_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices)
+    fully_paid_amount = sum(invoice.total_amount for invoice in all_invoices if invoice.payment_status == 'fully_paid')
+    partially_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices if invoice.payment_status == 'partially_paid')
+    overdue_amount = sum(invoice.outstanding_amount for invoice in all_invoices if invoice.status == 'overdue')
     
     summary = {
         'total_invoices': total_invoices,

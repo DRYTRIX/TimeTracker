@@ -34,15 +34,36 @@
         </button>
     </div>
     <div id="filterBody">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4" data-filter-form>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" data-filter-form>
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-            <select name="status" id="status" class="form-input">
+            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="filterByStatus('')" class="status-filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors {% if not request.args.get('status') %}bg-primary text-white{% else %}bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}" data-status="">
+                    <i class="fas fa-list mr-1"></i>All
+                </button>
+                <button type="button" onclick="filterByStatus('draft')" class="status-filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors {% if request.args.get('status') == 'draft' %}bg-slate-500 text-white{% else %}bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700{% endif %}" data-status="draft">
+                    <i class="fas fa-file-alt mr-1"></i>Draft
+                </button>
+                <button type="button" onclick="filterByStatus('sent')" class="status-filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors {% if request.args.get('status') == 'sent' %}bg-indigo-500 text-white{% else %}bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800{% endif %}" data-status="sent">
+                    <i class="fas fa-paper-plane mr-1"></i>Sent
+                </button>
+                <button type="button" onclick="filterByStatus('paid')" class="status-filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors {% if request.args.get('status') == 'paid' %}bg-emerald-500 text-white{% else %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800{% endif %}" data-status="paid">
+                    <i class="fas fa-check-circle mr-1"></i>Paid
+                </button>
+                <button type="button" onclick="filterByStatus('overdue')" class="status-filter-btn px-3 py-1.5 rounded-lg text-sm transition-colors {% if request.args.get('status') == 'overdue' %}bg-red-500 text-white{% else %}bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800{% endif %}" data-status="overdue">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>Overdue
+                </button>
+            </div>
+            <input type="hidden" name="status" id="statusFilter" value="{{ request.args.get('status', '') }}">
+        </div>
+        <div>
+            <label for="payment_status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Status</label>
+            <select name="payment_status" id="payment_status" class="form-input">
                 <option value="">All</option>
-                <option value="draft" {% if request.args.get('status') == 'draft' %}selected{% endif %}>Draft</option>
-                <option value="sent" {% if request.args.get('status') == 'sent' %}selected{% endif %}>Sent</option>
-                <option value="paid" {% if request.args.get('status') == 'paid' %}selected{% endif %}>Paid</option>
-                <option value="overdue" {% if request.args.get('status') == 'overdue' %}selected{% endif %}>Overdue</option>
+                <option value="unpaid" {% if request.args.get('payment_status') == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                <option value="partially_paid" {% if request.args.get('payment_status') == 'partially_paid' %}selected{% endif %}>Partially Paid</option>
+                <option value="fully_paid" {% if request.args.get('payment_status') == 'fully_paid' %}selected{% endif %}>Fully Paid</option>
+                <option value="overpaid" {% if request.args.get('payment_status') == 'overpaid' %}selected{% endif %}>Overpaid</option>
             </select>
         </div>
         <div>
@@ -93,6 +114,7 @@
                 <th class="p-4" data-sortable>Number</th>
                 <th class="p-4" data-sortable>Client</th>
                 <th class="p-4" data-sortable>Status</th>
+                <th class="p-4" data-sortable>Payment</th>
                 <th class="p-4 table-number" data-sortable>Total</th>
                 <th class="p-4 table-number" data-sortable>Due Date</th>
                 <th class="p-4">Actions</th>
@@ -111,27 +133,87 @@
                 <td class="p-4">
                     {% set s = invoice.status %}
                     {% if s == 'draft' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Draft</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            <i class="fas fa-file-alt mr-1"></i>Draft
+                        </span>
                     {% elif s == 'sent' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Sent</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                            <i class="fas fa-paper-plane mr-1"></i>Sent
+                        </span>
                     {% elif s == 'paid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Paid</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            <i class="fas fa-check-circle mr-1"></i>Paid
+                        </span>
                     {% elif s == 'overdue' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">Overdue</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>Overdue
+                        </span>
                     {% else %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ s }}</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% set ps = invoice.payment_status %}
+                    {% if ps == 'unpaid' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" title="Unpaid">
+                            <i class="fas fa-times-circle mr-1"></i>Unpaid
+                        </span>
+                    {% elif ps == 'partially_paid' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Partially Paid">
+                            <i class="fas fa-hourglass-half mr-1"></i>Partial
+                        </span>
+                    {% elif ps == 'fully_paid' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Fully Paid">
+                            <i class="fas fa-check-circle mr-1"></i>Paid
+                        </span>
+                    {% elif ps == 'overpaid' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" title="Overpaid">
+                            <i class="fas fa-plus-circle mr-1"></i>Overpaid
+                        </span>
+                    {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ ps }}</span>
                     {% endif %}
                 </td>
                 <td class="p-4 table-number">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</td>
                 <td class="p-4 table-number">
                     {% if invoice.due_date %}
-                        <span class="chip whitespace-nowrap chip-neutral">{{ invoice.due_date.strftime('%Y-%m-%d') }}</span>
+                        {% set is_overdue = invoice._is_overdue %}
+                        <span class="chip whitespace-nowrap {% if is_overdue %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-2 border-red-500{% else %}chip-neutral{% endif %}">
+                            {% if is_overdue %}<i class="fas fa-exclamation-circle mr-1"></i>{% endif %}
+                            {{ invoice.due_date.strftime('%Y-%m-%d') }}
+                        </span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
                 <td class="p-4">
-                    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="text-primary hover:underline">View</a>
+                    <div class="relative inline-block">
+                        <button type="button" onclick="toggleInvoiceActions({{ invoice.id }})" class="text-primary hover:text-primary/80 font-medium">
+                            Actions <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                        </button>
+                        <div id="invoiceActions{{ invoice.id }}" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                            <div class="py-1">
+                                <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-eye mr-2"></i>View
+                                </a>
+                                <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-edit mr-2"></i>Edit
+                                </a>
+                                <a href="{{ url_for('invoices.download_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-download mr-2"></i>Download PDF
+                                </a>
+                                <hr class="my-1 border-border-light dark:border-border-dark">
+                                <a href="{{ url_for('invoices.send_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-envelope mr-2"></i>Send Email
+                                </a>
+                                {% if current_user.is_admin %}
+                                <button type="button" onclick="showDeleteModal({{ invoice.id }}, '{{ invoice.invoice_number }}')" class="w-full text-left block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-trash mr-2"></i>Delete
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </td>
             </tr>
             {% else %}
@@ -259,8 +341,56 @@
 <style>
 .filter-collapsed { display: none !important; }
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
+.status-filter-btn {
+    border: 1px solid transparent;
+}
+.status-filter-btn.active {
+    border-color: currentColor;
+}
 </style>
 <script>
+// Status filter function
+function filterByStatus(status) {
+    document.getElementById('statusFilter').value = status;
+    document.querySelectorAll('.status-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.status === status) {
+            btn.classList.add('active');
+        }
+    });
+    // Submit form
+    const form = document.querySelector('[data-filter-form]');
+    if (form) {
+        form.submit();
+    }
+}
+
+// Toggle invoice actions dropdown
+function toggleInvoiceActions(invoiceId) {
+    const menu = document.getElementById('invoiceActions' + invoiceId);
+    const allMenus = document.querySelectorAll('[id^="invoiceActions"]');
+    
+    // Close all other menus
+    allMenus.forEach(m => {
+        if (m.id !== 'invoiceActions' + invoiceId) {
+            m.classList.add('hidden');
+        }
+    });
+    
+    // Toggle current menu
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[onclick*="toggleInvoiceActions"]') && !e.target.closest('[id^="invoiceActions"]')) {
+        document.querySelectorAll('[id^="invoiceActions"]').forEach(menu => {
+            menu.classList.add('hidden');
+        });
+    }
+});
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');

@@ -644,6 +644,24 @@ class OnboardingManager {
      * Skip the tour
      */
     async skip() {
+        // Temporarily lower the mask and overlay z-index so the confirmation dialog (z-index 2000) appears above them
+        const mask = document.querySelector('.onboarding-mask');
+        const highlight = document.querySelector('.onboarding-highlight');
+        const originalMaskZ = mask?.style.zIndex;
+        const originalOverlayZ = this.overlay?.style.zIndex;
+        const originalHighlightZ = highlight?.style.zIndex;
+        
+        // Lower mask and overlay z-index so confirmation dialog (z-index 2000) appears above
+        if (mask) {
+            mask.style.zIndex = '1500';
+        }
+        if (this.overlay) {
+            this.overlay.style.zIndex = '1500';
+        }
+        if (highlight) {
+            highlight.style.zIndex = '1501';
+        }
+        
         const confirmed = await showConfirm(
             'Are you sure you want to skip the tour? You can restart it later from the Help menu.',
             {
@@ -653,6 +671,30 @@ class OnboardingManager {
                 variant: 'warning'
             }
         );
+        
+        // Restore original z-index values
+        if (mask) {
+            if (originalMaskZ) {
+                mask.style.zIndex = originalMaskZ;
+            } else {
+                mask.style.zIndex = '';
+            }
+        }
+        if (this.overlay) {
+            if (originalOverlayZ) {
+                this.overlay.style.zIndex = originalOverlayZ;
+            } else {
+                this.overlay.style.zIndex = '';
+            }
+        }
+        if (highlight) {
+            if (originalHighlightZ) {
+                highlight.style.zIndex = originalHighlightZ;
+            } else {
+                highlight.style.zIndex = '';
+            }
+        }
+        
         if (confirmed) {
             this.complete();
         }

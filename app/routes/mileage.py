@@ -89,10 +89,25 @@ def list_mileage():
     clients = Client.get_active_clients()
     
     # Calculate totals
+    start_date_obj = None
+    end_date_obj = None
+    
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
     total_distance = Mileage.get_total_distance(
         user_id=None if current_user.is_admin else current_user.id,
-        start_date=datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None,
-        end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None
+        start_date=start_date_obj,
+        end_date=end_date_obj
     )
     
     total_amount_query = db.session.query(

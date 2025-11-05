@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app import db, socketio, log_event, track_event
 from app.models import User, Project, TimeEntry, Task, Settings, Activity
 from app.utils.timezone import parse_local_datetime, utc_to_local
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from app.utils.db import safe_commit
 from app.utils.posthog_funnels import (
@@ -845,6 +845,58 @@ def bulk_entry():
     
     return render_template('timer/bulk_entry.html', projects=active_projects, 
                          selected_project_id=project_id, selected_task_id=task_id)
+
+@timer_bp.route('/timer')
+@login_required
+def timer_page():
+    """Dedicated timer page with visual progress ring and quick project selection"""
+    active_timer = current_user.active_timer
+    
+    # Get active projects for dropdown
+    active_projects = Project.query.filter_by(status='active').order_by(Project.name).all()
+    
+    # Get recent projects (projects used in last 30 days)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    recent_project_ids = db.session.query(
+        TimeEntry.project_id
+    ).filter(
+        TimeEntry.user_id == current_user.id,
+        TimeEntry.start_time >= thirty_days_ago,
+        TimeEntry.end_time.isnot(None)
+    ).group_by(
+        TimeEntry.project_id
+    ).order_by(
+        db.func.max(TimeEntry.start_time).desc()
+    ).limit(5).all()
+    
+    recent_project_ids_list = [pid[0] for pid in recent_project_ids]
+    if recent_project_ids_list:
+        # Create a dict to preserve order from recent_project_ids_list
+        order_map = {pid: idx for idx, pid in enumerate(recent_project_ids_list)}
+        recent_projects = Project.query.filter(
+            Project.id.in_(recent_project_ids_list),
+            Project.status == 'active'
+        ).all()
+        # Sort by order in recent_project_ids_list
+        recent_projects.sort(key=lambda p: order_map.get(p.id, 999))
+    else:
+        recent_projects = []
+    
+    # Get tasks for active timer's project if timer is active
+    tasks = []
+    if active_timer and active_timer.project_id:
+        tasks = Task.query.filter(
+            Task.project_id == active_timer.project_id,
+            Task.status.in_(['todo', 'in_progress', 'review'])
+        ).order_by(Task.name).all()
+    
+    return render_template(
+        'timer/timer_page.html',
+        active_timer=active_timer,
+        projects=active_projects,
+        recent_projects=recent_projects,
+        tasks=tasks
+    )
 
 @timer_bp.route('/timer/calendar')
 @login_required

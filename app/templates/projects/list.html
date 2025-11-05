@@ -65,6 +65,15 @@
             {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
+            <!-- View Toggle -->
+            <div class="flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-1">
+                <button type="button" id="listViewBtn" onclick="setViewMode('list')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn active" data-view="list" title="List View">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button type="button" id="gridViewBtn" onclick="setViewMode('grid')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn" data-view="grid" title="Grid View">
+                    <i class="fas fa-th"></i>
+                </button>
+            </div>
             <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" 
                class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
                title="Export to CSV"
@@ -87,6 +96,9 @@
             {% endif %}
         </div>
     </div>
+    
+    <!-- List View -->
+    <div id="listView" class="view-container">
     <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
@@ -174,6 +186,150 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    </div>
+    
+    <!-- Grid View -->
+    <div id="gridView" class="view-container hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for project in projects %}
+            <div class="project-card bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:shadow-lg transition-all duration-200 relative overflow-hidden group">
+                <!-- Quick Actions on Hover -->
+                <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div class="flex gap-1">
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+                           class="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" 
+                           title="View Project">
+                            <i class="fas fa-eye text-xs"></i>
+                        </a>
+                        {% if current_user.is_admin or has_permission('edit_projects') %}
+                        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" 
+                           class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" 
+                           title="Edit Project">
+                            <i class="fas fa-edit text-xs"></i>
+                        </a>
+                        {% endif %}
+                        <button type="button" 
+                                class="favorite-btn p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors" 
+                                data-project-id="{{ project.id }}"
+                                data-is-favorited="{{ 'true' if (favorite_project_ids and project.id in favorite_project_ids) else 'false' }}"
+                                onclick="toggleFavorite({{ project.id }}, this)"
+                                title="{{ 'Remove from favorites' if (favorite_project_ids and project.id in favorite_project_ids) else 'Add to favorites' }}">
+                            <i class="{{ 'fas' if (favorite_project_ids and project.id in favorite_project_ids) else 'far' }} fa-star text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Project Header -->
+                <div class="p-6 pb-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex-1 pr-2">
+                            {{ project.name }}
+                        </h3>
+                        <!-- Status Badge -->
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap
+                            {% if project.status == 'active' %}
+                                bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                            {% elif project.status == 'inactive' %}
+                                bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                            {% else %}
+                                bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200
+                            {% endif %}">
+                            {{ project.status|title }}
+                        </span>
+                    </div>
+                    
+                    {% if project.client %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                        <i class="fas fa-building mr-1"></i>{{ project.client }}
+                    </p>
+                    {% endif %}
+                    
+                    {% if project.description %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4 line-clamp-2">
+                        {{ project.description }}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Progress Indicators -->
+                <div class="px-6 pb-4 space-y-3">
+                    {% if project.budget_amount %}
+                        {% set consumed = (project.budget_consumed_amount or 0.0) %}
+                        {% set total = project.budget_amount|float %}
+                        {% set pct = (consumed / total * 100) if total > 0 else 0 %}
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Budget</span>
+                                <span class="text-xs font-semibold 
+                                    {% if pct >= 90 %}text-red-600
+                                    {% elif pct >= 70 %}text-amber-600
+                                    {% else %}text-green-600{% endif %}">
+                                    {{ pct|round(0) }}%
+                                </span>
+                            </div>
+                            <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-300
+                                    {% if pct >= 90 %}bg-red-500
+                                    {% elif pct >= 70 %}bg-amber-500
+                                    {% else %}bg-green-500{% endif %}" 
+                                    style="width: {{ [pct,100]|min }}%">
+                                </div>
+                            </div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ "%.2f"|format(consumed) }} / {{ "%.2f"|format(total) }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Hours Progress -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Hours</span>
+                            <span class="text-xs font-semibold text-text-light dark:text-text-dark">
+                                {{ "%.1f"|format(project.total_hours) }}h
+                            </span>
+                        </div>
+                        {% if project.estimated_hours %}
+                            {% set hours_pct = (project.total_hours / project.estimated_hours * 100) if project.estimated_hours > 0 else 0 %}
+                            <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-primary rounded-full transition-all duration-300" 
+                                    style="width: {{ [hours_pct,100]|min }}%">
+                                </div>
+                            </div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ "%.1f"|format(project.total_hours) }} / {{ "%.1f"|format(project.estimated_hours) }}h
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Project Footer -->
+                <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 text-sm">
+                            {% if project.billable %}
+                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                                <i class="fas fa-dollar-sign mr-1"></i>Billable
+                            </span>
+                            {% endif %}
+                            {% if project.hourly_rate %}
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                                {{ '%.2f'|format(project.hourly_rate|float) }}/h
+                            </span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+                           class="text-primary hover:text-primary/80 text-sm font-medium">
+                            View <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
     {% if not projects %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
@@ -199,7 +355,58 @@
 <style>
 .filter-collapsed { display: none !important; }
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
+.view-container { display: block; }
+.view-container.hidden { display: none; }
+.view-mode-btn.active {
+    background-color: rgb(59 130 246);
+    color: white;
+}
+.view-mode-btn:not(.active) {
+    background-color: transparent;
+    color: inherit;
+}
+.view-mode-btn:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.dark .view-mode-btn:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+.project-card {
+    transition: transform 0.2s ease-in-out;
+}
+.project-card:hover {
+    transform: translateY(-2px);
+}
 </style>
+<script>
+// View mode toggle
+function setViewMode(mode) {
+    const listView = document.getElementById('listView');
+    const gridView = document.getElementById('gridView');
+    const listBtn = document.getElementById('listViewBtn');
+    const gridBtn = document.getElementById('gridViewBtn');
+    
+    if (mode === 'list') {
+        listView.classList.remove('hidden');
+        gridView.classList.add('hidden');
+        listBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        localStorage.setItem('projectsViewMode', 'list');
+    } else {
+        listView.classList.add('hidden');
+        gridView.classList.remove('hidden');
+        listBtn.classList.remove('active');
+        gridBtn.classList.add('active');
+        localStorage.setItem('projectsViewMode', 'grid');
+    }
+}
+
+// Load saved view mode
+document.addEventListener('DOMContentLoaded', function() {
+    const savedMode = localStorage.getItem('projectsViewMode') || 'list';
+    setViewMode(savedMode);
+});
+</script>
 <form id="bulkStatusChange-form" method="POST" action="{{ url_for('projects.bulk_status_change') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="new_status" id="bulkNewStatus" value="">
