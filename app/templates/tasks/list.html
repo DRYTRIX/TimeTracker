@@ -130,7 +130,7 @@
         </thead>
         <tbody>
             {% for task in tasks %}
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-context-menu='[{"label": "View", "icon": "fas fa-eye", "action": {"type": "view", "url": "{{ url_for('tasks.view_task', task_id=task.id) }}"}}, {"label": "Edit", "icon": "fas fa-edit", "action": {"type": "edit", "url": "{{ url_for('tasks.edit_task', task_id=task.id) }}"}}, {"label": "Duplicate", "icon": "fas fa-copy", "action": {"type": "duplicate", "url": "{{ url_for('tasks.duplicate_task', task_id=task.id) }}"}}, {"separator": true}, {"label": "Delete", "icon": "fas fa-trash", "danger": true, "action": {"type": "delete", "url": "{{ url_for('tasks.delete_task', task_id=task.id) }}", "confirm": "Are you sure you want to delete this task?"}}]'>
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-context-menu='[{"label": "View", "icon": "fas fa-eye", "action": {"type": "view", "url": "{{ url_for('tasks.view_task', task_id=task.id) }}"}}, {"label": "Edit", "icon": "fas fa-edit", "action": {"type": "edit", "url": "{{ url_for('tasks.edit_task', task_id=task.id) }}"}}, {"separator": true}, {"label": "Delete", "icon": "fas fa-trash", "danger": true, "action": {"type": "delete", "url": "{{ url_for('tasks.delete_task', task_id=task.id) }}", "confirm": "Are you sure you want to delete this task?"}}]'>
                 <td class="p-4">
                     <input type="checkbox" class="task-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-all" value="{{ task.id }}" onchange="updateBulkDeleteButton()">
                 </td>
