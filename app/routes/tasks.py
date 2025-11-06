@@ -67,9 +67,19 @@ def list_tasks():
             )
         )
     
+    # Check if any filters are active
+    has_filters = bool(status or priority or project_id or assigned_to or search or overdue)
+    
+    # If no filters are active, show all tasks; otherwise use pagination
+    if has_filters:
+        per_page = 20
+    else:
+        # Use a very large number to effectively show all tasks
+        per_page = 10000
+    
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).paginate(
         page=page,
-        per_page=20,
+        per_page=per_page,
         error_out=False
     )
     
