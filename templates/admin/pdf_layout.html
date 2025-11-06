@@ -327,6 +327,17 @@
     position: relative;
     background: #fafafa;
     overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 600px;
+    padding: 20px;
+}
+
+#canvas-container > div {
+    margin: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
 }
 
 /* Preview Modal */
@@ -1286,8 +1297,8 @@ function initializePDFEditor() {
     const container = document.getElementById('canvas-container');
     const currentSize = CURRENT_PAGE_SIZE || 'A4';
     const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
-    const width = dimensions.width;
-    const height = dimensions.height;
+    let width = dimensions.width;
+    let height = dimensions.height;
     
     let stage = new Konva.Stage({
         container: 'canvas-container',
@@ -1304,6 +1315,55 @@ function initializePDFEditor() {
     let selectedElement = null;
     let snapToGrid = true;
     const gridSize = 10;
+    
+    // Base fit scale (for auto-fitting to container)
+    let baseFitScale = 1;
+    let zoomScale = 1; // Zoom scale applied on top of base fit scale
+    
+    // Auto-fit scaling function to fit canvas within container
+    function fitCanvasToContainer() {
+        if (!container || !stage) return;
+        
+        // Get container dimensions (accounting for padding/borders)
+        const containerRect = container.getBoundingClientRect();
+        const containerWidth = containerRect.width - 40; // Account for padding
+        const containerHeight = containerRect.height - 40;
+        
+        // Skip if container not ready
+        if (containerWidth <= 0 || containerHeight <= 0) return;
+        
+        // Get actual page dimensions
+        const pageWidth = width;
+        const pageHeight = height;
+        
+        // Calculate scale to fit within container while maintaining aspect ratio
+        const scaleX = containerWidth / pageWidth;
+        const scaleY = containerHeight / pageHeight;
+        baseFitScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+        
+        // Reset zoom when fitting
+        zoomScale = 1;
+        
+        // Apply base fit scale
+        stage.scale({ x: baseFitScale, y: baseFitScale });
+        
+        // Redraw
+        layer.draw();
+        
+        console.log(`Canvas fitted: scale=${baseFitScale.toFixed(2)}, container=${containerWidth}x${containerHeight}, page=${pageWidth}x${pageHeight}`);
+    }
+    
+    // Fit canvas on initialization (after a short delay to ensure container is rendered)
+    setTimeout(() => {
+        fitCanvasToContainer();
+    }, 100);
+    
+    // Fit canvas on window resize
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(fitCanvasToContainer, 250);
+    });
     
     // Add background with grid
     let background = new Konva.Rect({
@@ -1998,16 +2058,16 @@ function initializePDFEditor() {
         }
     });
     
-    let scale = 1;
+    // Zoom controls (zoom scale is declared above with baseFitScale)
     document.getElementById('btn-zoom-in').addEventListener('click', function() {
-        scale = Math.min(scale + 0.1, 2);
-        stage.scale({ x: scale, y: scale });
+        zoomScale = Math.min(zoomScale + 0.1, 2);
+        stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
         layer.draw();
     });
     
     document.getElementById('btn-zoom-out').addEventListener('click', function() {
-        scale = Math.max(scale - 0.1, 0.5);
-        stage.scale({ x: scale, y: scale });
+        zoomScale = Math.max(zoomScale - 0.1, 0.5);
+        stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
         layer.draw();
     });
     
@@ -2655,6 +2715,10 @@ table tr:last-child td {
                     background.moveToBottom();
                 }
                 
+                // Update width and height variables for fit function
+                width = dimensions.width;
+                height = dimensions.height;
+                
                 // Redraw grid for new size
                 drawGrid();
                 
@@ -2669,6 +2733,12 @@ table tr:last-child td {
                 });
                 
                 layer.draw();
+                
+                // Refit canvas after loading saved design
+                setTimeout(() => {
+                    fitCanvasToContainer();
+                }, 150);
+                
                 console.log('✅ Saved design loaded successfully for size:', currentSize);
             } catch (error) {
                 console.error('Failed to load saved design:', error);
