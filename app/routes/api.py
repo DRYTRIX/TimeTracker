@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, current_app, send_from_directory,
 from flask_login import login_required, current_user
 from app import db, socketio
 from app.models import User, Project, TimeEntry, Settings, Task, FocusSession, RecurringBlock, RateOverride, SavedFilter, Client
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from app.utils.db import safe_commit
 from app.utils.timezone import parse_local_datetime, utc_to_local
 from app.models.time_entry import local_now
@@ -168,6 +168,58 @@ def search():
     results = results[:limit]
     
     return jsonify({'results': results})
+
+
+@api_bp.route('/api/deadlines/upcoming')
+@login_required
+def upcoming_deadlines():
+    """Return upcoming task deadlines for the current user."""
+    now_utc = datetime.utcnow()
+    today = now_utc.date()
+    horizon = (now_utc + timedelta(days=2)).date()
+
+    query = (
+        Task.query
+        .join(Project)
+        .filter(
+            Project.status == 'active',
+            Task.due_date.isnot(None),
+            Task.status.in_(('todo', 'in_progress', 'review')),
+            Task.due_date >= today,
+            Task.due_date <= horizon
+        )
+    )
+
+    if not current_user.is_admin:
+        query = query.filter(
+            or_(
+                Task.assigned_to == current_user.id,
+                Task.created_by == current_user.id
+            )
+        )
+
+    tasks = (
+        query
+        .order_by(Task.due_date.asc(), Task.priority.desc(), Task.name.asc())
+        .limit(20)
+        .all()
+    )
+
+    end_of_day = time(hour=23, minute=59, second=59)
+    deadlines = []
+    for task in tasks:
+        due_dt = datetime.combine(task.due_date, end_of_day)
+        deadlines.append({
+            'task_id': task.id,
+            'task_name': task.name,
+            'project_id': task.project_id,
+            'project_name': task.project.name if task.project else None,
+            'due_date': due_dt.isoformat(),
+            'priority': task.priority,
+            'status': task.status
+        })
+
+    return jsonify(deadlines)
 
 @api_bp.route('/api/tasks')
 @login_required
