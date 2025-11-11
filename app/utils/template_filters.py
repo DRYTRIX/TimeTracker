@@ -1,5 +1,9 @@
 from flask import Blueprint
-from app.utils.timezone import utc_to_local, format_local_datetime
+from app.utils.timezone import (
+    utc_to_local,
+    format_local_datetime,
+    format_user_datetime,
+)
 try:
     import markdown as _md
     import bleach
@@ -38,6 +42,27 @@ def register_template_filters(app):
         if utc_dt is None:
             return ""
         return format_local_datetime(utc_dt, '%m/%d %H:%M')
+    
+    @app.template_filter('user_datetime')
+    def user_datetime_filter(dt, format_str='%Y-%m-%d %H:%M'):
+        """Format datetime using the authenticated user's timezone preference."""
+        if dt is None:
+            return ""
+        return format_user_datetime(dt, format_str=format_str)
+    
+    @app.template_filter('user_date')
+    def user_date_filter(dt, format_str='%Y-%m-%d'):
+        """Format date using the authenticated user's timezone preference."""
+        if dt is None:
+            return ""
+        return format_user_datetime(dt, format_str=format_str)
+    
+    @app.template_filter('user_time')
+    def user_time_filter(dt, format_str='%H:%M'):
+        """Format time using the authenticated user's timezone preference."""
+        if dt is None:
+            return ""
+        return format_user_datetime(dt, format_str=format_str)
     
     @app.template_filter('nl2br')
     def nl2br_filter(text):

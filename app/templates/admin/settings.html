@@ -27,7 +27,14 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="timezone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
-                        <input type="text" name="timezone" id="timezone" value="{{ settings.timezone }}" required class="form-input">
+                        <select name="timezone" id="timezone" class="form-input" required>
+                            {% for tz in timezones %}
+                            <option value="{{ tz }}" {% if settings.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            This becomes the default timezone for users who choose “System Default”.
+                        </p>
                     </div>
                     <div>
                         <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>

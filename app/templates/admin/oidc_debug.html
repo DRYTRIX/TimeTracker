@@ -150,7 +150,7 @@
                     <td class="py-2 pr-4">{{ user.email or '-' }}</td>
                     <td class="py-2 pr-4">{{ user.full_name or '-' }}</td>
                     <td class="py-2 pr-4">{% if user.is_admin %}<span class="inline-flex items-center rounded px-1.5 py-0.5 bg-red-100 text-red-700 text-xs">{{ _('Admin') }}</span>{% else %}<span class="inline-flex items-center rounded px-1.5 py-0.5 bg-sky-100 text-sky-700 text-xs">{{ _('User') }}</span>{% endif %}</td>
-                    <td class="py-2 pr-4">{% if user.last_login %}{{ user.last_login.strftime('%Y-%m-%d %H:%M') }}{% else %}<span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Never') }}</span>{% endif %}</td>
+                    <td class="py-2 pr-4">{% if user.last_login %}{{ user.last_login|user_datetime('%Y-%m-%d %H:%M') }}{% else %}<span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Never') }}</span>{% endif %}</td>
                     <td class="py-2 pr-4"><small><code class="break-all">{{ user.oidc_sub[:20] }}...</code></small></td>
                     <td class="py-2 pr-0">
                         <a href="{{ url_for('admin.oidc_user_detail', user_id=user.id) }}" class="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark text-sm hover:bg-background-light dark:hover:bg-background-dark">

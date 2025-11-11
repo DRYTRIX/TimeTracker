@@ -5,6 +5,7 @@ from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from app.utils.timezone import convert_app_datetime_to_user
 
 
 def create_time_entries_excel(entries, filename_prefix='timetracker_export'):
@@ -357,7 +358,7 @@ def create_invoices_list_excel(invoices):
             float(invoice.outstanding_amount or 0),
             invoice.currency_code or 'USD',
             invoice.creator.display_name if invoice.creator else 'Unknown',
-            invoice.created_at.strftime('%Y-%m-%d %H:%M') if invoice.created_at else ''
+            (convert_app_datetime_to_user(invoice.created_at).strftime('%Y-%m-%d %H:%M') if invoice.created_at else '')
         ]
         
         for col_num, value in enumerate(data, 1):
@@ -472,7 +473,7 @@ def create_payments_list_excel(payments):
             payment.receiver.display_name if payment.receiver else 'N/A',
             payment.gateway_transaction_id or '',
             payment.notes or '',
-            payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else ''
+            (convert_app_datetime_to_user(payment.created_at).strftime('%Y-%m-%d %H:%M') if payment.created_at else '')
         ]
         
         for col_num, value in enumerate(data, 1):

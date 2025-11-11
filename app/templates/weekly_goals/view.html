@@ -177,7 +177,7 @@
                         {% endif %}
                     </div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {{ entry.start_time.strftime('%a, %b %d at %H:%M') }}
+                        {{ entry.start_time|user_datetime('%a, %b %d at %H:%M') }}
                         {% if entry.notes %}
                         • {{ entry.notes[:50] }}{% if entry.notes|length > 50 %}...{% endif %}
                         {% endif %}

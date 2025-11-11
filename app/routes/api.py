@@ -4,7 +4,7 @@ from app import db, socketio
 from app.models import User, Project, TimeEntry, Settings, Task, FocusSession, RecurringBlock, RateOverride, SavedFilter, Client
 from datetime import datetime, timedelta, time
 from app.utils.db import safe_commit
-from app.utils.timezone import parse_local_datetime, utc_to_local
+from app.utils.timezone import parse_local_datetime, utc_to_local, convert_app_datetime_to_user
 from app.models.time_entry import local_now
 from sqlalchemy import or_
 import json
@@ -1055,10 +1055,12 @@ def calendar_export():
         writer.writerow(['Date', 'Start Time', 'End Time', 'Project', 'Task', 'Duration (hours)', 'Notes', 'Tags', 'Billable'])
         
         for entry in items:
+            start_local = convert_app_datetime_to_user(entry.start_time, user=current_user)
+            end_local = convert_app_datetime_to_user(entry.end_time, user=current_user) if entry.end_time else None
             writer.writerow([
-                entry.start_time.strftime('%Y-%m-%d'),
-                entry.start_time.strftime('%H:%M'),
-                entry.end_time.strftime('%H:%M') if entry.end_time else 'Active',
+                start_local.strftime('%Y-%m-%d') if start_local else '',
+                start_local.strftime('%H:%M') if start_local else '',
+                end_local.strftime('%H:%M') if end_local else 'Active',
                 entry.project.name if entry.project else '',
                 entry.task.name if entry.task else '',
                 f"{entry.duration_hours:.2f}" if entry.duration_hours else '',
@@ -1086,6 +1088,9 @@ def calendar_export():
             if not entry.end_time:
                 continue
             
+            start_local = convert_app_datetime_to_user(entry.start_time, user=current_user)
+            end_local = convert_app_datetime_to_user(entry.end_time, user=current_user)
+            
             title = entry.project.name if entry.project else 'Time Entry'
             if entry.task:
                 title += f' - {entry.task.name}'
@@ -1101,8 +1106,8 @@ def calendar_export():
                 'BEGIN:VEVENT',
                 f'UID:{entry.id}@timetracker',
                 f'DTSTAMP:{datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")}',
-                f'DTSTART:{entry.start_time.strftime("%Y%m%dT%H%M%S")}',
-                f'DTEND:{entry.end_time.strftime("%Y%m%dT%H%M%S")}',
+                f'DTSTART:{start_local.strftime("%Y%m%dT%H%M%S") if start_local else entry.start_time.strftime("%Y%m%dT%H%M%S")}',
+                f'DTEND:{end_local.strftime("%Y%m%dT%H%M%S") if end_local else entry.end_time.strftime("%Y%m%dT%H%M%S")}',
                 f'SUMMARY:{title}',
                 f'DESCRIPTION:{" | ".join(description)}',
                 'END:VEVENT'

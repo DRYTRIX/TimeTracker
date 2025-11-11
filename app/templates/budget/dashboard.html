@@ -83,7 +83,7 @@
                     <p class="text-sm mb-2">{{ alert.message }}</p>
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
                         <i class="far fa-clock mr-1"></i>
-                        {{ _('Created') }}: {{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        {{ _('Created') }}: {{ alert.created_at|user_datetime('%Y-%m-%d %H:%M') }}
                     </p>
                 </div>
                 <div class="flex gap-2 flex-shrink-0">

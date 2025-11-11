@@ -8,6 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
+from app.utils.timezone import convert_app_datetime_to_user
 import csv
 import io
 
@@ -494,8 +495,8 @@ def export_clients():
             client.status,
             client.active_projects,
             client.total_projects,
-            client.created_at.strftime('%Y-%m-%d %H:%M:%S') if client.created_at else '',
-            client.updated_at.strftime('%Y-%m-%d %H:%M:%S') if client.updated_at else ''
+            (convert_app_datetime_to_user(client.created_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if client.created_at else ''),
+            (convert_app_datetime_to_user(client.updated_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if client.updated_at else '')
         ])
     
     # Create response

@@ -7,7 +7,7 @@ from app.models import Task, Project, User, TimeEntry, TaskActivity, KanbanColum
 from datetime import datetime, date
 from decimal import Decimal
 from app.utils.db import safe_commit
-from app.utils.timezone import now_in_app_timezone
+from app.utils.timezone import now_in_app_timezone, convert_app_datetime_to_user
 import csv
 import io
 
@@ -944,8 +944,8 @@ def export_tasks():
             task.creator.display_name if task.creator else '',
             task.due_date.strftime('%Y-%m-%d') if task.due_date else '',
             task.estimated_hours or '',
-            task.created_at.strftime('%Y-%m-%d %H:%M:%S') if task.created_at else '',
-            task.updated_at.strftime('%Y-%m-%d %H:%M:%S') if task.updated_at else ''
+            (convert_app_datetime_to_user(task.created_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if task.created_at else ''),
+            (convert_app_datetime_to_user(task.updated_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if task.updated_at else '')
         ])
     
     # Create response

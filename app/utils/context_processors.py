@@ -52,6 +52,14 @@ def register_context_processors(app):
             print(f"Warning: Could not inject globals: {e}")
             timezone_name = 'Europe/Rome'
 
+        # Resolve user-specific timezone, falling back to application timezone
+        user_timezone = timezone_name
+        try:
+            if current_user and getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'timezone', None):
+                user_timezone = current_user.timezone
+        except Exception:
+            pass
+
         # Determine app version from environment or config
         try:
             import os
@@ -84,6 +92,7 @@ def register_context_processors(app):
             'app_version': version_value,
             'timezone': timezone_name,
             'timezone_offset': get_timezone_offset_for_timezone(timezone_name),
+            'user_timezone': user_timezone,
             'current_locale': current_locale,
             'current_language_code': short_locale,
             'current_language_label': current_language_label,

@@ -1,8 +1,19 @@
 import pytest
+import pytz
 from datetime import datetime, timedelta
 from app import create_app, db
 from app.models import Settings, TimeEntry, User, Project
-from app.utils.timezone import get_app_timezone, utc_to_local, local_to_utc, now_in_app_timezone
+from app.utils.timezone import (
+    get_app_timezone,
+    utc_to_local,
+    local_to_utc,
+    now_in_app_timezone,
+    convert_app_datetime_to_user,
+    format_user_datetime,
+    get_available_timezones,
+)
+from app.routes.user import update_preferences
+from flask_login import login_user
 
 
 @pytest.fixture
@@ -117,7 +128,6 @@ def test_timezone_change_affects_display(app, user, project):
         assert ny_time.hour != rome_time.hour or abs(ny_time.hour - rome_time.hour) > 1
 
 
-@pytest.mark.xfail(reason="Timezone offset calculation needs adjustment - allows for timezone differences")
 def test_timezone_aware_current_time(app):
     """Test that current time is returned in the configured timezone"""
     with app.app_context():
@@ -228,3 +238,78 @@ def test_timezone_settings_update(app):
         # LA time should be in Pacific timezone
         assert la_time.tzinfo is not None
         assert 'America/Los_Angeles' in str(la_time.tzinfo)
+
+
+def test_get_available_timezones_matches_pytz_common():
+    """Ensure available timezone helper mirrors pytz common timezones."""
+    timezones = get_available_timezones()
+    assert isinstance(timezones, tuple)
+    expected = tuple(sorted(pytz.common_timezones))
+    assert timezones == expected
+
+
+def test_convert_app_datetime_to_user_respects_user_timezone(app, user):
+    """Ensure user-specific timezone overrides application timezone for formatting."""
+    with app.app_context():
+        settings = Settings.get_settings()
+        settings.timezone = 'America/Denver'
+        db.session.commit()
+        
+        user = db.session.merge(user)
+        user.timezone = 'Asia/Kolkata'
+        db.session.commit()
+        
+        naive_app_time = datetime(2025, 1, 15, 9, 0, 0)
+        user_local = convert_app_datetime_to_user(naive_app_time, user=user)
+        
+        assert user_local.tzinfo is not None
+        assert 'Asia/Kolkata' in str(user_local.tzinfo)
+        assert user_local.hour == 21
+        assert user_local.minute == 30
+        
+        formatted = format_user_datetime(naive_app_time, '%Y-%m-%d %H:%M', user=user)
+        assert formatted.endswith('21:30')
+
+
+def test_convert_app_datetime_to_user_falls_back_to_app_timezone(app, user):
+    """Ensure app timezone is used when user has no preference."""
+    with app.app_context():
+        settings = Settings.get_settings()
+        settings.timezone = 'America/Denver'
+        db.session.commit()
+        
+        user = db.session.merge(user)
+        user.timezone = None
+        db.session.commit()
+        
+        naive_app_time = datetime(2025, 1, 15, 9, 0, 0)
+        local_time = convert_app_datetime_to_user(naive_app_time, user=user)
+        
+        assert local_time.tzinfo is not None
+        assert 'America/Denver' in str(local_time.tzinfo)
+        assert local_time.hour == 9
+        assert local_time.minute == 0
+
+
+def test_update_preferences_allows_clearing_user_timezone(app, user):
+    """Ensure API allows resetting to system default by clearing timezone."""
+    with app.app_context():
+        user = db.session.merge(user)
+        user.timezone = 'Asia/Tokyo'
+        db.session.commit()
+
+        # Clear with empty string
+        with app.test_request_context('/user/api/preferences', method='PATCH', json={'timezone': ''}):
+            login_user(user)
+            response = update_preferences()
+            assert response.status_code == 200
+        assert user.timezone is None
+
+        # Reapply and clear with 'system'
+        user.timezone = 'Asia/Tokyo'
+        db.session.commit()
+        with app.test_request_context('/user/api/preferences', method='PATCH', json={'timezone': 'system'}):
+            login_user(user)
+            response = update_preferences()
+            assert response.status_code == 200
+        assert user.timezone is None

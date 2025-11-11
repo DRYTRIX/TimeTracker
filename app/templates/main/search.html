@@ -45,8 +45,8 @@
                                     <td>
                                         <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}">{{ entry.project.name }}</a>
                                     </td>
-                                                                <td>{{ entry.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>{{ entry.end_time.strftime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}</td>
+                                                                <td>{{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ entry.end_time|user_datetime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}</td>
                                     <td><strong>{{ entry.duration_formatted }}</strong></td>
                                     <td>
                                         {% if entry.notes %}

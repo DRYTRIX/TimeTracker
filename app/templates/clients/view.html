@@ -171,7 +171,7 @@
                             <div>
                                 <div class="font-medium">{{ note.author_name }}</div>
                                 <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                                    {{ note.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {{ note.created_at|user_datetime('%B %d, %Y at %I:%M %p') }}
                                     {% if note.created_at != note.updated_at %}
                                     <span class="ml-1">({{ _('edited') }})</span>
                                     {% endif %}

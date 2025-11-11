@@ -249,7 +249,7 @@
                         {{ activity.description or (activity.action + ' ' + activity.entity_type) }}
                     </p>
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                        {{ activity.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        {{ activity.created_at|user_datetime('%Y-%m-%d %H:%M') }}
                     </p>
                 </div>
             </div>

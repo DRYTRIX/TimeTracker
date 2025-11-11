@@ -25,7 +25,7 @@
                             <div class="flex-1 text-sm">
                                 <div class="font-medium">{{ entry.task.name if entry.task else _('Time Entry') }} · {{ '%.2f'|format(entry.duration_hours) }} {{ _('h') }}</div>
                                 <div class="text-text-muted-light dark:text-text-muted-dark">
-                                    {{ entry.start_time.strftime('%Y-%m-%d %H:%M') }} → {{ entry.end_time.strftime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}
+                                    {{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') }} → {{ entry.end_time|user_datetime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}
                                     {% if entry.notes %} · {{ entry.notes[:80] }}{% if entry.notes|length > 80 %}…{% endif %}{% endif %}
                                 </div>
                             </div>

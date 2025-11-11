@@ -62,7 +62,7 @@
                 <div class="flex justify-between items-center">
                     <div>
                         <p class="font-semibold">{{ active_timer.project.name }}</p>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Started at') }} {{ active_timer.start_time.strftime('%I:%M %p') }}</p>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Started at') }} {{ active_timer.start_time|user_time('%I:%M %p') }}</p>
                     </div>
                     <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -98,7 +98,7 @@
                             <td class="p-4">{% if entry.notes %}<span title="{{ entry.notes }}">{{ entry.notes[:60] }}{% if entry.notes|length > 60 %}...{% endif %}</span>{% else %}-{% endif %}</td>
                             <td class="p-4">{{ entry.tags or '-' }}</td>
                             <td class="p-4">{{ entry.duration_formatted }}</td>
-                            <td class="p-4">{{ entry.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="p-4">{{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') }}</td>
                             <td class="p-4">
                                 <div class="flex gap-2">
                                     <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Resume - Start a new timer with same properties') }}">
