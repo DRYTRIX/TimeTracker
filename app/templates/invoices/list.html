@@ -186,12 +186,12 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4 relative overflow-visible">
                     <div class="relative inline-block">
-                        <button type="button" onclick="toggleInvoiceActions({{ invoice.id }})" class="text-primary hover:text-primary/80 font-medium">
+                        <button type="button" onclick="toggleInvoiceActions(event, {{ invoice.id }})" class="text-primary hover:text-primary/80 font-medium">
                             Actions <i class="fas fa-chevron-down ml-1 text-xs"></i>
                         </button>
-                        <div id="invoiceActions{{ invoice.id }}" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                        <div id="invoiceActions{{ invoice.id }}" class="invoice-actions-dropdown hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg" style="z-index: 1200;">
                             <div class="py-1">
                                 <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-eye mr-2"></i>View
@@ -362,32 +362,85 @@ function filterByStatus(status) {
     }
 }
 
+function resetInvoiceActionsMenu(menu) {
+    if (!menu) return;
+    menu.classList.add('hidden');
+    menu.style.position = '';
+    menu.style.left = '';
+    menu.style.top = '';
+    menu.style.bottom = '';
+    menu.style.right = '';
+    menu.style.zIndex = '';
+    delete menu.dataset.visible;
+}
+
+function closeInvoiceActionMenus() {
+    document.querySelectorAll('.invoice-actions-dropdown').forEach(resetInvoiceActionsMenu);
+}
+
 // Toggle invoice actions dropdown
-function toggleInvoiceActions(invoiceId) {
-    const menu = document.getElementById('invoiceActions' + invoiceId);
-    const allMenus = document.querySelectorAll('[id^="invoiceActions"]');
-    
-    // Close all other menus
-    allMenus.forEach(m => {
-        if (m.id !== 'invoiceActions' + invoiceId) {
-            m.classList.add('hidden');
-        }
-    });
-    
-    // Toggle current menu
-    if (menu) {
-        menu.classList.toggle('hidden');
+function toggleInvoiceActions(evt, invoiceId) {
+    if (evt) {
+        evt.preventDefault();
+        evt.stopPropagation();
     }
+
+    const menu = document.getElementById('invoiceActions' + invoiceId);
+    if (!menu) return;
+
+    const willOpen = menu.classList.contains('hidden');
+
+    closeInvoiceActionMenus();
+
+    if (!willOpen) {
+        return;
+    }
+
+    const trigger = (evt && evt.currentTarget) || document.querySelector(`[data-invoice-actions-trigger="${invoiceId}"]`);
+    if (!trigger) return;
+
+    menu.classList.remove('hidden');
+    menu.style.position = 'fixed';
+    menu.style.zIndex = '1300';
+
+    // Measure after making visible
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+
+    let left = rect.right - menuWidth;
+    if (left < 16) {
+        left = rect.left;
+    }
+    if (left + menuWidth > window.innerWidth - 16) {
+        left = window.innerWidth - menuWidth - 16;
+    }
+    if (left < 16) {
+        left = 16;
+    }
+
+    let top = rect.bottom + 8;
+    if (top + menuHeight > window.innerHeight - 16) {
+        top = rect.top - menuHeight - 8;
+    }
+    if (top < 16) {
+        top = Math.max(16, rect.bottom + 8);
+    }
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    menu.dataset.visible = 'true';
 }
 
 // Close dropdowns when clicking outside
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('[onclick*="toggleInvoiceActions"]') && !e.target.closest('[id^="invoiceActions"]')) {
-        document.querySelectorAll('[id^="invoiceActions"]').forEach(menu => {
-            menu.classList.add('hidden');
-        });
+    if (!e.target.closest('[onclick*="toggleInvoiceActions"]') && !e.target.closest('.invoice-actions-dropdown')) {
+        closeInvoiceActionMenus();
     }
 });
+
+window.addEventListener('scroll', closeInvoiceActionMenus, true);
+
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');

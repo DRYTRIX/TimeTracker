@@ -43,7 +43,7 @@
                            name="startDate" 
                            class="form-control" 
                            required
-                           value="{% if event %}{{ event.start_time.strftime('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
+                           value="{% if event %}{{ event.start_time|user_date('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
                 </div>
                 
                 <div class="form-group">
@@ -52,7 +52,7 @@
                            id="startTime" 
                            name="startTime" 
                            class="form-control"
-                           value="{% if event %}{{ event.start_time.strftime('%H:%M') }}{% elif initial_time %}{{ initial_time.strftime('%H:%M') }}{% else %}09:00{% endif %}">
+                           value="{% if event %}{{ event.start_time|user_time('%H:%M') }}{% elif initial_time %}{{ initial_time.strftime('%H:%M') }}{% else %}09:00{% endif %}">
                 </div>
             </div>
             
@@ -64,7 +64,7 @@
                            name="endDate" 
                            class="form-control" 
                            required
-                           value="{% if event %}{{ event.end_time.strftime('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
+                           value="{% if event %}{{ event.end_time|user_date('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
                 </div>
                 
                 <div class="form-group">
@@ -73,7 +73,7 @@
                            id="endTime" 
                            name="endTime" 
                            class="form-control"
-                           value="{% if event %}{{ event.end_time.strftime('%H:%M') }}{% else %}10:00{% endif %}">
+                           value="{% if event %}{{ event.end_time|user_time('%H:%M') }}{% else %}10:00{% endif %}">
                 </div>
             </div>
             

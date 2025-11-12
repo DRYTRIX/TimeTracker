@@ -48,7 +48,13 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Email</h3>
-                    <p>{{ client.email or 'N/A' }}</p>
+                    <p>
+                        {% if client.email %}
+                            <a href="mailto:{{ client.email }}" class="text-primary hover:underline">{{ client.email }}</a>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Phone</h3>
@@ -60,6 +66,28 @@
                 </div>
             </div>
         </div>
+        {% if prepaid_overview %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Prepaid Hours') }}</h2>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                {{ _('Plan includes %(hours)s hours per cycle. Resets on day %(day)s.', hours='%.2f'|format(prepaid_overview.plan_hours), day=client.prepaid_reset_day) }}
+            </p>
+            <ul class="space-y-2 text-sm text-text-light dark:text-text-dark">
+                <li>
+                    <span class="font-medium">{{ _('Current cycle start') }}:</span>
+                    <span>{{ prepaid_overview.month_label }}</span>
+                </li>
+                <li>
+                    <span class="font-medium text-emerald-600">{{ _('Remaining hours') }}:</span>
+                    <span>{{ '%.2f'|format(prepaid_overview.remaining_hours) }} {{ _('h') }}</span>
+                </li>
+                <li>
+                    <span class="font-medium text-amber-600">{{ _('Consumed this cycle') }}:</span>
+                    <span>{{ '%.2f'|format(prepaid_overview.consumed_hours) }} {{ _('h') }}</span>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Right Column: Projects -->
@@ -80,7 +108,7 @@
                         <tr class="border-b border-border-light dark:border-border-dark">
                             <td class="p-4">
                                 <div class="flex items-center gap-2">
-                                    <span>{{ project.name }}</span>
+                                    <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">{{ project.name }}</a>
                                     {% if project.code_display %}
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ project.code_display }}</span>
                                     {% endif %}
@@ -171,7 +199,7 @@
                             <div>
                                 <div class="font-medium">{{ note.author_name }}</div>
                                 <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                                    {{ note.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {{ note.created_at|user_datetime('%B %d, %Y at %I:%M %p') }}
                                     {% if note.created_at != note.updated_at %}
                                     <span class="ml-1">({{ _('edited') }})</span>
                                     {% endif %}

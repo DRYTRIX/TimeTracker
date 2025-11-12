@@ -121,7 +121,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Created</label>
                     <p class="text-sm text-gray-700 dark:text-gray-300">
-                        {{ payment.created_at.strftime('%B %d, %Y at %I:%M %p') if payment.created_at else 'N/A' }}
+                        {{ payment.created_at|user_datetime('%B %d, %Y at %I:%M %p') if payment.created_at else 'N/A' }}
                     </p>
                 </div>
 
@@ -129,7 +129,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Last Updated</label>
                     <p class="text-sm text-gray-700 dark:text-gray-300">
-                        {{ payment.updated_at.strftime('%B %d, %Y at %I:%M %p') if payment.updated_at else 'N/A' }}
+                        {{ payment.updated_at|user_datetime('%B %d, %Y at %I:%M %p') if payment.updated_at else 'N/A' }}
                     </p>
                 </div>
             </div>

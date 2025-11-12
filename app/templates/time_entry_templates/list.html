@@ -92,7 +92,7 @@
                         Used {{ template.usage_count }} time{{ 's' if template.usage_count != 1 else '' }}
                     </span>
                     {% if template.last_used_at %}
-                    <span title="{{ template.last_used_at.strftime('%Y-%m-%d %H:%M') }}">
+                    <span title="{{ template.last_used_at|user_datetime('%Y-%m-%d %H:%M') }}">
                         Last used {{ template.last_used_at|timeago }}
                     </span>
                     {% endif %}

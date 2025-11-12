@@ -101,7 +101,7 @@
                     <div class="space-y-2 text-sm">
                         <div>
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Archived on:') }}</span>
-                            <span class="font-medium">{{ project.archived_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            <span class="font-medium">{{ project.archived_at|user_datetime('%Y-%m-%d %H:%M') }}</span>
                         </div>
                         {% if project.archived_by_user %}
                         <div>

@@ -71,7 +71,7 @@
                 <td class="p-4">{{ entry.user.username }}</td>
                 <td class="p-4">{{ entry.project.name }}</td>
                 <td class="p-4">{{ entry.duration }}</td>
-                <td class="p-4">{{ entry.start_time.strftime('%Y-%m-%d') }}</td>
+                <td class="p-4">{{ entry.start_time|user_date('%Y-%m-%d') }}</td>
             </tr>
             {% else %}
             <tr>

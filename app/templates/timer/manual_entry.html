@@ -24,7 +24,7 @@
                 <strong>Duplicating entry:</strong> {{ original_entry.project.name }}{% if original_entry.task %} - {{ original_entry.task.name }}{% endif %}
             </p>
             <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                Original: {{ original_entry.start_time.strftime('%Y-%m-%d %H:%M') }} to {{ original_entry.end_time.strftime('%Y-%m-%d %H:%M') if original_entry.end_time else 'N/A' }} ({{ original_entry.duration_formatted }})
+                Original: {{ original_entry.start_time|user_datetime('%Y-%m-%d %H:%M') }} to {{ original_entry.end_time|user_datetime('%Y-%m-%d %H:%M') if original_entry.end_time else 'N/A' }} ({{ original_entry.duration_formatted }})
             </p>
         </div>
     </div>

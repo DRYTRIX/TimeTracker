@@ -10,6 +10,7 @@ from .tax_rule import TaxRule
 from .payments import Payment, CreditNote, InvoiceReminderSchedule
 from .reporting import SavedReportView, ReportEmailSchedule
 from .client import Client
+from .client_prepaid_consumption import ClientPrepaidConsumption
 from .task_activity import TaskActivity
 from .expense_category import ExpenseCategory
 from .mileage import Mileage
@@ -75,4 +76,5 @@ __all__ = [
     "DataImport",
     "DataExport",
     "InvoicePDFTemplate",
+    "ClientPrepaidConsumption",
 ]

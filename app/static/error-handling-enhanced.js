@@ -587,6 +587,10 @@ class EnhancedErrorHandler {
     }
 
     handleJavaScriptError(error, message, filename, lineno) {
+        if (this.shouldIgnoreFrontendNoise(error, message)) {
+            return;
+        }
+
         const userFriendlyMessage = 'An unexpected error occurred. Please refresh the page or contact support if the problem persists.';
         
         this.showError(userFriendlyMessage, 'Application Error');
@@ -601,6 +605,10 @@ class EnhancedErrorHandler {
     }
 
     handleUnhandledRejection(reason) {
+        if (this.shouldIgnoreFrontendNoise(reason, reason?.message)) {
+            return;
+        }
+
         const userFriendlyMessage = 'An operation failed unexpectedly. Please try again or contact support if the problem persists.';
         
         this.showError(userFriendlyMessage, 'Operation Failed');
@@ -666,6 +674,19 @@ class EnhancedErrorHandler {
                 console.error('Failed to retry operation:', error);
             }
         });
+    }
+
+    shouldIgnoreFrontendNoise(error, message) {
+        const normalizedMessage = String(message || error?.message || '').toLowerCase();
+
+        // Known benign ResizeObserver warning triggered by various UI libraries/browsers
+        if (normalizedMessage.includes('resizeobserver loop limit exceeded') ||
+            normalizedMessage.includes('resizeobserver loop completed with undelivered notifications')) {
+            console.debug('Ignored benign ResizeObserver warning:', message || error);
+            return true;
+        }
+
+        return false;
     }
 }
 
