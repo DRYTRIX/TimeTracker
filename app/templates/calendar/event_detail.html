@@ -41,16 +41,16 @@
                     <p class="font-semibold">{{ _('Date & Time') }}</p>
                     <p class="text-muted">
                         {% if event.all_day %}
-                        {{ event.start_time.strftime('%A, %B %d, %Y') }}
+                        {{ event.start_time|user_datetime('%A, %B %d, %Y') }}
                         {% if event.start_time.date() != event.end_time.date() %}
-                        - {{ event.end_time.strftime('%A, %B %d, %Y') }}
+                        - {{ event.end_time|user_datetime('%A, %B %d, %Y') }}
                         {% endif %}
                         <span class="badge badge-secondary ml-2">All Day</span>
                         {% else %}
-                        {{ event.start_time.strftime('%A, %B %d, %Y at %I:%M %p') }}
-                        - {{ event.end_time.strftime('%I:%M %p') }}
+                        {{ event.start_time|user_datetime('%A, %B %d, %Y at %I:%M %p') }}
+                        - {{ event.end_time|user_time('%I:%M %p') }}
                         {% if event.start_time.date() != event.end_time.date() %}
-                        ({{ event.end_time.strftime('%B %d, %Y') }})
+                        ({{ event.end_time|user_datetime('%B %d, %Y') }})
                         {% endif %}
                         {% endif %}
                     </p>
@@ -169,8 +169,8 @@
                 <div>
                     <p class="font-semibold">{{ _('Information') }}</p>
                     <p class="text-sm text-muted">
-                        {{ _('Created') }}: {{ event.created_at.strftime('%B %d, %Y at %I:%M %p') }}<br>
-                        {{ _('Last Updated') }}: {{ event.updated_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        {{ _('Created') }}: {{ event.created_at|user_datetime('%B %d, %Y at %I:%M %p') }}<br>
+                        {{ _('Last Updated') }}: {{ event.updated_at|user_datetime('%B %d, %Y at %I:%M %p') }}
                     </p>
                 </div>
             </div>

@@ -7,6 +7,7 @@ from app.models import User, Activity
 from app.utils.db import safe_commit
 from flask_babel import gettext as _
 import pytz
+from app.utils.timezone import get_available_timezones
 
 user_bp = Blueprint('user', __name__)
 
@@ -60,14 +61,18 @@ def settings():
             
             # Regional settings
             timezone = request.form.get('timezone')
-            if timezone:
-                try:
-                    # Validate timezone
-                    pytz.timezone(timezone)
-                    current_user.timezone = timezone
-                except pytz.exceptions.UnknownTimeZoneError:
-                    flash(_('Invalid timezone selected'), 'error')
-                    return redirect(url_for('user.settings'))
+            if timezone is not None:
+                timezone = timezone.strip()
+                if timezone == '':
+                    current_user.timezone = None
+                else:
+                    try:
+                        # Validate timezone
+                        pytz.timezone(timezone)
+                        current_user.timezone = timezone
+                    except pytz.exceptions.UnknownTimeZoneError:
+                        flash(_('Invalid timezone selected'), 'error')
+                        return redirect(url_for('user.settings'))
             
             date_format = request.form.get('date_format')
             if date_format:
@@ -130,7 +135,7 @@ def settings():
         return redirect(url_for('user.settings'))
     
     # Get all available timezones
-    timezones = sorted(pytz.common_timezones)
+    timezones = get_available_timezones()
     
     # Get available languages from config
     from flask import current_app
@@ -172,11 +177,15 @@ def update_preferences():
             current_user.email_notifications = bool(data['email_notifications'])
         
         if 'timezone' in data:
-            try:
-                pytz.timezone(data['timezone'])
-                current_user.timezone = data['timezone']
-            except pytz.exceptions.UnknownTimeZoneError:
-                return jsonify({'error': 'Invalid timezone'}), 400
+            tz_value = data['timezone']
+            if tz_value in [None, '', 'system']:
+                current_user.timezone = None
+            else:
+                try:
+                    pytz.timezone(tz_value)
+                    current_user.timezone = tz_value
+                except pytz.exceptions.UnknownTimeZoneError:
+                    return jsonify({'error': 'Invalid timezone'}), 400
         
         db.session.commit()
         

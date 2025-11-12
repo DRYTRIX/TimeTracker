@@ -14,6 +14,7 @@ from app.utils.backup import create_backup, restore_backup
 from app.utils.installation import get_installation_config
 from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
 from app.utils.permissions import admin_or_permission_required
+from app.utils.timezone import get_available_timezones
 import threading
 import time
 import shutil
@@ -319,6 +320,7 @@ def settings():
     """Manage system settings"""
     settings_obj = Settings.get_settings()
     installation_config = get_installation_config()
+    timezones = get_available_timezones()
     
     # Sync analytics preference from installation config to database on load
     # (installation config is the source of truth for telemetry)
@@ -328,13 +330,13 @@ def settings():
     
     if request.method == 'POST':
         # Validate timezone
-        timezone = request.form.get('timezone', 'Europe/Rome')
+        timezone = request.form.get('timezone') or settings_obj.timezone
         try:
             import pytz
             pytz.timezone(timezone)  # This will raise an exception if timezone is invalid
         except pytz.exceptions.UnknownTimeZoneError:
             flash(f'Invalid timezone: {timezone}', 'error')
-            return render_template('admin/settings.html', settings=settings_obj)
+            return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
         
         # Update basic settings
         settings_obj.timezone = timezone
@@ -378,11 +380,11 @@ def settings():
         
         if not safe_commit('admin_update_settings'):
             flash('Could not update settings due to a database error. Please check server logs.', 'error')
-            return render_template('admin/settings.html', settings=settings_obj)
+            return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
         flash('Settings updated successfully', 'success')
         return redirect(url_for('admin.settings'))
     
-    return render_template('admin/settings.html', settings=settings_obj)
+    return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
 
 
 @admin_bp.route('/admin/pdf-layout', methods=['GET', 'POST'])

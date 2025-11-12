@@ -7,6 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
+from app.utils.timezone import convert_app_datetime_to_user
 import csv
 import io
 from app.utils.posthog_funnels import (
@@ -169,8 +170,8 @@ def export_projects():
             project.budget_threshold_percent or '',
             project.estimated_hours or '',
             project.billing_ref or '',
-            project.created_at.strftime('%Y-%m-%d %H:%M:%S') if project.created_at else '',
-            project.updated_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(project, 'updated_at') and project.updated_at else ''
+            (convert_app_datetime_to_user(project.created_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if project.created_at else ''),
+            (convert_app_datetime_to_user(project.updated_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if hasattr(project, 'updated_at') and project.updated_at else '')
         ])
     
     # Create response

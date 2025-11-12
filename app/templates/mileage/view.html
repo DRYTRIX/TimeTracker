@@ -211,7 +211,7 @@
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{% if mileage.status == 'approved' %}Approved By{% else %}Reviewed By{% endif %}</p>
                 <p class="font-semibold">{{ mileage.approver.full_name if mileage.approver and mileage.approver.full_name else (mileage.approver.username if mileage.approver else '-') }}</p>
                 {% if mileage.approved_at %}
-                <p class="text-xs text-gray-500 mt-1">{{ mileage.approved_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ mileage.approved_at|user_datetime('%Y-%m-%d %H:%M') }}</p>
                 {% endif %}
             </div>
             {% endif %}
@@ -286,12 +286,12 @@
             <div class="space-y-3">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Created</p>
-                    <p class="font-semibold text-sm">{{ mileage.created_at.strftime('%Y-%m-%d %H:%M') if mileage.created_at else '-' }}</p>
+                    <p class="font-semibold text-sm">{{ mileage.created_at|user_datetime('%Y-%m-%d %H:%M') if mileage.created_at else '-' }}</p>
                 </div>
                 
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Last Updated</p>
-                    <p class="font-semibold text-sm">{{ mileage.updated_at.strftime('%Y-%m-%d %H:%M') if mileage.updated_at else '-' }}</p>
+                    <p class="font-semibold text-sm">{{ mileage.updated_at|user_datetime('%Y-%m-%d %H:%M') if mileage.updated_at else '-' }}</p>
                 </div>
             </div>
         </div>

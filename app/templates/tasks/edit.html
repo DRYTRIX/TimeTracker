@@ -254,10 +254,10 @@
                     <!-- Meta -->
                     <div class="task-info-item">
                         <div class="grid grid-cols-2 gap-2 text-xs text-text-muted-light dark:text-text-muted-dark">
-                            <div><span class="block">{{ _('Created') }}</span><span class="text-text-light dark:text-text-dark">{{ task.created_at.strftime('%b %d, %Y %H:%M') if task.created_at else '-' }}</span></div>
-                            <div><span class="block">{{ _('Updated') }}</span><span class="text-text-light dark:text-text-dark">{{ task.updated_at.strftime('%b %d, %Y %H:%M') if task.updated_at else '-' }}</span></div>
-                            <div><span class="block">{{ _('Started') }}</span><span class="text-text-light dark:text-text-dark">{{ task.started_at.strftime('%b %d, %Y %H:%M') if task.started_at else '-' }}</span></div>
-                            <div><span class="block">{{ _('Completed') }}</span><span class="text-text-light dark:text-text-dark">{{ task.completed_at.strftime('%b %d, %Y %H:%M') if task.completed_at else '-' }}</span></div>
+                            <div><span class="block">{{ _('Created') }}</span><span class="text-text-light dark:text-text-dark">{{ task.created_at|user_datetime('%b %d, %Y %H:%M') if task.created_at else '-' }}</span></div>
+                            <div><span class="block">{{ _('Updated') }}</span><span class="text-text-light dark:text-text-dark">{{ task.updated_at|user_datetime('%b %d, %Y %H:%M') if task.updated_at else '-' }}</span></div>
+                            <div><span class="block">{{ _('Started') }}</span><span class="text-text-light dark:text-text-dark">{{ task.started_at|user_datetime('%b %d, %Y %H:%M') if task.started_at else '-' }}</span></div>
+                            <div><span class="block">{{ _('Completed') }}</span><span class="text-text-light dark:text-text-dark">{{ task.completed_at|user_datetime('%b %d, %Y %H:%M') if task.completed_at else '-' }}</span></div>
                         </div>
                     </div>
                 </div>

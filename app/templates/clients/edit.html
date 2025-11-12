@@ -36,6 +36,19 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
+                        <label for="prepaid_hours_monthly" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Monthly Prepaid Hours') }}</label>
+                        <input type="number" step="0.25" min="0" id="prepaid_hours_monthly" name="prepaid_hours_monthly" value="{{ request.form.get('prepaid_hours_monthly', client.prepaid_hours_monthly or '') }}" placeholder="{{ _('e.g. 50') }}" class="form-input">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Leave empty if this client has no prepaid allocation.') }}</p>
+                    </div>
+                    <div>
+                        <label for="prepaid_reset_day" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Prepaid Reset Day') }}</label>
+                        <input type="number" min="1" max="28" id="prepaid_reset_day" name="prepaid_reset_day" value="{{ request.form.get('prepaid_reset_day', client.prepaid_reset_day or 1) }}" class="form-input">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Day of the month when prepaid hours reset (1-28).') }}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
                         <label for="contact_person" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Contact Person') }}</label>
                         <input type="text" id="contact_person" name="contact_person" value="{{ request.form.get('contact_person', client.contact_person or '') }}" placeholder="{{ _('Primary contact name') }}" class="form-input">
                     </div>

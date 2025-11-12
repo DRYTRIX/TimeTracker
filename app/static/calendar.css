@@ -91,6 +91,35 @@
     background-color: #064e3b;
 }
 
+/* Fix icon colors in dark mode */
+.dark .event-card i,
+.dark .event-card .fas,
+.dark .event-card .far,
+.dark .event-card .fa {
+    color: var(--text-dark-color, #e5e7eb) !important;
+}
+
+.dark .event-card.event i,
+.dark .event-card.event .fas,
+.dark .event-card.event .far,
+.dark .event-card.event .fa {
+    color: #93c5fd !important;
+}
+
+.dark .event-card.task i,
+.dark .event-card.task .fas,
+.dark .event-card.task .far,
+.dark .event-card.task .fa {
+    color: #fbbf24 !important;
+}
+
+.dark .event-card.time_entry i,
+.dark .event-card.time_entry .fas,
+.dark .event-card.time_entry .far,
+.dark .event-card.time_entry .fa {
+    color: #6ee7b7 !important;
+}
+
 /* Week View */
 .calendar-week-view {
     overflow-x: auto;

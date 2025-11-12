@@ -250,7 +250,7 @@ class Calendar {
                     const eventColor = event.color || '#3b82f6';
                     html += `
                         <div class="event-card event" data-id="${event.id}" data-type="event" style="border-left-color: ${eventColor}" onclick="window.calendar.showEventDetails(${event.id}, 'event')">
-                            <i class="fas fa-calendar mr-2"></i>
+                            <i class="fas fa-calendar mr-2 text-blue-600 dark:text-blue-400"></i>
                             <strong>${eventTitle}</strong>
                             <br><small>${time}</small>
                         </div>

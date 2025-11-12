@@ -5,9 +5,10 @@ import app as app_module
 from app import db
 from app.models import Client, Project
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
+from app.utils.timezone import convert_app_datetime_to_user
 import csv
 import io
 
@@ -84,6 +85,8 @@ def create_client():
         phone = request.form.get('phone', '').strip()
         address = request.form.get('address', '').strip()
         default_hourly_rate = request.form.get('default_hourly_rate', '').strip()
+        prepaid_hours_input = request.form.get('prepaid_hours_monthly', '').strip()
+        prepaid_reset_day_input = request.form.get('prepaid_reset_day', '').strip()
         try:
             current_app.logger.info(
                 "POST /clients/create user=%s name=%s email=%s",
@@ -119,7 +122,7 @@ def create_client():
         # Validate hourly rate
         try:
             default_hourly_rate = Decimal(default_hourly_rate) if default_hourly_rate else None
-        except ValueError:
+        except (InvalidOperation, ValueError):
             if wants_json:
                 return jsonify({'error': 'validation_error', 'messages': ['Invalid hourly rate format']}), 400
             flash('Invalid hourly rate format', 'error')
@@ -127,6 +130,29 @@ def create_client():
                 current_app.logger.warning("Validation failed: invalid hourly rate '%s'", default_hourly_rate)
             except Exception:
                 pass
+            return render_template('clients/create.html')
+
+        try:
+            prepaid_hours_monthly = Decimal(prepaid_hours_input) if prepaid_hours_input else None
+            if prepaid_hours_monthly is not None and prepaid_hours_monthly < 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            message = _('Prepaid hours must be a positive number.')
+            if wants_json:
+                return jsonify({'error': 'validation_error', 'messages': [message]}), 400
+            flash(message, 'error')
+            return render_template('clients/create.html')
+
+        try:
+            prepaid_reset_day = int(prepaid_reset_day_input) if prepaid_reset_day_input else 1
+        except ValueError:
+            prepaid_reset_day = 1
+
+        if prepaid_reset_day < 1 or prepaid_reset_day > 28:
+            message = _('Prepaid reset day must be between 1 and 28.')
+            if wants_json:
+                return jsonify({'error': 'validation_error', 'messages': [message]}), 400
+            flash(message, 'error')
             return render_template('clients/create.html')
         
         # Create client
@@ -137,7 +163,9 @@ def create_client():
             email=email,
             phone=phone,
             address=address,
-            default_hourly_rate=default_hourly_rate
+            default_hourly_rate=default_hourly_rate,
+            prepaid_hours_monthly=prepaid_hours_monthly,
+            prepaid_reset_day=prepaid_reset_day
         )
         
         db.session.add(client)
@@ -155,7 +183,9 @@ def create_client():
             return jsonify({
                 'id': client.id,
                 'name': client.name,
-                'default_hourly_rate': float(client.default_hourly_rate) if client.default_hourly_rate is not None else None
+                'default_hourly_rate': float(client.default_hourly_rate) if client.default_hourly_rate is not None else None,
+                'prepaid_hours_monthly': float(client.prepaid_hours_monthly) if client.prepaid_hours_monthly is not None else None,
+                'prepaid_reset_day': client.prepaid_reset_day
             }), 201
 
         flash(f'Client "{name}" created successfully', 'success')
@@ -171,8 +201,22 @@ def view_client(client_id):
     
     # Get projects for this client
     projects = Project.query.filter_by(client_id=client.id).order_by(Project.name).all()
+
+    prepaid_overview = None
+    if client.prepaid_plan_enabled:
+        today = datetime.utcnow()
+        month_start = client.prepaid_month_start(today)
+        consumed_hours = client.get_prepaid_consumed_hours(month_start).quantize(Decimal('0.01'))
+        remaining_hours = client.get_prepaid_remaining_hours(month_start).quantize(Decimal('0.01'))
+        prepaid_overview = {
+            'month_start': month_start,
+            'month_label': month_start.strftime('%Y-%m-%d') if month_start else '',
+            'plan_hours': float(client.prepaid_hours_decimal),
+            'consumed_hours': float(consumed_hours),
+            'remaining_hours': float(remaining_hours),
+        }
     
-    return render_template('clients/view.html', client=client, projects=projects)
+    return render_template('clients/view.html', client=client, projects=projects, prepaid_overview=prepaid_overview)
 
 @clients_bp.route('/clients/<int:client_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -193,6 +237,8 @@ def edit_client(client_id):
         phone = request.form.get('phone', '').strip()
         address = request.form.get('address', '').strip()
         default_hourly_rate = request.form.get('default_hourly_rate', '').strip()
+        prepaid_hours_input = request.form.get('prepaid_hours_monthly', '').strip()
+        prepaid_reset_day_input = request.form.get('prepaid_reset_day', '').strip()
         
         # Validate required fields
         if not name:
@@ -208,8 +254,25 @@ def edit_client(client_id):
         # Validate hourly rate
         try:
             default_hourly_rate = Decimal(default_hourly_rate) if default_hourly_rate else None
-        except ValueError:
+        except (InvalidOperation, ValueError):
             flash('Invalid hourly rate format', 'error')
+            return render_template('clients/edit.html', client=client)
+
+        try:
+            prepaid_hours_monthly = Decimal(prepaid_hours_input) if prepaid_hours_input else None
+            if prepaid_hours_monthly is not None and prepaid_hours_monthly < 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            flash(_('Prepaid hours must be a positive number.'), 'error')
+            return render_template('clients/edit.html', client=client)
+
+        try:
+            prepaid_reset_day = int(prepaid_reset_day_input) if prepaid_reset_day_input else client.prepaid_reset_day or 1
+        except ValueError:
+            prepaid_reset_day = client.prepaid_reset_day or 1
+
+        if prepaid_reset_day < 1 or prepaid_reset_day > 28:
+            flash(_('Prepaid reset day must be between 1 and 28.'), 'error')
             return render_template('clients/edit.html', client=client)
         
         # Update client
@@ -220,6 +283,8 @@ def edit_client(client_id):
         client.phone = phone
         client.address = address
         client.default_hourly_rate = default_hourly_rate
+        client.prepaid_hours_monthly = prepaid_hours_monthly
+        client.prepaid_reset_day = prepaid_reset_day
         client.updated_at = datetime.utcnow()
         
         if not safe_commit('edit_client', {'client_id': client.id}):
@@ -494,8 +559,8 @@ def export_clients():
             client.status,
             client.active_projects,
             client.total_projects,
-            client.created_at.strftime('%Y-%m-%d %H:%M:%S') if client.created_at else '',
-            client.updated_at.strftime('%Y-%m-%d %H:%M:%S') if client.updated_at else ''
+            (convert_app_datetime_to_user(client.created_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if client.created_at else ''),
+            (convert_app_datetime_to_user(client.updated_at, user=current_user).strftime('%Y-%m-%d %H:%M:%S') if client.updated_at else '')
         ])
     
     # Create response
