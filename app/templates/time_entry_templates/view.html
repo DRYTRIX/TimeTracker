@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button %}
+
+{% block title %}View Template - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Time Entry Templates', 'url': url_for('time_entry_templates.list_templates')},
+    {'text': template.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-lines',
+    title_text=template.name,
+    subtitle_text='View time entry template details',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("time_entry_templates.edit_template", template_id=template.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors mr-2"><i class="fas fa-edit mr-2"></i>Edit</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-3xl mx-auto">
+    <div class="space-y-6">
+        <!-- Template Details -->
+        <div>
+            <h2 class="text-lg font-semibold mb-4">Template Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                    <p class="text-text-light dark:text-text-dark">{{ template.name }}</p>
+                </div>
+                
+                {% if template.description %}
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <p class="text-text-light dark:text-text-dark">{{ template.description }}</p>
+                </div>
+                {% endif %}
+                
+                {% if template.project %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        <i class="fas fa-folder mr-2"></i>{{ template.project.name }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if template.task %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Task</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        <i class="fas fa-tasks mr-2"></i>{{ template.task.name }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if template.default_duration %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Duration</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        <i class="fas fa-clock mr-2"></i>{{ template.default_duration }} hours
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if template.tags %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        <i class="fas fa-tags mr-2"></i>{{ template.tags }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billable</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        {% if template.billable %}
+                        <i class="fas fa-check-circle text-green-500 mr-2"></i>Yes
+                        {% else %}
+                        <i class="fas fa-times-circle text-red-500 mr-2"></i>No
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            {% if template.default_notes %}
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Notes</label>
+                <p class="text-text-light dark:text-text-dark whitespace-pre-wrap">{{ template.default_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Usage Statistics -->
+        <div class="border-t border-border-light dark:border-border-dark pt-6">
+            <h2 class="text-lg font-semibold mb-4">Usage Statistics</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Times Used</label>
+                    <p class="text-2xl font-bold text-text-light dark:text-text-dark">
+                        <i class="fas fa-chart-line mr-2"></i>{{ template.usage_count }}
+                    </p>
+                </div>
+                
+                {% if template.last_used_at %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Used</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        <i class="fas fa-clock mr-2"></i>{{ template.last_used_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            ({{ template.last_used_at|timeago }})
+                        </span>
+                    </p>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        <i class="fas fa-calendar mr-2"></i>{{ template.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                    </p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Updated</label>
+                    <p class="text-text-light dark:text-text-dark">
+                        <i class="fas fa-edit mr-2"></i>{{ template.updated_at|user_datetime('%Y-%m-%d %H:%M') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="border-t border-border-light dark:border-border-dark pt-6 flex gap-3">
+            <button onclick="useTemplate({{ template.id }})" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-play mr-2"></i>Use Template
+            </button>
+            <a href="{{ url_for('time_entry_templates.edit_template', template_id=template.id) }}" 
+               class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <i class="fas fa-edit mr-2"></i>Edit
+            </a>
+            <form method="POST" 
+                  action="{{ url_for('time_entry_templates.delete_template', template_id=template.id) }}"
+                  onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this template?') }}', { title: '{{ _('Delete Template') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });"
+                  class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                    <i class="fas fa-trash mr-2"></i>Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function useTemplate(templateId) {
+    // Fetch template data
+    fetch(`/api/templates/${templateId}`)
+        .then(response => response.json())
+        .then(template => {
+            // Store template data in sessionStorage
+            sessionStorage.setItem('activeTemplate', JSON.stringify(template));
+            
+            // Mark template as used
+            fetch(`/api/templates/${templateId}/use`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            // Redirect to manual entry (timer)
+            window.location.href = '{{ url_for("timer.manual_entry") }}?template=' + templateId;
+        })
+        .catch(error => {
+            console.error('Error loading template:', error);
+            alert('Failed to load template. Please try again.');
+        });
+}
+</script>
+{% endblock %}
+

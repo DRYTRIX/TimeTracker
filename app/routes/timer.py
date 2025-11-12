@@ -890,12 +890,20 @@ def timer_page():
             Task.status.in_(['todo', 'in_progress', 'review'])
         ).order_by(Task.name).all()
     
+    # Get user's time entry templates (most recently used first)
+    from app.models import TimeEntryTemplate
+    from sqlalchemy import desc
+    templates = TimeEntryTemplate.query.filter_by(
+        user_id=current_user.id
+    ).order_by(desc(TimeEntryTemplate.last_used_at)).limit(5).all()
+    
     return render_template(
         'timer/timer_page.html',
         active_timer=active_timer,
         projects=active_projects,
         recent_projects=recent_projects,
-        tasks=tasks
+        tasks=tasks,
+        templates=templates
     )
 
 @timer_bp.route('/timer/calendar')
