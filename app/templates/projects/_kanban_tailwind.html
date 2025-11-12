@@ -1,7 +1,7 @@
 {# Reusable Kanban board for tasks. Expects `tasks` and `kanban_columns` in context. #}
 
 <div class="kanban-board-wrapper p-4">
-    <div id="kanbanBoard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" role="list" aria-label="{{ _('Kanban board columns') }}">
+    <div id="kanbanBoard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6" role="list" aria-label="{{ _('Kanban board columns') }}">
         {% for col in kanban_columns %}
         <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm ring-1 ring-border-light/60 dark:ring-border-dark/60 flex flex-col" role="region" aria-labelledby="col-{{ col.key }}-title">
             <div class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gradient-to-b from-background-light/60 dark:from-background-dark/40 to-transparent rounded-t-xl">
@@ -45,7 +45,7 @@
                                     {{ task.priority | capitalize }}
                                 </span>
                                 {% if task.due_date %}
-                                <span class="{{ 'text-red-500 dark:text-red-400' if task.is_overdue else '' }}">
+                                <span class="{{ 'text-red-500 dark:text-red-400' if task.is_overdue else 'text-text-muted-light dark:text-text-muted-dark' }}">
                                     <i class="fas fa-calendar-alt mr-1"></i>
                                     {{ task.due_date.strftime('%b %d') }}
                                 </span>
