@@ -134,8 +134,8 @@
                 <td class="p-4">
                     <input type="checkbox" class="task-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-all" value="{{ task.id }}" onchange="updateBulkDeleteButton()">
                 </td>
-                <td class="p-4">{{ task.name }}</td>
-                <td class="p-4">{{ task.project.name }}</td>
+                <td class="p-4"><a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">{{ task.name }}</a></td>
+                <td class="p-4"><a href="{{ url_for('projects.view_project', project_id=task.project_id) }}" class="text-primary hover:underline">{{ task.project.name }}</a></td>
                 <td class="p-4">
                     {% set p = task.priority %}
                     {% set pcls = {'low':'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',

@@ -136,8 +136,14 @@
                         <i class="{{ 'fas fa-star text-yellow-500' if is_fav else 'far fa-star text-gray-400' }}"></i>
                     </button>
                 </td>
-                <td class="p-4 font-medium">{{ project.name }}</td>
-                <td class="p-4">{{ project.client }}</td>
+                <td class="p-4 font-medium"><a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">{{ project.name }}</a></td>
+                <td class="p-4">
+                    {% if project.client_id %}
+                        <a href="{{ url_for('clients.view_client', client_id=project.client_id) }}" class="text-primary hover:underline">{{ project.client }}</a>
+                    {% else %}
+                        {{ project.client }}
+                    {% endif %}
+                </td>
                 <td class="p-4">
                     {% if project.status == 'active' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
