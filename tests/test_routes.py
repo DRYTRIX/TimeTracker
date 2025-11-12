@@ -254,6 +254,80 @@ def test_client_detail_page(authenticated_client, test_client, app):
         assert response.status_code == 200
 
 
+@pytest.mark.integration
+@pytest.mark.routes
+def test_edit_client_updates_prepaid_fields(admin_authenticated_client, test_client, app):
+    """Ensure editing a client updates prepaid hours fields without errors."""
+    from app import db
+    from app.models import Client
+
+    with app.app_context():
+        client_id = test_client.id
+
+        response = admin_authenticated_client.post(
+            f'/clients/{client_id}/edit',
+            data={
+                'name': test_client.name,
+                'description': test_client.description or '',
+                'contact_person': test_client.contact_person or '',
+                'email': test_client.email or '',
+                'phone': test_client.phone or '',
+                'address': test_client.address or '',
+                'default_hourly_rate': '',
+                'prepaid_hours_monthly': '12.5',
+                'prepaid_reset_day': '10',
+            },
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 302
+
+        db.session.expire_all()
+        updated = Client.query.get(client_id)
+        assert updated is not None
+        assert updated.prepaid_hours_monthly == Decimal('12.5')
+        assert updated.prepaid_reset_day == 10
+
+
+@pytest.mark.integration
+@pytest.mark.routes
+def test_edit_client_rejects_negative_prepaid_hours(admin_authenticated_client, test_client, app):
+    """Regression test: negative prepaid hours should trigger validation error."""
+    from app import db
+    from app.models import Client
+
+    with app.app_context():
+        client_id = test_client.id
+        db.session.expire_all()
+        baseline = Client.query.get(client_id)
+        baseline_hours = baseline.prepaid_hours_monthly
+        baseline_reset_day = baseline.prepaid_reset_day
+
+        response = admin_authenticated_client.post(
+            f'/clients/{client_id}/edit',
+            data={
+                'name': test_client.name,
+                'description': test_client.description or '',
+                'contact_person': test_client.contact_person or '',
+                'email': test_client.email or '',
+                'phone': test_client.phone or '',
+                'address': test_client.address or '',
+                'default_hourly_rate': '',
+                'prepaid_hours_monthly': '-1',
+                'prepaid_reset_day': '3',
+            },
+            follow_redirects=False,
+        )
+
+        # View should re-render with validation error (200 OK)
+        assert response.status_code == 200
+
+        db.session.expire_all()
+        updated = Client.query.get(client_id)
+        assert updated.prepaid_hours_monthly == baseline_hours
+        assert updated.prepaid_reset_day == baseline_reset_day
+
+
 # ============================================================================
 # Reports Routes
 # ============================================================================

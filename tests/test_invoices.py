@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app import db
-from app.models import User, Project, Invoice, InvoiceItem, Settings, Client, ExtraGood
+from app.models import User, Project, Invoice, InvoiceItem, Settings, Client, ExtraGood, ClientPrepaidConsumption
 
 @pytest.fixture
 def sample_user(app):
@@ -379,6 +379,88 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
     # Check summary numbers render
     assert 'Total available hours' in html
     assert 'Total available costs' in html
+
+
+@pytest.mark.routes
+def test_generate_from_time_applies_prepaid_hours(app, client, user):
+    """Ensure prepaid hours are consumed before billing when generating invoice items."""
+    from app import db
+    from app.models import TimeEntry
+    # Authenticate
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(user.id)
+        sess['_fresh'] = True
+
+    prepaid_client = Client(
+        name='Prepaid Client',
+        email='prepaid@example.com',
+        prepaid_hours_monthly=Decimal('50.0'),
+        prepaid_reset_day=1
+    )
+    db.session.add(prepaid_client)
+    db.session.commit()
+
+    project = Project(
+        name='Prepaid Project',
+        client_id=prepaid_client.id,
+        billable=True,
+        hourly_rate=Decimal('120.00')
+    )
+    db.session.add(project)
+    db.session.commit()
+
+    invoice = Invoice(
+        invoice_number='INV-PREPAID-001',
+        project_id=project.id,
+        client_name=prepaid_client.name,
+        client_id=prepaid_client.id,
+        due_date=date.today() + timedelta(days=14),
+        created_by=user.id
+    )
+    db.session.add(invoice)
+    db.session.commit()
+
+    base_start = datetime(2025, 1, 5, 9, 0, 0)
+    hours_blocks = [Decimal('20'), Decimal('20'), Decimal('20')]
+    entries = []
+    for idx, hours in enumerate(hours_blocks):
+        start = base_start + timedelta(days=idx * 3)
+        end = start + timedelta(hours=float(hours))
+        entry = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=start,
+            end_time=end,
+            notes=f'Prepaid block {idx + 1}',
+            billable=True
+        )
+        db.session.add(entry)
+        db.session.commit()
+        db.session.refresh(entry)
+        entries.append(entry)
+
+    data = {
+        'time_entries[]': [str(entry.id) for entry in entries]
+    }
+    resp = client.post(f'/invoices/{invoice.id}/generate-from-time', data=data)
+    assert resp.status_code == 302
+
+    invoice = Invoice.query.get(invoice.id)
+    items = list(invoice.items)
+    assert len(items) == 1
+    assert items[0].quantity == Decimal('10.00')
+
+    # All prepaid consumptions registered (50 hours = 180000 seconds)
+    consumptions = ClientPrepaidConsumption.query.filter_by(client_id=prepaid_client.id).all()
+    assert len(consumptions) == 3
+    assert sum(c.seconds_consumed for c in consumptions) == 50 * 3600
+
+    db.session.refresh(entries[0])
+    db.session.refresh(entries[1])
+    db.session.refresh(entries[2])
+    assert entries[0].billable is False
+    assert entries[1].billable is False
+    assert entries[2].billable is True
 
 # Payment Status Tracking Tests
 

@@ -15,11 +15,14 @@ This document summarizes all critical bugs discovered and fixed during the deplo
 | 1 | `sqlalchemy.exc.InvalidRequestError: Attribute name 'metadata' is reserved` | Reserved SQLAlchemy keyword used as column name | ✅ Fixed | 3 |
 | 2 | `ImportError: cannot import name 'db' from 'app.models'` | Wrong import source for db instance | ✅ Fixed | 2 |
 | 3 | `ModuleNotFoundError: No module named 'app.utils.db_helpers'` | Wrong module name in imports | ✅ Fixed | 2 |
+| 4 | `NameError: name 'prepaid_hours_input' is not defined` when editing client | Missing form parsing for prepaid fields in edit route | ✅ Fixed | 3 |
+| 5 | `ResizeObserver loop completed with undelivered notifications` spam in console | Benign browser warning surfaced as toast by enhanced error handler | ✅ Fixed | 1 |
+| 6 | Invoice actions dropdown hidden behind table rows | Dropdown stacked under sibling elements due to z-index/overflow | ✅ Fixed | 1 |
 
-**Total Bugs**: 3  
+**Total Bugs**: 6  
 **All Fixed**: ✅  
-**Files Modified**: 5  
-**Total Resolution Time**: ~10 minutes
+**Files Modified**: 10  
+**Total Resolution Time**: ~20 minutes
 
 ---
 
@@ -110,6 +113,69 @@ from app.utils.db_helpers import safe_commit
 # After (CORRECT)
 from app.utils.db import safe_commit
 ```
+
+---
+
+## 🔧 Bug #4: Missing Form Parsing for Prepaid Fields
+
+### Error
+```
+NameError: name 'prepaid_hours_input' is not defined
+```
+
+### Root Cause
+The client edit route validated `prepaid_hours_input` and `prepaid_reset_day_input` but never read those form fields, causing a NameError when users tried to update prepaid hours.
+
+### Fix
+- Parse `prepaid_hours_monthly` and `prepaid_reset_day` from the form before validation
+- Added regression tests to cover successful updates and negative-hour validation
+- Documented the issue and fix in this summary
+
+### Files Modified
+1. `app/routes/clients.py` - Read prepaid form fields before validation
+2. `tests/test_routes.py` - Added route regression tests for prepaid editing
+3. `ALL_BUGFIXES_SUMMARY.md` - Documented the fix
+
+---
+
+## 🔧 Bug #5: Benign ResizeObserver Warnings Flooding Error Handler
+
+### Error
+```
+ResizeObserver loop completed with undelivered notifications.
+```
+
+### Root Cause
+Certain UI components trigger harmless `ResizeObserver` warnings in Chromium-based browsers. These were caught by the global error handler, surfaced to users as critical toasts, and logged as console errors.
+
+### Fix
+- Added noise filtering in `error-handling-enhanced.js` to ignore known benign ResizeObserver warnings while still logging other errors.
+- Downgraded these messages to `console.debug` so developers can inspect them without user-facing noise.
+- Updated bug summary documentation (this file).
+
+### Files Modified
+1. `app/static/error-handling-enhanced.js`
+2. `ALL_BUGFIXES_SUMMARY.md`
+
+---
+
+## 🔧 Bug #6: Invoice Actions Dropdown Hidden Behind Content
+
+### Error
+Invoice row actions menu appeared underneath neighboring table content, hiding menu items from the user.
+
+### Root Cause
+The dropdown relied on a modest `z-index` within a stacking context created by the grid/table layout. Parent cells also defaulted to clipping overflow, so the menu rendered below adjacent elements.
+
+- ### Fix
+- Marked the actions cell as `relative overflow-visible` so the dropdown can extend beyond the table cell.
+- Elevated the dropdown with a dedicated class and runtime positioning logic that renders it as a floating menu (fixed to the viewport) to avoid impacting table height.
+- Added scroll/resize listeners to collapse the menu when the layout changes, preventing stray overlays.
+- Documented the bug in this summary.
+
+### Files Modified
+1. `app/templates/invoices/list.html`
+2. `ALL_BUGFIXES_SUMMARY.md`
 
 ---
 

@@ -116,6 +116,26 @@
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available costs') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_costs) }} {{ currency }}</span></div>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available expenses') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_expenses) }} {{ currency }}</span></div>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available goods') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_goods) }} {{ currency }}</span></div>
+            {% if prepaid_plan_hours %}
+            <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+                <h4 class="text-sm font-semibold text-text-light dark:text-text-dark mb-2">{{ _('Prepaid Hours Overview') }}</h4>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">
+                    {{ _('Plan includes %(hours)s hours per cycle (resets on day %(day)s).', hours='%.2f'|format(prepaid_plan_hours), day=prepaid_reset_day) }}
+                </p>
+                {% if prepaid_summary %}
+                <ul class="space-y-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {% for item in prepaid_summary %}
+                    <li class="flex justify-between gap-4">
+                        <span class="font-medium text-text-light dark:text-text-dark">{{ item.allocation_month_label }}</span>
+                        <span>{{ _('Consumed: %(consumed)s h • Remaining: %(remaining)s h', consumed='%.2f'|format(item.consumed_hours), remaining='%.2f'|format(item.remaining_hours)) }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('No prepaid usage recorded for selected period yet.') }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">

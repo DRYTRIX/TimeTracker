@@ -10,6 +10,7 @@ import csv
 import json
 from app.utils.db import safe_commit
 from app.utils.excel_export import create_invoices_list_excel
+from app.utils.prepaid_hours import PrepaidHoursAllocator
 from app.utils.posthog_funnels import (
     track_invoice_page_viewed,
     track_invoice_project_selected,
@@ -507,45 +508,54 @@ def generate_from_time(invoice_id):
         # Clear existing items
         invoice.items.delete()
         
+        total_prepaid_allocated = Decimal('0')
+        prepaid_allocator = None
+
         # Process time entries
         if selected_entries:
             # Group time entries by task/project and create invoice items
             time_entries = TimeEntry.query.filter(TimeEntry.id.in_(selected_entries)).all()
-            
-            # Group by task (if available) or project
+
+            prepaid_allocator = PrepaidHoursAllocator(client=invoice.client, invoice=invoice)
+            processed_entries = prepaid_allocator.process(time_entries)
+            total_prepaid_allocated = prepaid_allocator.total_prepaid_hours_assigned
+
             grouped_entries = {}
-            for entry in time_entries:
+            for processed in processed_entries:
+                if processed.billable_hours <= 0:
+                    continue
+
+                entry = processed.entry
                 if entry.task_id:
                     key = f"task_{entry.task_id}"
-                    if key not in grouped_entries:
-                        grouped_entries[key] = {
-                            'description': f"Task: {entry.task.name if entry.task else 'Unknown Task'}",
-                            'entries': [],
-                            'total_hours': 0
-                        }
+                    description = f"Task: {entry.task.name if entry.task else 'Unknown Task'}"
                 else:
                     key = f"project_{entry.project_id}"
-                    if key not in grouped_entries:
-                        grouped_entries[key] = {
-                            'description': f"Project: {entry.project.name}",
-                            'entries': [],
-                            'total_hours': 0
-                        }
-                
-                grouped_entries[key]['entries'].append(entry)
-                grouped_entries[key]['total_hours'] += entry.duration_hours
-            
+                    description = f"Project: {entry.project.name}"
+
+                if key not in grouped_entries:
+                    grouped_entries[key] = {
+                        'description': description,
+                        'entries': [],
+                        'total_hours': Decimal('0'),
+                    }
+
+                grouped_entries[key]['entries'].append(processed)
+                grouped_entries[key]['total_hours'] += processed.billable_hours
+
             # Create invoice items from time entries
             for group in grouped_entries.values():
-                # Resolve effective rate (project override -> project rate -> client default)
+                if group['total_hours'] <= 0:
+                    continue
+
                 hourly_rate = RateOverride.resolve_rate(invoice.project)
-                
+
                 item = InvoiceItem(
                     invoice_id=invoice.id,
                     description=group['description'],
                     quantity=group['total_hours'],
                     unit_price=hourly_rate,
-                    time_entry_ids=','.join(str(entry.id) for entry in group['entries'])
+                    time_entry_ids=','.join(str(processed.entry.id) for processed in group['entries'])
                 )
                 db.session.add(item)
         
@@ -600,6 +610,13 @@ def generate_from_time(invoice_id):
             return redirect(url_for('invoices.edit_invoice', invoice_id=invoice.id))
         
         flash('Invoice items generated successfully from time entries and costs', 'success')
+        if total_prepaid_allocated and total_prepaid_allocated > 0:
+            flash(
+                _('Applied %(hours)s prepaid hours for %(client)s before billing overages.',
+                  hours=f"{total_prepaid_allocated:.2f}",
+                  client=invoice.client_name),
+                'info'
+            )
         return redirect(url_for('invoices.edit_invoice', invoice_id=invoice.id))
     
     # GET request - show time entry and cost selection
@@ -645,6 +662,23 @@ def generate_from_time(invoice_id):
     total_available_costs = sum(float(cost.amount) for cost in unbilled_costs)
     total_available_expenses = sum(float(expense.total_amount) for expense in unbilled_expenses)
     total_available_goods = sum(float(good.total_amount) for good in project_goods)
+
+    prepaid_summary = []
+    prepaid_plan_hours = None
+    if invoice.client and invoice.client.prepaid_plan_enabled:
+        allocator = PrepaidHoursAllocator(client=invoice.client)
+        summaries = allocator.build_summary(unbilled_entries)
+        prepaid_summary = []
+        for summary in summaries:
+            allocation_month = summary.allocation_month
+            prepaid_summary.append({
+                'allocation_month': allocation_month,
+                'allocation_month_label': allocation_month.strftime('%Y-%m-%d') if allocation_month else '',
+                'plan_hours': float(summary.plan_hours),
+                'consumed_hours': float(summary.consumed_hours),
+                'remaining_hours': float(summary.remaining_hours)
+            })
+        prepaid_plan_hours = float(invoice.client.prepaid_hours_decimal)
     
     # Get currency from settings
     settings = Settings.get_settings()
@@ -660,7 +694,10 @@ def generate_from_time(invoice_id):
                          total_available_costs=total_available_costs,
                          total_available_expenses=total_available_expenses,
                          total_available_goods=total_available_goods,
-                         currency=currency)
+                         currency=currency,
+                         prepaid_summary=prepaid_summary,
+                         prepaid_plan_hours=prepaid_plan_hours,
+                         prepaid_reset_day=invoice.client.prepaid_reset_day if invoice.client else None)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/export/csv')
 @login_required
