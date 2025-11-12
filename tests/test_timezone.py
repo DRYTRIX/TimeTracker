@@ -1,6 +1,6 @@
 import pytest
 import pytz
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app import create_app, db
 from app.models import Settings, TimeEntry, User, Project
 from app.utils.timezone import (
@@ -138,14 +138,17 @@ def test_timezone_aware_current_time(app):
         
         # Get current time in app timezone
         app_time = now_in_app_timezone()
-        utc_time = datetime.now().replace(tzinfo=None)
+        utc_now = datetime.now(timezone.utc)
         
         # App time should be in Rome timezone
         assert app_time.tzinfo is not None
         assert 'Europe/Rome' in str(app_time.tzinfo)
         
+        # Convert app_time to UTC for comparison
+        app_time_utc = app_time.astimezone(timezone.utc)
+        
         # Times should be close (within a few seconds)
-        time_diff = abs((app_time.replace(tzinfo=None) - utc_time).total_seconds())
+        time_diff = abs((app_time_utc - utc_now).total_seconds())
         assert time_diff < 10
 
 
