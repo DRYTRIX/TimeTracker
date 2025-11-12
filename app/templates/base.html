@@ -161,11 +161,11 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('time_entry_templates.') or ep.startswith('weekly_goals.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
-                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -227,11 +227,6 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_goals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('weekly_goals.index') }}">
                                     <i class="fas fa-bullseye w-4 mr-2"></i>{{ _('Weekly Goals') }}
-                                </a>
-                            </li>
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
-                                    <i class="fas fa-file-lines w-4 mr-2"></i>{{ _('Templates') }}
                                 </a>
                             </li>
                         </ul>
@@ -353,6 +348,11 @@
                                 </a>
                             </li>
                             <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.email_support' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.email_support') }}">
+                                    <i class="fas fa-envelope w-4 mr-2"></i>{{ _('Email Configuration') }}
+                                </a>
+                            </li>
+                            <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
                                     <i class="fas fa-file-pdf w-4 mr-2"></i>{{ _('PDF Layout') }}
                                 </a>
@@ -365,6 +365,13 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'per_diem.list_rates' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_rates') }}">
                                     <i class="fas fa-list-ul w-4 mr-2"></i>{{ _('Per Diem Rates') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin or has_permission('manage_settings') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
+                                    <i class="fas fa-file-lines w-4 mr-2"></i>{{ _('Time Entry Templates') }}
                                 </a>
                             </li>
                             {% endif %}

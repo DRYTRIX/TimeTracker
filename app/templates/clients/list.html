@@ -90,9 +90,15 @@
                     <input type="checkbox" class="client-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ client.id }}" onchange="updateClientsBulkState()">
                 </td>
                 {% endif %}
-                <td class="p-4 font-medium">{{ client.name }}</td>
+                <td class="p-4 font-medium"><a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="text-primary hover:underline">{{ client.name }}</a></td>
                 <td class="p-4">{{ client.contact_person or '—' }}</td>
-                <td class="p-4">{{ client.email or '—' }}</td>
+                <td class="p-4">
+                    {% if client.email %}
+                        <a href="mailto:{{ client.email }}" class="text-primary hover:underline">{{ client.email }}</a>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
                 <td class="p-4">
                     {% if client.status == 'active' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>

@@ -48,7 +48,13 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Email</h3>
-                    <p>{{ client.email or 'N/A' }}</p>
+                    <p>
+                        {% if client.email %}
+                            <a href="mailto:{{ client.email }}" class="text-primary hover:underline">{{ client.email }}</a>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Phone</h3>
@@ -102,7 +108,7 @@
                         <tr class="border-b border-border-light dark:border-border-dark">
                             <td class="p-4">
                                 <div class="flex items-center gap-2">
-                                    <span>{{ project.name }}</span>
+                                    <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">{{ project.name }}</a>
                                     {% if project.code_display %}
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ project.code_display }}</span>
                                     {% endif %}
