@@ -18,51 +18,91 @@ from app import db
 @pytest.mark.smoke
 def test_calendar_event_creation(app, user, project):
     """Test basic calendar event creation."""
+    import os
     with app.app_context():
-        # Ensure Settings exists before creating event to avoid commit conflicts
+        # Ensure Settings exists and is loaded into the session before creating event
+        # This prevents Settings.get_settings() from being called during flush
         from app.models import Settings
-        Settings.get_settings()
         
-        start_time = datetime.now()
-        end_time = start_time + timedelta(hours=2)
+        # Ensure Settings exists - try get_settings() first (it should find existing Settings)
+        # If it tries to commit, that's okay since we're not in a flush yet
+        try:
+            settings = Settings.get_settings()
+            # Settings should now be in the session
+        except Exception:
+            # If get_settings() failed, ensure Settings exists using direct query
+            settings = db.session.query(Settings).first()
+            if not settings:
+                settings = Settings()
+                db.session.add(settings)
+                db.session.commit()
         
-        event = CalendarEvent(
-            user_id=user.id,
-            title="Team Meeting",
-            start_time=start_time,
-            end_time=end_time,
-            description="Weekly team sync",
-            location="Conference Room A",
-            event_type="meeting"
-        )
-        db.session.add(event)
-        db.session.commit()
+        # Ensure Settings is definitely found by Settings.query (used by get_settings())
+        # by refreshing it into the session
+        db.session.refresh(settings)
         
-        # Verify event was committed successfully
-        assert event.id is not None, "Event should have an ID after commit"
+        # Temporarily set TZ environment variable as a fallback
+        # This ensures get_app_timezone() has a fallback if Settings.get_settings() fails
+        old_tz = os.environ.get('TZ')
+        os.environ['TZ'] = 'Europe/Rome'  # Set a default timezone
         
-        # Store ID and verify basic properties without re-querying
-        # (re-querying can fail in some test isolation scenarios)
-        event_id = event.id
-        
-        # Verify all properties on the committed event
-        assert event.id == event_id
-        assert event.title == "Team Meeting"
-        assert event.user_id == user.id
-        assert event.start_time == start_time
-        assert event.end_time == end_time
-        assert event.description == "Weekly team sync"
-        assert event.location == "Conference Room A"
-        assert event.event_type == "meeting"
-        assert event.all_day is False
-        assert event.is_private is False
-        assert event.is_recurring is False
-        assert event.created_at is not None
-        assert event.updated_at is not None
-        
-        # Verify persistence by checking count
-        event_count = CalendarEvent.query.filter_by(id=event_id).count()
-        assert event_count == 1, f"Event should exist in database (found {event_count})"
+        try:
+            start_time = datetime.now()
+            end_time = start_time + timedelta(hours=2)
+            
+            # Store user.id to avoid accessing user object after potential cleanup
+            user_id = user.id
+            
+            event = CalendarEvent(
+                user_id=user_id,
+                title="Team Meeting",
+                start_time=start_time,
+                end_time=end_time,
+                description="Weekly team sync",
+                location="Conference Room A",
+                event_type="meeting"
+            )
+            db.session.add(event)
+            db.session.commit()
+            
+            # Store ID immediately after commit (before any potential cleanup)
+            event_id = event.id
+            assert event_id is not None, "Event should have an ID after commit"
+            
+            # Verify properties on the event object immediately after commit
+            assert event.title == "Team Meeting"
+            assert event.user_id == user_id
+            assert event.start_time == start_time
+            assert event.end_time == end_time
+            assert event.description == "Weekly team sync"
+            assert event.location == "Conference Room A"
+            assert event.event_type == "meeting"
+            assert event.all_day is False
+            assert event.is_private is False
+            assert event.is_recurring is False
+            assert event.created_at is not None
+            assert event.updated_at is not None
+            
+            # Verify persistence using a direct SQL query with a fresh connection
+            # This avoids session state and cascade delete issues
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    text("SELECT id, title, user_id, event_type, description, location FROM calendar_events WHERE id = :event_id"),
+                    {"event_id": event_id}
+                ).first()
+                assert result is not None, f"Event should exist in database (ID: {event_id})"
+                assert result[1] == "Team Meeting"  # title
+                assert result[2] == user_id  # user_id
+                assert result[3] == "meeting"  # event_type
+                assert result[4] == "Weekly team sync"  # description
+                assert result[5] == "Conference Room A"  # location
+        finally:
+            # Restore original TZ environment variable
+            if old_tz is not None:
+                os.environ['TZ'] = old_tz
+            elif 'TZ' in os.environ:
+                del os.environ['TZ']
 
 
 @pytest.mark.unit
