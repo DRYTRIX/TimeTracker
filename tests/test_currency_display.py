@@ -30,6 +30,7 @@ def test_client_with_auth(app, client, admin_user):
     """Return authenticated client."""
     with client.session_transaction() as sess:
         sess['_user_id'] = str(admin_user.id)
+        sess['_fresh'] = True
     return client
 
 
@@ -45,27 +46,33 @@ def usd_settings(app):
 @pytest.fixture
 def sample_client(app):
     """Create a sample client."""
-    client = Client(
-        name='Test Client',
-        email='test@example.com'
-    )
-    db.session.add(client)
-    db.session.commit()
-    return client
+    with app.app_context():
+        client = Client(
+            name='Test Client',
+            email='test@example.com'
+        )
+        db.session.add(client)
+        db.session.commit()
+        db.session.refresh(client)
+        return client
 
 
 @pytest.fixture
 def sample_project(app, sample_client):
     """Create a sample project."""
-    project = Project(
-        name='Test Project',
-        client_id=sample_client.id,
-        status='active',
-        hourly_rate=Decimal('100.00')
-    )
-    db.session.add(project)
-    db.session.commit()
-    return project
+    with app.app_context():
+        # Store client_id before accessing relationship
+        client_id = sample_client.id
+        project = Project(
+            name='Test Project',
+            client_id=client_id,
+            status='active',
+            hourly_rate=Decimal('100.00')
+        )
+        db.session.add(project)
+        db.session.commit()
+        db.session.refresh(project)
+        return project
 
 
 @pytest.fixture

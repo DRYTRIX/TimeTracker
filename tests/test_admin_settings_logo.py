@@ -24,6 +24,7 @@ def authenticated_admin_client(client, admin_user):
     """Create an authenticated admin client."""
     with client.session_transaction() as sess:
         sess['_user_id'] = str(admin_user.id)
+        sess['_fresh'] = True
     return client
 
 
