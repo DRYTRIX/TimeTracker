@@ -29,7 +29,7 @@ class AuditLog(db.Model):
     entity_name = db.Column(db.String(500), nullable=True)  # Cached name for display
     
     # Action details
-    action = db.Column(db.String(20), nullable=False, index=True)  # 'created', 'updated', 'deleted'
+    action = db.Column(db.String(20), nullable=False)  # 'created', 'updated', 'deleted' - index defined in __table_args__
     field_name = db.Column(db.String(100), nullable=True, index=True)  # Name of the field that changed (None for create/delete)
     
     # Change values (stored as JSON for flexibility)
@@ -45,7 +45,7 @@ class AuditLog(db.Model):
     request_path = db.Column(db.String(500), nullable=True)
     
     # Timestamp
-    created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)  # index defined in __table_args__
     
     # Relationships
     user = db.relationship('User', backref='audit_logs')
