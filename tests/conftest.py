@@ -248,7 +248,8 @@ def test_client(app, user):
     db.session.commit()
     # Re-query to ensure we return a persistent instance without relying on refresh
     persisted_client = Client.query.get(client_id) or Client.query.filter_by(id=client_id).first()
-    return persisted_client
+    # Fallback to the original instance if re-query unexpectedly returns None
+    return persisted_client or client
 
 
 @pytest.fixture
