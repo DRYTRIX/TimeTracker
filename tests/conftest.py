@@ -42,7 +42,26 @@ def app(app_config):
     app = create_app(app_config)
     
     with app.app_context():
-        db.create_all()
+        # Drop all tables first to ensure clean state
+        try:
+            db.drop_all()
+        except Exception:
+            pass  # Ignore errors if tables don't exist
+        
+        # Create all tables, handling index creation errors gracefully
+        try:
+            db.create_all()
+        except Exception as e:
+            # SQLite may raise OperationalError if indexes already exist
+            # This can happen if db.create_all() is called multiple times
+            # Check if it's specifically an index-related error
+            error_msg = str(e).lower()
+            if 'index' in error_msg and ('already exists' in error_msg or 'duplicate' in error_msg):
+                # Index already exists - this is okay, continue
+                pass
+            else:
+                # Re-raise other errors as they indicate real problems
+                raise
         
         # Create default settings
         settings = Settings()
@@ -52,7 +71,10 @@ def app(app_config):
         yield app
         
         db.session.remove()
-        db.drop_all()
+        try:
+            db.drop_all()
+        except Exception:
+            pass  # Ignore errors during cleanup
 
 
 @pytest.fixture(scope='function')
