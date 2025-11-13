@@ -1553,6 +1553,8 @@ def test_invoice_view_has_delete_button(app, client, user, project):
 def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     """Smoke test: Verify that the invoice list page has delete buttons."""
     from app.models import Client
+    # Capture project_id early to avoid any session expiration across requests
+    project_id = project.id
     
     # Authenticate as admin using login endpoint
     client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
@@ -1565,7 +1567,7 @@ def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     invoices = [
         Invoice(
             invoice_number=f'INV-LIST-{i:03d}',
-            project_id=project.id,
+            project_id=project_id,
             client_name=cl.name,
             client_id=cl.id,
             due_date=date.today() + timedelta(days=30),
