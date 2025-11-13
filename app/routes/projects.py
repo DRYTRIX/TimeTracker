@@ -405,9 +405,20 @@ def view_project(project_id):
     # Get total cost count
     total_costs_count = ProjectCost.query.filter_by(project_id=project_id).count()
     
-    # Get kanban columns - force fresh data
+    # Get kanban columns for this project - force fresh data
     db.session.expire_all()
-    kanban_columns = KanbanColumn.get_active_columns() if KanbanColumn else []
+    if KanbanColumn:
+        # Try to get project-specific columns first
+        kanban_columns = KanbanColumn.get_active_columns(project_id=project_id)
+        # If no project-specific columns exist, fall back to global columns
+        if not kanban_columns:
+            kanban_columns = KanbanColumn.get_active_columns(project_id=None)
+            # If still no global columns exist, initialize default global columns
+            if not kanban_columns:
+                KanbanColumn.initialize_default_columns(project_id=None)
+                kanban_columns = KanbanColumn.get_active_columns(project_id=None)
+    else:
+        kanban_columns = []
     
     # Prevent browser caching of kanban board
     response = render_template('projects/view.html', 

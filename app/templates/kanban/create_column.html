@@ -16,6 +16,9 @@
       <div class="p-6">
         <form method="POST" action="{{ url_for('kanban.create_column') }}" role="form" aria-labelledby="formTitle">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if project_id %}
+          <input type="hidden" name="project_id" value="{{ project_id }}">
+          {% endif %}
 
           <h3 id="formTitle" class="sr-only">{{ _('Create Kanban Column form') }}</h3>
 
@@ -30,6 +33,19 @@
             <input type="text" id="key" name="key" required pattern="[a-z0-9_]+" aria-describedby="keyHelp" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2" placeholder="{{ _('e.g., in_review, blocked, testing') }}">
             <p id="keyHelp" class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Unique identifier (lowercase, no spaces, use underscores). Auto-generated from label if empty.') }}</p>
           </div>
+
+          {% if projects %}
+          <div class="mb-4">
+            <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
+            <select id="project_id" name="project_id" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2">
+              <option value="">{{ _('Global (for all projects)') }}</option>
+              {% for project in projects %}
+              <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+              {% endfor %}
+            </select>
+            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Select a project to create project-specific columns, or leave as Global for all projects') }}</p>
+          </div>
+          {% endif %}
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -66,7 +82,7 @@
           </div>
 
           <div class="mt-6 flex items-center justify-between">
-            <a href="{{ url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+            <a href="{{ url_for('kanban.list_columns', project_id=project_id) if project_id else url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
               <i class="fas fa-times"></i> {{ _('Cancel') }}
             </a>
             <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:opacity-90">
