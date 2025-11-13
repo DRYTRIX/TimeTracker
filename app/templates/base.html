@@ -73,6 +73,22 @@
         .sidebar-collapsed #sidebar { width: 4rem !important; overflow-x: hidden; }
         /* Shared bulk menu */
         .bulk-menu { z-index: 50; max-height: 16rem; overflow-y: auto; }
+        /* Layout fixes */
+        #mainContent { 
+            display: flex !important; 
+            flex-direction: column !important; 
+            overflow-x: hidden;
+            width: 100%;
+        }
+        #mainContentAnchor { 
+            flex: 1 0 auto; 
+            min-height: 0; 
+            width: 100%;
+            overflow-x: auto;
+        }
+        /* Ensure body and html don't cause horizontal overflow */
+        html, body { overflow-x: hidden; }
+        #appShell { overflow-x: hidden; width: 100%; }
     </style>
     <script>
         // Theme init (unchanged)
@@ -444,9 +460,10 @@
                         </a>
                     </li>
                     <li class="mt-2">
-                        <a href="https://buymeacoffee.com/DryTrix" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                            <i class="fas fa-mug-saucer w-6 text-center"></i>
-                            <span class="ml-3 sidebar-label">{{ _('Buy me a coffee') }}</span>
+                        <a href="https://buymeacoffee.com/DryTrix" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 group">
+                            <i class="fas fa-mug-saucer w-6 text-center group-hover:scale-110 transition-transform"></i>
+                            <span class="ml-3 sidebar-label font-medium">{{ _('Buy me a coffee') }}</span>
+                            <span class="ml-auto text-xs opacity-70">☕</span>
                         </a>
                     </li>
                 </ul>
@@ -461,7 +478,7 @@
         </aside>
 
         <!-- Main content -->
-        <div id="mainContent" class="flex-1 flex flex-col transition-all duration-200 ease-in-out lg:ml-64">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen transition-all duration-200 ease-in-out lg:ml-64">
             <!-- Header -->
             <header class="bg-card-light dark:bg-card-dark p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
                 <!-- Mobile menu button -->
@@ -484,6 +501,16 @@
 
                 <!-- Right side controls -->
                 <div class="flex items-center space-x-4">
+                    <!-- BuyMeACoffee Button -->
+                    <a href="https://buymeacoffee.com/DryTrix" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 text-sm font-medium"
+                       title="{{ _('Support TimeTracker development') }}">
+                        <i class="fas fa-mug-saucer"></i>
+                        <span class="hidden lg:inline">{{ _('Support') }}</span>
+                    </a>
+                    
                     <button id="theme-toggle" type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Toggle dark mode') }}">
                         <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
                         <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
@@ -555,6 +582,36 @@
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
+            </div>
+
+            <!-- Dismissible Support Banner -->
+            <div id="supportBanner" class="hidden bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3">
+                <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 flex-1">
+                        <i class="fas fa-mug-saucer text-amber-600 dark:text-amber-400 text-lg"></i>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-amber-900 dark:text-amber-100">
+                                {{ _('Enjoying TimeTracker?') }}
+                            </p>
+                            <p class="text-xs text-amber-700 dark:text-amber-300">
+                                {{ _('Support continued development with a coffee') }} ☕
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="https://buymeacoffee.com/DryTrix" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            {{ _('Support') }}
+                        </a>
+                        <button onclick="dismissSupportBanner()" 
+                                class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
+                                aria-label="{{ _('Dismiss') }}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Main page content -->
@@ -1112,6 +1169,41 @@
         });
         // Close on Escape
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
+        
+        // Support Banner Logic
+        function dismissSupportBanner() {
+            const banner = document.getElementById('supportBanner');
+            if (banner) {
+                banner.classList.add('hidden');
+                // Store dismissal timestamp (show again after 7 days)
+                try {
+                    localStorage.setItem('supportBannerDismissed', Date.now().toString());
+                } catch(e) {}
+            }
+        }
+        
+        function shouldShowSupportBanner() {
+            try {
+                const dismissed = localStorage.getItem('supportBannerDismissed');
+                if (!dismissed) return true;
+                const dismissedTime = parseInt(dismissed);
+                const sevenDays = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+                return (Date.now() - dismissedTime) > sevenDays;
+            } catch(e) {
+                return true; // Show by default if localStorage fails
+            }
+        }
+        
+        // Show support banner if conditions are met
+        document.addEventListener('DOMContentLoaded', function() {
+            const banner = document.getElementById('supportBanner');
+            if (banner && shouldShowSupportBanner()) {
+                // Show banner with a slight delay for better UX
+                setTimeout(() => {
+                    banner.classList.remove('hidden');
+                }, 2000); // Show after 2 seconds
+            }
+        });
     </script>
     
     <script src="{{ url_for('static', filename='data-tables-enhanced.js') }}"></script>
