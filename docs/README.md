@@ -37,6 +37,9 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 
 ## ✨ Feature Documentation
 
+### Complete Features Reference
+- **[📋 Complete Features Overview](FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features across 12 categories (⭐ Start here for complete feature list!)
+
 ### Core Features
 - **[Task Management](TASK_MANAGEMENT_README.md)** — Complete task tracking system
 - **[Task Management Overview](TASK_MANAGEMENT.md)** — Task management concepts
@@ -46,11 +49,20 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 - **[Enhanced Invoice System](ENHANCED_INVOICE_SYSTEM_README.md)** — Advanced invoicing features
 - **[Calendar Features](CALENDAR_FEATURES_README.md)** — Calendar view and bulk entry
 
-### Advanced Features
+### Financial Features
+- **[Expense Tracking](EXPENSE_TRACKING.md)** — Track business expenses
+- **[Payment Tracking](PAYMENT_TRACKING.md)** — Track invoice payments
+- **[Budget Alerts & Forecasting](BUDGET_ALERTS_AND_FORECASTING.md)** — Monitor project budgets
+
+### Productivity Features
 - **[Command Palette](COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts and quick actions
 - **[Bulk Time Entry](BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
-- **[Logo Upload System](LOGO_UPLOAD_SYSTEM_README.md)** — Brand your invoices
+- **[Weekly Time Goals](WEEKLY_TIME_GOALS.md)** — Set and track weekly hour targets
 - **[Toast Notification System](TOAST_NOTIFICATION_SYSTEM.md)** — User feedback and notifications
+
+### Advanced Features
+- **[Role-Based Permissions](ADVANCED_PERMISSIONS.md)** — Granular access control system
+- **[Logo Upload System](LOGO_UPLOAD_SYSTEM_README.md)** — Brand your invoices
 - **[Translation System](TRANSLATION_SYSTEM.md)** — Multi-language support
 
 ### Additional Documentation
