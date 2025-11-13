@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, button %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Recurring Invoices'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-sync-alt',
+    title_text='Recurring Invoices',
+    subtitle_text='Automate invoice generation for subscription-based billing',
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<a href="' + url_for("recurring_invoices.create_recurring_invoice") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Recurring Invoice</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Project</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Client</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Frequency</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Run</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {% for recurring in recurring_invoices %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ recurring.name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ recurring.project.name if recurring.project else 'N/A' }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ recurring.client_name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                            Every {{ recurring.interval }} {{ recurring.frequency }}{{ 's' if recurring.interval > 1 else '' }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ recurring.next_run_date.strftime('%Y-%m-%d') if recurring.next_run_date else 'N/A' }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if recurring.is_active %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="{{ url_for('recurring_invoices.view_recurring_invoice', recurring_id=recurring.id) }}" class="text-primary hover:text-primary/80 mr-3">View</a>
+                        <a href="{{ url_for('recurring_invoices.edit_recurring_invoice', recurring_id=recurring.id) }}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
+                        <button onclick="generateInvoice({{ recurring.id }})" class="text-green-600 hover:text-green-900 mr-3">Generate Now</button>
+                        <form method="POST" action="{{ url_for('recurring_invoices.delete_recurring_invoice', recurring_id=recurring.id) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this recurring invoice?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No recurring invoices found. <a href="{{ url_for('recurring_invoices.create_recurring_invoice') }}" class="text-primary">Create one</a> to get started.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function generateInvoice(recurringId) {
+    if (!confirm('Generate an invoice from this recurring template now?')) {
+        return;
+    }
+    
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    
+    fetch(`/recurring-invoices/${recurringId}/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            csrf_token: csrfToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Invoice ${data.invoice_number} generated successfully!`);
+            window.location.href = `/invoices/${data.invoice_id}/edit`;
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate invoice'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to generate invoice');
+    });
+}
+</script>
+{% endblock %}
+

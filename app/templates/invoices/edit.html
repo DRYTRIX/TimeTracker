@@ -10,6 +10,9 @@
         <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
             <i class="fas fa-arrow-left mr-2"></i>{{ _('Back') }}
         </a>
+        <button type="button" onclick="showSendEmailModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+            <i class="fas fa-envelope mr-1"></i>{{ _('Send Email') }}
+        </button>
     </div>
 </div>
 
@@ -521,5 +524,123 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+</script>
+
+<!-- Send Email Modal -->
+<div id="sendEmailModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+    <div class="mt-3">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Send Invoice via Email</h3>
+      <form id="sendEmailForm" onsubmit="sendInvoiceEmail(event)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-4">
+          <label for="recipient_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recipient Email *</label>
+          <input type="email" id="recipient_email" name="recipient_email" value="{{ invoice.client_email }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+        </div>
+        <div class="mb-4">
+          <label for="email_template_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Template (Optional)</label>
+          <select id="email_template_id" name="email_template_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <option value="">Default Template</option>
+            {% for template in email_templates %}
+            <option value="{{ template.id }}">{{ template.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="custom_message" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Custom Message (Optional)</label>
+          <textarea id="custom_message" name="custom_message" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button type="button" onclick="hideSendEmailModal()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Send Email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function showSendEmailModal() {
+  const modal = document.getElementById('sendEmailModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function hideSendEmailModal() {
+  const modal = document.getElementById('sendEmailModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function sendInvoiceEmail(event) {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+  
+  // Show loading state
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending...';
+  
+  fetch("{{ url_for('invoices.send_invoice_email_route', invoice_id=invoice.id) }}", {
+    method: 'POST',
+    body: formData
+  })
+  .then(async response => {
+    // Check content type to determine how to parse
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    
+    // Always try JSON first if content-type suggests it, otherwise read as text
+    if (isJson) {
+      const data = await response.json();
+      // Handle both success and error responses
+      if (!response.ok) {
+        return { success: false, error: data.error || data.message || `HTTP ${response.status}: ${response.statusText}` };
+      }
+      return data;
+    } else {
+      // Not JSON, read as text (only once)
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+      }
+      // If successful but not JSON, return error format
+      return { success: false, error: text || 'Unexpected response format' };
+    }
+  })
+  .then(data => {
+    if (data.success) {
+      if (window.toastManager) {
+        window.toastManager.success('Invoice email sent successfully!');
+      } else {
+        alert('Invoice email sent successfully!');
+      }
+      hideSendEmailModal();
+      // Optionally reload the page to show updated status
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      const errorMsg = data.error || 'Failed to send email';
+      console.error('Email send error:', errorMsg);
+      if (window.toastManager) {
+        window.toastManager.error('Error: ' + errorMsg);
+      } else {
+        alert('Error: ' + errorMsg);
+      }
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  })
+  .catch(error => {
+    console.error('Email send error:', error);
+    const errorMsg = error.message || 'Failed to send email. Please check server logs for details.';
+    if (window.toastManager) {
+      window.toastManager.error(errorMsg);
+    } else {
+      alert(errorMsg);
+    }
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  });
+}
 </script>
 {% endblock %}

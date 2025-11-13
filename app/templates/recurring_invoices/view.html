@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Recurring Invoices', 'url': url_for('recurring_invoices.list_recurring_invoices')},
+    {'text': recurring.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-sync-alt',
+    title_text=recurring.name,
+    subtitle_text='Recurring Invoice Template',
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<a href="' + url_for("recurring_invoices.edit_recurring_invoice", recurring_id=recurring.id) + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mr-2">Edit</a>'
+        + '<button onclick="generateInvoice(' + recurring.id|string + ')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Generate Now</button>'
+) }}
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">Template Details</h3>
+        <dl class="space-y-2">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.project.name if recurring.project else 'N/A' }}</dd>
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Client</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.client_name }}</dd>
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Frequency</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">Every {{ recurring.interval }} {{ recurring.frequency }}{{ 's' if recurring.interval > 1 else '' }}</dd>
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Next Run Date</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.next_run_date.strftime('%Y-%m-%d') if recurring.next_run_date else 'N/A' }}</dd>
+            
+            {% if recurring.end_date %}
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">End Date</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.end_date.strftime('%Y-%m-%d') }}</dd>
+            {% endif %}
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+            <dd class="text-sm">
+                {% if recurring.is_active %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                {% else %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Inactive</span>
+                {% endif %}
+            </dd>
+        </dl>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">Invoice Settings</h3>
+        <dl class="space-y-2">
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Due Date (Days)</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.due_date_days }} days from issue date</dd>
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Tax Rate</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.tax_rate }}%</dd>
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Currency</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.currency_code }}</dd>
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Auto Send</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+                {% if recurring.auto_send %}
+                <span class="text-green-600">Yes</span>
+                {% else %}
+                <span class="text-gray-500">No</span>
+                {% endif %}
+            </dd>
+            
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Auto Include Time Entries</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+                {% if recurring.auto_include_time_entries %}
+                <span class="text-green-600">Yes</span>
+                {% else %}
+                <span class="text-gray-500">No</span>
+                {% endif %}
+            </dd>
+            
+            {% if recurring.last_generated_at %}
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Generated</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.last_generated_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+{% if generated_invoices %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h3 class="text-lg font-semibold mb-4">Recently Generated Invoices</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Invoice Number</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Issue Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {% for invoice in generated_invoices %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ invoice.invoice_number }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else 'N/A' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ invoice.currency_code }} {{ invoice.total_amount }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ invoice.status }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="text-primary hover:text-primary/80">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function generateInvoice(recurringId) {
+    if (!confirm('Generate an invoice from this recurring template now?')) {
+        return;
+    }
+    
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    
+    fetch(`/recurring-invoices/${recurringId}/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            csrf_token: csrfToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Invoice ${data.invoice_number} generated successfully!`);
+            window.location.href = `/invoices/${data.invoice_id}/edit`;
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate invoice'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to generate invoice');
+    });
+}
+</script>
+{% endblock %}
+

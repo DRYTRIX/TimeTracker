@@ -367,12 +367,12 @@ class EnhancedErrorHandler {
         if (window.toastManager) {
             const toastId = window.toastManager.error(message, 'Error', 0);
             
-            // Find toast element by ID or by checking the container
+            // Find toast element by ID
             const toastElement = window.toastManager.container.querySelector(
                 `[data-toast-id="${toastId}"]`
             ) || Array.from(window.toastManager.container.children).find(
                 el => el.getAttribute('data-toast-id') === String(toastId)
-            ) || document.querySelector(`#toast-${toastId}`);
+            );
             
             if (toastElement) {
                 const retryContainer = document.createElement('div');
