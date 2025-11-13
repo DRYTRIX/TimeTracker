@@ -26,6 +26,8 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 ## ✨ Features
 
+TimeTracker includes **120+ features** across 12 major categories. See the [Complete Features Documentation](docs/FEATURES_COMPLETE.md) for a comprehensive overview.
+
 ### ⏱️ **Smart Time Tracking**
 - **One-Click Timers** — Start tracking with a single click
 - **Persistent Timers** — Timers keep running even after browser closes
@@ -34,6 +36,9 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Bulk Time Entry** — Create multiple entries for consecutive days with weekend skipping
 - **Time Entry Templates** — Save and reuse common time entries for faster logging
 - **Calendar View** — Visual calendar interface for viewing and managing time entries
+- **Focus Sessions** — Pomodoro-style focus session tracking
+- **Recurring Time Blocks** — Weekly recurring time block templates
+- **Time Rounding** — Configurable rounding intervals
 - **Real-time Updates** — See live timer updates across all devices via WebSocket
 
 ### 📊 **Project & Task Management**
@@ -42,24 +47,32 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Task Board** — Visual task management with priorities and assignments
 - **Kanban Board** — Drag-and-drop task management with customizable columns
 - **Status Tracking** — Monitor progress from to-do to completion
-- **Estimates vs Actuals** — Track project budgets and burn rates
+- **Budget Tracking** — Monitor project budgets with alerts and forecasting
+- **Project Costs** — Track direct project expenses
 - **Task Comments** — Collaborate with threaded comments on tasks
 - **Markdown Support** — Rich text formatting in project and task descriptions
+- **Project Favorites** — Quick access to frequently used projects
 
 ### 🧾 **Professional Invoicing**
 - **Generate from Time** — Convert tracked hours to invoices automatically
 - **Custom Line Items** — Add manual items for expenses or services
 - **Tax Calculation** — Automatic tax calculations with configurable rates
-- **PDF Export** — Professional PDF invoice generation with branding
+- **PDF Export** — Professional PDF invoice generation with customizable layouts
 - **Status Tracking** — Track draft, sent, paid, and overdue invoices
 - **Company Branding** — Add logos and custom company information
 - **Expense Integration** — Include tracked expenses in invoices
+- **Recurring Invoices** — Automate recurring billing
+- **Multi-Currency** — Support for multiple currencies with conversion
+- **Invoice Email** — Send invoices directly to clients
 
 ### 💰 **Financial Management**
 - **Expense Tracking** — Track business expenses with receipts and categories
 - **Payment Tracking** — Monitor invoice payments and payment methods
 - **Reimbursement Management** — Handle expense approvals and reimbursements
 - **Billable Expenses** — Mark expenses as billable and add to invoices
+- **Payment Gateway Integration** — Track gateway transactions and fees
+- **Mileage Tracking** — Track business mileage with rate calculation
+- **Per Diem Tracking** — Manage per diem expenses and rates
 - **Multi-Currency** — Support for multiple currencies with conversion
 
 ### 📈 **Analytics & Reporting**
@@ -70,6 +83,10 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Custom Date Ranges** — Flexible reporting periods
 - **Saved Filters** — Save frequently used report filters for quick access
 - **User Analytics** — Individual performance metrics and productivity insights
+- **Budget Alerts** — Automatic alerts when budget thresholds are exceeded
+- **Budget Forecasting** — Predict project completion dates based on burn rates
+- **Weekly Time Goals** — Set and track weekly hour targets
+- **Overtime Tracking** — Monitor and report overtime hours
 
 ### 🔐 **Multi-User & Security**
 - **Role-Based Access Control** — Granular permissions system with custom roles
@@ -79,13 +96,16 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Session Management** — Secure cookies and session handling
 - **Profile Pictures** — Users can upload profile pictures
 - **API Tokens** — Generate tokens for API access and integrations
+- **Audit Logs** — Track all system activity and user actions
 
 ### ⌨️ **Productivity Features**
 - **Command Palette** — Keyboard-driven navigation with shortcuts (press `?`)
 - **Keyboard Shortcuts** — Navigate and execute actions without the mouse
 - **Quick Search** — Fast search across projects, tasks, clients, and more (Ctrl+K)
 - **Email Notifications** — Configurable email alerts for tasks, invoices, and more
+- **Toast Notifications** — In-app notifications for actions and updates
 - **Weekly Summaries** — Optional weekly time tracking summaries via email
+- **Activity Feed** — Track recent activity across the system
 
 ### 🛠️ **Technical Excellence**
 - **Docker Ready** — Deploy in minutes with Docker Compose
@@ -96,6 +116,8 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - **Progressive Web App** — Install as a mobile app on phones and tablets
 - **Monitoring Stack** — Built-in Prometheus, Grafana, Loki for observability
 - **Internationalization** — Multiple language support (i18n)
+- **REST API** — Comprehensive REST API with token authentication
+- **HTTPS Support** — Automatic HTTPS setup with self-signed or trusted certificates
 
 ---
 
@@ -295,14 +317,18 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[HTTPS Manual Setup (mkcert)](README_HTTPS.md)** — 🔒 Manual HTTPS with no certificate warnings
 
 ### Features
+- **[📋 Complete Features Overview](docs/FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features (⭐ Complete reference!)
 - **[Task Management](docs/TASK_MANAGEMENT_README.md)** — Break projects into manageable tasks
 - **[Invoice System](docs/INVOICE_FEATURE_README.md)** — Generate professional invoices
 - **[Client Management](docs/CLIENT_MANAGEMENT_README.md)** — Manage client relationships
 - **[Calendar Features](docs/CALENDAR_FEATURES_README.md)** — Calendar and bulk entry features
 - **[Bulk Time Entry](docs/BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
 - **[Command Palette](docs/COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts for power users
-- **[Expense Tracking](docs/EXPENSE_TRACKING.md)** — Track business expenses (if available)
-- **[Role-Based Permissions](docs/PERMISSIONS.md)** — Granular access control (if available)
+- **[Expense Tracking](docs/EXPENSE_TRACKING.md)** — Track business expenses
+- **[Payment Tracking](docs/PAYMENT_TRACKING.md)** — Track invoice payments
+- **[Budget Alerts & Forecasting](docs/BUDGET_ALERTS_AND_FORECASTING.md)** — Monitor project budgets
+- **[Weekly Time Goals](docs/WEEKLY_TIME_GOALS.md)** — Set and track weekly hour targets
+- **[Role-Based Permissions](docs/ADVANCED_PERMISSIONS.md)** — Granular access control
 
 ### Technical Documentation
 - **[Project Structure](docs/PROJECT_STRUCTURE.md)** — Codebase architecture

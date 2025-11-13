@@ -1433,6 +1433,42 @@ msgstr "Help"
 msgid "Buy me a coffee"
 msgstr "Buy me a coffee"
 
+#: app/templates/main/dashboard.html:249
+msgid "Support TimeTracker"
+msgstr "Support TimeTracker"
+
+#: app/templates/main/dashboard.html:252
+msgid "Enjoying TimeTracker? Consider buying me a coffee to support continued development!"
+msgstr "Enjoying TimeTracker? Consider buying me a coffee to support continued development!"
+
+#: app/templates/base.html:577
+msgid "Made with"
+msgstr "Made with"
+
+#: app/templates/base.html:577
+msgid "by"
+msgstr "by"
+
+#: app/templates/base.html:509
+msgid "Support TimeTracker development"
+msgstr "Support TimeTracker development"
+
+#: app/templates/base.html:511
+msgid "Support"
+msgstr "Support"
+
+#: app/templates/base.html:594
+msgid "Enjoying TimeTracker?"
+msgstr "Enjoying TimeTracker?"
+
+#: app/templates/base.html:597
+msgid "Support continued development with a coffee"
+msgstr "Support continued development with a coffee"
+
+#: app/templates/base.html:610
+msgid "Dismiss"
+msgstr "Dismiss"
+
 #: app/templates/base.html:438 app/templates/base.html:439
 #: app/templates/tasks/my_tasks.html:115
 msgid "Search"

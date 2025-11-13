@@ -239,6 +239,29 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- BuyMeACoffee Widget -->
+        <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-6 rounded-lg shadow-lg dashboard-widget animated-card text-white">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold mb-1">
+                        <i class="fas fa-mug-saucer mr-2"></i>
+                        {{ _('Support TimeTracker') }}
+                    </h2>
+                    <p class="text-sm opacity-90 mb-4">
+                        {{ _('Enjoying TimeTracker? Consider buying me a coffee to support continued development!') }}
+                    </p>
+                </div>
+            </div>
+            <a href="https://buymeacoffee.com/DryTrix" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="inline-flex items-center justify-center w-full bg-white text-amber-600 px-4 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                <i class="fas fa-mug-saucer mr-2"></i>
+                {{ _('Buy me a coffee') }}
+                <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+            </a>
+        </div>
     </div>
     <!-- Delete Entry Confirmation Dialogs -->
     {% for entry in recent_entries %}

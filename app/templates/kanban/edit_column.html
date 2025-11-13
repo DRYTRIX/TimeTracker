@@ -23,6 +23,11 @@
             <label for="key" class="block text-sm font-medium mb-1">{{ _('Column Key') }}</label>
             <input type="text" id="key" value="{{ column.key }}" disabled class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2 opacity-75 cursor-not-allowed">
             <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('The key cannot be changed after creation') }}</p>
+            {% if column.project_id %}
+            <p class="mt-1 text-xs text-blue-600 dark:text-blue-400"><i class="fas fa-info-circle"></i> {{ _('This is a project-specific column') }}</p>
+            {% else %}
+            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark"><i class="fas fa-globe"></i> {{ _('This is a global column (for all projects)') }}</p>
+            {% endif %}
           </div>
 
           <div class="mb-4">
@@ -79,7 +84,7 @@
           </div>
 
           <div class="mt-6 flex items-center justify-between">
-            <a href="{{ url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+            <a href="{{ url_for('kanban.list_columns', project_id=column.project_id) if column.project_id else url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
               <i class="fas fa-times"></i> {{ _('Cancel') }}
             </a>
             <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:opacity-90">

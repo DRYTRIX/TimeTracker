@@ -408,5 +408,30 @@ setInterval(() => {
         refreshActivityFeed();
     }
 }, 30000);
+
+// WebSocket integration for real-time updates
+if (typeof io !== 'undefined') {
+    const socket = io();
+    
+    socket.on('activity_created', function(data) {
+        // Only add activity if it matches current filter (or no filter)
+        if (!activityFilter || activityFilter === 'all' || data.activity.entity_type === activityFilter) {
+            // Reload activities to get fresh data
+            if (activityPage === 1) {
+                loadActivities(false).catch(error => {
+                    console.error('Error reloading activities after WebSocket event:', error);
+                });
+            }
+        }
+    });
+    
+    socket.on('connect', function() {
+        console.log('Activity feed WebSocket connected');
+    });
+    
+    socket.on('disconnect', function() {
+        console.log('Activity feed WebSocket disconnected');
+    });
+}
 </script>
 

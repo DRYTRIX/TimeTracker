@@ -35,6 +35,9 @@ from .calendar_event import CalendarEvent
 from .budget_alert import BudgetAlert
 from .import_export import DataImport, DataExport
 from .invoice_pdf_template import InvoicePDFTemplate
+from .audit_log import AuditLog
+from .recurring_invoice import RecurringInvoice
+from .invoice_email import InvoiceEmail
 
 __all__ = [
     "User",
@@ -77,4 +80,7 @@ __all__ = [
     "DataExport",
     "InvoicePDFTemplate",
     "ClientPrepaidConsumption",
+    "AuditLog",
+    "RecurringInvoice",
+    "InvoiceEmail",
 ]
