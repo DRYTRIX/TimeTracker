@@ -48,8 +48,8 @@ class ToastNotificationManager {
             dismissible: options.dismissible !== false
         };
 
-        const toast = this.createToast(config);
         const toastId = Date.now() + Math.random();
+        const toast = this.createToast(config, toastId);
         
         this.toasts.set(toastId, {
             element: toast,
@@ -80,12 +80,15 @@ class ToastNotificationManager {
         return toastId;
     }
 
-    createToast(config) {
+    createToast(config, toastId) {
         const toast = document.createElement('div');
         toast.className = `toast-notification toast-${config.type}`;
         toast.setAttribute('role', 'alert');
         toast.setAttribute('aria-live', config.type === 'error' ? 'assertive' : 'polite');
         toast.setAttribute('aria-atomic', 'true');
+        if (toastId) {
+            toast.setAttribute('data-toast-id', String(toastId));
+        }
 
         // Icon
         const icon = this.getIcon(config.type);

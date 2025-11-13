@@ -1560,3 +1560,155 @@ def get_email_config():
         'password_set': bool(settings.mail_password),
         'default_sender': settings.mail_default_sender or ''
     }), 200
+
+
+# ==================== Email Template Management ====================
+
+@admin_bp.route('/admin/email-templates')
+@login_required
+@admin_or_permission_required('manage_settings')
+def list_email_templates():
+    """List all email templates"""
+    from app.models import InvoiceTemplate
+    
+    templates = InvoiceTemplate.query.order_by(InvoiceTemplate.name).all()
+    
+    return render_template('admin/email_templates/list.html', templates=templates)
+
+
+@admin_bp.route('/admin/email-templates/create', methods=['GET', 'POST'])
+@login_required
+@admin_or_permission_required('manage_settings')
+def create_email_template():
+    """Create a new email template"""
+    from app.models import InvoiceTemplate
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        html = request.form.get('html', '').strip()
+        css = request.form.get('css', '').strip()
+        is_default = request.form.get('is_default') == 'on'
+        
+        # Validate
+        if not name:
+            flash(_('Template name is required'), 'error')
+            return render_template('admin/email_templates/create.html')
+        
+        # Check for duplicate name
+        existing = InvoiceTemplate.query.filter_by(name=name).first()
+        if existing:
+            flash(_('A template with this name already exists'), 'error')
+            return render_template('admin/email_templates/create.html', 
+                                 name=name, description=description, html=html, css=css)
+        
+        # If setting as default, unset other defaults
+        if is_default:
+            InvoiceTemplate.query.update({InvoiceTemplate.is_default: False})
+        
+        # Create template
+        template = InvoiceTemplate(
+            name=name,
+            description=description if description else None,
+            html=html if html else None,
+            css=css if css else None,
+            is_default=is_default
+        )
+        
+        db.session.add(template)
+        if not safe_commit('create_email_template', {'name': name}):
+            flash(_('Could not create email template due to a database error.'), 'error')
+            return render_template('admin/email_templates/create.html')
+        
+        flash(_('Email template created successfully'), 'success')
+        return redirect(url_for('admin.list_email_templates'))
+    
+    return render_template('admin/email_templates/create.html')
+
+
+@admin_bp.route('/admin/email-templates/<int:template_id>')
+@login_required
+@admin_or_permission_required('manage_settings')
+def view_email_template(template_id):
+    """View email template details"""
+    from app.models import InvoiceTemplate
+    
+    template = InvoiceTemplate.query.get_or_404(template_id)
+    
+    return render_template('admin/email_templates/view.html', template=template)
+
+
+@admin_bp.route('/admin/email-templates/<int:template_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_or_permission_required('manage_settings')
+def edit_email_template(template_id):
+    """Edit email template"""
+    from app.models import InvoiceTemplate
+    
+    template = InvoiceTemplate.query.get_or_404(template_id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        html = request.form.get('html', '').strip()
+        css = request.form.get('css', '').strip()
+        is_default = request.form.get('is_default') == 'on'
+        
+        # Validate
+        if not name:
+            flash(_('Template name is required'), 'error')
+            return render_template('admin/email_templates/edit.html', template=template)
+        
+        # Check for duplicate name (excluding current template)
+        existing = InvoiceTemplate.query.filter(
+            InvoiceTemplate.name == name,
+            InvoiceTemplate.id != template_id
+        ).first()
+        if existing:
+            flash(_('A template with this name already exists'), 'error')
+            return render_template('admin/email_templates/edit.html', template=template)
+        
+        # If setting as default, unset other defaults
+        if is_default:
+            InvoiceTemplate.query.filter(InvoiceTemplate.id != template_id).update({InvoiceTemplate.is_default: False})
+        
+        # Update template
+        template.name = name
+        template.description = description if description else None
+        template.html = html if html else None
+        template.css = css if css else None
+        template.is_default = is_default
+        template.updated_at = datetime.utcnow()
+        
+        if not safe_commit('edit_email_template', {'template_id': template_id}):
+            flash(_('Could not update email template due to a database error.'), 'error')
+            return render_template('admin/email_templates/edit.html', template=template)
+        
+        flash(_('Email template updated successfully'), 'success')
+        return redirect(url_for('admin.view_email_template', template_id=template_id))
+    
+    return render_template('admin/email_templates/edit.html', template=template)
+
+
+@admin_bp.route('/admin/email-templates/<int:template_id>/delete', methods=['POST'])
+@login_required
+@admin_or_permission_required('manage_settings')
+def delete_email_template(template_id):
+    """Delete email template"""
+    from app.models import InvoiceTemplate
+    
+    template = InvoiceTemplate.query.get_or_404(template_id)
+    template_name = template.name
+    
+    # Check if template is in use
+    if template.invoices.count() > 0 or template.recurring_invoices.count() > 0:
+        flash(_('Cannot delete template that is in use by invoices or recurring invoices'), 'error')
+        return redirect(url_for('admin.list_email_templates'))
+    
+    db.session.delete(template)
+    if not safe_commit('delete_email_template', {'template_id': template_id}):
+        flash(_('Could not delete email template due to a database error.'), 'error')
+    else:
+        flash(_('Email template "%(name)s" deleted successfully', name=template_name), 'success')
+    
+    return redirect(url_for('admin.list_email_templates'))

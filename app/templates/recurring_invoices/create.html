@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Recurring Invoices', 'url': url_for('recurring_invoices.list_recurring_invoices')},
+    {'text': 'Create'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-sync-alt',
+    title_text='Create Recurring Invoice',
+    subtitle_text='Set up automated invoice generation',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Template Name *</label>
+                <input type="text" id="name" name="name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            </div>
+            
+            <div>
+                <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project *</label>
+                <select id="project_id" name="project_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="">Select Project</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}" data-client-id="{{ project.client_id if project.client_id else '' }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client *</label>
+                <select id="client_id" name="client_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="">Select Client</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}">{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="frequency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frequency *</label>
+                <select id="frequency" name="frequency" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly" selected>Monthly</option>
+                    <option value="yearly">Yearly</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="interval" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Interval</label>
+                <input type="number" id="interval" name="interval" value="1" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <p class="text-xs text-gray-500 mt-1">Every N periods (e.g., every 2 weeks)</p>
+            </div>
+            
+            <div>
+                <label for="next_run_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Next Run Date *</label>
+                <input type="date" id="next_run_date" name="next_run_date" value="{{ default_next_run_date }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            </div>
+            
+            <div>
+                <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date (Optional)</label>
+                <input type="date" id="end_date" name="end_date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            </div>
+            
+            <div>
+                <label for="due_date_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date (Days from Issue)</label>
+                <input type="number" id="due_date_days" name="due_date_days" value="30" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            </div>
+            
+            <div>
+                <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tax Rate (%)</label>
+                <input type="number" id="tax_rate" name="tax_rate" value="0" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            </div>
+        </div>
+        
+        <div>
+            <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Name</label>
+            <input type="text" id="client_name" name="client_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        </div>
+        
+        <div>
+            <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Email</label>
+            <input type="email" id="client_email" name="client_email" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        </div>
+        
+        <div>
+            <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Address</label>
+            <textarea id="client_address" name="client_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+        </div>
+        
+        <div>
+            <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+            <textarea id="notes" name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+        </div>
+        
+        <div>
+            <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Terms</label>
+            <textarea id="terms" name="terms" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <label class="flex items-center">
+                <input type="checkbox" name="auto_send" class="mr-2">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Automatically send invoices via email when generated</span>
+            </label>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <label class="flex items-center">
+                <input type="checkbox" name="auto_include_time_entries" checked class="mr-2">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Automatically include unbilled time entries</span>
+            </label>
+        </div>
+        
+        <div class="flex justify-end space-x-4">
+            <a href="{{ url_for('recurring_invoices.list_recurring_invoices') }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</a>
+            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">Create Recurring Invoice</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var projectSelect = document.getElementById('project_id');
+    var clientSelect = document.getElementById('client_id');
+    var clientName = document.getElementById('client_name');
+    var clientEmail = document.getElementById('client_email');
+    var clientAddress = document.getElementById('client_address');
+
+    if (projectSelect && clientSelect) {
+        projectSelect.addEventListener('change', function() {
+            var opt = projectSelect.options[projectSelect.selectedIndex];
+            if (!opt || !opt.value) return;
+            
+            var clientId = opt.getAttribute('data-client-id');
+            var name = opt.getAttribute('data-client-name') || '';
+            var email = opt.getAttribute('data-client-email') || '';
+            var address = opt.getAttribute('data-client-address') || '';
+            
+            // Set client dropdown
+            if (clientId) {
+                clientSelect.value = clientId;
+            }
+            
+            // Set client details fields
+            if (name && clientName) {
+                clientName.value = name;
+            }
+            if (email && clientEmail) {
+                clientEmail.value = email;
+            }
+            if (address && clientAddress) {
+                clientAddress.value = address;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

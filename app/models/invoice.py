@@ -28,6 +28,7 @@ class Invoice(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     currency_code = db.Column(db.String(3), nullable=False, default='EUR')
     template_id = db.Column(db.Integer, db.ForeignKey('invoice_templates.id'), nullable=True, index=True)
+    recurring_invoice_id = db.Column(db.Integer, db.ForeignKey('recurring_invoices.id'), nullable=True, index=True)
     
     # Notes and terms
     notes = db.Column(db.Text, nullable=True)
