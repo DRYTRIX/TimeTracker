@@ -73,7 +73,9 @@ class TimeEntry(db.Model):
             self.calculate_duration()
     
     def __repr__(self):
-        return f'<TimeEntry {self.id}: {self.user.username} on {self.project.name}>'
+        user_name = self.user.username if self.user else 'deleted_user'
+        project_name = self.project.name if self.project else 'deleted_project'
+        return f'<TimeEntry {self.id}: {user_name} on {project_name}>'
     
     @property
     def is_active(self):

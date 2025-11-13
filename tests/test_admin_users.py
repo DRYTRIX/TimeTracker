@@ -25,6 +25,7 @@ class TestAdminUserList:
             # Login as admin
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             response = client.get(url_for('admin.list_users'))
             assert response.status_code == 200
@@ -418,6 +419,7 @@ class TestAdminUserDeletionCascading:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             response = client.get(url_for('admin.list_users'))
             assert response.status_code == 200
@@ -431,6 +433,7 @@ class TestAdminUserDeletionCascading:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             response = client.get(url_for('admin.list_users'))
             assert response.status_code == 200
@@ -461,6 +464,7 @@ class TestUserDeletionSmokeTests:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             # Delete the user
             response = client.post(
@@ -496,6 +500,7 @@ class TestUserDeletionSmokeTests:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             # Try to delete
             response = client.post(
@@ -517,6 +522,7 @@ class TestUserDeletionSmokeTests:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             # Try to delete the only admin
             response = client.post(
@@ -538,6 +544,7 @@ class TestUserDeletionSmokeTests:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             response = client.get(url_for('admin.list_users'))
             
@@ -576,6 +583,7 @@ class TestUserDeletionSmokeTests:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             response = client.get(url_for('admin.list_users'))
             
@@ -599,6 +607,7 @@ class TestUserDeletionSmokeTests:
         with client:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(admin_user.id)
+                sess['_fresh'] = True
             
             # Step 2: View user list (should show user)
             response = client.get(url_for('admin.list_users'))
