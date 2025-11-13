@@ -13,6 +13,7 @@ from PIL import Image
 def admin_user(app):
     """Create an admin user for testing."""
     user = User(username='admintest', role='admin')
+    user.is_active = True
     db.session.add(user)
     db.session.commit()
     db.session.refresh(user)
@@ -22,9 +23,10 @@ def admin_user(app):
 @pytest.fixture
 def authenticated_admin_client(client, admin_user):
     """Create an authenticated admin client."""
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(admin_user.id)
-        sess['_fresh'] = True
+    # Use the actual login endpoint to properly authenticate
+    client.post('/login', data={
+        'username': admin_user.username
+    }, follow_redirects=True)
     return client
 
 

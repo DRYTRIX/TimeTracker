@@ -28,9 +28,10 @@ def admin_user(app):
 @pytest.fixture
 def test_client_with_auth(app, client, admin_user):
     """Return authenticated client."""
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(admin_user.id)
-        sess['_fresh'] = True
+    # Use the actual login endpoint to properly authenticate
+    client.post('/login', data={
+        'username': admin_user.username
+    }, follow_redirects=True)
     return client
 
 
