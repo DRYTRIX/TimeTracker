@@ -75,10 +75,25 @@ class Activity(db.Model):
         db.session.add(activity)
         try:
             db.session.commit()
+            
+            # Emit WebSocket event for real-time updates
+            try:
+                from app import socketio
+                socketio.emit('activity_created', {
+                    'activity': activity.to_dict(),
+                    'user_id': user_id
+                })
+            except Exception as socket_error:
+                # Don't let WebSocket errors break activity logging
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to emit activity WebSocket event: {socket_error}")
         except Exception as e:
             db.session.rollback()
             # Don't let activity logging break the main flow
-            print(f"Failed to log activity: {e}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to log activity: {e}")
     
     @classmethod
     def get_recent(cls, user_id=None, limit=50, entity_type=None):

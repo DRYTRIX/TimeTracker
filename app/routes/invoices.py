@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation
 import io
 import csv
 import json
+import logging
 from app.utils.db import safe_commit
 from app.utils.excel_export import create_invoices_list_excel
 from app.utils.prepaid_hours import PrepaidHoursAllocator
@@ -19,6 +20,7 @@ from app.utils.posthog_funnels import (
 )
 
 invoices_bp = Blueprint('invoices', __name__)
+logger = logging.getLogger(__name__)
 
 @invoices_bp.route('/invoices')
 @login_required
@@ -195,6 +197,7 @@ def create_invoice():
 @login_required
 def view_invoice(invoice_id):
     """View invoice details"""
+    from app.models import InvoiceTemplate
     invoice = Invoice.query.get_or_404(invoice_id)
     
     # Check access permissions
@@ -208,7 +211,10 @@ def view_invoice(invoice_id):
         "invoice_number": invoice.invoice_number
     })
     
-    return render_template('invoices/view.html', invoice=invoice)
+    # Get email templates for selection
+    email_templates = InvoiceTemplate.query.order_by(InvoiceTemplate.name).all()
+    
+    return render_template('invoices/view.html', invoice=invoice, email_templates=email_templates)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -321,8 +327,10 @@ def edit_invoice(invoice_id):
         return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
     
     # GET request - show edit form
+    from app.models import InvoiceTemplate
     projects = Project.query.filter_by(status='active').order_by(Project.name).all()
-    return render_template('invoices/edit.html', invoice=invoice, projects=projects)
+    email_templates = InvoiceTemplate.query.order_by(InvoiceTemplate.name).all()
+    return render_template('invoices/edit.html', invoice=invoice, projects=projects, email_templates=email_templates)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/status', methods=['POST'])
 @login_required
@@ -771,41 +779,36 @@ def export_invoice_csv(invoice_id):
 @login_required
 def export_invoice_pdf(invoice_id):
     """Export invoice as PDF with optional page size selection"""
-    # Debug logging - output to stdout for Docker
-    import sys
-    print(f"\n{'='*80}", file=sys.stdout, flush=True)
-    print(f"INVOICE EXPORT ROUTE CALLED - Invoice ID: {invoice_id}", file=sys.stdout, flush=True)
-    print(f"{'='*80}", file=sys.stdout, flush=True)
+    logger.info(f"Invoice PDF export requested - Invoice ID: {invoice_id}, User: {current_user.username}")
     
     invoice = Invoice.query.get_or_404(invoice_id)
-    print(f"[ROUTE DEBUG] Invoice found: {invoice.invoice_number}", file=sys.stdout, flush=True)
+    logger.debug(f"Invoice found: {invoice.invoice_number}")
     
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        print(f"[ROUTE DEBUG] Permission denied", file=sys.stdout, flush=True)
+        logger.warning(f"Permission denied for invoice {invoice_id} by user {current_user.username}")
         flash(_('You do not have permission to export this invoice'), 'error')
         return redirect(request.referrer or url_for('invoices.list_invoices'))
     
     # Get page size from query parameter, default to A4
     page_size = request.args.get('size', 'A4')
-    print(f"[ROUTE DEBUG] Page size from request: '{page_size}'", file=sys.stdout, flush=True)
+    logger.debug(f"Page size from request: '{page_size}'")
     
     # Validate page size
     valid_sizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid']
     if page_size not in valid_sizes:
-        print(f"[ROUTE DEBUG] Invalid page size, defaulting to A4", file=sys.stdout, flush=True)
+        logger.warning(f"Invalid page size '{page_size}', defaulting to A4")
         page_size = 'A4'
     
-    print(f"[ROUTE DEBUG] Final page size: '{page_size}'", file=sys.stdout, flush=True)
-    print(f"[ROUTE DEBUG] Calling InvoicePDFGenerator.generate_pdf()...", file=sys.stdout, flush=True)
+    logger.debug(f"Final page size: '{page_size}'")
     
     try:
         from app.utils.pdf_generator import InvoicePDFGenerator
         settings = Settings.get_settings()
-        print(f"[ROUTE DEBUG] Creating InvoicePDFGenerator with page_size='{page_size}'", file=sys.stdout, flush=True)
+        logger.debug(f"Creating InvoicePDFGenerator with page_size='{page_size}'")
         pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
-        print(f"[ROUTE DEBUG] Calling pdf_generator.generate_pdf()...", file=sys.stdout, flush=True)
+        logger.debug("Calling pdf_generator.generate_pdf()")
         pdf_bytes = pdf_generator.generate_pdf()
-        print(f"[ROUTE DEBUG] PDF generated successfully, size: {len(pdf_bytes)} bytes", file=sys.stdout, flush=True)
+        logger.info(f"PDF generated successfully, size: {len(pdf_bytes)} bytes")
         filename = f'invoice_{invoice.invoice_number}_{page_size}.pdf'
         return send_file(
             io.BytesIO(pdf_bytes),
@@ -814,18 +817,15 @@ def export_invoice_pdf(invoice_id):
             download_name=filename
         )
     except Exception as e:
-        import sys
         import traceback
-        print(f"[ROUTE DEBUG] Exception in PDF generation: {e}", file=sys.stdout, flush=True)
-        print(f"[ROUTE DEBUG] Traceback:", file=sys.stdout, flush=True)
-        print(traceback.format_exc(), file=sys.stdout, flush=True)
+        logger.error(f"Exception in PDF generation: {e}", exc_info=True)
         try:
-            print(f"[ROUTE DEBUG] Falling back to InvoicePDFGeneratorFallback", file=sys.stdout, flush=True)
+            logger.info("Falling back to InvoicePDFGeneratorFallback")
             from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
             settings = Settings.get_settings()
             pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
             pdf_bytes = pdf_generator.generate_pdf()
-            print(f"[ROUTE DEBUG] Fallback PDF generated successfully", file=sys.stdout, flush=True)
+            logger.info("Fallback PDF generated successfully")
             filename = f'invoice_{invoice.invoice_number}_{page_size}.pdf'
             return send_file(
                 io.BytesIO(pdf_bytes),
@@ -834,6 +834,7 @@ def export_invoice_pdf(invoice_id):
                 download_name=filename
             )
         except Exception as fallback_error:
+            logger.error(f"Fallback PDF generation also failed: {fallback_error}", exc_info=True)
             flash(_('PDF generation failed: %(err)s. Fallback also failed: %(fb)s', err=str(e), fb=str(fallback_error)), 'error')
             return redirect(request.referrer or url_for('invoices.view_invoice', invoice_id=invoice.id))
 
@@ -936,3 +937,55 @@ def export_invoices_excel():
         as_attachment=True,
         download_name=filename
     )
+
+@invoices_bp.route('/invoices/<int:invoice_id>/send-email', methods=['POST'])
+@login_required
+def send_invoice_email_route(invoice_id):
+    """Send invoice via email"""
+    invoice = Invoice.query.get_or_404(invoice_id)
+    
+    # Check access permissions
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    # Get recipient email from request
+    recipient_email = request.form.get('recipient_email', '').strip() or request.json.get('recipient_email', '').strip() if request.is_json else ''
+    
+    if not recipient_email:
+        # Try to use invoice client email
+        recipient_email = invoice.client_email
+    
+    if not recipient_email:
+        return jsonify({'error': 'Recipient email address is required'}), 400
+    
+    # Get custom message if provided
+    custom_message = request.form.get('custom_message', '').strip() or (request.json.get('custom_message', '').strip() if request.is_json else '')
+    
+    # Get email template ID if provided
+    email_template_id = request.form.get('email_template_id', type=int) or (request.json.get('email_template_id') if request.is_json else None)
+    
+    try:
+        from app.utils.email import send_invoice_email
+        
+        success, invoice_email, message = send_invoice_email(
+            invoice=invoice,
+            recipient_email=recipient_email,
+            sender_user=current_user,
+            custom_message=custom_message if custom_message else None,
+            email_template_id=email_template_id
+        )
+        
+        if success:
+            flash(f'Invoice email sent successfully to {recipient_email}', 'success')
+            return jsonify({
+                'success': True,
+                'message': message,
+                'invoice_email_id': invoice_email.id if invoice_email else None
+            })
+        else:
+            return jsonify({'error': message}), 500
+    
+    except Exception as e:
+        logger.error(f"Error sending invoice email: {type(e).__name__}: {str(e)}")
+        logger.exception("Full error traceback:")
+        return jsonify({'error': f'Failed to send email: {str(e)}'}), 500

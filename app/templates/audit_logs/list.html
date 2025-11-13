@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, badge %}
+
+{% block title %}Audit Logs - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Audit Logs'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-history',
+    title_text='Audit Logs',
+    subtitle_text='Track who changed what and when',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">Filters</h2>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div>
+            <label for="entity_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Entity Type</label>
+            <select name="entity_type" id="entity_type" class="form-input">
+                <option value="">All Types</option>
+                {% for et in entity_types %}
+                <option value="{{ et }}" {% if entity_type == et %}selected{% endif %}>{{ et }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="entity_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Entity ID</label>
+            <input type="number" name="entity_id" id="entity_id" value="{{ entity_id or '' }}" class="form-input" placeholder="Entity ID">
+        </div>
+        <div>
+            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User</label>
+            <select name="user_id" id="user_id" class="form-input">
+                <option value="">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="action" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Action</label>
+            <select name="action" id="action" class="form-input">
+                <option value="">All Actions</option>
+                <option value="created" {% if action == 'created' %}selected{% endif %}>Created</option>
+                <option value="updated" {% if action == 'updated' %}selected{% endif %}>Updated</option>
+                <option value="deleted" {% if action == 'deleted' %}selected{% endif %}>Deleted</option>
+            </select>
+        </div>
+        <div>
+            <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Range</label>
+            <select name="days" id="days" class="form-input">
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+                <option value="0" {% if days == 0 %}selected{% endif %}>All time</option>
+            </select>
+        </div>
+        <div class="col-span-full flex justify-end gap-2">
+            <a href="{{ url_for('audit_logs.list_audit_logs') }}" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Clear</a>
+            <button type="submit" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    {% if audit_logs %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timestamp</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entity</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Field</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Change</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {% for log in audit_logs %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {{ log.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {% if log.user %}
+                            {{ log.user.display_name }}
+                        {% else %}
+                            <span class="text-gray-400">System</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ badge(log.action, log.get_color()) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        <a href="{{ url_for('audit_logs.entity_history', entity_type=log.entity_type, entity_id=log.entity_id) }}" 
+                           class="text-primary hover:underline">
+                            {{ log.entity_type }}#{{ log.entity_id }}
+                        </a>
+                        {% if log.entity_name %}
+                        <br><span class="text-xs text-gray-500">{{ log.entity_name }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {% if log.field_name %}
+                            <code class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ log.field_name }}</code>
+                        {% else %}
+                            <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                        {% if log.field_name %}
+                            <div class="space-y-1">
+                                {% if log.old_value %}
+                                <div class="text-xs">
+                                    <span class="text-red-600 dark:text-red-400">-</span> 
+                                    <span class="line-through">{{ log.get_old_value() }}</span>
+                                </div>
+                                {% endif %}
+                                {% if log.new_value %}
+                                <div class="text-xs">
+                                    <span class="text-green-600 dark:text-green-400">+</span> 
+                                    {{ log.get_new_value() }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-gray-400">{{ log.change_description or '—' }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{{ url_for('audit_logs.view_audit_log', log_id=log.id) }}" 
+                           class="text-primary hover:underline">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="bg-gray-50 dark:bg-gray-800 px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
+        <div class="text-sm text-gray-700 dark:text-gray-300">
+            Showing {{ (pagination.page - 1) * pagination.per_page + 1 }} to 
+            {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} 
+            of {{ pagination.total }} results
+        </div>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('audit_logs.list_audit_logs', page=pagination.prev_num, entity_type=entity_type, entity_id=entity_id, user_id=user_id, action=action, days=days) }}" 
+               class="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                Previous
+            </a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('audit_logs.list_audit_logs', page=pagination.next_num, entity_type=entity_type, entity_id=entity_id, user_id=user_id, action=action, days=days) }}" 
+               class="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                Next
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="p-12 text-center">
+        <i class="fas fa-history text-4xl text-gray-400 mb-4"></i>
+        <p class="text-gray-500 dark:text-gray-400">No audit logs found matching your filters.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -73,6 +73,22 @@
         .sidebar-collapsed #sidebar { width: 4rem !important; overflow-x: hidden; }
         /* Shared bulk menu */
         .bulk-menu { z-index: 50; max-height: 16rem; overflow-y: auto; }
+        /* Layout fixes */
+        #mainContent { 
+            display: flex !important; 
+            flex-direction: column !important; 
+            overflow-x: hidden;
+            width: 100%;
+        }
+        #mainContentAnchor { 
+            flex: 1 0 auto; 
+            min-height: 0; 
+            width: 100%;
+            overflow-x: auto;
+        }
+        /* Ensure body and html don't cause horizontal overflow */
+        html, body { overflow-x: hidden; }
+        #appShell { overflow-x: hidden; width: 100%; }
     </style>
     <script>
         // Theme init (unchanged)
@@ -162,10 +178,10 @@
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
                 {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') %}
-                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
+                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
-                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -240,6 +256,7 @@
                         <ul id="financeDropdown" class="{% if not finance_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_reports = ep.startswith('reports.') %}
                             {% set nav_active_invoices = ep.startswith('invoices.') %}
+                            {% set nav_active_recurring_invoices = ep.startswith('recurring_invoices.') %}
                             {% set nav_active_payments = ep.startswith('payments.') %}
                             {% set nav_active_expenses = ep.startswith('expenses.') %}
                             {% set nav_active_mileage = ep.startswith('mileage.') %}
@@ -253,6 +270,11 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
                                     <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoices') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_recurring_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('recurring_invoices.list_recurring_invoices') }}">
+                                    <i class="fas fa-sync-alt w-4 mr-2"></i>{{ _('Recurring Invoices') }}
                                 </a>
                             </li>
                             <li>
@@ -317,11 +339,14 @@
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                         <ul id="adminDropdown" class="{% if not admin_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            <!-- Dashboard -->
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.admin_dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.admin_dashboard') }}">
                                     <i class="fas fa-tachometer-alt w-4 mr-2"></i>{{ _('Admin Dashboard') }}
                                 </a>
                             </li>
+                            
+                            <!-- User Management -->
                             {% if current_user.is_admin or has_permission('view_users') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.list_users' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_users') }}">
@@ -331,16 +356,29 @@
                             {% endif %}
                             {% if current_user.is_admin %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">
-                                    <i class="fas fa-key w-4 mr-2"></i>{{ _('API Tokens') }}
-                                </a>
-                            </li>
-                            <li>
                                 <a class="block px-2 py-1 rounded {% if ep.startswith('permissions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('permissions.list_roles') }}">
                                     <i class="fas fa-shield-alt w-4 mr-2"></i>{{ _('Roles & Permissions') }}
                                 </a>
                             </li>
                             {% endif %}
+                            
+                            <!-- Security & Monitoring -->
+                            {% if current_user.is_admin or has_permission('view_audit_logs') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('audit_logs.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('audit_logs.list_audit_logs') }}">
+                                    <i class="fas fa-history w-4 mr-2"></i>{{ _('Audit Logs') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">
+                                    <i class="fas fa-key w-4 mr-2"></i>{{ _('API Tokens') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            <!-- System Configuration -->
                             {% if current_user.is_admin or has_permission('manage_settings') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">
@@ -357,6 +395,10 @@
                                     <i class="fas fa-file-pdf w-4 mr-2"></i>{{ _('PDF Layout') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            
+                            <!-- Data Management -->
+                            {% if current_user.is_admin %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'expense_categories.list_categories' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expense_categories.list_categories') }}">
                                     <i class="fas fa-tags w-4 mr-2"></i>{{ _('Expense Categories') }}
@@ -375,6 +417,8 @@
                                 </a>
                             </li>
                             {% endif %}
+                            
+                            <!-- System Info & Maintenance -->
                             {% if current_user.is_admin or has_permission('view_system_info') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.system_info' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.system_info') }}">
@@ -387,9 +431,9 @@
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.backups_management' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.backups_management') }}">
                                     <i class="fas fa-database w-4 mr-2"></i>{{ _('Backups') }}
                                 </a>
-                    </li>
-                    {% endif %}
-                    {% if current_user.is_admin or has_permission('manage_oidc') %}
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin or has_permission('manage_oidc') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.oidc_debug' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.oidc_debug') }}">
                                     <i class="fas fa-lock w-4 mr-2"></i>{{ _('OIDC Settings') }}
@@ -416,9 +460,10 @@
                         </a>
                     </li>
                     <li class="mt-2">
-                        <a href="https://buymeacoffee.com/DryTrix" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                            <i class="fas fa-mug-saucer w-6 text-center"></i>
-                            <span class="ml-3 sidebar-label">{{ _('Buy me a coffee') }}</span>
+                        <a href="https://buymeacoffee.com/DryTrix" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 group">
+                            <i class="fas fa-mug-saucer w-6 text-center group-hover:scale-110 transition-transform"></i>
+                            <span class="ml-3 sidebar-label font-medium">{{ _('Buy me a coffee') }}</span>
+                            <span class="ml-auto text-xs opacity-70">☕</span>
                         </a>
                     </li>
                 </ul>
@@ -433,7 +478,7 @@
         </aside>
 
         <!-- Main content -->
-        <div id="mainContent" class="flex-1 flex flex-col transition-all duration-200 ease-in-out lg:ml-64">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen transition-all duration-200 ease-in-out lg:ml-64">
             <!-- Header -->
             <header class="bg-card-light dark:bg-card-dark p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
                 <!-- Mobile menu button -->
@@ -456,6 +501,16 @@
 
                 <!-- Right side controls -->
                 <div class="flex items-center space-x-4">
+                    <!-- BuyMeACoffee Button -->
+                    <a href="https://buymeacoffee.com/DryTrix" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 text-sm font-medium"
+                       title="{{ _('Support TimeTracker development') }}">
+                        <i class="fas fa-mug-saucer"></i>
+                        <span class="hidden lg:inline">{{ _('Support') }}</span>
+                    </a>
+                    
                     <button id="theme-toggle" type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Toggle dark mode') }}">
                         <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
                         <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
@@ -527,6 +582,36 @@
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
+            </div>
+
+            <!-- Dismissible Support Banner -->
+            <div id="supportBanner" class="hidden bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3">
+                <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 flex-1">
+                        <i class="fas fa-mug-saucer text-amber-600 dark:text-amber-400 text-lg"></i>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-amber-900 dark:text-amber-100">
+                                {{ _('Enjoying TimeTracker?') }}
+                            </p>
+                            <p class="text-xs text-amber-700 dark:text-amber-300">
+                                {{ _('Support continued development with a coffee') }} ☕
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="https://buymeacoffee.com/DryTrix" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            {{ _('Support') }}
+                        </a>
+                        <button onclick="dismissSupportBanner()" 
+                                class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
+                                aria-label="{{ _('Dismiss') }}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Main page content -->
@@ -1084,6 +1169,41 @@
         });
         // Close on Escape
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
+        
+        // Support Banner Logic
+        function dismissSupportBanner() {
+            const banner = document.getElementById('supportBanner');
+            if (banner) {
+                banner.classList.add('hidden');
+                // Store dismissal timestamp (show again after 7 days)
+                try {
+                    localStorage.setItem('supportBannerDismissed', Date.now().toString());
+                } catch(e) {}
+            }
+        }
+        
+        function shouldShowSupportBanner() {
+            try {
+                const dismissed = localStorage.getItem('supportBannerDismissed');
+                if (!dismissed) return true;
+                const dismissedTime = parseInt(dismissed);
+                const sevenDays = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+                return (Date.now() - dismissedTime) > sevenDays;
+            } catch(e) {
+                return true; // Show by default if localStorage fails
+            }
+        }
+        
+        // Show support banner if conditions are met
+        document.addEventListener('DOMContentLoaded', function() {
+            const banner = document.getElementById('supportBanner');
+            if (banner && shouldShowSupportBanner()) {
+                // Show banner with a slight delay for better UX
+                setTimeout(() => {
+                    banner.classList.remove('hidden');
+                }, 2000); // Show after 2 seconds
+            }
+        });
     </script>
     
     <script src="{{ url_for('static', filename='data-tables-enhanced.js') }}"></script>

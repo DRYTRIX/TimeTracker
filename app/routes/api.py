@@ -1134,14 +1134,16 @@ def get_projects():
 @api_bp.route('/api/projects/<int:project_id>/tasks')
 @login_required
 def get_project_tasks(project_id):
-    """Get tasks for a specific project"""
+    """Get tasks for a specific project (excluding done and cancelled tasks)"""
     # Check if project exists and is active
     project = Project.query.filter_by(id=project_id, status='active').first()
     if not project:
         return jsonify({'error': 'Project not found or inactive'}), 404
     
-    # Get tasks for the project
-    tasks = Task.query.filter_by(project_id=project_id).order_by(Task.name).all()
+    # Get active tasks for the project (exclude done and cancelled)
+    tasks = Task.query.filter_by(project_id=project_id).filter(
+        Task.status.in_(['todo', 'in_progress', 'review'])
+    ).order_by(Task.name).all()
     
     return jsonify({
         'success': True,

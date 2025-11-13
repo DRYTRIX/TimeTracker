@@ -36,28 +36,37 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
         db.session.add(entry)
         db.session.commit()
 
-        # Submit edit form to change the project to project2
-        resp = authenticated_client.post(
-            f'/tasks/{task.id}/edit',
-            data={
-                'project_id': project2.id,
-                'name': task.name,
-                'description': '',
-                'priority': 'medium',
-                'estimated_hours': '',
-                'due_date': '',
-                'assigned_to': ''
-            },
-            follow_redirects=False
-        )
+        # Store IDs before POST request
+        task_id = task.id
+        entry_id = entry.id
+        project2_id = project2.id  # Store project2 ID before leaving app context
+    
+    # Submit edit form to change the project to project2 (POST happens outside app context)
+    resp = authenticated_client.post(
+        f'/tasks/{task_id}/edit',
+        data={
+            'project_id': str(project2_id),  # Use stored ID
+            'name': 'Move Me',  # Use explicit name
+            'description': '',
+            'priority': 'medium',
+            'status': 'todo',  # Include status to match current task status
+            'estimated_hours': '',
+            'due_date': '',
+            'assigned_to': ''
+        },
+        follow_redirects=True  # Follow redirects to see final response
+    )
 
-        # Expect redirect to task view
-        assert resp.status_code in (302, 303)
+    # Expect success (200 after redirect or 302 redirect)
+    assert resp.status_code in (200, 302, 303), f"Expected 200/302/303, got {resp.status_code}. Response: {resp.get_data(as_text=True)[:500]}"
 
-        # Refresh objects and verify project change persisted
-        db.session.refresh(task)
-        db.session.refresh(entry)
-        assert task.project_id == project2.id
-        assert entry.project_id == project2.id
+    # Re-query objects to verify project change persisted (within app context)
+    with app.app_context():
+        task = Task.query.get(task_id)
+        entry = TimeEntry.query.get(entry_id)
+        assert task is not None, "Task should still exist"
+        assert entry is not None, "Entry should still exist"
+        assert task.project_id == project2_id, f"Task project_id is {task.project_id}, expected {project2_id}"
+        assert entry.project_id == project2_id, f"Entry project_id is {entry.project_id}, expected {project2_id}"
 
 

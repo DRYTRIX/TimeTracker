@@ -35,7 +35,7 @@ def get_app_timezone():
         from app import db
         
         # Check if we have a database connection
-        if db.session.is_active:
+        if db.session.is_active and not getattr(db.session, "_flushing", False):
             try:
                 settings = Settings.get_settings()
                 if settings and settings.timezone:
