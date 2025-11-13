@@ -24,6 +24,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 import posthog
+from sqlalchemy.pool import StaticPool
 
 # Load environment variables
 load_dotenv()
@@ -204,6 +205,24 @@ def create_app(config=None):
         app.config.from_object("app.config.Config")
     if config:
         app.config.update(config)
+
+    # Special handling for SQLite in-memory DB during tests:
+    # ensure a single shared connection so objects don't disappear after commit.
+    try:
+        db_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI", "") or "")
+        if app.config.get("TESTING") and db_uri.startswith("sqlite") and ":memory:" in db_uri:
+            engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
+            engine_opts.setdefault("poolclass", StaticPool)
+            engine_opts.setdefault("connect_args", {"check_same_thread": False})
+            app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
+        # Avoid attribute expiration on commit during tests to keep objects usable
+        if app.config.get("TESTING"):
+            session_opts = dict(app.config.get("SQLALCHEMY_SESSION_OPTIONS") or {})
+            session_opts.setdefault("expire_on_commit", False)
+            app.config["SQLALCHEMY_SESSION_OPTIONS"] = session_opts
+    except Exception:
+        # Do not fail app creation for engine option tweaks
+        pass
 
     # Add top-level templates directory in addition to app/templates
     extra_templates_path = os.path.abspath(
