@@ -160,6 +160,12 @@ def logout():
 
     id_token = session.pop('oidc_id_token', None)
     logout_user()
+    # Ensure both possible session keys are cleared for compatibility
+    try:
+        session.pop('_user_id', None)
+        session.pop('user_id', None)
+    except Exception:
+        pass
     flash(_('Goodbye, %(username)s!', username=username), 'info')
 
     if auth_method in ('oidc', 'both'):

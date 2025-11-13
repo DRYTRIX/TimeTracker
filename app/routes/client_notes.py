@@ -136,9 +136,11 @@ def delete_note(client_id, note_id):
     return redirect(url_for('clients.view_client', client_id=client_id))
 
 @client_notes_bp.route('/clients/<int:client_id>/notes/<int:note_id>/toggle-important', methods=['POST'])
-@login_required
 def toggle_important(client_id, note_id):
     """Toggle the important flag on a client note"""
+    # Explicit auth check to avoid redirect behavior from login_required for JSON flows
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({'error': 'Authentication required'}), 401
     note = ClientNote.query.get_or_404(note_id)
     
     # Verify note belongs to this client
@@ -174,9 +176,11 @@ def toggle_important(client_id, note_id):
         return jsonify({'error': str(e)}), 500
 
 @client_notes_bp.route('/api/clients/<int:client_id>/notes')
-@login_required
 def list_notes(client_id):
     """API endpoint to get notes for a client"""
+    # Explicit auth check to avoid redirect behavior from login_required for JSON flows
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({'error': 'Authentication required'}), 401
     order_by_important = request.args.get('order_by_important', 'false').lower() == 'true'
     
     try:
@@ -193,9 +197,11 @@ def list_notes(client_id):
         return jsonify({'error': str(e)}), 500
 
 @client_notes_bp.route('/api/client-notes/<int:note_id>')
-@login_required
 def get_note(note_id):
     """API endpoint to get a single client note"""
+    # Explicit auth check to avoid redirect behavior from login_required for JSON flows
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({'error': 'Authentication required'}), 401
     try:
         note = ClientNote.query.get_or_404(note_id)
         return jsonify({
@@ -207,9 +213,11 @@ def get_note(note_id):
         return jsonify({'error': str(e)}), 500
 
 @client_notes_bp.route('/api/client-notes/important')
-@login_required
 def get_important_notes():
     """API endpoint to get all important client notes"""
+    # Explicit auth check to avoid redirect behavior from login_required for JSON flows
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({'error': 'Authentication required'}), 401
     client_id = request.args.get('client_id', type=int)
     
     try:
@@ -223,9 +231,11 @@ def get_important_notes():
         return jsonify({'error': str(e)}), 500
 
 @client_notes_bp.route('/api/client-notes/recent')
-@login_required
 def get_recent_notes():
     """API endpoint to get recent client notes"""
+    # Explicit auth check to avoid redirect behavior from login_required for JSON flows
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({'error': 'Authentication required'}), 401
     limit = request.args.get('limit', 10, type=int)
     
     try:
@@ -239,9 +249,11 @@ def get_recent_notes():
         return jsonify({'error': str(e)}), 500
 
 @client_notes_bp.route('/api/client-notes/user/<int:user_id>')
-@login_required
 def get_user_notes(user_id):
     """API endpoint to get notes by a specific user"""
+    # Explicit auth check to avoid redirect behavior from login_required for JSON flows
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({'error': 'Authentication required'}), 401
     limit = request.args.get('limit', type=int)
     
     # Only allow users to see their own notes unless they're admin
