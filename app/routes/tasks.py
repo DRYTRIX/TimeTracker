@@ -299,7 +299,7 @@ def edit_task(task_id):
         task.assigned_to = assigned_to
         # Handle status update (including reopening from done)
         selected_status = request.form.get('status', '').strip()
-        valid_statuses = KanbanColumn.get_valid_status_keys()
+        valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)
         if selected_status and selected_status in valid_statuses and selected_status != task.status:
             try:
                 previous_status = task.status
@@ -393,11 +393,11 @@ def update_task_status(task_id):
         flash('You do not have permission to update this task', 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
-        # Validate status against configured kanban columns
-        valid_statuses = KanbanColumn.get_valid_status_keys()
-        if new_status not in valid_statuses:
-            flash('Invalid status', 'error')
-            return redirect(url_for('tasks.view_task', task_id=task.id))
+    # Validate status against configured kanban columns for this task's project
+    valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)
+    if new_status not in valid_statuses:
+        flash('Invalid status', 'error')
+        return redirect(url_for('tasks.view_task', task_id=task.id))
     
     # Update status
     try:
@@ -633,9 +633,7 @@ def bulk_update_status():
         flash('No tasks selected', 'warning')
         return redirect(url_for('tasks.list_tasks'))
     
-    # Validate against configured kanban columns
-    valid_statuses = set(KanbanColumn.get_valid_status_keys()) if KanbanColumn else set(['todo','in_progress','review','done','cancelled'])
-    if not new_status or new_status not in valid_statuses:
+    if not new_status:
         flash('Invalid status value', 'error')
         return redirect(url_for('tasks.list_tasks'))
     
@@ -646,6 +644,12 @@ def bulk_update_status():
         try:
             task_id = int(task_id_str)
             task = Task.query.get(task_id)
+            
+            # Validate status against configured kanban columns for this task's project
+            valid_statuses = set(KanbanColumn.get_valid_status_keys(project_id=task.project_id) if KanbanColumn else ['todo','in_progress','review','done','cancelled'])
+            if new_status not in valid_statuses:
+                skipped_count += 1
+                continue
             
             if not task:
                 continue
@@ -1083,8 +1087,8 @@ def api_update_status(task_id):
     if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Validate status against configured kanban columns
-    valid_statuses = KanbanColumn.get_valid_status_keys()
+    # Validate status against configured kanban columns for this task's project
+    valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)
     if new_status not in valid_statuses:
         return jsonify({'error': 'Invalid status'}), 400
     

@@ -19,9 +19,22 @@
         </h2>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Customize your kanban board columns and task states') }}</p>
       </div>
-      <a href="{{ url_for('kanban.create_column') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:opacity-90">
-        <i class="fas fa-plus"></i> {{ _('Add Column') }}
-      </a>
+      <div class="flex items-center gap-3">
+        {% if projects %}
+        <form method="GET" action="{{ url_for('kanban.list_columns') }}" class="flex items-center gap-2">
+          <label for="project_filter" class="text-sm font-medium">{{ _('Project:') }}</label>
+          <select id="project_filter" name="project_id" onchange="this.form.submit()" class="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2">
+            <option value="">{{ _('Global Columns') }}</option>
+            {% for project in projects %}
+            <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('kanban.create_column', project_id=project_id) if project_id else url_for('kanban.create_column') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:opacity-90">
+          <i class="fas fa-plus"></i> {{ _('Add Column') }}
+        </a>
+      </div>
     </div>
 
     <!-- Flash messages are globally converted to toasts in base.html -->
@@ -199,7 +212,7 @@ if (tbody) {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRFToken': '{{ csrf_token() }}'
           },
-          body: JSON.stringify({ column_ids: columnIds })
+          body: JSON.stringify({ column_ids: columnIds, project_id: {% if project_id %}{{ project_id }}{% else %}null{% endif %} })
         });
         
         if (!response.ok) {
