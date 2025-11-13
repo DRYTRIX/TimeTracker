@@ -280,9 +280,29 @@ def multiple_clients(app, user):
 @pytest.fixture
 def project(app, test_client):
     """Create a test project."""
+    # Resolve client_id robustly to avoid issues with expired/detached instances
+    try:
+        cid = getattr(test_client, 'id', None)
+    except Exception:
+        cid = None
+    if not cid:
+        existing = Client.query.filter_by(name='Test Client Corp').first() or Client.query.first()
+        if existing:
+            cid = existing.id
+        else:
+            fallback = Client(
+                name='Test Client Corp',
+                email='john@testclient.com',
+                default_hourly_rate=Decimal('85.00')
+            )
+            fallback.status = 'active'
+            db.session.add(fallback)
+            db.session.flush()
+            cid = fallback.id
+
     project = Project(
         name='Test Project',
-        client_id=test_client.id,
+        client_id=cid,
         description='Test project description',
         billable=True,
         hourly_rate=Decimal('75.00')
@@ -298,11 +318,31 @@ def project(app, test_client):
 @pytest.fixture
 def multiple_projects(app, test_client):
     """Create multiple test projects."""
+    # Resolve client_id robustly
+    try:
+        cid = getattr(test_client, 'id', None)
+    except Exception:
+        cid = None
+    if not cid:
+        existing = Client.query.filter_by(name='Test Client Corp').first() or Client.query.first()
+        if existing:
+            cid = existing.id
+        else:
+            fallback = Client(
+                name='Test Client Corp',
+                email='john@testclient.com',
+                default_hourly_rate=Decimal('85.00')
+            )
+            fallback.status = 'active'
+            db.session.add(fallback)
+            db.session.flush()
+            cid = fallback.id
+
     projects = []
     for i in range(1, 4):
         project = Project(
             name=f'Project {i}',
-            client_id=test_client.id,
+            client_id=cid,
             description=f'Test project {i}',
             billable=True,
             hourly_rate=Decimal('75.00')
