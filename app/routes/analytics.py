@@ -66,8 +66,11 @@ def hours_by_day():
             # Handle both string and date object returns from different databases
             if isinstance(date_str, str):
                 formatted_date = date_str
-            else:
+            elif hasattr(date_str, 'strftime'):
                 formatted_date = date_str.strftime('%Y-%m-%d')
+            else:
+                # Skip if we can't format the date
+                continue
             date_data[formatted_date] = round(total_seconds / 3600, 2)
     
     return jsonify({
@@ -278,9 +281,26 @@ def weekly_trends():
     for start_time, duration_seconds in results:
         # Get the start of the week (Monday) for this entry
         if isinstance(start_time, str):
-            entry_date = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S').date()
+            try:
+                entry_date = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S').date()
+            except ValueError:
+                # Try alternative format if the first one fails
+                try:
+                    entry_date = datetime.strptime(start_time, '%Y-%m-%d').date()
+                except ValueError:
+                    # Skip invalid date strings
+                    continue
+        elif isinstance(start_time, datetime):
+            entry_date = start_time.date()
+        elif isinstance(start_time, type(end_date)):  # date object
+            entry_date = start_time
         else:
-            entry_date = start_time.date() if hasattr(start_time, 'date') else start_time
+            # Skip if we can't determine the date
+            continue
+        
+        # Ensure entry_date is a date object before calculating weekday
+        if not isinstance(entry_date, type(end_date)):
+            continue
         
         # Calculate Monday of that week
         week_start = entry_date - timedelta(days=entry_date.weekday())
@@ -290,9 +310,22 @@ def weekly_trends():
     labels = []
     data = []
     
-    for week_start in sorted(week_data.keys()):
-        labels.append(week_start.strftime('%b %d'))
-        data.append(round(week_data[week_start] / 3600, 2))
+    for week_start_key in sorted(week_data.keys()):
+        # Ensure week_start is a date object before calling strftime
+        if isinstance(week_start_key, str):
+            # If it's a string, try to parse it
+            try:
+                week_start_date = datetime.strptime(week_start_key, '%Y-%m-%d').date()
+            except (ValueError, AttributeError):
+                continue
+        elif isinstance(week_start_key, type(end_date)):
+            week_start_date = week_start_key
+        else:
+            # Skip if it's not a date object or string
+            continue
+        
+        labels.append(week_start_date.strftime('%b %d'))
+        data.append(round(week_data[week_start_key] / 3600, 2))
     
     return jsonify({
         'labels': labels,
@@ -927,8 +960,11 @@ def payments_over_time():
         if date_obj:
             if isinstance(date_obj, str):
                 formatted_date = date_obj
-            else:
+            elif hasattr(date_obj, 'strftime'):
                 formatted_date = date_obj.strftime('%Y-%m-%d')
+            else:
+                # Skip if we can't format the date
+                continue
             date_data[formatted_date] = float(total_amount or 0)
     
     return jsonify({
