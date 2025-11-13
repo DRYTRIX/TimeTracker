@@ -1564,6 +1564,21 @@ def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     db.session.add(cl)
     db.session.commit()
     
+    # Ensure project still exists post-login (reattach or recreate if needed)
+    from app.models import Project as ProjectModel
+    proj = ProjectModel.query.get(project_id)
+    if proj is None:
+        # Recreate a minimal billable project tied to the client for stability
+        proj = ProjectModel(
+            name='Smoke Test Project',
+            client_id=cl.id,
+            billable=True,
+            hourly_rate=Decimal('75.00')
+        )
+        db.session.add(proj)
+        db.session.commit()
+        project_id = proj.id
+    
     invoices = [
         Invoice(
             invoice_number=f'INV-LIST-{i:03d}',
