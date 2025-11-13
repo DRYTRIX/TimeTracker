@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation
 import io
 import csv
 import json
+import logging
 from app.utils.db import safe_commit
 from app.utils.excel_export import create_invoices_list_excel
 from app.utils.prepaid_hours import PrepaidHoursAllocator
@@ -19,6 +20,7 @@ from app.utils.posthog_funnels import (
 )
 
 invoices_bp = Blueprint('invoices', __name__)
+logger = logging.getLogger(__name__)
 
 @invoices_bp.route('/invoices')
 @login_required
@@ -771,9 +773,6 @@ def export_invoice_csv(invoice_id):
 @login_required
 def export_invoice_pdf(invoice_id):
     """Export invoice as PDF with optional page size selection"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
     logger.info(f"Invoice PDF export requested - Invoice ID: {invoice_id}, User: {current_user.username}")
     
     invoice = Invoice.query.get_or_404(invoice_id)
