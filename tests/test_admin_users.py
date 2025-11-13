@@ -21,27 +21,22 @@ class TestAdminUserList:
     
     def test_list_users_as_admin(self, client, admin_user):
         """Test that admin can view user list."""
-        with client:
-            # Login as admin
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            response = client.get(url_for('admin.list_users'))
-            assert response.status_code == 200
-            assert b'Manage Users' in response.data
-            assert admin_user.username.encode() in response.data
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        response = client.get(url_for('admin.list_users'))
+        assert response.status_code == 200
+        assert b'Manage Users' in response.data
+        assert admin_user.username.encode() in response.data
     
     def test_list_users_as_regular_user_denied(self, client, user):
         """Test that regular users cannot access user list."""
-        with client:
-            # Login as regular user
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(user.id)
-            
-            response = client.get(url_for('admin.list_users'))
-            # Should redirect or show error
-            assert response.status_code in [302, 403]
+        # Login as regular user using the login endpoint
+        client.post('/login', data={'username': user.username}, follow_redirects=True)
+        
+        response = client.get(url_for('admin.list_users'))
+        # Should redirect or show error
+        assert response.status_code in [302, 403]
     
     def test_list_users_unauthenticated(self, client):
         """Test that unauthenticated users cannot access user list."""
@@ -416,30 +411,26 @@ class TestAdminUserDeletionCascading:
     
     def test_user_list_shows_delete_button_for_other_users(self, client, admin_user, user):
         """Test that the user list shows delete button for other users."""
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            response = client.get(url_for('admin.list_users'))
-            assert response.status_code == 200
-            
-            # Should show delete button for the regular user
-            assert b'Delete' in response.data
-            assert f'confirmDeleteUser'.encode() in response.data
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        response = client.get(url_for('admin.list_users'))
+        assert response.status_code == 200
+        
+        # Should show delete button for the regular user
+        assert b'Delete' in response.data
+        assert f'confirmDeleteUser'.encode() in response.data
     
     def test_user_list_hides_delete_button_for_current_user(self, client, admin_user):
         """Test that the user list doesn't show delete button for current user."""
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            response = client.get(url_for('admin.list_users'))
-            assert response.status_code == 200
-            
-            # Check that the JavaScript function exists
-            assert b'confirmDeleteUser' in response.data
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        response = client.get(url_for('admin.list_users'))
+        assert response.status_code == 200
+        
+        # Check that the JavaScript function exists
+        assert b'confirmDeleteUser' in response.data
 
 
 # ============================================================================
@@ -461,24 +452,22 @@ class TestUserDeletionSmokeTests:
             db.session.commit()
             user_id = clean_user.id
         
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            # Delete the user
-            response = client.post(
-                url_for('admin.delete_user', user_id=user_id),
-                follow_redirects=True
-            )
-            
-            # Should succeed
-            assert response.status_code == 200
-            assert b'deleted successfully' in response.data
-            
-            # Verify deletion
-            with app.app_context():
-                assert User.query.get(user_id) is None
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        # Delete the user
+        response = client.post(
+            url_for('admin.delete_user', user_id=user_id),
+            follow_redirects=True
+        )
+        
+        # Should succeed
+        assert response.status_code == 200
+        assert b'deleted successfully' in response.data
+        
+        # Verify deletion
+        with app.app_context():
+            assert User.query.get(user_id) is None
     
     @pytest.mark.smoke
     def test_cannot_delete_user_with_time_entries(self, client, admin_user, user, test_client, test_project, app):
@@ -497,60 +486,54 @@ class TestUserDeletionSmokeTests:
             db.session.commit()
             user_id = user.id
         
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            # Try to delete
-            response = client.post(
-                url_for('admin.delete_user', user_id=user_id),
-                follow_redirects=True
-            )
-            
-            # Should fail with appropriate message
-            assert response.status_code == 200
-            assert b'Cannot delete user with existing time entries' in response.data
-            
-            # User should still exist
-            with app.app_context():
-                assert User.query.get(user_id) is not None
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        # Try to delete
+        response = client.post(
+            url_for('admin.delete_user', user_id=user_id),
+            follow_redirects=True
+        )
+        
+        # Should fail with appropriate message
+        assert response.status_code == 200
+        assert b'Cannot delete user with existing time entries' in response.data
+        
+        # User should still exist
+        with app.app_context():
+            assert User.query.get(user_id) is not None
     
     @pytest.mark.smoke
     def test_cannot_delete_last_admin(self, client, admin_user, app):
         """SMOKE: System prevents deletion of the last administrator."""
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            # Try to delete the only admin
-            response = client.post(
-                url_for('admin.delete_user', user_id=admin_user.id),
-                follow_redirects=True
-            )
-            
-            # Should fail
-            assert response.status_code == 200
-            assert b'Cannot delete the last administrator' in response.data
-            
-            # Admin should still exist
-            with app.app_context():
-                assert User.query.get(admin_user.id) is not None
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        # Try to delete the only admin
+        response = client.post(
+            url_for('admin.delete_user', user_id=admin_user.id),
+            follow_redirects=True
+        )
+        
+        # Should fail
+        assert response.status_code == 200
+        assert b'Cannot delete the last administrator' in response.data
+        
+        # Admin should still exist
+        with app.app_context():
+            assert User.query.get(admin_user.id) is not None
     
     @pytest.mark.smoke
     def test_user_list_accessible_to_admin(self, client, admin_user):
         """SMOKE: Admin can access user list page."""
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            response = client.get(url_for('admin.list_users'))
-            
-            # Should succeed
-            assert response.status_code == 200
-            assert b'Manage Users' in response.data
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        response = client.get(url_for('admin.list_users'))
+        
+        # Should succeed
+        assert response.status_code == 200
+        assert b'Manage Users' in response.data
     
     @pytest.mark.smoke
     def test_regular_user_cannot_access_user_deletion(self, client, user, app):
@@ -580,17 +563,15 @@ class TestUserDeletionSmokeTests:
     @pytest.mark.smoke
     def test_delete_button_appears_in_ui(self, client, admin_user, user):
         """SMOKE: Delete button appears in user list UI."""
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            response = client.get(url_for('admin.list_users'))
-            
-            # Should show delete functionality
-            assert response.status_code == 200
-            assert b'Delete' in response.data
-            assert b'confirmDeleteUser' in response.data
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        response = client.get(url_for('admin.list_users'))
+        
+        # Should show delete functionality
+        assert response.status_code == 200
+        assert b'Delete' in response.data
+        assert b'confirmDeleteUser' in response.data
     
     @pytest.mark.smoke
     def test_complete_user_deletion_workflow(self, client, admin_user, app):
@@ -604,30 +585,28 @@ class TestUserDeletionSmokeTests:
             db.session.commit()
             user_id = new_user.id
         
-        with client:
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(admin_user.id)
-                sess['_fresh'] = True
-            
-            # Step 2: View user list (should show user)
-            response = client.get(url_for('admin.list_users'))
-            assert response.status_code == 200
-            assert b'workflowuser' in response.data
-            
-            # Step 3: Delete user
-            response = client.post(
-                url_for('admin.delete_user', user_id=user_id),
-                follow_redirects=True
-            )
-            assert response.status_code == 200
-            assert b'deleted successfully' in response.data
-            
-            # Step 4: Verify user list no longer shows user
-            response = client.get(url_for('admin.list_users'))
-            assert response.status_code == 200
-            assert b'workflowuser' not in response.data
-            
-            # Step 5: Verify user is actually deleted
-            with app.app_context():
-                assert User.query.get(user_id) is None
+        # Login as admin using the login endpoint
+        client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
+        
+        # Step 2: View user list (should show user)
+        response = client.get(url_for('admin.list_users'))
+        assert response.status_code == 200
+        assert b'workflowuser' in response.data
+        
+        # Step 3: Delete user
+        response = client.post(
+            url_for('admin.delete_user', user_id=user_id),
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b'deleted successfully' in response.data
+        
+        # Step 4: Verify user list no longer shows user
+        response = client.get(url_for('admin.list_users'))
+        assert response.status_code == 200
+        assert b'workflowuser' not in response.data
+        
+        # Step 5: Verify user is actually deleted
+        with app.app_context():
+            assert User.query.get(user_id) is None
 

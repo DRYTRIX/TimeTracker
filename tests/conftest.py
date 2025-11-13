@@ -482,18 +482,20 @@ def invoice_with_items(app, invoice):
 @pytest.fixture
 def authenticated_client(client, user):
     """Create an authenticated test client."""
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(user.id)
-        sess['_fresh'] = True
+    # Use the actual login endpoint to properly authenticate
+    client.post('/login', data={
+        'username': user.username
+    }, follow_redirects=True)
     return client
 
 
 @pytest.fixture
 def admin_authenticated_client(client, admin_user):
     """Create an authenticated admin test client."""
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(admin_user.id)
-        sess['_fresh'] = True
+    # Use the actual login endpoint to properly authenticate
+    client.post('/login', data={
+        'username': admin_user.username
+    }, follow_redirects=True)
     return client
 
 
