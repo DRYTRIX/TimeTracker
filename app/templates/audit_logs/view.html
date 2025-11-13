@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, badge %}
+
+{% block title %}Audit Log Details - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Audit Logs', 'url': url_for('audit_logs.list_audit_logs')},
+    {'text': 'Details'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-history',
+    title_text='Audit Log Details',
+    subtitle_text='Detailed information about this change',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Main Details -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">Change Information</h2>
+        <dl class="space-y-4">
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Timestamp</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    {{ audit_log.created_at|user_datetime('%Y-%m-%d %H:%M:%S') }}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">User</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    {% if audit_log.user %}
+                        {{ audit_log.user.display_name }} ({{ audit_log.user.username }})
+                    {% else %}
+                        <span class="text-gray-400">System</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Action</dt>
+                <dd class="mt-1">
+                    {{ badge(audit_log.action, audit_log.get_color()) }}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Entity</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    <a href="{{ url_for('audit_logs.entity_history', entity_type=audit_log.entity_type, entity_id=audit_log.entity_id) }}" 
+                       class="text-primary hover:underline">
+                        {{ audit_log.entity_type }}#{{ audit_log.entity_id }}
+                    </a>
+                    {% if audit_log.entity_name %}
+                    <br><span class="text-xs text-gray-500">{{ audit_log.entity_name }}</span>
+                    {% endif %}
+                </dd>
+            </div>
+            {% if audit_log.field_name %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Field</dt>
+                <dd class="mt-1">
+                    <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ audit_log.field_name }}</code>
+                </dd>
+            </div>
+            {% endif %}
+            {% if audit_log.change_description %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Description</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    {{ audit_log.change_description }}
+                </dd>
+            </div>
+            {% endif %}
+        </dl>
+    </div>
+    
+    <!-- Change Details -->
+    {% if audit_log.field_name %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">Change Details</h2>
+        <div class="space-y-4">
+            {% if audit_log.old_value %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Old Value</dt>
+                <dd class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <pre class="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{{ audit_log.get_old_value() }}</pre>
+                </dd>
+            </div>
+            {% endif %}
+            {% if audit_log.new_value %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">New Value</dt>
+                <dd class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <pre class="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{{ audit_log.get_new_value() }}</pre>
+                </dd>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Request Information -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow lg:col-span-2">
+        <h2 class="text-xl font-semibold mb-4">Request Information</h2>
+        <dl class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% if audit_log.ip_address %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">IP Address</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 font-mono">{{ audit_log.ip_address }}</dd>
+            </div>
+            {% endif %}
+            {% if audit_log.request_path %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Request Path</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 font-mono">{{ audit_log.request_path }}</dd>
+            </div>
+            {% endif %}
+            {% if audit_log.user_agent %}
+            <div class="md:col-span-3">
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">User Agent</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 break-words">{{ audit_log.user_agent }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+<div class="mt-6 flex gap-4">
+    <a href="{{ url_for('audit_logs.list_audit_logs') }}" 
+       class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>Back to List
+    </a>
+    <a href="{{ url_for('audit_logs.entity_history', entity_type=audit_log.entity_type, entity_id=audit_log.entity_id) }}" 
+       class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-history mr-2"></i>View Entity History
+    </a>
+</div>
+{% endblock %}
+
