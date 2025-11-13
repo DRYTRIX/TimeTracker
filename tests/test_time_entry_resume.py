@@ -363,10 +363,6 @@ def test_resume_timer_handles_deleted_task(client, user, project):
 def test_resume_timer_smoke(client, user, project):
     """Smoke test for resume timer functionality"""
     with client.application.app_context():
-        # Set up authenticated session
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
-        
         # Create and complete a time entry
         timer = TimeEntry(
             user_id=user.id,
@@ -379,15 +375,19 @@ def test_resume_timer_smoke(client, user, project):
         db.session.add(timer)
         db.session.commit()
         timer_id = timer.id
-        
-        # Resume the timer
-        response = client.get(f'/timer/resume/{timer_id}', follow_redirects=True)
-        
-        # Basic assertions
-        assert response.status_code == 200
-        assert b'Timer resumed' in response.data
-        
-        # Verify active timer exists
+    
+    # Login using the login endpoint (after creating timer)
+    client.post('/login', data={'username': user.username}, follow_redirects=True)
+    
+    # Resume the timer
+    response = client.get(f'/timer/resume/{timer_id}', follow_redirects=True)
+    
+    # Basic assertions
+    assert response.status_code == 200
+    assert b'Timer resumed' in response.data
+    
+    # Verify active timer exists
+    with client.application.app_context():
         active_timer = TimeEntry.query.filter_by(
             user_id=user.id,
             end_time=None

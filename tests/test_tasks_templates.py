@@ -10,13 +10,13 @@ def test_create_task_page_has_tips(client, app):
     with app.app_context():
         # Minimal data to render page
         user = User(username='ui_user', role='user')
+        user.is_active = True
         db.session.add(user)
         db.session.add(Project(name='UI Test Project', client='UI Test Client'))
         db.session.commit()
 
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
-            sess['_fresh'] = True
+        # Login using the login endpoint
+        client.post('/login', data={'username': user.username}, follow_redirects=True)
 
         resp = client.get('/tasks/create')
         assert resp.status_code == 200
@@ -29,6 +29,7 @@ def test_edit_task_page_has_tips(client, app):
     with app.app_context():
         # Minimal data to render page
         user = User(username='ui_editor', role='user')
+        user.is_active = True
         project = Project(name='Edit UI Project', client='Client X')
         db.session.add_all([user, project])
         db.session.commit()
@@ -37,9 +38,8 @@ def test_edit_task_page_has_tips(client, app):
         db.session.add(task)
         db.session.commit()
 
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
-            sess['_fresh'] = True
+        # Login using the login endpoint
+        client.post('/login', data={'username': user.username}, follow_redirects=True)
 
         resp = client.get(f'/tasks/{task.id}/edit')
         assert resp.status_code == 200
@@ -60,10 +60,8 @@ def test_kanban_board_aria_and_dnd(authenticated_client, app):
         db.session.add_all([user, project])
         db.session.commit()
 
-        # login session
-        with authenticated_client.session_transaction() as sess:
-            sess['_user_id'] = str(user.id)
-            sess['_fresh'] = True
+        # authenticated_client already has a logged-in user, but we need to login as the new user
+        authenticated_client.post('/login', data={'username': user.username}, follow_redirects=True)
 
         resp = authenticated_client.get('/kanban')
         assert resp.status_code == 200
@@ -90,9 +88,8 @@ def test_kanban_card_shows_project_code_and_no_status_dropdown(authenticated_cli
         db.session.add(task)
         db.session.commit()
 
-        with authenticated_client.session_transaction() as sess:
-            sess['_user_id'] = str(admin.id)
-            sess['_fresh'] = True
+        # Login as admin using the login endpoint
+        authenticated_client.post('/login', data={'username': admin.username}, follow_redirects=True)
 
         resp = authenticated_client.get('/kanban')
         assert resp.status_code == 200

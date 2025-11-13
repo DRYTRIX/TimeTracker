@@ -33,6 +33,10 @@ def test_calendar_event_creation(app, user, project):
         )
         db.session.add(event)
         db.session.commit()
+        event_id = event.id  # Store ID before potential refresh issues
+        
+        # Re-query to avoid refresh issues
+        event = CalendarEvent.query.get(event_id)
         
         assert event.id is not None
         assert event.title == "Team Meeting"
