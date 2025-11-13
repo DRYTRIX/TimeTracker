@@ -165,7 +165,7 @@
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
-                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -317,11 +317,14 @@
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                         <ul id="adminDropdown" class="{% if not admin_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            <!-- Dashboard -->
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.admin_dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.admin_dashboard') }}">
                                     <i class="fas fa-tachometer-alt w-4 mr-2"></i>{{ _('Admin Dashboard') }}
                                 </a>
                             </li>
+                            
+                            <!-- User Management -->
                             {% if current_user.is_admin or has_permission('view_users') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.list_users' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_users') }}">
@@ -331,16 +334,29 @@
                             {% endif %}
                             {% if current_user.is_admin %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">
-                                    <i class="fas fa-key w-4 mr-2"></i>{{ _('API Tokens') }}
-                                </a>
-                            </li>
-                            <li>
                                 <a class="block px-2 py-1 rounded {% if ep.startswith('permissions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('permissions.list_roles') }}">
                                     <i class="fas fa-shield-alt w-4 mr-2"></i>{{ _('Roles & Permissions') }}
                                 </a>
                             </li>
                             {% endif %}
+                            
+                            <!-- Security & Monitoring -->
+                            {% if current_user.is_admin or has_permission('view_audit_logs') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('audit_logs.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('audit_logs.list_audit_logs') }}">
+                                    <i class="fas fa-history w-4 mr-2"></i>{{ _('Audit Logs') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">
+                                    <i class="fas fa-key w-4 mr-2"></i>{{ _('API Tokens') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            <!-- System Configuration -->
                             {% if current_user.is_admin or has_permission('manage_settings') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">
@@ -357,6 +373,10 @@
                                     <i class="fas fa-file-pdf w-4 mr-2"></i>{{ _('PDF Layout') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            
+                            <!-- Data Management -->
+                            {% if current_user.is_admin %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'expense_categories.list_categories' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expense_categories.list_categories') }}">
                                     <i class="fas fa-tags w-4 mr-2"></i>{{ _('Expense Categories') }}
@@ -375,6 +395,8 @@
                                 </a>
                             </li>
                             {% endif %}
+                            
+                            <!-- System Info & Maintenance -->
                             {% if current_user.is_admin or has_permission('view_system_info') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.system_info' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.system_info') }}">
@@ -387,9 +409,9 @@
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.backups_management' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.backups_management') }}">
                                     <i class="fas fa-database w-4 mr-2"></i>{{ _('Backups') }}
                                 </a>
-                    </li>
-                    {% endif %}
-                    {% if current_user.is_admin or has_permission('manage_oidc') %}
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_admin or has_permission('manage_oidc') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.oidc_debug' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.oidc_debug') }}">
                                     <i class="fas fa-lock w-4 mr-2"></i>{{ _('OIDC Settings') }}

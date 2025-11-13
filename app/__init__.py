@@ -743,6 +743,9 @@ def create_app(config=None):
             pass
         return resp
 
+    # Initialize audit logging (import to register event listeners)
+    from app.utils import audit  # noqa: F401
+    
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp
@@ -775,6 +778,15 @@ def create_app(config=None):
     from app.routes.per_diem import per_diem_bp
     from app.routes.budget_alerts import budget_alerts_bp
     from app.routes.import_export import import_export_bp
+    try:
+        from app.routes.audit_logs import audit_logs_bp
+        app.register_blueprint(audit_logs_bp)
+    except Exception as e:
+        # Log error but don't fail app startup
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Could not register audit_logs blueprint: {e}")
+        # Try to continue without audit logs if there's an issue
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -808,6 +820,7 @@ def create_app(config=None):
     app.register_blueprint(per_diem_bp)
     app.register_blueprint(budget_alerts_bp)
     app.register_blueprint(import_export_bp)
+    # audit_logs_bp is registered above with error handling
 
     # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
     # Only if CSRF is enabled

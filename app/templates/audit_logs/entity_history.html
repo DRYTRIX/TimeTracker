@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, badge %}
+
+{% block title %}History: {{ entity_type }}#{{ entity_id }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Audit Logs', 'url': url_for('audit_logs.list_audit_logs')},
+    {'text': entity_type + '#' + entity_id|string}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-history',
+    title_text='Change History',
+    subtitle_text=entity_name or (entity_type + ' #' + entity_id|string),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    {% if audit_logs %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timestamp</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Field</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Change</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {% for log in audit_logs %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {{ log.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {% if log.user %}
+                            {{ log.user.display_name }}
+                        {% else %}
+                            <span class="text-gray-400">System</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ badge(log.action, log.get_color()) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {% if log.field_name %}
+                            <code class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ log.field_name }}</code>
+                        {% else %}
+                            <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                        {% if log.field_name %}
+                            <div class="space-y-1">
+                                {% if log.old_value %}
+                                <div class="text-xs">
+                                    <span class="text-red-600 dark:text-red-400">-</span> 
+                                    <span class="line-through">{{ log.get_old_value() }}</span>
+                                </div>
+                                {% endif %}
+                                {% if log.new_value %}
+                                <div class="text-xs">
+                                    <span class="text-green-600 dark:text-green-400">+</span> 
+                                    {{ log.get_new_value() }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-gray-400">{{ log.change_description or '—' }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{{ url_for('audit_logs.view_audit_log', log_id=log.id) }}" 
+                           class="text-primary hover:underline">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="bg-gray-50 dark:bg-gray-800 px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
+        <div class="text-sm text-gray-700 dark:text-gray-300">
+            Showing {{ (pagination.page - 1) * pagination.per_page + 1 }} to 
+            {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} 
+            of {{ pagination.total }} results
+        </div>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('audit_logs.entity_history', entity_type=entity_type, entity_id=entity_id, page=pagination.prev_num) }}" 
+               class="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                Previous
+            </a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('audit_logs.entity_history', entity_type=entity_type, entity_id=entity_id, page=pagination.next_num) }}" 
+               class="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                Next
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="p-12 text-center">
+        <i class="fas fa-history text-4xl text-gray-400 mb-4"></i>
+        <p class="text-gray-500 dark:text-gray-400">No change history found for this entity.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-6">
+    <a href="{{ url_for('audit_logs.list_audit_logs') }}" 
+       class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Audit Logs
+    </a>
+</div>
+{% endblock %}
+
