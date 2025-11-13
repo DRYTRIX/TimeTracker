@@ -432,8 +432,8 @@ def test_edit_weekly_goal(authenticated_client, app, user):
         response = authenticated_client.post(f'/goals/{goal_id}/edit', data=data, follow_redirects=True)
         assert response.status_code == 200
         
-        # Check goal was updated
-        db.session.refresh(goal)
+        # Check goal was updated - re-query to avoid refresh issues
+        goal = WeeklyTimeGoal.query.get(goal_id)
         assert goal.target_hours == 35.0
         assert goal.notes == 'Updated notes'
 
@@ -454,25 +454,27 @@ def test_delete_weekly_goal(authenticated_client, app, user):
         response = authenticated_client.post(f'/goals/{goal_id}/delete', follow_redirects=True)
         assert response.status_code == 200
         
-        # Check goal was deleted
-        deleted_goal = WeeklyTimeGoal.query.get(goal_id)
-        assert deleted_goal is None
+        # Check goal was deleted - re-query to avoid refresh issues
+        with app.app_context():
+            deleted_goal = WeeklyTimeGoal.query.get(goal_id)
+            assert deleted_goal is None
 
 
 @pytest.mark.smoke
 def test_view_weekly_goal(authenticated_client, app, user):
     """Test viewing a specific weekly goal."""
+    # Create goal outside app context to ensure it persists
+    goal = WeeklyTimeGoal(
+        user_id=user.id,
+        target_hours=40.0
+    )
     with app.app_context():
-        goal = WeeklyTimeGoal(
-            user_id=user.id,
-            target_hours=40.0
-        )
         db.session.add(goal)
         db.session.commit()
         goal_id = goal.id
-        
-        response = authenticated_client.get(f'/goals/{goal_id}')
-        assert response.status_code == 200
+    
+    response = authenticated_client.get(f'/goals/{goal_id}')
+    assert response.status_code == 200
 
 
 # ============================================================================
@@ -482,83 +484,88 @@ def test_view_weekly_goal(authenticated_client, app, user):
 @pytest.mark.smoke
 def test_api_get_current_goal(authenticated_client, app, user):
     """Test API endpoint for getting current week's goal."""
+    # Create goal outside app context to ensure it persists
+    goal = WeeklyTimeGoal(
+        user_id=user.id,
+        target_hours=40.0
+    )
     with app.app_context():
-        goal = WeeklyTimeGoal(
-            user_id=user.id,
-            target_hours=40.0
-        )
         db.session.add(goal)
         db.session.commit()
-        
-        response = authenticated_client.get('/api/goals/current')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        assert 'target_hours' in data
-        assert data['target_hours'] == 40.0
+    
+    response = authenticated_client.get('/api/goals/current')
+    assert response.status_code == 200
+    
+    data = response.get_json()
+    assert 'target_hours' in data
+    assert data['target_hours'] == 40.0
 
 
 @pytest.mark.smoke
 def test_api_list_goals(authenticated_client, app, user):
     """Test API endpoint for listing goals."""
+    # Create multiple goals
+    goals = []
+    for i in range(3):
+        goal = WeeklyTimeGoal(
+            user_id=user.id,
+            target_hours=40.0,
+            week_start_date=date.today() - timedelta(weeks=i, days=date.today().weekday())
+        )
+        goals.append(goal)
+    
     with app.app_context():
-        # Create multiple goals
-        for i in range(3):
-            goal = WeeklyTimeGoal(
-                user_id=user.id,
-                target_hours=40.0,
-                week_start_date=date.today() - timedelta(weeks=i, days=date.today().weekday())
-            )
+        for goal in goals:
             db.session.add(goal)
         db.session.commit()
-        
-        response = authenticated_client.get('/api/goals')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        assert isinstance(data, list)
-        assert len(data) == 3
+    
+    response = authenticated_client.get('/api/goals')
+    assert response.status_code == 200
+    
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) == 3
 
 
 @pytest.mark.smoke
 def test_api_get_goal_stats(authenticated_client, app, user, project):
     """Test API endpoint for goal statistics."""
+    # Create a few goals (their actual status will be determined by update_status)
+    # Goal 1: Completed in the past with enough hours
+    past_week_start = date.today() - timedelta(days=14)
+    goal1 = WeeklyTimeGoal(
+        user_id=user.id,
+        target_hours=40.0,
+        week_start_date=past_week_start
+    )
+    
+    # Goal 2: Active week
+    current_week_start = date.today() - timedelta(days=date.today().weekday())
+    goal2 = WeeklyTimeGoal(
+        user_id=user.id,
+        target_hours=40.0,
+        week_start_date=current_week_start
+    )
+    
     with app.app_context():
-        # Create a few goals (their actual status will be determined by update_status)
-        # Goal 1: Completed in the past with enough hours
-        past_week_start = date.today() - timedelta(days=14)
-        goal1 = WeeklyTimeGoal(
-            user_id=user.id,
-            target_hours=40.0,
-            week_start_date=past_week_start
-        )
         db.session.add(goal1)
-        
-        # Goal 2: Active week
-        current_week_start = date.today() - timedelta(days=date.today().weekday())
-        goal2 = WeeklyTimeGoal(
-            user_id=user.id,
-            target_hours=40.0,
-            week_start_date=current_week_start
-        )
         db.session.add(goal2)
-        
         db.session.commit()
-        
-        response = authenticated_client.get('/api/goals/stats')
-        assert response.status_code == 200
-        
-        data = response.get_json()
-        # Verify the structure is correct
-        assert 'total_goals' in data
-        assert 'completed' in data
-        assert 'failed' in data
-        assert 'active' in data
-        assert 'completion_rate' in data
-        assert data['total_goals'] == 2
-        # Verify counts are consistent (completed + failed + active + cancelled should equal total)
-        assert (data.get('completed', 0) + data.get('failed', 0) + 
-                data.get('active', 0) + data.get('cancelled', 0)) == data['total_goals']
+    
+    response = authenticated_client.get('/api/goals/stats')
+    assert response.status_code == 200
+    
+    data = response.get_json()
+    # Verify the structure is correct
+    assert 'total_goals' in data
+    assert 'completed' in data
+    assert 'failed' in data
+    assert 'active' in data
+    assert 'completion_rate' in data
+    assert data['total_goals'] == 2
+    # Verify counts are consistent (completed + failed + active + cancelled should equal total)
+    assert (data.get('completed', 0) + data.get('failed', 0) + 
+            data.get('active', 0) + data.get('cancelled', 0)) == data['total_goals']
 
 
 @pytest.mark.unit

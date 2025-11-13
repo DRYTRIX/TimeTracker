@@ -1507,10 +1507,8 @@ def test_invoice_view_has_delete_button(app, client, user, project):
     """Smoke test: Verify that the invoice view page has a delete button."""
     from app.models import Client
     
-    # Authenticate
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(user.id)
-        sess['_fresh'] = True
+    # Authenticate using login endpoint
+    client.post('/login', data={'username': user.username}, follow_redirects=True)
     
     # Create client and invoice
     cl = Client(name='Delete Button Test Client', email='button@test.com')
@@ -1551,10 +1549,8 @@ def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     """Smoke test: Verify that the invoice list page has delete buttons."""
     from app.models import Client
     
-    # Authenticate as admin
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(admin_user.id)
-        sess['_fresh'] = True
+    # Authenticate as admin using login endpoint
+    client.post('/login', data={'username': admin_user.username}, follow_redirects=True)
     
     # Create client and invoices
     cl = Client(name='List Delete Test Client', email='listdelete@test.com')
@@ -1599,10 +1595,8 @@ def test_delete_invoice_with_complex_data_smoke(app, client, user, project):
     from app.models import Client
     from app.models.payments import Payment
     
-    # Authenticate
-    with client.session_transaction() as sess:
-        sess['_user_id'] = str(user.id)
-        sess['_fresh'] = True
+    # Authenticate using login endpoint
+    client.post('/login', data={'username': user.username}, follow_redirects=True)
     
     # Create client and invoice
     cl = Client(name='Complex Delete Test', email='complex@test.com')

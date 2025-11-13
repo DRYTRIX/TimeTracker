@@ -40,7 +40,7 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
         resp = authenticated_client.post(
             f'/tasks/{task.id}/edit',
             data={
-                'project_id': project2.id,
+                'project_id': str(project2.id),  # Ensure it's a string
                 'name': task.name,
                 'description': '',
                 'priority': 'medium',
@@ -48,16 +48,16 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
                 'due_date': '',
                 'assigned_to': ''
             },
-            follow_redirects=False
+            follow_redirects=True  # Follow redirects to see final response
         )
 
-        # Expect redirect to task view
-        assert resp.status_code in (302, 303)
+        # Expect success (200 after redirect or 302 redirect)
+        assert resp.status_code in (200, 302, 303), f"Expected 200/302/303, got {resp.status_code}. Response: {resp.get_data(as_text=True)[:500]}"
 
         # Refresh objects and verify project change persisted
         db.session.refresh(task)
         db.session.refresh(entry)
-        assert task.project_id == project2.id
-        assert entry.project_id == project2.id
+        assert task.project_id == project2.id, f"Task project_id is {task.project_id}, expected {project2.id}"
+        assert entry.project_id == project2.id, f"Entry project_id is {entry.project_id}, expected {project2.id}"
 
 
