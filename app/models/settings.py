@@ -191,20 +191,32 @@ class Settings(db.Model):
     def get_settings(cls):
         """Get the singleton settings instance, creating it if it doesn't exist"""
         settings = cls.query.first()
-        if not settings:
-            settings = cls()
-            db.session.add(settings)
-            try:
-                # Try to commit, but if we're in a nested transaction or flush, just flush
+        if settings:
+            return settings
+        
+        # Avoid performing session writes during flush/commit phases.
+        # When called from default column factories (e.g., created_at=local_now),
+        # SQLAlchemy may be in the middle of a flush. Writing here would raise
+        # SAWarnings/ResourceClosedError. In that case, return a transient instance
+        # with sensible defaults; the persistent row can be created later by
+        # initialization code or explicit admin flows.
+        try:
+            if not getattr(db.session, "_flushing", False):
+                settings = cls()
+                db.session.add(settings)
                 db.session.commit()
+                return settings
+        except Exception:
+            # If anything goes wrong creating the persistent row, rollback and
+            # fall back to an in-memory Settings instance.
+            try:
+                db.session.rollback()
             except Exception:
-                # If commit fails (e.g., during a flush), just flush to get the object persisted
-                try:
-                    db.session.flush()
-                except Exception:
-                    # If even flush fails, we'll work with the transient object
-                    pass
-        return settings
+                # Ignore rollback failures to avoid masking original contexts
+                pass
+        
+        # Fallback: return a non-persisted Settings instance
+        return cls()
     
     @classmethod
     def update_settings(cls, **kwargs):
