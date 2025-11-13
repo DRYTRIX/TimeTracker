@@ -63,10 +63,10 @@ def test_calendar_event_creation(app, user, project):
                 event_type="meeting"
             )
             db.session.add(event)
-            db.session.commit()
-            
-            # Store ID immediately after commit (before any potential cleanup)
+            # Flush first to assign PK, then store ID before commit to avoid reloads
+            db.session.flush()
             event_id = event.id
+            db.session.commit()
             assert event_id is not None, "Event should have an ID after commit"
             
             # Verify properties on the event object immediately after commit
@@ -390,12 +390,14 @@ def test_calendar_event_user_relationship(app, user):
             event_type="event"
         )
         db.session.add(event)
+        db.session.flush()
+        ev_id = event.id
         db.session.commit()
-        
-        db.session.refresh(event)
-        assert event.user is not None
-        assert event.user.id == user.id
-        assert event.user.username == user.username
+        persisted = CalendarEvent.query.get(ev_id)
+        assert persisted is not None
+        assert persisted.user is not None
+        assert persisted.user.id == user.id
+        assert persisted.user.username == user.username
 
 
 @pytest.mark.unit

@@ -242,22 +242,13 @@ def test_client(app, user):
     )
     client.status = 'active'  # Set after creation
     db.session.add(client)
-    db.session.commit()
-    
-    # Store ID before attempting refresh
+    # Flush to assign primary key before commit to avoid expired attribute reloads
+    db.session.flush()
     client_id = client.id
-    
-    # Only refresh if client is still in session
-    try:
-        db.session.refresh(client)
-    except Exception:
-        # If refresh fails, re-query the client using stored ID
-        client = Client.query.get(client_id)
-        if client is None:
-            # If still None, try filter_by as fallback
-            client = Client.query.filter_by(id=client_id).first()
-    
-    return client
+    db.session.commit()
+    # Re-query to ensure we return a persistent instance without relying on refresh
+    persisted_client = Client.query.get(client_id) or Client.query.filter_by(id=client_id).first()
+    return persisted_client
 
 
 @pytest.fixture
@@ -297,16 +288,12 @@ def project(app, test_client):
     )
     project.status = 'active'  # Set after creation
     db.session.add(project)
+    # Flush to assign ID before commit, then re-query after commit
+    db.session.flush()
+    project_id = project.id
     db.session.commit()
-    
-    # Only refresh if project is still in session
-    try:
-        db.session.refresh(project)
-    except Exception:
-        # If refresh fails, re-query the project
-        project = Project.query.filter_by(id=project.id).first()
-    
-    return project
+    persisted_project = Project.query.get(project_id) or Project.query.filter_by(id=project_id).first()
+    return persisted_project
 
 
 @pytest.fixture
