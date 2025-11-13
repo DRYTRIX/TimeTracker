@@ -69,19 +69,21 @@ def test_calendar_event_creation(app, user, project):
             db.session.commit()
             assert event_id is not None, "Event should have an ID after commit"
             
-            # Verify properties on the event object immediately after commit
-            assert event.title == "Team Meeting"
-            assert event.user_id == user_id
-            assert event.start_time == start_time
-            assert event.end_time == end_time
-            assert event.description == "Weekly team sync"
-            assert event.location == "Conference Room A"
-            assert event.event_type == "meeting"
-            assert event.all_day is False
-            assert event.is_private is False
-            assert event.is_recurring is False
-            assert event.created_at is not None
-            assert event.updated_at is not None
+            # Re-query persisted instance to avoid any expired/removed state issues
+            persisted = CalendarEvent.query.get(event_id)
+            assert persisted is not None
+            assert persisted.title == "Team Meeting"
+            assert persisted.user_id == user_id
+            assert persisted.start_time == start_time
+            assert persisted.end_time == end_time
+            assert persisted.description == "Weekly team sync"
+            assert persisted.location == "Conference Room A"
+            assert persisted.event_type == "meeting"
+            assert persisted.all_day is False
+            assert persisted.is_private is False
+            assert persisted.is_recurring is False
+            assert persisted.created_at is not None
+            assert persisted.updated_at is not None
             
             # Verify persistence using a direct SQL query with a fresh connection
             # This avoids session state and cascade delete issues
