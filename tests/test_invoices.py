@@ -1,4 +1,5 @@
 import pytest
+import sys
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app import db
@@ -1024,6 +1025,10 @@ def test_pdf_fallback_generator_includes_extra_goods(app, sample_invoice, sample
 
 @pytest.mark.smoke
 @pytest.mark.invoices
+@pytest.mark.skipif(
+    sys.platform == 'win32',
+    reason="WeasyPrint requires gobject-2.0-0 library on Windows which may not be available"
+)
 def test_pdf_export_with_extra_goods_smoke(app, sample_invoice, sample_user):
     """Smoke test: Generate PDF with extra goods without errors."""
     from app.utils.pdf_generator import InvoicePDFGenerator

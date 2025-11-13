@@ -422,19 +422,21 @@ def test_edit_weekly_goal(authenticated_client, app, user):
         db.session.add(goal)
         db.session.commit()
         goal_id = goal.id
-        
-        # Update goal
-        data = {
-            'target_hours': 35.0,
-            'notes': 'Updated notes',
-            'status': 'active'
-        }
-        response = authenticated_client.post(f'/goals/{goal_id}/edit', data=data, follow_redirects=True)
-        assert response.status_code == 200
-        
-        # Check goal was updated - re-query to avoid refresh issues
+    
+    # Update goal (POST request happens outside app context)
+    data = {
+        'target_hours': 35.0,
+        'notes': 'Updated notes',
+        'status': 'active'
+    }
+    response = authenticated_client.post(f'/goals/{goal_id}/edit', data=data, follow_redirects=True)
+    assert response.status_code == 200
+    
+    # Check goal was updated - re-query within app context
+    with app.app_context():
         goal = WeeklyTimeGoal.query.get(goal_id)
-        assert goal.target_hours == 35.0
+        assert goal is not None, "Goal should still exist after edit"
+        assert goal.target_hours == 35.0, f"Expected 35.0, got {goal.target_hours}"
         assert goal.notes == 'Updated notes'
 
 
@@ -449,15 +451,15 @@ def test_delete_weekly_goal(authenticated_client, app, user):
         db.session.add(goal)
         db.session.commit()
         goal_id = goal.id
-        
-        # Delete goal
-        response = authenticated_client.post(f'/goals/{goal_id}/delete', follow_redirects=True)
-        assert response.status_code == 200
-        
-        # Check goal was deleted - re-query to avoid refresh issues
-        with app.app_context():
-            deleted_goal = WeeklyTimeGoal.query.get(goal_id)
-            assert deleted_goal is None
+    
+    # Delete goal (POST request happens outside app context)
+    response = authenticated_client.post(f'/goals/{goal_id}/delete', follow_redirects=True)
+    assert response.status_code == 200
+    
+    # Check goal was deleted - re-query within app context
+    with app.app_context():
+        deleted_goal = WeeklyTimeGoal.query.get(goal_id)
+        assert deleted_goal is None, f"Goal should be deleted but found: {deleted_goal}"
 
 
 @pytest.mark.smoke

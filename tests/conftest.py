@@ -244,7 +244,19 @@ def test_client(app, user):
     db.session.add(client)
     db.session.commit()
     
-    db.session.refresh(client)
+    # Store ID before attempting refresh
+    client_id = client.id
+    
+    # Only refresh if client is still in session
+    try:
+        db.session.refresh(client)
+    except Exception:
+        # If refresh fails, re-query the client using stored ID
+        client = Client.query.get(client_id)
+        if client is None:
+            # If still None, try filter_by as fallback
+            client = Client.query.filter_by(id=client_id).first()
+    
     return client
 
 
@@ -287,7 +299,13 @@ def project(app, test_client):
     db.session.add(project)
     db.session.commit()
     
-    db.session.refresh(project)
+    # Only refresh if project is still in session
+    try:
+        db.session.refresh(project)
+    except Exception:
+        # If refresh fails, re-query the project
+        project = Project.query.filter_by(id=project.id).first()
+    
     return project
 
 
