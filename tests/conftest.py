@@ -288,12 +288,10 @@ def project(app, test_client):
     )
     project.status = 'active'  # Set after creation
     db.session.add(project)
-    # Flush to assign ID before commit, then re-query after commit
+    # Flush to assign ID before commit and return the same instance to avoid re-query issues
     db.session.flush()
-    project_id = project.id
     db.session.commit()
-    persisted_project = Project.query.get(project_id) or Project.query.filter_by(id=project_id).first()
-    return persisted_project
+    return project
 
 
 @pytest.fixture
