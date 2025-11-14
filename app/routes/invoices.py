@@ -214,7 +214,13 @@ def view_invoice(invoice_id):
     # Get email templates for selection
     email_templates = InvoiceTemplate.query.order_by(InvoiceTemplate.name).all()
     
-    return render_template('invoices/view.html', invoice=invoice, email_templates=email_templates)
+    # Get email history
+    from app.models import InvoiceEmail
+    email_history = InvoiceEmail.query.filter_by(invoice_id=invoice_id)\
+        .order_by(InvoiceEmail.sent_at.desc())\
+        .all()
+    
+    return render_template('invoices/view.html', invoice=invoice, email_templates=email_templates, email_history=email_history)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -989,3 +995,85 @@ def send_invoice_email_route(invoice_id):
         logger.error(f"Error sending invoice email: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
         return jsonify({'error': f'Failed to send email: {str(e)}'}), 500
+
+
+@invoices_bp.route('/invoices/<int:invoice_id>/email-history', methods=['GET'])
+@login_required
+def get_invoice_email_history(invoice_id):
+    """Get email history for an invoice"""
+    invoice = Invoice.query.get_or_404(invoice_id)
+    
+    # Check access permissions
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    from app.models import InvoiceEmail
+    
+    # Get all email records for this invoice, ordered by most recent first
+    email_records = InvoiceEmail.query.filter_by(invoice_id=invoice_id)\
+        .order_by(InvoiceEmail.sent_at.desc())\
+        .all()
+    
+    # Convert to list of dictionaries
+    email_history = [email.to_dict() for email in email_records]
+    
+    return jsonify({
+        'success': True,
+        'email_history': email_history,
+        'count': len(email_history)
+    })
+
+
+@invoices_bp.route('/invoices/<int:invoice_id>/resend-email/<int:email_id>', methods=['POST'])
+@login_required
+def resend_invoice_email(invoice_id, email_id):
+    """Resend an invoice email"""
+    invoice = Invoice.query.get_or_404(invoice_id)
+    
+    # Check access permissions
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    from app.models import InvoiceEmail
+    original_email = InvoiceEmail.query.get_or_404(email_id)
+    
+    # Verify the email belongs to this invoice
+    if original_email.invoice_id != invoice_id:
+        return jsonify({'error': 'Email record does not belong to this invoice'}), 400
+    
+    # Get recipient email from request or use original
+    recipient_email = request.form.get('recipient_email', '').strip() or request.json.get('recipient_email', '').strip() if request.is_json else ''
+    if not recipient_email:
+        recipient_email = original_email.recipient_email
+    
+    # Get custom message if provided
+    custom_message = request.form.get('custom_message', '').strip() or (request.json.get('custom_message', '').strip() if request.is_json else '')
+    
+    # Get email template ID if provided
+    email_template_id = request.form.get('email_template_id', type=int) or (request.json.get('email_template_id') if request.is_json else None)
+    
+    try:
+        from app.utils.email import send_invoice_email
+        
+        success, invoice_email, message = send_invoice_email(
+            invoice=invoice,
+            recipient_email=recipient_email,
+            sender_user=current_user,
+            custom_message=custom_message if custom_message else None,
+            email_template_id=email_template_id
+        )
+        
+        if success:
+            flash(f'Invoice email resent successfully to {recipient_email}', 'success')
+            return jsonify({
+                'success': True,
+                'message': message,
+                'invoice_email_id': invoice_email.id if invoice_email else None
+            })
+        else:
+            return jsonify({'error': message}), 500
+    
+    except Exception as e:
+        logger.error(f"Error resending invoice email: {type(e).__name__}: {str(e)}")
+        logger.exception("Full error traceback:")
+        return jsonify({'error': f'Failed to resend email: {str(e)}'}), 500

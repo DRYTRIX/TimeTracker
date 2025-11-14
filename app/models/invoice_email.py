@@ -1,5 +1,11 @@
 from datetime import datetime
 from app import db
+from app.utils.timezone import now_in_app_timezone
+
+
+def local_now():
+    """Get current time in local timezone as naive datetime (for database storage)"""
+    return now_in_app_timezone().replace(tzinfo=None)
 
 
 class InvoiceEmail(db.Model):
@@ -13,7 +19,7 @@ class InvoiceEmail(db.Model):
     # Email details
     recipient_email = db.Column(db.String(200), nullable=False)
     subject = db.Column(db.String(500), nullable=False)
-    sent_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    sent_at = db.Column(db.DateTime, nullable=False, default=local_now)
     sent_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
     # Tracking
@@ -31,8 +37,8 @@ class InvoiceEmail(db.Model):
     error_message = db.Column(db.Text, nullable=True)  # Error message if send failed
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=local_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
     
     # Relationships
     invoice = db.relationship('Invoice', backref='email_records')
@@ -52,8 +58,8 @@ class InvoiceEmail(db.Model):
     def mark_opened(self):
         """Mark email as opened"""
         if not self.opened_at:
-            self.opened_at = datetime.utcnow()
-        self.last_opened_at = datetime.utcnow()
+            self.opened_at = local_now()
+        self.last_opened_at = local_now()
         self.opened_count += 1
         if self.status == 'sent':
             self.status = 'opened'
@@ -61,7 +67,7 @@ class InvoiceEmail(db.Model):
     def mark_paid(self):
         """Mark invoice as paid (after email was sent)"""
         if not self.paid_at:
-            self.paid_at = datetime.utcnow()
+            self.paid_at = local_now()
         self.status = 'paid'
     
     def mark_failed(self, error_message):
