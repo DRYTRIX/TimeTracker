@@ -156,6 +156,15 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Scopes *</label>
                     <div class="space-y-2">
+                        <!-- Convenience wildcards -->
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:*" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:* - Read access to all resources</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:*" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:* - Write access to all resources</span>
+                        </label>
                         <label class="flex items-center">
                             <input type="checkbox" name="scopes" value="read:projects" class="rounded border-gray-300 dark:border-gray-600">
                             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:projects - View projects</span>
@@ -163,6 +172,30 @@
                         <label class="flex items-center">
                             <input type="checkbox" name="scopes" value="write:projects" class="rounded border-gray-300 dark:border-gray-600">
                             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:projects - Create/update projects</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:invoices" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:invoices - View invoices and billing data</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:invoices" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:invoices - Create/update invoices</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:expenses" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:expenses - View expenses</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:expenses" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:expenses - Create/update expenses</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:payments" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:payments - View payments</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:payments" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:payments - Create/update payments</span>
                         </label>
                         <label class="flex items-center">
                             <input type="checkbox" name="scopes" value="read:time_entries" class="rounded border-gray-300 dark:border-gray-600">
@@ -187,6 +220,54 @@
                         <label class="flex items-center">
                             <input type="checkbox" name="scopes" value="write:clients" class="rounded border-gray-300 dark:border-gray-600">
                             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:clients - Create/update clients</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:comments" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:comments - View comments</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:comments" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:comments - Create/update comments</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:mileage" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:mileage - View mileage</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:mileage" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:mileage - Create/update mileage</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:per_diem" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:per_diem - View per diem</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:per_diem" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:per_diem - Create/update per diem</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:calendar" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:calendar - View calendar events</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:calendar" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:calendar - Create/update calendar events</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:budget_alerts" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:budget_alerts - View budget alerts</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:budget_alerts" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:budget_alerts - Create/ack budget alerts</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="read:recurring_invoices" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">read:recurring_invoices - View recurring invoices</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="scopes" value="write:recurring_invoices" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">write:recurring_invoices - Create/update recurring invoices</span>
                         </label>
                         <label class="flex items-center">
                             <input type="checkbox" name="scopes" value="read:reports" class="rounded border-gray-300 dark:border-gray-600">

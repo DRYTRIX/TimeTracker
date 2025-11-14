@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pytz
 from app import db, track_page_view
 from sqlalchemy import text
+from app.models.time_entry import local_now
 
 from flask import make_response, current_app
 import json
@@ -113,7 +114,7 @@ def readiness_check():
     """Readiness probe: verify DB connectivity and critical dependencies"""
     try:
         db.session.execute(text('SELECT 1'))
-        return {'status': 'ready', 'timestamp': datetime.utcnow().isoformat()}, 200
+        return {'status': 'ready', 'timestamp': local_now().isoformat()}, 200
     except Exception as e:
         return {'status': 'not_ready', 'error': 'db_unreachable'}, 503
 
@@ -209,11 +210,19 @@ def service_worker():
     # Build absolute URLs for static assets to ensure proper caching
     assets = [
         '/',
-        url_for('static', filename='base.css'),
-        url_for('static', filename='mobile.css'),
-        url_for('static', filename='ui.css'),
+        # CSS
+        url_for('static', filename='dist/output.css'),
+        url_for('static', filename='enhanced-ui.css'),
+        url_for('static', filename='ui-enhancements.css'),
+        url_for('static', filename='form-validation.css'),
+        url_for('static', filename='keyboard-shortcuts.css'),
+        url_for('static', filename='toast-notifications.css'),
+        # JS
         url_for('static', filename='mobile.js'),
         url_for('static', filename='commands.js'),
+        url_for('static', filename='enhanced-ui.js'),
+        url_for('static', filename='ui-enhancements.js'),
+        url_for('static', filename='toast-notifications.js'),
     ]
     preamble = "const CACHE_NAME='tt-cache-v2';\n"
     assets_js = "const ASSETS=" + json.dumps(assets) + ";\n\n"
