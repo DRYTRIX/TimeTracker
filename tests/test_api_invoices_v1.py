@@ -115,5 +115,4 @@ def test_create_get_update_cancel_invoice(client, api_token, user, project, clie
     db.session.expire_all()
     inv_obj = Invoice.query.get(invoice_id)
     assert inv_obj.status == 'cancelled'
-*** End Patch*** }  ਜੋ  ?>
 
