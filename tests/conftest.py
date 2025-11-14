@@ -360,25 +360,26 @@ def multiple_users(app):
 @pytest.fixture
 def test_client(app, user):
     """Create a test client (business client, not test client)."""
-    client = Client(
-        name='Test Client Corp',
-        description='Test client for integration tests',
-        contact_person='John Doe',
-        email='john@testclient.com',
-        phone='+1 (555) 123-4567',
-        address='123 Test Street, Test City, TC 12345',
-        default_hourly_rate=Decimal('85.00')
-    )
-    client.status = 'active'  # Set after creation
-    db.session.add(client)
-    # Flush to assign primary key before commit to avoid expired attribute reloads
-    db.session.flush()
-    client_id = client.id
-    db.session.commit()
-    # Re-query to ensure we return a persistent instance without relying on refresh
-    persisted_client = Client.query.get(client_id) or Client.query.filter_by(id=client_id).first()
-    # Fallback to the original instance if re-query unexpectedly returns None
-    return persisted_client or client
+    with app.app_context():
+        client_model = Client(
+            name='Test Client Corp',
+            description='Test client for integration tests',
+            contact_person='John Doe',
+            email='john@testclient.com',
+            phone='+1 (555) 123-4567',
+            address='123 Test Street, Test City, TC 12345',
+            default_hourly_rate=Decimal('85.00')
+        )
+        client_model.status = 'active'  # Set after creation
+        db.session.add(client_model)
+        # Flush to assign primary key before commit to avoid expired attribute reloads
+        db.session.flush()
+        client_id = client_model.id
+        db.session.commit()
+        # Re-query to ensure we return a persistent instance without relying on refresh
+        persisted_client = Client.query.get(client_id) or Client.query.filter_by(id=client_id).first()
+        # Fallback to the original instance if re-query unexpectedly returns None
+        return persisted_client or client_model
 
 
 @pytest.fixture

@@ -34,7 +34,7 @@ class TestClientPortalUserModel:
         with app.app_context():
             assert user.client_id is None
     
-    def test_is_client_portal_user_property(self, app, user, client):
+    def test_is_client_portal_user_property(self, app, user, test_client):
         """Test is_client_portal_user property"""
         with app.app_context():
             # Initially False
@@ -45,10 +45,10 @@ class TestClientPortalUserModel:
             assert user.is_client_portal_user is False
             
             # Assign client
-            user.client_id = client.id
+            user.client_id = test_client.id
             assert user.is_client_portal_user is True
     
-    def test_get_client_portal_data(self, app, user, client):
+    def test_get_client_portal_data(self, app, user, test_client):
         """Test get_client_portal_data method"""
         with app.app_context():
             # No portal access
@@ -56,7 +56,7 @@ class TestClientPortalUserModel:
             
             # Enable portal and assign client
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             db.session.commit()
             
             # Should return data structure
@@ -66,18 +66,18 @@ class TestClientPortalUserModel:
             assert 'projects' in data
             assert 'invoices' in data
             assert 'time_entries' in data
-            assert data['client'] == client
+            assert data['client'] == test_client
     
-    def test_get_client_portal_data_with_projects(self, app, user, client):
+    def test_get_client_portal_data_with_projects(self, app, user, test_client):
         """Test get_client_portal_data includes projects"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             
             # Create projects
-            project1 = Project(name="Project 1", client_id=client.id, status='active')
-            project2 = Project(name="Project 2", client_id=client.id, status='active')
-            project3 = Project(name="Project 3", client_id=client.id, status='inactive')
+            project1 = Project(name="Project 1", client_id=test_client.id, status='active')
+            project2 = Project(name="Project 2", client_id=test_client.id, status='active')
+            project3 = Project(name="Project 3", client_id=test_client.id, status='inactive')
             db.session.add_all([project1, project2, project3])
             db.session.commit()
             
@@ -87,13 +87,13 @@ class TestClientPortalUserModel:
             assert project2 in data['projects']
             assert project3 not in data['projects']
     
-    def test_get_client_portal_data_with_invoices(self, app, user, client):
+    def test_get_client_portal_data_with_invoices(self, app, user, test_client):
         """Test get_client_portal_data includes invoices"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             
-            project = Project(name="Test Project", client_id=client.id)
+            project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
             db.session.commit()
             
@@ -101,8 +101,8 @@ class TestClientPortalUserModel:
             invoice1 = Invoice(
                 invoice_number="INV-001",
                 project_id=project.id,
-                client_name=client.name,
-                client_id=client.id,
+                client_name=test_client.name,
+                client_id=test_client.id,
                 due_date=datetime.utcnow().date() + timedelta(days=30),
                 created_by=user.id,
                 total_amount=Decimal('100.00')
@@ -110,8 +110,8 @@ class TestClientPortalUserModel:
             invoice2 = Invoice(
                 invoice_number="INV-002",
                 project_id=project.id,
-                client_name=client.name,
-                client_id=client.id,
+                client_name=test_client.name,
+                client_id=test_client.id,
                 due_date=datetime.utcnow().date() + timedelta(days=30),
                 created_by=user.id,
                 total_amount=Decimal('200.00')
@@ -124,13 +124,13 @@ class TestClientPortalUserModel:
             assert invoice1 in data['invoices']
             assert invoice2 in data['invoices']
     
-    def test_get_client_portal_data_with_time_entries(self, app, user, client):
+    def test_get_client_portal_data_with_time_entries(self, app, user, test_client):
         """Test get_client_portal_data includes time entries"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             
-            project = Project(name="Test Project", client_id=client.id)
+            project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
             db.session.commit()
             
@@ -167,80 +167,80 @@ class TestClientPortalUserModel:
 class TestClientPortalRoutes:
     """Test client portal routes"""
     
-    def test_client_portal_dashboard_requires_access(self, app, client_fixture, user):
+    def test_client_portal_dashboard_requires_access(self, app, client, user):
         """Test dashboard requires client portal access"""
         with app.app_context():
             # Login user without portal access
-            with client_fixture.session_transaction() as sess:
+            with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
             
-            response = client_fixture.get('/client-portal/dashboard')
+            response = client.get('/client-portal/dashboard')
             assert response.status_code == 403
     
-    def test_client_portal_dashboard_with_access(self, app, client_fixture, user, client):
+    def test_client_portal_dashboard_with_access(self, app, client, user, test_client):
         """Test dashboard accessible with portal access"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             db.session.commit()
             
-            with client_fixture.session_transaction() as sess:
+            with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
             
-            response = client_fixture.get('/client-portal/dashboard')
+            response = client.get('/client-portal/dashboard')
             assert response.status_code == 200
             assert b'Client Portal' in response.data
     
-    def test_client_portal_projects_route(self, app, client_fixture, user, client):
+    def test_client_portal_projects_route(self, app, client, user, test_client):
         """Test projects route"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             db.session.commit()
             
-            with client_fixture.session_transaction() as sess:
+            with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
             
-            response = client_fixture.get('/client-portal/projects')
+            response = client.get('/client-portal/projects')
             assert response.status_code == 200
     
-    def test_client_portal_invoices_route(self, app, client_fixture, user, client):
+    def test_client_portal_invoices_route(self, app, client, user, test_client):
         """Test invoices route"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             db.session.commit()
             
-            with client_fixture.session_transaction() as sess:
+            with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
             
-            response = client_fixture.get('/client-portal/invoices')
+            response = client.get('/client-portal/invoices')
             assert response.status_code == 200
     
-    def test_client_portal_time_entries_route(self, app, client_fixture, user, client):
+    def test_client_portal_time_entries_route(self, app, client, user, test_client):
         """Test time entries route"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             db.session.commit()
             
-            with client_fixture.session_transaction() as sess:
+            with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
             
-            response = client_fixture.get('/client-portal/time-entries')
+            response = client.get('/client-portal/time-entries')
             assert response.status_code == 200
     
-    def test_view_invoice_belongs_to_client(self, app, client_fixture, user, client):
+    def test_view_invoice_belongs_to_client(self, app, client, user, test_client):
         """Test viewing invoice requires it belongs to user's client"""
         with app.app_context():
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             
             # Create another client
             other_client = Client(name="Other Client")
             db.session.add(other_client)
             
-            project = Project(name="Test Project", client_id=client.id)
+            project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
             db.session.commit()
             
@@ -248,8 +248,8 @@ class TestClientPortalRoutes:
             invoice = Invoice(
                 invoice_number="INV-001",
                 project_id=project.id,
-                client_name=client.name,
-                client_id=client.id,
+                client_name=test_client.name,
+                client_id=test_client.id,
                 due_date=datetime.utcnow().date() + timedelta(days=30),
                 created_by=user.id,
                 total_amount=Decimal('100.00')
@@ -257,11 +257,11 @@ class TestClientPortalRoutes:
             db.session.add(invoice)
             db.session.commit()
             
-            with client_fixture.session_transaction() as sess:
+            with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
             
             # Should be able to view invoice
-            response = client_fixture.get(f'/client-portal/invoices/{invoice.id}')
+            response = client.get(f'/client-portal/invoices/{invoice.id}')
             assert response.status_code == 200
 
 
@@ -274,7 +274,7 @@ class TestClientPortalRoutes:
 class TestAdminClientPortalManagement:
     """Test admin interface for managing client portal access"""
     
-    def test_admin_can_enable_client_portal(self, app, admin_authenticated_client, user, client):
+    def test_admin_can_enable_client_portal(self, app, admin_authenticated_client, user, test_client):
         """Test admin can enable client portal for user"""
         with app.app_context():
             response = admin_authenticated_client.post(
@@ -284,7 +284,7 @@ class TestAdminClientPortalManagement:
                     'role': user.role,
                     'is_active': 'on' if user.is_active else '',
                     'client_portal_enabled': 'on',
-                    'client_id': str(client.id),
+                    'client_id': str(test_client.id),
                     'csrf_token': 'test-csrf-token'
                 },
                 follow_redirects=True
@@ -295,14 +295,14 @@ class TestAdminClientPortalManagement:
             # Verify user was updated
             updated_user = User.query.get(user.id)
             assert updated_user.client_portal_enabled is True
-            assert updated_user.client_id == client.id
+            assert updated_user.client_id == test_client.id
     
-    def test_admin_can_disable_client_portal(self, app, admin_authenticated_client, user, client):
+    def test_admin_can_disable_client_portal(self, app, admin_authenticated_client, user, test_client):
         """Test admin can disable client portal for user"""
         with app.app_context():
             # Enable portal first
             user.client_portal_enabled = True
-            user.client_id = client.id
+            user.client_id = test_client.id
             db.session.commit()
             
             response = admin_authenticated_client.post(
