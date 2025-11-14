@@ -16,7 +16,7 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <form method="POST" class="space-y-6">
+    <form method="POST" id="emailTemplateForm" class="space-y-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -36,27 +36,493 @@
                     <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Set as default template</span>
                 </label>
             </div>
-            
-            <div class="md:col-span-2">
-                <label for="html" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">HTML Template *</label>
-                <textarea id="html" name="html" rows="15" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm">{{ template.html or '' }}</textarea>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    HTML content for the email. Use Jinja2 syntax: <code>{{ '{{ invoice.invoice_number }}' }}</code>, <code>{{ '{{ company_name }}' }}</code>, <code>{{ '{{ custom_message }}' }}</code>
-                </p>
+        </div>
+
+        <!-- Visual Editor Section -->
+        <div class="mt-6">
+            <div class="flex items-center justify-between mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">HTML Template *</label>
+                <div class="flex gap-2" id="variableButtons">
+                    <button type="button" data-variable="invoice.invoice_number" class="variable-btn px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">
+                        Invoice Number
+                    </button>
+                    <button type="button" data-variable="company_name" class="variable-btn px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">
+                        Company Name
+                    </button>
+                    <button type="button" data-variable="custom_message" class="variable-btn px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">
+                        Custom Message
+                    </button>
+                    <button type="button" id="showAllVariablesBtn" class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600">
+                        More Variables
+                    </button>
+                </div>
             </div>
             
-            <div class="md:col-span-2">
-                <label for="css" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CSS Styles (Optional)</label>
-                <textarea id="css" name="css" rows="10" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm">{{ template.css or '' }}</textarea>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">CSS styles for the email template. Will be automatically wrapped in &lt;style&gt; tags.</p>
+            <!-- Split View: Editor and Preview -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Editor Column -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                    <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 border-b border-gray-300 dark:border-gray-600 flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Editor</span>
+                        <div class="flex gap-2">
+                            <button type="button" id="viewModeBtn" class="px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600">
+                                <i class="fas fa-code mr-1"></i>Code
+                            </button>
+                            <button type="button" id="updatePreviewBtn" class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
+                                <i class="fas fa-sync mr-1"></i>Preview
+                            </button>
+                        </div>
+                    </div>
+                    <div id="html_editor" style="min-height: 500px;"></div>
+                    <textarea id="html" name="html" required style="display: none;">{{ template.html or '' }}</textarea>
+                </div>
+                
+                <!-- Preview Column -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                    <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 border-b border-gray-300 dark:border-gray-600 flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Live Preview</span>
+                        <button type="button" id="refreshPreviewBtn" class="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
+                            <i class="fas fa-refresh mr-1"></i>Refresh
+                        </button>
+                    </div>
+                    <div id="email_preview" class="p-4 bg-white dark:bg-gray-800 overflow-auto" style="min-height: 500px; max-height: 500px;">
+                        <div class="text-gray-500 dark:text-gray-400 text-center py-8">
+                            <i class="fas fa-eye-slash text-4xl mb-2"></i>
+                            <p>Preview will appear here</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+            
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Use Jinja2 syntax for variables: <code>{{ '{{ invoice.invoice_number }}' }}</code>, <code>{{ '{{ company_name }}' }}</code>, <code>{{ '{{ custom_message }}' }}</code>
+            </p>
         </div>
         
-        <div class="flex justify-end gap-3">
+        <!-- CSS Editor Section -->
+        <div class="mt-6">
+            <div class="flex items-center justify-between mb-2">
+                <label for="css" class="block text-sm font-medium text-gray-700 dark:text-gray-300">CSS Styles (Optional)</label>
+                <button type="button" id="applyCssBtn" class="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
+                    <i class="fas fa-refresh mr-1"></i>Apply CSS
+                </button>
+            </div>
+            <textarea id="css" name="css" rows="10" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm">{{ template.css or '' }}</textarea>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">CSS styles for the email template. Will be automatically wrapped in &lt;style&gt; tags.</p>
+        </div>
+        
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-300 dark:border-gray-600">
             <a href="{{ url_for('admin.list_email_templates') }}" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">{{ _('Cancel') }}</a>
             <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Update Template') }}</button>
         </div>
     </form>
 </div>
+
+<!-- Variable Reference Modal -->
+<div id="variablesModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Available Variables</h3>
+            <button id="closeVariablesModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <h4 class="font-semibold text-sm mb-2 text-gray-700 dark:text-gray-300">Invoice Variables</h4>
+                <div class="space-y-1">
+                    <button data-variable="invoice.invoice_number" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ invoice.invoice_number }}' }}</code>
+                    </button>
+                    <button data-variable="invoice.issue_date" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ invoice.issue_date }}' }}</code>
+                    </button>
+                    <button data-variable="invoice.due_date" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ invoice.due_date }}' }}</code>
+                    </button>
+                    <button data-variable="invoice.total_amount" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ invoice.total_amount }}' }}</code>
+                    </button>
+                    <button data-variable="invoice.currency_code" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ invoice.currency_code }}' }}</code>
+                    </button>
+                    <button data-variable="invoice.client_name" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ invoice.client_name }}' }}</code>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm mb-2 text-gray-700 dark:text-gray-300">Other Variables</h4>
+                <div class="space-y-1">
+                    <button data-variable="company_name" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ company_name }}' }}</code>
+                    </button>
+                    <button data-variable="custom_message" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <code>{{ '{{ custom_message }}' }}</code>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button id="closeVariablesModalBtn2" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">Close</button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+<style>
+#email_preview {
+    font-family: Arial, sans-serif;
+}
+#email_preview img {
+    max-width: 100%;
+    height: auto;
+}
+</style>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script>
+let htmlEditor = null;
+let isCodeMode = false;
+let originalHtml = {{ (template.html or '') | tojson }};
+
+// Wait for DOM and Toast UI Editor to be ready
+function initEditor() {
+    console.log('initEditor called');
+    const htmlTextarea = document.getElementById('html');
+    const editorContainer = document.getElementById('html_editor');
+    
+    console.log('htmlTextarea:', htmlTextarea);
+    console.log('editorContainer:', editorContainer);
+    
+    if (!editorContainer) {
+        console.error('Editor container not found');
+        return;
+    }
+    
+    if (!window.toastui || !window.toastui.Editor) {
+        console.error('Toast UI Editor not loaded');
+        // Fallback to textarea
+        editorContainer.innerHTML = '<textarea id="html_fallback" name="html" class="w-full h-full p-4 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded" style="min-height: 500px;">' + (originalHtml || '') + '</textarea>';
+        const fallbackTextarea = document.getElementById('html_fallback');
+        if (fallbackTextarea && htmlTextarea) {
+            fallbackTextarea.addEventListener('input', function() {
+                htmlTextarea.value = this.value;
+                updatePreview();
+            });
+        }
+        setupEventListeners();
+        return;
+    }
+    
+    try {
+        const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        
+        htmlEditor = new toastui.Editor({
+            el: editorContainer,
+            height: '500px',
+            initialEditType: 'wysiwyg',
+            previewStyle: 'vertical',
+            usageStatistics: false,
+            theme: theme,
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task'],
+                ['link', 'code', 'codeblock', 'table'],
+                ['image'],
+                ['scrollSync']
+            ],
+            initialValue: originalHtml || ''
+        });
+        
+        // Update hidden textarea on form submit
+        const emailTemplateForm = document.getElementById('emailTemplateForm');
+        if (emailTemplateForm) {
+            emailTemplateForm.addEventListener('submit', function() {
+                if (htmlEditor) {
+                    try {
+                        htmlTextarea.value = htmlEditor.getHTML();
+                    } catch (e) {
+                        htmlTextarea.value = htmlEditor.getMarkdown();
+                    }
+                }
+            });
+        }
+        
+        // Auto-update preview on content change
+        htmlEditor.on('change', function() {
+            clearTimeout(window.previewTimeout);
+            window.previewTimeout = setTimeout(updatePreview, 500);
+        });
+        
+        // Initial preview after a short delay
+        setTimeout(updatePreview, 300);
+        
+        setupEventListeners();
+    } catch (error) {
+        console.error('Error initializing editor:', error);
+        initializeFallback();
+    }
+}
+
+function initializeFallback() {
+    const editorContainer = document.getElementById('html_editor');
+    const htmlTextarea = document.getElementById('html');
+    if (editorContainer && htmlTextarea) {
+        editorContainer.innerHTML = '<textarea id="html_fallback" name="html" class="w-full h-full p-4 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded" style="min-height: 500px;">' + (originalHtml || '') + '</textarea>';
+        const fallbackTextarea = document.getElementById('html_fallback');
+        if (fallbackTextarea) {
+            fallbackTextarea.addEventListener('input', function() {
+                htmlTextarea.value = this.value;
+                updatePreview();
+            });
+        }
+        setupEventListeners();
+    }
+}
+
+function setupEventListeners() {
+    // CSS editor change handler
+    const cssTextarea = document.getElementById('css');
+    if (cssTextarea) {
+        cssTextarea.addEventListener('input', function() {
+            clearTimeout(window.previewTimeout);
+            window.previewTimeout = setTimeout(updatePreview, 500);
+        });
+    }
+    
+    // Set up event listeners for variable buttons
+    document.querySelectorAll('.variable-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const varName = this.getAttribute('data-variable');
+            insertVariable(varName);
+        });
+    });
+    
+    const showAllVariablesBtn = document.getElementById('showAllVariablesBtn');
+    if (showAllVariablesBtn) {
+        showAllVariablesBtn.addEventListener('click', showAllVariables);
+    }
+    
+    const closeVariablesModalBtn = document.getElementById('closeVariablesModalBtn');
+    if (closeVariablesModalBtn) {
+        closeVariablesModalBtn.addEventListener('click', closeVariablesModal);
+    }
+    
+    const closeVariablesModalBtn2 = document.getElementById('closeVariablesModalBtn2');
+    if (closeVariablesModalBtn2) {
+        closeVariablesModalBtn2.addEventListener('click', closeVariablesModal);
+    }
+    
+    document.querySelectorAll('.modal-variable-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const varName = this.getAttribute('data-variable');
+            insertVariable(varName);
+            closeVariablesModal();
+        });
+    });
+    
+    // Set up event listeners for preview and view mode buttons
+    const viewModeBtn = document.getElementById('viewModeBtn');
+    if (viewModeBtn) {
+        viewModeBtn.addEventListener('click', toggleViewMode);
+    }
+    
+    const updatePreviewBtn = document.getElementById('updatePreviewBtn');
+    if (updatePreviewBtn) {
+        updatePreviewBtn.addEventListener('click', updatePreview);
+    }
+    
+    const refreshPreviewBtn = document.getElementById('refreshPreviewBtn');
+    if (refreshPreviewBtn) {
+        refreshPreviewBtn.addEventListener('click', updatePreview);
+    }
+    
+    const applyCssBtn = document.getElementById('applyCssBtn');
+    if (applyCssBtn) {
+        applyCssBtn.addEventListener('click', updatePreview);
+    }
+}
+
+function toggleViewMode() {
+    if (!htmlEditor) return;
+    
+    isCodeMode = !isCodeMode;
+    const btn = document.getElementById('viewModeBtn');
+    
+    if (isCodeMode) {
+        htmlEditor.changeMode('markdown');
+        btn.innerHTML = '<i class="fas fa-eye mr-1"></i>Visual';
+    } else {
+        htmlEditor.changeMode('wysiwyg');
+        btn.innerHTML = '<i class="fas fa-code mr-1"></i>Code';
+    }
+}
+
+function insertVariable(varName) {
+    if (!htmlEditor) {
+        const textarea = document.getElementById('html_fallback') || document.getElementById('html');
+        if (textarea) {
+            const cursorPos = textarea.selectionStart || textarea.value.length;
+            const textBefore = textarea.value.substring(0, cursorPos);
+            const textAfter = textarea.value.substring(cursorPos);
+            const variable = '{{ ' + varName + ' }}';
+            textarea.value = textBefore + variable + textAfter;
+            textarea.focus();
+            textarea.setSelectionRange(cursorPos + variable.length, cursorPos + variable.length);
+            updatePreview();
+        }
+        return;
+    }
+    
+    const variable = '{{ ' + varName + ' }}';
+    
+    try {
+        if (isCodeMode || htmlEditor.getCurrentMode() === 'markdown') {
+            htmlEditor.insertText(variable);
+        } else {
+            htmlEditor.insertText(variable);
+        }
+        updatePreview();
+    } catch (e) {
+        console.error('Error inserting variable:', e);
+    }
+}
+
+function showAllVariables() {
+    const modal = document.getElementById('variablesModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeVariablesModal() {
+    const modal = document.getElementById('variablesModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function updatePreview() {
+    if (!htmlEditor) {
+        const textarea = document.getElementById('html_fallback') || document.getElementById('html');
+        if (textarea) {
+            updatePreviewContent(textarea.value);
+        }
+        return;
+    }
+    
+    let htmlContent = '';
+    try {
+        htmlContent = htmlEditor.getHTML();
+    } catch (e) {
+        try {
+            htmlContent = htmlEditor.getMarkdown();
+        } catch (e2) {
+            console.error('Error getting editor content:', e2);
+            return;
+        }
+    }
+    
+    updatePreviewContent(htmlContent);
+}
+
+function updatePreviewContent(htmlContent) {
+    const previewDiv = document.getElementById('email_preview');
+    const cssTextarea = document.getElementById('css');
+    const cssContent = cssTextarea ? cssTextarea.value : '';
+    
+    if (!previewDiv) {
+        console.error('Preview div not found');
+        return;
+    }
+    
+    // Create a complete HTML document with CSS
+    let fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
+    if (cssContent) {
+        fullHtml += '<style>' + cssContent + '</style>';
+    }
+    fullHtml += '</head><body>';
+    
+    // Replace Jinja2 variables with sample data for preview
+    htmlContent = (htmlContent || '')
+        .replace(/\{\{\s*invoice\.invoice_number\s*\}\}/g, 'INV-2024-001')
+        .replace(/\{\{\s*invoice\.issue_date\s*\}\}/g, '2024-01-15')
+        .replace(/\{\{\s*invoice\.due_date\s*\}\}/g, '2024-02-15')
+        .replace(/\{\{\s*invoice\.total_amount\s*\}\}/g, '1,200.00')
+        .replace(/\{\{\s*invoice\.currency_code\s*\}\}/g, 'EUR')
+        .replace(/\{\{\s*invoice\.client_name\s*\}\}/g, 'Sample Client')
+        .replace(/\{\{\s*company_name\s*\}\}/g, 'Your Company Name')
+        .replace(/\{\{\s*custom_message\s*\}\}/g, 'Thank you for your business!');
+    
+    fullHtml += htmlContent;
+    fullHtml += '</body></html>';
+    
+    // Create iframe for safe preview
+    previewDiv.innerHTML = '<iframe id="preview_iframe" style="width: 100%; height: 100%; border: none;"></iframe>';
+    const iframe = document.getElementById('preview_iframe');
+    if (iframe) {
+        try {
+            iframe.contentDocument.open();
+            iframe.contentDocument.write(fullHtml);
+            iframe.contentDocument.close();
+        } catch (e) {
+            console.error('Error writing to iframe:', e);
+            previewDiv.innerHTML = '<div class="text-red-500 p-4">Preview unavailable. Please check browser console.</div>';
+        }
+    }
+}
+
+// Close modal on outside click
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('variablesModal');
+    if (event.target == modal) {
+        closeVariablesModal();
+    }
+});
+
+// Initialize when DOM and Toast UI Editor are ready
+function waitForEditorAndInit() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            checkEditorAndInit();
+        });
+    } else {
+        checkEditorAndInit();
+    }
+}
+
+function checkEditorAndInit() {
+    console.log('checkEditorAndInit called');
+    console.log('window.toastui:', window.toastui);
+    console.log('document.readyState:', document.readyState);
+    
+    // Check if Toast UI Editor is loaded
+    if (window.toastui && window.toastui.Editor) {
+        console.log('Toast UI Editor found, initializing...');
+        setTimeout(initEditor, 50);
+    } else {
+        console.log('Toast UI Editor not found, waiting...');
+        // Wait a bit and try again
+        setTimeout(function() {
+            if (window.toastui && window.toastui.Editor) {
+                console.log('Toast UI Editor found after wait, initializing...');
+                initEditor();
+            } else {
+                console.warn('Toast UI Editor not loaded, using fallback');
+                initEditor(); // Will use fallback
+            }
+        }, 500);
+    }
+}
+
+waitForEditorAndInit();
+</script>
+{% endblock %}
