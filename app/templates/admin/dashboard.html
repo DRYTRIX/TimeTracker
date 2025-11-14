@@ -38,6 +38,11 @@
             <div>API Tokens</div>
             <div class="text-xs mt-1 opacity-90">REST API Access</div>
         </a>
+        <a href="{{ url_for('webhooks.list_webhooks') }}" class="bg-indigo-600 text-white p-4 rounded-lg text-center hover:bg-indigo-700">
+            <i class="fas fa-plug mb-2"></i>
+            <div>Webhooks</div>
+            <div class="text-xs mt-1 opacity-90">Integrations</div>
+        </a>
         <a href="{{ url_for('admin.email_support') }}" class="bg-purple-600 text-white p-4 rounded-lg text-center hover:bg-purple-700">
             <i class="fas fa-envelope mb-2"></i>
             <div>Email Configuration</div>

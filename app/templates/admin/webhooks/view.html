@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('Webhooks'), 'url': url_for('webhooks.list_webhooks')},
+    {'text': webhook.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-plug',
+    title_text=webhook.name,
+    subtitle_text=webhook.description or _('Webhook details'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<div class="flex gap-2">'
+        + '<button onclick="testWebhook(' + webhook.id|string + ')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"><i class="fas fa-paper-plane mr-2"></i>' + _('Test') + '</button>'
+        + '<a href="' + url_for("webhooks.edit_webhook", webhook_id=webhook.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90"><i class="fas fa-edit mr-2"></i>' + _('Edit') + '</a>'
+        + '</div>'
+) }}
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <!-- Webhook Details -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Details') }}</h3>
+        <dl class="space-y-3">
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('URL') }}</dt>
+                <dd class="mt-1"><code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded break-all">{{ webhook.url }}</code></dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</dt>
+                <dd class="mt-1">
+                    {% if webhook.is_active %}
+                    <span class="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{{ _('Active') }}</span>
+                    {% else %}
+                    <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">{{ _('Inactive') }}</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('HTTP Method') }}</dt>
+                <dd class="mt-1">{{ webhook.http_method }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Events') }}</dt>
+                <dd class="mt-1">
+                    <div class="flex flex-wrap gap-1">
+                        {% for event in webhook.events %}
+                        <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{{ event }}</span>
+                        {% endfor %}
+                    </div>
+                </dd>
+            </div>
+            {% if webhook.secret %}
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Secret') }}</dt>
+                <dd class="mt-1">
+                    <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ webhook.secret[:20] }}...</code>
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark ml-2">{{ _('(truncated)') }}</span>
+                </dd>
+            </div>
+            {% endif %}
+        </dl>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Statistics') }}</h3>
+        <dl class="space-y-3">
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total Deliveries') }}</dt>
+                <dd class="mt-1 text-2xl font-bold">{{ webhook.total_deliveries }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Successful') }}</dt>
+                <dd class="mt-1 text-xl font-semibold text-green-600 dark:text-green-400">{{ webhook.successful_deliveries }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Failed') }}</dt>
+                <dd class="mt-1 text-xl font-semibold text-red-600 dark:text-red-400">{{ webhook.failed_deliveries }}</dd>
+            </div>
+            {% if webhook.last_delivery_at %}
+            <div>
+                <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Last Delivery') }}</dt>
+                <dd class="mt-1">{{ webhook.last_delivery_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+<!-- Recent Deliveries -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h3 class="text-lg font-semibold mb-4">{{ _('Recent Deliveries') }}</h3>
+    {% if deliveries %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-4">{{ _('Event') }}</th>
+                    <th class="p-4">{{ _('Status') }}</th>
+                    <th class="p-4">{{ _('Attempt') }}</th>
+                    <th class="p-4">{{ _('Response') }}</th>
+                    <th class="p-4">{{ _('Time') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for delivery in deliveries %}
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <td class="p-4">{{ delivery.event_type }}</td>
+                    <td class="p-4">
+                        {% if delivery.status == 'success' %}
+                        <span class="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{{ _('Success') }}</span>
+                        {% elif delivery.status == 'failed' %}
+                        <span class="text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 px-2 py-1 rounded">{{ _('Failed') }}</span>
+                        {% elif delivery.status == 'retrying' %}
+                        <span class="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded">{{ _('Retrying') }}</span>
+                        {% else %}
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">{{ delivery.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">{{ delivery.attempt_number }}</td>
+                    <td class="p-4">
+                        {% if delivery.response_status_code %}
+                        <span class="text-sm">{{ delivery.response_status_code }}</span>
+                        {% endif %}
+                        {% if delivery.error_message %}
+                        <div class="text-xs text-red-600 dark:text-red-400 mt-1">{{ delivery.error_message[:50] }}{% if delivery.error_message|length > 50 %}...{% endif %}</div>
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-sm">{{ delivery.started_at.strftime('%Y-%m-%d %H:%M:%S') if delivery.started_at else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No deliveries yet') }}</p>
+    {% endif %}
+</div>
+
+<script>
+function testWebhook(webhookId) {
+    if (!confirm('{{ _("Send a test webhook event?") }}')) {
+        return;
+    }
+    
+    fetch(`/admin/webhooks/${webhookId}/test`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('{{ _("Test webhook sent successfully!") }}');
+            location.reload();
+        } else {
+            alert('{{ _("Error:") }} ' + (data.error || '{{ _("Unknown error") }}'));
+        }
+    })
+    .catch(error => {
+        alert('{{ _("Error sending test webhook:") }} ' + error);
+    });
+}
+</script>
+{% endblock %}
+

@@ -33,6 +33,8 @@ from app.models import (
     AuditLog,
     InvoicePDFTemplate,
     InvoiceTemplate,
+    Webhook,
+    WebhookDelivery,
 )
 from app.utils.api_auth import require_api_token
 from datetime import datetime, timedelta
@@ -154,6 +156,7 @@ def api_info():
             'audit_logs': '/api/v1/audit-logs',
             'invoice_pdf_templates': '/api/v1/invoice-pdf-templates',
             'invoice_templates': '/api/v1/invoice-templates',
+            'webhooks': '/api/v1/webhooks',
             'users': '/api/v1/users',
             'reports': '/api/v1/reports'
         }
@@ -3593,6 +3596,339 @@ def list_users():
         'users': [u.to_dict() for u in result['items']],
         'pagination': result['pagination']
     })
+
+
+# ==================== Webhooks ====================
+
+@api_v1_bp.route('/webhooks', methods=['GET'])
+@require_api_token('read:webhooks')
+def list_webhooks():
+    """List all webhooks
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: page
+        in: query
+        type: integer
+      - name: per_page
+        in: query
+        type: integer
+      - name: is_active
+        in: query
+        type: boolean
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: List of webhooks
+    """
+    query = Webhook.query
+    
+    # Filter by active status
+    is_active = request.args.get('is_active')
+    if is_active is not None:
+        query = query.filter_by(is_active=is_active.lower() == 'true')
+    
+    # Filter by user (non-admins can only see their own)
+    if not g.api_user.is_admin:
+        query = query.filter_by(user_id=g.api_user.id)
+    
+    query = query.order_by(Webhook.created_at.desc())
+    
+    # Paginate
+    result = paginate_query(query)
+    
+    return jsonify({
+        'webhooks': [w.to_dict() for w in result['items']],
+        'pagination': result['pagination']
+    })
+
+
+@api_v1_bp.route('/webhooks', methods=['POST'])
+@require_api_token('write:webhooks')
+def create_webhook():
+    """Create a new webhook
+    ---
+    tags:
+      - Webhooks
+    security:
+      - Bearer: []
+    responses:
+      201:
+        description: Webhook created successfully
+      400:
+        description: Invalid input
+    """
+    data = request.get_json() or {}
+    
+    # Validate required fields
+    if not data.get('name'):
+        return jsonify({'error': 'name is required'}), 400
+    if not data.get('url'):
+        return jsonify({'error': 'url is required'}), 400
+    if not data.get('events') or not isinstance(data.get('events'), list):
+        return jsonify({'error': 'events must be a non-empty list'}), 400
+    
+    # Validate URL
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(data['url'])
+        if not parsed.scheme or not parsed.netloc:
+            return jsonify({'error': 'Invalid URL format'}), 400
+        if parsed.scheme not in ['http', 'https']:
+            return jsonify({'error': 'URL must use http or https'}), 400
+    except Exception:
+        return jsonify({'error': 'Invalid URL format'}), 400
+    
+    # Validate events
+    from app.utils.webhook_service import WebhookService
+    available_events = WebhookService.get_available_events()
+    for event in data['events']:
+        if event != '*' and event not in available_events:
+            return jsonify({'error': f'Invalid event type: {event}'}), 400
+    
+    # Create webhook
+    webhook = Webhook(
+        name=data['name'],
+        description=data.get('description'),
+        url=data['url'],
+        events=data['events'],
+        http_method=data.get('http_method', 'POST'),
+        content_type=data.get('content_type', 'application/json'),
+        headers=data.get('headers'),
+        is_active=data.get('is_active', True),
+        user_id=g.api_user.id,
+        max_retries=data.get('max_retries', 3),
+        retry_delay_seconds=data.get('retry_delay_seconds', 60),
+        timeout_seconds=data.get('timeout_seconds', 30),
+    )
+    
+    # Generate secret if requested
+    if data.get('generate_secret', True):
+        webhook.set_secret()
+    
+    db.session.add(webhook)
+    db.session.commit()
+    
+    return jsonify({
+        'webhook': webhook.to_dict(include_secret=True),
+        'message': 'Webhook created successfully'
+    }), 201
+
+
+@api_v1_bp.route('/webhooks/<int:webhook_id>', methods=['GET'])
+@require_api_token('read:webhooks')
+def get_webhook(webhook_id):
+    """Get a specific webhook
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: webhook_id
+        in: path
+        type: integer
+        required: true
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Webhook details
+      404:
+        description: Webhook not found
+    """
+    webhook = Webhook.query.get_or_404(webhook_id)
+    
+    # Check permissions
+    if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    return jsonify({'webhook': webhook.to_dict()})
+
+
+@api_v1_bp.route('/webhooks/<int:webhook_id>', methods=['PUT', 'PATCH'])
+@require_api_token('write:webhooks')
+def update_webhook(webhook_id):
+    """Update a webhook
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: webhook_id
+        in: path
+        type: integer
+        required: true
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Webhook updated successfully
+      404:
+        description: Webhook not found
+    """
+    webhook = Webhook.query.get_or_404(webhook_id)
+    
+    # Check permissions
+    if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    data = request.get_json() or {}
+    
+    # Update fields
+    if 'name' in data:
+        webhook.name = data['name']
+    if 'description' in data:
+        webhook.description = data['description']
+    if 'url' in data:
+        # Validate URL
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(data['url'])
+            if not parsed.scheme or not parsed.netloc:
+                return jsonify({'error': 'Invalid URL format'}), 400
+            if parsed.scheme not in ['http', 'https']:
+                return jsonify({'error': 'URL must use http or https'}), 400
+        except Exception:
+            return jsonify({'error': 'Invalid URL format'}), 400
+        webhook.url = data['url']
+    if 'events' in data:
+        if not isinstance(data['events'], list):
+            return jsonify({'error': 'events must be a list'}), 400
+        # Validate events
+        from app.utils.webhook_service import WebhookService
+        available_events = WebhookService.get_available_events()
+        for event in data['events']:
+            if event != '*' and event not in available_events:
+                return jsonify({'error': f'Invalid event type: {event}'}), 400
+        webhook.events = data['events']
+    if 'http_method' in data:
+        if data['http_method'] not in ['POST', 'PUT', 'PATCH']:
+            return jsonify({'error': 'http_method must be POST, PUT, or PATCH'}), 400
+        webhook.http_method = data['http_method']
+    if 'content_type' in data:
+        webhook.content_type = data['content_type']
+    if 'headers' in data:
+        webhook.headers = data['headers']
+    if 'is_active' in data:
+        webhook.is_active = bool(data['is_active'])
+    if 'max_retries' in data:
+        webhook.max_retries = int(data['max_retries'])
+    if 'retry_delay_seconds' in data:
+        webhook.retry_delay_seconds = int(data['retry_delay_seconds'])
+    if 'timeout_seconds' in data:
+        webhook.timeout_seconds = int(data['timeout_seconds'])
+    if 'generate_secret' in data and data['generate_secret']:
+        webhook.set_secret()
+    
+    db.session.commit()
+    
+    return jsonify({
+        'webhook': webhook.to_dict(),
+        'message': 'Webhook updated successfully'
+    })
+
+
+@api_v1_bp.route('/webhooks/<int:webhook_id>', methods=['DELETE'])
+@require_api_token('write:webhooks')
+def delete_webhook(webhook_id):
+    """Delete a webhook
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: webhook_id
+        in: path
+        type: integer
+        required: true
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Webhook deleted successfully
+      404:
+        description: Webhook not found
+    """
+    webhook = Webhook.query.get_or_404(webhook_id)
+    
+    # Check permissions
+    if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    db.session.delete(webhook)
+    db.session.commit()
+    
+    return jsonify({'message': 'Webhook deleted successfully'})
+
+
+@api_v1_bp.route('/webhooks/<int:webhook_id>/deliveries', methods=['GET'])
+@require_api_token('read:webhooks')
+def list_webhook_deliveries(webhook_id):
+    """List deliveries for a webhook
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: webhook_id
+        in: path
+        type: integer
+        required: true
+      - name: status
+        in: query
+        type: string
+        enum: [pending, success, failed, retrying]
+      - name: page
+        in: query
+        type: integer
+      - name: per_page
+        in: query
+        type: integer
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: List of deliveries
+    """
+    webhook = Webhook.query.get_or_404(webhook_id)
+    
+    # Check permissions
+    if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    query = WebhookDelivery.query.filter_by(webhook_id=webhook_id)
+    
+    # Filter by status
+    status = request.args.get('status')
+    if status:
+        query = query.filter_by(status=status)
+    
+    query = query.order_by(WebhookDelivery.started_at.desc())
+    
+    # Paginate
+    result = paginate_query(query)
+    
+    return jsonify({
+        'deliveries': [d.to_dict() for d in result['items']],
+        'pagination': result['pagination']
+    })
+
+
+@api_v1_bp.route('/webhooks/events', methods=['GET'])
+@require_api_token('read:webhooks')
+def list_webhook_events():
+    """Get list of available webhook event types
+    ---
+    tags:
+      - Webhooks
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: List of available event types
+    """
+    from app.utils.webhook_service import WebhookService
+    events = WebhookService.get_available_events()
+    
+    return jsonify({'events': events})
 
 
 # ==================== Error Handlers ====================
