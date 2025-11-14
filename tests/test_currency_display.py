@@ -21,7 +21,9 @@ def app():
     """Isolated app for currency display tests to avoid SQLite file locking on Windows."""
     app = create_app({
         'TESTING': True,
+        'FLASK_ENV': 'testing',
         'WTF_CSRF_ENABLED': False,
+        'SECRET_KEY': 'test-secret-key-do-not-use-in-production-12345',
         'SQLALCHEMY_DATABASE_URI': 'sqlite://',
         'SQLALCHEMY_ENGINE_OPTIONS': {
             'connect_args': {'check_same_thread': False, 'timeout': 30},
