@@ -257,8 +257,14 @@ class User(UserMixin, db.Model):
         from .project import Project
         from .invoice import Invoice
         from .time_entry import TimeEntry
+        from .client import Client
         
+        # Get client - try relationship first, then query by ID if needed
         client = self.client
+        if not client and self.client_id:
+            # Relationship might not be loaded, query directly
+            client = Client.query.get(self.client_id)
+        
         if not client:
             return None
         
