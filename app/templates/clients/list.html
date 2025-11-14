@@ -79,6 +79,7 @@
                 <th class="p-4" data-sortable>Email</th>
                 <th class="p-4" data-sortable>Status</th>
                 <th class="p-4" data-sortable>Projects</th>
+                <th class="p-4">Portal</th>
                 <th class="p-4">Actions</th>
             </tr>
         </thead>
@@ -108,6 +109,17 @@
                 </td>
                 <td class="p-4">
                     <span class="px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">{{ client.active_projects }}/{{ client.total_projects }}</span>
+                </td>
+                <td class="p-4">
+                    {% if client.portal_enabled %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" title="Portal: {{ client.portal_username }}">
+                        <i class="fas fa-building mr-1"></i>Enabled
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                        Disabled
+                    </span>
+                    {% endif %}
                 </td>
                 <td class="p-4">
                     <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="text-primary hover:underline">View</a>

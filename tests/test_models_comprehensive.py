@@ -11,6 +11,7 @@ from app.models import (
     User, Project, TimeEntry, Client, Settings,
     Invoice, InvoiceItem, Task
 )
+from factories import InvoiceFactory
 from app import db
 
 
@@ -260,7 +261,8 @@ def test_time_entry_tag_list(app, test_client):
         db.session.add(project)
     db.session.commit()
     
-    entry = TimeEntry(
+    from factories import TimeEntryFactory
+    entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=datetime.utcnow(),
@@ -268,8 +270,6 @@ def test_time_entry_tag_list(app, test_client):
         tags='python,testing,development',
         source='manual'
     )
-    db.session.add(entry)
-    db.session.commit()
     
     db.session.refresh(entry)
     assert entry.tag_list == ['python', 'testing', 'development']
@@ -398,19 +398,20 @@ def test_invoice_payment_tracking(app, invoice_with_items):
 def test_invoice_overdue_status(app, user, project, test_client):
     """Test invoice overdue status."""
     # Create overdue invoice
-    overdue_invoice = Invoice(
+    overdue_invoice = InvoiceFactory(
         invoice_number=Invoice.generate_invoice_number(),
         project_id=project.id,
         client_id=test_client.id,
         client_name='Test Client',
         due_date=date.today() - timedelta(days=10),
-        created_by=user.id
+        created_by=user.id,
+        status='sent'
     )
-    # Set status after creation (not in __init__)
-    overdue_invoice.status = 'sent'
-    db.session.add(overdue_invoice)
     db.session.commit()
     
+    # Ensure status is 'sent' for overdue calculation compatibility
+    overdue_invoice.status = 'sent'
+    db.session.commit()
     db.session.refresh(overdue_invoice)
     assert overdue_invoice.is_overdue is True
     assert overdue_invoice.days_overdue == 10

@@ -305,6 +305,32 @@ def register_scheduled_tasks(scheduler):
         )
         logger.info("Registered recurring invoices generation task")
         
+        # Retry failed webhook deliveries every 5 minutes
+        scheduler.add_job(
+            func=retry_failed_webhooks,
+            trigger='cron',
+            minute='*/5',
+            id='retry_failed_webhooks',
+            name='Retry failed webhook deliveries',
+            replace_existing=True
+        )
+        logger.info("Registered webhook retry task")
+    
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
+
+
+def retry_failed_webhooks():
+    """Retry failed webhook deliveries
+    
+    This task should be run periodically to retry webhook deliveries
+    that have failed and are scheduled for retry.
+    """
+    try:
+        from app.utils.webhook_service import WebhookService
+        retried_count = WebhookService.retry_failed_deliveries(max_deliveries=100)
+        if retried_count > 0:
+            logger.info(f"Retried {retried_count} failed webhook deliveries")
+    except Exception as e:
+        logger.error(f"Error retrying failed webhooks: {e}")
 

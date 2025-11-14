@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from app import db
 from app.models import Payment, Invoice, User, Project, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, PaymentFactory
 
 
 @pytest.fixture
@@ -12,34 +13,30 @@ def setup_payment_test_data(app):
     """Setup test data for payment smoke tests"""
     with app.app_context():
         # Create user
-        user = User(username='smoketest_user', email='smoke@example.com')
+        user = UserFactory()
         user.role = 'admin'
         db.session.add(user)
-        
+        db.session.commit()
+
         # Create client
-        client = Client(name='Smoke Test Client', email='smoke_client@example.com')
-        db.session.add(client)
+        client = ClientFactory()
         db.session.flush()
         
         # Create project
-        project = Project(
-            name='Smoke Test Project',
+        project = ProjectFactory(
             client_id=client.id,
-            created_by=user.id,
             billable=True,
             hourly_rate=Decimal('100.00')
         )
-        db.session.add(project)
         db.session.flush()
         
         # Create invoice
-        invoice = Invoice(
-            invoice_number='INV-SMOKE-001',
+        invoice = InvoiceFactory(
             project_id=project.id,
-            client_name='Smoke Test Client',
+            client_name=client.name,
             client_id=client.id,
-            due_date=date.today() + timedelta(days=30),
-            created_by=user.id
+            created_by=user.id,
+            due_date=(date.today() + timedelta(days=30)),
         )
         invoice.subtotal = Decimal('1000.00')
         invoice.tax_rate = Decimal('21.00')
@@ -118,7 +115,7 @@ class TestPaymentSmokeTests:
             user = setup_payment_test_data['user']
             
             # Create payment
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -152,7 +149,7 @@ class TestPaymentSmokeTests:
             invoice = Invoice.query.get(invoice_id)
             
             # Create payment
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -253,7 +250,7 @@ class TestPaymentSmokeTests:
         with app.app_context():
             invoice = setup_payment_test_data['invoice']
             
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -284,7 +281,7 @@ class TestPaymentSmokeTests:
             client.post('/login', data={'username': user.username}, follow_redirects=True)
             
             # Create test payments with different statuses (client context already provides app context)
-            payment1 = Payment(
+            payment1 = PaymentFactory(
                 invoice_id=invoice.id,
                 amount=Decimal('100.00'),
                 currency='EUR',
@@ -292,7 +289,7 @@ class TestPaymentSmokeTests:
                 method='cash',
                 status='completed'
             )
-            payment2 = Payment(
+            payment2 = PaymentFactory(
                 invoice_id=invoice.id,
                 amount=Decimal('200.00'),
                 currency='EUR',

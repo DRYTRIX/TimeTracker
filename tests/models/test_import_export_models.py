@@ -14,7 +14,10 @@ def app():
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
         'WTF_CSRF_ENABLED': False,
-        'SECRET_KEY': 'test-secret-key'
+        # Ensure fail-fast production checks are bypassed for tests
+        'FLASK_ENV': 'testing',
+        # Provide a sufficiently strong secret for any residual checks
+        'SECRET_KEY': 'test-secret-key-do-not-use-in-production-1234567890'
     })
     
     with app.app_context():

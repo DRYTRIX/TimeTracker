@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
 from app.utils.timezone import convert_app_datetime_to_user
+from app.utils.email import send_client_portal_password_setup_email
 import csv
 import io
 
@@ -275,6 +276,23 @@ def edit_client(client_id):
             flash(_('Prepaid reset day must be between 1 and 28.'), 'error')
             return render_template('clients/edit.html', client=client)
         
+        # Handle portal settings
+        portal_enabled = request.form.get('portal_enabled') == 'on'
+        portal_username = request.form.get('portal_username', '').strip()
+        portal_password = request.form.get('portal_password', '').strip()
+        
+        # Validate portal settings
+        if portal_enabled:
+            if not portal_username:
+                flash(_('Portal username is required when enabling portal access.'), 'error')
+                return render_template('clients/edit.html', client=client)
+            
+            # Check if portal username is already taken by another client
+            existing_client = Client.query.filter_by(portal_username=portal_username).first()
+            if existing_client and existing_client.id != client.id:
+                flash(_('This portal username is already in use by another client.'), 'error')
+                return render_template('clients/edit.html', client=client)
+        
         # Update client
         client.name = name
         client.description = description
@@ -285,6 +303,18 @@ def edit_client(client_id):
         client.default_hourly_rate = default_hourly_rate
         client.prepaid_hours_monthly = prepaid_hours_monthly
         client.prepaid_reset_day = prepaid_reset_day
+        client.portal_enabled = portal_enabled
+        
+        # Update portal credentials
+        if portal_enabled:
+            client.portal_username = portal_username
+            if portal_password:  # Only update password if provided
+                client.set_portal_password(portal_password)
+        else:
+            # Disable portal - clear credentials
+            client.portal_username = None
+            client.portal_password_hash = None
+        
         client.updated_at = datetime.utcnow()
         
         if not safe_commit('edit_client', {'client_id': client.id}):
@@ -299,6 +329,68 @@ def edit_client(client_id):
         return redirect(url_for('clients.view_client', client_id=client.id))
     
     return render_template('clients/edit.html', client=client)
+
+
+@clients_bp.route('/clients/<int:client_id>/send-portal-password-email', methods=['POST'])
+@login_required
+def send_portal_password_email(client_id):
+    """Send password setup email to client"""
+    client = Client.query.get_or_404(client_id)
+    
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission('edit_clients'):
+        flash(_('You do not have permission to send portal emails'), 'error')
+        return redirect(url_for('clients.view_client', client_id=client_id))
+    
+    # Check if portal is enabled and username is set
+    if not client.portal_enabled:
+        flash(_('Client portal is not enabled for this client.'), 'error')
+        return redirect(url_for('clients.edit_client', client_id=client_id))
+    
+    if not client.portal_username:
+        flash(_('Portal username is not set for this client.'), 'error')
+        return redirect(url_for('clients.edit_client', client_id=client_id))
+    
+    if not client.email:
+        flash(_('Client email address is not set. Cannot send password setup email.'), 'error')
+        return redirect(url_for('clients.edit_client', client_id=client_id))
+    
+    # Generate password setup token
+    token = client.generate_password_setup_token(expires_hours=24)
+    
+    if not safe_commit('client_generate_password_token', {'client_id': client.id}):
+        flash(_('Could not generate password setup token due to a database error.'), 'error')
+        return redirect(url_for('clients.edit_client', client_id=client_id))
+    
+    # Send email
+    try:
+        # Ensure we're using latest database email settings
+        from app.utils.email import reload_mail_config
+        from app.models import Settings
+        settings = Settings.get_settings()
+        if settings.mail_enabled:
+            reload_mail_config(current_app._get_current_object())
+        
+        success = send_client_portal_password_setup_email(client, token)
+        if success:
+            flash(_('Password setup email sent successfully to %(email)s', email=client.email), 'success')
+        else:
+            # Check email configuration to provide better error message
+            db_config = settings.get_mail_config()
+            if db_config:
+                mail_server = db_config.get('MAIL_SERVER')
+            else:
+                mail_server = current_app.config.get('MAIL_SERVER')
+            
+            if not mail_server or mail_server == 'localhost':
+                flash(_('Email server is not configured. Please configure email settings in Admin → Email Configuration or set MAIL_SERVER environment variable.'), 'error')
+            else:
+                flash(_('Failed to send password setup email. Please check email configuration and server logs for details.'), 'error')
+    except Exception as e:
+        current_app.logger.error(f"Error sending password setup email: {e}")
+        flash(_('An error occurred while sending the email: %(error)s', error=str(e)), 'error')
+    
+    return redirect(url_for('clients.edit_client', client_id=client_id))
 
 @clients_bp.route('/clients/<int:client_id>/archive', methods=['POST'])
 @login_required

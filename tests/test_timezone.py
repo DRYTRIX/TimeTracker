@@ -100,7 +100,8 @@ def test_timezone_change_affects_display(app, user, project):
         user = db.session.merge(user)
         project = db.session.merge(project)
         
-        entry = TimeEntry(
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=utc_time,

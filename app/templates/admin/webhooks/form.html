@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('Webhooks'), 'url': url_for('webhooks.list_webhooks')},
+    {'text': _('Create Webhook') if not webhook else _('Edit Webhook')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-plug',
+    title_text=_('Create Webhook') if not webhook else _('Edit Webhook'),
+    subtitle_text=_('Configure webhook for integrations'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('webhooks.create_webhook') if not webhook else url_for('webhooks.edit_webhook', webhook_id=webhook.id) }}">
+        <div class="space-y-6">
+            <!-- Basic Information -->
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Name') }} *</label>
+                <input type="text" name="name" value="{{ webhook.name if webhook else '' }}" required
+                       class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
+                <textarea name="description" rows="3"
+                          class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">{{ webhook.description if webhook else '' }}</textarea>
+            </div>
+            
+            <!-- URL Configuration -->
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Webhook URL') }} *</label>
+                <input type="url" name="url" value="{{ webhook.url if webhook else '' }}" required
+                       placeholder="https://example.com/webhook"
+                       class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The URL where webhook events will be sent') }}</p>
+            </div>
+            
+            <!-- Events -->
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Events') }} *</label>
+                <div class="border border-border-light dark:border-border-dark rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {% for event in available_events %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="events" value="{{ event }}"
+                                   {% if webhook and event in webhook.events %}checked{% endif %}
+                                   class="rounded border-border-light dark:border-border-dark">
+                            <span class="text-sm">{{ event }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select which events should trigger this webhook') }}</p>
+            </div>
+            
+            <!-- HTTP Configuration -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">{{ _('HTTP Method') }}</label>
+                    <select name="http_method"
+                            class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+                        <option value="POST" {% if webhook and webhook.http_method == 'POST' %}selected{% endif %}>POST</option>
+                        <option value="PUT" {% if webhook and webhook.http_method == 'PUT' %}selected{% endif %}>PUT</option>
+                        <option value="PATCH" {% if webhook and webhook.http_method == 'PATCH' %}selected{% endif %}>PATCH</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{{ _('Content Type') }}</label>
+                    <input type="text" name="content_type" value="{{ webhook.content_type if webhook else 'application/json' }}"
+                           class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+                </div>
+            </div>
+            
+            <!-- Retry Configuration -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">{{ _('Max Retries') }}</label>
+                    <input type="number" name="max_retries" value="{{ webhook.max_retries if webhook else 3 }}" min="0" max="10"
+                           class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{{ _('Retry Delay (seconds)') }}</label>
+                    <input type="number" name="retry_delay_seconds" value="{{ webhook.retry_delay_seconds if webhook else 60 }}" min="1"
+                           class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">{{ _('Timeout (seconds)') }}</label>
+                    <input type="number" name="timeout_seconds" value="{{ webhook.timeout_seconds if webhook else 30 }}" min="1"
+                           class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+                </div>
+            </div>
+            
+            <!-- Status -->
+            <div>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="is_active" {% if not webhook or webhook.is_active %}checked{% endif %}
+                           class="rounded border-border-light dark:border-border-dark">
+                    <span>{{ _('Active') }}</span>
+                </label>
+            </div>
+            
+            {% if webhook %}
+            <!-- Regenerate Secret -->
+            <div>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="regenerate_secret"
+                           class="rounded border-border-light dark:border-border-dark">
+                    <span>{{ _('Regenerate Secret') }}</span>
+                </label>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Warning: Regenerating the secret will invalidate the current secret') }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Actions -->
+            <div class="flex gap-4">
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90">
+                    {{ _('Save') }}
+                </button>
+                <a href="{{ url_for('webhooks.list_webhooks') }}" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700">
+                    {{ _('Cancel') }}
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

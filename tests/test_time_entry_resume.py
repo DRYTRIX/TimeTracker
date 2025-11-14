@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from app import db
 from app.models import User, Project, TimeEntry, Task
 from app.models.time_entry import local_now
+from factories import TimeEntryFactory
 
 
 @pytest.mark.unit
@@ -14,7 +15,7 @@ def test_resume_timer_properties(app, user, project):
     """Test that resumed timer copies all properties correctly"""
     with app.app_context():
         # Create original time entry with all properties
-        original_timer = TimeEntry(
+        original_timer = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=local_now() - timedelta(hours=2),
@@ -28,11 +29,12 @@ def test_resume_timer_properties(app, user, project):
         db.session.commit()
         
         # Simulate resume by creating new timer with same properties
-        resumed_timer = TimeEntry(
+        resumed_timer = TimeEntryFactory(
             user_id=original_timer.user_id,
             project_id=original_timer.project_id,
             task_id=original_timer.task_id,
             start_time=local_now(),
+            end_time=None,
             notes=original_timer.notes,
             tags=original_timer.tags,
             source='auto',
@@ -70,7 +72,7 @@ def test_resume_timer_with_task(app, user, project):
         db.session.commit()
         
         # Create original time entry with task
-        original_timer = TimeEntry(
+        original_timer = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             task_id=task.id,
@@ -83,11 +85,12 @@ def test_resume_timer_with_task(app, user, project):
         db.session.commit()
         
         # Create resumed timer
-        resumed_timer = TimeEntry(
+        resumed_timer = TimeEntryFactory(
             user_id=original_timer.user_id,
             project_id=original_timer.project_id,
             task_id=original_timer.task_id,
             start_time=local_now(),
+            end_time=None,
             notes=original_timer.notes,
             tags=original_timer.tags,
             source='auto',
@@ -107,7 +110,7 @@ def test_resume_timer_without_task(app, user, project):
     """Test resuming a timer that has no task"""
     with app.app_context():
         # Create original time entry without task
-        original_timer = TimeEntry(
+        original_timer = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             task_id=None,
@@ -120,11 +123,12 @@ def test_resume_timer_without_task(app, user, project):
         db.session.commit()
         
         # Create resumed timer
-        resumed_timer = TimeEntry(
+        resumed_timer = TimeEntryFactory(
             user_id=original_timer.user_id,
             project_id=original_timer.project_id,
             task_id=original_timer.task_id,
             start_time=local_now(),
+            end_time=None,
             notes=original_timer.notes,
             tags=original_timer.tags,
             source='auto',
@@ -147,7 +151,7 @@ def test_resume_timer_route(client, user, project):
             sess['_user_id'] = str(user.id)
         
         # Create a completed time entry
-        original_timer = TimeEntry(
+        original_timer = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=local_now() - timedelta(hours=2),
@@ -190,7 +194,7 @@ def test_resume_timer_blocks_if_active_timer_exists(client, user, project):
             sess['_user_id'] = str(user.id)
         
         # Create a completed time entry
-        completed_timer = TimeEntry(
+        completed_timer = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=local_now() - timedelta(hours=2),
@@ -201,10 +205,11 @@ def test_resume_timer_blocks_if_active_timer_exists(client, user, project):
         db.session.add(completed_timer)
         
         # Create an active timer
-        active_timer = TimeEntry(
+        active_timer = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=local_now(),
+            end_time=None,
             notes="Active work",
             source='auto'
         )

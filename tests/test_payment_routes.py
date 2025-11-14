@@ -4,81 +4,91 @@ import pytest
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from flask import url_for
-from app import db
+from app import db, create_app
 from app.models import Payment, Invoice, User, Project, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, PaymentFactory
+from sqlalchemy.pool import StaticPool
+@pytest.fixture
+def app():
+    """Isolated app for payment routes tests using in-memory SQLite to avoid file locks on Windows."""
+    app = create_app({
+        'TESTING': True,
+        'WTF_CSRF_ENABLED': False,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+        'SQLALCHEMY_ENGINE_OPTIONS': {
+            'connect_args': {'check_same_thread': False, 'timeout': 30},
+            'poolclass': StaticPool,
+        },
+        'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
+    })
+    with app.app_context():
+        db.create_all()
+        try:
+            db.session.execute("PRAGMA journal_mode=WAL;")
+            db.session.execute("PRAGMA synchronous=NORMAL;")
+            db.session.execute("PRAGMA busy_timeout=30000;")
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
+            yield app
+        finally:
+            db.session.remove()
+            db.drop_all()
+            try:
+                db.engine.dispose()
+            except Exception:
+                pass
 
 
 @pytest.fixture
 def test_user(app):
     """Create a test user"""
     with app.app_context():
-        user = User(username='testuser', email='test@example.com')
-        user.role = 'user'
-        db.session.add(user)
-        db.session.commit()
+        user = UserFactory(username='testuser')
         yield user
-        # Cleanup
-        db.session.delete(user)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_admin(app):
     """Create a test admin user"""
     with app.app_context():
-        admin = User(username='testadmin', email='admin@example.com')
-        admin.role = 'admin'
+        admin = UserFactory(username='testadmin', role='admin')
         db.session.add(admin)
         db.session.commit()
         yield admin
-        # Cleanup
-        db.session.delete(admin)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_client(app):
     """Create a test client"""
     with app.app_context():
-        client = Client(name='Test Client', email='client@example.com')
-        db.session.add(client)
-        db.session.commit()
+        client = ClientFactory()
         yield client
-        # Cleanup
-        db.session.delete(client)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_project(app, test_client, test_user):
     """Create a test project"""
     with app.app_context():
-        project = Project(
-            name='Test Project',
+        project = ProjectFactory(
             client_id=test_client.id,
-            created_by=test_user.id,
             billable=True,
             hourly_rate=Decimal('100.00')
         )
-        db.session.add(project)
-        db.session.commit()
         yield project
-        # Cleanup
-        db.session.delete(project)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_invoice(app, test_project, test_user, test_client):
     """Create a test invoice"""
     with app.app_context():
-        invoice = Invoice(
-            invoice_number='INV-TEST-001',
+        invoice = InvoiceFactory(
             project_id=test_project.id,
-            client_name='Test Client',
             client_id=test_client.id,
-            due_date=date.today() + timedelta(days=30),
-            created_by=test_user.id
+            created_by=test_user.id,
+            client_name='Test Client',
+            due_date=(date.today() + timedelta(days=30)),
         )
         invoice.subtotal = Decimal('1000.00')
         invoice.tax_rate = Decimal('21.00')
@@ -87,16 +97,13 @@ def test_invoice(app, test_project, test_user, test_client):
         db.session.add(invoice)
         db.session.commit()
         yield invoice
-        # Cleanup
-        db.session.delete(invoice)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_payment(app, test_invoice, test_user):
     """Create a test payment"""
     with app.app_context():
-        payment = Payment(
+        payment = PaymentFactory(
             invoice_id=test_invoice.id,
             amount=Decimal('500.00'),
             currency='EUR',
@@ -109,9 +116,6 @@ def test_payment(app, test_invoice, test_user):
         db.session.add(payment)
         db.session.commit()
         yield payment
-        # Cleanup
-        db.session.delete(payment)
-        db.session.commit()
 
 
 class TestPaymentRoutes:

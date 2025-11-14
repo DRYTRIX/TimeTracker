@@ -98,14 +98,14 @@ def test_user_cannot_edit_other_users_time_entries(app, authenticated_client, us
             db.session.add(project)
             db.session.commit()
         
-        other_entry = TimeEntry(
+        from factories import TimeEntryFactory
+        other_entry = TimeEntryFactory(
             user_id=other_user.id,
             project_id=project.id,
             start_time=datetime.utcnow(),
             end_time=datetime.utcnow(),
             source='manual'
         )
-        db.session.add(other_entry)
         db.session.commit()
         
         # Try to edit the other user's entry

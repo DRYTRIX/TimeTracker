@@ -20,7 +20,7 @@
     <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg">
         <p class="text-sm">
             <i class="fas fa-info-circle mr-2"></i>
-            {{ _('Configure email settings here to save them in the database. Database settings take precedence over environment variables.') }}
+            {{ _('Configure email settings here to save them in the database.') }}
         </p>
     </div>
     
@@ -119,7 +119,7 @@
                 <i class="fas fa-exclamation-triangle text-xl mr-3"></i>
                 <div>
                     <strong class="font-bold">{{ _('Email is not configured') }}</strong>
-                    <span class="block sm:inline">{{ _('Please configure email settings in your environment variables.') }}</span>
+                    <span class="block sm:inline">{{ _('Please configure email settings using the form above.') }}</span>
                 </div>
             </div>
         </div>
@@ -228,23 +228,6 @@
     <h2 class="text-lg font-semibold mb-4">{{ _('Configuration Guide') }}</h2>
     
     <div class="prose dark:prose-invert max-w-none">
-        <p class="mb-4">{{ _('To configure email, set the following environment variables:') }}</p>
-        
-        <div class="bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-lg p-4 mb-4 font-mono text-sm overflow-x-auto">
-            <div># {{ _('Basic SMTP Settings') }}</div>
-            <div>MAIL_SERVER=smtp.gmail.com</div>
-            <div>MAIL_PORT=587</div>
-            <div>MAIL_USE_TLS=true</div>
-            <div>MAIL_USE_SSL=false</div>
-            <div><br></div>
-            <div># {{ _('Authentication') }}</div>
-            <div>MAIL_USERNAME=your-email@gmail.com</div>
-            <div>MAIL_PASSWORD=your-app-password</div>
-            <div><br></div>
-            <div># {{ _('Sender Information') }}</div>
-            <div>MAIL_DEFAULT_SENDER=noreply@yourdomain.com</div>
-        </div>
-        
         <h3 class="text-base font-semibold mb-2">{{ _('Common SMTP Providers') }}</h3>
         <ul class="list-disc list-inside space-y-2 mb-4">
             <li><strong>Gmail:</strong> smtp.gmail.com:587 (TLS) - {{ _('Requires app password') }}</li>

@@ -7,22 +7,24 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from app import db
 from app.models import ExpenseCategory, Expense, User
+from factories import UserFactory, ExpenseFactory, ExpenseCategoryFactory
 
 
 @pytest.fixture
 def user(client):
     """Create a test user"""
-    user = User(username='testuser', email='test@example.com')
-    user.set_password('password123')
-    db.session.add(user)
-    db.session.commit()
+    user = UserFactory()
+    try:
+        user.set_password('password123')
+    except Exception:
+        pass
     return user
 
 
 @pytest.fixture
 def category(client):
     """Create a test expense category"""
-    category = ExpenseCategory(
+    category = ExpenseCategoryFactory(
         name='Travel',
         code='TRV',
         monthly_budget=5000,
@@ -30,7 +32,8 @@ def category(client):
         yearly_budget=60000,
         budget_threshold_percent=80,
         requires_receipt=True,
-        requires_approval=True
+        requires_approval=True,
+        is_active=True,
     )
     db.session.add(category)
     db.session.commit()
@@ -39,7 +42,7 @@ def category(client):
 
 def test_create_expense_category(client):
     """Test creating an expense category"""
-    category = ExpenseCategory(
+    category = ExpenseCategoryFactory(
         name='Meals',
         code='MEL',
         description='Meal expenses',
@@ -63,7 +66,7 @@ def test_category_budget_utilization(client, category, user):
     today = date.today()
     start_of_month = date(today.year, today.month, 1)
     
-    expense1 = Expense(
+    expense1 = ExpenseFactory(
         user_id=user.id,
         title='Flight tickets',
         category='Travel',
@@ -71,7 +74,7 @@ def test_category_budget_utilization(client, category, user):
         expense_date=today,
         status='approved'
     )
-    expense2 = Expense(
+    expense2 = ExpenseFactory(
         user_id=user.id,
         title='Hotel',
         category='Travel',
@@ -99,7 +102,7 @@ def test_category_over_budget_threshold(client, category, user):
     today = date.today()
     
     # Create expense that exceeds threshold (80% of 5000 = 4000)
-    expense = Expense(
+    expense = ExpenseFactory(
         user_id=user.id,
         title='Expensive trip',
         category='Travel',
@@ -122,7 +125,7 @@ def test_category_over_budget_threshold(client, category, user):
 def test_get_active_categories(client, category):
     """Test getting active categories"""
     # Create an inactive category
-    inactive_category = ExpenseCategory(
+    inactive_category = ExpenseCategoryFactory(
         name='Deprecated',
         code='DEP',
         is_active=False
@@ -173,7 +176,7 @@ def test_category_quarterly_budget(client, category, user):
     start_month = (quarter - 1) * 3 + 1
     
     # Create expenses in current quarter
-    expense = Expense(
+    expense = ExpenseFactory(
         user_id=user.id,
         title='Q1 Travel',
         category='Travel',
@@ -199,7 +202,7 @@ def test_get_categories_over_budget(client, category, user):
     today = date.today()
     
     # Create expense that exceeds threshold
-    expense = Expense(
+    expense = ExpenseFactory(
         user_id=user.id,
         title='Over budget',
         category='Travel',

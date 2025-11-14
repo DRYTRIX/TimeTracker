@@ -6,14 +6,54 @@ This file contains common fixtures and test configuration used across all test m
 import pytest
 import os
 import tempfile
+import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
+from sqlalchemy.pool import NullPool
 
 from app import create_app, db
 from app.models import (
     User, Project, TimeEntry, Client, Settings, 
     Invoice, InvoiceItem, Task
 )
+
+
+# ----------------------------------------------------------------------------
+# Time control helpers (freezegun)
+# ----------------------------------------------------------------------------
+@pytest.fixture
+def time_freezer():
+    """
+    Utility fixture to freeze time during a test.
+
+    Usage:
+        freezer = time_freezer()  # freezes at default "2024-01-01 09:00:00"
+        # ... run code ...
+        freezer.stop()
+
+        # or with a custom timestamp:
+        f = time_freezer("2024-06-15 12:30:00")
+        # ... run code ...
+        f.stop()
+    """
+    from freezegun import freeze_time as _freeze_time
+    _active = []
+
+    def _start(at: str = "2024-01-01 09:00:00"):
+        f = _freeze_time(at)
+        f.start()
+        _active.append(f)
+        return f
+
+    try:
+        yield _start
+    finally:
+        while _active:
+            f = _active.pop()
+            try:
+                f.stop()
+            except Exception:
+                pass
 
 
 # ============================================================================
@@ -25,7 +65,15 @@ def app_config():
     """Base test configuration."""
     return {
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        # Use file-based SQLite to ensure consistent connections across contexts/threads
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///pytest_main.sqlite',
+        # Mitigate SQLite 'database is locked' by increasing busy timeout and enabling pre-ping
+        'SQLALCHEMY_ENGINE_OPTIONS': {
+            'pool_pre_ping': True,
+            'connect_args': {'timeout': 30},
+            'poolclass': NullPool,
+        },
+        'FLASK_ENV': 'testing',
         'SQLALCHEMY_TRACK_MODIFICATIONS': False,
         'WTF_CSRF_ENABLED': False,
         'SECRET_KEY': 'test-secret-key-do-not-use-in-production',
@@ -33,15 +81,26 @@ def app_config():
         'APPLICATION_ROOT': '/',
         'PREFERRED_URL_SCHEME': 'http',
         'SESSION_COOKIE_HTTPONLY': True,
+        # Ensure a stable locale for Babel-dependent formatting in tests
+        'BABEL_DEFAULT_LOCALE': 'en',
     }
 
 
 @pytest.fixture(scope='function')
 def app(app_config):
     """Create application for testing with function scope."""
-    app = create_app(app_config)
+    # Use a unique SQLite file per test function to avoid Windows file locking
+    unique_db_path = os.path.join(tempfile.gettempdir(), f"pytest_{uuid.uuid4().hex}.sqlite")
+    config = dict(app_config)
+    config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{unique_db_path}"
+    app = create_app(config)
     
     with app.app_context():
+        # Ensure any lingering connections are closed to avoid SQLite file locks (Windows)
+        try:
+            db.engine.dispose()
+        except Exception:
+            pass
         # Drop all tables first to ensure clean state
         try:
             db.drop_all()
@@ -75,6 +134,16 @@ def app(app_config):
             db.drop_all()
         except Exception:
             pass  # Ignore errors during cleanup
+        try:
+            db.engine.dispose()
+        except Exception:
+            pass
+        # Remove the per-test database file
+        try:
+            if os.path.exists(unique_db_path):
+                os.remove(unique_db_path)
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope='function')
@@ -470,18 +539,18 @@ def task(app, project, user):
 def invoice(app, user, project, test_client):
     """Create a test invoice."""
     from datetime import date
+    from factories import InvoiceFactory
     
-    invoice = Invoice(
+    invoice = InvoiceFactory(
         invoice_number=Invoice.generate_invoice_number(),
         project_id=project.id,
         client_id=test_client.id,
         client_name=test_client.name,
         due_date=date.today() + timedelta(days=30),
         created_by=user.id,
-        tax_rate=Decimal('20.00')
+        tax_rate=Decimal('20.00'),
+        status='draft'
     )
-    invoice.status = 'draft'  # Set after creation
-    db.session.add(invoice)
     db.session.commit()
     
     db.session.refresh(invoice)
@@ -491,22 +560,21 @@ def invoice(app, user, project, test_client):
 @pytest.fixture
 def invoice_with_items(app, invoice):
     """Create an invoice with items."""
+    from factories import InvoiceItemFactory
     items = [
-        InvoiceItem(
+        InvoiceItemFactory(
             invoice_id=invoice.id,
             description='Development work',
             quantity=Decimal('10.00'),
             unit_price=Decimal('75.00')
         ),
-        InvoiceItem(
+        InvoiceItemFactory(
             invoice_id=invoice.id,
             description='Testing work',
             quantity=Decimal('5.00'),
             unit_price=Decimal('60.00')
         )
     ]
-    
-    db.session.add_all(items)
     db.session.commit()
     
     invoice.calculate_totals()
@@ -527,9 +595,28 @@ def invoice_with_items(app, invoice):
 def authenticated_client(client, user):
     """Create an authenticated test client."""
     # Use the actual login endpoint to properly authenticate
-    client.post('/login', data={
-        'username': user.username
-    }, follow_redirects=True)
+    # If CSRF is enabled, fetch a token and include it in the form submit
+    try:
+        from flask import current_app
+        csrf_enabled = bool(current_app.config.get('WTF_CSRF_ENABLED'))
+    except Exception:
+        csrf_enabled = False
+
+    login_data = {'username': user.username}
+    headers = {}
+
+    if csrf_enabled:
+        try:
+            resp = client.get('/auth/csrf-token')
+            token = ''
+            if resp.is_json:
+                token = (resp.get_json() or {}).get('csrf_token') or ''
+            login_data['csrf_token'] = token
+            headers['X-CSRFToken'] = token
+        except Exception:
+            pass
+
+    client.post('/login', data=login_data, headers=headers or None, follow_redirects=True)
     return client
 
 

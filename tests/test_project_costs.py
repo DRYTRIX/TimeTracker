@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from app import create_app, db
 from app.models import User, Project, Client, Invoice, ProjectCost
+from factories import InvoiceFactory
 
 
 @pytest.fixture
@@ -90,14 +91,13 @@ def test_invoice(app, test_client, test_project, test_user):
     with app.app_context():
         # Get the client to retrieve client_name
         client = db.session.get(Client, test_client)
-        invoice = Invoice(
+        invoice = InvoiceFactory(
             invoice_number='INV-TEST-001',
             project_id=test_project,
             client_name=client.name,
             due_date=date.today() + timedelta(days=30),
             created_by=test_user,
             client_id=test_client,
-            issue_date=date.today(),
             status='draft'
         )
         db.session.add(invoice)

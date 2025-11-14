@@ -583,13 +583,14 @@ class TestTimeEntryTemplateIntegration:
         from app.models.time_entry import local_now
         
         # Create an active timer
-        active_timer = TimeEntry(
+        from factories import TimeEntryFactory
+        active_timer = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=local_now(),
+            end_time=None,
             source='auto'
         )
-        db.session.add(active_timer)
         
         # Create a template
         template = TimeEntryTemplate(

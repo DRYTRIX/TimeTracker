@@ -5,6 +5,7 @@ import pytest
 from decimal import Decimal
 from datetime import datetime
 from app.models import ExtraGood, Project, User, Client, Invoice
+from factories import InvoiceFactory
 
 
 class TestExtraGoodModel:
@@ -67,16 +68,15 @@ class TestExtraGoodModel:
         db_session.add(project)
         db_session.commit()
         
-        invoice = Invoice(
+        invoice = InvoiceFactory(
             invoice_number="INV-001",
             project_id=project.id,
             client_name="Test Client",
             due_date=datetime.utcnow().date(),
             created_by=user.id,
-            client_id=client.id
+            client_id=client.id,
+            status='draft'
         )
-        db_session.add(invoice)
-        db_session.commit()
         
         # Create extra good
         good = ExtraGood(

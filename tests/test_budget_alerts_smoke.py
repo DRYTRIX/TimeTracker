@@ -5,6 +5,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from app import db
 from app.models import Project, User, TimeEntry, BudgetAlert, Client
+from factories import TimeEntryFactory
 
 
 @pytest.fixture
@@ -78,7 +79,7 @@ def test_burn_rate_api_endpoint(client, app, admin_user, project_with_budget, re
     # Add some time entries
     now = datetime.now()
     for i in range(5):
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=regular_user.id,
             project_id=project_with_budget.id,
             start_time=now - timedelta(days=i),
@@ -86,7 +87,6 @@ def test_burn_rate_api_endpoint(client, app, admin_user, project_with_budget, re
             billable=True
         )
         entry.calculate_duration()
-        db.session.add(entry)
     db.session.commit()
     
     with client.session_transaction() as sess:
@@ -121,7 +121,7 @@ def test_resource_allocation_api_endpoint(client, app, admin_user, project_with_
     # Add some time entries
     now = datetime.now()
     for i in range(5):
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=regular_user.id,
             project_id=project_with_budget.id,
             start_time=now - timedelta(days=i),
@@ -129,7 +129,6 @@ def test_resource_allocation_api_endpoint(client, app, admin_user, project_with_
             billable=True
         )
         entry.calculate_duration()
-        db.session.add(entry)
     db.session.commit()
     
     with client.session_transaction() as sess:

@@ -9,9 +9,44 @@ instead of hardcoding Euro symbols.
 import pytest
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from app import db
+from app import db, create_app
 from app.models import User, Project, Settings, Client, Payment, Invoice, Expense
+from factories import ClientFactory, ProjectFactory, InvoiceFactory, ExpenseFactory
 from flask_login import login_user
+from sqlalchemy.pool import StaticPool
+
+
+@pytest.fixture
+def app():
+    """Isolated app for currency display tests to avoid SQLite file locking on Windows."""
+    app = create_app({
+        'TESTING': True,
+        'WTF_CSRF_ENABLED': False,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+        'SQLALCHEMY_ENGINE_OPTIONS': {
+            'connect_args': {'check_same_thread': False, 'timeout': 30},
+            'poolclass': StaticPool,
+        },
+        'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
+    })
+    with app.app_context():
+        db.create_all()
+        try:
+            db.session.execute("PRAGMA journal_mode=WAL;")
+            db.session.execute("PRAGMA synchronous=NORMAL;")
+            db.session.execute("PRAGMA busy_timeout=30000;")
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
+            yield app
+        finally:
+            db.session.remove()
+            db.drop_all()
+            try:
+                db.engine.dispose()
+            except Exception:
+                pass
 
 
 @pytest.fixture
@@ -29,32 +64,33 @@ def admin_user(app):
 def test_client_with_auth(app, client, admin_user):
     """Return authenticated client."""
     # Use the actual login endpoint to properly authenticate
-    client.post('/login', data={
-        'username': admin_user.username
-    }, follow_redirects=True)
+    with app.app_context():
+        admin_in_session = db.session.merge(admin_user)
+        username = admin_in_session.username
+    client.post('/login', data={'username': username}, follow_redirects=True)
     return client
 
 
 @pytest.fixture
 def usd_settings(app):
     """Set currency to USD for testing."""
-    settings = Settings.get_settings()
-    settings.currency = 'USD'
-    db.session.commit()
-    return settings
+    with app.app_context():
+        try:
+            settings = Settings.get_settings()
+            settings.currency = 'USD'
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        # Return a lightweight object to avoid ORM expiration issues in assertions
+        from types import SimpleNamespace
+        return SimpleNamespace(currency='USD')
 
 
 @pytest.fixture
 def sample_client(app):
     """Create a sample client."""
     with app.app_context():
-        client = Client(
-            name='Test Client',
-            email='test@example.com'
-        )
-        db.session.add(client)
-        db.session.commit()
-        db.session.refresh(client)
+        client = ClientFactory(name='Test Client', email='test@example.com')
         return client
 
 
@@ -63,34 +99,27 @@ def sample_project(app, sample_client):
     """Create a sample project."""
     with app.app_context():
         # Store client_id before accessing relationship
-        client_id = sample_client.id
-        project = Project(
+        project = ProjectFactory(
             name='Test Project',
-            client_id=client_id,
+            client_id=sample_client.id,
             status='active',
             hourly_rate=Decimal('100.00')
         )
-        db.session.add(project)
-        db.session.commit()
-        db.session.refresh(project)
         return project
 
 
 @pytest.fixture
 def sample_invoice(app, sample_project, admin_user, sample_client):
     """Create a sample invoice."""
-    invoice = Invoice(
-        invoice_number='INV-TEST-001',
+    invoice = InvoiceFactory(
         project_id=sample_project.id,
         client_name=sample_client.name,
         due_date=date.today() + timedelta(days=30),
         created_by=admin_user.id,
         client_id=sample_client.id,
         status='sent',
-        currency_code='USD'
+        currency_code='USD',
     )
-    db.session.add(invoice)
-    db.session.commit()
     return invoice
 
 
@@ -114,7 +143,7 @@ def sample_payment(app, sample_invoice):
 @pytest.fixture
 def sample_expense(app, admin_user, sample_project):
     """Create a sample expense."""
-    expense = Expense(
+    expense = ExpenseFactory(
         user_id=admin_user.id,
         title='Test Expense',
         category='travel',
@@ -122,10 +151,8 @@ def sample_expense(app, admin_user, sample_project):
         expense_date=date.today(),
         project_id=sample_project.id,
         currency_code='USD',
-        status='approved'
+        status='approved',
     )
-    db.session.add(expense)
-    db.session.commit()
     return expense
 
 
