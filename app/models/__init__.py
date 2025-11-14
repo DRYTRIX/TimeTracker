@@ -38,6 +38,7 @@ from .invoice_pdf_template import InvoicePDFTemplate
 from .audit_log import AuditLog
 from .recurring_invoice import RecurringInvoice
 from .invoice_email import InvoiceEmail
+from .webhook import Webhook, WebhookDelivery
 
 __all__ = [
     "User",
@@ -83,4 +84,6 @@ __all__ = [
     "AuditLog",
     "RecurringInvoice",
     "InvoiceEmail",
+    "Webhook",
+    "WebhookDelivery",
 ]

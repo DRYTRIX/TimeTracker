@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('Webhooks')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-plug',
+    title_text=_('Webhooks'),
+    subtitle_text=_('Manage webhook integrations'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("webhooks.create_webhook") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('Create Webhook') + '</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if webhooks %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-4">{{ _('Name') }}</th>
+                    <th class="p-4">{{ _('URL') }}</th>
+                    <th class="p-4">{{ _('Events') }}</th>
+                    <th class="p-4">{{ _('Status') }}</th>
+                    <th class="p-4">{{ _('Statistics') }}</th>
+                    <th class="p-4">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for webhook in webhooks %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td class="p-4">
+                        <div class="font-semibold">{{ webhook.name }}</div>
+                        {% if webhook.description %}
+                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ webhook.description }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">
+                        <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ webhook.url[:50] }}{% if webhook.url|length > 50 %}...{% endif %}</code>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex flex-wrap gap-1">
+                            {% if webhook.events|length > 3 %}
+                                {% for event in webhook.events[:3] %}
+                                <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{{ event }}</span>
+                                {% endfor %}
+                                <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">+{{ webhook.events|length - 3 }} more</span>
+                            {% else %}
+                                {% for event in webhook.events %}
+                                <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{{ event }}</span>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        {% if webhook.is_active %}
+                        <span class="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{{ _('Active') }}</span>
+                        {% else %}
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">{{ _('Inactive') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">
+                        <div class="text-sm">
+                            <div>{{ _('Total') }}: {{ webhook.total_deliveries }}</div>
+                            <div class="text-green-600 dark:text-green-400">{{ _('Success') }}: {{ webhook.successful_deliveries }}</div>
+                            <div class="text-red-600 dark:text-red-400">{{ _('Failed') }}: {{ webhook.failed_deliveries }}</div>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex gap-2">
+                            <a href="{{ url_for('webhooks.view_webhook', webhook_id=webhook.id) }}" class="text-primary hover:text-primary/80">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('webhooks.edit_webhook', webhook_id=webhook.id) }}" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <i class="fas fa-plug text-4xl text-gray-400 mb-4"></i>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No webhooks configured') }}</p>
+        <a href="{{ url_for('webhooks.create_webhook') }}" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">
+            {{ _('Create Your First Webhook') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
