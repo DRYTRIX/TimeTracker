@@ -184,35 +184,47 @@ def create_user():
 @admin_or_permission_required('edit_users')
 def edit_user(user_id):
     """Edit an existing user"""
+    from app.models import Client
     user = User.query.get_or_404(user_id)
+    clients = Client.query.filter_by(status='active').order_by(Client.name).all()
     
     if request.method == 'POST':
         username = request.form.get('username', '').strip().lower()
         role = request.form.get('role', 'user')
         is_active = request.form.get('is_active') == 'on'
+        client_portal_enabled = request.form.get('client_portal_enabled') == 'on'
+        client_id = request.form.get('client_id', '').strip()
         
         if not username:
             flash('Username is required', 'error')
-            return render_template('admin/user_form.html', user=user)
+            return render_template('admin/user_form.html', user=user, clients=clients)
         
         # Check if username is already taken by another user
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and existing_user.id != user.id:
             flash('Username already exists', 'error')
-            return render_template('admin/user_form.html', user=user)
+            return render_template('admin/user_form.html', user=user, clients=clients)
+        
+        # Validate client portal settings
+        if client_portal_enabled and not client_id:
+            flash('Please select a client when enabling client portal access.', 'error')
+            return render_template('admin/user_form.html', user=user, clients=clients)
         
         # Update user
         user.username = username
         user.role = role
         user.is_active = is_active
+        user.client_portal_enabled = client_portal_enabled
+        user.client_id = int(client_id) if client_id else None
+        
         if not safe_commit('admin_edit_user', {'user_id': user.id}):
             flash('Could not update user due to a database error. Please check server logs.', 'error')
-            return render_template('admin/user_form.html', user=user)
+            return render_template('admin/user_form.html', user=user, clients=clients)
         
         flash(f'User "{username}" updated successfully', 'success')
         return redirect(url_for('admin.list_users'))
     
-    return render_template('admin/user_form.html', user=user)
+    return render_template('admin/user_form.html', user=user, clients=clients)
 
 @admin_bp.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @login_required

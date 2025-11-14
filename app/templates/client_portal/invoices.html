@@ -1,0 +1,95 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Invoices') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Invoices')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-invoice',
+    title_text=_('Invoices'),
+    subtitle_text=_('Invoices for %(client_name)s', client_name=client.name),
+    breadcrumbs=breadcrumbs
+) }}
+
+<!-- Filter Tabs -->
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow mb-6">
+    <div class="flex gap-2">
+        <a href="{{ url_for('client_portal.invoices', status='all') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'all' %}bg-primary text-white{% else %}bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
+            {{ _('All') }}
+        </a>
+        <a href="{{ url_for('client_portal.invoices', status='paid') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'paid' %}bg-primary text-white{% else %}bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
+            {{ _('Paid') }}
+        </a>
+        <a href="{{ url_for('client_portal.invoices', status='unpaid') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'unpaid' %}bg-primary text-white{% else %}bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
+            {{ _('Unpaid') }}
+        </a>
+        <a href="{{ url_for('client_portal.invoices', status='overdue') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'overdue' %}bg-primary text-white{% else %}bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
+            {{ _('Overdue') }}
+        </a>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if invoices %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-3">{{ _('Invoice Number') }}</th>
+                    <th class="p-3">{{ _('Issue Date') }}</th>
+                    <th class="p-3">{{ _('Due Date') }}</th>
+                    <th class="p-3">{{ _('Amount') }}</th>
+                    <th class="p-3">{{ _('Status') }}</th>
+                    <th class="p-3">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                    <td class="p-3">
+                        <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}" class="text-primary hover:underline font-medium">
+                            {{ invoice.invoice_number }}
+                        </a>
+                    </td>
+                    <td class="p-3">{{ invoice.issue_date.strftime('%Y-%m-%d') }}</td>
+                    <td class="p-3">
+                        {{ invoice.due_date.strftime('%Y-%m-%d') }}
+                        {% if invoice.is_overdue %}
+                        <span class="text-red-600 text-xs ml-1">({{ invoice.days_overdue }} {{ _('days overdue') }})</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-3 font-medium">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            {% if invoice.payment_status == 'fully_paid' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                            {% elif invoice.is_overdue %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                            {% elif invoice.payment_status == 'partially_paid' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                            {{ invoice.payment_status|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}" class="text-primary hover:underline text-sm">
+                            {{ _('View') }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No invoices found.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+

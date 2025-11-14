@@ -45,11 +45,16 @@ class User(UserMixin, db.Model):
     # Overtime settings
     standard_hours_per_day = db.Column(db.Float, default=8.0, nullable=False)  # Standard working hours per day for overtime calculation
     
+    # Client portal settings
+    client_portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id', ondelete='SET NULL'), nullable=True, index=True)  # Link user to a client for portal access
+    
     # Relationships
     time_entries = db.relationship('TimeEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     project_costs = db.relationship('ProjectCost', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     favorite_projects = db.relationship('Project', secondary='user_favorite_projects', lazy='dynamic', backref=db.backref('favorited_by', lazy='dynamic'))
     roles = db.relationship('Role', secondary='user_roles', lazy='joined', backref=db.backref('users', lazy='dynamic'))
+    client = db.relationship('Client', backref='portal_users', lazy='joined')
     
     def __init__(self, username, role='user', email=None, full_name=None):
         self.username = username.lower().strip()
@@ -237,3 +242,47 @@ class User(UserMixin, db.Model):
     def get_role_names(self):
         """Get list of role names for this user"""
         return [r.name for r in self.roles]
+    
+    # Client portal helpers
+    @property
+    def is_client_portal_user(self):
+        """Check if user has client portal access enabled"""
+        return self.client_portal_enabled and self.client_id is not None
+    
+    def get_client_portal_data(self):
+        """Get data for client portal view (projects, invoices, time entries for assigned client)"""
+        if not self.is_client_portal_user:
+            return None
+        
+        from .project import Project
+        from .invoice import Invoice
+        from .time_entry import TimeEntry
+        
+        client = self.client
+        if not client:
+            return None
+        
+        # Get active projects for this client
+        projects = Project.query.filter_by(
+            client_id=client.id,
+            status='active'
+        ).order_by(Project.name).all()
+        
+        # Get invoices for this client
+        invoices = Invoice.query.filter_by(
+            client_id=client.id
+        ).order_by(Invoice.issue_date.desc()).limit(50).all()
+        
+        # Get time entries for projects belonging to this client
+        project_ids = [p.id for p in projects]
+        time_entries = TimeEntry.query.filter(
+            TimeEntry.project_id.in_(project_ids),
+            TimeEntry.end_time.isnot(None)
+        ).order_by(TimeEntry.start_time.desc()).limit(100).all()
+        
+        return {
+            'client': client,
+            'projects': projects,
+            'invoices': invoices,
+            'time_entries': time_entries
+        }

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('Client Portal Login') }} - {{ app_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+    <script>
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+    <div class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-0 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
+            <div class="hidden md:flex items-center justify-center p-10 bg-background-light dark:bg-background-dark">
+                <div class="text-center">
+                    <img src="{{ url_for('static', filename='images/drytrix-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
+                    <h1 class="text-3xl font-bold mt-4 text-primary">TimeTracker</h1>
+                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Client Portal') }}</p>
+                    <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('View your projects and invoices') }}</p>
+                </div>
+            </div>
+            <div class="p-8">
+                <h2 class="text-2xl font-bold tracking-tight">{{ _('Sign in to Client Portal') }}</h2>
+                <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Enter your portal credentials to access your projects and invoices') }}</p>
+                <form class="mt-6" method="POST" action="{{ url_for('client_portal.login') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if request.args.get('next') %}
+                    <input type="hidden" name="next" value="{{ request.args.get('next')|e }}">
+                    {% endif %}
+                    
+                    <label for="username" class="block mb-2 text-sm font-medium">{{ _('Username') }}</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
+                        <input type="text" name="username" id="username" autocomplete="username" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('portal_username') }}" required>
+                    </div>
+
+                    <label for="password" class="block mb-2 text-sm font-medium mt-4">{{ _('Password') }}</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
+                        <input type="password" name="password" id="password" autocomplete="current-password" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('Enter your password') }}" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full mt-6">{{ _('Sign in') }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages (hidden; converted to toasts) -->
+    <div id="flash-messages-container" class="hidden">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-danger{% elif category == 'warning' %}alert-warning{% else %}alert-info{% endif %}" data-toast-message="{{ message }}" data-toast-type="{{ category }}"></div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+    <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='toast-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
+</body>
+</html>

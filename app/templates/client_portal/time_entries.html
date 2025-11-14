@@ -1,0 +1,87 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Time Entries') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Time Entries')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-clock',
+    title_text=_('Time Entries'),
+    subtitle_text=_('Time entries for %(client_name)s projects', client_name=client.name),
+    breadcrumbs=breadcrumbs
+) }}
+
+<!-- Filters -->
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
+            <select name="project_id" id="project_id" class="form-input">
+                <option value="">{{ _('All Projects') }}</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="date_from" class="block text-sm font-medium mb-1">{{ _('From Date') }}</label>
+            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
+        </div>
+        <div>
+            <label for="date_to" class="block text-sm font-medium mb-1">{{ _('To Date') }}</label>
+            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if time_entries %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-3">{{ _('Date') }}</th>
+                    <th class="p-3">{{ _('Project') }}</th>
+                    <th class="p-3">{{ _('User') }}</th>
+                    <th class="p-3">{{ _('Start Time') }}</th>
+                    <th class="p-3">{{ _('End Time') }}</th>
+                    <th class="p-3">{{ _('Duration') }}</th>
+                    <th class="p-3">{{ _('Description') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in time_entries %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                    <td class="p-3">{{ entry.start_time.strftime('%Y-%m-%d') }}</td>
+                    <td class="p-3">{{ entry.project.name if entry.project else _('N/A') }}</td>
+                    <td class="p-3">{{ entry.user.display_name if entry.user else _('N/A') }}</td>
+                    <td class="p-3">{{ entry.start_time.strftime('%H:%M') }}</td>
+                    <td class="p-3">{{ entry.end_time.strftime('%H:%M') if entry.end_time else '-' }}</td>
+                    <td class="p-3 font-medium">{{ "%.2f"|format(entry.duration_hours) }}h</td>
+                    <td class="p-3">{{ entry.description[:100] if entry.description else '-' }}{% if entry.description and entry.description|length > 100 %}...{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Total entries') }}: {{ time_entries|length }} | 
+            {{ _('Total hours') }}: {{ "%.2f"|format(time_entries|sum(attribute='duration_hours')) }}h
+        </p>
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No time entries found.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+

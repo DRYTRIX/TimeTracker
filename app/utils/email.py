@@ -16,8 +16,9 @@ def init_mail(app):
     """Initialize Flask-Mail with the app
     
     Checks for database settings first, then falls back to environment variables.
+    Database settings persist between restarts and updates.
     """
-    # First, load defaults from environment variables
+    # First, load defaults from environment variables (as fallback)
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'localhost')
     app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
     app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
@@ -28,6 +29,7 @@ def init_mail(app):
     app.config['MAIL_MAX_EMAILS'] = int(os.getenv('MAIL_MAX_EMAILS', 100))
     
     # Check if database settings should override environment variables
+    # Database settings persist between restarts and updates
     try:
         from app.models import Settings
         from app import db
@@ -37,14 +39,15 @@ def init_mail(app):
             db_config = settings.get_mail_config()
             
             if db_config:
-                # Database settings take precedence
+                # Database settings take precedence and persist between restarts
                 app.config.update(db_config)
-                app.logger.info("Using database email configuration")
+                app.logger.info(f"✓ Using database email configuration (persistent): {db_config.get('MAIL_SERVER')}:{db_config.get('MAIL_PORT')}")
             else:
-                app.logger.info("Using environment variable email configuration")
+                app.logger.info("Using environment variable email configuration (database email not enabled)")
     except Exception as e:
         # If database is not available, fall back to environment variables
         app.logger.debug(f"Could not load email settings from database: {e}")
+        app.logger.info("Using environment variable email configuration (database unavailable)")
     
     mail.init_app(app)
     return mail
@@ -54,6 +57,7 @@ def reload_mail_config(app):
     """Reload email configuration from database
     
     Call this after updating email settings in the database to apply changes.
+    Database settings persist between restarts and updates.
     """
     try:
         from app.models import Settings
@@ -61,12 +65,15 @@ def reload_mail_config(app):
         db_config = settings.get_mail_config()
         
         if db_config:
-            # Update app configuration
+            # Update app configuration with latest database settings
             app.config.update(db_config)
-            # Reinitialize mail with new config
+            # Reinitialize mail with new config (this ensures mail object uses latest settings)
             mail.init_app(app)
+            app.logger.info(f"✓ Email configuration reloaded from database: {db_config.get('MAIL_SERVER')}:{db_config.get('MAIL_PORT')}")
             return True
-        return False
+        else:
+            app.logger.info("No database email configuration found, using environment variables")
+            return False
     except Exception as e:
         app.logger.error(f"Failed to reload email configuration: {e}")
         return False
@@ -81,6 +88,94 @@ def send_async_email(app, msg):
             current_app.logger.error(f"Failed to send email: {e}")
 
 
+def send_client_portal_password_setup_email(client, token):
+    """Send password setup email to client
+    
+    Args:
+        client: Client object
+        token: Password setup token
+        
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    try:
+        if not client.email:
+            current_app.logger.warning(f"Cannot send password setup email to client {client.name}: no email address")
+            return False
+        
+        # Always check database settings first (they take precedence)
+        from app.models import Settings
+        settings = Settings.get_settings()
+        db_config = settings.get_mail_config()
+        
+        # Use database config if available, otherwise fall back to app config
+        if db_config:
+            mail_server = db_config.get('MAIL_SERVER')
+            mail_default_sender = db_config.get('MAIL_DEFAULT_SENDER')
+            # Reload mail config to ensure we're using latest database settings
+            reload_mail_config(current_app._get_current_object())
+        else:
+            mail_server = current_app.config.get('MAIL_SERVER')
+            mail_default_sender = current_app.config.get('MAIL_DEFAULT_SENDER')
+        
+        # Check if email is configured
+        if not mail_server or mail_server == 'localhost':
+            current_app.logger.error("Mail server not configured. Cannot send password setup email.")
+            return False
+        
+        # Generate password setup URL
+        setup_url = url_for('client_portal.set_password', token=token, _external=True)
+        
+        # Render email template
+        html_body = render_template(
+            'email/client_portal_password_setup.html',
+            client=client,
+            setup_url=setup_url,
+            token=token
+        )
+        
+        # Plain text version
+        text_body = f"""
+Hello {client.name or client.contact_person or 'Client'},
+
+You have been granted access to the TimeTracker Client Portal.
+
+To set your password and access the portal, please click the following link:
+{setup_url}
+
+This link will expire in 24 hours.
+
+If you did not request this access, please contact your administrator.
+
+Best regards,
+TimeTracker Team
+"""
+        
+        subject = f"Set Your Client Portal Password - {client.name}"
+        
+        # Create message
+        msg = Message(
+            subject=subject,
+            recipients=[client.email],
+            body=text_body,
+            html=html_body,
+            sender=mail_default_sender or current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@timetracker.local')
+        )
+        
+        # Send synchronously to catch errors
+        try:
+            mail.send(msg)
+            current_app.logger.info(f"Password setup email sent successfully to {client.email} for client {client.name}")
+            return True
+        except Exception as send_error:
+            current_app.logger.error(f"Failed to send password setup email: {send_error}")
+            return False
+        
+    except Exception as e:
+        current_app.logger.error(f"Failed to prepare password setup email: {e}")
+        return False
+
+
 def send_email(subject, recipients, text_body, html_body=None, sender=None, attachments=None):
     """Send an email
     
@@ -92,7 +187,20 @@ def send_email(subject, recipients, text_body, html_body=None, sender=None, atta
         sender: Sender email address (optional, uses default if not provided)
         attachments: List of (filename, content_type, data) tuples
     """
-    if not current_app.config.get('MAIL_SERVER'):
+    # Always check database settings first (they take precedence)
+    from app.models import Settings
+    settings = Settings.get_settings()
+    db_config = settings.get_mail_config()
+    
+    # Use database config if available, otherwise fall back to app config
+    if db_config:
+        mail_server = db_config.get('MAIL_SERVER')
+        mail_default_sender = db_config.get('MAIL_DEFAULT_SENDER')
+    else:
+        mail_server = current_app.config.get('MAIL_SERVER')
+        mail_default_sender = current_app.config.get('MAIL_DEFAULT_SENDER')
+    
+    if not mail_server or mail_server == 'localhost':
         current_app.logger.warning("Mail server not configured, skipping email send")
         return
     
@@ -105,7 +213,7 @@ def send_email(subject, recipients, text_body, html_body=None, sender=None, atta
         recipients=recipients if isinstance(recipients, list) else [recipients],
         body=text_body,
         html=html_body,
-        sender=sender or current_app.config['MAIL_DEFAULT_SENDER']
+        sender=sender or mail_default_sender or current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@timetracker.local')
     )
     
     # Add attachments if provided

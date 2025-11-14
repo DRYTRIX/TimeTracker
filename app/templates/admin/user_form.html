@@ -32,6 +32,29 @@
             </div>
             
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
+                <h3 class="font-semibold mb-2">Client Portal Access</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                    Enable client portal access for this user. When enabled, the user will only see data for their assigned client.
+                </p>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="client_portal_enabled" id="client_portal_enabled" {% if user.client_portal_enabled %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" onchange="toggleClientSelect()">
+                        <label for="client_portal_enabled" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable Client Portal</label>
+                    </div>
+                    <div id="client_select_container" style="display: {% if user.client_portal_enabled %}block{% else %}none{% endif %};">
+                        <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign Client</label>
+                        <select name="client_id" id="client_id" class="form-input">
+                            <option value="">-- Select Client --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" {% if user.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">Select the client this user should have access to.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
                 <h3 class="font-semibold mb-2">Advanced Permissions</h3>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
                     Manage fine-grained role-based permissions for this user.
@@ -55,4 +78,16 @@
         </div>
     </form>
 </div>
+
+<script>
+function toggleClientSelect() {
+    const checkbox = document.getElementById('client_portal_enabled');
+    const container = document.getElementById('client_select_container');
+    if (checkbox.checked) {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

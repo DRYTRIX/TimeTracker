@@ -849,6 +849,7 @@ def create_app(config=None):
     from app.routes.budget_alerts import budget_alerts_bp
     from app.routes.import_export import import_export_bp
     from app.routes.webhooks import webhooks_bp
+    from app.routes.client_portal import client_portal_bp
     try:
         from app.routes.audit_logs import audit_logs_bp
         app.register_blueprint(audit_logs_bp)
@@ -876,6 +877,7 @@ def create_app(config=None):
     app.register_blueprint(payments_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(client_notes_bp)
+    app.register_blueprint(client_portal_bp)
     app.register_blueprint(comments_bp)
     app.register_blueprint(kanban_bp)
     app.register_blueprint(setup_bp)
