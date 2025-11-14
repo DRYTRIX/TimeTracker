@@ -85,6 +85,7 @@ def app():
 @pytest.fixture
 def admin_user(app):
     """Create an admin user for testing."""
+    # app fixture already provides app context
     user = User(username='admin', role='admin')
     user.is_active = True  # Set after creation
     user.set_password('test123')
@@ -97,9 +98,13 @@ def admin_user(app):
 def test_client_with_auth(app, client, admin_user):
     """Return authenticated client."""
     # Use the actual login endpoint to properly authenticate
-    with app.app_context():
-        admin_in_session = db.session.merge(admin_user)
-        username = admin_in_session.username
+    # Query for admin user to avoid session expiration issues
+    admin = User.query.filter_by(username='admin').first()
+    if admin:
+        username = admin.username
+    else:
+        # Fallback to the admin_user object if query fails
+        username = 'admin'
     client.post('/login', data={'username': username}, follow_redirects=True)
     return client
 
@@ -144,11 +149,22 @@ def sample_project(app, sample_client):
 @pytest.fixture
 def sample_invoice(app, sample_project, admin_user, sample_client):
     """Create a sample invoice."""
+    # Get admin_user.id - use the ID directly since we're in the same session
+    # If the object is expired, query fresh
+    try:
+        admin_user_id = admin_user.id
+    except Exception:
+        # Object expired, query fresh
+        admin = User.query.filter_by(username='admin').first()
+        admin_user_id = admin.id if admin else None
+        if not admin_user_id:
+            raise ValueError("Admin user not found in database")
+    
     invoice = InvoiceFactory(
         project_id=sample_project.id,
         client_name=sample_client.name,
         due_date=date.today() + timedelta(days=30),
-        created_by=admin_user.id,
+        created_by=admin_user_id,
         client_id=sample_client.id,
         status='sent',
         currency_code='USD',
