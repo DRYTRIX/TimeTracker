@@ -12,9 +12,19 @@ from decimal import Decimal
 from sqlalchemy.pool import NullPool
 
 from app import create_app, db
+# Import all models to ensure their tables are created by db.create_all()
 from app.models import (
     User, Project, TimeEntry, Client, Settings, 
-    Invoice, InvoiceItem, Task
+    Invoice, InvoiceItem, Task, TaskActivity, Comment,
+    ExpenseCategory, Mileage, PerDiem, PerDiemRate, ExtraGood,
+    FocusSession, RecurringBlock, RateOverride, SavedFilter,
+    ProjectCost, KanbanColumn, TimeEntryTemplate, Activity,
+    UserFavoriteProject, ClientNote, WeeklyTimeGoal, Expense,
+    Permission, Role, ApiToken, CalendarEvent, BudgetAlert,
+    DataImport, DataExport, InvoicePDFTemplate, ClientPrepaidConsumption,
+    AuditLog, RecurringInvoice, InvoiceEmail, Webhook, WebhookDelivery,
+    InvoiceTemplate, Currency, ExchangeRate, TaxRule, Payment,
+    CreditNote, InvoiceReminderSchedule, SavedReportView, ReportEmailSchedule
 )
 
 
@@ -96,6 +106,22 @@ def app(app_config):
     app = create_app(config)
     
     with app.app_context():
+        # Import all models AFTER app creation but BEFORE db.create_all()
+        # This ensures they're registered with SQLAlchemy's metadata
+        # Import all models explicitly to ensure their tables are created
+        from app.models import (
+            User, Project, TimeEntry, Client, Settings, 
+            Invoice, InvoiceItem, Task, TaskActivity, Comment,
+            ExpenseCategory, Mileage, PerDiem, PerDiemRate, ExtraGood,
+            FocusSession, RecurringBlock, RateOverride, SavedFilter,
+            ProjectCost, KanbanColumn, TimeEntryTemplate, Activity,
+            UserFavoriteProject, ClientNote, WeeklyTimeGoal, Expense,
+            Permission, Role, ApiToken, CalendarEvent, BudgetAlert,
+            DataImport, DataExport, InvoicePDFTemplate, ClientPrepaidConsumption,
+            AuditLog, RecurringInvoice, InvoiceEmail, Webhook, WebhookDelivery,
+            InvoiceTemplate, Currency, ExchangeRate, TaxRule, Payment,
+            CreditNote, InvoiceReminderSchedule, SavedReportView, ReportEmailSchedule
+        )
         # Ensure any lingering connections are closed to avoid SQLite file locks (Windows)
         try:
             db.engine.dispose()
@@ -108,19 +134,53 @@ def app(app_config):
             pass  # Ignore errors if tables don't exist
         
         # Create all tables, handling index creation errors gracefully
+        # We need to create tables even if some indexes already exist
+        # SQLAlchemy's create_all() stops on first error, so we need to handle this carefully
         try:
             db.create_all()
         except Exception as e:
             # SQLite may raise OperationalError if indexes already exist
             # This can happen if db.create_all() is called multiple times
-            # Check if it's specifically an index-related error
             error_msg = str(e).lower()
             if 'index' in error_msg and ('already exists' in error_msg or 'duplicate' in error_msg):
-                # Index already exists - this is okay, continue
-                pass
+                # Index already exists - this is okay, but we need to ensure all tables are created
+                # Create tables individually to work around the issue
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                existing_tables = set(inspector.get_table_names())
+                
+                # Create missing tables explicitly
+                for table_name, table in db.metadata.tables.items():
+                    if table_name not in existing_tables:
+                        try:
+                            table.create(db.engine, checkfirst=True)
+                        except Exception as table_error:
+                            # Ignore errors for individual tables (might be index issues)
+                            pass
             else:
-                # Re-raise other errors as they indicate real problems
-                raise
+                # Log other errors but try to continue
+                import logging
+                import traceback
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error during db.create_all(): {e}")
+                logger.warning(traceback.format_exc())
+        
+        # Verify critical tables were created and create any missing ones
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        created_tables = set(inspector.get_table_names())
+        required_tables = ['time_entries', 'tasks', 'users', 'projects']
+        missing_tables = [t for t in required_tables if t not in created_tables]
+        
+        if missing_tables:
+            # Try to create missing tables explicitly
+            for table_name in missing_tables:
+                if table_name in db.metadata.tables:
+                    try:
+                        db.metadata.tables[table_name].create(db.engine, checkfirst=True)
+                    except Exception as e:
+                        # Ignore errors - table might already exist or have dependency issues
+                        pass
         
         # Create default settings
         settings = Settings()

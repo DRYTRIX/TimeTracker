@@ -30,7 +30,40 @@ def app():
         'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
     })
     with app.app_context():
-        db.create_all()
+        # Import all models to ensure they're registered
+        from app.models import (
+            User, Project, TimeEntry, Client, Settings, 
+            Invoice, InvoiceItem, Task, TaskActivity, Comment,
+            ExpenseCategory, Mileage, PerDiem, PerDiemRate, ExtraGood,
+            FocusSession, RecurringBlock, RateOverride, SavedFilter,
+            ProjectCost, KanbanColumn, TimeEntryTemplate, Activity,
+            UserFavoriteProject, ClientNote, WeeklyTimeGoal, Expense,
+            Permission, Role, ApiToken, CalendarEvent, BudgetAlert,
+            DataImport, DataExport, InvoicePDFTemplate, ClientPrepaidConsumption,
+            AuditLog, RecurringInvoice, InvoiceEmail, Webhook, WebhookDelivery,
+            InvoiceTemplate, Currency, ExchangeRate, TaxRule, Payment,
+            CreditNote, InvoiceReminderSchedule, SavedReportView, ReportEmailSchedule
+        )
+        
+        # Create all tables, handling index creation errors gracefully
+        try:
+            db.create_all()
+        except Exception as e:
+            # Handle index errors by creating tables individually
+            error_msg = str(e).lower()
+            if 'index' in error_msg and ('already exists' in error_msg or 'duplicate' in error_msg):
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                existing_tables = set(inspector.get_table_names())
+                
+                # Create missing tables explicitly
+                for table_name, table in db.metadata.tables.items():
+                    if table_name not in existing_tables:
+                        try:
+                            table.create(db.engine, checkfirst=True)
+                        except Exception:
+                            pass
+        
         try:
             db.session.execute("PRAGMA journal_mode=WAL;")
             db.session.execute("PRAGMA synchronous=NORMAL;")

@@ -330,12 +330,12 @@ class TestAdminClientPortalManagement:
 
 @pytest.mark.smoke
 @pytest.mark.unit
-def test_client_portal_smoke(app, user, client):
+def test_client_portal_smoke(app, user, test_client):
     """Smoke test for client portal basic functionality"""
     with app.app_context():
         # Enable portal
         user.client_portal_enabled = True
-        user.client_id = client.id
+        user.client_id = test_client.id
         db.session.commit()
         
         # Verify properties
@@ -344,5 +344,5 @@ def test_client_portal_smoke(app, user, client):
         # Get portal data
         data = user.get_client_portal_data()
         assert data is not None
-        assert data['client'] == client
+        assert data['client'] == test_client
 
