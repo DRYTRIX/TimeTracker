@@ -118,9 +118,9 @@ def test_bulk_delete_with_time_entries_skips_task(authenticated_client, app, use
         db.session.commit()
         db.session.refresh(task)
         
-        from app.models import TimeEntry
+        from factories import TimeEntryFactory
         from datetime import datetime
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             task_id=task.id,
@@ -128,7 +128,6 @@ def test_bulk_delete_with_time_entries_skips_task(authenticated_client, app, use
             end_time=datetime.utcnow(),
             duration_seconds=3600
         )
-        db.session.add(entry)
         db.session.commit()
         
         response = authenticated_client.post('/tasks/bulk-delete', data={
@@ -382,9 +381,9 @@ def test_bulk_move_project_updates_time_entries(authenticated_client, app, user,
         db.session.commit()
         db.session.refresh(task)
         
-        from app.models import TimeEntry
+        from factories import TimeEntryFactory
         from datetime import datetime
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             task_id=task.id,
@@ -392,7 +391,6 @@ def test_bulk_move_project_updates_time_entries(authenticated_client, app, user,
             end_time=datetime.utcnow(),
             duration_seconds=3600
         )
-        db.session.add(entry)
         db.session.commit()
         db.session.refresh(entry)
         
@@ -404,6 +402,7 @@ def test_bulk_move_project_updates_time_entries(authenticated_client, app, user,
         assert response.status_code == 200
         
         # Verify time entry project is updated
+        from app.models import TimeEntry
         entry = TimeEntry.query.get(entry.id)
         assert entry.project_id == second_project.id
 

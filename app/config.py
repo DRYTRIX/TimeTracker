@@ -158,6 +158,11 @@ class TestingConfig(Config):
     SECRET_KEY = 'test-secret-key'
     WTF_CSRF_SSL_STRICT = False
 
+    def __init__(self):
+        # Ensure SQLALCHEMY_DATABASE_URI reflects the current environment at instantiation time,
+        # not only at module import time. This keeps parity with tests that mutate env vars.
+        self.SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///:memory:')
+
 class ProductionConfig(Config):
     """Production configuration"""
     FLASK_DEBUG = False

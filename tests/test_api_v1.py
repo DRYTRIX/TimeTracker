@@ -11,7 +11,8 @@ def app():
     """Create and configure a test app instance"""
     app = create_app({
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        # Use a file-based SQLite DB to ensure consistent connection across contexts
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///test_api_v1.sqlite',
         'WTF_CSRF_ENABLED': False
     })
     
@@ -30,13 +31,15 @@ def client(app):
 
 @pytest.fixture
 def test_user(app):
-    """Create a test user"""
+    """Create a test user and return its ID"""
     user = User(username='testuser', email='test@example.com')
     user.set_password('password')
     user.is_active = True
     db.session.add(user)
     db.session.commit()
-    return user
+    # Re-query to avoid relying on possibly expired instance state
+    uid = db.session.query(User.id).filter_by(username='testuser').scalar()
+    return int(uid)
 
 
 @pytest.fixture
@@ -53,15 +56,22 @@ def admin_user(app):
 @pytest.fixture
 def api_token(app, test_user):
     """Create an API token with full permissions"""
-    token, plain_token = ApiToken.create_token(
-        user_id=test_user.id,
-        name='Test Token',
-        description='For testing',
-        scopes='read:projects,write:projects,read:time_entries,write:time_entries,read:tasks,write:tasks,read:clients,write:clients,read:reports,read:users'
-    )
-    db.session.add(token)
-    db.session.commit()
-    return plain_token
+    with app.app_context():
+        # Robustly resolve user_id even if the instance is expired/detached
+        try:
+            user_id = int(getattr(test_user, "id"))
+        except Exception:
+            user = User.query.filter_by(username='testuser').first()
+            user_id = int(user.id) if user else None
+        token, plain_token = ApiToken.create_token(
+            user_id=user_id,
+            name='Test Token',
+            description='For testing',
+            scopes='read:projects,write:projects,read:time_entries,write:time_entries,read:tasks,write:tasks,read:clients,write:clients,read:reports,read:users'
+        )
+        db.session.add(token)
+        db.session.commit()
+        return plain_token
 
 
 @pytest.fixture
@@ -124,7 +134,7 @@ class TestAPIAuthentication:
         """Test request with insufficient scope"""
         # Create token with limited scope
         token, plain_token = ApiToken.create_token(
-            user_id=test_user.id,
+            user_id=int(test_user),
             name='Limited Token',
             scopes='read:projects'  # Only read access
         )
@@ -223,6 +233,8 @@ class TestProjects:
         assert response.status_code == 200
         
         # Verify project is archived
+        # Ensure we don't read a stale instance from the identity map
+        db.session.expire_all()
         project = Project.query.get(test_project.id)
         assert project.status == 'archived'
 
@@ -234,15 +246,14 @@ class TestTimeEntries:
     def test_list_time_entries(self, client, api_token, test_user, test_project):
         """Test listing time entries"""
         # Create a test time entry
-        entry = TimeEntry(
-            user_id=test_user.id,
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
+            user_id=int(test_user),
             project_id=test_project.id,
             start_time=datetime.utcnow() - timedelta(hours=2),
             end_time=datetime.utcnow(),
             source='api'
         )
-        db.session.add(entry)
-        db.session.commit()
         
         headers = {'Authorization': f'Bearer {api_token}'}
         response = client.get('/api/v1/time-entries', headers=headers)
@@ -279,16 +290,15 @@ class TestTimeEntries:
     def test_update_time_entry(self, client, api_token, test_user, test_project):
         """Test updating a time entry"""
         # Create entry
-        entry = TimeEntry(
-            user_id=test_user.id,
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
+            user_id=int(test_user),
             project_id=test_project.id,
             start_time=datetime.utcnow() - timedelta(hours=2),
             end_time=datetime.utcnow(),
             notes='Original notes',
             source='api'
         )
-        db.session.add(entry)
-        db.session.commit()
         
         headers = {
             'Authorization': f'Bearer {api_token}',
@@ -345,14 +355,14 @@ class TestTimer:
     def test_stop_timer(self, client, api_token, test_user, test_project):
         """Test stopping a timer"""
         # Start a timer
-        timer = TimeEntry(
-            user_id=test_user.id,
+        from factories import TimeEntryFactory
+        timer = TimeEntryFactory(
+            user_id=int(test_user),
             project_id=test_project.id,
             start_time=datetime.utcnow(),
+            end_time=None,
             source='api'
         )
-        db.session.add(timer)
-        db.session.commit()
         
         headers = {'Authorization': f'Bearer {api_token}'}
         response = client.post('/api/v1/timer/stop', headers=headers)
@@ -454,23 +464,22 @@ class TestReports:
     def test_summary_report(self, client, api_token, test_user, test_project):
         """Test getting summary report"""
         # Create some time entries
-        entry1 = TimeEntry(
-            user_id=test_user.id,
+        from factories import TimeEntryFactory
+        entry1 = TimeEntryFactory(
+            user_id=int(test_user),
             project_id=test_project.id,
             start_time=datetime.utcnow() - timedelta(hours=10),
             end_time=datetime.utcnow() - timedelta(hours=8),
             source='api'
         )
-        entry2 = TimeEntry(
-            user_id=test_user.id,
+        entry2 = TimeEntryFactory(
+            user_id=int(test_user),
             project_id=test_project.id,
             start_time=datetime.utcnow() - timedelta(hours=5),
             end_time=datetime.utcnow() - timedelta(hours=3),
             billable=True,
             source='api'
         )
-        db.session.add_all([entry1, entry2])
-        db.session.commit()
         
         headers = {'Authorization': f'Bearer {api_token}'}
         response = client.get('/api/v1/reports/summary', headers=headers)

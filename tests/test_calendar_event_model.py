@@ -551,14 +551,14 @@ def test_get_events_in_range_with_time_entries(app, user, project):
         db.session.add(event)
         
         # Create time entry
-        time_entry = TimeEntry(
+        from factories import TimeEntryFactory
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=now + timedelta(hours=2),
             end_time=now + timedelta(hours=4),
             notes="Working on feature"
         )
-        db.session.add(time_entry)
         db.session.commit()
         
         # Get events including time entries

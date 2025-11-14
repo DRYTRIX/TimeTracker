@@ -1,4 +1,5 @@
 import os
+import tempfile
 import logging
 import uuid
 import time
@@ -209,10 +210,20 @@ def create_app(config=None):
     # Special handling for SQLite in-memory DB during tests:
     # ensure a single shared connection so objects don't disappear after commit.
     try:
+        # In tests, proactively clear POSTGRES_* env hints to avoid accidental overrides
+        if app.config.get("TESTING"):
+            for var in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST", "DATABASE_URL"):
+                try:
+                    os.environ.pop(var, None)
+                except Exception:
+                    pass
         db_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI", "") or "")
-        if app.config.get("TESTING") and db_uri.startswith("sqlite") and ":memory:" in db_uri:
+        if app.config.get("TESTING") and isinstance(db_uri, str) and db_uri.startswith("sqlite") and ":memory:" in db_uri:
+            # Use a file-based SQLite database during tests to ensure consistent behavior across contexts
+            db_file = os.path.join(tempfile.gettempdir(), f"timetracker_pytest_{os.getpid()}.sqlite")
+            app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_file}"
+            # Also keep permissive engine options for SQLite
             engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
-            engine_opts.setdefault("poolclass", StaticPool)
             engine_opts.setdefault("connect_args", {"check_same_thread": False})
             app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
         # Avoid attribute expiration on commit during tests to keep objects usable
@@ -263,8 +274,8 @@ def create_app(config=None):
     from app.utils.email import init_mail
     init_mail(app)
     
-    # Initialize and start background scheduler
-    if not scheduler.running:
+    # Initialize and start background scheduler (disabled in tests)
+    if (not app.config.get("TESTING")) and (not scheduler.running):
         from app.utils.scheduled_tasks import register_scheduled_tasks
         scheduler.start()
         # Register tasks after app context is available

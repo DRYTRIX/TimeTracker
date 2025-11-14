@@ -6,8 +6,17 @@ Uses WeasyPrint to generate professional PDF invoices
 import os
 import html as html_lib
 from datetime import datetime
-from weasyprint import HTML, CSS
-from weasyprint.text.fonts import FontConfiguration
+try:
+    # Try importing WeasyPrint. This may fail on systems without native deps.
+    from weasyprint import HTML, CSS  # type: ignore
+    from weasyprint.text.fonts import FontConfiguration  # type: ignore
+    _WEASYPRINT_AVAILABLE = True
+except Exception:
+    # Defer to fallback implementation at runtime
+    HTML = None  # type: ignore
+    CSS = None  # type: ignore
+    FontConfiguration = None  # type: ignore
+    _WEASYPRINT_AVAILABLE = False
 from app.models import Settings, InvoicePDFTemplate
 from app import db
 from flask import current_app
@@ -29,6 +38,11 @@ class InvoicePDFGenerator:
     
     def generate_pdf(self):
         """Generate PDF content and return as bytes"""
+        # If WeasyPrint isn't available or explicitly disabled, use the fallback
+        if (not _WEASYPRINT_AVAILABLE) or os.getenv("DISABLE_WEASYPRINT", "").lower() in ("1", "true", "yes"):
+            from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
+            fallback = InvoicePDFGeneratorFallback(self.invoice, settings=self.settings)
+            return fallback.generate_pdf()
         # Enable debugging - output directly to stdout for Docker console visibility
         import sys
         
@@ -601,8 +615,8 @@ class InvoicePDFGenerator:
                         <div class="invoice-title">{_('INVOICE')}</div>
                         <div class="meta-grid">
                             <div class="label">{_('Invoice #')}</div><div class="value">{self.invoice.invoice_number}</div>
-                            <div class="label">{_('Issue Date')}</div><div class="value">{(babel_format_date(self.invoice.issue_date) if babel_format_date else self.invoice.issue_date.strftime('%Y-%m-%d'))}</div>
-                            <div class="label">{_('Due Date')}</div><div class="value">{(babel_format_date(self.invoice.due_date) if babel_format_date else self.invoice.due_date.strftime('%Y-%m-%d'))}</div>
+                            <div class="label">{_('Issue Date')}</div><div class="value">{self.invoice.issue_date.strftime('%Y-%m-%d') if self.invoice.issue_date else ''}</div>
+                            <div class="label">{_('Due Date')}</div><div class="value">{self.invoice.due_date.strftime('%Y-%m-%d') if self.invoice.due_date else ''}</div>
                             <div class="label">{_('Status')}</div><div class="value">{_(self.invoice.status.title())}</div>
                         </div>
                     </div>

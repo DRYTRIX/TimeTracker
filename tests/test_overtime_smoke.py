@@ -7,6 +7,7 @@ import pytest
 from datetime import datetime, timedelta, date
 from app import db
 from app.models import User, TimeEntry, Project, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFactory
 from app.utils.overtime import calculate_daily_overtime, calculate_period_overtime
 
 
@@ -24,7 +25,7 @@ class TestOvertimeSmoke:
     
     def test_user_model_has_standard_hours(self, app):
         """Smoke test: verify User model has standard_hours_per_day field"""
-        user = User(username='smoke_test_user', role='user')
+        user = UserFactory(username='smoke_test_user')
         assert hasattr(user, 'standard_hours_per_day')
         assert user.standard_hours_per_day == 8.0  # Default value
     
@@ -42,7 +43,7 @@ class TestOvertimeSmoke:
     def test_period_overtime_basic(self, app):
         """Smoke test: verify period overtime calculation doesn't crash"""
         # Create a test user
-        user = User(username='smoke_period_user', role='user')
+        user = UserFactory(username='smoke_period_user')
         user.standard_hours_per_day = 8.0
         db.session.add(user)
         db.session.commit()
@@ -79,16 +80,14 @@ class TestOvertimeSmoke:
     def test_overtime_calculation_with_real_entry(self, app):
         """Smoke test: verify overtime calculation with a real time entry"""
         # Create test data
-        user = User(username='smoke_entry_user', role='user')
+        user = UserFactory(username='smoke_entry_user')
         user.standard_hours_per_day = 8.0
         db.session.add(user)
         
-        client_obj = Client(name='Smoke Test Client')
-        db.session.add(client_obj)
+        client_obj = ClientFactory(name='Smoke Test Client')
         db.session.commit()
         
-        project = Project(name='Smoke Test Project', client_id=client_obj.id)
-        db.session.add(project)
+        project = ProjectFactory(name='Smoke Test Project', client_id=client_obj.id)
         db.session.commit()
         
         # Create a 10-hour time entry (should result in 2 hours overtime)
@@ -96,14 +95,13 @@ class TestOvertimeSmoke:
         entry_start = datetime.combine(entry_date, datetime.min.time().replace(hour=9))
         entry_end = entry_start + timedelta(hours=10)
         
-        entry = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=entry_start,
             end_time=entry_end,
             notes='Smoke test entry'
         )
-        db.session.add(entry)
         db.session.commit()
         
         # Calculate overtime
@@ -138,17 +136,15 @@ class TestOvertimeIntegration:
     def test_full_overtime_workflow(self, app):
         """Integration test: full overtime calculation workflow"""
         # 1. Create user with custom standard hours
-        user = User(username='integration_user', role='user')
+        user = UserFactory(username='integration_user')
         user.standard_hours_per_day = 7.5  # 7.5 hour workday
         db.session.add(user)
         
         # 2. Create client and project
-        client_obj = Client(name='Integration Client')
-        db.session.add(client_obj)
+        client_obj = ClientFactory(name='Integration Client')
         db.session.commit()
         
-        project = Project(name='Integration Project', client_id=client_obj.id)
-        db.session.add(project)
+        project = ProjectFactory(name='Integration Project', client_id=client_obj.id)
         db.session.commit()
         
         # 3. Create time entries over multiple days
@@ -157,35 +153,32 @@ class TestOvertimeIntegration:
         # Day 1: 9 hours (1.5 hours overtime)
         entry1_start = datetime.combine(start_date, datetime.min.time().replace(hour=9))
         entry1_end = entry1_start + timedelta(hours=9)
-        entry1 = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=entry1_start,
             end_time=entry1_end
         )
-        db.session.add(entry1)
         
         # Day 2: 7 hours (no overtime)
         entry2_start = datetime.combine(start_date + timedelta(days=1), datetime.min.time().replace(hour=9))
         entry2_end = entry2_start + timedelta(hours=7)
-        entry2 = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=entry2_start,
             end_time=entry2_end
         )
-        db.session.add(entry2)
         
         # Day 3: 10 hours (2.5 hours overtime)
         entry3_start = datetime.combine(start_date + timedelta(days=2), datetime.min.time().replace(hour=9))
         entry3_end = entry3_start + timedelta(hours=10)
-        entry3 = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=entry3_start,
             end_time=entry3_end
         )
-        db.session.add(entry3)
         
         db.session.commit()
         
@@ -213,22 +206,20 @@ class TestOvertimeIntegration:
     def test_different_standard_hours_between_users(self, app):
         """Integration test: different users with different standard hours"""
         # User 1: 8 hour standard
-        user1 = User(username='user_8h', role='user')
+        user1 = UserFactory(username='user_8h')
         user1.standard_hours_per_day = 8.0
         db.session.add(user1)
         
         # User 2: 6 hour standard (part-time)
-        user2 = User(username='user_6h', role='user')
+        user2 = UserFactory(username='user_6h')
         user2.standard_hours_per_day = 6.0
         db.session.add(user2)
         
         # Create client and project
-        client_obj = Client(name='Multi User Client')
-        db.session.add(client_obj)
+        client_obj = ClientFactory(name='Multi User Client')
         db.session.commit()
         
-        project = Project(name='Multi User Project', client_id=client_obj.id)
-        db.session.add(project)
+        project = ProjectFactory(name='Multi User Project', client_id=client_obj.id)
         db.session.commit()
         
         # Both users work 7 hours today
@@ -236,21 +227,19 @@ class TestOvertimeIntegration:
         entry_start = datetime.combine(today, datetime.min.time().replace(hour=9))
         entry_end = entry_start + timedelta(hours=7)
         
-        entry1 = TimeEntry(
+        TimeEntryFactory(
             user_id=user1.id,
             project_id=project.id,
             start_time=entry_start,
             end_time=entry_end
         )
-        db.session.add(entry1)
         
-        entry2 = TimeEntry(
+        TimeEntryFactory(
             user_id=user2.id,
             project_id=project.id,
             start_time=entry_start,
             end_time=entry_end
         )
-        db.session.add(entry2)
         
         db.session.commit()
         

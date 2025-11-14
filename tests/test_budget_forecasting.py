@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, date
 from decimal import Decimal
 from app import db
 from app.models import Project, TimeEntry, User, ProjectCost, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFactory
 from app.utils.budget_forecasting import (
     calculate_burn_rate,
     estimate_completion_date,
@@ -21,7 +22,8 @@ pytestmark = pytest.mark.skip(reason="Pre-existing issues with model initializat
 @pytest.fixture
 def client_obj(app):
     """Create a test client"""
-    client = Client(name="Test Client", status="active")
+    client = ClientFactory(name="Test Client")
+    client.status = "active"
     db.session.add(client)
     db.session.commit()
     return client
@@ -30,15 +32,15 @@ def client_obj(app):
 @pytest.fixture
 def project_with_budget(app, client_obj):
     """Create a test project with budget"""
-    project = Project(
-        name="Test Project",
+    project = ProjectFactory(
         client_id=client_obj.id,
+        name="Test Project",
         billable=True,
         hourly_rate=Decimal("100.00"),
-        budget_amount=Decimal("10000.00"),
-        budget_threshold_percent=80,
-        status='active'
     )
+    project.budget_amount = Decimal("10000.00")
+    project.budget_threshold_percent = 80
+    project.status = 'active'
     db.session.add(project)
     db.session.commit()
     return project
@@ -47,7 +49,7 @@ def project_with_budget(app, client_obj):
 @pytest.fixture
 def test_user(app):
     """Create a test user"""
-    user = User(username="testuser", role="user")
+    user = UserFactory(username="testuser")
     user.is_active = True
     db.session.add(user)
     db.session.commit()
@@ -62,7 +64,7 @@ def time_entries_last_30_days(app, project_with_budget, test_user):
     
     for i in range(30):
         entry_date = now - timedelta(days=i)
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=test_user.id,
             project_id=project_with_budget.id,
             start_time=entry_date,
@@ -112,13 +114,13 @@ def test_calculate_burn_rate_invalid_project(app):
 
 def test_estimate_completion_date_no_budget(app, client_obj):
     """Test completion estimate for project without budget"""
-    project = Project(
+    project = ProjectFactory(
         name="No Budget Project",
         client_id=client_obj.id,
         billable=True,
         hourly_rate=Decimal("100.00"),
-        status='active'
     )
+    project.status = 'active'
     db.session.add(project)
     db.session.commit()
     
@@ -251,7 +253,7 @@ def test_get_budget_status_warning(app, project_with_budget, test_user):
     # 70% = $7,000 = 70 hours
     now = datetime.now()
     for i in range(70):
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=test_user.id,
             project_id=project_with_budget.id,
             start_time=now - timedelta(hours=i+1),
@@ -277,7 +279,7 @@ def test_get_budget_status_critical(app, project_with_budget, test_user):
     # 85% = $8,500 = 85 hours
     now = datetime.now()
     for i in range(85):
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=test_user.id,
             project_id=project_with_budget.id,
             start_time=now - timedelta(hours=i+1),
@@ -303,7 +305,7 @@ def test_get_budget_status_over_budget(app, project_with_budget, test_user):
     # 110% = $11,000 = 110 hours
     now = datetime.now()
     for i in range(110):
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=test_user.id,
             project_id=project_with_budget.id,
             start_time=now - timedelta(hours=i+1),
@@ -385,9 +387,9 @@ def test_check_budget_alerts_invalid_project(app):
 def test_resource_allocation_multiple_users(app, project_with_budget, client_obj):
     """Test resource allocation with multiple users"""
     # Create additional users
-    user1 = User(username="user1", role="user")
+    user1 = UserFactory(username="user1")
     user1.is_active = True
-    user2 = User(username="user2", role="user")
+    user2 = UserFactory(username="user2")
     user2.is_active = True
     db.session.add(user1)
     db.session.add(user2)
@@ -397,7 +399,7 @@ def test_resource_allocation_multiple_users(app, project_with_budget, client_obj
     now = datetime.now()
     for i in range(10):
         # User 1: 10 entries of 2 hours each
-        entry1 = TimeEntry(
+        entry1 = TimeEntryFactory(
             user_id=user1.id,
             project_id=project_with_budget.id,
             start_time=now - timedelta(days=i),
@@ -408,7 +410,7 @@ def test_resource_allocation_multiple_users(app, project_with_budget, client_obj
         db.session.add(entry1)
         
         # User 2: 10 entries of 3 hours each
-        entry2 = TimeEntry(
+        entry2 = TimeEntryFactory(
             user_id=user2.id,
             project_id=project_with_budget.id,
             start_time=now - timedelta(days=i),

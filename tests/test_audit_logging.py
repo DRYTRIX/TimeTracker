@@ -107,7 +107,8 @@ class TestAuditLoggingIntegration:
             
             # Update the project
             test_project.name = 'Updated Project Name'
-            db.session.add(test_project)
+            # Ensure instance is attached to the current session
+            test_project = db.session.merge(test_project)
             db.session.flush()  # Flush to trigger audit logging
             
             # Check if audit log was created
@@ -128,7 +129,8 @@ class TestAuditLoggingIntegration:
             project_id = test_project.id
             
             # Delete the project
-            db.session.delete(test_project)
+            merged = db.session.merge(test_project)
+            db.session.delete(merged)
             db.session.flush()  # Flush to trigger audit logging
             
             # Check if audit log was created

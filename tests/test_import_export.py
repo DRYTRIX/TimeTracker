@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from app import create_app, db
 from app.models import User, Project, TimeEntry, Client, DataImport, DataExport
+from factories import TimeEntryFactory
 
 # Skip all tests in this module due to transaction closure issues with custom fixtures
 pytestmark = pytest.mark.skip(reason="Pre-existing transaction issues with custom app fixture - needs refactoring")
@@ -46,7 +47,7 @@ def app():
         # Create test time entry
         start_time = datetime.utcnow() - timedelta(hours=2)
         end_time = datetime.utcnow()
-        time_entry = TimeEntry(
+        time_entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=start_time,
@@ -56,7 +57,6 @@ def app():
             source='manual'
         )
         time_entry.calculate_duration()
-        db.session.add(time_entry)
         
         db.session.commit()
         

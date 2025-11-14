@@ -7,6 +7,7 @@ from app.models import (
     User, Client, Project, TimeEntry, Invoice, InvoiceItem,
     Task, Comment, Settings
 )
+from factories import ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory, UserFactory
 
 
 # ============================================================================
@@ -51,14 +52,14 @@ def test_user_projects_through_time_entries(app, user, project):
         project = db.session.merge(project)
         
         # Create time entry
-        entry = TimeEntry(
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.utcnow(),
             end_time=datetime.utcnow() + timedelta(hours=2),
             source='manual'
         )
-        db.session.add(entry)
         db.session.commit()
         
         # Get user's projects
@@ -248,7 +249,8 @@ def test_time_entry_with_notes(app, user, project):
         project = db.session.merge(project)
         
         notes = "Worked on implementing new feature X"
-        entry = TimeEntry(
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.utcnow(),
@@ -256,7 +258,6 @@ def test_time_entry_with_notes(app, user, project):
             notes=notes,
             source='manual'
         )
-        db.session.add(entry)
         db.session.commit()
         
         assert entry.notes == notes
@@ -270,7 +271,8 @@ def test_time_entry_with_tags(app, user, project):
         user = db.session.merge(user)
         project = db.session.merge(project)
         
-        entry = TimeEntry(
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.utcnow(),
@@ -278,7 +280,6 @@ def test_time_entry_with_tags(app, user, project):
             tags='development,testing,bugfix',
             source='manual'
         )
-        db.session.add(entry)
         db.session.commit()
         
         tag_list = entry.tag_list
@@ -297,14 +298,14 @@ def test_time_entry_billable_calculation(app, user, project):
         project.billable = True
         project.hourly_rate = 100.0
         
-        entry = TimeEntry(
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.utcnow(),
             end_time=datetime.utcnow() + timedelta(hours=3),
             source='manual'
         )
-        db.session.add(entry)
         db.session.commit()
         
         # 3 hours * $100/hr = $300
@@ -324,14 +325,14 @@ def test_time_entry_long_duration(app, user, project):
         start = datetime.utcnow()
         end = start + timedelta(hours=24)  # 24 hours
         
-        entry = TimeEntry(
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=start,
             end_time=end,
             source='manual'
         )
-        db.session.add(entry)
         db.session.commit()
         
         # Check duration through time difference
@@ -454,7 +455,7 @@ def test_invoice_with_multiple_items(app, test_client, project, user):
         project = db.session.merge(project)
         user = db.session.merge(user)
         
-        invoice = Invoice(
+        invoice = InvoiceFactory(
             client_id=test_client.id,
             project_id=project.id,
             client_name=test_client.name,
@@ -464,18 +465,15 @@ def test_invoice_with_multiple_items(app, test_client, project, user):
             status='draft',
             created_by=user.id
         )
-        db.session.add(invoice)
-        db.session.flush()
         
         # Add multiple items
         for i in range(5):
-            item = InvoiceItem(
+            InvoiceItemFactory(
                 invoice_id=invoice.id,
                 description=f'Service {i+1}',
                 quantity=i+1,
                 unit_price=100.0
             )
-            db.session.add(item)
         
         db.session.commit()
         db.session.refresh(invoice)
@@ -509,7 +507,7 @@ def test_invoice_status_transitions(app, test_client, project, user):
         project = db.session.merge(project)
         user = db.session.merge(user)
         
-        invoice = Invoice(
+        invoice = InvoiceFactory(
             client_id=test_client.id,
             project_id=project.id,
             client_name=test_client.name,
@@ -519,7 +517,6 @@ def test_invoice_status_transitions(app, test_client, project, user):
             status='draft',
             created_by=user.id
         )
-        db.session.add(invoice)
         db.session.commit()
         
         # Test status transitions
@@ -665,14 +662,14 @@ def test_user_client_relationship_through_projects(app, user, test_client):
         db.session.flush()
         
         # Create time entry
-        entry = TimeEntry(
+        from factories import TimeEntryFactory
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.utcnow(),
             end_time=datetime.utcnow() + timedelta(hours=2),
             source='manual'
         )
-        db.session.add(entry)
         db.session.commit()
         
         # Verify relationships

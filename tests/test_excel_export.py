@@ -4,6 +4,7 @@ Tests for Excel export functionality
 import pytest
 from datetime import datetime, timedelta
 from app.models import TimeEntry, Task
+from factories import TimeEntryFactory
 
 
 @pytest.mark.unit
@@ -16,7 +17,7 @@ def test_create_time_entries_excel_with_client(app, user, project, test_client):
     start_time = datetime.utcnow() - timedelta(hours=2)
     end_time = datetime.utcnow()
     
-    entry = TimeEntry(
+    entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=start_time,
@@ -59,7 +60,7 @@ def test_create_time_entries_excel_with_task(app, user, project, task):
     start_time = datetime.utcnow() - timedelta(hours=1)
     end_time = datetime.utcnow()
     
-    entry = TimeEntry(
+    entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         task_id=task.id,
