@@ -66,7 +66,7 @@ class TestClientPortalUserModel:
             assert 'projects' in data
             assert 'invoices' in data
             assert 'time_entries' in data
-            assert data['client'] == test_client
+            assert data['client'].id == test_client.id
     
     def test_get_client_portal_data_with_projects(self, app, user, test_client):
         """Test get_client_portal_data includes projects"""
@@ -92,15 +92,23 @@ class TestClientPortalUserModel:
         with app.app_context():
             user.client_portal_enabled = True
             user.client_id = test_client.id
+            db.session.commit()
+            
+            # Handle potential session issues from audit logging
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             
             project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
-            db.session.commit()
+            db.session.flush()  # Flush to get project.id without committing
+            project_id = project.id
             
             # Create invoices
             invoice1 = Invoice(
                 invoice_number="INV-001",
-                project_id=project.id,
+                project_id=project_id,
                 client_name=test_client.name,
                 client_id=test_client.id,
                 due_date=datetime.utcnow().date() + timedelta(days=30),
@@ -109,7 +117,7 @@ class TestClientPortalUserModel:
             )
             invoice2 = Invoice(
                 invoice_number="INV-002",
-                project_id=project.id,
+                project_id=project_id,
                 client_name=test_client.name,
                 client_id=test_client.id,
                 due_date=datetime.utcnow().date() + timedelta(days=30),
