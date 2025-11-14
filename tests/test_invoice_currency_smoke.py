@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from app import create_app, db
 from app.models import User, Project, Client, Invoice, Settings
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory
 
 
 @pytest.fixture
@@ -35,15 +36,15 @@ def test_invoice_currency_smoke(app):
     """Smoke test: Create invoice and verify it uses settings currency"""
     with app.app_context():
         # Setup: Create user, client, project
-        user = User(username='smokeuser', role='admin', email='smoke@example.com')
+        user = UserFactory(username='smokeuser', role='admin', email='smoke@example.com')
         db.session.add(user)
         db.session.flush()  # Flush to get user.id
         
-        client = Client(name='Smoke Client', email='client@example.com')
+        client = ClientFactory(name='Smoke Client', email='client@example.com')
         db.session.add(client)
         db.session.flush()  # Flush to get client.id
         
-        project = Project(
+        project = ProjectFactory(
             name='Smoke Project',
             client_id=client.id,
             billable=True,
@@ -61,13 +62,14 @@ def test_invoice_currency_smoke(app):
         db.session.commit()
         
         # Action: Create invoice
-        invoice = Invoice(
+        invoice = InvoiceFactory(
             invoice_number='SMOKE-001',
             project_id=project.id,
             client_name=client.name,
             due_date=date.today() + timedelta(days=30),
             created_by=user.id,
             client_id=client.id,
+            status='draft',
             currency_code=settings.currency
         )
         db.session.add(invoice)
@@ -83,15 +85,15 @@ def test_pdf_generator_uses_settings_currency(app):
     """Smoke test: Verify PDF generator uses settings currency"""
     with app.app_context():
         # Setup
-        user = User(username='pdfuser', role='admin', email='pdf@example.com')
+        user = UserFactory(username='pdfuser', role='admin', email='pdf@example.com')
         db.session.add(user)
         db.session.flush()  # Flush to get user.id
         
-        client = Client(name='PDF Client', email='pdf@example.com')
+        client = ClientFactory(name='PDF Client', email='pdf@example.com')
         db.session.add(client)
         db.session.flush()  # Flush to get client.id
         
-        project = Project(
+        project = ProjectFactory(
             name='PDF Project',
             client_id=client.id,
             billable=True,
@@ -105,13 +107,14 @@ def test_pdf_generator_uses_settings_currency(app):
         settings = Settings.get_settings()
         settings.currency = 'SEK'
         
-        invoice = Invoice(
+        invoice = InvoiceFactory(
             invoice_number='PDF-001',
             project_id=project.id,
             client_name=client.name,
             due_date=date.today() + timedelta(days=30),
             created_by=user.id,
             client_id=client.id,
+            status='draft',
             currency_code=settings.currency
         )
         db.session.add(invoice)

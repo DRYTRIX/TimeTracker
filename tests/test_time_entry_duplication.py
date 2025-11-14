@@ -21,7 +21,8 @@ def time_entry_with_all_fields(app, user, project, task):
     start_time = datetime.utcnow() - timedelta(days=1)
     end_time = start_time + timedelta(hours=2, minutes=30)
     
-    entry = TimeEntry(
+    from factories import TimeEntryFactory
+    entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         task_id=task.id,
@@ -32,11 +33,7 @@ def time_entry_with_all_fields(app, user, project, task):
         source='manual',
         billable=True
     )
-    
-    db.session.add(entry)
     db.session.commit()
-    db.session.refresh(entry)
-    
     return entry
 
 
@@ -46,7 +43,8 @@ def time_entry_minimal(app, user, project):
     start_time = datetime.utcnow() - timedelta(days=2)
     end_time = start_time + timedelta(hours=1)
     
-    entry = TimeEntry(
+    from factories import TimeEntryFactory
+    entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=start_time,
@@ -54,11 +52,7 @@ def time_entry_minimal(app, user, project):
         source='manual',
         billable=False
     )
-    
-    db.session.add(entry)
     db.session.commit()
-    db.session.refresh(entry)
-    
     return entry
 
 
@@ -226,14 +220,14 @@ def test_duplicate_own_entry_only(app, user, project, authenticated_client):
         # Create entry for other user
         start_time = datetime.utcnow() - timedelta(hours=1)
         end_time = start_time + timedelta(hours=1)
-        other_entry = TimeEntry(
+        from factories import TimeEntryFactory
+        other_entry = TimeEntryFactory(
             user_id=other_user.id,
             project_id=project.id,
             start_time=start_time,
             end_time=end_time,
             source='manual'
         )
-        db.session.add(other_entry)
         db.session.commit()
         
         # Try to duplicate other user's entry using authenticated client (logged in as original user)
@@ -251,13 +245,15 @@ def test_admin_can_duplicate_any_entry(admin_authenticated_client, user, project
         # Create entry for regular user
         start_time = datetime.utcnow() - timedelta(hours=1)
         end_time = start_time + timedelta(hours=1)
-        user_entry = TimeEntry(
+        from factories import TimeEntryFactory
+        user_entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=start_time,
             end_time=end_time,
             source='manual'
         )
+        db.session.commit()
         db.session.add(user_entry)
         db.session.commit()
         db.session.refresh(user_entry)

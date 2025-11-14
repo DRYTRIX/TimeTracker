@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, date
 from decimal import Decimal
 from app import create_app, db
 from app.models import User, Project, Client, Invoice, InvoiceItem, Settings
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory
 
 
 @pytest.fixture
@@ -49,7 +50,7 @@ def client_fixture(app):
 def test_user(app):
     """Create a test user"""
     with app.app_context():
-        user = User(username='testuser', role='admin', email='test@example.com')
+        user = UserFactory(username='testuser', role='admin', email='test@example.com')
         db.session.add(user)
         db.session.commit()
         db.session.refresh(user)  # Refresh to keep object in session
@@ -62,10 +63,7 @@ def test_client_model(app, test_user):
     with app.app_context():
         # Re-query user to get it in this session
         user = db.session.get(User, test_user.id)
-        client = Client(
-            name='Test Client',
-            email='client@example.com'
-        )
+        client = ClientFactory(name='Test Client', email='client@example.com')
         db.session.add(client)
         db.session.commit()
         db.session.refresh(client)  # Refresh to keep object in session
@@ -79,7 +77,7 @@ def test_project(app, test_user, test_client_model):
         # Re-query user and client to get them in this session
         user = db.session.get(User, test_user.id)
         client = db.session.get(Client, test_client_model.id)
-        project = Project(
+        project = ProjectFactory(
             name='Test Project',
             client_id=client.id,
             billable=True,
@@ -104,13 +102,14 @@ class TestInvoiceCurrencyFix:
             assert settings.currency == 'USD'
             
             # Create invoice via model (simulating route behavior)
-            invoice = Invoice(
+            invoice = InvoiceFactory(
                 invoice_number='TEST-001',
                 project_id=test_project.id,
                 client_name=test_client_model.name,
                 due_date=date.today() + timedelta(days=30),
                 created_by=test_user.id,
                 client_id=test_client_model.id,
+                status='draft',
                 currency_code=settings.currency
             )
             db.session.add(invoice)
@@ -153,13 +152,14 @@ class TestInvoiceCurrencyFix:
             db.session.commit()
             
             # Create invoice
-            invoice = Invoice(
+            invoice = InvoiceFactory(
                 invoice_number='TEST-002',
                 project_id=test_project.id,
                 client_name=test_client_model.name,
                 due_date=date.today() + timedelta(days=30),
                 created_by=test_user.id,
                 client_id=test_client_model.id,
+                status='draft',
                 currency_code=settings.currency
             )
             db.session.add(invoice)
@@ -172,26 +172,28 @@ class TestInvoiceCurrencyFix:
         """Test that duplicating an invoice preserves the currency"""
         with app.app_context():
             # Create original invoice with JPY currency
-            original_invoice = Invoice(
+            original_invoice = InvoiceFactory(
                 invoice_number='ORIG-001',
                 project_id=test_project.id,
                 client_name=test_client_model.name,
                 due_date=date.today() + timedelta(days=30),
                 created_by=test_user.id,
                 client_id=test_client_model.id,
+                status='draft',
                 currency_code='JPY'
             )
             db.session.add(original_invoice)
             db.session.commit()
             
             # Simulate duplication (like in duplicate_invoice route)
-            new_invoice = Invoice(
+            new_invoice = InvoiceFactory(
                 invoice_number='DUP-001',
                 project_id=original_invoice.project_id,
                 client_name=original_invoice.client_name,
                 due_date=original_invoice.due_date + timedelta(days=30),
                 created_by=test_user.id,
                 client_id=original_invoice.client_id,
+                status='draft',
                 currency_code=original_invoice.currency_code
             )
             db.session.add(new_invoice)
@@ -204,20 +206,21 @@ class TestInvoiceCurrencyFix:
         """Test that invoice items display correctly with currency"""
         with app.app_context():
             # Create invoice
-            invoice = Invoice(
+            invoice = InvoiceFactory(
                 invoice_number='TEST-003',
                 project_id=test_project.id,
                 client_name=test_client_model.name,
                 due_date=date.today() + timedelta(days=30),
                 created_by=test_user.id,
                 client_id=test_client_model.id,
+                status='draft',
                 currency_code='EUR'
             )
             db.session.add(invoice)
             db.session.flush()
             
             # Add invoice item
-            item = InvoiceItem(
+            item = InvoiceItemFactory(
                 invoice_id=invoice.id,
                 description='Test Service',
                 quantity=Decimal('10.00'),

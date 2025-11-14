@@ -6,6 +6,7 @@ import pytest
 from datetime import datetime, timedelta, date
 from app import db
 from app.models import User, TimeEntry, Project, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFactory
 from app.utils.overtime import (
     calculate_daily_overtime,
     calculate_period_overtime,
@@ -45,7 +46,7 @@ class TestPeriodOvertime:
     @pytest.fixture
     def test_user(self, app):
         """Create a test user with 8 hour standard day"""
-        user = User(username='test_user_ot', role='user')
+        user = UserFactory()
         user.standard_hours_per_day = 8.0
         db.session.add(user)
         db.session.commit()
@@ -54,19 +55,14 @@ class TestPeriodOvertime:
     @pytest.fixture
     def test_client_obj(self, app):
         """Create a test client"""
-        test_client = Client(name='Test Client OT')
-        db.session.add(test_client)
+        test_client = ClientFactory(name='Test Client OT')
         db.session.commit()
         return test_client
     
     @pytest.fixture
     def test_project(self, app, test_client_obj):
         """Create a test project"""
-        project = Project(
-            name='Test Project OT',
-            client_id=test_client_obj.id
-        )
-        db.session.add(project)
+        project = ProjectFactory(client_id=test_client_obj.id, name='Test Project OT')
         db.session.commit()
         return project
     
@@ -92,14 +88,13 @@ class TestPeriodOvertime:
             entry_start = datetime.combine(entry_date, datetime.min.time().replace(hour=9))
             entry_end = entry_start + timedelta(hours=7)
             
-            entry = TimeEntry(
+            TimeEntryFactory(
                 user_id=test_user.id,
                 project_id=test_project.id,
                 start_time=entry_start,
                 end_time=entry_end,
                 notes='Regular work'
             )
-            db.session.add(entry)
         
         db.session.commit()
         
@@ -119,28 +114,26 @@ class TestPeriodOvertime:
         entry_start = datetime.combine(entry_date, datetime.min.time().replace(hour=9))
         entry_end = entry_start + timedelta(hours=10)
         
-        entry1 = TimeEntry(
+        TimeEntryFactory(
             user_id=test_user.id,
             project_id=test_project.id,
             start_time=entry_start,
             end_time=entry_end,
             notes='Long day'
         )
-        db.session.add(entry1)
         
         # Day 2: 6 hours (no overtime)
         entry_date2 = start_date + timedelta(days=1)
         entry_start2 = datetime.combine(entry_date2, datetime.min.time().replace(hour=9))
         entry_end2 = entry_start2 + timedelta(hours=6)
         
-        entry2 = TimeEntry(
+        TimeEntryFactory(
             user_id=test_user.id,
             project_id=test_project.id,
             start_time=entry_start2,
             end_time=entry_end2,
             notes='Short day'
         )
-        db.session.add(entry2)
         
         db.session.commit()
         
@@ -160,14 +153,13 @@ class TestPeriodOvertime:
             entry_start = datetime.combine(entry_date, datetime.min.time().replace(hour=9 + i * 3))
             entry_end = entry_start + timedelta(hours=hours)
             
-            entry = TimeEntry(
+            TimeEntryFactory(
                 user_id=test_user.id,
                 project_id=test_project.id,
                 start_time=entry_start,
                 end_time=entry_end,
                 notes=f'Entry {i+1}'
             )
-            db.session.add(entry)
         
         db.session.commit()
         
@@ -185,7 +177,7 @@ class TestDailyBreakdown:
     @pytest.fixture
     def test_user_daily(self, app):
         """Create a test user"""
-        user = User(username='test_user_daily', role='user')
+        user = UserFactory()
         user.standard_hours_per_day = 8.0
         db.session.add(user)
         db.session.commit()
@@ -194,19 +186,14 @@ class TestDailyBreakdown:
     @pytest.fixture
     def test_project_daily(self, app, test_client_obj):
         """Create a test project"""
-        project = Project(
-            name='Test Project Daily',
-            client_id=test_client_obj.id
-        )
-        db.session.add(project)
+        project = ProjectFactory(client_id=test_client_obj.id, name='Test Project Daily')
         db.session.commit()
         return project
     
     @pytest.fixture
     def test_client_obj(self, app):
         """Create a test client"""
-        test_client = Client(name='Test Client Daily')
-        db.session.add(test_client)
+        test_client = ClientFactory(name='Test Client Daily')
         db.session.commit()
         return test_client
     
@@ -226,24 +213,22 @@ class TestDailyBreakdown:
         # Day 1: 9 hours (1 hour overtime)
         entry1_start = datetime.combine(start_date, datetime.min.time().replace(hour=9))
         entry1_end = entry1_start + timedelta(hours=9)
-        entry1 = TimeEntry(
+        TimeEntryFactory(
             user_id=test_user_daily.id,
             project_id=test_project_daily.id,
             start_time=entry1_start,
             end_time=entry1_end
         )
-        db.session.add(entry1)
         
         # Day 2: 6 hours (no overtime)
         entry2_start = datetime.combine(start_date + timedelta(days=1), datetime.min.time().replace(hour=9))
         entry2_end = entry2_start + timedelta(hours=6)
-        entry2 = TimeEntry(
+        TimeEntryFactory(
             user_id=test_user_daily.id,
             project_id=test_project_daily.id,
             start_time=entry2_start,
             end_time=entry2_end
         )
-        db.session.add(entry2)
         
         db.session.commit()
         
@@ -272,7 +257,7 @@ class TestOvertimeStatistics:
     @pytest.fixture
     def test_user_stats(self, app):
         """Create a test user"""
-        user = User(username='test_user_stats', role='user')
+        user = UserFactory()
         user.standard_hours_per_day = 8.0
         db.session.add(user)
         db.session.commit()
@@ -281,19 +266,14 @@ class TestOvertimeStatistics:
     @pytest.fixture
     def test_project_stats(self, app, test_client_obj):
         """Create a test project"""
-        project = Project(
-            name='Test Project Stats',
-            client_id=test_client_obj.id
-        )
-        db.session.add(project)
+        project = ProjectFactory(client_id=test_client_obj.id, name='Test Project Stats')
         db.session.commit()
         return project
     
     @pytest.fixture
     def test_client_obj(self, app):
         """Create a test client"""
-        test_client = Client(name='Test Client Stats')
-        db.session.add(test_client)
+        test_client = ClientFactory(name='Test Client Stats')
         db.session.commit()
         return test_client
     
@@ -309,13 +289,12 @@ class TestOvertimeStatistics:
             entry_start = datetime.combine(entry_date, datetime.min.time().replace(hour=9))
             entry_end = entry_start + timedelta(hours=hours)
             
-            entry = TimeEntry(
+            TimeEntryFactory(
                 user_id=test_user_stats.id,
                 project_id=test_project_stats.id,
                 start_time=entry_start,
                 end_time=entry_end
             )
-            db.session.add(entry)
         
         db.session.commit()
         

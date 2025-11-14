@@ -5,13 +5,14 @@ from datetime import date, timedelta
 from decimal import Decimal
 from app import db
 from app.models import User, Project, Invoice, InvoiceItem, Settings, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory
 from flask import url_for
 
 
 @pytest.fixture
 def admin_user(app):
     """Create an admin user for testing."""
-    user = User(username='admin', role='admin', email='admin@test.com')
+    user = UserFactory(username='admin', role='admin', email='admin@test.com')
     user.is_active = True
     user.set_password('password123')
     db.session.add(user)
@@ -22,7 +23,7 @@ def admin_user(app):
 @pytest.fixture
 def regular_user(app):
     """Create a regular user for testing."""
-    user = User(username='regular', role='user', email='regular@test.com')
+    user = UserFactory(username='regular', role='user', email='regular@test.com')
     user.is_active = True
     user.set_password('password123')
     db.session.add(user)
@@ -34,23 +35,21 @@ def regular_user(app):
 def sample_invoice(app, admin_user):
     """Create a sample invoice for testing."""
     # Create a client
-    client = Client(name='Test Client', email='client@test.com')
-    db.session.add(client)
+    client = ClientFactory(name='Test Client', email='client@test.com')
     db.session.commit()
     
     # Create a project
-    project = Project(
+    project = ProjectFactory(
+        client_id=client.id,
         name='Test Project',
-        client='Test Client',
         description='Test project for PDF',
         billable=True,
         hourly_rate=Decimal('100.00')
     )
-    db.session.add(project)
     db.session.commit()
     
     # Create invoice
-    invoice = Invoice(
+    invoice = InvoiceFactory(
         invoice_number='INV-2024-001',
         project_id=project.id,
         client_name='Test Client',
@@ -60,20 +59,19 @@ def sample_invoice(app, admin_user):
         created_by=admin_user.id,
         client_id=client.id,
         tax_rate=Decimal('10.00'),
+        status='draft',
         notes='Test notes',
         terms='Test terms'
     )
-    db.session.add(invoice)
     db.session.commit()
     
     # Add invoice item
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=invoice.id,
         description='Test Service',
         quantity=Decimal('5.00'),
         unit_price=Decimal('100.00')
     )
-    db.session.add(item)
     db.session.commit()
     
     return invoice

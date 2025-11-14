@@ -1,6 +1,7 @@
 import pytest
 from app import db
 from app.models import User, Project, TimeEntry, Settings, Client
+from factories import TimeEntryFactory
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -86,7 +87,7 @@ def test_time_entry_creation(app, user, project):
     start_time = datetime.utcnow()
     end_time = start_time + timedelta(hours=2)
     
-    entry = TimeEntry(
+    entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=start_time,
@@ -95,7 +96,6 @@ def test_time_entry_creation(app, user, project):
         tags='test,work',
         source='manual'
     )
-    db.session.add(entry)
     db.session.commit()
     
     assert entry.id is not None
@@ -108,13 +108,13 @@ def test_time_entry_creation(app, user, project):
 def test_active_timer(app, user, project):
     """Test active timer functionality"""
     # Create active timer
-    timer = TimeEntry(
+    timer = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=datetime.utcnow(),
-        source='auto'
+        source='auto',
+        end_time=None
     )
-    db.session.add(timer)
     db.session.commit()
     
     assert timer.is_active is True
@@ -135,13 +135,13 @@ def test_user_active_timer_property(app, user, project):
     db.session.refresh(user)
     
     # Create active timer
-    timer = TimeEntry(
+    timer = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=datetime.utcnow(),
-        source='auto'
+        source='auto',
+        end_time=None
     )
-    db.session.add(timer)
     db.session.commit()
     
     # Refresh user to load relationships
@@ -158,7 +158,7 @@ def test_project_totals(app, user, project):
     """Test project total calculations"""
     # Create time entries
     start_time = datetime.utcnow()
-    entry1 = TimeEntry(
+    entry1 = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=start_time,
@@ -166,7 +166,7 @@ def test_project_totals(app, user, project):
         source='manual',
         billable=True
     )
-    entry2 = TimeEntry(
+    entry2 = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=start_time + timedelta(hours=3),
@@ -174,7 +174,6 @@ def test_project_totals(app, user, project):
         source='manual',
         billable=True
     )
-    db.session.add_all([entry1, entry2])
     db.session.commit()
     
     # Refresh project to load relationships

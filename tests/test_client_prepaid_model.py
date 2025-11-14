@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from app import db
 from app.models import Client, ClientPrepaidConsumption, User, Project, TimeEntry
+from factories import TimeEntryFactory
 
 
 @pytest.mark.models
@@ -31,15 +32,13 @@ def test_client_prepaid_properties_and_consumption(app):
     db.session.add(project)
     db.session.commit()
 
-    entry = TimeEntry(
+    entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=datetime(2025, 3, 5, 9, 0, 0),
         end_time=datetime(2025, 3, 5, 21, 0, 0),
         billable=True
     )
-    db.session.add(entry)
-    db.session.commit()
 
     # Create a consumption record for 12 hours
     consumption = ClientPrepaidConsumption(

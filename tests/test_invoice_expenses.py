@@ -6,15 +6,17 @@ from datetime import datetime, timedelta, date
 from decimal import Decimal
 from app import db
 from app.models import Invoice, InvoiceItem, Expense, User, Project, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, ExpenseFactory
 
 
 @pytest.fixture
 def test_user(app):
     """Create a test user"""
-    user = User(username='testuser', email='test@example.com', role='admin')
-    user.set_password('testpass')
-    db.session.add(user)
-    db.session.commit()
+    user = UserFactory(role='admin')
+    try:
+        user.set_password('testpass')
+    except Exception:
+        pass
     yield user
     db.session.delete(user)
     db.session.commit()
@@ -23,9 +25,7 @@ def test_user(app):
 @pytest.fixture
 def test_client(app):
     """Create a test client"""
-    client = Client(name='Test Client', email='client@example.com')
-    db.session.add(client)
-    db.session.commit()
+    client = ClientFactory(name='Test Client', email='client@example.com')
     yield client
     db.session.delete(client)
     db.session.commit()
@@ -34,14 +34,7 @@ def test_client(app):
 @pytest.fixture
 def test_project(app, test_client):
     """Create a test project"""
-    project = Project(
-        name='Test Project',
-        client_id=test_client.id,
-        billable=True,
-        hourly_rate=Decimal('100.00')
-    )
-    db.session.add(project)
-    db.session.commit()
+    project = ProjectFactory(name='Test Project', client_id=test_client.id, billable=True, hourly_rate=Decimal('100.00'))
     yield project
     db.session.delete(project)
     db.session.commit()
@@ -50,17 +43,14 @@ def test_project(app, test_client):
 @pytest.fixture
 def test_invoice(app, test_user, test_project, test_client):
     """Create a test invoice"""
-    invoice = Invoice(
-        invoice_number='INV-TEST-001',
+    invoice = InvoiceFactory(
         project_id=test_project.id,
         client_name=test_client.name,
         client_id=test_client.id,
         due_date=date.today() + timedelta(days=30),
         created_by=test_user.id,
-        tax_rate=Decimal('10.00')
+        tax_rate=Decimal('10.00'),
     )
-    db.session.add(invoice)
-    db.session.commit()
     yield invoice
     db.session.delete(invoice)
     db.session.commit()
@@ -69,7 +59,7 @@ def test_invoice(app, test_user, test_project, test_client):
 @pytest.fixture
 def test_expense(app, test_user, test_project):
     """Create a test expense"""
-    expense = Expense(
+    expense = ExpenseFactory(
         user_id=test_user.id,
         project_id=test_project.id,
         title='Travel Expense',
@@ -80,10 +70,8 @@ def test_expense(app, test_user, test_project):
         expense_date=date.today(),
         billable=True,
         vendor='Taxi Service',
-        status='approved'
+        status='approved',
     )
-    db.session.add(expense)
-    db.session.commit()
     yield expense
     db.session.delete(expense)
     db.session.commit()
@@ -124,13 +112,13 @@ class TestInvoiceExpenseIntegration:
     def test_calculate_totals_with_expenses(self, app, test_invoice, test_expense):
         """Test that invoice totals include expenses"""
         # Add an invoice item
-        item = InvoiceItem(
+        from factories import InvoiceItemFactory
+        item = InvoiceItemFactory(
             invoice_id=test_invoice.id,
             description='Development Work',
             quantity=Decimal('10.00'),
             unit_price=Decimal('100.00')
         )
-        db.session.add(item)
         
         # Link expense to invoice
         test_expense.mark_as_invoiced(test_invoice.id)
@@ -184,26 +172,26 @@ class TestInvoiceExpenseIntegration:
     def test_multiple_expenses_on_invoice(self, app, test_invoice, test_user, test_project):
         """Test that multiple expenses can be added to an invoice"""
         # Create multiple expenses
-        expense1 = Expense(
+        expense1 = ExpenseFactory(
             user_id=test_user.id,
             project_id=test_project.id,
             title='Travel Expense 1',
             category='travel',
             amount=Decimal('100.00'),
             expense_date=date.today(),
-            billable=True
+            billable=True,
+            status='approved',
         )
-        expense2 = Expense(
+        expense2 = ExpenseFactory(
             user_id=test_user.id,
             project_id=test_project.id,
             title='Meals Expense',
             category='meals',
             amount=Decimal('50.00'),
             expense_date=date.today(),
-            billable=True
+            billable=True,
+            status='approved',
         )
-        db.session.add_all([expense1, expense2])
-        db.session.commit()
         
         # Link both to invoice
         expense1.mark_as_invoiced(test_invoice.id)

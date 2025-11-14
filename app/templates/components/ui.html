@@ -47,7 +47,7 @@
 <nav class="flex" aria-label="Breadcrumb">
     <ol class="inline-flex items-center space-x-1 md:space-x-3">
         <li class="inline-flex items-center">
-            <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors">
+            <a href="{% if get_current_client is defined and get_current_client() %}{{ url_for('client_portal.dashboard') }}{% else %}{{ url_for('main.dashboard') }}{% endif %}" class="inline-flex items-center text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors">
                 <i class="fas fa-home mr-2"></i>
                 {{ _('Home') }}
             </a>

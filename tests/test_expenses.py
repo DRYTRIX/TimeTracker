@@ -14,6 +14,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from app import create_app, db
 from app.models import User, Project, Client, Invoice, Expense
+from factories import InvoiceFactory
+from factories import ExpenseFactory
 
 
 @pytest.fixture
@@ -89,7 +91,7 @@ def test_invoice(app, test_client, test_project, test_user):
     """Create a test invoice."""
     with app.app_context():
         client = db.session.get(Client, test_client)
-        invoice = Invoice(
+        invoice = InvoiceFactory(
             invoice_number='INV-TEST-001',
             project_id=test_project,
             client_name=client.name,
@@ -99,7 +101,6 @@ def test_invoice(app, test_client, test_project, test_user):
             issue_date=date.today(),
             status='draft'
         )
-        db.session.add(invoice)
         db.session.commit()
         return invoice.id
 
@@ -112,15 +113,15 @@ class TestExpenseModel:
     def test_create_expense(self, app, test_user):
         """Test creating a basic expense."""
         with app.app_context():
-            expense = Expense(
+            expense = ExpenseFactory(
                 user_id=test_user,
                 title='Travel Expense',
                 category='travel',
                 amount=Decimal('150.00'),
-                expense_date=date.today()
+                expense_date=date.today(),
+                billable=False,
+                reimbursable=True,
             )
-            db.session.add(expense)
-            db.session.commit()
             
             assert expense.id is not None
             assert expense.title == 'Travel Expense'
@@ -134,7 +135,7 @@ class TestExpenseModel:
     def test_create_expense_with_all_fields(self, app, test_user, test_project, test_client):
         """Test creating an expense with all optional fields."""
         with app.app_context():
-            expense = Expense(
+            expense = ExpenseFactory(
                 user_id=test_user,
                 title='Conference Travel',
                 category='travel',
@@ -154,8 +155,6 @@ class TestExpenseModel:
                 billable=True,
                 reimbursable=True
             )
-            db.session.add(expense)
-            db.session.commit()
             
             assert expense.description == 'Flight and hotel for conference'
             assert expense.project_id == test_project

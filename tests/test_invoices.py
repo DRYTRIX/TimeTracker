@@ -4,11 +4,12 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app import db
 from app.models import User, Project, Invoice, InvoiceItem, Settings, Client, ExtraGood, ClientPrepaidConsumption
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory, PaymentFactory
 
 @pytest.fixture
 def sample_user(app):
     """Create a sample user for testing."""
-    user = User(username='testuser', role='user')
+    user = UserFactory(username='testuser', role='user')
     db.session.add(user)
     db.session.commit()
     return user
@@ -16,14 +17,15 @@ def sample_user(app):
 @pytest.fixture
 def sample_project(app):
     """Create a sample project for testing."""
-    project = Project(
+    client = ClientFactory(name='Test Client')
+    db.session.commit()
+    project = ProjectFactory(
         name='Test Project',
-        client='Test Client',
-        description='A test project',
+        client_id=client.id,
         billable=True,
-        hourly_rate=Decimal('75.00')
+        hourly_rate=Decimal('75.00'),
+        description='A test project',
     )
-    db.session.add(project)
     db.session.commit()
     return project
 
@@ -32,22 +34,18 @@ def sample_invoice(app, sample_user, sample_project):
     """Create a sample invoice for testing."""
     # Create a client first
     from app.models import Client
-    client = Client(
-        name='Sample Invoice Client',
-        email='sample@test.com'
-    )
-    db.session.add(client)
+    client = ClientFactory(name='Sample Invoice Client', email='sample@test.com')
     db.session.commit()
     
-    invoice = Invoice(
+    invoice = InvoiceFactory(
         invoice_number='INV-20241201-001',
         project_id=sample_project.id,
         client_name='Sample Invoice Client',
         due_date=date.today() + timedelta(days=30),
         created_by=sample_user.id,
-        client_id=client.id
+        client_id=client.id,
+        status='draft'
     )
-    db.session.add(invoice)
     db.session.commit()
     return invoice
 
@@ -87,14 +85,12 @@ def test_invoice_creation(app, sample_user, sample_project):
 @pytest.mark.invoices
 def test_invoice_item_creation(app, sample_invoice):
     """Test that invoice items can be created correctly."""
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Development work',
         quantity=Decimal('10.00'),
         unit_price=Decimal('75.00')
     )
-    
-    db.session.add(item)
     db.session.commit()
     
     assert item.id is not None
@@ -105,22 +101,23 @@ def test_invoice_item_creation(app, sample_invoice):
 @pytest.mark.invoices
 def test_invoice_totals_calculation(app, sample_invoice):
     """Test that invoice totals are calculated correctly."""
+    # Ensure no tax for this calculation
+    sample_invoice.tax_rate = Decimal('0.00')
     # Add multiple items
-    item1 = InvoiceItem(
+    item1 = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Development work',
         quantity=Decimal('10.00'),
         unit_price=Decimal('75.00')
     )
     
-    item2 = InvoiceItem(
+    item2 = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Design work',
         quantity=Decimal('5.00'),
         unit_price=Decimal('100.00')
     )
     
-    db.session.add_all([item1, item2])
     db.session.commit()
     
     # Calculate totals
@@ -134,35 +131,29 @@ def test_invoice_with_tax(app, sample_user, sample_project):
     """Test invoice calculation with tax."""
     # Create a client first
     from app.models import Client
-    client = Client(
-        name='Tax Test Client',
-        email='tax@test.com'
-    )
-    db.session.add(client)
+    client = ClientFactory(name='Tax Test Client', email='tax@test.com')
     db.session.commit()
     
-    invoice = Invoice(
+    invoice = InvoiceFactory(
         invoice_number='INV-20241201-003',
         project_id=sample_project.id,
         client_name='Tax Test Client',
         due_date=date.today() + timedelta(days=30),
         created_by=sample_user.id,
         client_id=client.id,
-        tax_rate=Decimal('20.00')
+        tax_rate=Decimal('20.00'),
+        status='draft'
     )
     
-    db.session.add(invoice)
     db.session.commit()
     
     # Add item
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=invoice.id,
         description='Development work',
         quantity=Decimal('10.00'),
         unit_price=Decimal('75.00')
     )
-    
-    db.session.add(item)
     db.session.commit()
     
     # Calculate totals
@@ -189,27 +180,20 @@ def test_invoice_overdue_status(app, sample_user, sample_project):
     """Test that invoices are marked as overdue correctly."""
     # Create a client first
     from app.models import Client
-    client = Client(
-        name='Overdue Test Client',
-        email='overdue@test.com'
-    )
-    db.session.add(client)
+    client = ClientFactory(name='Overdue Test Client', email='overdue@test.com')
     db.session.commit()
     
     # Create an overdue invoice
     overdue_date = date.today() - timedelta(days=5)
-    invoice = Invoice(
+    invoice = InvoiceFactory(
         invoice_number='INV-20241201-004',
         project_id=sample_project.id,
         client_id=client.id,
         client_name='Test Client',
         due_date=overdue_date,
-        created_by=sample_user.id
+        created_by=sample_user.id,
+        status='sent'
     )
-    # Set status after creation
-    invoice.status = 'sent'
-    
-    db.session.add(invoice)
     db.session.commit()
     
     # Refresh to get latest values
@@ -265,14 +249,12 @@ def test_invoice_to_dict(app, sample_invoice):
 
 def test_invoice_item_to_dict(app, sample_invoice):
     """Test that invoice item can be converted to dictionary."""
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Test item',
         quantity=Decimal('5.00'),
         unit_price=Decimal('50.00')
     )
-    
-    db.session.add(item)
     db.session.commit()
     
     item_dict = item.to_dict()
@@ -294,11 +276,10 @@ def test_edit_invoice_template_has_expected_fields(app, client, user, project):
 
     # Create client and invoice with an item
     from app.models import Client, InvoiceItem
-    cl = Client(name='Edit Test Client', email='edit@test.com', address='Street 1')
-    db.session.add(cl)
+    cl = ClientFactory(name='Edit Test Client', email='edit@test.com', address='Street 1')
     db.session.commit()
 
-    inv = Invoice(
+    inv = InvoiceFactory(
         invoice_number='INV-TEST-EDIT-001',
         project_id=project.id,
         client_name=cl.name,
@@ -307,13 +288,12 @@ def test_edit_invoice_template_has_expected_fields(app, client, user, project):
         created_by=user.id,
         tax_rate=Decimal('10.00'),
         notes='Note',
-        terms='Terms'
+        terms='Terms',
+        status='draft'
     )
-    db.session.add(inv)
     db.session.commit()
 
-    it = InvoiceItem(invoice_id=inv.id, description='Line A', quantity=Decimal('2.00'), unit_price=Decimal('50.00'))
-    db.session.add(it)
+    it = InvoiceItemFactory(invoice_id=inv.id, description='Line A', quantity=Decimal('2.00'), unit_price=Decimal('50.00'))
     db.session.commit()
 
     resp = client.get(f'/invoices/{inv.id}/edit')
@@ -342,28 +322,26 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
         sess['_fresh'] = True
 
     # Create client and invoice
-    cl = Client(name='GenFromTime Client', email='gft@test.com')
-    db.session.add(cl)
+    cl = ClientFactory(name='GenFromTime Client', email='gft@test.com')
     db.session.commit()
 
-    inv = Invoice(
+    inv = InvoiceFactory(
         invoice_number='INV-TEST-GFT-001',
         project_id=project.id,
         client_name=cl.name,
         client_id=cl.id,
         due_date=date.today() + timedelta(days=7),
-        created_by=user.id
+        created_by=user.id,
+        status='draft'
     )
-    db.session.add(inv)
     db.session.commit()
 
     # Add an unbilled time entry and a project cost
     from app.models import TimeEntry, ProjectCost
+    from factories import TimeEntryFactory
     start = datetime.utcnow() - timedelta(hours=2)
     end = datetime.utcnow()
-    te = TimeEntry(user_id=user.id, project_id=project.id, start_time=start, end_time=end, notes='Work A', billable=True)
-    db.session.add(te)
-    db.session.commit()
+    TimeEntryFactory(user_id=user.id, project_id=project.id, start_time=start, end_time=end, notes='Work A', billable=True)
 
     pc = ProjectCost(project_id=project.id, user_id=user.id, description='Expense A', category='materials', amount=Decimal('12.50'), cost_date=date.today(), billable=True)
     db.session.add(pc)
@@ -387,38 +365,37 @@ def test_generate_from_time_applies_prepaid_hours(app, client, user):
     """Ensure prepaid hours are consumed before billing when generating invoice items."""
     from app import db
     from app.models import TimeEntry
+    from factories import TimeEntryFactory
     # Authenticate
     with client.session_transaction() as sess:
         sess['_user_id'] = str(user.id)
         sess['_fresh'] = True
 
-    prepaid_client = Client(
+    prepaid_client = ClientFactory(
         name='Prepaid Client',
         email='prepaid@example.com',
         prepaid_hours_monthly=Decimal('50.0'),
         prepaid_reset_day=1
     )
-    db.session.add(prepaid_client)
     db.session.commit()
 
-    project = Project(
+    project = ProjectFactory(
         name='Prepaid Project',
         client_id=prepaid_client.id,
         billable=True,
         hourly_rate=Decimal('120.00')
     )
-    db.session.add(project)
     db.session.commit()
 
-    invoice = Invoice(
+    invoice = InvoiceFactory(
         invoice_number='INV-PREPAID-001',
         project_id=project.id,
         client_name=prepaid_client.name,
         client_id=prepaid_client.id,
         due_date=date.today() + timedelta(days=14),
-        created_by=user.id
+        created_by=user.id,
+        status='draft'
     )
-    db.session.add(invoice)
     db.session.commit()
 
     base_start = datetime(2025, 1, 5, 9, 0, 0)
@@ -427,7 +404,7 @@ def test_generate_from_time_applies_prepaid_hours(app, client, user):
     for idx, hours in enumerate(hours_blocks):
         start = base_start + timedelta(days=idx * 3)
         end = start + timedelta(hours=float(hours))
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=start,
@@ -435,9 +412,6 @@ def test_generate_from_time_applies_prepaid_hours(app, client, user):
             notes=f'Prepaid block {idx + 1}',
             billable=True
         )
-        db.session.add(entry)
-        db.session.commit()
-        db.session.refresh(entry)
         entries.append(entry)
 
     data = {
@@ -509,13 +483,12 @@ def test_record_full_payment(app, sample_invoice):
     See tests/test_payment_model.py and tests/test_payment_routes.py for Payment model tests.
     """
     # Set up invoice with items
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Development work',
         quantity=Decimal('10.00'),
         unit_price=Decimal('75.00')
     )
-    db.session.add(item)
     db.session.commit()
     
     sample_invoice.calculate_totals()
@@ -639,6 +612,8 @@ def test_multiple_payments(app, sample_invoice):
     db.session.add(item)
     db.session.commit()
     
+    # Ensure no tax is applied for this scenario
+    sample_invoice.tax_rate = Decimal('0.00')
     sample_invoice.calculate_totals()
     total_amount = sample_invoice.total_amount  # 1000.00
     
@@ -746,7 +721,7 @@ def test_invoice_sorted_payments_property(app, sample_invoice, sample_user):
     from app.models.payments import Payment
     
     # Create multiple payments with different dates
-    payment1 = Payment(
+    payment1 = PaymentFactory(
         invoice_id=sample_invoice.id,
         amount=Decimal('100.00'),
         payment_date=date(2024, 1, 1),
@@ -754,7 +729,7 @@ def test_invoice_sorted_payments_property(app, sample_invoice, sample_user):
         received_by=sample_user.id
     )
     
-    payment2 = Payment(
+    payment2 = PaymentFactory(
         invoice_id=sample_invoice.id,
         amount=Decimal('200.00'),
         payment_date=date(2024, 1, 15),
@@ -762,7 +737,7 @@ def test_invoice_sorted_payments_property(app, sample_invoice, sample_user):
         received_by=sample_user.id
     )
     
-    payment3 = Payment(
+    payment3 = PaymentFactory(
         invoice_id=sample_invoice.id,
         amount=Decimal('150.00'),
         payment_date=date(2024, 1, 10),
@@ -770,7 +745,6 @@ def test_invoice_sorted_payments_property(app, sample_invoice, sample_user):
         received_by=sample_user.id
     )
     
-    db.session.add_all([payment1, payment2, payment3])
     db.session.commit()
     
     # Get sorted payments
@@ -796,27 +770,25 @@ def test_invoice_sorted_payments_with_same_date(app, sample_invoice, sample_user
     # Create payments with the same payment_date but different created_at times
     same_date = date.today()
     
-    payment1 = Payment(
+    payment1 = PaymentFactory(
         invoice_id=sample_invoice.id,
         amount=Decimal('100.00'),
         payment_date=same_date,
         method='bank_transfer',
         received_by=sample_user.id
     )
-    db.session.add(payment1)
     db.session.commit()
     
     # Small delay to ensure different created_at
     time.sleep(0.01)
     
-    payment2 = Payment(
+    payment2 = PaymentFactory(
         invoice_id=sample_invoice.id,
         amount=Decimal('200.00'),
         payment_date=same_date,
         method='credit_card',
         received_by=sample_user.id
     )
-    db.session.add(payment2)
     db.session.commit()
     
     # Get sorted payments
@@ -906,7 +878,13 @@ def test_pdf_generator_includes_extra_goods(app, sample_invoice, sample_user):
     
     # Generate PDF
     generator = InvoicePDFGenerator(sample_invoice)
-    html_content = generator._generate_html()
+    with app.test_request_context('/'):
+        # Ensure fallback path if Babel filter isn't properly configured in tests
+        try:
+            app.jinja_env.filters.pop('babel_format_date', None)
+        except Exception:
+            pass
+        html_content = generator._generate_html()
     
     # Verify invoice item is in HTML
     assert 'Development work' in html_content
@@ -966,7 +944,12 @@ def test_pdf_generator_extra_goods_formatting(app, sample_invoice, sample_user):
     
     # Generate PDF
     generator = InvoicePDFGenerator(sample_invoice)
-    html_content = generator._generate_html()
+    with app.test_request_context('/'):
+        try:
+            app.jinja_env.filters.pop('babel_format_date', None)
+        except Exception:
+            pass
+        html_content = generator._generate_html()
     
     # Verify all goods are present
     assert 'Product A' in html_content
@@ -986,13 +969,12 @@ def test_pdf_fallback_generator_includes_extra_goods(app, sample_invoice, sample
     from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
     
     # Add an invoice item
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Consulting Services',
         quantity=Decimal('8.00'),
         unit_price=Decimal('100.00')
     )
-    db.session.add(item)
     
     # Add extra goods
     good = ExtraGood(
@@ -1034,13 +1016,12 @@ def test_pdf_export_with_extra_goods_smoke(app, sample_invoice, sample_user):
     from app.utils.pdf_generator import InvoicePDFGenerator
     
     # Add multiple items and goods
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Web Development',
         quantity=Decimal('40.00'),
         unit_price=Decimal('85.00')
     )
-    db.session.add(item)
     
     goods = [
         ExtraGood(
@@ -1098,13 +1079,12 @@ def test_pdf_export_fallback_with_extra_goods_smoke(app, sample_invoice, sample_
     from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
     
     # Add items and goods
-    item = InvoiceItem(
+    item = InvoiceItemFactory(
         invoice_id=sample_invoice.id,
         description='Design Services',
         quantity=Decimal('20.00'),
         unit_price=Decimal('65.00')
     )
-    db.session.add(item)
     
     good = ExtraGood(
         name='Stock Photos',
@@ -1251,18 +1231,19 @@ def test_invoice_deletion_cascades_to_extra_goods(app, sample_invoice, sample_us
 @pytest.mark.invoices
 def test_invoice_deletion_cascades_to_payments(app, sample_invoice, sample_user):
     """Test that deleting an invoice also deletes its payments (cascade)."""
+    from factories import PaymentFactory
     from app.models.payments import Payment
     
     # Add payments to invoice
     payments = [
-        Payment(
+        PaymentFactory(
             invoice_id=sample_invoice.id,
             amount=Decimal('100.00'),
             payment_date=date.today(),
             method='bank_transfer',
             received_by=sample_user.id
         ),
-        Payment(
+        PaymentFactory(
             invoice_id=sample_invoice.id,
             amount=Decimal('200.00'),
             payment_date=date.today(),
@@ -1270,9 +1251,6 @@ def test_invoice_deletion_cascades_to_payments(app, sample_invoice, sample_user)
             received_by=sample_user.id
         )
     ]
-    
-    for payment in payments:
-        db.session.add(payment)
     db.session.commit()
     
     # Store payment IDs
@@ -1366,19 +1344,18 @@ def test_delete_invoice_route_success(app, client, user, project):
         sess['_fresh'] = True
     
     # Create client and invoice
-    cl = Client(name='Delete Test Client', email='delete@test.com')
-    db.session.add(cl)
+    cl = ClientFactory(name='Delete Test Client', email='delete@test.com')
     db.session.commit()
     
-    inv = Invoice(
+    inv = InvoiceFactory(
         invoice_number='INV-DELETE-001',
         project_id=project.id,
         client_name=cl.name,
         client_id=cl.id,
         due_date=date.today() + timedelta(days=30),
-        created_by=user.id
+        created_by=user.id,
+        status='draft'
     )
-    db.session.add(inv)
     db.session.commit()
     
     invoice_id = inv.id
@@ -1404,24 +1381,22 @@ def test_delete_invoice_route_permission_denied(app, client, user, project):
     from app.models import Client
     
     # Create another user
-    other_user = User(username='otheruser', role='user')
-    db.session.add(other_user)
+    other_user = UserFactory(username='otheruser', role='user')
     db.session.commit()
     
     # Create client and invoice owned by other_user
-    cl = Client(name='Permission Test Client', email='perm@test.com')
-    db.session.add(cl)
+    cl = ClientFactory(name='Permission Test Client', email='perm@test.com')
     db.session.commit()
     
-    inv = Invoice(
+    inv = InvoiceFactory(
         invoice_number='INV-PERM-001',
         project_id=project.id,
         client_name=cl.name,
         client_id=cl.id,
         due_date=date.today() + timedelta(days=30),
-        created_by=other_user.id  # Owned by other_user
+        created_by=other_user.id,  # Owned by other_user
+        status='draft'
     )
-    db.session.add(inv)
     db.session.commit()
     
     invoice_id = inv.id
@@ -1449,24 +1424,22 @@ def test_delete_invoice_route_admin_can_delete_any(app, client, user, project):
     from app.models import Client
     
     # Create another user
-    other_user = User(username='otheruseradmin', role='user')
-    db.session.add(other_user)
+    other_user = UserFactory(username='otheruseradmin', role='user')
     db.session.commit()
     
     # Create client and invoice owned by other_user
-    cl = Client(name='Admin Delete Test Client', email='admin@test.com')
-    db.session.add(cl)
+    cl = ClientFactory(name='Admin Delete Test Client', email='admin@test.com')
     db.session.commit()
     
-    inv = Invoice(
+    inv = InvoiceFactory(
         invoice_number='INV-ADMIN-001',
         project_id=project.id,
         client_name=cl.name,
         client_id=cl.id,
         due_date=date.today() + timedelta(days=30),
-        created_by=other_user.id  # Owned by other_user
+        created_by=other_user.id,  # Owned by other_user
+        status='draft'
     )
-    db.session.add(inv)
     db.session.commit()
     
     invoice_id = inv.id
@@ -1516,19 +1489,18 @@ def test_invoice_view_has_delete_button(app, client, user, project):
     client.post('/login', data={'username': user.username}, follow_redirects=True)
     
     # Create client and invoice
-    cl = Client(name='Delete Button Test Client', email='button@test.com')
-    db.session.add(cl)
+    cl = ClientFactory(name='Delete Button Test Client', email='button@test.com')
     db.session.commit()
     
-    inv = Invoice(
+    inv = InvoiceFactory(
         invoice_number='INV-BUTTON-001',
         project_id=project.id,
         client_name=cl.name,
         client_id=cl.id,
         due_date=date.today() + timedelta(days=30),
-        created_by=user.id
+        created_by=user.id,
+        status='draft'
     )
-    db.session.add(inv)
     db.session.commit()
     
     # Visit invoice view page
@@ -1666,15 +1638,16 @@ def test_delete_invoice_with_complex_data_smoke(app, client, user, project):
         db.session.add(good)
     
     # Add payments
+    from app.models.payments import Payment
     payments = [
-        Payment(
+        PaymentFactory(
             invoice_id=inv.id,
             amount=Decimal('100.00'),
             payment_date=date.today(),
             method='bank_transfer',
             received_by=user.id
         ),
-        Payment(
+        PaymentFactory(
             invoice_id=inv.id,
             amount=Decimal('200.00'),
             payment_date=date.today(),
@@ -1682,8 +1655,6 @@ def test_delete_invoice_with_complex_data_smoke(app, client, user, project):
             received_by=user.id
         )
     ]
-    for payment in payments:
-        db.session.add(payment)
     
     db.session.commit()
     

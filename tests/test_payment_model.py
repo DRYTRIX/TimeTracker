@@ -3,68 +3,84 @@
 import pytest
 from datetime import datetime, date, timedelta
 from decimal import Decimal
-from app import db
+from app import db, create_app
+from sqlalchemy.pool import StaticPool
 from app.models import Payment, Invoice, User, Project, Client
+from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, PaymentFactory
+@pytest.fixture
+def app():
+    """Isolated app for payment model tests using in-memory SQLite to avoid file locks on Windows."""
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+        'WTF_CSRF_ENABLED': False,
+        'SQLALCHEMY_ENGINE_OPTIONS': {
+            'connect_args': {'check_same_thread': False, 'timeout': 30},
+            'poolclass': StaticPool,
+        },
+        'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
+    })
+    with app.app_context():
+        db.create_all()
+        try:
+            # Improve SQLite concurrency behavior
+            db.session.execute("PRAGMA journal_mode=WAL;")
+            db.session.execute("PRAGMA synchronous=NORMAL;")
+            db.session.execute("PRAGMA busy_timeout=30000;")
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
+            yield app
+        finally:
+            db.session.remove()
+            db.drop_all()
+            try:
+                db.engine.dispose()
+            except Exception:
+                pass
 
 
 @pytest.fixture
 def test_user(app):
     """Create a test user"""
     with app.app_context():
-        user = User(username='testuser', email='test@example.com')
-        user.role = 'user'
-        db.session.add(user)
-        db.session.commit()
+        user = UserFactory()
         yield user
-        # Cleanup
-        db.session.delete(user)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_client(app):
     """Create a test client"""
     with app.app_context():
-        client = Client(name='Test Client', email='client@example.com')
-        db.session.add(client)
-        db.session.commit()
+        client = ClientFactory()
         yield client
-        # Cleanup
-        db.session.delete(client)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_project(app, test_client, test_user):
     """Create a test project"""
     with app.app_context():
-        project = Project(
-            name='Test Project',
+        project = ProjectFactory(
             client_id=test_client.id,
-            created_by=test_user.id,
             billable=True,
             hourly_rate=Decimal('100.00')
         )
-        db.session.add(project)
-        db.session.commit()
         yield project
-        # Cleanup
-        db.session.delete(project)
-        db.session.commit()
 
 
 @pytest.fixture
 def test_invoice(app, test_project, test_user, test_client):
     """Create a test invoice"""
     with app.app_context():
-        invoice = Invoice(
-            invoice_number='INV-TEST-001',
+        invoice = InvoiceFactory(
             project_id=test_project.id,
-            client_name='Test Client',
             client_id=test_client.id,
-            due_date=date.today() + timedelta(days=30),
-            created_by=test_user.id
+            created_by=test_user.id,
+            client_name='Test Client',
+            due_date=(date.today() + timedelta(days=30)),
         )
+        # Ensure non-zero totals for payment-related assertions
         invoice.subtotal = Decimal('1000.00')
         invoice.tax_rate = Decimal('21.00')
         invoice.tax_amount = Decimal('210.00')
@@ -72,9 +88,6 @@ def test_invoice(app, test_project, test_user, test_client):
         db.session.add(invoice)
         db.session.commit()
         yield invoice
-        # Cleanup
-        db.session.delete(invoice)
-        db.session.commit()
 
 
 class TestPaymentModel:
@@ -83,7 +96,7 @@ class TestPaymentModel:
     def test_create_payment(self, app, test_invoice, test_user):
         """Test creating a payment"""
         with app.app_context():
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -112,7 +125,7 @@ class TestPaymentModel:
     def test_payment_calculate_net_amount_without_fee(self, app, test_invoice):
         """Test calculating net amount without gateway fee"""
         with app.app_context():
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -129,7 +142,7 @@ class TestPaymentModel:
     def test_payment_calculate_net_amount_with_fee(self, app, test_invoice):
         """Test calculating net amount with gateway fee"""
         with app.app_context():
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -145,7 +158,7 @@ class TestPaymentModel:
     def test_payment_to_dict(self, app, test_invoice, test_user):
         """Test converting payment to dictionary"""
         with app.app_context():
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -156,8 +169,7 @@ class TestPaymentModel:
                 status='completed',
                 received_by=test_user.id,
                 gateway_fee=Decimal('15.00'),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                # created_at/updated_at set by defaults; no need to override
             )
             payment.calculate_net_amount()
             
@@ -186,7 +198,7 @@ class TestPaymentModel:
             from app.models.invoice import Invoice
             invoice_in_session = Invoice.query.get(test_invoice.id)
             
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=invoice_in_session.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -215,7 +227,7 @@ class TestPaymentModel:
             from app.models.user import User
             user_in_session = User.query.get(test_user.id)
             
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -241,7 +253,7 @@ class TestPaymentModel:
     def test_payment_repr(self, app, test_invoice):
         """Test payment string representation"""
         with app.app_context():
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=Decimal('500.00'),
                 currency='EUR',
@@ -261,7 +273,7 @@ class TestPaymentModel:
             from app.models.invoice import Invoice
             invoice_in_session = Invoice.query.get(test_invoice.id)
             
-            payment1 = Payment(
+            payment1 = PaymentFactory(
                 invoice_id=invoice_in_session.id,
                 amount=Decimal('300.00'),
                 currency='EUR',
@@ -269,7 +281,7 @@ class TestPaymentModel:
                 status='completed'
             )
             
-            payment2 = Payment(
+            payment2 = PaymentFactory(
                 invoice_id=invoice_in_session.id,
                 amount=Decimal('200.00'),
                 currency='EUR',
@@ -297,7 +309,7 @@ class TestPaymentModel:
             statuses = ['completed', 'pending', 'failed', 'refunded']
             
             for status in statuses:
-                payment = Payment(
+                payment = PaymentFactory(
                     invoice_id=test_invoice.id,
                     amount=Decimal('100.00'),
                     currency='EUR',
@@ -326,7 +338,7 @@ class TestPaymentIntegration:
             assert test_invoice.payment_status == 'unpaid'
             
             # Add payment
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=Decimal('605.00'),  # Half of total
                 currency='EUR',
@@ -356,7 +368,7 @@ class TestPaymentIntegration:
         """Test that invoice becomes fully paid when total payments equal total amount"""
         with app.app_context():
             # Add payments that equal total amount
-            payment = Payment(
+            payment = PaymentFactory(
                 invoice_id=test_invoice.id,
                 amount=test_invoice.total_amount,
                 currency='EUR',

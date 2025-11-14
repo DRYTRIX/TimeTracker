@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from app import db
 from app.models import Project, Task, TimeEntry
+from factories import TimeEntryFactory
 
 
 @pytest.mark.smoke
@@ -25,7 +26,7 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
         # Create a time entry associated with this task and project1
         start_time = datetime.utcnow() - timedelta(hours=2)
         end_time = datetime.utcnow() - timedelta(hours=1)
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project1.id,
             task_id=task.id,
@@ -33,7 +34,6 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
             end_time=end_time,
             notes='Work on task before moving'
         )
-        db.session.add(entry)
         db.session.commit()
 
         # Store IDs before POST request

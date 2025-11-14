@@ -7,6 +7,7 @@ import pytest
 from datetime import datetime, timedelta, date
 from app.models import WeeklyTimeGoal, TimeEntry, User, Project
 from app import db
+from factories import TimeEntryFactory
 
 
 # ============================================================================
@@ -88,22 +89,20 @@ def test_weekly_goal_actual_hours_calculation(app, user, project):
         db.session.commit()
         
         # Add time entries for the week
-        entry1 = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start, datetime.min.time()),
             end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=8),
             duration_seconds=8 * 3600
         )
-        entry2 = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start + timedelta(days=1), datetime.min.time()),
             end_time=datetime.combine(week_start + timedelta(days=1), datetime.min.time()) + timedelta(hours=7),
             duration_seconds=7 * 3600
         )
-        db.session.add_all([entry1, entry2])
-        db.session.commit()
         
         # Refresh goal to get calculated properties
         db.session.refresh(goal)
@@ -126,15 +125,13 @@ def test_weekly_goal_progress_percentage(app, user, project):
         db.session.commit()
         
         # Add time entry
-        entry = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start, datetime.min.time()),
             end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=20),
             duration_seconds=20 * 3600
         )
-        db.session.add(entry)
-        db.session.commit()
         
         db.session.refresh(goal)
         
@@ -157,15 +154,13 @@ def test_weekly_goal_remaining_hours(app, user, project):
         db.session.commit()
         
         # Add time entry
-        entry = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start, datetime.min.time()),
             end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=15),
             duration_seconds=15 * 3600
         )
-        db.session.add(entry)
-        db.session.commit()
         
         db.session.refresh(goal)
         
@@ -190,15 +185,13 @@ def test_weekly_goal_is_completed(app, user, project):
         assert goal.is_completed is False
         
         # Add time entry to complete goal
-        entry = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start, datetime.min.time()),
             end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=20),
             duration_seconds=20 * 3600
         )
-        db.session.add(entry)
-        db.session.commit()
         
         db.session.refresh(goal)
         assert goal.is_completed is True
@@ -219,15 +212,13 @@ def test_weekly_goal_average_hours_per_day(app, user, project):
         db.session.commit()
         
         # Add time entry for 10 hours
-        entry = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start, datetime.min.time()),
             end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=10),
             duration_seconds=10 * 3600
         )
-        db.session.add(entry)
-        db.session.commit()
         
         db.session.refresh(goal)
         
@@ -272,15 +263,13 @@ def test_weekly_goal_status_update_completed(app, user, project):
         db.session.commit()
         
         # Add time entry to meet goal
-        entry = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start, datetime.min.time()),
             end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=20),
             duration_seconds=20 * 3600
         )
-        db.session.add(entry)
-        db.session.commit()
         
         goal.update_status()
         db.session.commit()
@@ -305,15 +294,13 @@ def test_weekly_goal_status_update_failed(app, user, project):
         db.session.commit()
         
         # Add time entry that doesn't meet goal
-        entry = TimeEntry(
+        TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.combine(week_start, datetime.min.time()),
             end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=20),
             duration_seconds=20 * 3600
         )
-        db.session.add(entry)
-        db.session.commit()
         
         goal.update_status()
         db.session.commit()

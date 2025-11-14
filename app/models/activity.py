@@ -88,6 +88,16 @@ class Activity(db.Model):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to emit activity WebSocket event: {socket_error}")
+            
+            # Trigger webhooks for this activity
+            try:
+                from app.utils.webhook_dispatcher import WebhookDispatcher
+                WebhookDispatcher.on_activity_logged(activity)
+            except Exception as webhook_error:
+                # Don't let webhook errors break activity logging
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to dispatch webhook for activity: {webhook_error}")
         except Exception as e:
             db.session.rollback()
             # Don't let activity logging break the main flow

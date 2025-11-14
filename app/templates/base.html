@@ -391,6 +391,11 @@
                                 </a>
                             </li>
                             <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('admin.') and ('email_template' in ep or 'email-templates' in request.path) %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_email_templates') }}">
+                                    <i class="fas fa-envelope-open-text w-4 mr-2"></i>{{ _('Email Templates') }}
+                                </a>
+                            </li>
+                            <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
                                     <i class="fas fa-file-pdf w-4 mr-2"></i>{{ _('PDF Layout') }}
                                 </a>

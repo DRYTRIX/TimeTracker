@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from app import db
 from app.models import Client, Project, TimeEntry, Invoice, ClientPrepaidConsumption
+from factories import InvoiceFactory
+from factories import TimeEntryFactory
 from app.utils.prepaid_hours import PrepaidHoursAllocator
 
 
@@ -28,13 +30,14 @@ def test_prepaid_allocator_partial_allocation(app, user):
     db.session.add(project)
     db.session.commit()
 
-    invoice = Invoice(
+    invoice = InvoiceFactory(
         invoice_number='INV-ALLOC-001',
         project_id=project.id,
         client_name=client.name,
         client_id=client.id,
         due_date=date.today() + timedelta(days=30),
-        created_by=user.id
+        created_by=user.id,
+        status='draft'
     )
     db.session.add(invoice)
     db.session.commit()
@@ -45,7 +48,7 @@ def test_prepaid_allocator_partial_allocation(app, user):
     for idx, hours in enumerate(hours_blocks):
         start = base_start + timedelta(days=idx)
         end = start + timedelta(hours=float(hours))
-        entry = TimeEntry(
+        entry = TimeEntryFactory(
             user_id=user.id,
             project_id=project.id,
             start_time=start,
@@ -53,9 +56,6 @@ def test_prepaid_allocator_partial_allocation(app, user):
             billable=True,
             notes=f'Allocation block {idx + 1}'
         )
-        db.session.add(entry)
-        db.session.commit()
-        db.session.refresh(entry)
         entries.append(entry)
 
     allocator = PrepaidHoursAllocator(client=client, invoice=invoice)

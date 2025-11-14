@@ -1,6 +1,7 @@
 """
 Tests for enhanced UI features
 """
+import os
 import pytest
 from flask import url_for
 
@@ -325,10 +326,27 @@ class TestStaticFiles:
 @pytest.fixture
 def app():
     """Create application for testing"""
-    from app import create_app
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
+    from app import create_app, db
+    from sqlalchemy.pool import StaticPool
+    app = create_app({
+        'TESTING': True,
+        'WTF_CSRF_ENABLED': False,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+        'SQLALCHEMY_ENGINE_OPTIONS': {
+            'connect_args': {'check_same_thread': False, 'timeout': 30},
+            'poolclass': StaticPool,
+        },
+        'SQLALCHEMY_SESSION_OPTIONS': {'expire_on_commit': False},
+    })
+    with app.app_context():
+        db.create_all()
+        try:
+            db.session.execute("PRAGMA journal_mode=WAL;")
+            db.session.execute("PRAGMA synchronous=NORMAL;")
+            db.session.execute("PRAGMA busy_timeout=30000;")
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     return app
 
 

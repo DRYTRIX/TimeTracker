@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ _('Client Portal') }} - {{ app_name }}{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Client Portal - View your projects, invoices, and time entries">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+    <script>
+        // Theme init
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+    <!-- Simple header for client portal -->
+    <header class="bg-card-light dark:bg-card-dark border-b border-border-light dark:border-border-dark shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-primary">{{ _('Client Portal') }}</h1>
+                    {% set current_client = get_current_client() %}
+                    {% if current_client %}
+                    <span class="ml-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ current_client.name }}</span>
+                    {% endif %}
+                </div>
+                {% set current_client = get_current_client() %}
+                {% if current_client %}
+                <nav class="flex items-center space-x-4">
+                    <a href="{{ url_for('client_portal.dashboard') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-home mr-1"></i>{{ _('Dashboard') }}
+                    </a>
+                    <a href="{{ url_for('client_portal.projects') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-folder-open mr-1"></i>{{ _('Projects') }}
+                    </a>
+                    <a href="{{ url_for('client_portal.invoices') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-file-invoice mr-1"></i>{{ _('Invoices') }}
+                    </a>
+                    <a href="{{ url_for('client_portal.time_entries') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-clock mr-1"></i>{{ _('Time Entries') }}
+                    </a>
+                    <a href="{{ url_for('client_portal.logout') }}" class="text-sm text-text-light dark:text-text-dark hover:text-red-600 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-1"></i>{{ _('Logout') }}
+                    </a>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% from "components/ui.html" import breadcrumb_nav %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Flash Messages (hidden; converted to toasts) -->
+    <div id="flash-messages-container" class="hidden">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-danger{% elif category == 'warning' %}alert-warning{% else %}alert-info{% endif %}" data-toast-message="{{ message }}" data-toast-type="{{ category }}"></div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+    <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='toast-manager.js') }}"></script>
+</body>
+</html>
+

@@ -1,0 +1,53 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Projects') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Projects')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-folder-open',
+    title_text=_('Projects'),
+    subtitle_text=_('Projects for %(client_name)s', client_name=client.name),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if project_stats %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for stat in project_stats %}
+        <div class="border border-border-light dark:border-border-dark rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+                <h3 class="text-lg font-semibold">{{ stat.project.name }}</h3>
+                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ stat.project.status|capitalize }}</span>
+            </div>
+            {% if stat.project.description %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ stat.project.description }}</p>
+            {% endif %}
+            <div class="flex items-center justify-between text-sm">
+                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}:</span>
+                <span class="font-medium">{{ "%.2f"|format(stat.total_hours) }}h</span>
+            </div>
+            <div class="flex items-center justify-between text-sm mt-1">
+                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Time Entries') }}:</span>
+                <span class="font-medium">{{ stat.entry_count }}</span>
+            </div>
+            {% if stat.project.hourly_rate %}
+            <div class="flex items-center justify-between text-sm mt-1">
+                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Hourly Rate') }}:</span>
+                <span class="font-medium">{{ "%.2f"|format(stat.project.hourly_rate) }} {{ stat.project.client_obj.default_hourly_rate and 'EUR' or '' }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No projects found.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+
