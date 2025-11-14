@@ -1,7 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
+from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from .client_prepaid_consumption import ClientPrepaidConsumption
+import secrets
 
 class Client(db.Model):
     """Client model for managing client information and rates"""
@@ -21,6 +23,13 @@ class Client(db.Model):
     prepaid_reset_day = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Client portal settings
+    portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
+    portal_username = db.Column(db.String(80), unique=True, nullable=True, index=True)  # Portal login username
+    portal_password_hash = db.Column(db.String(255), nullable=True)  # Hashed password for portal access
+    password_setup_token = db.Column(db.String(100), nullable=True, index=True)  # Token for password setup/reset
+    password_setup_token_expires = db.Column(db.DateTime, nullable=True)  # Token expiration time
     
     # Relationships
     projects = db.relationship('Project', backref='client_obj', lazy='dynamic', cascade='all, delete-orphan')
@@ -202,3 +211,111 @@ class Client(db.Model):
     def get_all_clients(cls):
         """Get all clients ordered by name"""
         return cls.query.order_by(cls.name).all()
+    
+    # Client portal helpers
+    def set_portal_password(self, password):
+        """Set the portal password for this client"""
+        if password:
+            self.portal_password_hash = generate_password_hash(password)
+        else:
+            self.portal_password_hash = None
+    
+    def check_portal_password(self, password):
+        """Check if the provided password matches the portal password"""
+        if not self.portal_password_hash or not password:
+            return False
+        return check_password_hash(self.portal_password_hash, password)
+    
+    @property
+    def has_portal_access(self):
+        """Check if client has portal access enabled and credentials set"""
+        return self.portal_enabled and self.portal_username and self.portal_password_hash
+    
+    def get_portal_data(self):
+        """Get data for client portal view (projects, invoices, time entries)"""
+        if not self.has_portal_access:
+            return None
+        
+        from .project import Project
+        from .invoice import Invoice
+        from .time_entry import TimeEntry
+        
+        # Get active projects for this client
+        projects = Project.query.filter_by(
+            client_id=self.id,
+            status='active'
+        ).order_by(Project.name).all()
+        
+        # Get invoices for this client
+        invoices = Invoice.query.filter_by(
+            client_id=self.id
+        ).order_by(Invoice.issue_date.desc()).limit(50).all()
+        
+        # Get time entries for projects belonging to this client
+        project_ids = [p.id for p in projects]
+        time_entries = TimeEntry.query.filter(
+            TimeEntry.project_id.in_(project_ids),
+            TimeEntry.end_time.isnot(None)
+        ).order_by(TimeEntry.start_time.desc()).limit(100).all()
+        
+        return {
+            'client': self,
+            'projects': projects,
+            'invoices': invoices,
+            'time_entries': time_entries
+        }
+    
+    def generate_password_setup_token(self, expires_hours=24):
+        """Generate a secure token for password setup/reset"""
+        token = secrets.token_urlsafe(32)
+        self.password_setup_token = token
+        self.password_setup_token_expires = datetime.utcnow() + timedelta(hours=expires_hours)
+        return token
+    
+    def verify_password_setup_token(self, token):
+        """Verify if a password setup token is valid"""
+        if not self.password_setup_token or not token:
+            return False
+        
+        if self.password_setup_token != token:
+            return False
+        
+        if self.password_setup_token_expires and self.password_setup_token_expires < datetime.utcnow():
+            return False
+        
+        return True
+    
+    def clear_password_setup_token(self):
+        """Clear the password setup token after use"""
+        self.password_setup_token = None
+        self.password_setup_token_expires = None
+    
+    @classmethod
+    def authenticate_portal(cls, username, password):
+        """Authenticate a client portal login"""
+        client = cls.query.filter_by(portal_username=username, portal_enabled=True).first()
+        if not client:
+            return None
+        
+        if not client.check_portal_password(password):
+            return None
+        
+        if not client.is_active:
+            return None
+        
+        return client
+    
+    @classmethod
+    def find_by_password_token(cls, token):
+        """Find a client by password setup token"""
+        if not token:
+            return None
+        
+        client = cls.query.filter_by(password_setup_token=token).first()
+        if not client:
+            return None
+        
+        if client.password_setup_token_expires and client.password_setup_token_expires < datetime.utcnow():
+            return None
+        
+        return client
