@@ -20,9 +20,30 @@ class OnboardingManager {
             return;
         }
 
+        // Disable tour on mobile devices (width < 768px)
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            console.log('Onboarding tour disabled on mobile devices');
+            // Mark as completed to prevent future attempts
+            localStorage.setItem(this.storageKey, 'true');
+            return;
+        }
+
         this.steps = steps;
         this.createOverlay();
         this.createTooltip();
+        
+        // Add resize handler to handle window resizing during tour
+        this.resizeHandler = () => {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                // If window is resized to mobile size, cancel the tour
+                console.log('Window resized to mobile size, cancelling tour');
+                this.complete();
+            }
+        };
+        window.addEventListener('resize', this.resizeHandler);
+        
         this.showStep(0);
     }
 
@@ -107,6 +128,54 @@ class OnboardingManager {
                     visibility: visible;
                     transition: opacity 0.2s ease-out;
                     pointer-events: auto;
+                }
+                
+                /* Mobile responsive styles (for future use if tour is enabled on mobile) */
+                @media (max-width: 768px) {
+                    .onboarding-tooltip {
+                        max-width: calc(100vw - 32px);
+                        min-width: unset;
+                        width: calc(100vw - 32px);
+                        padding: 20px;
+                        left: 16px !important;
+                        right: 16px !important;
+                        top: auto !important;
+                        bottom: 20px !important;
+                        transform: translateY(0) !important;
+                    }
+                    
+                    .onboarding-tooltip-header {
+                        margin-bottom: 10px;
+                    }
+                    
+                    .onboarding-tooltip-title {
+                        font-size: 16px;
+                    }
+                    
+                    .onboarding-tooltip-body {
+                        font-size: 14px;
+                        margin-bottom: 16px;
+                    }
+                    
+                    .onboarding-tooltip-footer {
+                        flex-direction: column;
+                        gap: 12px;
+                    }
+                    
+                    .onboarding-tooltip-buttons {
+                        width: 100%;
+                        flex-direction: column;
+                    }
+                    
+                    .onboarding-btn {
+                        width: 100%;
+                        padding: 12px 16px;
+                    }
+                    
+                    .onboarding-tooltip-progress {
+                        text-align: center;
+                        width: 100%;
+                    }
                 }
                 
                 .onboarding-tooltip * {
@@ -710,6 +779,12 @@ class OnboardingManager {
         document.querySelector('.onboarding-highlight')?.remove();
         document.querySelector('.onboarding-mask')?.remove();
 
+        // Remove resize listener if it exists
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
+        }
+
         // Mark as completed
         localStorage.setItem(this.storageKey, 'true');
 
@@ -835,8 +910,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if user is on dashboard and hasn't completed onboarding
     if (window.location.pathname === '/main/dashboard' || window.location.pathname === '/') {
         setTimeout(() => {
-            if (!window.onboardingManager.isCompleted()) {
+            // Skip on mobile devices (width < 768px)
+            const isMobile = window.innerWidth <= 768;
+            if (!isMobile && !window.onboardingManager.isCompleted()) {
                 window.onboardingManager.init(defaultTourSteps);
+            } else if (isMobile) {
+                // Mark as completed on mobile to prevent future attempts
+                localStorage.setItem('onboarding_completed', 'true');
             }
         }, 1000);
     }

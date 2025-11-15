@@ -495,6 +495,14 @@ class EnhancedOnboardingManager {
     checkFirstTimeUser() {
         if (this.isCompleted()) return;
 
+        // Skip on mobile devices (width < 768px)
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            // Mark as completed on mobile to prevent future attempts
+            localStorage.setItem(this.storageKey, 'true');
+            return;
+        }
+
         // Check if we're on a page where tour should start
         const path = window.location.pathname;
         if (path === '/' || path === '/main/dashboard' || path === '/dashboard') {
