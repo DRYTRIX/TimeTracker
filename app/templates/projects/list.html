@@ -252,9 +252,9 @@
                     {% endif %}
                     
                     {% if project.description %}
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4 line-clamp-2">
-                        {{ project.description }}
-                    </p>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4 line-clamp-2 prose prose-sm dark:prose-invert max-w-none">
+                        {{ project.description | markdown | safe }}
+                    </div>
                     {% endif %}
                 </div>
                 

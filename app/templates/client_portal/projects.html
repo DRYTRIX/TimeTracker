@@ -26,7 +26,7 @@
                 <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ stat.project.status|capitalize }}</span>
             </div>
             {% if stat.project.description %}
-            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ stat.project.description }}</p>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3 prose prose-sm dark:prose-invert max-w-none">{{ stat.project.description | markdown | safe }}</div>
             {% endif %}
             <div class="flex items-center justify-between text-sm">
                 <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}:</span>
