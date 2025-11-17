@@ -229,6 +229,14 @@ class SmartNotificationManager {
         setInterval(async () => {
             try {
                 const response = await fetch('/api/deadlines/upcoming');
+                
+                // Check if response is OK before reading body
+                if (!response.ok) {
+                    // If response is not OK, the error handler may have already consumed the body
+                    // Just return early to avoid "Body has already been consumed" error
+                    return;
+                }
+                
                 const deadlines = await response.json();
                 
                 deadlines.forEach(deadline => {
@@ -247,7 +255,10 @@ class SmartNotificationManager {
                     }
                 });
             } catch (error) {
-                console.error('Error checking deadlines:', error);
+                // Only log if it's not a "body consumed" error (which is expected when response is not OK)
+                if (!error.message || !error.message.includes('already been consumed')) {
+                    console.error('Error checking deadlines:', error);
+                }
             }
         }, 60 * 60 * 1000); // Check every hour
     }
@@ -276,6 +287,14 @@ class SmartNotificationManager {
 
         try {
             const response = await fetch('/api/summary/today');
+            
+            // Check if response is OK before reading body
+            if (!response.ok) {
+                // If response is not OK, the error handler may have already consumed the body
+                // Just return early to avoid "Body has already been consumed" error
+                return;
+            }
+            
             const summary = await response.json();
 
             const hours = (summary && typeof summary.hours === 'number')
@@ -303,7 +322,10 @@ class SmartNotificationManager {
                 });
             }
         } catch (error) {
-            console.error('Error fetching daily summary:', error);
+            // Only log if it's not a "body consumed" error (which is expected when response is not OK)
+            if (!error.message || !error.message.includes('already been consumed')) {
+                console.error('Error fetching daily summary:', error);
+            }
         }
     }
 

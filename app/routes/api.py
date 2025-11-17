@@ -1513,6 +1513,35 @@ def dashboard_sparklines():
         'month': hours_data   # Same data for now
     })
 
+@api_bp.route('/api/summary/today')
+@login_required
+def summary_today():
+    """Get today's time tracking summary for daily summary notification"""
+    from app.models import TimeEntry, Project
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, distinct
+    
+    today = datetime.utcnow().date()
+    
+    # Get today's time entries for current user
+    entries = TimeEntry.query.filter(
+        TimeEntry.user_id == current_user.id,
+        func.date(TimeEntry.start_time) == today,
+        TimeEntry.end_time.isnot(None)
+    ).all()
+    
+    # Calculate total hours
+    total_hours = sum((entry.duration_hours or 0) for entry in entries)
+    
+    # Count unique projects
+    project_ids = set(entry.project_id for entry in entries if entry.project_id)
+    project_count = len(project_ids)
+    
+    return jsonify({
+        'hours': round(total_hours, 2),
+        'projects': project_count
+    })
+
 @api_bp.route('/api/activity/timeline')
 @login_required
 def activity_timeline():

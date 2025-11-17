@@ -152,7 +152,7 @@
                 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Invoice Number</label>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ _('Invoice Number') }}</label>
                         <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" 
                            class="text-lg font-semibold text-primary hover:text-primary-dark">
                             {{ payment.invoice.invoice_number }}

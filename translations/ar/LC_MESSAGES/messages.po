@@ -294,7 +294,7 @@ msgid "Company Logo"
 msgstr "شعار الشركة"
 
 msgid "DryTrix Logo"
-msgstr "شعار DryTrix"
+msgstr "DryTrix Logo"
 
 msgid "TimeTracker"
 msgstr "TimeTracker"
@@ -478,4 +478,227 @@ msgstr "%(app)s هو تطبيق ويب لتتبع الوقت مصمم للاست
 
 msgid "Learn more about "
 msgstr "تعرف على المزيد حول "
+
+#: app/templates/setup/initial_setup.html:30
+msgid "Privacy First"
+msgstr "الخصوصية أولاً"
+
+#: app/templates/setup/initial_setup.html:35
+msgid "Self-hosted on your server"
+msgstr "مستضاف ذاتياً على خادمك"
+
+#: app/templates/setup/initial_setup.html:41
+msgid "Anonymous telemetry (opt-in)"
+msgstr "قياس مجهول (اختياري)"
+
+#: app/templates/setup/initial_setup.html:47
+msgid "No PII collected ever"
+msgstr "لا يتم جمع بيانات شخصية أبداً"
+
+#: app/templates/setup/initial_setup.html:53
+msgid "Open source & transparent"
+msgstr "مفتوح المصدر وشفاف"
+
+#: app/templates/setup/initial_setup.html:61
+msgid "Welcome to TimeTracker"
+msgstr "مرحباً بك في TimeTracker"
+
+#: app/templates/setup/initial_setup.html:62
+msgid "Let's get you set up in just a moment"
+msgstr "دعنا نعدك في لحظة"
+
+#: app/templates/setup/initial_setup.html:69
+msgid "Thank you for choosing TimeTracker!"
+msgstr "شكراً لاختيارك TimeTracker!"
+
+#: app/templates/setup/initial_setup.html:71
+msgid "Your data stays on your server, and you have complete control."
+msgstr "تبقى بياناتك على خادمك ولديك سيطرة كاملة."
+
+#: app/templates/setup/initial_setup.html:77
+msgid "Help Us Improve (Optional)"
+msgstr "ساعدنا على التحسين (اختياري)"
+
+#: app/templates/setup/initial_setup.html:83
+msgid "Enable anonymous telemetry"
+msgstr "تفعيل القياس المجهول"
+
+#: app/templates/setup/initial_setup.html:85
+msgid "Help us understand usage patterns to improve TimeTracker"
+msgstr "ساعدنا على فهم أنماط الاستخدام لتحسين TimeTracker"
+
+#: app/templates/setup/initial_setup.html:94
+msgid "What data is collected?"
+msgstr "ما هي البيانات التي يتم جمعها؟"
+
+#: app/templates/setup/initial_setup.html:98
+msgid "What we collect:"
+msgstr "ما نجمع:"
+
+#: app/templates/setup/initial_setup.html:100
+msgid "Anonymous installation fingerprint (hashed)"
+msgstr "بصمة تثبيت مجهولة (مشفرة)"
+
+#: app/templates/setup/initial_setup.html:101
+msgid "Application version & platform info"
+msgstr "إصدار التطبيق ومعلومات المنصة"
+
+#: app/templates/setup/initial_setup.html:102
+msgid "Feature usage statistics"
+msgstr "إحصائيات استخدام الميزات"
+
+#: app/templates/setup/initial_setup.html:103
+msgid "Internal numeric IDs only"
+msgstr "معرفات رقمية داخلية فقط"
+
+#: app/templates/setup/initial_setup.html:108
+msgid "What we DON'T collect:"
+msgstr "ما لا نجمع:"
+
+#: app/templates/setup/initial_setup.html:110
+msgid "No usernames or emails"
+msgstr "لا أسماء مستخدمين أو بريد إلكتروني"
+
+#: app/templates/setup/initial_setup.html:111
+msgid "No project names or descriptions"
+msgstr "لا أسماء مشاريع أو أوصاف"
+
+#: app/templates/setup/initial_setup.html:112
+msgid "No time entry data or notes"
+msgstr "لا بيانات إدخال الوقت أو ملاحظات"
+
+#: app/templates/setup/initial_setup.html:113
+msgid "No client or business data"
+msgstr "لا بيانات عميل أو أعمال"
+
+#: app/templates/setup/initial_setup.html:114
+msgid "No IP addresses or PII"
+msgstr "لا عناوين IP أو بيانات شخصية"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Why?"
+msgstr "لماذا؟"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Anonymous usage data helps us prioritize features and fix issues."
+msgstr "بيانات الاستخدام المجهولة تساعدنا على تحديد أولويات الميزات وإصلاح المشكلات."
+
+#: app/templates/setup/initial_setup.html:121
+msgid "You can change this anytime in"
+msgstr "يمكنك تغيير هذا في أي وقت في"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Admin → Settings"
+msgstr "المسؤول → الإعدادات"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Privacy & Analytics section"
+msgstr "قسم الخصوصية والتحليلات"
+
+#: app/templates/setup/initial_setup.html:131
+msgid "Complete Setup & Continue"
+msgstr "إكمال الإعداد والمتابعة"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "By continuing, you agree to use TimeTracker under the"
+msgstr "بالمتابعة، أنت توافق على استخدام TimeTracker بموجب"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "GPL-3.0 License"
+msgstr "رخصة GPL-3.0"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Duplicate Time Entry"
+msgstr "تكرار إدخال الوقت"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Log Time Manually"
+msgstr "تسجيل الوقت يدوياً"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a copy of a previous entry with new times"
+msgstr "إنشاء نسخة من إدخال سابق بأوقات جديدة"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a new time entry"
+msgstr "إنشاء إدخال وقت جديد"
+
+#: app/templates/timer/manual_entry.html:24
+msgid "Duplicating entry:"
+msgstr "تكرار الإدخال:"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "Original:"
+msgstr "الأصلي:"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "to"
+msgstr "إلى"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "N/A"
+msgstr "غير متاح"
+
+#: app/templates/timer/manual_entry.html:82
+msgid "What did you work on?"
+msgstr "على ماذا عملت؟"
+
+#: app/templates/timer/manual_entry.html:87
+msgid "tag1, tag2"
+msgstr "tag1, tag2"
+
+#: app/templates/timer/manual_entry.html:131
+msgid "Failed to load tasks"
+msgstr "فشل تحميل المهام"
+
+#: app/templates/tasks/list.html:299
+msgid "Move Selected Tasks to Project"
+msgstr "نقل المهام المحددة إلى المشروع"
+
+#: app/templates/tasks/list.html:309
+msgid "Move Tasks"
+msgstr "نقل المهام"
+
+#: app/templates/timer/timer_page.html:135
+msgid "Add notes about what you're working on..."
+msgstr "أضف ملاحظات حول ما تعمل عليه..."
+
+#: app/templates/admin/email_templates/edit.html:36
+#: app/templates/admin/email_templates/create.html:38
+msgid "Set as default template"
+msgstr "تعيين كقالب افتراضي"
+
+#: app/templates/admin/email_templates/edit.html:44
+#: app/templates/admin/email_templates/create.html:46
+#: app/templates/admin/email_templates/view.html:56
+msgid "HTML Template"
+msgstr "قالب HTML"
+
+#: app/templates/admin/email_templates/edit.html:47
+#: app/templates/admin/email_templates/create.html:49
+msgid "Invoice Number"
+msgstr "رقم الفاتورة"
+
+#: app/templates/admin/email_templates/edit.html:50
+#: app/templates/admin/email_templates/create.html:52
+msgid "Company Name"
+msgstr "اسم الشركة"
+
+#: app/templates/admin/email_templates/edit.html:53
+#: app/templates/admin/email_templates/create.html:55
+msgid "Custom Message"
+msgstr "رسالة مخصصة"
+
+#: app/templates/admin/email_templates/edit.html:56
+#: app/templates/admin/email_templates/create.html:58
+msgid "More Variables"
+msgstr "المزيد من المتغيرات"
+
+#: app/templates/invoices/list.html:72
+msgid "Invoice number or client"
+msgstr "رقم الفاتورة أو العميل"
+
+#: app/templates/expenses/form.html:231
+msgid "Receipt/Invoice Number"
+msgstr "رقم الإيصال/الفاتورة"
 

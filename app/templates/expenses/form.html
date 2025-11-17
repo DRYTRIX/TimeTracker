@@ -228,7 +228,7 @@
                 
                 <div>
                     <label for="receipt_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Receipt/Invoice Number
+                        {{ _('Receipt/Invoice Number') }}
                     </label>
                     <input type="text" name="receipt_number" id="receipt_number"
                            value="{{ expense.receipt_number if expense else '' }}"

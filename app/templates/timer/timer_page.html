@@ -121,24 +121,24 @@
                     
                     <div>
                         <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Task <span class="text-text-muted-light dark:text-text-muted-dark">(Optional)</span>
+                            {{ _('Task') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                         </label>
                         <select name="task_id" id="task_id" class="form-input w-full">
-                            <option value="">No task</option>
+                            <option value="">{{ _('No task') }}</option>
                         </select>
                     </div>
                     
                     <div>
                         <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Notes <span class="text-text-muted-light dark:text-text-muted-dark">(Optional)</span>
+                            {{ _('Notes') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                         </label>
-                        <textarea name="notes" id="notes" rows="3" class="form-input w-full" placeholder="Add notes about what you're working on..."></textarea>
+                        <textarea name="notes" id="notes" rows="3" class="form-input w-full" placeholder="{{ _('Add notes about what you\'re working on...') }}"></textarea>
                     </div>
                     
                     {% if templates %}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Or use a template
+                            {{ _('Or use a template') }}
                         </label>
                         <div class="space-y-2">
                             {% for template in templates %}

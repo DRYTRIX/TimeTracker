@@ -296,17 +296,17 @@
 <div id="bulkProjectDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
-            <h3 class="text-lg font-semibold mb-4">Move Selected Tasks to Project</h3>
-            <label for="bulkProjectSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Project</label>
+            <h3 class="text-lg font-semibold mb-4">{{ _('Move Selected Tasks to Project') }}</h3>
+            <label for="bulkProjectSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Select Project') }}</label>
             <select id="bulkProjectSelect" class="form-input w-full mb-4">
-                <option value="">-- Select Project --</option>
+                <option value="">-- {{ _('Select Project') }} --</option>
                 {% for project in projects %}
                 <option value="{{ project.id }}">{{ project.name }}</option>
                 {% endfor %}
             </select>
             <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeBulkProjectDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                <button type="button" onclick="submitBulkProject()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">Move Tasks</button>
+                <button type="button" onclick="closeBulkProjectDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">{{ _('Cancel') }}</button>
+                <button type="button" onclick="submitBulkProject()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Move Tasks') }}</button>
             </div>
         </div>
     </div>

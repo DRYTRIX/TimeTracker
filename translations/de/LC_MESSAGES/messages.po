@@ -478,3 +478,226 @@ msgstr "%(app)s ist eine webbasierte Zeiterfassungsanwendung für die interne Nu
 
 msgid "Learn more about "
 msgstr "Erfahren Sie mehr über "
+
+#: app/templates/setup/initial_setup.html:30
+msgid "Privacy First"
+msgstr "Datenschutz zuerst"
+
+#: app/templates/setup/initial_setup.html:35
+msgid "Self-hosted on your server"
+msgstr "Selbst gehostet auf Ihrem Server"
+
+#: app/templates/setup/initial_setup.html:41
+msgid "Anonymous telemetry (opt-in)"
+msgstr "Anonyme Telemetrie (Opt-in)"
+
+#: app/templates/setup/initial_setup.html:47
+msgid "No PII collected ever"
+msgstr "Keine personenbezogenen Daten werden jemals gesammelt"
+
+#: app/templates/setup/initial_setup.html:53
+msgid "Open source & transparent"
+msgstr "Open Source & transparent"
+
+#: app/templates/setup/initial_setup.html:61
+msgid "Welcome to TimeTracker"
+msgstr "Willkommen bei TimeTracker"
+
+#: app/templates/setup/initial_setup.html:62
+msgid "Let's get you set up in just a moment"
+msgstr "Lassen Sie uns Sie in einem Moment einrichten"
+
+#: app/templates/setup/initial_setup.html:69
+msgid "Thank you for choosing TimeTracker!"
+msgstr "Vielen Dank, dass Sie TimeTracker gewählt haben!"
+
+#: app/templates/setup/initial_setup.html:71
+msgid "Your data stays on your server, and you have complete control."
+msgstr "Ihre Daten bleiben auf Ihrem Server und Sie haben die vollständige Kontrolle."
+
+#: app/templates/setup/initial_setup.html:77
+msgid "Help Us Improve (Optional)"
+msgstr "Helfen Sie uns zu verbessern (Optional)"
+
+#: app/templates/setup/initial_setup.html:83
+msgid "Enable anonymous telemetry"
+msgstr "Anonyme Telemetrie aktivieren"
+
+#: app/templates/setup/initial_setup.html:85
+msgid "Help us understand usage patterns to improve TimeTracker"
+msgstr "Helfen Sie uns, Nutzungsmuster zu verstehen, um TimeTracker zu verbessern"
+
+#: app/templates/setup/initial_setup.html:94
+msgid "What data is collected?"
+msgstr "Welche Daten werden gesammelt?"
+
+#: app/templates/setup/initial_setup.html:98
+msgid "What we collect:"
+msgstr "Was wir sammeln:"
+
+#: app/templates/setup/initial_setup.html:100
+msgid "Anonymous installation fingerprint (hashed)"
+msgstr "Anonymer Installations-Fingerabdruck (gehasht)"
+
+#: app/templates/setup/initial_setup.html:101
+msgid "Application version & platform info"
+msgstr "Anwendungsversion & Plattforminformationen"
+
+#: app/templates/setup/initial_setup.html:102
+msgid "Feature usage statistics"
+msgstr "Funktionsnutzungsstatistiken"
+
+#: app/templates/setup/initial_setup.html:103
+msgid "Internal numeric IDs only"
+msgstr "Nur interne numerische IDs"
+
+#: app/templates/setup/initial_setup.html:108
+msgid "What we DON'T collect:"
+msgstr "Was wir NICHT sammeln:"
+
+#: app/templates/setup/initial_setup.html:110
+msgid "No usernames or emails"
+msgstr "Keine Benutzernamen oder E-Mails"
+
+#: app/templates/setup/initial_setup.html:111
+msgid "No project names or descriptions"
+msgstr "Keine Projektnamen oder Beschreibungen"
+
+#: app/templates/setup/initial_setup.html:112
+msgid "No time entry data or notes"
+msgstr "Keine Zeiteintragsdaten oder Notizen"
+
+#: app/templates/setup/initial_setup.html:113
+msgid "No client or business data"
+msgstr "Keine Kunden- oder Geschäftsdaten"
+
+#: app/templates/setup/initial_setup.html:114
+msgid "No IP addresses or PII"
+msgstr "Keine IP-Adressen oder personenbezogene Daten"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Why?"
+msgstr "Warum?"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Anonymous usage data helps us prioritize features and fix issues."
+msgstr "Anonyme Nutzungsdaten helfen uns, Funktionen zu priorisieren und Probleme zu beheben."
+
+#: app/templates/setup/initial_setup.html:121
+msgid "You can change this anytime in"
+msgstr "Sie können dies jederzeit ändern in"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Admin → Settings"
+msgstr "Admin → Einstellungen"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Privacy & Analytics section"
+msgstr "Bereich Datenschutz & Analyse"
+
+#: app/templates/setup/initial_setup.html:131
+msgid "Complete Setup & Continue"
+msgstr "Einrichtung abschließen & fortfahren"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "By continuing, you agree to use TimeTracker under the"
+msgstr "Durch Fortfahren stimmen Sie zu, TimeTracker unter der"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "GPL-3.0 License"
+msgstr "GPL-3.0-Lizenz"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Duplicate Time Entry"
+msgstr "Zeiteintrag duplizieren"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Log Time Manually"
+msgstr "Zeit manuell erfassen"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a copy of a previous entry with new times"
+msgstr "Eine Kopie eines vorherigen Eintrags mit neuen Zeiten erstellen"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a new time entry"
+msgstr "Neuen Zeiteintrag erstellen"
+
+#: app/templates/timer/manual_entry.html:24
+msgid "Duplicating entry:"
+msgstr "Eintrag duplizieren:"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "Original:"
+msgstr "Original:"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "to"
+msgstr "bis"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "N/A"
+msgstr "N/V"
+
+#: app/templates/timer/manual_entry.html:82
+msgid "What did you work on?"
+msgstr "Woran haben Sie gearbeitet?"
+
+#: app/templates/timer/manual_entry.html:87
+msgid "tag1, tag2"
+msgstr "tag1, tag2"
+
+#: app/templates/timer/manual_entry.html:131
+msgid "Failed to load tasks"
+msgstr "Aufgaben konnten nicht geladen werden"
+
+#: app/templates/tasks/list.html:299
+msgid "Move Selected Tasks to Project"
+msgstr "Ausgewählte Aufgaben zum Projekt verschieben"
+
+#: app/templates/tasks/list.html:309
+msgid "Move Tasks"
+msgstr "Aufgaben verschieben"
+
+#: app/templates/timer/timer_page.html:135
+msgid "Add notes about what you're working on..."
+msgstr "Notizen hinzufügen, woran Sie arbeiten..."
+
+#: app/templates/admin/email_templates/edit.html:36
+#: app/templates/admin/email_templates/create.html:38
+msgid "Set as default template"
+msgstr "Als Standardvorlage festlegen"
+
+#: app/templates/admin/email_templates/edit.html:44
+#: app/templates/admin/email_templates/create.html:46
+#: app/templates/admin/email_templates/view.html:56
+msgid "HTML Template"
+msgstr "HTML-Vorlage"
+
+#: app/templates/admin/email_templates/edit.html:47
+#: app/templates/admin/email_templates/create.html:49
+msgid "Invoice Number"
+msgstr "Rechnungsnummer"
+
+#: app/templates/admin/email_templates/edit.html:50
+#: app/templates/admin/email_templates/create.html:52
+msgid "Company Name"
+msgstr "Firmenname"
+
+#: app/templates/admin/email_templates/edit.html:53
+#: app/templates/admin/email_templates/create.html:55
+msgid "Custom Message"
+msgstr "Benutzerdefinierte Nachricht"
+
+#: app/templates/admin/email_templates/edit.html:56
+#: app/templates/admin/email_templates/create.html:58
+msgid "More Variables"
+msgstr "Weitere Variablen"
+
+#: app/templates/invoices/list.html:72
+msgid "Invoice number or client"
+msgstr "Rechnungsnummer oder Kunde"
+
+#: app/templates/expenses/form.html:231
+msgid "Receipt/Invoice Number"
+msgstr "Beleg-/Rechnungsnummer"
