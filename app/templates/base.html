@@ -89,6 +89,37 @@
         /* Ensure body and html don't cause horizontal overflow */
         html, body { overflow-x: hidden; }
         #appShell { overflow-x: hidden; width: 100%; }
+        
+        /* Custom scrollbar styling for sidebar */
+        #sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+        }
+        .dark #sidebar {
+            scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+        }
+        /* Webkit scrollbar styling (Chrome, Edge, Safari) */
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+        #sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(156, 163, 175, 0.7);
+        }
+        .dark #sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.3);
+        }
+        .dark #sidebar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(156, 163, 175, 0.5);
+        }
     </style>
     <script>
         // Theme init (unchanged)
