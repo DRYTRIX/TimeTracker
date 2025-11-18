@@ -36,7 +36,7 @@ def compile_po_to_mo(po_path: str, mo_path: str) -> bool:
         # Log the actual error for debugging
         import logging
         logger = logging.getLogger('timetracker')
-        logger.warning(f"Error compiling {po_path}: {e}")
+        logger.warning(f"Error compiling {po_path}: {e}", exc_info=True)
         return False
 
 
