@@ -621,7 +621,7 @@
             </div>
 
             <!-- Dismissible Support Banner -->
-            <div id="supportBanner" class="hidden bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3">
+            <div id="supportBanner" class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3 opacity-0 invisible max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
                 <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3 flex-1">
                         <i class="fas fa-mug-saucer text-amber-600 dark:text-amber-400 text-lg"></i>
@@ -1210,7 +1210,8 @@
         function dismissSupportBanner() {
             const banner = document.getElementById('supportBanner');
             if (banner) {
-                banner.classList.add('hidden');
+                banner.classList.add('opacity-0', 'invisible', 'max-h-0', 'overflow-hidden');
+                banner.classList.remove('opacity-100', 'visible', 'max-h-[100px]');
                 // Store dismissal timestamp (show again after 7 days)
                 try {
                     localStorage.setItem('supportBannerDismissed', Date.now().toString());
@@ -1231,15 +1232,27 @@
         }
         
         // Show support banner if conditions are met
-        document.addEventListener('DOMContentLoaded', function() {
+        // Check immediately to reserve space and prevent layout shift
+        (function() {
             const banner = document.getElementById('supportBanner');
-            if (banner && shouldShowSupportBanner()) {
-                // Show banner with a slight delay for better UX
+            if (!banner) return;
+            
+            if (shouldShowSupportBanner()) {
+                // Reserve space immediately by removing height constraints
+                // This prevents layout shift when banner becomes visible
+                banner.classList.remove('max-h-0', 'overflow-hidden');
+                // Space is now reserved, content just invisible
+                
+                // Show banner with a slight delay for better UX, but space is already reserved
                 setTimeout(() => {
-                    banner.classList.remove('hidden');
+                    banner.classList.remove('opacity-0', 'invisible');
+                    banner.classList.add('opacity-100', 'visible');
                 }, 2000); // Show after 2 seconds
+            } else {
+                // Keep it hidden and collapsed - no space reserved
+                banner.classList.add('max-h-0', 'overflow-hidden');
             }
-        });
+        })();
     </script>
     
     <script src="{{ url_for('static', filename='data-tables-enhanced.js') }}"></script>
