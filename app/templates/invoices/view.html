@@ -14,12 +14,12 @@
                 <option value="A5">A5</option>
                 <option value="Tabloid">Tabloid</option>
             </select>
-            <a id="export-pdf-link" href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-dark">Export PDF</a>
+            <a id="export-pdf-link" href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-dark">{{ _('Export PDF') }}</a>
         </div>
         <button type="button" onclick="showSendEmailModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-envelope mr-1"></i>Send Email
         </button>
-        <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Record Payment</a>
+        <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">{{ _('Record Payment') }}</a>
         <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
             <i class="fas fa-trash mr-1"></i>Delete
         </button>
@@ -116,7 +116,7 @@
 
     {% if invoice.extra_goods.count() > 0 %}
     <div class="mt-6">
-        <h2 class="text-lg font-semibold mb-4">Extra Goods</h2>
+        <h2 class="text-lg font-semibold mb-4">{{ _('Extra Goods') }}</h2>
         <table class="w-full text-left">
             <thead>
                 <tr>
@@ -173,7 +173,7 @@
     {% if invoice.payments.count() > 0 %}
     <div class="mt-8 border-t border-gray-300 dark:border-gray-600 pt-6">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-semibold">Payment History</h2>
+            <h2 class="text-lg font-semibold">{{ _('Payment History') }}</h2>
             <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
                 <i class="fas fa-plus mr-2"></i>Add Payment
             </a>
@@ -233,7 +233,7 @@
     {% else %}
     <div class="mt-8 border-t border-gray-300 dark:border-gray-600 pt-6">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-semibold">Payment History</h2>
+            <h2 class="text-lg font-semibold">{{ _('Payment History') }}</h2>
             <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
                 <i class="fas fa-plus mr-2"></i>Record First Payment
             </a>

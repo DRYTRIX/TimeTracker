@@ -3,13 +3,13 @@
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': 'Timer'}
+    {'text': _('Timer')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-stopwatch',
-    title_text='Timer',
-    subtitle_text='Track your time with a visual timer',
+    title_text=_('Timer'),
+    subtitle_text=_('Track your time with a visual timer'),
     breadcrumbs=breadcrumbs,
     actions_html=None
 ) }}
@@ -65,19 +65,19 @@
                     <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors shadow-md">
-                            <i class="fas fa-stop mr-2"></i>Stop Timer
+                            <i class="fas fa-stop mr-2"></i>{{ _('Stop Timer') }}
                         </button>
                     </form>
                 </div>
                 
                 <!-- Duration Estimation -->
                 <div class="mt-6 p-4 bg-background-light dark:bg-background-dark rounded-lg w-full max-w-md">
-                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">Estimated Completion</h3>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Estimated Completion') }}</h3>
                     <div class="text-lg font-semibold text-text-light dark:text-text-dark" id="estimated-completion">
-                        Calculating...
+                        {{ _('Calculating...') }}
                     </div>
                     <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                        Based on average session duration
+                        {{ _('Based on average session duration') }}
                     </div>
                 </div>
             </div>
@@ -94,7 +94,7 @@
                         00:00:00
                     </div>
                 </div>
-                <p class="text-text-muted-light dark:text-text-muted-dark mb-6">No active timer. Start one below!</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark mb-6">{{ _('No active timer. Start one below!') }}</p>
             </div>
             {% endif %}
         </div>
@@ -102,7 +102,7 @@
         <!-- Quick Project/Task Selection -->
         {% if not active_timer %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
-            <h2 class="text-lg font-semibold mb-4">Start New Timer</h2>
+            <h2 class="text-lg font-semibold mb-4">{{ _('Start New Timer') }}</h2>
             <form action="{{ url_for('timer.start_timer') }}" method="POST" id="timer-start-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
@@ -112,7 +112,7 @@
                             Project <span class="text-red-500">*</span>
                         </label>
                         <select name="project_id" id="project_id" class="form-input w-full" required>
-                            <option value="">Select a project...</option>
+                            <option value="">{{ _('Select a project...') }}</option>
                             {% for project in projects %}
                             <option value="{{ project.id }}">{{ project.name }}</option>
                             {% endfor %}

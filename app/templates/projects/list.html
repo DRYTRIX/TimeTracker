@@ -16,7 +16,7 @@
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">Filter Projects</h2>
+        <h2 class="text-lg font-semibold">{{ _('Filter Projects') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
             <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
         </button>
@@ -76,7 +76,7 @@
             </div>
             <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" 
                class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
-               title="Export to CSV"
+               title="{{ _('Export to CSV') }}"
                onclick="showExportLoading(this); return true;">
                 <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
             </a>
@@ -546,7 +546,7 @@ function showBulkArchiveDialog(){
                 </div>
                 <div class="flex gap-2 mb-3">
                     <button type="button" onclick="setBulkArchiveReason('Projects completed successfully')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Completed</button>
-                    <button type="button" onclick="setBulkArchiveReason('Contracts ended')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Contract Ended</button>
+                    <button type="button" onclick="setBulkArchiveReason('Contracts ended')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">{{ _('Contract Ended') }}</button>
                     <button type="button" onclick="setBulkArchiveReason('Projects cancelled')" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Cancelled</button>
                 </div>
                 <div class="flex justify-end gap-3">

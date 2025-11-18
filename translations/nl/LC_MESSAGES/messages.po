@@ -1,9 +1,18 @@
+
 msgid ""
 msgstr ""
-"Project-Id-Version: TimeTracker\n"
+"Project-Id-Version:  TimeTracker\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-11-18 08:01+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: nl\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Language-Team: nl <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.14.0\n"
 
 # Navigation and Common
 msgid "Time Tracker"
@@ -238,8 +247,12 @@ msgstr "Selecteer taak (Optioneel)"
 msgid "Choose a task..."
 msgstr "Kies een taak..."
 
-msgid "Tasks list updates after choosing a project. Leave empty to log at project level."
-msgstr "De takenlijst wordt bijgewerkt na het kiezen van een project. Laat leeg om op projectniveau te loggen."
+msgid ""
+"Tasks list updates after choosing a project. Leave empty to log at project "
+"level."
+msgstr ""
+"De takenlijst wordt bijgewerkt na het kiezen van een project. Laat leeg om "
+"op projectniveau te loggen."
 
 msgid "Notes (Optional)"
 msgstr "Notities (Optioneel)"
@@ -305,6 +318,7 @@ msgstr "Professioneel tijdbeheer"
 msgid "Sign in to your account to start tracking your time"
 msgstr "Meld je aan bij je account om je tijd bij te houden"
 
+#: app/templates/setup/initial_setup.html:61
 msgid "Welcome to TimeTracker"
 msgstr "Welkom bij TimeTracker"
 
@@ -352,9 +366,6 @@ msgstr "Versie"
 
 msgid "Please enter a username"
 msgstr "Voer een gebruikersnaam in"
-
-msgid "Signing in..."
-msgstr "Inloggen..."
 
 # Tasks
 msgid "Board"
@@ -470,11 +481,20 @@ msgstr "Wat is"
 msgid "A simple, efficient time tracking solution for teams and individuals."
 msgstr "Een eenvoudige, efficiënte tijdregistratie-oplossing voor teams en individuen."
 
-msgid "It provides a simple and intuitive interface for tracking time spent on various projects and tasks."
-msgstr "Het biedt een eenvoudige en intuïtieve interface om tijd bij te houden voor verschillende projecten en taken."
+msgid ""
+"It provides a simple and intuitive interface for tracking time spent on "
+"various projects and tasks."
+msgstr ""
+"Het biedt een eenvoudige en intuïtieve interface om tijd bij te houden voor "
+"verschillende projecten en taken."
 
-msgid "%(app)s is a web-based time tracking application designed for internal use within organizations."
-msgstr "%(app)s is een webgebaseerde tijdregistratie-applicatie ontworpen voor intern gebruik binnen organisaties."
+#, python-format
+msgid ""
+"%(app)s is a web-based time tracking application designed for internal use "
+"within organizations."
+msgstr ""
+"%(app)s is een webgebaseerde tijdregistratie-applicatie ontworpen voor "
+"intern gebruik binnen organisaties."
 
 msgid "Learn more about "
 msgstr "Meer informatie over "
@@ -498,10 +518,6 @@ msgstr "Geen persoonsgegevens worden ooit verzameld"
 #: app/templates/setup/initial_setup.html:53
 msgid "Open source & transparent"
 msgstr "Open source & transparant"
-
-#: app/templates/setup/initial_setup.html:61
-msgid "Welcome to TimeTracker"
-msgstr "Welkom bij TimeTracker"
 
 #: app/templates/setup/initial_setup.html:62
 msgid "Let's get you set up in just a moment"
@@ -581,7 +597,9 @@ msgstr "Waarom?"
 
 #: app/templates/setup/initial_setup.html:120
 msgid "Anonymous usage data helps us prioritize features and fix issues."
-msgstr "Anonieme gebruiksgegevens helpen ons functies te prioriteren en problemen op te lossen."
+msgstr ""
+"Anonieme gebruiksgegevens helpen ons functies te prioriteren en problemen op "
+"te lossen."
 
 #: app/templates/setup/initial_setup.html:121
 msgid "You can change this anytime in"
@@ -663,34 +681,34 @@ msgstr "Taken verplaatsen"
 msgid "Add notes about what you're working on..."
 msgstr "Notities toevoegen over waar je aan werkt..."
 
-#: app/templates/admin/email_templates/edit.html:36
 #: app/templates/admin/email_templates/create.html:38
+#: app/templates/admin/email_templates/edit.html:36
 msgid "Set as default template"
 msgstr "Instellen als standaardsjabloon"
 
-#: app/templates/admin/email_templates/edit.html:44
 #: app/templates/admin/email_templates/create.html:46
+#: app/templates/admin/email_templates/edit.html:44
 #: app/templates/admin/email_templates/view.html:56
 msgid "HTML Template"
 msgstr "HTML-sjabloon"
 
-#: app/templates/admin/email_templates/edit.html:47
 #: app/templates/admin/email_templates/create.html:49
+#: app/templates/admin/email_templates/edit.html:47
 msgid "Invoice Number"
 msgstr "Factuurnummer"
 
-#: app/templates/admin/email_templates/edit.html:50
 #: app/templates/admin/email_templates/create.html:52
+#: app/templates/admin/email_templates/edit.html:50
 msgid "Company Name"
 msgstr "Bedrijfsnaam"
 
-#: app/templates/admin/email_templates/edit.html:53
 #: app/templates/admin/email_templates/create.html:55
+#: app/templates/admin/email_templates/edit.html:53
 msgid "Custom Message"
 msgstr "Aangepast bericht"
 
-#: app/templates/admin/email_templates/edit.html:56
 #: app/templates/admin/email_templates/create.html:58
+#: app/templates/admin/email_templates/edit.html:56
 msgid "More Variables"
 msgstr "Meer variabelen"
 
@@ -701,3 +719,6753 @@ msgstr "Factuurnummer of klant"
 #: app/templates/expenses/form.html:231
 msgid "Receipt/Invoice Number"
 msgstr "Bon-/Factuurnummer"
+
+msgid "Your session expired or the page was open too long. Please try again."
+msgstr "Uw sessie is verlopen of de pagina was te lang open. Probeer het opnieuw."
+
+msgid "Administrator access required"
+msgstr "Beheerdersrechten vereist"
+
+msgid "Could not update PDF layout due to a database error."
+msgstr "Kon PDF-lay-out niet bijwerken vanwege een databasefout."
+
+msgid "PDF layout updated successfully"
+msgstr "PDF-lay-out succesvol bijgewerkt"
+
+msgid "Could not reset PDF layout due to a database error."
+msgstr "Kon PDF-lay-out niet resetten vanwege een databasefout."
+
+msgid "PDF layout reset to defaults"
+msgstr "PDF-lay-out gereset naar standaardwaarden"
+
+msgid "Username is required"
+msgstr "Gebruikersnaam is vereist"
+
+msgid ""
+"Could not create your account due to a database error. Please try again "
+"later."
+msgstr ""
+"Kon uw account niet aanmaken vanwege een databasefout. Probeer het later "
+"opnieuw."
+
+msgid "Welcome! Your account has been created."
+msgstr "Welkom! Uw account is aangemaakt."
+
+msgid "User not found. Please contact an administrator."
+msgstr "Gebruiker niet gevonden. Neem contact op met een beheerder."
+
+msgid "Could not update your account role due to a database error."
+msgstr "Kon uw accountrol niet bijwerken vanwege een databasefout."
+
+msgid "Account is disabled. Please contact an administrator."
+msgstr "Account is uitgeschakeld. Neem contact op met een beheerder."
+
+#, python-format
+msgid "Welcome back, %(username)s!"
+msgstr "Welkom terug, %(username)s!"
+
+msgid "Unexpected error during login. Please try again or check server logs."
+msgstr "Onverwachte fout tijdens aanmelden. Probeer het opnieuw of controleer de serverlogs."
+
+#, python-format
+msgid "Goodbye, %(username)s!"
+msgstr "Tot ziens, %(username)s!"
+
+msgid "Invalid avatar file type. Allowed: PNG, JPG, JPEG, GIF, WEBP"
+msgstr "Ongeldig avatarbestandstype. Toegestaan: PNG, JPG, JPEG, GIF, WEBP"
+
+msgid "Invalid image file."
+msgstr "Ongeldig afbeeldingsbestand."
+
+msgid "Failed to save avatar on server."
+msgstr "Kon avatar niet opslaan op server."
+
+msgid "Profile updated successfully"
+msgstr "Profiel succesvol bijgewerkt"
+
+msgid "Could not update your profile due to a database error."
+msgstr "Kon uw profiel niet bijwerken vanwege een databasefout."
+
+msgid "Avatar removed"
+msgstr "Avatar verwijderd"
+
+msgid "Failed to remove avatar."
+msgstr "Kon avatar niet verwijderen."
+
+msgid "Single Sign-On is not configured yet. Please contact an administrator."
+msgstr "Single Sign-On is nog niet geconfigureerd. Neem contact op met een beheerder."
+
+msgid "Single Sign-On is not configured."
+msgstr "Single Sign-On is niet geconfigureerd."
+
+msgid ""
+"Authentication failed: missing issuer or subject claim. Please check OIDC "
+"configuration."
+msgstr ""
+"Authenticatie mislukt: ontbrekende issuer of subject claim. Controleer de "
+"OIDC-configuratie."
+
+msgid "User account does not exist and self-registration is disabled."
+msgstr "Gebruikersaccount bestaat niet en zelfregistratie is uitgeschakeld."
+
+msgid "Could not create your account due to a database error."
+msgstr "Kon uw account niet aanmaken vanwege een databasefout."
+
+msgid "Unexpected error during SSO login. Please try again or contact support."
+msgstr "Onverwachte fout tijdens SSO-aanmelden. Probeer het opnieuw of neem contact op met ondersteuning."
+
+msgid "Event created successfully"
+msgstr "Gebeurtenis succesvol aangemaakt"
+
+msgid "Event updated successfully"
+msgstr "Gebeurtenis succesvol bijgewerkt"
+
+msgid "You do not have permission to delete this event."
+msgstr "U heeft geen toestemming om deze gebeurtenis te verwijderen."
+
+msgid "Failed to delete event"
+msgstr "Kon gebeurtenis niet verwijderen"
+
+msgid "Event deleted successfully"
+msgstr "Gebeurtenis succesvol verwijderd"
+
+#, python-format
+msgid "Error deleting event: %(error)s"
+msgstr "Fout bij verwijderen gebeurtenis: %(error)s"
+
+msgid "Event moved successfully"
+msgstr "Gebeurtenis succesvol verplaatst"
+
+msgid "Event resized successfully"
+msgstr "Gebeurtenis succesvol van grootte gewijzigd"
+
+msgid "You do not have permission to view this event."
+msgstr "U heeft geen toestemming om deze gebeurtenis te bekijken."
+
+msgid "You do not have permission to edit this event."
+msgstr "U heeft geen toestemming om deze gebeurtenis te bewerken."
+
+msgid "Note content cannot be empty"
+msgstr "Notitie-inhoud kan niet leeg zijn"
+
+msgid "Note added successfully"
+msgstr "Notitie succesvol toegevoegd"
+
+msgid "Error adding note"
+msgstr "Fout bij toevoegen notitie"
+
+#, python-format
+msgid "Error adding note: %(error)s"
+msgstr "Fout bij toevoegen notitie: %(error)s"
+
+msgid "Note does not belong to this client"
+msgstr "Notitie behoort niet bij deze klant"
+
+msgid "You do not have permission to edit this note"
+msgstr "U heeft geen toestemming om deze notitie te bewerken"
+
+msgid "Error updating note"
+msgstr "Fout bij bijwerken notitie"
+
+msgid "Note updated successfully"
+msgstr "Notitie succesvol bijgewerkt"
+
+#, python-format
+msgid "Error updating note: %(error)s"
+msgstr "Fout bij bijwerken notitie: %(error)s"
+
+msgid "You do not have permission to delete this note"
+msgstr "U heeft geen toestemming om deze notitie te verwijderen"
+
+msgid "Error deleting note"
+msgstr "Fout bij verwijderen notitie"
+
+msgid "Note deleted successfully"
+msgstr "Notitie succesvol verwijderd"
+
+#, python-format
+msgid "Error deleting note: %(error)s"
+msgstr "Fout bij verwijderen notitie: %(error)s"
+
+msgid "You do not have permission to create clients"
+msgstr "U heeft geen toestemming om klanten aan te maken"
+
+msgid "Comment content cannot be empty"
+msgstr "Reactie-inhoud kan niet leeg zijn"
+
+msgid "Comment must be associated with a project or task"
+msgstr "Reactie moet gekoppeld zijn aan een project of taak"
+
+msgid "Comment cannot be associated with both a project and a task"
+msgstr "Reactie kan niet tegelijk gekoppeld zijn aan een project en een taak"
+
+msgid "Invalid parent comment"
+msgstr "Ongeldige bovenliggende reactie"
+
+msgid "Comment added successfully"
+msgstr "Reactie succesvol toegevoegd"
+
+msgid "Error adding comment"
+msgstr "Fout bij toevoegen reactie"
+
+#, python-format
+msgid "Error adding comment: %(error)s"
+msgstr "Fout bij toevoegen reactie: %(error)s"
+
+msgid "You do not have permission to edit this comment"
+msgstr "U heeft geen toestemming om deze reactie te bewerken"
+
+msgid "Comment updated successfully"
+msgstr "Reactie succesvol bijgewerkt"
+
+#, python-format
+msgid "Error updating comment: %(error)s"
+msgstr "Fout bij bijwerken reactie: %(error)s"
+
+msgid "You do not have permission to delete this comment"
+msgstr "U heeft geen toestemming om deze reactie te verwijderen"
+
+msgid "Comment deleted successfully"
+msgstr "Reactie succesvol verwijderd"
+
+#, python-format
+msgid "Error deleting comment: %(error)s"
+msgstr "Fout bij verwijderen reactie: %(error)s"
+
+msgid "Category name is required"
+msgstr "Categorienaam is vereist"
+
+msgid "Expense category created successfully"
+msgstr "Uitgavencategorie succesvol aangemaakt"
+
+msgid "Error creating expense category"
+msgstr "Fout bij aanmaken uitgavencategorie"
+
+msgid "Expense category updated successfully"
+msgstr "Uitgavencategorie succesvol bijgewerkt"
+
+msgid "Error updating expense category"
+msgstr "Fout bij bijwerken uitgavencategorie"
+
+msgid "Expense category deactivated successfully"
+msgstr "Uitgavencategorie succesvol gedeactiveerd"
+
+msgid "Error deactivating expense category"
+msgstr "Fout bij deactiveren uitgavencategorie"
+
+msgid "Title is required"
+msgstr "Titel is vereist"
+
+msgid "Category is required"
+msgstr "Categorie is vereist"
+
+msgid "Amount is required"
+msgstr "Bedrag is vereist"
+
+msgid "Expense date is required"
+msgstr "Uitgavedatum is vereist"
+
+msgid "Invalid date format"
+msgstr "Ongeldig datumformaat"
+
+msgid "Invalid amount format"
+msgstr "Ongeldig bedragsformaat"
+
+msgid "Expense created successfully"
+msgstr "Uitgave succesvol aangemaakt"
+
+msgid "Error creating expense"
+msgstr "Fout bij aanmaken uitgave"
+
+msgid "You do not have permission to view this expense"
+msgstr "U heeft geen toestemming om deze uitgave te bekijken"
+
+msgid "You do not have permission to edit this expense"
+msgstr "U heeft geen toestemming om deze uitgave te bewerken"
+
+msgid "Cannot edit approved or reimbursed expenses"
+msgstr "Kan goedgekeurde of terugbetaalde uitgaven niet bewerken"
+
+msgid "Please fill in all required fields"
+msgstr "Vul alle verplichte velden in"
+
+msgid "Expense updated successfully"
+msgstr "Uitgave succesvol bijgewerkt"
+
+msgid "Error updating expense"
+msgstr "Fout bij bijwerken uitgave"
+
+msgid "You do not have permission to delete this expense"
+msgstr "U heeft geen toestemming om deze uitgave te verwijderen"
+
+msgid "Cannot delete approved or invoiced expenses"
+msgstr "Kan goedgekeurde of gefactureerde uitgaven niet verwijderen"
+
+msgid "Expense deleted successfully"
+msgstr "Uitgave succesvol verwijderd"
+
+msgid "Error deleting expense"
+msgstr "Fout bij verwijderen uitgave"
+
+msgid "Only administrators can approve expenses"
+msgstr "Alleen beheerders kunnen uitgaven goedkeuren"
+
+msgid "Only pending expenses can be approved"
+msgstr "Alleen openstaande uitgaven kunnen worden goedgekeurd"
+
+msgid "Expense approved successfully"
+msgstr "Uitgave succesvol goedgekeurd"
+
+msgid "Error approving expense"
+msgstr "Fout bij goedkeuren uitgave"
+
+msgid "Only administrators can reject expenses"
+msgstr "Alleen beheerders kunnen uitgaven afwijzen"
+
+msgid "Only pending expenses can be rejected"
+msgstr "Alleen openstaande uitgaven kunnen worden afgewezen"
+
+msgid "Rejection reason is required"
+msgstr "Afwijzingsreden is vereist"
+
+msgid "Expense rejected"
+msgstr "Uitgave afgewezen"
+
+msgid "Error rejecting expense"
+msgstr "Fout bij afwijzen uitgave"
+
+msgid "Only administrators can mark expenses as reimbursed"
+msgstr "Alleen beheerders kunnen uitgaven als terugbetaald markeren"
+
+msgid "Only approved expenses can be marked as reimbursed"
+msgstr "Alleen goedgekeurde uitgaven kunnen als terugbetaald worden gemarkeerd"
+
+msgid "This expense is not marked as reimbursable"
+msgstr "Deze uitgave is niet gemarkeerd als terugbetaalbaar"
+
+msgid "Expense marked as reimbursed"
+msgstr "Uitgave gemarkeerd als terugbetaald"
+
+msgid "Error marking expense as reimbursed"
+msgstr "Fout bij markeren uitgave als terugbetaald"
+
+msgid "OCR is not available. Please contact your administrator."
+msgstr "OCR is niet beschikbaar. Neem contact op met uw beheerder."
+
+msgid "No file provided"
+msgstr "Geen bestand opgegeven"
+
+msgid "No file selected"
+msgstr "Geen bestand geselecteerd"
+
+msgid "Invalid file type. Allowed types: png, jpg, jpeg, gif, pdf"
+msgstr "Ongeldig bestandstype. Toegestane typen: png, jpg, jpeg, gif, pdf"
+
+msgid ""
+"Receipt scanned successfully! You can now create an expense with the "
+"extracted data."
+msgstr ""
+"Bon succesvol gescand! U kunt nu een uitgave aanmaken met de geëxtraheerde "
+"gegevens."
+
+msgid "Error scanning receipt. Please try again or enter the expense manually."
+msgstr "Fout bij scannen bon. Probeer het opnieuw of voer de uitgave handmatig in."
+
+msgid "No scanned receipt data found. Please scan a receipt first."
+msgstr "Geen gescande bongegevens gevonden. Scan eerst een bon."
+
+msgid "Expense created successfully from scanned receipt"
+msgstr "Uitgave succesvol aangemaakt van gescande bon"
+
+msgid "You do not have permission to export this invoice"
+msgstr "U heeft geen toestemming om deze factuur te exporteren"
+
+#, python-format
+msgid "PDF generation failed: %(err)s. Fallback also failed: %(fb)s"
+msgstr "PDF-generatie mislukt: %(err)s. Fallback ook mislukt: %(fb)s"
+
+msgid "Mileage entry created successfully"
+msgstr "Kilometergeregistratie succesvol aangemaakt"
+
+msgid "Error creating mileage entry"
+msgstr "Fout bij aanmaken kilometergeregistratie"
+
+msgid "You do not have permission to view this mileage entry"
+msgstr "U heeft geen toestemming om deze kilometergeregistratie te bekijken"
+
+msgid "You do not have permission to edit this mileage entry"
+msgstr "U heeft geen toestemming om deze kilometergeregistratie te bewerken"
+
+msgid "Cannot edit approved or reimbursed mileage entries"
+msgstr "Kan goedgekeurde of terugbetaalde kilometergeregistraties niet bewerken"
+
+msgid "Mileage entry updated successfully"
+msgstr "Kilometergeregistratie succesvol bijgewerkt"
+
+msgid "Error updating mileage entry"
+msgstr "Fout bij bijwerken kilometergeregistratie"
+
+msgid "You do not have permission to delete this mileage entry"
+msgstr "U heeft geen toestemming om deze kilometergeregistratie te verwijderen"
+
+msgid "Mileage entry deleted successfully"
+msgstr "Kilometergeregistratie succesvol verwijderd"
+
+msgid "Error deleting mileage entry"
+msgstr "Fout bij verwijderen kilometergeregistratie"
+
+msgid "Only administrators can approve mileage entries"
+msgstr "Alleen beheerders kunnen kilometergeregistraties goedkeuren"
+
+msgid "Only pending mileage entries can be approved"
+msgstr "Alleen openstaande kilometergeregistraties kunnen worden goedgekeurd"
+
+msgid "Mileage entry approved successfully"
+msgstr "Kilometergeregistratie succesvol goedgekeurd"
+
+msgid "Error approving mileage entry"
+msgstr "Fout bij goedkeuren kilometergeregistratie"
+
+msgid "Only administrators can reject mileage entries"
+msgstr "Alleen beheerders kunnen kilometergeregistraties afwijzen"
+
+msgid "Only pending mileage entries can be rejected"
+msgstr "Alleen openstaande kilometergeregistraties kunnen worden afgewezen"
+
+msgid "Mileage entry rejected"
+msgstr "Kilometergeregistratie afgewezen"
+
+msgid "Error rejecting mileage entry"
+msgstr "Fout bij afwijzen kilometergeregistratie"
+
+msgid "Only administrators can mark mileage entries as reimbursed"
+msgstr "Alleen beheerders kunnen kilometergeregistraties als terugbetaald markeren"
+
+msgid "Only approved mileage entries can be marked as reimbursed"
+msgstr "Alleen goedgekeurde kilometergeregistraties kunnen als terugbetaald worden gemarkeerd"
+
+msgid "Mileage entry marked as reimbursed"
+msgstr "Kilometergeregistratie gemarkeerd als terugbetaald"
+
+msgid "Error marking mileage entry as reimbursed"
+msgstr "Fout bij markeren kilometergeregistratie als terugbetaald"
+
+msgid "Start date must be before end date"
+msgstr "Startdatum moet voor einddatum liggen"
+
+msgid "No per diem rate found for this location. Please configure rates first."
+msgstr "Geen per diem-tarief gevonden voor deze locatie. Configureer eerst de tarieven."
+
+msgid "Per diem claim created successfully"
+msgstr "Per diem-claim succesvol aangemaakt"
+
+msgid "Error creating per diem claim"
+msgstr "Fout bij aanmaken per diem-claim"
+
+msgid "You do not have permission to view this per diem claim"
+msgstr "U heeft geen toestemming om deze per diem-claim te bekijken"
+
+msgid "You do not have permission to edit this per diem claim"
+msgstr "U heeft geen toestemming om deze per diem-claim te bewerken"
+
+msgid "Cannot edit approved or reimbursed per diem claims"
+msgstr "Kan goedgekeurde of terugbetaalde per diem-claims niet bewerken"
+
+msgid "Per diem claim updated successfully"
+msgstr "Per diem-claim succesvol bijgewerkt"
+
+msgid "Error updating per diem claim"
+msgstr "Fout bij bijwerken per diem-claim"
+
+msgid "You do not have permission to delete this per diem claim"
+msgstr "U heeft geen toestemming om deze per diem-claim te verwijderen"
+
+msgid "Per diem claim deleted successfully"
+msgstr "Per diem-claim succesvol verwijderd"
+
+msgid "Error deleting per diem claim"
+msgstr "Fout bij verwijderen per diem-claim"
+
+msgid "Only administrators can approve per diem claims"
+msgstr "Alleen beheerders kunnen per diem-claims goedkeuren"
+
+msgid "Only pending per diem claims can be approved"
+msgstr "Alleen openstaande per diem-claims kunnen worden goedgekeurd"
+
+msgid "Per diem claim approved successfully"
+msgstr "Per diem-claim succesvol goedgekeurd"
+
+msgid "Error approving per diem claim"
+msgstr "Fout bij goedkeuren per diem-claim"
+
+msgid "Only administrators can reject per diem claims"
+msgstr "Alleen beheerders kunnen per diem-claims afwijzen"
+
+msgid "Only pending per diem claims can be rejected"
+msgstr "Alleen openstaande per diem-claims kunnen worden afgewezen"
+
+msgid "Per diem claim rejected"
+msgstr "Per diem-claim afgewezen"
+
+msgid "Error rejecting per diem claim"
+msgstr "Fout bij afwijzen per diem-claim"
+
+msgid "Per diem rate created successfully"
+msgstr "Per diem-tarief succesvol aangemaakt"
+
+msgid "Error creating per diem rate"
+msgstr "Fout bij aanmaken per diem-tarief"
+
+msgid "You do not have permission to access this page"
+msgstr "U heeft geen toestemming om deze pagina te openen"
+
+msgid "Role name is required"
+msgstr "Rolnaam is vereist"
+
+msgid "A role with this name already exists"
+msgstr "Een rol met deze naam bestaat al"
+
+msgid "Could not create role due to a database error"
+msgstr "Kon rol niet aanmaken vanwege een databasefout"
+
+msgid "Role created successfully"
+msgstr "Rol succesvol aangemaakt"
+
+msgid "System roles cannot be edited"
+msgstr "Systeemrollen kunnen niet worden bewerkt"
+
+msgid "Could not update role due to a database error"
+msgstr "Kon rol niet bijwerken vanwege een databasefout"
+
+msgid "Role updated successfully"
+msgstr "Rol succesvol bijgewerkt"
+
+msgid "You do not have permission to perform this action"
+msgstr "U heeft geen toestemming om deze actie uit te voeren"
+
+msgid "System roles cannot be deleted"
+msgstr "Systeemrollen kunnen niet worden verwijderd"
+
+msgid "Cannot delete role that is assigned to users. Please reassign users first."
+msgstr "Kan rol niet verwijderen die aan gebruikers is toegewezen. Wijs eerst gebruikers opnieuw toe."
+
+msgid "Could not delete role due to a database error"
+msgstr "Kon rol niet verwijderen vanwege een databasefout"
+
+#, python-format
+msgid "Role \"%(name)s\" deleted successfully"
+msgstr "Rol \"%(name)s\" succesvol verwijderd"
+
+msgid "Could not update user roles due to a database error"
+msgstr "Kon gebruikersrollen niet bijwerken vanwege een databasefout"
+
+msgid "User roles updated successfully"
+msgstr "Gebruikersrollen succesvol bijgewerkt"
+
+msgid "Project code already in use"
+msgstr "Projectcode is al in gebruik"
+
+msgid "Project is already in favorites"
+msgstr "Project staat al in favorieten"
+
+msgid "Project added to favorites"
+msgstr "Project toegevoegd aan favorieten"
+
+msgid "Failed to add project to favorites"
+msgstr "Kon project niet toevoegen aan favorieten"
+
+msgid "Project is not in favorites"
+msgstr "Project staat niet in favorieten"
+
+msgid "Project removed from favorites"
+msgstr "Project verwijderd uit favorieten"
+
+msgid "Failed to remove project from favorites"
+msgstr "Kon project niet verwijderen uit favorieten"
+
+msgid "Description, category, amount, and date are required"
+msgstr "Beschrijving, categorie, bedrag en datum zijn vereist"
+
+msgid "Could not add cost due to a database error. Please check server logs."
+msgstr "Kon kosten niet toevoegen vanwege een databasefout. Controleer de serverlogs."
+
+msgid "Cost added successfully"
+msgstr "Kosten succesvol toegevoegd"
+
+msgid "Cost not found"
+msgstr "Kosten niet gevonden"
+
+msgid "You do not have permission to edit this cost"
+msgstr "U heeft geen toestemming om deze kosten te bewerken"
+
+msgid "Could not update cost due to a database error. Please check server logs."
+msgstr "Kon kosten niet bijwerken vanwege een databasefout. Controleer de serverlogs."
+
+msgid "Cost updated successfully"
+msgstr "Kosten succesvol bijgewerkt"
+
+msgid "You do not have permission to delete this cost"
+msgstr "U heeft geen toestemming om deze kosten te verwijderen"
+
+msgid "Cannot delete cost that has been invoiced"
+msgstr "Kan kosten niet verwijderen die zijn gefactureerd"
+
+msgid "Could not delete cost due to a database error. Please check server logs."
+msgstr "Kon kosten niet verwijderen vanwege een databasefout. Controleer de serverlogs."
+
+msgid "Name and unit price are required"
+msgstr "Naam en eenheidsprijs zijn vereist"
+
+msgid "Invalid quantity format"
+msgstr "Ongeldig hoeveelheidsformaat"
+
+msgid "Invalid unit price format"
+msgstr "Ongeldig eenheidsprijsformaat"
+
+msgid "Could not add extra good due to a database error. Please check server logs."
+msgstr "Kon extra goed niet toevoegen vanwege een databasefout. Controleer de serverlogs."
+
+msgid "Extra good added successfully"
+msgstr "Extra goed succesvol toegevoegd"
+
+msgid "Extra good not found"
+msgstr "Extra goed niet gevonden"
+
+msgid "You do not have permission to edit this extra good"
+msgstr "U heeft geen toestemming om dit extra goed te bewerken"
+
+msgid ""
+"Could not update extra good due to a database error. Please check server "
+"logs."
+msgstr ""
+"Kon extra goed niet bijwerken vanwege een databasefout. Controleer de "
+"serverlogs."
+
+msgid "Extra good updated successfully"
+msgstr "Extra goed succesvol bijgewerkt"
+
+msgid "You do not have permission to delete this extra good"
+msgstr "U heeft geen toestemming om dit extra goed te verwijderen"
+
+msgid "Cannot delete extra good that has been added to an invoice"
+msgstr "Kan extra goed niet verwijderen dat aan een factuur is toegevoegd"
+
+msgid ""
+"Could not delete extra good due to a database error. Please check server "
+"logs."
+msgstr ""
+"Kon extra goed niet verwijderen vanwege een databasefout. Controleer de "
+"serverlogs."
+
+msgid "Invalid project selected"
+msgstr "Ongeldig project geselecteerd"
+
+msgid ""
+"Cannot start timer for an archived project. Please unarchive the project "
+"first."
+msgstr ""
+"Kan timer niet starten voor een gearchiveerd project. Archiveer het project "
+"eerst op."
+
+msgid "Cannot start timer for an inactive project"
+msgstr "Kan timer niet starten voor een inactief project"
+
+msgid ""
+"Cannot create time entries for an archived project. Please unarchive the "
+"project first."
+msgstr ""
+"Kan tijdregistraties niet aanmaken voor een gearchiveerd project. Archiveer "
+"het project eerst op."
+
+msgid "Cannot create time entries for an inactive project"
+msgstr "Kan tijdregistraties niet aanmaken voor een inactief project"
+
+msgid "Invalid timezone selected"
+msgstr "Ongeldige tijdzone geselecteerd"
+
+msgid "Standard hours per day must be between 0.5 and 24"
+msgstr "Standaard uren per dag moeten tussen 0,5 en 24 liggen"
+
+msgid "Settings saved successfully"
+msgstr "Instellingen succesvol opgeslagen"
+
+msgid "Error saving settings"
+msgstr "Fout bij opslaan instellingen"
+
+#, python-format
+msgid "Error saving settings: %(error)s"
+msgstr "Fout bij opslaan instellingen: %(error)s"
+
+msgid "Preferences updated"
+msgstr "Voorkeuren bijgewerkt"
+
+msgid "Language updated successfully"
+msgstr "Taal succesvol bijgewerkt"
+
+msgid "Invalid language"
+msgstr "Ongeldige taal"
+
+#, python-format
+msgid "Language updated to %(language)s"
+msgstr "Taal bijgewerkt naar %(language)s"
+
+msgid "Please enter a valid target hours (greater than 0)"
+msgstr "Voer een geldig doel aantal uren in (groter dan 0)"
+
+msgid "A goal already exists for this week. Please edit the existing goal instead."
+msgstr "Er bestaat al een doel voor deze week. Bewerk het bestaande doel in plaats daarvan."
+
+msgid "Weekly time goal created successfully!"
+msgstr "Wekelijks tijddoel succesvol aangemaakt!"
+
+msgid "Failed to create goal. Please try again."
+msgstr "Kon doel niet aanmaken. Probeer het opnieuw."
+
+msgid "You do not have permission to view this goal"
+msgstr "U heeft geen toestemming om dit doel te bekijken"
+
+msgid "You do not have permission to edit this goal"
+msgstr "U heeft geen toestemming om dit doel te bewerken"
+
+msgid "Weekly time goal updated successfully!"
+msgstr "Wekelijks tijddoel succesvol bijgewerkt!"
+
+msgid "Failed to update goal. Please try again."
+msgstr "Kon doel niet bijwerken. Probeer het opnieuw."
+
+msgid "You do not have permission to delete this goal"
+msgstr "U heeft geen toestemming om dit doel te verwijderen"
+
+msgid "Weekly time goal deleted successfully"
+msgstr "Wekelijks tijddoel succesvol verwijderd"
+
+msgid "Failed to delete goal. Please try again."
+msgstr "Kon doel niet verwijderen. Probeer het opnieuw."
+
+msgid "remaining"
+msgstr "resterend"
+
+msgid "Success"
+msgstr "Succes"
+
+msgid "Error"
+msgstr "Fout"
+
+msgid "Warning"
+msgstr "Waarschuwing"
+
+msgid "Information"
+msgstr "Informatie"
+
+msgid "Saving..."
+msgstr "Opslaan..."
+
+msgid "Save"
+msgstr "Opslaan"
+
+msgid "Edit"
+msgstr "Bewerken"
+
+msgid "Add"
+msgstr "Toevoegen"
+
+msgid "Remove"
+msgstr "Verwijderen"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "No"
+msgstr "Nee"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Are you sure you want to delete this?"
+msgstr "Weet u zeker dat u dit wilt verwijderen?"
+
+msgid "You have unsaved changes. Are you sure you want to leave?"
+msgstr "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u wilt vertrekken?"
+
+msgid "Operation failed"
+msgstr "Bewerking mislukt"
+
+msgid "Operation completed successfully"
+msgstr "Bewerking succesvol voltooid"
+
+msgid "No items selected"
+msgstr "Geen items geselecteerd"
+
+msgid "Invalid input"
+msgstr "Ongeldige invoer"
+
+msgid "This field is required"
+msgstr "Dit veld is verplicht"
+
+msgid "No active timer"
+msgstr "Geen actieve timer"
+
+msgid "Timer stopped"
+msgstr "Timer gestopt"
+
+msgid "Failed to stop timer"
+msgstr "Kon timer niet stoppen"
+
+msgid "Error stopping timer"
+msgstr "Fout bij stoppen timer"
+
+msgid "No form to save"
+msgstr "Geen formulier om op te slaan"
+
+msgid "No timer found"
+msgstr "Geen timer gevonden"
+
+msgid "Timer stopped due to inactivity"
+msgstr "Timer gestopt vanwege inactiviteit"
+
+msgid "Navigation"
+msgstr "Navigatie"
+
+msgid "Time Tracking"
+msgstr "Tijdregistratie"
+
+msgid "Kanban Board"
+msgstr "Kanbanbord"
+
+msgid "Weekly Goals"
+msgstr "Wekelijkse doelen"
+
+msgid "Templates"
+msgstr "Sjablonen"
+
+msgid "Finance & Expenses"
+msgstr "Financiën & Uitgaven"
+
+msgid "Payments"
+msgstr "Betalingen"
+
+msgid "Expenses"
+msgstr "Uitgaven"
+
+msgid "Mileage"
+msgstr "Kilometergeregistratie"
+
+msgid "Per Diem"
+msgstr "Per Diem"
+
+msgid "Budget Alerts"
+msgstr "Budgetwaarschuwingen"
+
+msgid "Tools & Data"
+msgstr "Tools & Gegevens"
+
+msgid "Import / Export"
+msgstr "Importeren / Exporteren"
+
+msgid "Saved Filters"
+msgstr "Opgeslagen filters"
+
+msgid "Admin Dashboard"
+msgstr "Beheerdersdashboard"
+
+msgid "Users"
+msgstr "Gebruikers"
+
+msgid "API Tokens"
+msgstr "API-tokens"
+
+msgid "Roles & Permissions"
+msgstr "Rollen & Machtigingen"
+
+msgid "System Settings"
+msgstr "Systeeminstellingen"
+
+msgid "PDF Layout"
+msgstr "PDF-lay-out"
+
+msgid "Expense Categories"
+msgstr "Uitgavencategorieën"
+
+msgid "Per Diem Rates"
+msgstr "Per Diem-tarieven"
+
+msgid "System Info"
+msgstr "Systeeminformatie"
+
+msgid "Backups"
+msgstr "Back-ups"
+
+msgid "OIDC Settings"
+msgstr "OIDC-instellingen"
+
+msgid "Support TimeTracker"
+msgstr "Ondersteun TimeTracker"
+
+msgid ""
+"Enjoying TimeTracker? Consider buying me a coffee to support continued "
+"development!"
+msgstr ""
+"Geniet u van TimeTracker? Overweeg om mij een koffie te kopen om de "
+"doorlopende ontwikkeling te ondersteunen!"
+
+msgid "Made with"
+msgstr "Gemaakt met"
+
+msgid "by"
+msgstr "door"
+
+msgid "Support TimeTracker development"
+msgstr "Ondersteun TimeTracker-ontwikkeling"
+
+msgid "Support"
+msgstr "Ondersteuning"
+
+msgid "Enjoying TimeTracker?"
+msgstr "Geniet u van TimeTracker?"
+
+msgid "Support continued development with a coffee"
+msgstr "Ondersteun doorlopende ontwikkeling met een koffie"
+
+msgid "Dismiss"
+msgstr "Sluiten"
+
+msgid "Toggle dark mode"
+msgstr "Donkere modus wisselen"
+
+msgid "Change language"
+msgstr "Taal wijzigen"
+
+msgid "User menu"
+msgstr "Gebruikersmenu"
+
+msgid "Guest"
+msgstr "Gast"
+
+msgid "My Profile"
+msgstr "Mijn profiel"
+
+msgid "My Settings"
+msgstr "Mijn instellingen"
+
+msgid "Are you sure you want to"
+msgstr "Weet u zeker dat u wilt"
+
+msgid "deactivate"
+msgstr "deactiveren"
+
+msgid "activate"
+msgstr "activeren"
+
+msgid "this token?"
+msgstr "deze token?"
+
+msgid "Deactivate Token"
+msgstr "Token deactiveren"
+
+msgid "Activate Token"
+msgstr "Token activeren"
+
+msgid "Deactivate"
+msgstr "Deactiveren"
+
+msgid "Activate"
+msgstr "Activeren"
+
+msgid "Are you sure you want to delete this token? This action cannot be undone."
+msgstr "Weet u zeker dat u deze token wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+
+msgid "Delete Token"
+msgstr "Token verwijderen"
+
+msgid "Email Configuration & Testing"
+msgstr "E-mailconfiguratie & Testen"
+
+msgid "Configure and test email delivery"
+msgstr "E-maillevering configureren en testen"
+
+msgid "Back to Admin"
+msgstr "Terug naar Beheer"
+
+msgid "Email Configuration"
+msgstr "E-mailconfiguratie"
+
+msgid ""
+"Configure email settings here to save them in the database. Database "
+"settings take precedence over environment variables."
+msgstr ""
+"Configureer hier e-mailinstellingen om ze in de database op te slaan. "
+"Database-instellingen hebben voorrang op omgevingsvariabelen."
+
+msgid "Enable Database Email Configuration"
+msgstr "Database-e-mailconfiguratie inschakelen"
+
+msgid "Mail Server"
+msgstr "Mailserver"
+
+msgid "Mail Port"
+msgstr "Mailpoort"
+
+msgid "Use TLS"
+msgstr "TLS gebruiken"
+
+msgid "Use SSL"
+msgstr "SSL gebruiken"
+
+msgid "Password"
+msgstr "Wachtwoord"
+
+msgid "Leave empty to keep current"
+msgstr "Laat leeg om huidige te behouden"
+
+msgid "Default Sender"
+msgstr "Standaard afzender"
+
+msgid "Save Configuration"
+msgstr "Configuratie opslaan"
+
+msgid "Reset"
+msgstr "Resetten"
+
+msgid "Email Configuration Status"
+msgstr "E-mailconfiguratiestatus"
+
+msgid "Refresh"
+msgstr "Vernieuwen"
+
+msgid "Email is configured!"
+msgstr "E-mail is geconfigureerd!"
+
+msgid "Your email settings are properly set up."
+msgstr "Uw e-mailinstellingen zijn correct ingesteld."
+
+msgid "Email is not configured"
+msgstr "E-mail is niet geconfigureerd"
+
+msgid "Please configure email settings in your environment variables."
+msgstr "Configureer e-mailinstellingen in uw omgevingsvariabelen."
+
+msgid "Configuration Errors"
+msgstr "Configuratiefouten"
+
+msgid "Configuration Warnings"
+msgstr "Configuratiewaarschuwingen"
+
+msgid "Current Email Settings"
+msgstr "Huidige e-mailinstellingen"
+
+msgid "Port"
+msgstr "Poort"
+
+msgid "Password Set"
+msgstr "Wachtwoord ingesteld"
+
+msgid "Send Test Email"
+msgstr "Test-e-mail verzenden"
+
+msgid "Recipient Email Address"
+msgstr "E-mailadres ontvanger"
+
+msgid "Configuration Guide"
+msgstr "Configuratiegids"
+
+msgid "To configure email, set the following environment variables:"
+msgstr "Om e-mail te configureren, stel de volgende omgevingsvariabelen in:"
+
+msgid "Basic SMTP Settings"
+msgstr "Basis SMTP-instellingen"
+
+msgid "Authentication"
+msgstr "Authenticatie"
+
+msgid "Sender Information"
+msgstr "Afzenderinformatie"
+
+msgid "Common SMTP Providers"
+msgstr "Veelgebruikte SMTP-providers"
+
+msgid "Requires app password"
+msgstr "Vereist app-wachtwoord"
+
+msgid "Important Notes"
+msgstr "Belangrijke opmerkingen"
+
+msgid "Gmail requires an App Password if 2FA is enabled"
+msgstr "Gmail vereist een app-wachtwoord als 2FA is ingeschakeld"
+
+msgid "Restart the application after changing email settings"
+msgstr "Herstart de applicatie na het wijzigen van e-mailinstellingen"
+
+msgid "Check firewall rules if emails are not sending"
+msgstr "Controleer firewallregels als e-mails niet worden verzonden"
+
+msgid "For production, use a dedicated email service like SendGrid or Amazon SES"
+msgstr "Gebruik voor productie een toegewijde e-mailservice zoals SendGrid of Amazon SES"
+
+msgid "password is set"
+msgstr "wachtwoord is ingesteld"
+
+msgid "no password set"
+msgstr "geen wachtwoord ingesteld"
+
+msgid "Failed to save configuration. Please try again."
+msgstr "Kon configuratie niet opslaan. Probeer het opnieuw."
+
+msgid "Success!"
+msgstr "Succes!"
+
+msgid "Failed to refresh status. Please try again."
+msgstr "Kon status niet vernieuwen. Probeer het opnieuw."
+
+msgid "Please enter a valid email address"
+msgstr "Voer een geldig e-mailadres in"
+
+msgid "Sending..."
+msgstr "Verzenden..."
+
+msgid "Failed to send test email. Please check your configuration."
+msgstr "Kon test-e-mail niet verzenden. Controleer uw configuratie."
+
+msgid "OIDC Debug Dashboard"
+msgstr "OIDC-debugdashboard"
+
+msgid "Inspect configuration, provider metadata and OIDC users"
+msgstr "Inspecteer configuratie, providermetadata en OIDC-gebruikers"
+
+msgid "Test Configuration"
+msgstr "Configuratie testen"
+
+msgid "OIDC Configuration"
+msgstr "OIDC-configuratie"
+
+msgid "Enabled"
+msgstr "Ingeschakeld"
+
+msgid "Disabled"
+msgstr "Uitgeschakeld"
+
+msgid "Auth Method"
+msgstr "Authenticatiemethode"
+
+msgid "Issuer"
+msgstr "Uitgever"
+
+msgid "Not configured"
+msgstr "Niet geconfigureerd"
+
+msgid "Client ID"
+msgstr "Client-ID"
+
+msgid "Client Secret"
+msgstr "Clientgeheim"
+
+msgid "Set"
+msgstr "Ingesteld"
+
+msgid "Not set"
+msgstr "Niet ingesteld"
+
+msgid "Redirect URI"
+msgstr "Omleidings-URI"
+
+msgid "Auto-generated"
+msgstr "Automatisch gegenereerd"
+
+msgid "Scopes"
+msgstr "Scopes"
+
+msgid "Claim Mapping"
+msgstr "Claim-mapping"
+
+msgid "Username Claim"
+msgstr "Gebruikersnaam-claim"
+
+msgid "Email Claim"
+msgstr "E-mail-claim"
+
+msgid "Full Name Claim"
+msgstr "Volledige naam-claim"
+
+msgid "Groups Claim"
+msgstr "Groepen-claim"
+
+msgid "Admin Group"
+msgstr "Beheerdersgroep"
+
+msgid "Admin Emails"
+msgstr "Beheerderse-mails"
+
+msgid "Post-Logout URI"
+msgstr "Post-logout-URI"
+
+msgid "Provider Metadata"
+msgstr "Providermetadata"
+
+msgid "Error loading metadata:"
+msgstr "Fout bij laden metadata:"
+
+msgid "Discovery endpoint:"
+msgstr "Discovery-endpoint:"
+
+msgid "Successfully loaded provider metadata"
+msgstr "Providermetadata succesvol geladen"
+
+msgid "Endpoints"
+msgstr "Endpoints"
+
+msgid "Authorization"
+msgstr "Autorisatie"
+
+msgid "Token"
+msgstr "Token"
+
+msgid "UserInfo"
+msgstr "Gebruikersinformatie"
+
+msgid "End Session"
+msgstr "Sessie beëindigen"
+
+msgid "JWKS URI"
+msgstr "JWKS-URI"
+
+msgid "Supported Features"
+msgstr "Ondersteunde functies"
+
+msgid "Response Types"
+msgstr "Responsetypen"
+
+msgid "Grant Types"
+msgstr "Grant-typen"
+
+msgid "Auth Methods"
+msgstr "Authenticatiemethoden"
+
+msgid "Claims"
+msgstr "Claims"
+
+msgid "Provider metadata not loaded. Click \"Test Configuration\" to fetch."
+msgstr "Providermetadata niet geladen. Klik op \"Configuratie testen\" om op te halen."
+
+msgid "OIDC Users"
+msgstr "OIDC-gebruikers"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "Full Name"
+msgstr "Volledige naam"
+
+msgid "Role"
+msgstr "Rol"
+
+msgid "Last Login"
+msgstr "Laatste aanmelding"
+
+msgid "OIDC Subject"
+msgstr "OIDC-subject"
+
+msgid "Inactive"
+msgstr "Inactief"
+
+msgid "User"
+msgstr "Gebruiker"
+
+msgid "Never"
+msgstr "Nooit"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "No users have logged in via OIDC yet."
+msgstr "Nog geen gebruikers ingelogd via OIDC."
+
+msgid "Environment Variables Reference"
+msgstr "Referentie omgevingsvariabelen"
+
+msgid "Configure OIDC using these environment variables:"
+msgstr "Configureer OIDC met deze omgevingsvariabelen:"
+
+msgid "Variable"
+msgstr "Variabele"
+
+msgid "Description"
+msgstr "Beschrijving"
+
+msgid "Example"
+msgstr "Voorbeeld"
+
+msgid "Authentication method"
+msgstr "Authenticatiemethode"
+
+msgid "OIDC provider issuer URL"
+msgstr "OIDC-provider issuer-URL"
+
+msgid "Client ID from OIDC provider"
+msgstr "Client-ID van OIDC-provider"
+
+msgid "Client secret from OIDC provider"
+msgstr "Clientgeheim van OIDC-provider"
+
+msgid "Callback URL (optional, auto-generated)"
+msgstr "Callback-URL (optioneel, automatisch gegenereerd)"
+
+msgid "Requested scopes"
+msgstr "Gevraagde scopes"
+
+msgid "Claim containing username"
+msgstr "Claim met gebruikersnaam"
+
+msgid "Claim containing email"
+msgstr "Claim met e-mail"
+
+msgid "Claim containing full name"
+msgstr "Claim met volledige naam"
+
+msgid "Claim containing groups"
+msgstr "Claim met groepen"
+
+msgid "Group name for admin role (optional)"
+msgstr "Groepsnaam voor beheerdersrol (optioneel)"
+
+msgid "Comma-separated admin emails (optional)"
+msgstr "Door komma's gescheiden beheerderse-mails (optioneel)"
+
+msgid "OIDC User Details"
+msgstr "OIDC-gebruikersdetails"
+
+msgid "Profile and OIDC identity for this user"
+msgstr "Profiel en OIDC-identiteit voor deze gebruiker"
+
+msgid "Back to OIDC Debug"
+msgstr "Terug naar OIDC-debug"
+
+msgid "User Profile"
+msgstr "Gebruikersprofiel"
+
+msgid "Active"
+msgstr "Actief"
+
+msgid "Preferred Language"
+msgstr "Voorkeurstaal"
+
+msgid "Theme"
+msgstr "Thema"
+
+msgid "Created At"
+msgstr "Aangemaakt op"
+
+msgid "Unknown"
+msgstr "Onbekend"
+
+msgid "OIDC Information"
+msgstr "OIDC-informatie"
+
+msgid "OIDC Issuer"
+msgstr "OIDC-uitgever"
+
+msgid "OIDC Subject (sub)"
+msgstr "OIDC-subject (sub)"
+
+msgid "Authentication Method"
+msgstr "Authenticatiemethode"
+
+msgid "Local"
+msgstr "Lokaal"
+
+msgid ""
+"This user was created or linked via OIDC. The issuer and subject are used to"
+" uniquely identify the user across login sessions."
+msgstr ""
+"Deze gebruiker is aangemaakt of gekoppeld via OIDC. De uitgever en het "
+"subject worden gebruikt om de gebruiker uniek te identificeren tussen "
+"aanmeldingssessies."
+
+msgid ""
+"This user has no OIDC information. They may have been created manually or "
+"via self-registration without OIDC."
+msgstr ""
+"Deze gebruiker heeft geen OIDC-informatie. Ze zijn mogelijk handmatig "
+"aangemaakt of via zelfregistratie zonder OIDC."
+
+msgid "Activity Statistics"
+msgstr "Activiteitsstatistieken"
+
+msgid "Time Entries"
+msgstr "Tijdregistraties"
+
+msgid "None"
+msgstr "Geen"
+
+msgid "Active Timer"
+msgstr "Actieve timer"
+
+msgid "Tasks Created"
+msgstr "Taken aangemaakt"
+
+msgid "Edit User"
+msgstr "Gebruiker bewerken"
+
+msgid "View All Users"
+msgstr "Alle gebruikers bekijken"
+
+msgid "Are you sure you want to remove the company logo?"
+msgstr "Weet u zeker dat u het bedrijfslogo wilt verwijderen?"
+
+msgid "Remove Logo"
+msgstr "Logo verwijderen"
+
+msgid "Admin Access"
+msgstr "Beheerders toegang"
+
+msgid "Migrate to new role system"
+msgstr "Migreren naar nieuw rolensysteem"
+
+msgid "Migrate"
+msgstr "Migreren"
+
+msgid "Roles"
+msgstr "Rollen"
+
+msgid "No users found."
+msgstr "Geen gebruikers gevonden."
+
+msgid ""
+"Cannot delete user \"{name}\" because they have {count} time entries. Users "
+"with existing time entries cannot be deleted."
+msgstr ""
+"Kan gebruiker \"{name}\" niet verwijderen omdat ze {count} tijdregistraties "
+"hebben. Gebruikers met bestaande tijdregistraties kunnen niet worden "
+"verwijderd."
+
+msgid "Cannot Delete User"
+msgstr "Kan gebruiker niet verwijderen"
+
+msgid ""
+"Are you sure you want to delete user \"{name}\"? This action cannot be "
+"undone."
+msgstr ""
+"Weet u zeker dat u gebruiker \"{name}\" wilt verwijderen? Deze actie kan niet "
+"ongedaan worden gemaakt."
+
+msgid "Delete User"
+msgstr "Gebruiker verwijderen"
+
+msgid "System Permissions"
+msgstr "Systeemmachtigingen"
+
+msgid "All available permissions in the system"
+msgstr "Alle beschikbare machtigingen in het systeem"
+
+msgid "Back to Roles"
+msgstr "Terug naar rollen"
+
+msgid "permissions"
+msgstr "machtigingen"
+
+msgid "No description available"
+msgstr "Geen beschrijving beschikbaar"
+
+msgid "About Permissions"
+msgstr "Over machtigingen"
+
+msgid ""
+"Permissions define what actions users can perform in the system. These "
+"permissions are assigned to roles, and roles are assigned to users. This "
+"provides a flexible and granular access control system."
+msgstr ""
+"Machtigingen bepalen welke acties gebruikers in het systeem kunnen uitvoeren. "
+"Deze machtigingen worden toegewezen aan rollen, en rollen worden toegewezen "
+"aan gebruikers. Dit biedt een flexibel en gedetailleerd "
+"toegangscontrolesysteem."
+
+msgid "Edit Role"
+msgstr "Rol bewerken"
+
+msgid "Create New Role"
+msgstr "Nieuwe rol aanmaken"
+
+msgid "Role Name"
+msgstr "Rolnaam"
+
+msgid "A unique name for this role"
+msgstr "Een unieke naam voor deze rol"
+
+msgid "Optional description of this role"
+msgstr "Optionele beschrijving van deze rol"
+
+msgid "Permissions"
+msgstr "Machtigingen"
+
+msgid "Select the permissions this role should have:"
+msgstr "Selecteer de machtigingen die deze rol moet hebben:"
+
+msgid "Toggle All"
+msgstr "Alles wisselen"
+
+msgid "Update Role"
+msgstr "Rol bijwerken"
+
+msgid "Create Role"
+msgstr "Rol aanmaken"
+
+msgid "Manage roles and their permissions"
+msgstr "Beheer rollen en hun machtigingen"
+
+msgid "View Permissions"
+msgstr "Machtigingen bekijken"
+
+msgid "Total Roles"
+msgstr "Totaal rollen"
+
+msgid "System Roles"
+msgstr "Systeemrollen"
+
+msgid "Custom Roles"
+msgstr "Aangepaste rollen"
+
+msgid "Assigned Users"
+msgstr "Toegewezen gebruikers"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Default role"
+msgstr "Standaardrol"
+
+msgid "user"
+msgstr "gebruiker"
+
+msgid "users"
+msgstr "gebruikers"
+
+msgid "No users"
+msgstr "Geen gebruikers"
+
+msgid "System"
+msgstr "Systeem"
+
+msgid "Custom"
+msgstr "Aangepast"
+
+msgid "View"
+msgstr "Bekijken"
+
+msgid "Permissions for"
+msgstr "Machtigingen voor"
+
+msgid "No permissions assigned."
+msgstr "Geen machtigingen toegewezen."
+
+msgid "No roles found."
+msgstr "Geen rollen gevonden."
+
+msgid "About Roles & Permissions"
+msgstr "Over rollen en machtigingen"
+
+msgid ""
+"Roles are collections of permissions that can be assigned to users. System "
+"roles are predefined and cannot be deleted or renamed, but custom roles can "
+"be created for your specific needs."
+msgstr ""
+"Rollen zijn verzamelingen van machtigingen die aan gebruikers kunnen worden "
+"toegewezen. Systeemrollen zijn vooraf gedefinieerd en kunnen niet worden "
+"verwijderd of hernoemd, maar aangepaste rollen kunnen worden aangemaakt voor "
+"uw specifieke behoeften."
+
+msgid "Are you sure you want to delete the role"
+msgstr "Weet u zeker dat u de rol wilt verwijderen"
+
+msgid "Delete Role"
+msgstr "Rol verwijderen"
+
+msgid "No description"
+msgstr "Geen beschrijving"
+
+msgid "Role Information"
+msgstr "Rolinformatie"
+
+msgid "System Role"
+msgstr "Systeemrol"
+
+msgid "Custom Role"
+msgstr "Aangepaste rol"
+
+msgid "Total Permissions"
+msgstr "Totaal machtigingen"
+
+msgid "Created"
+msgstr "Aangemaakt"
+
+msgid "Users with this Role"
+msgstr "Gebruikers met deze rol"
+
+msgid "No users assigned to this role yet."
+msgstr "Nog geen gebruikers toegewezen aan deze rol."
+
+msgid "This role has no permissions assigned."
+msgstr "Deze rol heeft geen toegewezen machtigingen."
+
+msgid "Back to User"
+msgstr "Terug naar gebruiker"
+
+msgid "Manage Roles for"
+msgstr "Beheer rollen voor"
+
+msgid "Assign Roles"
+msgstr "Rollen toewijzen"
+
+msgid ""
+"Select the roles this user should have. Users inherit all permissions from "
+"their assigned roles."
+msgstr ""
+"Selecteer de rollen die deze gebruiker moet hebben. Gebruikers erven alle "
+"machtigingen van hun toegewezen rollen."
+
+msgid "Update Roles"
+msgstr "Rollen bijwerken"
+
+msgid "Current Effective Permissions"
+msgstr "Huidige effectieve machtigingen"
+
+msgid "These are all the permissions the user currently has through their roles:"
+msgstr "Dit zijn alle machtigingen die de gebruiker momenteel heeft via hun rollen:"
+
+msgid "No permissions (assign roles to grant permissions)"
+msgstr "Geen machtigingen (wijs rollen toe om machtigingen te verlenen)"
+
+msgid "Analytics Dashboard"
+msgstr "Analytisch dashboard"
+
+msgid "Last 7 days"
+msgstr "Laatste 7 dagen"
+
+msgid "Last 30 days"
+msgstr "Laatste 30 dagen"
+
+msgid "Last 90 days"
+msgstr "Laatste 90 dagen"
+
+msgid "Last year"
+msgstr "Afgelopen jaar"
+
+msgid "Key metrics and insights about your time tracking"
+msgstr "Belangrijke metriek en inzichten over uw tijdregistratie"
+
+msgid "Total Hours"
+msgstr "Totaal uren"
+
+msgid "Billable Hours"
+msgstr "Factureerbare uren"
+
+msgid "Active Projects"
+msgstr "Actieve projecten"
+
+msgid "Avg Daily Hours"
+msgstr "Gem. dagelijkse uren"
+
+msgid "Daily Hours Trend"
+msgstr "Dagelijkse uren trend"
+
+msgid "Billable vs Non-Billable"
+msgstr "Factureerbaar vs niet-factureerbaar"
+
+msgid "Hours by Project"
+msgstr "Uren per project"
+
+msgid "Weekly Trends"
+msgstr "Wekelijkse trends"
+
+msgid "Hours by Time of Day"
+msgstr "Uren per tijdstip"
+
+msgid "Project Efficiency"
+msgstr "Projectefficiëntie"
+
+msgid "User Performance"
+msgstr "Gebruikersprestaties"
+
+msgid "Failed to load charts. Please try again."
+msgstr "Kon grafieken niet laden. Probeer het opnieuw."
+
+msgid "Failed to refresh charts. Please try again."
+msgstr "Kon grafieken niet vernieuwen. Probeer het opnieuw."
+
+msgid "Hours"
+msgstr "Uren"
+
+msgid "Hour of Day"
+msgstr "Uur van de dag"
+
+msgid "Revenue"
+msgstr "Omzet"
+
+msgid "Key metrics and actionable insights"
+msgstr "Belangrijke metriek en actiegerichte inzichten"
+
+msgid "Export"
+msgstr "Exporteren"
+
+msgid "vs previous period"
+msgstr "vs vorige periode"
+
+msgid "of total"
+msgstr "van totaal"
+
+msgid "Potential Revenue"
+msgstr "Potentiële omzet"
+
+msgid "Avg rate:"
+msgstr "Gem. tarief:"
+
+msgid "Trend"
+msgstr "Trend"
+
+msgid "active projects"
+msgstr "actieve projecten"
+
+msgid "Insights & Recommendations"
+msgstr "Inzichten en aanbevelingen"
+
+msgid "Cumulative"
+msgstr "Cumulatief"
+
+msgid "Billable Distribution"
+msgstr "Factureerbare verdeling"
+
+msgid "Task Status Overview"
+msgstr "Taakstatusoverzicht"
+
+msgid "Tasks Completed"
+msgstr "Taken voltooid"
+
+msgid "Revenue by Project"
+msgstr "Omzet per project"
+
+msgid "Payments Over Time"
+msgstr "Betalingen in de loop van de tijd"
+
+msgid "Payment Status"
+msgstr "Betalingsstatus"
+
+msgid "Payment Methods"
+msgstr "Betalingsmethoden"
+
+msgid "Revenue vs Payments"
+msgstr "Omzet vs betalingen"
+
+msgid "Collection Rate"
+msgstr "Inningspercentage"
+
+msgid "Project Completion Rate"
+msgstr "Projectvoltooiingspercentage"
+
+msgid "Billable"
+msgstr "Factureerbaar"
+
+msgid "Non-Billable"
+msgstr "Niet-factureerbaar"
+
+msgid "Completion Rate (%)"
+msgstr "Voltooiingspercentage (%)"
+
+msgid "Mobile insights overview"
+msgstr "Mobiel inzichtsoverzicht"
+
+msgid "Daily Avg"
+msgstr "Dagelijks gem."
+
+msgid "Daily Hours"
+msgstr "Dagelijkse uren"
+
+msgid "Top Projects"
+msgstr "Top projecten"
+
+msgid "Track time. Stay organized."
+msgstr "Houd tijd bij. Blijf georganiseerd."
+
+msgid "Sign in to your account"
+msgstr "Meld u aan bij uw account"
+
+msgid "Sign in"
+msgstr "Aanmelden"
+
+msgid "Tip: Enter a new username to create your account."
+msgstr "Tip: Voer een nieuwe gebruikersnaam in om uw account aan te maken."
+
+msgid "Or continue with"
+msgstr "Of ga verder met"
+
+msgid "Single Sign-On"
+msgstr "Single Sign-On"
+
+msgid "Budget Alerts & Forecasting"
+msgstr "Budgetwaarschuwingen en prognoses"
+
+msgid "Monitor project budgets and forecast completion"
+msgstr "Monitor projectbudgetten en voorspel voltooiing"
+
+msgid "Unacknowledged Alerts"
+msgstr "Niet-bevestigde waarschuwingen"
+
+msgid "Critical Alerts"
+msgstr "Kritieke waarschuwingen"
+
+msgid "Projects with Budgets"
+msgstr "Projecten met budgetten"
+
+msgid "Warning Alerts"
+msgstr "Waarschuwingswaarschuwingen"
+
+msgid "Active Alerts"
+msgstr "Actieve waarschuwingen"
+
+msgid "Acknowledge"
+msgstr "Bevestigen"
+
+msgid "Project Budget Status"
+msgstr "Projectbudgetstatus"
+
+msgid "Budget"
+msgstr "Budget"
+
+msgid "Consumed"
+msgstr "Verbruikt"
+
+msgid "Remaining"
+msgstr "Resterend"
+
+msgid "Progress"
+msgstr "Voortgang"
+
+msgid "over"
+msgstr "over"
+
+msgid "Over Budget"
+msgstr "Boven budget"
+
+msgid "Critical"
+msgstr "Kritiek"
+
+msgid "Healthy"
+msgstr "Gezond"
+
+msgid "No projects with budgets found"
+msgstr "Geen projecten met budgetten gevonden"
+
+msgid "Alert acknowledged successfully"
+msgstr "Waarschuwing succesvol bevestigd"
+
+msgid "Failed to acknowledge alert"
+msgstr "Kon waarschuwing niet bevestigen"
+
+msgid "Budget Analysis & Forecasting"
+msgstr "Budgetanalyse en prognoses"
+
+msgid "Back to Dashboard"
+msgstr "Terug naar dashboard"
+
+msgid "View Project"
+msgstr "Project bekijken"
+
+msgid "Total Budget"
+msgstr "Totaal budget"
+
+msgid "Burn Rate Analysis"
+msgstr "Burn rate-analyse"
+
+msgid "Daily Burn Rate"
+msgstr "Dagelijkse burn rate"
+
+msgid "Weekly Burn Rate"
+msgstr "Wekelijkse burn rate"
+
+msgid "Monthly Burn Rate"
+msgstr "Maandelijkse burn rate"
+
+msgid "Period Total"
+msgstr "Periode totaal"
+
+msgid "Based on last"
+msgstr "Gebaseerd op laatste"
+
+msgid "days"
+msgstr "dagen"
+
+msgid "No burn rate data available"
+msgstr "Geen burn rate-gegevens beschikbaar"
+
+msgid "Completion Estimate"
+msgstr "Voltooiingsschatting"
+
+msgid "Estimated Completion Date"
+msgstr "Geschatte voltooiingsdatum"
+
+msgid "days remaining"
+msgstr "dagen resterend"
+
+msgid "Confidence Level"
+msgstr "Betrouwbaarheidsniveau"
+
+msgid "No completion estimate available"
+msgstr "Geen voltooiingsschatting beschikbaar"
+
+msgid "Cost Trend Analysis"
+msgstr "Kostentrendanalyse"
+
+msgid "Average"
+msgstr "Gemiddelde"
+
+msgid "Change"
+msgstr "Wijziging"
+
+msgid "Resource Allocation"
+msgstr "Resourceallocatie"
+
+msgid "Total Cost"
+msgstr "Totale kosten"
+
+msgid "Hourly Rate"
+msgstr "Uurtarief"
+
+msgid "Team Member"
+msgstr "Teamlid"
+
+msgid "Cost"
+msgstr "Kosten"
+
+msgid "Hours %"
+msgstr "Uren %"
+
+msgid "Cost %"
+msgstr "Kosten %"
+
+msgid "Entries"
+msgstr "Registraties"
+
+msgid "Date & Time"
+msgstr "Datum en tijd"
+
+msgid "Location"
+msgstr "Locatie"
+
+msgid "Task"
+msgstr "Taak"
+
+msgid "Client"
+msgstr "Klant"
+
+msgid "Reminder"
+msgstr "Herinnering"
+
+msgid "minutes before"
+msgstr "minuten voor"
+
+msgid "hours before"
+msgstr "uren voor"
+
+msgid "days before"
+msgstr "dagen voor"
+
+msgid "Recurring"
+msgstr "Terugkerend"
+
+msgid "Until"
+msgstr "Tot"
+
+msgid "Last Updated"
+msgstr "Laatst bijgewerkt"
+
+msgid "Back to Calendar"
+msgstr "Terug naar kalender"
+
+msgid "Delete Event"
+msgstr "Gebeurtenis verwijderen"
+
+msgid "Are you sure you want to delete this event? This action cannot be undone."
+msgstr "Weet u zeker dat u deze gebeurtenis wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+
+msgid "Edit Event"
+msgstr "Gebeurtenis bewerken"
+
+msgid "New Event"
+msgstr "Nieuwe gebeurtenis"
+
+msgid "Title"
+msgstr "Titel"
+
+msgid "Start Date"
+msgstr "Startdatum"
+
+msgid "Start Time"
+msgstr "Starttijd"
+
+msgid "End Date"
+msgstr "Einddatum"
+
+msgid "End Time"
+msgstr "Eindtijd"
+
+msgid "All Day Event"
+msgstr "Hele dag gebeurtenis"
+
+msgid "Event Type"
+msgstr "Gebeurtenistype"
+
+msgid "Event"
+msgstr "Gebeurtenis"
+
+msgid "Meeting"
+msgstr "Vergadering"
+
+msgid "Appointment"
+msgstr "Afspraak"
+
+msgid "Deadline"
+msgstr "Deadline"
+
+msgid "-- None --"
+msgstr "-- Geen --"
+
+msgid "No reminder"
+msgstr "Geen herinnering"
+
+msgid "5 minutes before"
+msgstr "5 minuten voor"
+
+msgid "15 minutes before"
+msgstr "15 minuten voor"
+
+msgid "30 minutes before"
+msgstr "30 minuten voor"
+
+msgid "1 hour before"
+msgstr "1 uur voor"
+
+msgid "1 day before"
+msgstr "1 dag voor"
+
+msgid "Color"
+msgstr "Kleur"
+
+msgid "Choose a color for this event"
+msgstr "Kies een kleur voor deze gebeurtenis"
+
+msgid "Private Event"
+msgstr "Privé gebeurtenis"
+
+msgid "Private events are only visible to you"
+msgstr "Privé gebeurtenissen zijn alleen zichtbaar voor u"
+
+msgid "Recurring Event"
+msgstr "Terugkerende gebeurtenis"
+
+msgid "This is a recurring event"
+msgstr "Dit is een terugkerende gebeurtenis"
+
+msgid "Recurrence Pattern"
+msgstr "Herhalingspatroon"
+
+msgid "Use RRULE format (e.g., FREQ=WEEKLY;BYDAY=MO,WE,FR)"
+msgstr "Gebruik RRULE-formaat (bijv. FREQ=WEEKLY;BYDAY=MO,WE,FR)"
+
+msgid "Recurrence End Date"
+msgstr "Einddatum herhaling"
+
+msgid "Update Event"
+msgstr "Gebeurtenis bijwerken"
+
+msgid "Create Event"
+msgstr "Gebeurtenis aanmaken"
+
+msgid "View and manage your events, tasks, and time entries"
+msgstr "Bekijk en beheer uw gebeurtenissen, taken en tijdregistraties"
+
+msgid "Day"
+msgstr "Dag"
+
+msgid "Week"
+msgstr "Week"
+
+msgid "Month"
+msgstr "Maand"
+
+msgid "Today"
+msgstr "Vandaag"
+
+msgid "Events"
+msgstr "Gebeurtenissen"
+
+msgid "Loading calendar..."
+msgstr "Kalender laden..."
+
+msgid "Event Details"
+msgstr "Gebeurtenisdetails"
+
+msgid "Edit Client Note"
+msgstr "Klantnotitie bewerken"
+
+msgid "Back to Client"
+msgstr "Terug naar klant"
+
+msgid "Client:"
+msgstr "Klant:"
+
+msgid "Created on"
+msgstr "Aangemaakt op"
+
+msgid "Last edited on"
+msgstr "Laatst bewerkt op"
+
+msgid "Note Content"
+msgstr "Notitie-inhoud"
+
+msgid "Internal note visible only to your team."
+msgstr "Interne notitie alleen zichtbaar voor uw team."
+
+msgid "Mark as important"
+msgstr "Markeren als belangrijk"
+
+msgid "Save Changes"
+msgstr "Wijzigingen opslaan"
+
+msgid "Create Client"
+msgstr "Klant aanmaken"
+
+msgid "Add a new client to manage related projects and billing."
+msgstr "Voeg een nieuwe klant toe om gerelateerde projecten en facturering te beheren."
+
+msgid "Back to Clients"
+msgstr "Terug naar klanten"
+
+msgid "Client Name"
+msgstr "Klantnaam"
+
+msgid "Enter client name"
+msgstr "Voer klantnaam in"
+
+msgid "Default Hourly Rate"
+msgstr "Standaard uurtarief"
+
+msgid "e.g. 75.00"
+msgstr "bijv. 75,00"
+
+msgid "This rate will be automatically filled when creating projects for this client"
+msgstr "Dit tarief wordt automatisch ingevuld bij het aanmaken van projecten voor deze klant"
+
+msgid "Supports Markdown"
+msgstr "Ondersteunt Markdown"
+
+msgid "Brief description of the client or project scope"
+msgstr "Korte beschrijving van de klant of projectomvang"
+
+msgid "Contact Person"
+msgstr "Contactpersoon"
+
+msgid "Primary contact name"
+msgstr "Primaire contactnaam"
+
+msgid "contact@client.com"
+msgstr "contact@klant.nl"
+
+msgid "Phone"
+msgstr "Telefoon"
+
+msgid "+1 (555) 123-4567"
+msgstr "+31 (0) 20 123 4567"
+
+msgid "Address"
+msgstr "Adres"
+
+msgid "Client address"
+msgstr "Klantadres"
+
+msgid "Choose a clear, descriptive name for the client organization."
+msgstr "Kies een duidelijke, beschrijvende naam voor de klantorganisatie."
+
+msgid ""
+"Set the standard hourly rate for this client. This will automatically "
+"populate when creating new projects."
+msgstr ""
+"Stel het standaard uurtarief in voor deze klant. Dit wordt automatisch "
+"ingevuld bij het aanmaken van nieuwe projecten."
+
+msgid "Contact Information"
+msgstr "Contactinformatie"
+
+msgid "Add contact details for easy communication and record keeping."
+msgstr "Voeg contactgegevens toe voor eenvoudige communicatie en administratie."
+
+msgid "Provide context about the client relationship or typical project types."
+msgstr "Geef context over de klantrelatie of typische projecttypen."
+
+msgid "Edit Client"
+msgstr "Klant bewerken"
+
+msgid "Update Client"
+msgstr "Klant bijwerken"
+
+msgid "Client Statistics"
+msgstr "Klantstatistieken"
+
+msgid "Total Projects"
+msgstr "Totaal projecten"
+
+msgid "Est. Total Cost"
+msgstr "Geschat totaal kosten"
+
+msgid "Mark client as Inactive?"
+msgstr "Klant markeren als inactief?"
+
+msgid "Change Client Status"
+msgstr "Klantstatus wijzigen"
+
+msgid "Mark Inactive"
+msgstr "Markeren als inactief"
+
+msgid "Activate client?"
+msgstr "Klant activeren?"
+
+msgid "Activate Client"
+msgstr "Klant activeren"
+
+msgid "Delete Client"
+msgstr "Klant verwijderen"
+
+msgid "Archived"
+msgstr "Gearchiveerd"
+
+msgid "Internal Notes"
+msgstr "Interne notities"
+
+msgid "Add Note"
+msgstr "Notitie toevoegen"
+
+msgid "Add an internal note about this client..."
+msgstr "Voeg een interne notitie toe over deze klant..."
+
+msgid "Save Note"
+msgstr "Notitie opslaan"
+
+msgid "edited"
+msgstr "bewerkt"
+
+msgid "Important"
+msgstr "Belangrijk"
+
+msgid "Unmark"
+msgstr "Markering verwijderen"
+
+msgid "Mark Important"
+msgstr "Markeren als belangrijk"
+
+msgid ""
+"No notes yet. Add a note to keep track of important information about this "
+"client."
+msgstr ""
+"Nog geen notities. Voeg een notitie toe om belangrijke informatie over deze "
+"klant bij te houden."
+
+msgid "Are you sure you want to delete this note?"
+msgstr "Weet u zeker dat u deze notitie wilt verwijderen?"
+
+msgid "Delete Note"
+msgstr "Notitie verwijderen"
+
+msgid "Edited on"
+msgstr "Bewerkt op"
+
+msgid "Reply"
+msgstr "Antwoorden"
+
+msgid "Write your reply..."
+msgstr "Schrijf uw antwoord..."
+
+msgid "Comments"
+msgstr "Reacties"
+
+msgid "Add Comment"
+msgstr "Reactie toevoegen"
+
+msgid "Your Comment"
+msgstr "Uw reactie"
+
+msgid "Share your thoughts, updates, or questions..."
+msgstr "Deel uw gedachten, updates of vragen..."
+
+msgid "You can use line breaks to format your comment."
+msgstr "U kunt regeleinden gebruiken om uw reactie te formatteren."
+
+msgid "Add Image"
+msgstr "Afbeelding toevoegen"
+
+msgid "Post Comment"
+msgstr "Reactie plaatsen"
+
+msgid "No comments yet"
+msgstr "Nog geen reacties"
+
+msgid "Start the conversation by adding the first comment."
+msgstr "Start het gesprek door de eerste reactie toe te voegen."
+
+msgid "Add First Comment"
+msgstr "Eerste reactie toevoegen"
+
+msgid "Edit Comment"
+msgstr "Reactie bewerken"
+
+msgid "Back"
+msgstr "Terug"
+
+msgid "Editing comment on:"
+msgstr "Reactie bewerken op:"
+
+msgid "Originally posted on"
+msgstr "Oorspronkelijk geplaatst op"
+
+msgid "Comment Content"
+msgstr "Reactie-inhoud"
+
+msgid "Recent Activity"
+msgstr "Recente activiteit"
+
+msgid "All Activities"
+msgstr "Alle activiteiten"
+
+msgid "Time Templates"
+msgstr "Tijdsjablonen"
+
+msgid "No recent activity"
+msgstr "Geen recente activiteit"
+
+msgid "Activity will appear here as you work"
+msgstr "Activiteit verschijnt hier terwijl u werkt"
+
+msgid "Load More"
+msgstr "Meer laden"
+
+msgid "Failed to load activities"
+msgstr "Kon activiteiten niet laden"
+
+msgid "400 Bad Request"
+msgstr "400 Ongeldig verzoek"
+
+msgid "Invalid Request"
+msgstr "Ongeldig verzoek"
+
+msgid "The request you made is invalid or contains errors. This could be due to:"
+msgstr "Het verzoek dat u heeft gedaan is ongeldig of bevat fouten. Dit kan komen door:"
+
+msgid "Missing or invalid form data"
+msgstr "Ontbrekende of ongeldige formuliergegevens"
+
+msgid "Malformed request parameters"
+msgstr "Onjuist gevormde verzoekparameters"
+
+msgid "Go to Dashboard"
+msgstr "Naar dashboard"
+
+msgid "Go Back"
+msgstr "Terug"
+
+msgid "403 Forbidden"
+msgstr "403 Verboden"
+
+msgid "Access Denied"
+msgstr "Toegang geweigerd"
+
+msgid "You don't have permission to access this resource. This could be due to:"
+msgstr "U heeft geen toestemming om deze bron te openen. Dit kan komen door:"
+
+msgid "Insufficient privileges"
+msgstr "Onvoldoende rechten"
+
+msgid "Not logged in"
+msgstr "Niet ingelogd"
+
+msgid "Resource access restrictions"
+msgstr "Toegangsbeperkingen voor bronnen"
+
+msgid "Page Not Found"
+msgstr "Pagina niet gevonden"
+
+msgid "The page you're looking for doesn't exist or has been moved."
+msgstr "De pagina die u zoekt bestaat niet of is verplaatst."
+
+msgid "Server Error"
+msgstr "Serverfout"
+
+msgid "Something went wrong on our end. Please try again later."
+msgstr "Er is iets misgegaan aan onze kant. Probeer het later opnieuw."
+
+msgid "Try Again"
+msgstr "Probeer opnieuw"
+
+msgid "An error occurred while processing your request."
+msgstr "Er is een fout opgetreden bij het verwerken van uw verzoek."
+
+msgid "Are you sure you want to delete this expense?"
+msgstr "Weet u zeker dat u deze uitgave wilt verwijderen?"
+
+msgid "Delete Expense"
+msgstr "Uitgave verwijderen"
+
+msgid "Import/Export Data"
+msgstr "Gegevens importeren/exporteren"
+
+msgid "Import/Export"
+msgstr "Importeren/Exporteren"
+
+msgid ""
+"Import data from other time trackers or export your data for GDPR compliance"
+" and backups"
+msgstr ""
+"Importeer gegevens van andere tijdregistratiesystemen of exporteer uw "
+"gegevens voor GDPR-naleving en back-ups"
+
+msgid "Import Data"
+msgstr "Gegevens importeren"
+
+msgid "CSV Import"
+msgstr "CSV-import"
+
+msgid "Import time entries from a CSV file"
+msgstr "Importeer tijdregistraties uit een CSV-bestand"
+
+msgid "Choose CSV File"
+msgstr "Kies CSV-bestand"
+
+msgid "Download Template"
+msgstr "Sjabloon downloaden"
+
+msgid "Import from Toggl Track"
+msgstr "Importeren uit Toggl Track"
+
+msgid "Import time entries from Toggl Track"
+msgstr "Importeer tijdregistraties uit Toggl Track"
+
+msgid "Import from Toggl"
+msgstr "Importeren uit Toggl"
+
+msgid "Import from Harvest"
+msgstr "Importeren uit Harvest"
+
+msgid "Import time entries from Harvest"
+msgstr "Importeer tijdregistraties uit Harvest"
+
+msgid "Restore from Backup"
+msgstr "Herstellen vanuit back-up"
+
+msgid "Restore data from a backup file"
+msgstr "Herstel gegevens uit een back-upbestand"
+
+msgid "Restore Backup"
+msgstr "Back-up herstellen"
+
+msgid "Import History"
+msgstr "Importgeschiedenis"
+
+msgid "Export Data"
+msgstr "Gegevens exporteren"
+
+msgid "Full Data Export (GDPR)"
+msgstr "Volledige gegevensexport (GDPR)"
+
+msgid "Export all your personal data"
+msgstr "Exporteer al uw persoonlijke gegevens"
+
+msgid "Export as JSON"
+msgstr "Exporteren als JSON"
+
+msgid "Export as ZIP"
+msgstr "Exporteren als ZIP"
+
+msgid "Filtered Export"
+msgstr "Gefilterde export"
+
+msgid "Export specific data with filters"
+msgstr "Exporteer specifieke gegevens met filters"
+
+msgid "Export with Filters"
+msgstr "Exporteren met filters"
+
+msgid "Create Backup"
+msgstr "Back-up maken"
+
+msgid "Create a full database backup"
+msgstr "Maak een volledige databaseback-up"
+
+msgid "Export History"
+msgstr "Exportgeschiedenis"
+
+msgid "API Token"
+msgstr "API-token"
+
+msgid "Workspace ID"
+msgstr "Werkruimte-ID"
+
+msgid "Import"
+msgstr "Importeren"
+
+msgid "Account ID"
+msgstr "Account-ID"
+
+msgid "Create Invoice"
+msgstr "Factuur aanmaken"
+
+msgid "Generate a new invoice for a project and client"
+msgstr "Genereer een nieuwe factuur voor een project en klant"
+
+msgid "Back to Invoices"
+msgstr "Terug naar facturen"
+
+msgid "Select a project"
+msgstr "Selecteer een project"
+
+msgid "Selecting a project will auto-fill client details"
+msgstr "Het selecteren van een project vult automatisch klantgegevens in"
+
+msgid "Client Email"
+msgstr "Klant-e-mail"
+
+msgid "Due Date"
+msgstr "Vervaldatum"
+
+msgid "Client Address"
+msgstr "Klantadres"
+
+msgid "Tax Rate (%)"
+msgstr "Btw-tarief (%)"
+
+msgid "Terms"
+msgstr "Voorwaarden"
+
+msgid "Tips"
+msgstr "Tips"
+
+msgid "Choose the correct project to auto-fill client details."
+msgstr "Kies het juiste project om klantgegevens automatisch in te vullen."
+
+msgid "You can customize notes and terms before sending the invoice."
+msgstr "U kunt notities en voorwaarden aanpassen voordat u de factuur verzendt."
+
+msgid "Edit Invoice"
+msgstr "Factuur bewerken"
+
+msgid "Update invoice details, items, and terms"
+msgstr "Werk factuurgegevens, items en voorwaarden bij"
+
+msgid "Invoice Items"
+msgstr "Factuuritems"
+
+msgid "Time-based services and hourly work"
+msgstr "Tijdgebaseerde diensten en uurtariefwerk"
+
+msgid "Add Item"
+msgstr "Item toevoegen"
+
+msgid "Quantity"
+msgstr "Hoeveelheid"
+
+msgid "Unit Price"
+msgstr "Eenheidsprijs"
+
+msgid "Action"
+msgstr "Actie"
+
+msgid "e.g., Web Development Services"
+msgstr "bijv. Webontwikkelingsdiensten"
+
+msgid "Remove item"
+msgstr "Item verwijderen"
+
+msgid "Items Subtotal"
+msgstr "Subtotaal items"
+
+msgid "Billable expenses such as travel, meals, and materials"
+msgstr "Factureerbare uitgaven zoals reizen, maaltijden en materialen"
+
+msgid "Add Expense"
+msgstr "Uitgave toevoegen"
+
+msgid "Category"
+msgstr "Categorie"
+
+msgid "Amount"
+msgstr "Bedrag"
+
+msgid "e.g., Travel to Client Meeting"
+msgstr "bijv. Reis naar klantbespreking"
+
+msgid "Linked expense - title cannot be edited"
+msgstr "Gekoppelde uitgave - titel kan niet worden bewerkt"
+
+msgid "Linked expense - description cannot be edited"
+msgstr "Gekoppelde uitgave - beschrijving kan niet worden bewerkt"
+
+msgid "Linked expense - category cannot be edited"
+msgstr "Gekoppelde uitgave - categorie kan niet worden bewerkt"
+
+msgid "Travel"
+msgstr "Reizen"
+
+msgid "Meals"
+msgstr "Maaltijden"
+
+msgid "Accommodation"
+msgstr "Accommodatie"
+
+msgid "Supplies"
+msgstr "Benodigdheden"
+
+msgid "Software"
+msgstr "Software"
+
+msgid "Equipment"
+msgstr "Apparatuur"
+
+msgid "Services"
+msgstr "Diensten"
+
+msgid "Marketing"
+msgstr "Marketing"
+
+msgid "Training"
+msgstr "Opleiding"
+
+msgid "Other"
+msgstr "Overig"
+
+msgid "Linked expense - amount cannot be edited"
+msgstr "Gekoppelde uitgave - bedrag kan niet worden bewerkt"
+
+msgid "Linked expense - date cannot be edited"
+msgstr "Gekoppelde uitgave - datum kan niet worden bewerkt"
+
+msgid "Unlink expense from invoice"
+msgstr "Uitgave loskoppelen van factuur"
+
+msgid "Expenses Subtotal"
+msgstr "Subtotaal uitgaven"
+
+msgid "Extra Goods"
+msgstr "Extra goederen"
+
+msgid "Products, materials, licenses, and other goods"
+msgstr "Producten, materialen, licenties en andere goederen"
+
+msgid "Add Good"
+msgstr "Goed toevoegen"
+
+msgid "Name"
+msgstr "Naam"
+
+msgid "Qty"
+msgstr "Hvh"
+
+msgid "Price"
+msgstr "Prijs"
+
+msgid "SKU"
+msgstr "SKU"
+
+msgid "e.g., Software License"
+msgstr "bijv. Softwarelicentie"
+
+msgid "Product"
+msgstr "Product"
+
+msgid "Service"
+msgstr "Dienst"
+
+msgid "Material"
+msgstr "Materiaal"
+
+msgid "License"
+msgstr "Licentie"
+
+msgid "Remove good"
+msgstr "Goed verwijderen"
+
+msgid "Goods Subtotal"
+msgstr "Subtotaal goederen"
+
+msgid "Live Preview"
+msgstr "Live voorvertoning"
+
+msgid "Issue Date"
+msgstr "Uitgavedatum"
+
+msgid "Payment"
+msgstr "Betaling"
+
+msgid "Currency"
+msgstr "Valuta"
+
+msgid "Items"
+msgstr "Items"
+
+msgid "Goods"
+msgstr "Goederen"
+
+msgid "Subtotal"
+msgstr "Subtotaal"
+
+msgid "Tax"
+msgstr "Btw"
+
+msgid "Total"
+msgstr "Totaal"
+
+msgid "Amount Paid"
+msgstr "Betaald bedrag"
+
+msgid "Outstanding"
+msgstr "Openstaand"
+
+msgid "Generate from Time/Costs"
+msgstr "Genereren vanuit tijd/kosten"
+
+msgid "Record Payment"
+msgstr "Betaling registreren"
+
+msgid "Export PDF"
+msgstr "Exporteren als PDF"
+
+msgid "Export CSV"
+msgstr "Exporteren als CSV"
+
+msgid "Duplicate Invoice"
+msgstr "Factuur dupliceren"
+
+msgid "Are you sure you want to unlink this expense from the invoice?"
+msgstr "Weet u zeker dat u deze uitgave van de factuur wilt loskoppelen?"
+
+msgid "Unlink Expense"
+msgstr "Uitgave loskoppelen"
+
+msgid "Unlink"
+msgstr "Loskoppelen"
+
+msgid "Please add at least one item, expense, or extra good to the invoice"
+msgstr "Voeg ten minste één item, uitgave of extra goed toe aan de factuur"
+
+msgid "Generate from Time, Costs & Goods"
+msgstr "Genereren vanuit tijd, kosten en goederen"
+
+msgid ""
+"Select unbilled time entries, project costs, and extra goods to add to this "
+"invoice"
+msgstr ""
+"Selecteer niet-gefactureerde tijdregistraties, projectkosten en extra "
+"goederen om toe te voegen aan deze factuur"
+
+msgid "Back to Edit"
+msgstr "Terug naar bewerken"
+
+msgid "Unbilled Time Entries"
+msgstr "Niet-gefactureerde tijdregistraties"
+
+msgid "Time Entry"
+msgstr "Tijdregistratie"
+
+msgid "No unbilled time entries found for this project."
+msgstr "Geen niet-gefactureerde tijdregistraties gevonden voor dit project."
+
+msgid "Uninvoiced Project Costs"
+msgstr "Niet-gefactureerde projectkosten"
+
+msgid "No uninvoiced costs found for this project."
+msgstr "Geen niet-gefactureerde kosten gevonden voor dit project."
+
+msgid "Uninvoiced Billable Expenses"
+msgstr "Niet-gefactureerde factureerbare uitgaven"
+
+msgid "Vendor"
+msgstr "Leverancier"
+
+msgid "No uninvoiced billable expenses found for this project."
+msgstr "Geen niet-gefactureerde factureerbare uitgaven gevonden voor dit project."
+
+msgid "Project Extra Goods"
+msgstr "Project extra goederen"
+
+msgid "No extra goods found for this project."
+msgstr "Geen extra goederen gevonden voor dit project."
+
+msgid "Add Selected to Invoice"
+msgstr "Geselecteerde toevoegen aan factuur"
+
+msgid "Selection Summary"
+msgstr "Selectieoverzicht"
+
+msgid "Total available hours"
+msgstr "Totaal beschikbare uren"
+
+msgid "Total available costs"
+msgstr "Totaal beschikbare kosten"
+
+msgid "Total available expenses"
+msgstr "Totaal beschikbare uitgaven"
+
+msgid "Total available goods"
+msgstr "Totaal beschikbare goederen"
+
+msgid "You can select multiple time entries, costs, expenses, and extra goods."
+msgstr "U kunt meerdere tijdregistraties, kosten, uitgaven en extra goederen selecteren."
+
+msgid "Time entries are grouped by task or project at item creation."
+msgstr "Tijdregistraties worden gegroepeerd op taak of project bij het aanmaken van items."
+
+msgid "Costs and extra goods are added as individual invoice items."
+msgstr "Kosten en extra goederen worden toegevoegd als individuele factuuritems."
+
+msgid "Expenses are linked to the invoice and appear in a separate section."
+msgstr "Uitgaven zijn gekoppeld aan de factuur en verschijnen in een aparte sectie."
+
+msgid "Please select at least one time entry, cost, expense, or extra good"
+msgstr "Selecteer ten minste één tijdregistratie, kosten, uitgave of extra goed"
+
+msgid "Delete Invoice"
+msgstr "Factuur verwijderen"
+
+msgid "Are you sure you want to delete invoice"
+msgstr "Weet u zeker dat u factuur wilt verwijderen"
+
+msgid ""
+"All invoice items, extra goods, and payment records associated with this "
+"invoice will be permanently deleted."
+msgstr ""
+"Alle factuuritems, extra goederen en betalingsgegevens die aan deze factuur "
+"zijn gekoppeld, worden permanent verwijderd."
+
+msgid "Invoice"
+msgstr "Factuur"
+
+msgid "Website"
+msgstr "Website"
+
+msgid "Tax ID"
+msgstr "Btw-nummer"
+
+msgid "INVOICE"
+msgstr "FACTUUR"
+
+msgid "Invoice #"
+msgstr "Factuurnummer"
+
+msgid "Bill To"
+msgstr "Factureren aan"
+
+msgid "Quantity (Hours)"
+msgstr "Hoeveelheid (uren)"
+
+msgid "Total Amount"
+msgstr "Totaalbedrag"
+
+#, python-format
+msgid "Generated from %(num)d time entries"
+msgstr "Gegenereerd uit %(num)d tijdregistraties"
+
+msgid "Expense"
+msgstr "Uitgave"
+
+msgid "Subtotal:"
+msgstr "Subtotaal:"
+
+#, python-format
+msgid "Tax (%(rate).2f%%):"
+msgstr "Btw (%(rate).2f%%):"
+
+msgid "Total Amount:"
+msgstr "Totaalbedrag:"
+
+msgid "Notes:"
+msgstr "Notities:"
+
+msgid "Terms:"
+msgstr "Voorwaarden:"
+
+msgid "Payment Information:"
+msgstr "Betalingsinformatie:"
+
+msgid "Terms & Conditions:"
+msgstr "Algemene voorwaarden:"
+
+msgid "Kanban"
+msgstr "Kanban"
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Manage Columns"
+msgstr "Kolommen beheren"
+
+msgid "Drag tasks between columns to update their status"
+msgstr "Sleep taken tussen kolommen om hun status bij te werken"
+
+msgid "Kanban board"
+msgstr "Kanbanbord"
+
+msgid "moved to"
+msgstr "verplaatst naar"
+
+msgid "No tasks in this column."
+msgstr "Geen taken in deze kolom."
+
+msgid "Manage Kanban Columns"
+msgstr "Kanbankolommen beheren"
+
+msgid "Customize your kanban board columns and task states"
+msgstr "Pas uw kanbanbordkolommen en taakstatussen aan"
+
+msgid "Add Column"
+msgstr "Kolom toevoegen"
+
+msgid "Kanban columns list"
+msgstr "Kanbankolommenlijst"
+
+msgid "Key"
+msgstr "Sleutel"
+
+msgid "Label"
+msgstr "Label"
+
+msgid "Icon"
+msgstr "Pictogram"
+
+msgid "Complete?"
+msgstr "Voltooid?"
+
+msgid "Drag to reorder"
+msgstr "Sleep om te herordenen"
+
+msgid "Edit column"
+msgstr "Kolom bewerken"
+
+msgid "Toggle active state"
+msgstr "Actieve status wisselen"
+
+msgid "No kanban columns found. Create your first column to get started."
+msgstr "Geen kanbankolommen gevonden. Maak uw eerste kolom aan om te beginnen."
+
+msgid "Tips:"
+msgstr "Tips:"
+
+msgid "Drag and drop rows to reorder columns"
+msgstr "Sleep en zet rijen neer om kolommen te herordenen"
+
+msgid ""
+"System columns (todo, in_progress, done) cannot be deleted but can be "
+"customized"
+msgstr ""
+"Systeemkolommen (todo, in_progress, done) kunnen niet worden verwijderd maar "
+"wel worden aangepast"
+
+msgid ""
+"Columns marked as \"Complete\" will mark tasks as completed when dragged to "
+"that column"
+msgstr ""
+"Kolommen gemarkeerd als \"Voltooid\" markeren taken als voltooid wanneer ze "
+"naar die kolom worden gesleept"
+
+msgid ""
+"Inactive columns are hidden from the kanban board but tasks with that status"
+" remain accessible"
+msgstr ""
+"Inactieve kolommen zijn verborgen op het kanbanbord, maar taken met die "
+"status blijven toegankelijk"
+
+msgid "Delete Kanban Column"
+msgstr "Kanbankolom verwijderen"
+
+msgid "Are you sure you want to delete the column?"
+msgstr "Weet u zeker dat u de kolom wilt verwijderen?"
+
+msgid "Key:"
+msgstr "Sleutel:"
+
+msgid ""
+"Note: Tasks with this status will remain accessible but the column will no "
+"longer appear on the kanban board."
+msgstr ""
+"Opmerking: Taken met deze status blijven toegankelijk, maar de kolom "
+"verschijnt niet meer op het kanbanbord."
+
+msgid "Delete Column"
+msgstr "Kolom verwijderen"
+
+msgid "Columns reordered successfully"
+msgstr "Kolommen succesvol herordend"
+
+msgid "Failed to reorder columns. Please try again."
+msgstr "Kon kolommen niet herordenen. Probeer het opnieuw."
+
+msgid "Create Kanban Column"
+msgstr "Kanbankolom aanmaken"
+
+msgid "Add a new column to your kanban board"
+msgstr "Voeg een nieuwe kolom toe aan uw kanbanbord"
+
+msgid "Create Kanban Column form"
+msgstr "Kanbankolom aanmaken formulier"
+
+msgid "Column Label"
+msgstr "Kolomlabel"
+
+msgid "e.g., In Review, Blocked, Testing"
+msgstr "bijv. In beoordeling, Geblokkeerd, Testen"
+
+msgid "The display name shown on the kanban board"
+msgstr "De weergavenaam die op het kanbanbord wordt getoond"
+
+msgid "Column Key"
+msgstr "Kolomsleutel"
+
+msgid "e.g., in_review, blocked, testing"
+msgstr "bijv. in_review, blocked, testing"
+
+msgid ""
+"Unique identifier (lowercase, no spaces, use underscores). Auto-generated "
+"from label if empty."
+msgstr ""
+"Unieke identifier (kleine letters, geen spaties, gebruik underscores). "
+"Automatisch gegenereerd van label indien leeg."
+
+msgid "Icon Class"
+msgstr "Pictogramklasse"
+
+msgid "Font Awesome icon class"
+msgstr "Font Awesome pictogramklasse"
+
+msgid "Browse icons"
+msgstr "Blader door pictogrammen"
+
+msgid "Primary (Blue)"
+msgstr "Primair (Blauw)"
+
+msgid "Secondary (Gray)"
+msgstr "Secundair (Grijs)"
+
+msgid "Success (Green)"
+msgstr "Succes (Groen)"
+
+msgid "Danger (Red)"
+msgstr "Gevaar (Rood)"
+
+msgid "Warning (Yellow)"
+msgstr "Waarschuwing (Geel)"
+
+msgid "Info (Cyan)"
+msgstr "Info (Cyaan)"
+
+msgid "Dark"
+msgstr "Donker"
+
+msgid "Bootstrap color class for styling"
+msgstr "Bootstrap kleurklasse voor styling"
+
+msgid "Mark as Complete State"
+msgstr "Markeren als voltooid status"
+
+msgid "Tasks moved to this column will be marked as completed"
+msgstr "Taken die naar deze kolom worden verplaatst, worden gemarkeerd als voltooid"
+
+msgid "Create Column"
+msgstr "Kolom aanmaken"
+
+msgid "Note:"
+msgstr "Opmerking:"
+
+msgid ""
+"The column will be added at the end of the board. You can reorder columns "
+"later from the management page."
+msgstr ""
+"De kolom wordt aan het einde van het bord toegevoegd. U kunt kolommen later "
+"herordenen vanaf de beheerpagina."
+
+msgid "Edit Kanban Column"
+msgstr "Kanbankolom bewerken"
+
+msgid "Modify column settings"
+msgstr "Kolominstellingen wijzigen"
+
+msgid "Edit Kanban Column form"
+msgstr "Kanbankolom bewerken formulier"
+
+msgid "The key cannot be changed after creation"
+msgstr "De sleutel kan niet worden gewijzigd na aanmaak"
+
+msgid "Preview"
+msgstr "Voorvertoning"
+
+msgid "Inactive columns are hidden from the kanban board"
+msgstr "Inactieve kolommen zijn verborgen op het kanbanbord"
+
+msgid "System Column:"
+msgstr "Systeemkolom:"
+
+msgid ""
+"This is a system column. You can customize its appearance but cannot delete "
+"it."
+msgstr ""
+"Dit is een systeemkolom. U kunt het uiterlijk aanpassen, maar u kunt het "
+"niet verwijderen."
+
+msgid "Professional time tracking and project management"
+msgstr "Professionele tijdregistratie en projectbeheer"
+
+msgid ""
+"A comprehensive web-based time tracking application built with Flask, "
+"featuring project management, client organization, task management, "
+"invoicing, and advanced analytics."
+msgstr ""
+"Een uitgebreide webgebaseerde tijdregistratie-applicatie gebouwd met Flask, "
+"met projectbeheer, klantorganisatie, taakbeheer, facturering en geavanceerde "
+"analyses."
+
+msgid "Project Management"
+msgstr "Projectbeheer"
+
+msgid "Invoicing"
+msgstr "Facturering"
+
+msgid "Smart Timers"
+msgstr "Slimme timers"
+
+msgid "Real-time tracking with idle detection and live updates"
+msgstr "Real-time tracking met inactiviteitsdetectie en live-updates"
+
+msgid "Client Management"
+msgstr "Klantenbeheer"
+
+msgid "Organize clients with contacts, rates, and project relations"
+msgstr "Organiseer klanten met contacten, tarieven en projectrelaties"
+
+msgid "Task System"
+msgstr "Taaksysteem"
+
+msgid "Break down projects into tasks with progress tracking"
+msgstr "Breek projecten op in taken met voortgangsregistratie"
+
+msgid "PDF Invoices"
+msgstr "PDF-facturen"
+
+msgid "Generate professional invoices from tracked time"
+msgstr "Genereer professionele facturen van geregistreerde tijd"
+
+msgid "Core Features"
+msgstr "Kernfuncties"
+
+msgid "Start/stop timers with project and task association"
+msgstr "Start/stop timers met project- en taakkoppeling"
+
+msgid "Manual time entry with notes and tags"
+msgstr "Handmatige tijdregistratie met notities en tags"
+
+msgid "Client and project organization"
+msgstr "Klant- en projectorganisatie"
+
+msgid "Role-based access and user profiles"
+msgstr "Rolgebaseerde toegang en gebruikersprofielen"
+
+msgid "Advanced Features"
+msgstr "Geavanceerde functies"
+
+msgid "Branded PDF invoicing with tax and payment tracking"
+msgstr "Gebrandmerkte PDF-facturering met btw- en betalingsregistratie"
+
+msgid "Visual analytics and detailed reporting"
+msgstr "Visuele analyses en gedetailleerde rapportage"
+
+msgid "REST API for integrations"
+msgstr "REST API voor integraties"
+
+msgid "PWA capabilities and mobile-friendly UI"
+msgstr "PWA-mogelijkheden en mobielvriendelijke interface"
+
+msgid "Platform Support"
+msgstr "Platformondersteuning"
+
+msgid "Web Application"
+msgstr "Webapplicatie"
+
+msgid "Desktop browsers (Chrome, Firefox, Safari, Edge)"
+msgstr "Desktopbrowsers (Chrome, Firefox, Safari, Edge)"
+
+msgid "Mobile responsive design"
+msgstr "Mobiel responsief ontwerp"
+
+msgid "Progressive Web App (PWA)"
+msgstr "Progressive Web App (PWA)"
+
+msgid "Touch-friendly tablet interface"
+msgstr "Touch-vriendelijke tabletinterface"
+
+msgid "Operating Systems"
+msgstr "Besturingssystemen"
+
+msgid "Windows, macOS, Linux"
+msgstr "Windows, macOS, Linux"
+
+msgid "Android and iOS (browser)"
+msgstr "Android en iOS (browser)"
+
+msgid "Raspberry Pi support"
+msgstr "Raspberry Pi-ondersteuning"
+
+msgid "Dockerized deployment"
+msgstr "Gedockeriseerde implementatie"
+
+msgid "Database Support"
+msgstr "Databaseondersteuning"
+
+msgid "PostgreSQL (recommended)"
+msgstr "PostgreSQL (aanbevolen)"
+
+msgid "SQLite (dev/test)"
+msgstr "SQLite (dev/test)"
+
+msgid "Automatic migrations with Flask-Migrate"
+msgstr "Automatische migraties met Flask-Migrate"
+
+msgid "Backup and restoration tools"
+msgstr "Back-up- en hersteltools"
+
+msgid "Technical Specifications"
+msgstr "Technische specificaties"
+
+msgid "Technology Stack"
+msgstr "Technologiestack"
+
+msgid "Backend"
+msgstr "Backend"
+
+msgid "Frontend"
+msgstr "Frontend"
+
+msgid "Database"
+msgstr "Database"
+
+msgid "Deployment"
+msgstr "Implementatie"
+
+msgid "Key Capabilities"
+msgstr "Belangrijkste mogelijkheden"
+
+msgid "Real-time"
+msgstr "Real-time"
+
+msgid "i18n"
+msgstr "i18n"
+
+msgid "Security"
+msgstr "Beveiliging"
+
+msgid "Mobile"
+msgstr "Mobiel"
+
+msgid "Open Source & Community"
+msgstr "Open Source en gemeenschap"
+
+msgid "Open Source Benefits"
+msgstr "Open Source-voordelen"
+
+msgid "Full source code available on GitHub"
+msgstr "Volledige broncode beschikbaar op GitHub"
+
+msgid "Licensed under GPL v3.0"
+msgstr "Gelicentieerd onder GPL v3.0"
+
+msgid "Community-driven development"
+msgstr "Gemeenschapsgedreven ontwikkeling"
+
+msgid "Transparent issue tracking and bug reports"
+msgstr "Transparante issue tracking en bugrapporten"
+
+msgid "Deployment Options"
+msgstr "Implementatie-opties"
+
+msgid "Docker images (GHCR)"
+msgstr "Docker-images (GHCR)"
+
+msgid "Self-hosted deployment with full control"
+msgstr "Zelf-gehoste implementatie met volledige controle"
+
+msgid "Cloud-ready with Compose configs"
+msgstr "Cloud-klaar met Compose-configuraties"
+
+msgid "View on GitHub"
+msgstr "Bekijk op GitHub"
+
+msgid "Support Development"
+msgstr "Ondersteun ontwikkeling"
+
+msgid "Getting Help & Resources"
+msgstr "Hulp en bronnen krijgen"
+
+msgid "Documentation"
+msgstr "Documentatie"
+
+msgid "Step-by-step guides for all features."
+msgstr "Stap-voor-stapgidsen voor alle functies."
+
+msgid "View Help"
+msgstr "Help bekijken"
+
+msgid "System Information"
+msgstr "Systeeminformatie"
+
+msgid "Status, versions, and configuration details."
+msgstr "Status, versies en configuratiedetails."
+
+msgid "Admin access required"
+msgstr "Beheerders toegang vereist"
+
+msgid "Community Support"
+msgstr "Gemeenschapsondersteuning"
+
+msgid "Report issues, request features, contribute."
+msgstr "Rapporteer problemen, vraag functies aan, draag bij."
+
+msgid "GitHub Issues"
+msgstr "GitHub Issues"
+
+msgid "Here's a quick overview of your work."
+msgstr "Hier is een snel overzicht van uw werk."
+
+msgid "Timer"
+msgstr "Timer"
+
+msgid "No active timer."
+msgstr "Geen actieve timer."
+
+msgid "Tags"
+msgstr "Tags"
+
+msgid "Duplicate entry"
+msgstr "Dubbele invoer"
+
+msgid "No recent entries found."
+msgstr "Geen recente invoeren gevonden."
+
+msgid "Weekly Goal"
+msgstr "Wekelijks Doel"
+
+msgid "Days Left"
+msgstr "Dagen Over"
+
+msgid "Need"
+msgstr "Nodig"
+
+msgid "to reach goal"
+msgstr "om doel te bereiken"
+
+msgid "No Weekly Goal"
+msgstr "Geen Wekelijks Doel"
+
+msgid "Set a weekly time goal to track your progress"
+msgstr "Stel een wekelijks tijddoel in om je voortgang bij te houden"
+
+msgid "Create Goal"
+msgstr "Doel Aanmaken"
+
+msgid "Top Projects (30 days)"
+msgstr "Top Projecten (30 dagen)"
+
+msgid "No activity in the last 30 days."
+msgstr "Geen activiteit in de laatste 30 dagen."
+
+msgid "Task (optional)"
+msgstr "Taak (optioneel)"
+
+msgid "Notes (optional)"
+msgstr "Notities (optioneel)"
+
+msgid "Or use a template"
+msgstr "Of gebruik een sjabloon"
+
+msgid "View all templates"
+msgstr "Bekijk alle sjablonen"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "Complete documentation and user guide"
+msgstr "Volledige documentatie en gebruikershandleiding"
+
+msgid "Quick Navigation"
+msgstr "Snelle Navigatie"
+
+msgid "Filter sections..."
+msgstr "Filter secties..."
+
+msgid "Quick Start"
+msgstr "Snelstart"
+
+msgid "Task Management"
+msgstr "Taakbeheer"
+
+msgid "Reports & Analytics"
+msgstr "Rapporten & Analyses"
+
+msgid "Productivity Features"
+msgstr "Productiviteitsfuncties"
+
+msgid "Admin Features"
+msgstr "Beheerfuncties"
+
+msgid "Mobile Usage"
+msgstr "Mobiel Gebruik"
+
+msgid "Troubleshooting"
+msgstr "Probleemoplossing"
+
+msgid "TimeTracker Help Center"
+msgstr "TimeTracker Helpcentrum"
+
+msgid "Everything you need to know to get the most out of TimeTracker"
+msgstr "Alles wat je moet weten om het meeste uit TimeTracker te halen"
+
+msgid "Start Tracking Time"
+msgstr "Start Tijdregistratie"
+
+msgid "View Projects"
+msgstr "Bekijk Projecten"
+
+msgid "Generate Reports"
+msgstr "Genereer Rapporten"
+
+msgid "Quick Start Guide"
+msgstr "Snelstartgids"
+
+msgid "For New Users"
+msgstr "Voor Nieuwe Gebruikers"
+
+msgid "Log in with your username (no password required)"
+msgstr "Log in met je gebruikersnaam (geen wachtwoord vereist)"
+
+msgid "Explore the dashboard to see your overview"
+msgstr "Verken het dashboard om je overzicht te zien"
+
+msgid "Start your first timer on an existing project"
+msgstr "Start je eerste timer op een bestaand project"
+
+msgid "View your time entries in reports"
+msgstr "Bekijk je tijdregistraties in rapporten"
+
+msgid "For Administrators"
+msgstr "Voor Beheerders"
+
+msgid "Set up clients in the Client Management section"
+msgstr "Stel klanten in in het Klantenbeheer gedeelte"
+
+msgid "Create projects and assign them to clients"
+msgstr "Maak projecten aan en wijs ze toe aan klanten"
+
+msgid "Configure system settings (timezone, currency, etc.)"
+msgstr "Configureer systeeminstellingen (tijdzone, valuta, etc.)"
+
+msgid "Manage users and permissions"
+msgstr "Beheer gebruikers en rechten"
+
+msgid "Pro Tip:"
+msgstr "Pro Tip:"
+
+msgid ""
+"Use the mobile-friendly interface to track time on the go. The timer "
+"continues running even if you close your browser!"
+msgstr ""
+"Gebruik de mobielvriendelijke interface om onderweg tijd bij te houden. De "
+"timer blijft lopen, zelfs als je je browser sluit!"
+
+msgid "Real-time tracking with automatic idle detection and WebSocket updates"
+msgstr "Real-time tracking met automatische inactiviteitsdetectie en WebSocket-updates"
+
+msgid "Manual Entry"
+msgstr "Handmatige Invoer"
+
+msgid "Log time manually with custom start and end times"
+msgstr "Log tijd handmatig met aangepaste start- en eindtijden"
+
+msgid "Starting a Timer"
+msgstr "Timer Starten"
+
+msgid "Navigate to the Timer page or dashboard"
+msgstr "Navigeer naar de Timer-pagina of het dashboard"
+
+msgid "Select a project from the dropdown"
+msgstr "Selecteer een project uit de dropdown"
+
+msgid "Optionally select a task for more detailed tracking"
+msgstr "Optioneel een taak selecteren voor gedetailleerdere tracking"
+
+msgid "Add notes about what you're working on (optional)"
+msgstr "Voeg notities toe over waar je aan werkt (optioneel)"
+
+msgid "Add tags separated by commas (optional)"
+msgstr "Voeg tags toe gescheiden door komma's (optioneel)"
+
+msgid "Click \"Start Timer\""
+msgstr "Klik op \"Start Timer\""
+
+msgid "Timer Features"
+msgstr "Timer Functies"
+
+msgid "Real-time duration display"
+msgstr "Real-time duurweergave"
+
+msgid "Continues running if browser closes"
+msgstr "Blijft lopen als de browser sluit"
+
+msgid "Automatic idle detection (configurable)"
+msgstr "Automatische inactiviteitsdetectie (configureerbaar)"
+
+msgid "One active timer per user (configurable)"
+msgstr "Eén actieve timer per gebruiker (configureerbaar)"
+
+msgid "WebSocket live updates"
+msgstr "WebSocket live-updates"
+
+msgid "Manual Time Entry"
+msgstr ""
+
+msgid ""
+"Create time entries manually when you need to record time spent away from "
+"the computer or adjust existing entries."
+msgstr ""
+
+msgid "Required Information"
+msgstr ""
+
+msgid "Project selection"
+msgstr ""
+
+msgid "Start date and time"
+msgstr ""
+
+msgid "End date and time"
+msgstr ""
+
+msgid "Optional Information"
+msgstr ""
+
+msgid "Task assignment"
+msgstr ""
+
+msgid "Description/notes"
+msgstr ""
+
+msgid "Tags for categorization"
+msgstr ""
+
+msgid "Billable status override"
+msgstr ""
+
+msgid "Advanced Time Entry Features"
+msgstr ""
+
+msgid ""
+"Create multiple time entries for consecutive days with the same project and "
+"duration. Perfect for regular work patterns."
+msgstr ""
+
+msgid ""
+"Save frequently used time entries as templates for quick reuse. Saves "
+"project, task, and notes."
+msgstr ""
+
+msgid "Calendar View"
+msgstr ""
+
+msgid ""
+"Visualize your time entries on a calendar. Drag-and-drop to reschedule or "
+"click dates to add entries."
+msgstr ""
+
+msgid "Project Information"
+msgstr ""
+
+msgid "Descriptive project name"
+msgstr ""
+
+msgid "Associated client organization"
+msgstr ""
+
+msgid "Project details and scope"
+msgstr ""
+
+msgid "Active, completed, or archived"
+msgstr ""
+
+msgid "Billing Information"
+msgstr ""
+
+msgid "Whether time should be tracked for billing"
+msgstr ""
+
+msgid "Rate for billable time calculations"
+msgstr ""
+
+msgid "Billing Reference"
+msgstr ""
+
+msgid "PO number or billing code"
+msgstr ""
+
+msgid "Project Operations"
+msgstr ""
+
+msgid "Create new projects with client relationships"
+msgstr ""
+
+msgid "Edit existing projects to update details"
+msgstr ""
+
+msgid "Archive projects to hide from timers (preserves data)"
+msgstr ""
+
+msgid "Delete projects (removes all associated time entries)"
+msgstr ""
+
+msgid "Best Practices"
+msgstr ""
+
+msgid "Use descriptive project names"
+msgstr ""
+
+msgid "Set accurate hourly rates for billing"
+msgstr ""
+
+msgid "Archive instead of delete when possible"
+msgstr ""
+
+msgid "Use billing references for external tracking"
+msgstr ""
+
+msgid ""
+"The client management system helps organize your work by client "
+"organizations, preventing errors and streamlining project creation."
+msgstr ""
+
+msgid "Client Information"
+msgstr ""
+
+msgid "Organization Name"
+msgstr ""
+
+msgid "Company or client name"
+msgstr ""
+
+msgid "Primary contact details"
+msgstr ""
+
+msgid "Email & Phone"
+msgstr ""
+
+msgid "Contact information"
+msgstr ""
+
+msgid "Business address"
+msgstr ""
+
+msgid "Benefits"
+msgstr ""
+
+msgid "Dropdown selection prevents typos"
+msgstr ""
+
+msgid "Default rates auto-populate projects"
+msgstr ""
+
+msgid "Consistent client naming"
+msgstr ""
+
+msgid "Easier project organization"
+msgstr ""
+
+msgid "Project Count"
+msgstr ""
+
+msgid "Total and active projects"
+msgstr ""
+
+msgid "Total hours worked"
+msgstr ""
+
+msgid "Cost Estimation"
+msgstr ""
+
+msgid "Estimated billing amounts"
+msgstr ""
+
+msgid ""
+"Break down projects into manageable tasks with detailed tracking and "
+"progress monitoring."
+msgstr ""
+
+msgid "Task Properties"
+msgstr ""
+
+msgid "Name & Description"
+msgstr ""
+
+msgid "Clear task identification"
+msgstr ""
+
+msgid "Priority Levels"
+msgstr ""
+
+msgid "Low, Medium, High, Urgent"
+msgstr ""
+
+msgid "Due Dates"
+msgstr ""
+
+msgid "Deadline tracking"
+msgstr ""
+
+msgid "Assignment"
+msgstr ""
+
+msgid "Task ownership"
+msgstr ""
+
+msgid "Status Tracking"
+msgstr ""
+
+msgid "To Do - Not started"
+msgstr ""
+
+msgid "In Progress - Currently working"
+msgstr ""
+
+msgid "Review - Ready for review"
+msgstr ""
+
+msgid "Done - Completed"
+msgstr ""
+
+msgid "Cancelled - Not needed"
+msgstr ""
+
+msgid "Time Tracking Features"
+msgstr ""
+
+msgid "Start timers directly from tasks"
+msgstr ""
+
+msgid "Link time entries to specific tasks"
+msgstr ""
+
+msgid "Track estimated vs actual hours"
+msgstr ""
+
+msgid "Monitor task progress automatically"
+msgstr ""
+
+msgid "Task Views"
+msgstr ""
+
+msgid "My Tasks - Your assigned tasks"
+msgstr ""
+
+msgid "All Tasks - Complete task list"
+msgstr ""
+
+msgid "Overdue Tasks - Past due items"
+msgstr ""
+
+msgid "Project Tasks - Tasks within projects"
+msgstr ""
+
+msgid "Collaboration Features"
+msgstr ""
+
+msgid "Task Comments - Threaded discussions on tasks"
+msgstr ""
+
+msgid "Markdown Support - Rich formatting in descriptions"
+msgstr ""
+
+msgid "User Mentions - Tag team members (if enabled)"
+msgstr ""
+
+msgid "File Attachments - Attach files to tasks (if enabled)"
+msgstr ""
+
+msgid "Markdown Formatting"
+msgstr ""
+
+msgid "Task and project descriptions support Markdown:"
+msgstr ""
+
+msgid "**Bold**, *Italic*, ~~Strikethrough~~"
+msgstr ""
+
+msgid "# Headings, - Lists, [Links](url)"
+msgstr ""
+
+msgid "```code blocks```, tables, images"
+msgstr ""
+
+msgid ""
+"Visualize your workflow with a drag-and-drop Kanban board for intuitive task"
+" management."
+msgstr ""
+
+msgid "Board Features"
+msgstr ""
+
+msgid "Customizable columns matching task statuses"
+msgstr ""
+
+msgid "Drag-and-drop tasks between columns"
+msgstr ""
+
+msgid "Filter by project, user, or priority"
+msgstr ""
+
+msgid "Quick search across all tasks"
+msgstr ""
+
+msgid "Using the Kanban Board"
+msgstr ""
+
+msgid "Access from the Tasks menu or project page"
+msgstr ""
+
+msgid "Drag tasks to different columns to change status"
+msgstr ""
+
+msgid "Click on a task card to view/edit details"
+msgstr ""
+
+msgid "Use filters to focus on specific work"
+msgstr ""
+
+msgid ""
+"The Kanban board is perfect for sprint planning and daily standups. Each "
+"column represents a stage in your workflow!"
+msgstr ""
+
+msgid "Expense Tracking"
+msgstr ""
+
+msgid ""
+"Track business expenses, manage receipts, and handle reimbursements "
+"efficiently."
+msgstr ""
+
+msgid "Expense Features"
+msgstr ""
+
+msgid "Categorize expenses (travel, meals, supplies, etc.)"
+msgstr ""
+
+msgid "Attach receipt images and documents"
+msgstr ""
+
+msgid "Track amounts, tax, and payment methods"
+msgstr ""
+
+msgid "Approval workflow for expense requests"
+msgstr ""
+
+msgid "Billing & Reimbursement"
+msgstr ""
+
+msgid "Mark expenses as billable to clients"
+msgstr ""
+
+msgid "Include expenses in client invoices"
+msgstr ""
+
+msgid "Track reimbursement status"
+msgstr ""
+
+msgid "Link expenses to specific projects"
+msgstr ""
+
+msgid "Record Expense"
+msgstr ""
+
+msgid "Enter details and upload receipt"
+msgstr ""
+
+msgid "Submit for Approval"
+msgstr ""
+
+msgid "Admin reviews and approves"
+msgstr ""
+
+msgid "Invoice/Reimburse"
+msgstr ""
+
+msgid "Add to invoice or reimburse"
+msgstr ""
+
+msgid "Track Payment"
+msgstr ""
+
+msgid "Monitor reimbursement status"
+msgstr ""
+
+msgid "Professional Invoicing"
+msgstr ""
+
+msgid "Professional PDF generation"
+msgstr ""
+
+msgid "Company branding and logos"
+msgstr ""
+
+msgid "Automatic invoice numbering"
+msgstr ""
+
+msgid "Tax calculations"
+msgstr ""
+
+msgid "Time Integration"
+msgstr ""
+
+msgid "Generate from time entries"
+msgstr ""
+
+msgid "Smart grouping by task/project"
+msgstr ""
+
+msgid "Prevent double-billing"
+msgstr ""
+
+msgid "Use project hourly rates"
+msgstr ""
+
+msgid "Set up client and project details"
+msgstr ""
+
+msgid "Add Items"
+msgstr ""
+
+msgid "Generate from time or add manually"
+msgstr ""
+
+msgid "Review & Send"
+msgstr ""
+
+msgid "Export PDF and update status"
+msgstr ""
+
+msgid "Monitor status and payments"
+msgstr ""
+
+msgid "Standard Reports"
+msgstr ""
+
+msgid "Project Report - Time breakdown by project"
+msgstr ""
+
+msgid "User Report - Individual performance metrics"
+msgstr ""
+
+msgid "Summary Report - Key metrics and trends"
+msgstr ""
+
+msgid "Time Entry Report - Detailed time logs"
+msgstr ""
+
+msgid "Export Options"
+msgstr ""
+
+msgid "CSV Export - For external analysis"
+msgstr ""
+
+msgid "Configurable delimiters"
+msgstr ""
+
+msgid "Custom date ranges"
+msgstr ""
+
+msgid "Filtered data export"
+msgstr ""
+
+msgid "Filter Options"
+msgstr ""
+
+msgid "Date Range - Custom start and end dates"
+msgstr ""
+
+msgid "Project - Filter by specific projects"
+msgstr ""
+
+msgid "User - Filter by team members"
+msgstr ""
+
+msgid "Client - Filter by client organization"
+msgstr ""
+
+msgid "Saved Filters - Save frequently used filters"
+msgstr ""
+
+msgid "Visual Analytics"
+msgstr ""
+
+msgid "Interactive bar charts"
+msgstr ""
+
+msgid "Time distribution pie charts"
+msgstr ""
+
+msgid "Trend analysis over time"
+msgstr ""
+
+msgid "Mobile-optimized charts"
+msgstr ""
+
+msgid ""
+"Use Saved Filters to quickly access your most common report views. Save "
+"filters for weekly reviews, monthly billing, or specific project tracking!"
+msgstr ""
+
+msgid ""
+"Boost your efficiency with keyboard shortcuts, command palette, and "
+"automation features."
+msgstr ""
+
+msgid "Access any feature instantly without leaving the keyboard"
+msgstr ""
+
+msgid "Opening the Command Palette"
+msgstr ""
+
+msgid "Press the question mark key"
+msgstr ""
+
+msgid "Quick search"
+msgstr ""
+
+msgid "Go to Projects"
+msgstr ""
+
+msgid "Go to Tasks"
+msgstr ""
+
+msgid "New Time Entry"
+msgstr ""
+
+msgid ""
+"Navigate faster with keyboard-driven commands. Press Shift+? to see all "
+"shortcuts."
+msgstr ""
+
+msgid "Global Search"
+msgstr ""
+
+msgid ""
+"Quickly find projects, tasks, clients, and time entries from anywhere in the"
+" app."
+msgstr ""
+
+msgid "Email Notifications"
+msgstr ""
+
+msgid ""
+"Get notified about task assignments, overdue invoices, and weekly summaries "
+"via email."
+msgstr ""
+
+msgid "Administrator Features"
+msgstr ""
+
+msgid "User Management"
+msgstr ""
+
+msgid "Create new users with flexible authentication"
+msgstr ""
+
+msgid "Assign custom roles with specific permissions"
+msgstr ""
+
+msgid "Activate/deactivate user accounts"
+msgstr ""
+
+msgid "View user statistics and activity"
+msgstr ""
+
+msgid "Generate API tokens for users"
+msgstr ""
+
+msgid "Access Control"
+msgstr ""
+
+msgid "Granular role-based permissions system"
+msgstr ""
+
+msgid "Custom roles with fine-grained access"
+msgstr ""
+
+msgid "User data access controls"
+msgstr ""
+
+msgid "OIDC/SSO integration (Azure AD, Authelia, etc.)"
+msgstr ""
+
+msgid "API token management for integrations"
+msgstr ""
+
+msgid "Authentication Methods"
+msgstr ""
+
+msgid "Username-only (simple internal use)"
+msgstr ""
+
+msgid "OIDC/SSO (enterprise authentication)"
+msgstr ""
+
+msgid "Both methods simultaneously"
+msgstr ""
+
+msgid "Automatic role assignment via groups"
+msgstr ""
+
+msgid "Role & Permission Management"
+msgstr ""
+
+msgid "Create custom roles beyond Admin/User"
+msgstr ""
+
+msgid "Set granular permissions per feature"
+msgstr ""
+
+msgid "Assign users to multiple roles"
+msgstr ""
+
+msgid "View and manage all permissions"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "Timezone and locale settings"
+msgstr ""
+
+msgid "Currency configuration"
+msgstr ""
+
+msgid "Time rounding rules"
+msgstr ""
+
+msgid "Self-registration settings"
+msgstr ""
+
+msgid "Timer Settings"
+msgstr ""
+
+msgid "Idle timeout configuration"
+msgstr ""
+
+msgid "Single active timer mode"
+msgstr ""
+
+msgid "Timer display preferences"
+msgstr ""
+
+msgid "Notification settings"
+msgstr ""
+
+msgid "Database Management"
+msgstr ""
+
+msgid "Create manual database backups"
+msgstr ""
+
+msgid "View database migration status"
+msgstr ""
+
+msgid "Monitor database performance"
+msgstr ""
+
+msgid "Clean up old data and logs"
+msgstr ""
+
+msgid "System Monitoring"
+msgstr ""
+
+msgid "View system information and health"
+msgstr ""
+
+msgid "Monitor application performance"
+msgstr ""
+
+msgid "Review system logs and errors"
+msgstr ""
+
+msgid "Mobile-Friendly Features"
+msgstr ""
+
+msgid "Optimized for phones and tablets"
+msgstr ""
+
+msgid "Touch-friendly interface"
+msgstr ""
+
+msgid "Adaptive layouts for all screen sizes"
+msgstr ""
+
+msgid "High contrast for outdoor visibility"
+msgstr ""
+
+msgid "Mobile Navigation"
+msgstr ""
+
+msgid "Bottom tab bar for easy access"
+msgstr ""
+
+msgid "Quick access to dashboard"
+msgstr ""
+
+msgid "One-tap time logging"
+msgstr ""
+
+msgid "Mobile-optimized reports"
+msgstr ""
+
+msgid "Installation"
+msgstr ""
+
+msgid "Open TimeTracker in your mobile browser"
+msgstr ""
+
+msgid "Look for \"Add to Home Screen\" option"
+msgstr ""
+
+msgid "Follow browser-specific installation prompts"
+msgstr ""
+
+msgid "Launch from your home screen like a native app"
+msgstr ""
+
+msgid "PWA Benefits"
+msgstr ""
+
+msgid "Offline capability for basic functions"
+msgstr ""
+
+msgid "Faster loading times"
+msgstr ""
+
+msgid "Native app-like experience"
+msgstr ""
+
+msgid "Push notifications (where supported)"
+msgstr ""
+
+msgid "Troubleshooting & FAQ"
+msgstr ""
+
+msgid "What happens if I forget to stop my timer?"
+msgstr ""
+
+msgid ""
+"The timer will continue running until you stop it manually. You can see your"
+" active timer on the dashboard and timer page. The timer persists even if "
+"you close your browser or restart your device. If idle detection is enabled,"
+" the timer may pause automatically after the configured timeout period."
+msgstr ""
+
+msgid "Can I edit time entries after they're created?"
+msgstr "Kan ik tijdregistraties bewerken nadat ze zijn aangemaakt?"
+
+msgid ""
+"Yes, you can edit any time entry by clicking the edit button in the time "
+"entry list. You can modify the project, start/end times, notes, tags, "
+"billable status, and task assignment. Admins can edit all time entries, "
+"while regular users can only edit their own entries."
+msgstr ""
+"Ja, u kunt elke tijdregistratie bewerken door op de bewerkknop in de "
+"tijdregistratielijst te klikken. U kunt het project, start/eindtijden, "
+"notities, tags, factureerbare status en taaktoewijzing wijzigen. Beheerders "
+"kunnen alle tijdregistraties bewerken, terwijl gewone gebruikers alleen "
+"hun eigen registraties kunnen bewerken."
+
+msgid "How do I track time for multiple projects?"
+msgstr "Hoe registreer ik tijd voor meerdere projecten?"
+
+msgid ""
+"By default, you can only have one active timer at a time. To switch "
+"projects, stop your current timer and start a new one for the different "
+"project. Alternatively, you can create manual time entries for past work or "
+"configure the system to allow multiple active timers (admin setting)."
+msgstr ""
+"Standaard kunt u slechts één actieve timer tegelijk hebben. Om van project "
+"te wisselen, stop uw huidige timer en start een nieuwe voor het andere "
+"project. U kunt ook handmatige tijdregistraties aanmaken voor verleden werk "
+"of het systeem configureren om meerdere actieve timers toe te staan "
+"(beheerderinstelling)."
+
+msgid "How do I export my time data?"
+msgstr "Hoe exporteer ik mijn tijdgegevens?"
+
+msgid ""
+"Go to the Reports page and use the \"Export CSV\" feature. You can apply "
+"filters to export specific data, or export all time entries. The CSV file "
+"includes all time entry details and can be opened in Excel or other "
+"spreadsheet applications. You can also configure the delimiter for different"
+" regional standards."
+msgstr ""
+"Ga naar de Rapporten-pagina en gebruik de \"Export CSV\" functie. U kunt "
+"filters toepassen om specifieke gegevens te exporteren, of alle "
+"tijdregistraties exporteren. Het CSV-bestand bevat alle "
+"tijdregistratiedetails en kan worden geopend in Excel of andere "
+"spreadsheet-applicaties. U kunt ook het scheidingsteken configureren voor "
+"verschillende regionale standaarden."
+
+msgid "What's the difference between billable and non-billable time?"
+msgstr "Wat is het verschil tussen factureerbare en niet-factureerbare tijd?"
+
+msgid ""
+"Billable time is tracked for client billing purposes and can have an hourly "
+"rate associated with it. Non-billable time is for internal work that doesn't"
+" get charged to clients. You can mark individual time entries as billable or"
+" non-billable, and projects can have default billable settings. This "
+"distinction is crucial for accurate invoicing and profitability analysis."
+msgstr ""
+"Factureerbare tijd wordt bijgehouden voor klantfacturering en kan een "
+"uurtarief hebben. Niet-factureerbare tijd is voor intern werk dat niet aan "
+"klanten wordt doorberekend. U kunt individuele tijdregistraties markeren als "
+"factureerbaar of niet-factureerbaar, en projecten kunnen standaard "
+"factureerbare instellingen hebben. Dit onderscheid is cruciaal voor "
+"nauwkeurige facturering en winstgevendheidsanalyse."
+
+msgid "How do I create an invoice from my time entries?"
+msgstr "Hoe maak ik een factuur van mijn tijdregistraties?"
+
+msgid ""
+"Navigate to Invoices → Create Invoice, set up the client and project "
+"details, then use \"Generate from Time Entries\" to automatically create "
+"invoice items from your tracked time. You can filter by date range and "
+"project, and the system will group time entries intelligently. Review the "
+"generated items and export as a professional PDF."
+msgstr ""
+"Navigeer naar Facturen → Factuur aanmaken, stel de klant- en projectgegevens "
+"in, gebruik dan \"Genereren vanuit tijdregistraties\" om automatisch "
+"factuuritems aan te maken van uw geregistreerde tijd. U kunt filteren op "
+"datumbereik en project, en het systeem groepeert tijdregistraties "
+"intelligent. Bekijk de gegenereerde items en exporteer als professionele PDF."
+
+msgid "Can I use TimeTracker on my mobile device?"
+msgstr "Kan ik TimeTracker op mijn mobiele apparaat gebruiken?"
+
+msgid ""
+"Yes! TimeTracker is fully responsive and works great on mobile devices. You "
+"can install it as a Progressive Web App (PWA) for a native-like experience. "
+"The mobile interface includes a bottom tab bar for easy navigation and "
+"touch-optimized controls for time tracking on the go."
+msgstr ""
+"Ja! TimeTracker is volledig responsief en werkt uitstekend op mobiele "
+"apparaten. U kunt het installeren als een Progressive Web App (PWA) voor een "
+"native-achtige ervaring. De mobiele interface bevat een onderste tabbalk voor "
+"eenvoudige navigatie en touch-geoptimaliseerde bedieningselementen voor "
+"tijdregistratie onderweg."
+
+msgid "How do I use the command palette and keyboard shortcuts?"
+msgstr "Hoe gebruik ik het opdrachtpalet en sneltoetsen?"
+
+msgid ""
+"Press the question mark key (?) to open the command palette. From there, you"
+" can type to search for any action or navigation target. Use keyboard "
+"sequences like \"g d\" for Dashboard, \"g p\" for Projects, or \"n e\" for "
+"New Entry. Press Shift+? to see all available shortcuts. Press Ctrl+K (or "
+"Cmd+K on Mac) for quick search."
+msgstr ""
+"Druk op het vraagteken (?) om het opdrachtpalet te openen. Vanaf daar kunt u "
+"typen om te zoeken naar een actie of navigatiedoel. Gebruik "
+"toetsenbordsequenties zoals \"g d\" voor Dashboard, \"g p\" voor Projecten, "
+"of \"n e\" voor Nieuwe registratie. Druk op Shift+? om alle beschikbare "
+"sneltoetsen te zien. Druk op Ctrl+K (of Cmd+K op Mac) voor snelle zoekfunctie."
+
+msgid "How do I create bulk time entries for multiple days?"
+msgstr "Hoe maak ik bulk tijdregistraties aan voor meerdere dagen?"
+
+msgid ""
+"Navigate to Work → Bulk Time Entry. Select your project, choose a date "
+"range, set your daily start and end times, and optionally skip weekends. The"
+" system will create identical time entries for each day in the range. This "
+"is perfect for logging regular work patterns or filling in past time when "
+"you worked consistent hours."
+msgstr ""
+"Navigeer naar Werk → Bulk tijdregistratie. Selecteer uw project, kies een "
+"datumbereik, stel uw dagelijkse start- en eindtijden in, en sla optioneel "
+"weekends over. Het systeem maakt identieke tijdregistraties aan voor elke "
+"dag in het bereik. Dit is perfect voor het loggen van regelmatige "
+"werkpatronen of het invullen van verleden tijd wanneer u consistente uren "
+"werkte."
+
+msgid "What are time entry templates and how do I use them?"
+msgstr "Wat zijn tijdregistratiesjablonen en hoe gebruik ik ze?"
+
+msgid ""
+"Time entry templates let you save frequently used time entry configurations."
+" When creating a manual time entry, check \"Save as Template\" to save the "
+"project, task, and notes. Later, when creating new entries, you can select a"
+" template to quickly fill in these details. Templates are personal and only "
+"visible to you."
+msgstr ""
+"Tijdregistratiesjablonen laten u veelgebruikte tijdregistratieconfiguraties "
+"opslaan. Bij het aanmaken van een handmatige tijdregistratie, vink \"Opslaan "
+"als sjabloon\" aan om het project, de taak en notities op te slaan. Later, "
+"bij het aanmaken van nieuwe registraties, kunt u een sjabloon selecteren om "
+"snel deze details in te vullen. Sjablonen zijn persoonlijk en alleen "
+"zichtbaar voor u."
+
+msgid "How do I track expenses and add them to invoices?"
+msgstr "Hoe registreer ik uitgaven en voeg ik ze toe aan facturen?"
+
+msgid ""
+"Go to Expenses → New Expense to record business expenses. Upload receipt "
+"images, categorize the expense, and mark it as billable if needed. When "
+"creating invoices, you can include these expenses as line items. Expenses "
+"support approval workflows, reimbursement tracking, and can be linked to "
+"specific projects."
+msgstr ""
+"Ga naar Uitgaven → Nieuwe uitgave om zakelijke uitgaven te registreren. "
+"Upload bonafbeeldingen, categoriseer de uitgave en markeer deze als "
+"factureerbaar indien nodig. Bij het aanmaken van facturen kunt u deze "
+"uitgaven opnemen als regelitems. Uitgaven ondersteunen goedkeuringsworkflows, "
+"vergoedingsregistratie en kunnen worden gekoppeld aan specifieke projecten."
+
+msgid "Can I use Markdown in descriptions?"
+msgstr "Kan ik Markdown gebruiken in beschrijvingen?"
+
+msgid ""
+"Yes! Project and task descriptions support full Markdown formatting. You can"
+" use bold, italic, headings, lists, links, code blocks, tables, and images. "
+"This allows you to create rich, well-formatted documentation directly in "
+"your projects and tasks. The Markdown editor includes a preview mode and "
+"supports dark theme."
+msgstr ""
+"Ja! Project- en taakbeschrijvingen ondersteunen volledige Markdown-opmaak. U "
+"kunt vet, cursief, koppen, lijsten, links, codeblokken, tabellen en "
+"afbeeldingen gebruiken. Dit stelt u in staat om rijke, goed geformatteerde "
+"documentatie direct in uw projecten en taken te maken. De Markdown-editor "
+"bevat een voorvertoningsmodus en ondersteunt donker thema."
+
+msgid "Where can I get additional help?"
+msgstr "Waar kan ik aanvullende hulp krijgen?"
+
+msgid "This help page covers most common questions and features."
+msgstr "Deze helppagina behandelt de meest voorkomende vragen en functies."
+
+msgid "Report issues and request features on"
+msgstr "Rapporteer problemen en vraag functies aan op"
+
+msgid ""
+"As an admin, you can access additional system information and diagnostics in"
+" the"
+msgstr ""
+"Als beheerder kunt u aanvullende systeeminformatie en diagnostiek openen in "
+"het"
+
+msgid "section."
+msgstr "gedeelte."
+
+msgid "Still Need Help?"
+msgstr "Nog hulp nodig?"
+
+msgid "Can't find what you're looking for? Here are additional resources:"
+msgstr "Kunt u niet vinden wat u zoekt? Hier zijn aanvullende bronnen:"
+
+msgid "GitHub Repository"
+msgstr "GitHub-repository"
+
+msgid "Report Issue"
+msgstr "Probleem rapporteren"
+
+msgid "Search Results"
+msgstr "Zoekresultaten"
+
+msgid "Search notes or tags"
+msgstr "Zoek in notities of tags"
+
+msgid "Results"
+msgstr "Resultaten"
+
+msgid "End"
+msgstr "Einde"
+
+msgid ""
+"Are you sure you want to delete this time entry? This action cannot be "
+"undone."
+msgstr ""
+"Weet u zeker dat u deze tijdregistratie wilt verwijderen? Deze actie kan niet "
+"ongedaan worden gemaakt."
+
+msgid "Previous"
+msgstr "Vorige"
+
+msgid "Page"
+msgstr "Pagina"
+
+msgid "of"
+msgstr "van"
+
+msgid "Next"
+msgstr "Volgende"
+
+msgid "No results found"
+msgstr "Geen resultaten gevonden"
+
+msgid "Try a different query or check your spelling."
+msgstr "Probeer een andere zoekopdracht of controleer uw spelling."
+
+msgid "Kanban board columns"
+msgstr "Kanbanbordkolommen"
+
+msgid "Edit swimlane"
+msgstr "Zwembaan bewerken"
+
+msgid "Column"
+msgstr "Kolom"
+
+msgid "Add Extra Good"
+msgstr "Extra goed toevoegen"
+
+msgid "Add a product or service to"
+msgstr "Voeg een product of dienst toe aan"
+
+msgid "Back to Project"
+msgstr "Terug naar project"
+
+msgid "SKU/Product Code"
+msgstr "SKU/Productcode"
+
+msgid "What happens when you archive a project?"
+msgstr "Wat gebeurt er wanneer u een project archiveert?"
+
+msgid "The project will be hidden from active project lists"
+msgstr "Het project wordt verborgen in actieve projectlijsten"
+
+msgid "No new time entries can be added to this project"
+msgstr "Er kunnen geen nieuwe tijdregistraties worden toegevoegd aan dit project"
+
+msgid "Existing data and time entries are preserved"
+msgstr "Bestaande gegevens en tijdregistraties worden bewaard"
+
+msgid "You can unarchive the project later if needed"
+msgstr "U kunt het project later opnieuw activeren indien nodig"
+
+msgid "Reason for Archiving"
+msgstr "Reden voor archiveren"
+
+msgid "Optional"
+msgstr "Optioneel"
+
+msgid "e.g., Project completed, Client contract ended, Project cancelled, etc."
+msgstr "bijv. Project voltooid, Klantcontract beëindigd, Project geannuleerd, etc."
+
+msgid "Adding a reason helps with project organization and future reference."
+msgstr "Het toevoegen van een reden helpt bij projectorganisatie en toekomstige referentie."
+
+msgid "Quick Select"
+msgstr "Snelle selectie"
+
+msgid "Project completed successfully"
+msgstr "Project succesvol voltooid"
+
+msgid "Project Completed"
+msgstr "Project voltooid"
+
+msgid "Client contract ended"
+msgstr "Klantcontract beëindigd"
+
+msgid "Contract Ended"
+msgstr "Contract beëindigd"
+
+msgid "Project cancelled by client"
+msgstr "Project geannuleerd door klant"
+
+msgid "Project on hold indefinitely"
+msgstr "Project onbepaald opgeschort"
+
+msgid "On Hold"
+msgstr "Opgeschort"
+
+msgid "Maintenance period ended"
+msgstr "Onderhoudsperiode beëindigd"
+
+msgid "Maintenance Ended"
+msgstr "Onderhoud beëindigd"
+
+msgid "Archive Project"
+msgstr "Project archiveren"
+
+msgid "Create Project"
+msgstr "Project aanmaken"
+
+msgid "Set up a new project to organize your work and track time effectively"
+msgstr "Stel een nieuw project in om uw werk te organiseren en tijd effectief bij te houden"
+
+msgid "Back to Projects"
+msgstr "Terug naar projecten"
+
+msgid "Project Name"
+msgstr "Projectnaam"
+
+msgid "Enter a descriptive project name"
+msgstr "Voer een beschrijvende projectnaam in"
+
+msgid "Choose a clear, descriptive name that explains the project scope"
+msgstr "Kies een duidelijke, beschrijvende naam die de projectomvang uitlegt"
+
+msgid "Project Code"
+msgstr "Projectcode"
+
+msgid "Short code, e.g., ABC"
+msgstr "Korte code, bijv. ABC"
+
+msgid "Optional: Short tag shown on Kanban cards"
+msgstr "Optioneel: Korte tag getoond op Kanban-kaarten"
+
+msgid "Select a client..."
+msgstr "Selecteer een klant..."
+
+msgid "Create new client"
+msgstr "Nieuwe klant aanmaken"
+
+msgid ""
+"Provide detailed information about the project, objectives, and "
+"deliverables..."
+msgstr ""
+"Geef gedetailleerde informatie over het project, doelstellingen en "
+"levertijden..."
+
+msgid "Optional: Add context, objectives, or specific requirements for the project"
+msgstr "Optioneel: Voeg context, doelstellingen of specifieke vereisten voor het project toe"
+
+msgid "Billable Project"
+msgstr "Factureerbaar project"
+
+msgid "Enable billing for this project"
+msgstr "Schakel facturering in voor dit project"
+
+msgid "Leave empty for non-billable projects"
+msgstr "Laat leeg voor niet-factureerbare projecten"
+
+msgid "PO number, contract reference, etc."
+msgstr "PO-nummer, contractreferentie, etc."
+
+msgid "Optional: Add a reference number or identifier for billing purposes"
+msgstr "Optioneel: Voeg een referentienummer of identifier toe voor factureringsdoeleinden"
+
+msgid "Budget Amount"
+msgstr "Budgetbedrag"
+
+msgid "e.g. 10000.00"
+msgstr "bijv. 10000,00"
+
+msgid "Optional: Set a total project budget to monitor spend"
+msgstr "Optioneel: Stel een totaal projectbudget in om uitgaven te monitoren"
+
+msgid "Alert Threshold (%)"
+msgstr "Waarschuwingsdrempel (%)"
+
+msgid "Notify when consumed budget exceeds this threshold"
+msgstr "Waarschuw wanneer verbruikt budget deze drempel overschrijdt"
+
+msgid "Project Creation Tips"
+msgstr "Projectaanmaaktips"
+
+msgid "Clear Naming"
+msgstr "Duidelijke naamgeving"
+
+msgid "Use descriptive names that clearly indicate the project's purpose"
+msgstr "Gebruik beschrijvende namen die duidelijk het doel van het project aangeven"
+
+msgid "Billing Setup"
+msgstr "Factureringsinstellingen"
+
+msgid "Set appropriate hourly rates based on project complexity and client budget"
+msgstr "Stel passende uurtarieven in op basis van projectcomplexiteit en klantbudget"
+
+msgid "Detailed Description"
+msgstr "Gedetailleerde beschrijving"
+
+msgid "Include project objectives, deliverables, and key requirements"
+msgstr "Voeg projectdoelstellingen, levertijden en belangrijke vereisten toe"
+
+msgid "Client Selection"
+msgstr "Klantselectie"
+
+msgid "Choose the right client to ensure proper project organization"
+msgstr "Kies de juiste klant om een goede projectorganisatie te waarborgen"
+
+msgid "Creating..."
+msgstr "Aanmaken..."
+
+msgid "Could not create client. Please try again."
+msgstr "Kon klant niet aanmaken. Probeer het opnieuw."
+
+msgid "Client created"
+msgstr "Klant aangemaakt"
+
+msgid "Network error while creating client"
+msgstr "Netwerkfout bij aanmaken klant"
+
+msgid "Project Dashboard & Analytics"
+msgstr "Projectdashboard en analyses"
+
+msgid "Budget Analysis"
+msgstr "Budgetanalyse"
+
+msgid "All Time"
+msgstr "Alle tijd"
+
+msgid "Last 7 Days"
+msgstr "Laatste 7 dagen"
+
+msgid "Last 30 Days"
+msgstr "Laatste 30 dagen"
+
+msgid "Last 3 Months"
+msgstr "Laatste 3 maanden"
+
+msgid "Last Year"
+msgstr "Afgelopen jaar"
+
+msgid "estimated"
+msgstr "geschat"
+
+msgid "Budget Used"
+msgstr "Budget gebruikt"
+
+msgid "of budget"
+msgstr "van budget"
+
+msgid "Tasks Complete"
+msgstr "Taken voltooid"
+
+msgid "completion"
+msgstr "voltooiing"
+
+msgid "Team Members"
+msgstr "Teamleden"
+
+msgid "contributing"
+msgstr "bijdragend"
+
+msgid "Budget vs. Actual"
+msgstr "Budget vs. werkelijk"
+
+msgid "No budget set for this project"
+msgstr "Geen budget ingesteld voor dit project"
+
+msgid "Task Status Distribution"
+msgstr "Taakstatusverdeling"
+
+msgid "No tasks created yet"
+msgstr "Nog geen taken aangemaakt"
+
+msgid "Team Member Contributions"
+msgstr "Teamlidbijdragen"
+
+msgid "No time entries recorded yet"
+msgstr "Nog geen tijdregistraties geregistreerd"
+
+msgid "Time Tracking Timeline"
+msgstr "Tijdregistratietijdlijn"
+
+msgid "Select a time period to view timeline"
+msgstr "Selecteer een tijdsperiode om tijdlijn te bekijken"
+
+msgid "Team Member Details"
+msgstr "Teamlid details"
+
+msgid "entries"
+msgstr "registraties"
+
+msgid "tasks"
+msgstr "taken"
+
+msgid "No team members have logged time yet"
+msgstr "Nog geen teamleden hebben tijd geregistreerd"
+
+msgid "Attention Required"
+msgstr "Aandacht vereist"
+
+msgid "task(s) are overdue"
+msgstr "taak/taken is/zijn achterstallig"
+
+msgid "Edit Project"
+msgstr "Project bewerken"
+
+msgid "Edit Extra Good"
+msgstr "Extra goed bewerken"
+
+msgid "Manage products and services for this project"
+msgstr "Beheer producten en diensten voor dit project"
+
+msgid "Total Goods"
+msgstr "Totaal goederen"
+
+msgid "Billable Amount"
+msgstr "Factureerbaar bedrag"
+
+msgid "Categories"
+msgstr "Categorieën"
+
+msgid "Invoiced"
+msgstr "Gefactureerd"
+
+msgid "Non-billable"
+msgstr "Niet-factureerbaar"
+
+msgid "Are you sure you want to delete this extra good?"
+msgstr "Weet u zeker dat u dit extra goed wilt verwijderen?"
+
+msgid "Delete Extra Good"
+msgstr "Extra goed verwijderen"
+
+msgid "No extra goods found for this project"
+msgstr "Geen extra goederen gevonden voor dit project"
+
+msgid "Add Your First Good"
+msgstr "Voeg uw eerste goed toe"
+
+msgid "Breakdown by Category"
+msgstr "Uitsplitsing per categorie"
+
+msgid "item(s)"
+msgstr "item(s)"
+
+msgid "Mark project as Inactive?"
+msgstr "Project markeren als inactief?"
+
+msgid "Change Project Status"
+msgstr "Projectstatus wijzigen"
+
+msgid "Activate project?"
+msgstr "Project activeren?"
+
+msgid "Activate Project"
+msgstr "Project activeren"
+
+msgid "Archive"
+msgstr "Archiveren"
+
+msgid "Unarchive project?"
+msgstr "Project opnieuw activeren?"
+
+msgid "Unarchive Project"
+msgstr "Project opnieuw activeren"
+
+msgid "Unarchive"
+msgstr "Opnieuw activeren"
+
+msgid "Delete Project"
+msgstr "Project verwijderen"
+
+msgid "Archive Information"
+msgstr "Archiveerinformatie"
+
+msgid "Archived on:"
+msgstr "Gearchiveerd op:"
+
+msgid "Archived by:"
+msgstr "Gearchiveerd door:"
+
+msgid "Reason:"
+msgstr "Reden:"
+
+msgid "Budget Overview"
+msgstr "Budgetoverzicht"
+
+msgid "Over"
+msgstr "Over"
+
+msgid "View Full Budget Analysis"
+msgstr "Volledige budgetanalyse bekijken"
+
+msgid "Tasks for this project"
+msgstr "Taken voor dit project"
+
+msgid "Due"
+msgstr "Vervaldatum"
+
+msgid "No tasks for this project."
+msgstr "Geen taken voor dit project."
+
+msgid "Are you sure you want to delete this filter?"
+msgstr "Weet u zeker dat u dit filter wilt verwijderen?"
+
+msgid "Delete Filter"
+msgstr "Filter verwijderen"
+
+msgid "This will reset all keyboard shortcuts to their default values. Continue?"
+msgstr "Dit zal alle sneltoetsen resetten naar hun standaardwaarden. Doorgaan?"
+
+msgid "Reset to Defaults"
+msgstr "Resetten naar standaardwaarden"
+
+msgid "Edit Task"
+msgstr "Taak bewerken"
+
+msgid "Overdue"
+msgstr "Achterstallig"
+
+msgid "Failed to update status"
+msgstr "Kon status niet bijwerken"
+
+msgid "Failed to update task status"
+msgstr "Kon taakstatus niet bijwerken"
+
+msgid "Kanban column created"
+msgstr "Kanbankolom aangemaakt"
+
+msgid "Kanban column deleted"
+msgstr "Kanbankolom verwijderd"
+
+msgid "Kanban columns reordered"
+msgstr "Kanbankolommen herordend"
+
+msgid "Kanban column visibility changed"
+msgstr "Kanbankolom zichtbaarheid gewijzigd"
+
+msgid "Kanban columns updated"
+msgstr "Kanbankolommen bijgewerkt"
+
+msgid "Update"
+msgstr "Bijwerken"
+
+msgid "Failed to refresh kanban columns"
+msgstr "Kon kanbankolommen niet vernieuwen"
+
+msgid "Loading task details..."
+msgstr "Taakdetails laden..."
+
+msgid "Assigned To"
+msgstr "Toegewezen aan"
+
+msgid "Tracked"
+msgstr "Geregistreerd"
+
+msgid "Estimated"
+msgstr "Geschat"
+
+msgid "View Full Details"
+msgstr "Volledige details bekijken"
+
+msgid "Create Task"
+msgstr "Taak aanmaken"
+
+msgid "Add a new task to your project to break down work into manageable components"
+msgstr "Voeg een nieuwe taak toe aan uw project om werk op te delen in beheersbare componenten"
+
+msgid "Back to Tasks"
+msgstr "Terug naar taken"
+
+msgid "Task Name"
+msgstr "Taaknaam"
+
+msgid "Enter a descriptive task name"
+msgstr "Voer een beschrijvende taaknaam in"
+
+msgid "Choose a clear, descriptive name that explains what needs to be done"
+msgstr "Kies een duidelijke, beschrijvende naam die uitlegt wat er moet gebeuren"
+
+msgid ""
+"Provide detailed information about the task, requirements, and any specific "
+"instructions..."
+msgstr ""
+"Geef gedetailleerde informatie over de taak, vereisten en eventuele specifieke "
+"instructies..."
+
+msgid "Optional: Add context, requirements, or specific instructions for the task"
+msgstr "Optioneel: Voeg context, vereisten of specifieke instructies voor de taak toe"
+
+msgid "Select the project this task belongs to"
+msgstr "Selecteer het project waar deze taak bij hoort"
+
+msgid "Initial Status"
+msgstr "Initiële status"
+
+msgid "Optional: Set a deadline for this task"
+msgstr "Optioneel: Stel een deadline in voor deze taak"
+
+msgid "Estimated Hours"
+msgstr "Geschatte uren"
+
+msgid "Optional: Estimate how long this task will take"
+msgstr "Optioneel: Schat in hoe lang deze taak zal duren"
+
+msgid "Assign To"
+msgstr "Toewijzen aan"
+
+msgid "Unassigned"
+msgstr "Niet toegewezen"
+
+msgid "Optional: Assign this task to a team member"
+msgstr "Optioneel: Wijs deze taak toe aan een teamlid"
+
+msgid "Task Creation Tips"
+msgstr "Taakaanmaaktips"
+
+msgid "Use action verbs and be specific about what needs to be done"
+msgstr "Gebruik actiewoorden en wees specifiek over wat er moet gebeuren"
+
+msgid "Realistic Estimates"
+msgstr "Realistische schattingen"
+
+msgid "Consider complexity and dependencies when estimating time"
+msgstr "Houd rekening met complexiteit en afhankelijkheden bij het schatten van tijd"
+
+msgid "Set Deadlines"
+msgstr "Deadlines instellen"
+
+msgid "Due dates help prioritize work and track progress"
+msgstr "Vervaldatums helpen werk te prioriteren en voortgang bij te houden"
+
+msgid "Priority Matters"
+msgstr "Prioriteit is belangrijk"
+
+msgid "Use priority levels to help team members focus on what's most important"
+msgstr "Gebruik prioriteitsniveaus om teamleden te helpen focussen op wat het belangrijkst is"
+
+#, python-format
+msgid "Update task details and settings for \"%(task)s\""
+msgstr "Werk taakdetails en instellingen bij voor \"%(task)s\""
+
+msgid "Back to Task"
+msgstr "Terug naar taak"
+
+msgid "Task Information"
+msgstr "Taakinformatie"
+
+msgid "Update Task"
+msgstr "Taak bijwerken"
+
+msgid "Estimate used"
+msgstr "Schatting gebruikt"
+
+msgid "Actual"
+msgstr "Werkelijk"
+
+msgid "Current Task Info"
+msgstr "Huidige taakinformatie"
+
+msgid "Current Status"
+msgstr "Huidige status"
+
+msgid "Current Priority"
+msgstr "Huidige prioriteit"
+
+msgid "Currently Assigned To"
+msgstr "Momenteel toegewezen aan"
+
+msgid "Current Due Date"
+msgstr "Huidige vervaldatum"
+
+msgid "Current Estimate"
+msgstr "Huidige schatting"
+
+msgid "hours"
+msgstr "uren"
+
+msgid "Actual Hours"
+msgstr "Werkelijke uren"
+
+msgid "Updated"
+msgstr "Bijgewerkt"
+
+msgid "Started"
+msgstr "Gestart"
+
+msgid "View Task"
+msgstr "Taak bekijken"
+
+msgid "Edit Tips"
+msgstr "Bewerktips"
+
+msgid "Status Changes"
+msgstr "Statuswijzigingen"
+
+msgid "Changing status may affect time tracking and progress calculations"
+msgstr "Statuswijziging kan tijdregistratie en voortgangsberekeningen beïnvloeden"
+
+msgid "Due Date Updates"
+msgstr "Vervaldatum updates"
+
+msgid "Consider team workload when adjusting deadlines"
+msgstr "Houd rekening met teamwerkdruk bij het aanpassen van deadlines"
+
+msgid "Assignment Changes"
+msgstr "Toewijzingswijzigingen"
+
+msgid "Notify team members when reassigning tasks"
+msgstr "Informeer teamleden bij het opnieuw toewijzen van taken"
+
+msgid "Updating..."
+msgstr "Bijwerken..."
+
+msgid "Are you sure you want to delete the task \"{name}\"?"
+msgstr "Weet u zeker dat u de taak \"{name}\" wilt verwijderen?"
+
+msgid ""
+"Cannot delete task \"{name}\" because it has time entries. Please delete the"
+" time entries first."
+msgstr ""
+"Kan taak \"{name}\" niet verwijderen omdat deze tijdregistraties heeft. "
+"Verwijder eerst de tijdregistraties."
+
+msgid "Delete Task"
+msgstr "Taak verwijderen"
+
+msgid "Hide Filters"
+msgstr "Filters verbergen"
+
+msgid "Show Filters"
+msgstr "Filters tonen"
+
+msgid "My Tasks"
+msgstr "Mijn taken"
+
+msgid "Tasks assigned to or created by you"
+msgstr "Taken toegewezen aan of aangemaakt door u"
+
+msgid "Filter My Tasks"
+msgstr "Mijn taken filteren"
+
+msgid "Task Type"
+msgstr "Taaktype"
+
+msgid "All Types"
+msgstr "Alle typen"
+
+msgid "Assigned to Me"
+msgstr "Toegewezen aan mij"
+
+msgid "Created by Me"
+msgstr "Aangemaakt door mij"
+
+msgid "Show overdue only"
+msgstr "Toon alleen achterstallige"
+
+msgid "Apply Filters"
+msgstr "Filters toepassen"
+
+msgid "Clear"
+msgstr "Wissen"
+
+msgid "Created by me"
+msgstr "Aangemaakt door mij"
+
+msgid "View Details"
+msgstr "Details bekijken"
+
+msgid "My tasks pagination"
+msgstr "Mijn taken paginering"
+
+msgid "..."
+msgstr "..."
+
+msgid "No tasks found"
+msgstr "Geen taken gevonden"
+
+msgid "You don't have any tasks assigned to you or created by you yet."
+msgstr "U heeft nog geen taken toegewezen aan u of aangemaakt door u."
+
+msgid "Create Your First Task"
+msgstr "Maak uw eerste taak aan"
+
+msgid "View All Tasks"
+msgstr "Alle taken bekijken"
+
+msgid "Overdue Tasks"
+msgstr "Achterstallige taken"
+
+msgid "Requires immediate attention"
+msgstr "Vereist onmiddellijke aandacht"
+
+msgid "items"
+msgstr "items"
+
+msgid "Overdue Tasks Detected"
+msgstr "Achterstallige taken gedetecteerd"
+
+msgid "There are"
+msgstr "Er zijn"
+
+msgid "overdue tasks that require immediate attention."
+msgstr "achterstallige taken die onmiddellijke aandacht vereisen."
+
+msgid "Please review and update these tasks to prevent further delays."
+msgstr "Bekijk en werk deze taken bij om verdere vertragingen te voorkomen."
+
+msgid "Due:"
+msgstr "Vervaldatum:"
+
+msgid "Est:"
+msgstr "Schatting:"
+
+msgid "Actual:"
+msgstr "Werkelijk:"
+
+msgid "No Overdue Tasks!"
+msgstr "Geen achterstallige taken!"
+
+msgid "Great job! All tasks are currently on schedule."
+msgstr "Goed gedaan! Alle taken lopen momenteel op schema."
+
+msgid "Enter new due date (YYYY-MM-DD):"
+msgstr "Voer nieuwe vervaldatum in (JJJJ-MM-DD):"
+
+msgid "Are you sure you want to extend the due date to"
+msgstr "Weet u zeker dat u de vervaldatum wilt verlengen tot"
+
+msgid "for all overdue tasks?"
+msgstr "voor alle achterstallige taken?"
+
+msgid "Bulk due date update feature coming soon!"
+msgstr "Bulk vervaldatum update functie komt binnenkort!"
+
+msgid "Enter new priority (low/medium/high/urgent):"
+msgstr "Voer nieuwe prioriteit in (laag/medium/hoog/dringend):"
+
+msgid "Are you sure you want to set priority to"
+msgstr "Weet u zeker dat u de prioriteit wilt instellen op"
+
+msgid "Bulk priority update feature coming soon!"
+msgstr "Bulk prioriteit update functie komt binnenkort!"
+
+msgid "Invalid priority. Please use: low, medium, high, or urgent"
+msgstr "Ongeldige prioriteit. Gebruik: laag, medium, hoog of dringend"
+
+msgid "Start task and mark as In Progress?"
+msgstr "Taak starten en markeren als In uitvoering?"
+
+msgid "Change Task Status"
+msgstr "Taakstatus wijzigen"
+
+msgid "Mark task as To Do?"
+msgstr "Taak markeren als Te doen?"
+
+msgid "Pause"
+msgstr "Pauzeren"
+
+msgid "Mark task as Done?"
+msgstr "Taak markeren als Voltooid?"
+
+msgid "Complete Task"
+msgstr "Taak voltooien"
+
+msgid "Complete"
+msgstr "Voltooien"
+
+msgid "Reopen task to Review?"
+msgstr "Taak heropenen naar Beoordeling?"
+
+msgid "Reopen Task"
+msgstr "Taak heropenen"
+
+msgid "Reopen"
+msgstr "Heropenen"
+
+msgid "Are you sure you want to delete this template?"
+msgstr "Weet u zeker dat u dit sjabloon wilt verwijderen?"
+
+msgid "Delete Template"
+msgstr "Sjabloon verwijderen"
+
+msgid "Settings"
+msgstr "Instellingen"
+
+msgid "No project"
+msgstr "Geen project"
+
+msgid "Member Since"
+msgstr "Lid sinds"
+
+msgid "Recent Time Entries"
+msgstr "Recente tijdregistraties"
+
+msgid "In progress"
+msgstr "In uitvoering"
+
+msgid "View all time entries"
+msgstr "Bekijk alle tijdregistraties"
+
+msgid "No recent time entries"
+msgstr "Geen recente tijdregistraties"
+
+msgid "Manage your account settings and preferences"
+msgstr "Beheer uw accountinstellingen en voorkeuren"
+
+msgid "Profile Information"
+msgstr "Profielinformatie"
+
+msgid "Username cannot be changed"
+msgstr "Gebruikersnaam kan niet worden gewijzigd"
+
+msgid "Email Address"
+msgstr "E-mailadres"
+
+msgid "Required for email notifications"
+msgstr "Vereist voor e-mailmeldingen"
+
+msgid "Notification Preferences"
+msgstr "Meldingsvoorkeuren"
+
+msgid "Enable Email Notifications"
+msgstr "E-mailmeldingen inschakelen"
+
+msgid "Master switch for all email notifications"
+msgstr "Hoofdschakelaar voor alle e-mailmeldingen"
+
+msgid "Overdue Invoice Notifications"
+msgstr "Achterstallige factuurmeldingen"
+
+msgid "Task Assignment Notifications"
+msgstr "Taaktoewijzingsmeldingen"
+
+msgid "Comment & Mention Notifications"
+msgstr "Reactie- en vermeldingsmeldingen"
+
+msgid "Weekly Time Summary Email"
+msgstr "Wekelijks tijdoverzicht e-mail"
+
+msgid "Display Preferences"
+msgstr "Weergavevoorkeuren"
+
+msgid "System Default"
+msgstr "Systeemstandaard"
+
+msgid "Light"
+msgstr "Licht"
+
+msgid "Time Rounding Preferences"
+msgstr "Tijdafrondingsvoorkeuren"
+
+msgid ""
+"Configure how your time entries are rounded. This affects how durations are "
+"calculated when you stop timers."
+msgstr ""
+"Configureer hoe uw tijdregistraties worden afgerond. Dit beïnvloedt hoe "
+"duren worden berekend wanneer u timers stopt."
+
+msgid "Enable Time Rounding"
+msgstr "Tijdafronding inschakelen"
+
+msgid "Round time entries to configured intervals"
+msgstr "Rond tijdregistraties af naar geconfigureerde intervallen"
+
+msgid "Rounding Interval"
+msgstr "Afrondingsinterval"
+
+msgid "Time entries will be rounded to this interval"
+msgstr "Tijdregistraties worden afgerond naar dit interval"
+
+msgid "Rounding Method"
+msgstr "Afrondingsmethode"
+
+msgid "Overtime Settings"
+msgstr "Overureninstellingen"
+
+msgid ""
+"Set your standard working hours per day. Any time worked beyond this will be"
+" counted as overtime."
+msgstr ""
+"Stel uw standaard werkuren per dag in. Alle tijd die hierboven wordt gewerkt, "
+"wordt geteld als overuren."
+
+msgid "Standard Hours Per Day"
+msgstr "Standaard uren per dag"
+
+msgid "Typically 8 hours for a full-time job"
+msgstr "Meestal 8 uur voor een voltijdbaan"
+
+msgid "How it works"
+msgstr "Hoe het werkt"
+
+msgid ""
+"If you work more than your standard hours in a day, the extra time will be "
+"tracked as overtime in reports and analytics."
+msgstr ""
+"Als u meer dan uw standaard uren per dag werkt, wordt de extra tijd "
+"geregistreerd als overuren in rapporten en analyses."
+
+msgid "Regional Settings"
+msgstr "Regionale instellingen"
+
+msgid "Timezone"
+msgstr "Tijdzone"
+
+msgid "Date Format"
+msgstr "Datumformaat"
+
+msgid "Time Format"
+msgstr "Tijdformaat"
+
+msgid "Week Starts On"
+msgstr "Week begint op"
+
+msgid "Sunday"
+msgstr "Zondag"
+
+msgid "Monday"
+msgstr "Maandag"
+
+msgid "Saturday"
+msgstr "Zaterdag"
+
+msgid "Save Settings"
+msgstr "Instellingen opslaan"
+
+msgid "Time rounding is disabled. All times will be recorded exactly as tracked."
+msgstr "Tijdafronding is uitgeschakeld. Alle tijden worden exact geregistreerd zoals getrackt."
+
+msgid "No rounding - times will be recorded exactly as tracked."
+msgstr "Geen afronding - tijden worden exact geregistreerd zoals getrackt."
+
+msgid "Actual time:"
+msgstr "Werkelijke tijd:"
+
+msgid "Rounded:"
+msgstr "Afgerond:"
+
+msgid "With "
+msgstr "Met "
+
+msgid " minute intervals"
+msgstr " minuten intervallen"
+
+msgid "Create Weekly Goal"
+msgstr "Wekelijks doel aanmaken"
+
+msgid "Create Weekly Time Goal"
+msgstr "Wekelijks tijddoel aanmaken"
+
+msgid "Set a target for hours to work this week"
+msgstr "Stel een doel in voor uren om deze week te werken"
+
+msgid "Target Hours"
+msgstr "Doel uren"
+
+msgid "How many hours do you want to work this week?"
+msgstr "Hoeveel uren wilt u deze week werken?"
+
+msgid "Week Start Date"
+msgstr "Week startdatum"
+
+msgid "Leave blank to use current week (starting Monday)"
+msgstr "Laat leeg om huidige week te gebruiken (beginnend op maandag)"
+
+msgid "Optional notes about your goal..."
+msgstr "Optionele notities over uw doel..."
+
+msgid "Quick Presets"
+msgstr "Snelle voorinstellingen"
+
+msgid "Tips for Setting Goals"
+msgstr "Tips voor het instellen van doelen"
+
+msgid "Be realistic: Consider holidays, meetings, and other commitments"
+msgstr "Wees realistisch: Houd rekening met vakanties, vergaderingen en andere verplichtingen"
+
+msgid "Start conservative: You can always adjust your goal later"
+msgstr "Begin conservatief: U kunt uw doel later altijd aanpassen"
+
+msgid "Track progress: Check your dashboard regularly to stay on track"
+msgstr "Houd voortgang bij: Controleer uw dashboard regelmatig om op koers te blijven"
+
+msgid "Typical full-time: 40 hours per week (8 hours/day, 5 days)"
+msgstr "Typisch voltijd: 40 uur per week (8 uur/dag, 5 dagen)"
+
+msgid "Edit Weekly Goal"
+msgstr "Wekelijks doel bewerken"
+
+msgid "Edit Weekly Time Goal"
+msgstr "Wekelijks tijddoel bewerken"
+
+msgid "Week Period"
+msgstr "Weekperiode"
+
+msgid "Current Progress"
+msgstr "Huidige voortgang"
+
+msgid "Failed"
+msgstr "Mislukt"
+
+msgid "Are you sure you want to delete this goal?"
+msgstr "Weet u zeker dat u dit doel wilt verwijderen?"
+
+msgid "Delete Goal"
+msgstr "Doel verwijderen"
+
+msgid "Weekly Time Goals"
+msgstr "Wekelijkse tijddoelen"
+
+msgid "Set and track your weekly hour targets"
+msgstr "Stel uw wekelijkse uurtargets in en houd ze bij"
+
+msgid "New Goal"
+msgstr "Nieuw doel"
+
+msgid "Total Goals"
+msgstr "Totaal doelen"
+
+msgid "Success Rate"
+msgstr "Succespercentage"
+
+msgid "Current Week Goal"
+msgstr "Huidig weekdoel"
+
+msgid "Remaining Hours"
+msgstr "Resterende uren"
+
+msgid "Days Remaining"
+msgstr "Resterende dagen"
+
+msgid "Avg Hours/Day Needed"
+msgstr "Gem. uren/dag nodig"
+
+msgid "Edit Goal"
+msgstr "Doel bewerken"
+
+msgid "No goal set for this week"
+msgstr "Geen doel ingesteld voor deze week"
+
+msgid "Create a weekly time goal to start tracking your progress"
+msgstr "Maak een wekelijks tijddoel aan om uw voortgang bij te houden"
+
+msgid "Goal History"
+msgstr "Doelgeschiedenis"
+
+msgid "Target"
+msgstr "Doel"
+
+msgid "Weekly Goal Details"
+msgstr "Wekelijks doel details"
+
+msgid "Daily Breakdown"
+msgstr "Dagelijkse uitsplitsing"
+
+msgid "Time Entries This Week"
+msgstr "Tijdregistraties deze week"
+
+msgid "No Project"
+msgstr "Geen project"
+
+msgid "No time entries recorded for this week yet"
+msgstr "Nog geen tijdregistraties geregistreerd voor deze week"
+
+msgid "Draft"
+msgstr "Concept"
+
+msgid "Sent"
+msgstr "Verzonden"
+
+msgid "Paid"
+msgstr "Betaald"
+
+msgid "Unpaid"
+msgstr "Onbetaald"
+
+msgid "Partially Paid"
+msgstr "Gedeeltelijk betaald"
+
+msgid "Fully Paid"
+msgstr "Volledig betaald"
+
+msgid "Overpaid"
+msgstr "Overbetaald"
+
+msgid "Cash"
+msgstr "Contant"
+
+msgid "Check"
+msgstr "Cheque"
+
+msgid "Bank Transfer"
+msgstr "Bankoverschrijving"
+
+msgid "Credit Card"
+msgstr "Creditcard"
+
+msgid "Debit Card"
+msgstr "Debetkaart"
+
+msgid "PayPal"
+msgstr "PayPal"
+
+msgid "Stripe"
+msgstr "Stripe"
+
+msgid "Company Card"
+msgstr "Bedrijfskaart"
+
+msgid "Pending"
+msgstr "In behandeling"
+
+msgid "Approved"
+msgstr "Goedgekeurd"
+
+msgid "Rejected"
+msgstr "Afgewezen"
+
+msgid "Reimbursed"
+msgstr "Vergoed"
+
+msgid "Processing"
+msgstr "Verwerken"
+
+msgid "Partial"
+msgstr "Gedeeltelijk"
+
+msgid "80% Budget Warning"
+msgstr "80% budgetwaarschuwing"
+
+msgid "Budget Limit Reached"
+msgstr "Budgetlimiet bereikt"
+
+msgid "Info"
+msgstr "Info"
+
+#, python-format
+msgid "Invoice #: %(num)s"
+msgstr "Factuurnummer: %(num)s"
+
+#, python-format
+msgid "Issue Date: %(date)s"
+msgstr "Uitgavedatum: %(date)s"
+
+#, python-format
+msgid "Due Date: %(date)s"
+msgstr "Vervaldatum: %(date)s"
+
+msgid "Please log in to access this page"
+msgstr "Log in om deze pagina te openen"
+
+msgid "PDF Invoice Designer"
+msgstr "PDF-factuurontwerper"
+
+msgid "Visual Invoice Designer"
+msgstr "Visuele factuurontwerper"
+
+msgid "Drag and drop elements to design your invoice layout"
+msgstr "Sleep en zet elementen neer om uw factuurlay-out te ontwerpen"
+
+msgid "How to use:"
+msgstr "Hoe te gebruiken:"
+
+msgid ""
+"Click elements from the left sidebar to add them to the canvas. Click "
+"elements to select and customize them in the properties panel. Use the "
+"alignment tools and keyboard shortcuts for faster editing."
+msgstr ""
+"Klik op elementen in de linkerzijbalk om ze toe te voegen aan het canvas. Klik "
+"op elementen om ze te selecteren en aan te passen in het eigenschappenpaneel. "
+"Gebruik de uitlijningstools en sneltoetsen voor sneller bewerken."
+
+msgid "Keyboard Shortcuts:"
+msgstr "Sneltoetsen:"
+
+msgid "Clear Canvas"
+msgstr "Canvas wissen"
+
+msgid "Generate Preview"
+msgstr "Voorvertoning genereren"
+
+msgid "Save Design"
+msgstr "Ontwerp opslaan"
+
+msgid "View Code"
+msgstr "Code bekijken"
+
+msgid "Toolbox"
+msgstr "Gereedschapskist"
+
+msgid "Search elements & variables..."
+msgstr "Zoek elementen en variabelen..."
+
+msgid "Elements"
+msgstr "Elementen"
+
+msgid "Variables"
+msgstr "Variabelen"
+
+msgid "Basic Elements"
+msgstr "Basiselementen"
+
+msgid "Custom Text"
+msgstr "Aangepaste tekst"
+
+msgid "Text"
+msgstr "Tekst"
+
+msgid "Heading"
+msgstr "Kop"
+
+msgid "Line"
+msgstr "Lijn"
+
+msgid "Rectangle"
+msgstr "Rechthoek"
+
+msgid "Circle"
+msgstr "Cirkel"
+
+msgid "Company Info"
+msgstr "Bedrijfsinformatie"
+
+msgid "Company Details"
+msgstr "Bedrijfsdetails"
+
+msgid "Invoice Data"
+msgstr "Factuurgegevens"
+
+msgid "Invoice Date"
+msgstr "Factuurdatum"
+
+msgid "Client Info"
+msgstr "Klantinformatie"
+
+msgid "Items Table"
+msgstr "Items tabel"
+
+msgid "Payment & Project"
+msgstr "Betaling en project"
+
+msgid "Payment Date"
+msgstr "Betalingsdatum"
+
+msgid "Payment Method"
+msgstr "Betalingsmethode"
+
+msgid "Client Phone"
+msgstr "Klanttelefoon"
+
+msgid "Advanced"
+msgstr "Geavanceerd"
+
+msgid "QR Code"
+msgstr "QR-code"
+
+msgid "Barcode"
+msgstr "Barcode"
+
+msgid "Page Number"
+msgstr "Paginanummer"
+
+msgid "Current Date"
+msgstr "Huidige datum"
+
+msgid "Watermark"
+msgstr "Watermerk"
+
+msgid "Bank Info"
+msgstr "Bankinformatie"
+
+msgid "Invoice Fields"
+msgstr "Factuurvelden"
+
+msgid "Invoice number"
+msgstr "Factuurnummer"
+
+msgid "Invoice status (draft/sent/paid/overdue)"
+msgstr "Factuurstatus (concept/verzonden/betaald/achterstallig)"
+
+msgid "Issue date"
+msgstr "Uitgavedatum"
+
+msgid "Due date"
+msgstr "Vervaldatum"
+
+msgid "Subtotal amount"
+msgstr "Subtotaalbedrag"
+
+msgid "Tax rate (%)"
+msgstr "Btw-tarief (%)"
+
+msgid "Tax amount"
+msgstr "Btw-bedrag"
+
+msgid "Total amount"
+msgstr "Totaalbedrag"
+
+msgid "Currency code (EUR, USD, etc)"
+msgstr "Valutacode (EUR, USD, etc)"
+
+msgid "Invoice notes"
+msgstr "Factuurnotities"
+
+msgid "Terms & conditions"
+msgstr "Algemene voorwaarden"
+
+msgid "Client Fields"
+msgstr "Klantvelden"
+
+msgid "Client company name"
+msgstr "Klantbedrijfsnaam"
+
+msgid "Client email address"
+msgstr "Klant-e-mailadres"
+
+msgid "Client full address"
+msgstr "Volledig klantadres"
+
+msgid "Client contact person"
+msgstr "Klantcontactpersoon"
+
+msgid "Client phone number"
+msgstr "Klanttelefoonnummer"
+
+msgid "Payment Fields"
+msgstr "Betalingsvelden"
+
+msgid "Payment status"
+msgstr "Betalingsstatus"
+
+msgid "Payment date"
+msgstr "Betalingsdatum"
+
+msgid "Payment method"
+msgstr "Betalingsmethode"
+
+msgid "Payment reference number"
+msgstr "Betalingsreferentienummer"
+
+msgid "Amount paid"
+msgstr "Betaald bedrag"
+
+msgid "Outstanding amount"
+msgstr "Openstaand bedrag"
+
+msgid "Payment notes"
+msgstr "Betalingsnotities"
+
+msgid "Project Fields"
+msgstr "Projectvelden"
+
+msgid "Project name"
+msgstr "Projectnaam"
+
+msgid "Project code"
+msgstr "Projectcode"
+
+msgid "Project description"
+msgstr "Projectbeschrijving"
+
+msgid "Project billing reference"
+msgstr "Projectfactureringsreferentie"
+
+msgid "Company/Settings Fields"
+msgstr "Bedrijf/Instellingen velden"
+
+msgid "Your company name"
+msgstr "Uw bedrijfsnaam"
+
+msgid "Your company address"
+msgstr "Uw bedrijfsadres"
+
+msgid "Your company email"
+msgstr "Uw bedrijfse-mail"
+
+msgid "Your company phone"
+msgstr "Uw bedrijfstelefoon"
+
+msgid "Your company website"
+msgstr "Uw bedrijfswebsite"
+
+msgid "Your tax ID number"
+msgstr "Uw btw-nummer"
+
+msgid "Your bank account info"
+msgstr "Uw bankrekeninginformatie"
+
+msgid "Default invoice terms"
+msgstr "Standaard factuurvoorwaarden"
+
+msgid "Default invoice notes"
+msgstr "Standaard factuurnotities"
+
+msgid "Date/Time Fields"
+msgstr "Datum/tijdvelden"
+
+msgid "Current date"
+msgstr "Huidige datum"
+
+msgid "Invoice creation date"
+msgstr "Factuuraanmaakdatum"
+
+msgid "Invoice last update date"
+msgstr "Factuur laatste updatedatum"
+
+msgid "Invoice Items Loop"
+msgstr "Factuuritems lus"
+
+msgid "Loop through invoice items"
+msgstr "Loop door factuuritems"
+
+msgid "Item description"
+msgstr "Itembeschrijving"
+
+msgid "Item quantity"
+msgstr "Itemhoeveelheid"
+
+msgid "Item unit price"
+msgstr "Item eenheidsprijs"
+
+msgid "Item total amount"
+msgstr "Item totaalbedrag"
+
+msgid "End loop"
+msgstr "Einde lus"
+
+msgid "Design Canvas"
+msgstr "Ontwerpcanvas"
+
+msgid "Zoom In"
+msgstr "Inzoomen"
+
+msgid "Zoom Out"
+msgstr "Uitzoomen"
+
+msgid "Delete Selected"
+msgstr "Geselecteerde verwijderen"
+
+msgid "Properties"
+msgstr "Eigenschappen"
+
+msgid "Select an element to edit its properties"
+msgstr "Selecteer een element om de eigenschappen te bewerken"
+
+msgid "Generating..."
+msgstr "Genereren..."
+
+msgid "Generated Code"
+msgstr "Gegenereerde code"
+
+msgid "Clear all elements?"
+msgstr "Alle elementen wissen?"
+
+msgid "Reset to defaults?"
+msgstr "Resetten naar standaardwaarden?"
+
+msgid "Reset PDF Layout"
+msgstr "PDF-lay-out resetten"
+
+msgid "Danger Operation"
+msgstr "Gevaarlijke bewerking"
+
+msgid "Upload Backup Archive (.zip)"
+msgstr "Back-uparchief uploaden (.zip)"
+
+msgid ""
+"Restoring a backup will overwrite your current database and files. Ensure "
+"you have a recent backup before proceeding."
+msgstr ""
+"Het herstellen van een back-up overschrijft uw huidige database en bestanden. "
+"Zorg ervoor dat u een recente back-up heeft voordat u doorgaat."
+
+msgid "Status:"
+msgstr "Status:"
+
+msgid "Backup Archive (.zip)"
+msgstr "Back-uparchief (.zip)"
+
+msgid "Select a .zip archive previously created via the Backup action."
+msgstr "Selecteer een .zip-archief dat eerder is aangemaakt via de Back-up actie."
+
+msgid "Restore"
+msgstr "Herstellen"
+
+msgid "Safety Tips"
+msgstr "Veiligheidstips"
+
+msgid "Verify the backup archive integrity before restoring."
+msgstr "Verifieer de integriteit van het back-uparchief voordat u herstelt."
+
+msgid "Ensure no active writes are occurring during restore."
+msgstr "Zorg ervoor dat er geen actieve schrijfacties plaatsvinden tijdens het herstellen."
+
+msgid "Keep a copy of the current data in case you need to roll back."
+msgstr "Bewaar een kopie van de huidige gegevens voor het geval u moet terugdraaien."
+
+msgid "After restore, review settings and re-run migrations if required."
+msgstr "Na herstel, bekijk instellingen en voer migraties opnieuw uit indien nodig."
+
+msgid "Add Cost"
+msgstr "Kosten toevoegen"
+
+msgid "Add Cost to Project"
+msgstr "Kosten toevoegen aan project"
+
+msgid "e.g., Travel expenses to client site"
+msgstr "bijv. Reiskosten naar klantlocatie"
+
+msgid "Brief description of the cost"
+msgstr "Korte beschrijving van de kosten"
+
+msgid "Select category"
+msgstr "Selecteer categorie"
+
+msgid "Materials"
+msgstr "Materialen"
+
+msgid "Software/Licenses"
+msgstr "Software/Licenties"
+
+msgid "Additional details about this cost"
+msgstr "Aanvullende details over deze kosten"
+
+msgid "Billable to client"
+msgstr "Factureerbaar aan klant"
+
+msgid "If checked, this cost will be included in invoices"
+msgstr "Indien aangevinkt, worden deze kosten opgenomen in facturen"
+
+msgid "Edit Cost"
+msgstr "Kosten bewerken"
+
+msgid "This cost has been invoiced. Changes may affect existing invoices."
+msgstr "Deze kosten zijn gefactureerd. Wijzigingen kunnen bestaande facturen beïnvloeden."
+
+msgid "Update Cost"
+msgstr "Kosten bijwerken"
+
+msgid "Single Entry"
+msgstr "Enkele invoer"
+
+msgid "Create multiple time entries for consecutive days"
+msgstr "Maak meerdere tijdregistraties aan voor opeenvolgende dagen"
+
+msgid "Bulk Entry Form"
+msgstr "Bulk invoerformulier"
+
+msgid "Select the project to log time for"
+msgstr "Selecteer het project om tijd voor te registreren"
+
+msgid "Tasks load after selecting a project"
+msgstr "Taken worden geladen na het selecteren van een project"
+
+msgid "Date Range"
+msgstr "Datumbereik"
+
+msgid "Skip weekends (Saturday & Sunday)"
+msgstr "Weekends overslaan (zaterdag en zondag)"
+
+msgid "Entries will be created for these dates"
+msgstr "Registraties worden aangemaakt voor deze datums"
+
+msgid "Same start time for all days"
+msgstr "Zelfde starttijd voor alle dagen"
+
+msgid "Same end time for all days"
+msgstr "Zelfde eindtijd voor alle dagen"
+
+msgid "What did you work on? (same notes for all entries)"
+msgstr "Waar heeft u aan gewerkt? (zelfde notities voor alle registraties)"
+
+msgid "tag1, tag2, tag3"
+msgstr "tag1, tag2, tag3"
+
+msgid "Separate tags with commas (same for all entries)"
+msgstr "Scheid tags met komma's (zelfde voor alle registraties)"
+
+msgid "Include in invoices"
+msgstr "Opnemen in facturen"
+
+msgid "Create Entries"
+msgstr "Registraties aanmaken"
+
+msgid "Bulk Entry Tips"
+msgstr "Bulk invoertips"
+
+msgid ""
+"Select start and end dates. Entries will be created for each day in the "
+"range."
+msgstr ""
+"Selecteer start- en einddatums. Registraties worden aangemaakt voor elke dag "
+"in het bereik."
+
+msgid "Skip Weekends"
+msgstr "Weekends overslaan"
+
+msgid "Enable to automatically skip Saturdays and Sundays from the date range."
+msgstr "Schakel in om automatisch zaterdagen en zondagen over te slaan uit het datumbereik."
+
+msgid "Same Time Daily"
+msgstr "Zelfde tijd dagelijks"
+
+msgid "All entries will use the same start and end time each day."
+msgstr "Alle registraties gebruiken dezelfde start- en eindtijd elke dag."
+
+msgid "Conflict Check"
+msgstr "Conflictcontrole"
+
+msgid "System will check for existing time entries and prevent overlaps."
+msgstr "Systeem controleert op bestaande tijdregistraties en voorkomt overlappingen."
+
+msgid "No task"
+msgstr "Geen taak"
+
+msgid "Total days"
+msgstr "Totaal dagen"
+
+msgid "Weekdays only"
+msgstr "Alleen weekdagen"
+
+msgid "Total hours"
+msgstr "Totaal uren"
+
+msgid "Entries will be created for"
+msgstr "Registraties worden aangemaakt voor"
+
+msgid "Agenda"
+msgstr "Agenda"
+
+msgid "iCal Format"
+msgstr "iCal-formaat"
+
+msgid "CSV Format"
+msgstr "CSV-formaat"
+
+msgid "All Tasks"
+msgstr "Alle taken"
+
+msgid "Filter by tags..."
+msgstr "Filteren op tags..."
+
+msgid "Show billable entries only"
+msgstr "Toon alleen factureerbare registraties"
+
+msgid "Billable Only"
+msgstr "Alleen factureerbaar"
+
+msgid "Assign to project for new events..."
+msgstr "Toewijzen aan project voor nieuwe gebeurtenissen..."
+
+msgid "Total Hours:"
+msgstr "Totaal uren:"
+
+msgid "Colors assigned by project"
+msgstr "Kleuren toegewezen per project"
+
+msgid "Create Time Entry"
+msgstr "Tijdregistratie aanmaken"
+
+msgid "Select a project..."
+msgstr "Selecteer een project..."
+
+msgid "Comma-separated tags"
+msgstr "Door komma's gescheiden tags"
+
+msgid "Create"
+msgstr "Aanmaken"
+
+msgid "Time Entry Details"
+msgstr "Tijdregistratiedetails"
+
+msgid "Duplicate"
+msgstr "Dupliceren"
+
+msgid "Recurring Time Blocks"
+msgstr "Terugkerende tijdblokken"
+
+msgid "Manage your recurring time entry templates."
+msgstr "Beheer uw terugkerende tijdregistratiesjablonen."
+
+msgid "New Recurring Block"
+msgstr "Nieuw terugkerend blok"
+
+msgid "Jump to Today"
+msgstr "Spring naar vandaag"
+
+msgid "Next Week/Month"
+msgstr "Volgende week/maand"
+
+msgid "Previous Week/Month"
+msgstr "Vorige week/maand"
+
+msgid "Navigate Days"
+msgstr "Navigeer dagen"
+
+msgid "Views"
+msgstr "Weergaven"
+
+msgid "Day View"
+msgstr "Dagweergave"
+
+msgid "Week View"
+msgstr "Weekweergave"
+
+msgid "Month View"
+msgstr "Maandweergave"
+
+msgid "Agenda View"
+msgstr "Agendaweergave"
+
+msgid "Create New Entry"
+msgstr "Nieuwe registratie aanmaken"
+
+msgid "Focus Filter"
+msgstr "Focusfilter"
+
+msgid "Clear All Filters"
+msgstr "Alle filters wissen"
+
+msgid "Close Modal"
+msgstr "Modal sluiten"
+
+msgid "Show This Help"
+msgstr "Toon deze help"
+
+msgid "Got it!"
+msgstr "Begrepen!"
+
+msgid "Failed to load events"
+msgstr "Kon gebeurtenissen niet laden"
+
+msgid "Please select a project for new entries"
+msgstr "Selecteer een project voor nieuwe registraties"
+
+msgid "Please select a project first"
+msgstr "Selecteer eerst een project"
+
+msgid "Showing billable entries only"
+msgstr "Toont alleen factureerbare registraties"
+
+msgid "Entry created successfully"
+msgstr "Registratie succesvol aangemaakt"
+
+msgid "Failed to create entry"
+msgstr "Kon registratie niet aanmaken"
+
+msgid "Entry updated"
+msgstr "Registratie bijgewerkt"
+
+msgid "Failed to update entry"
+msgstr "Kon registratie niet bijwerken"
+
+msgid "Source"
+msgstr "Bron"
+
+msgid "Automatic Timer"
+msgstr "Automatische timer"
+
+msgid "Are you sure you want to delete this entry?"
+msgstr "Weet u zeker dat u deze registratie wilt verwijderen?"
+
+msgid "Entry deleted"
+msgstr "Registratie verwijderd"
+
+msgid "Failed to delete entry"
+msgstr "Kon registratie niet verwijderen"
+
+msgid "Export started"
+msgstr "Export gestart"
+
+msgid "No recurring blocks yet"
+msgstr "Nog geen terugkerende blokken"
+
+msgid "Unknown Project"
+msgstr "Onbekend project"
+
+msgid "Failed to load recurring blocks"
+msgstr "Kon terugkerende blokken niet laden"
+
+msgid "No events in this period"
+msgstr "Geen gebeurtenissen in deze periode"
+
+msgid "Failed to load agenda view"
+msgstr "Kon agendaweergave niet laden"
+
+msgid "Failed to load event details"
+msgstr "Kon gebeurtenisdetails niet laden"
+
+msgid "Are you sure you want to delete this recurring block?"
+msgstr "Weet u zeker dat u dit terugkerende blok wilt verwijderen?"
+
+msgid "Delete Recurring Block"
+msgstr "Terugkerend blok verwijderen"
+
+msgid "Recurring block deleted"
+msgstr "Terugkerend blok verwijderd"
+
+msgid "Failed to delete recurring block"
+msgstr "Kon terugkerend blok niet verwijderen"
+
+msgid "Enter new start time (YYYY-MM-DD HH:MM):"
+msgstr "Voer nieuwe starttijd in (JJJJ-MM-DD UU:MM):"
+
+msgid "Entry duplicated successfully"
+msgstr "Registratie succesvol gedupliceerd"
+
+msgid "Failed to duplicate entry"
+msgstr "Kon registratie niet dupliceren"
+
+msgid "Jumped to today"
+msgstr "Gesprongen naar vandaag"
+
+msgid "💡 Press ? to see keyboard shortcuts"
+msgstr "💡 Druk op ? om sneltoetsen te zien"
+
+msgid "Edit Time Entry"
+msgstr "Tijdregistratie bewerken"
+
+msgid "These updates will modify this time entry permanently."
+msgstr "Deze updates wijzigen deze tijdregistratie permanent."
+
+msgid "Confirm Changes"
+msgstr "Wijzigingen bevestigen"
+
+msgid "Confirm & Save"
+msgstr "Bevestigen en opslaan"
+
+msgid "Admin Mode"
+msgstr "Beheerdersmodus"
+
+msgid "Admin Mode:"
+msgstr "Beheerdersmodus:"
+
+msgid ""
+"You can edit all fields of this time entry, including project, task, "
+"start/end times, and source."
+msgstr ""
+"U kunt alle velden van deze tijdregistratie bewerken, inclusief project, "
+"taak, start/eindtijden en bron."
+
+msgid "Select the project this time entry belongs to"
+msgstr "Selecteer het project waar deze tijdregistratie bij hoort"
+
+msgid "Task (Optional)"
+msgstr "Taak (optioneel)"
+
+msgid "Select a specific task within the project"
+msgstr "Selecteer een specifieke taak binnen het project"
+
+msgid "When the work started"
+msgstr "Wanneer het werk is gestart"
+
+msgid "Time the work started"
+msgstr "Tijd waarop het werk is gestart"
+
+msgid "When the work ended (leave empty if still running)"
+msgstr "Wanneer het werk is beëindigd (laat leeg als nog actief)"
+
+msgid "Time the work ended"
+msgstr "Tijd waarop het werk is beëindigd"
+
+msgid "Manual"
+msgstr "Handmatig"
+
+msgid "Automatic"
+msgstr "Automatisch"
+
+msgid "How this entry was created"
+msgstr "Hoe deze registratie is aangemaakt"
+
+msgid "Describe what you worked on"
+msgstr "Beschrijf waar u aan heeft gewerkt"
+
+msgid "Separate tags with commas"
+msgstr "Scheid tags met komma's"
+
+msgid "Project:"
+msgstr "Project:"
+
+msgid "Task:"
+msgstr "Taak:"
+
+msgid "Start:"
+msgstr "Start:"
+
+msgid "End:"
+msgstr "Einde:"
+
+msgid "Running"
+msgstr "Actief"
+
+msgid "Entry Details"
+msgstr "Registratiedetails"
+
+msgid "Entry ID"
+msgstr "Registratie-ID"
+
+msgid "Admin Notice"
+msgstr "Beheerdersbericht"
+
+msgid ""
+"As an admin, you have full editing privileges for this time entry. Changes "
+"will be logged for audit purposes."
+msgstr ""
+"Als beheerder heeft u volledige bewerkingsrechten voor deze tijdregistratie. "
+"Wijzigingen worden gelogd voor auditdoeleinden."
+
+msgid "{editor}: Editing failed"
+msgstr "{editor}: Bewerken mislukt"
+
+msgid "{editor}: Editing failed: {e}"
+msgstr "{editor}: Bewerken mislukt: {e}"
+
+msgid "{text} {deprecated_message}"
+msgstr "{text} {deprecated_message}"
+
+msgid "Options"
+msgstr "Opties"
+
+msgid "Got unexpected extra argument ({args})"
+msgid_plural "Got unexpected extra arguments ({args})"
+msgstr[0] "Onverwacht extra argument ontvangen ({args})"
+msgstr[1] "Onverwachte extra argumenten ontvangen ({args})"
+
+msgid "DeprecationWarning: The command {name!r} is deprecated.{extra_message}"
+msgstr "DeprecationWarning: Het commando {name!r} is verouderd.{extra_message}"
+
+msgid "Aborted!"
+msgstr "Afgebroken!"
+
+msgid "Commands"
+msgstr "Commando's"
+
+msgid "Missing command."
+msgstr "Commando ontbreekt."
+
+msgid "No such command {name!r}."
+msgstr "Geen dergelijk commando {name!r}."
+
+msgid "Value must be an iterable."
+msgstr "Waarde moet iterable zijn."
+
+msgid "Takes {nargs} values but 1 was given."
+msgid_plural "Takes {nargs} values but {len} were given."
+msgstr[0] "Vereist {nargs} waarden maar 1 werd gegeven."
+msgstr[1] "Vereist {nargs} waarden maar {len} werden gegeven."
+
+msgid "DeprecationWarning: The {param_type} {name!r} is deprecated.{extra_message}"
+msgstr "DeprecationWarning: De {param_type} {name!r} is verouderd.{extra_message}"
+
+msgid "env var: {var}"
+msgstr "omgevingsvariabele: {var}"
+
+msgid "default: {default}"
+msgstr "standaard: {default}"
+
+msgid "required"
+msgstr "vereist"
+
+msgid "(dynamic)"
+msgstr "(dynamisch)"
+
+#, python-format
+msgid "%(prog)s, version %(version)s"
+msgstr "%(prog)s, versie %(version)s"
+
+msgid "Show the version and exit."
+msgstr "Toon de versie en sluit af."
+
+msgid "Show this message and exit."
+msgstr "Toon dit bericht en sluit af."
+
+msgid "Error: {message}"
+msgstr "Fout: {message}"
+
+msgid "Try '{command} {option}' for help."
+msgstr "Probeer '{command} {option}' voor help."
+
+msgid "Invalid value: {message}"
+msgstr "Ongeldige waarde: {message}"
+
+msgid "Invalid value for {param_hint}: {message}"
+msgstr "Ongeldige waarde voor {param_hint}: {message}"
+
+msgid "Missing argument"
+msgstr "Argument ontbreekt"
+
+msgid "Missing option"
+msgstr "Optie ontbreekt"
+
+msgid "Missing parameter"
+msgstr "Parameter ontbreekt"
+
+msgid "Missing {param_type}"
+msgstr "{param_type} ontbreekt"
+
+msgid "Missing parameter: {param_name}"
+msgstr "Parameter ontbreekt: {param_name}"
+
+msgid "No such option: {name}"
+msgstr "Geen dergelijke optie: {name}"
+
+msgid "Did you mean {possibility}?"
+msgid_plural "(Possible options: {possibilities})"
+msgstr[0] "Bedoelde u {possibility}?"
+msgstr[1] "(Mogelijke opties: {possibilities})"
+
+msgid "unknown error"
+msgstr "onbekende fout"
+
+msgid "Could not open file {filename!r}: {message}"
+msgstr "Kon bestand {filename!r} niet openen: {message}"
+
+msgid "Usage:"
+msgstr "Gebruik:"
+
+msgid "Argument {name!r} takes {nargs} values."
+msgstr "Argument {name!r} vereist {nargs} waarden."
+
+msgid "Option {name!r} does not take a value."
+msgstr "Optie {name!r} neemt geen waarde."
+
+msgid "Option {name!r} requires an argument."
+msgid_plural "Option {name!r} requires {nargs} arguments."
+msgstr[0] "Optie {name!r} vereist een argument."
+msgstr[1] "Optie {name!r} vereist {nargs} argumenten."
+
+msgid "Shell completion is not supported for Bash versions older than 4.4."
+msgstr "Shell-completion wordt niet ondersteund voor Bash-versies ouder dan 4.4."
+
+msgid "Couldn't detect Bash version, shell completion is not supported."
+msgstr "Kon Bash-versie niet detecteren, shell-completion wordt niet ondersteund."
+
+msgid "Repeat for confirmation"
+msgstr "Herhaal ter bevestiging"
+
+msgid "Error: The value you entered was invalid."
+msgstr "Fout: De waarde die u heeft ingevoerd was ongeldig."
+
+msgid "Error: {e.message}"
+msgstr "Fout: {e.message}"
+
+msgid "Error: The two entered values do not match."
+msgstr "Fout: De twee ingevoerde waarden komen niet overeen."
+
+msgid "Error: invalid input"
+msgstr "Fout: ongeldige invoer"
+
+msgid "Press any key to continue..."
+msgstr "Druk op een toets om door te gaan..."
+
+msgid ""
+"Choose from:\n"
+"\t{choices}"
+msgstr ""
+"Kies uit:\n"
+"\t{choices}"
+
+msgid "{value!r} is not {choice}."
+msgid_plural "{value!r} is not one of {choices}."
+msgstr[0] "{value!r} is niet {choice}."
+msgstr[1] "{value!r} is niet een van {choices}."
+
+msgid "{value!r} does not match the format {format}."
+msgid_plural "{value!r} does not match the formats {formats}."
+msgstr[0] "{value!r} komt niet overeen met het formaat {format}."
+msgstr[1] "{value!r} komt niet overeen met de formaten {formats}."
+
+msgid "{value!r} is not a valid {number_type}."
+msgstr "{value!r} is geen geldig {number_type}."
+
+msgid "{value} is not in the range {range}."
+msgstr "{value} valt niet binnen het bereik {range}."
+
+msgid "{value!r} is not a valid boolean. Recognized values: {states}"
+msgstr "{value!r} is geen geldige boolean. Erkende waarden: {states}"
+
+msgid "{value!r} is not a valid UUID."
+msgstr "{value!r} is geen geldige UUID."
+
+msgid "file"
+msgstr "bestand"
+
+msgid "directory"
+msgstr "map"
+
+msgid "path"
+msgstr "pad"
+
+msgid "{name} {filename!r} does not exist."
+msgstr "{name} {filename!r} bestaat niet."
+
+msgid "{name} {filename!r} is a file."
+msgstr "{name} {filename!r} is een bestand."
+
+msgid "{name} {filename!r} is a directory."
+msgstr "{name} {filename!r} is een map."
+
+msgid "{name} {filename!r} is not readable."
+msgstr "{name} {filename!r} is niet leesbaar."
+
+msgid "{name} {filename!r} is not writable."
+msgstr "{name} {filename!r} is niet beschrijfbaar."
+
+msgid "{name} {filename!r} is not executable."
+msgstr "{name} {filename!r} is niet uitvoerbaar."
+
+msgid "{len_type} values are required, but {len_value} was given."
+msgid_plural "{len_type} values are required, but {len_value} were given."
+msgstr[0] "{len_type} waarden zijn vereist, maar {len_value} werd gegeven."
+msgstr[1] "{len_type} waarden zijn vereist, maar {len_value} werden gegeven."
+
+msgid "This field is required."
+msgstr "Dit veld is vereist."
+
+msgid "File does not have an approved extension: {extensions}"
+msgstr "Bestand heeft geen goedgekeurde extensie: {extensions}"
+
+msgid "File does not have an approved extension."
+msgstr "Bestand heeft geen goedgekeurde extensie."
+
+msgid "File must be between {min_size} and {max_size} bytes."
+msgstr "Bestand moet tussen {min_size} en {max_size} bytes zijn."
+
+msgid "show this help message and exit"
+msgstr "toon dit helpbericht en sluit af"
+
+#, python-format
+msgid "%(prog)s: error: %(message)s\n"
+msgstr "%(prog)s: fout: %(message)s\n"
+
+msgid "Arguments"
+msgstr "Argumenten"
+
+msgid "(deprecated) "
+msgstr "(verouderd) "
+
+msgid "[default: {}]"
+msgstr "[standaard: {}]"
+
+msgid "[env var: {}]"
+msgstr "[omgevingsvariabele: {}]"
+
+msgid "[required]"
+msgstr "[vereist]"
+
+msgid "Aborted."
+msgstr "Afgebroken."
+
+msgid "Try [blue]'{command_path} {help_option}'[/] for help."
+msgstr "Probeer [blue]'{command_path} {help_option}'[/] voor help."
+
+#, python-format
+msgid "Invalid field name '%s'."
+msgstr "Ongeldige veldnaam '%s'."
+
+#, python-format
+msgid "Field must be equal to %(other_name)s."
+msgstr "Veld moet gelijk zijn aan %(other_name)s."
+
+#, python-format
+msgid "Field must be at least %(min)d character long."
+msgid_plural "Field must be at least %(min)d characters long."
+msgstr[0] "Veld moet minimaal %(min)d teken lang zijn."
+msgstr[1] "Veld moet minimaal %(min)d tekens lang zijn."
+
+#, python-format
+msgid "Field cannot be longer than %(max)d character."
+msgid_plural "Field cannot be longer than %(max)d characters."
+msgstr[0] "Veld mag niet langer zijn dan %(max)d teken."
+msgstr[1] "Veld mag niet langer zijn dan %(max)d tekens."
+
+#, python-format
+msgid "Field must be exactly %(max)d character long."
+msgid_plural "Field must be exactly %(max)d characters long."
+msgstr[0] "Veld moet precies %(max)d teken lang zijn."
+msgstr[1] "Veld moet precies %(max)d tekens lang zijn."
+
+#, python-format
+msgid "Field must be between %(min)d and %(max)d characters long."
+msgstr "Veld moet tussen %(min)d en %(max)d tekens lang zijn."
+
+#, python-format
+msgid "Number must be at least %(min)s."
+msgstr "Nummer moet minimaal %(min)s zijn."
+
+#, python-format
+msgid "Number must be at most %(max)s."
+msgstr "Nummer mag maximaal %(max)s zijn."
+
+#, python-format
+msgid "Number must be between %(min)s and %(max)s."
+msgstr "Nummer moet tussen %(min)s en %(max)s liggen."
+
+msgid "Invalid input."
+msgstr "Ongeldige invoer."
+
+msgid "Invalid email address."
+msgstr "Ongeldig e-mailadres."
+
+msgid "Invalid IP address."
+msgstr "Ongeldig IP-adres."
+
+msgid "Invalid Mac address."
+msgstr "Ongeldig Mac-adres."
+
+msgid "Invalid URL."
+msgstr "Ongeldige URL."
+
+msgid "Invalid UUID."
+msgstr "Ongeldige UUID."
+
+#, python-format
+msgid "Invalid value, must be one of: %(values)s."
+msgstr "Ongeldige waarde, moet een van zijn: %(values)s."
+
+#, python-format
+msgid "Invalid value, can't be any of: %(values)s."
+msgstr "Ongeldige waarde, kan geen van zijn: %(values)s."
+
+msgid "This field cannot be edited."
+msgstr "Dit veld kan niet worden bewerkt."
+
+msgid "This field is disabled and cannot have a value."
+msgstr "Dit veld is uitgeschakeld en kan geen waarde hebben."
+
+msgid "Invalid CSRF Token."
+msgstr "Ongeldig CSRF-token."
+
+msgid "CSRF token missing."
+msgstr "CSRF-token ontbreekt."
+
+msgid "CSRF failed."
+msgstr "CSRF mislukt."
+
+msgid "CSRF token expired."
+msgstr "CSRF-token verlopen."
+
+msgid "Invalid Choice: could not coerce."
+msgstr "Ongeldige keuze: kon niet converteren."
+
+msgid "Choices cannot be None."
+msgstr "Keuzes kunnen niet None zijn."
+
+msgid "Not a valid choice."
+msgstr "Geen geldige keuze."
+
+msgid "Invalid choice(s): one or more data inputs could not be coerced."
+msgstr "Ongeldige keuze(s): een of meer gegevensinvoeren konden niet worden geconverteerd."
+
+#, python-format
+msgid "'%(value)s' is not a valid choice for this field."
+msgid_plural "'%(value)s' are not valid choices for this field."
+msgstr[0] "'%(value)s' is geen geldige keuze voor dit veld."
+msgstr[1] "'%(value)s' zijn geen geldige keuzes voor dit veld."
+
+msgid "Not a valid datetime value."
+msgstr "Geen geldige datum/tijdwaarde."
+
+msgid "Not a valid date value."
+msgstr "Geen geldige datumwaarde."
+
+msgid "Not a valid time value."
+msgstr "Geen geldige tijdwaarde."
+
+msgid "Not a valid week value."
+msgstr "Geen geldige weekwaarde."
+
+msgid "Not a valid integer value."
+msgstr "Geen geldige integerwaarde."
+
+msgid "Not a valid decimal value."
+msgstr "Geen geldige decimaalwaarde."
+
+msgid "Not a valid float value."
+msgstr "Geen geldige floatwaarde."
+

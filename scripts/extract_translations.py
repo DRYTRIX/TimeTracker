@@ -4,6 +4,9 @@ import subprocess
 
 def run(cmd: list[str]) -> int:
     print("$", " ".join(cmd))
+    # Use python -m babel instead of pybabel directly
+    if cmd[0] == 'pybabel':
+        cmd = ['python', '-m', 'babel.messages.frontend'] + cmd[1:]
     return subprocess.call(cmd)
 
 

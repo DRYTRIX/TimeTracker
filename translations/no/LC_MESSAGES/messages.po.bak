@@ -6,8 +6,8 @@ msgstr ""
 "POT-Creation-Date: 2025-10-31 10:32+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: nb\n"
-"Language-Team: nb <LL@li.org>\n"
+"Language: no\n"
+"Language-Team: no <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -43,6 +43,12 @@ msgstr "PDF layout reset to defaults"
 #, fuzzy
 msgid "Username is required"
 msgstr "This field is required"
+
+#: app/routes/auth.py:83
+msgid ""
+msgstr ""
+"Could not create your account due to a database error. Please try again "
+"later."
 
 #: app/routes/auth.py:94 app/routes/auth.py:502
 msgid "Welcome! Your account has been created."
@@ -114,6 +120,12 @@ msgstr "Single Sign-On is not configured yet. Please contact an administrator."
 #: app/routes/auth.py:355
 msgid "Single Sign-On is not configured."
 msgstr "Single Sign-On is not configured."
+
+#: app/routes/auth.py:458
+msgid ""
+msgstr ""
+"Authentication failed: missing issuer or subject claim. Please check OIDC"
+" configuration."
 
 #: app/routes/auth.py:482
 msgid "User account does not exist and self-registration is disabled."
@@ -388,7 +400,8 @@ msgid "Cannot edit approved or reimbursed expenses"
 msgstr "Cannot edit approved or reimbursed expenses"
 
 #: app/routes/expenses.py:406 app/routes/expenses.py:1081
-#: app/routes/mileage.py:157 app/routes/per_diem.py:128 app/routes/per_diem.py:446
+#: app/routes/mileage.py:157 app/routes/per_diem.py:128
+#: app/routes/per_diem.py:446
 msgid "Please fill in all required fields"
 msgstr "Please fill in all required fields"
 
@@ -444,7 +457,8 @@ msgstr "Only administrators can reject expenses"
 msgid "Only pending expenses can be rejected"
 msgstr "Only pending expenses can be rejected"
 
-#: app/routes/expenses.py:587 app/routes/mileage.py:375 app/routes/per_diem.py:396
+#: app/routes/expenses.py:587 app/routes/mileage.py:375
+#: app/routes/per_diem.py:396
 #, fuzzy
 msgid "Rejection reason is required"
 msgstr "This field is required"
@@ -494,6 +508,12 @@ msgstr "No items selected"
 #: app/routes/expenses.py:981
 msgid "Invalid file type. Allowed types: png, jpg, jpeg, gif, pdf"
 msgstr "Invalid file type. Allowed types: png, jpg, jpeg, gif, pdf"
+
+#: app/routes/expenses.py:1029
+msgid ""
+msgstr ""
+"Receipt scanned successfully! You can now create an expense with the "
+"extracted data."
 
 #: app/routes/expenses.py:1034
 msgid "Error scanning receipt. Please try again or enter the expense manually."
@@ -853,6 +873,12 @@ msgstr "Invalid quantity format"
 msgid "Invalid unit price format"
 msgstr "Invalid unit price format"
 
+#: app/routes/projects.py:1460
+msgid ""
+msgstr ""
+"Could not add extra good due to a database error. Please check server "
+"logs."
+
 #: app/routes/projects.py:1463
 #, fuzzy
 msgid "Extra good added successfully"
@@ -865,6 +891,12 @@ msgstr "Extra good not found"
 #: app/routes/projects.py:1483
 msgid "You do not have permission to edit this extra good"
 msgstr "You do not have permission to edit this extra good"
+
+#: app/routes/projects.py:1531
+msgid ""
+msgstr ""
+"Could not update extra good due to a database error. Please check server "
+"logs."
 
 #: app/routes/projects.py:1534
 #, fuzzy
@@ -879,15 +911,33 @@ msgstr "You do not have permission to delete this extra good"
 msgid "Cannot delete extra good that has been added to an invoice"
 msgstr "Cannot delete extra good that has been added to an invoice"
 
+#: app/routes/projects.py:1565
+msgid ""
+msgstr ""
+"Could not delete extra good due to a database error. Please check server "
+"logs."
+
 #: app/routes/timer.py:54 app/routes/timer.py:233 app/routes/timer.py:586
 #: app/routes/timer.py:704
 #, fuzzy
 msgid "Invalid project selected"
 msgstr "All Projects"
 
+#: app/routes/timer.py:60 app/routes/timer.py:239
+msgid ""
+msgstr ""
+"Cannot start timer for an archived project. Please unarchive the project "
+"first."
+
 #: app/routes/timer.py:64 app/routes/timer.py:243
 msgid "Cannot start timer for an inactive project"
 msgstr "Cannot start timer for an inactive project"
+
+#: app/routes/timer.py:592 app/routes/timer.py:710
+msgid ""
+msgstr ""
+"Cannot create time entries for an archived project. Please unarchive the "
+"project first."
 
 #: app/routes/timer.py:596 app/routes/timer.py:714
 msgid "Cannot create time entries for an inactive project"
@@ -936,6 +986,12 @@ msgstr "Language updated to %(language)s"
 #: app/routes/weekly_goals.py:78 app/routes/weekly_goals.py:212
 msgid "Please enter a valid target hours (greater than 0)"
 msgstr "Please enter a valid target hours (greater than 0)"
+
+#: app/routes/weekly_goals.py:99
+msgid ""
+msgstr ""
+"A goal already exists for this week. Please edit the existing goal "
+"instead."
 
 #: app/routes/weekly_goals.py:113
 #, fuzzy
@@ -1005,7 +1061,8 @@ msgstr "Information"
 
 #: app/templates/analytics/dashboard.html:195
 #: app/templates/analytics/dashboard_improved.html:200
-#: app/templates/analytics/mobile_dashboard.html:148 app/templates/base.html:110
+#: app/templates/analytics/mobile_dashboard.html:148
+#: app/templates/base.html:110
 #: app/templates/components/activity_feed_widget.html:220
 #: app/templates/import_export/index.html:91
 #: app/templates/import_export/index.html:153 templates/timer/calendar.html:667
@@ -1023,8 +1080,10 @@ msgstr "Saving..."
 msgid "Deleting..."
 msgstr "Deleting..."
 
-#: app/templates/admin/api_tokens.html:348 app/templates/admin/api_tokens.html:381
-#: app/templates/admin/roles/form.html:99 app/templates/admin/roles/list.html:213
+#: app/templates/admin/api_tokens.html:348
+#: app/templates/admin/api_tokens.html:381
+#: app/templates/admin/roles/form.html:99
+#: app/templates/admin/roles/list.html:213
 #: app/templates/admin/settings.html:293 app/templates/admin/users.html:113
 #: app/templates/admin/users/roles.html:57 app/templates/base.html:113
 #: app/templates/calendar/event_detail.html:194
@@ -1036,16 +1095,17 @@ msgstr "Deleting..."
 #: app/templates/comments/_comments_section.html:44
 #: app/templates/comments/edit.html:79 app/templates/expenses/view.html:399
 #: app/templates/import_export/index.html:191
-#: app/templates/import_export/index.html:229 app/templates/invoices/edit.html:213
-#: app/templates/invoices/edit.html:469
+#: app/templates/import_export/index.html:229
+#: app/templates/invoices/edit.html:213 app/templates/invoices/edit.html:469
 #: app/templates/invoices/generate_from_time.html:105
 #: app/templates/invoices/list.html:90 app/templates/invoices/view.html:239
 #: app/templates/kanban/columns.html:149
 #: app/templates/kanban/create_column.html:70
 #: app/templates/kanban/edit_column.html:83
-#: app/templates/projects/add_good.html:68 app/templates/projects/archive.html:82
-#: app/templates/projects/create.html:92 app/templates/projects/create.html:414
-#: app/templates/projects/edit.html:83 app/templates/projects/edit_good.html:68
+#: app/templates/projects/add_good.html:68
+#: app/templates/projects/archive.html:82 app/templates/projects/create.html:92
+#: app/templates/projects/create.html:414 app/templates/projects/edit.html:83
+#: app/templates/projects/edit_good.html:68
 #: app/templates/settings/keyboard_shortcuts.html:465
 #: app/templates/tasks/create.html:116 app/templates/tasks/edit.html:140
 #: app/templates/tasks/list.html:505 app/templates/user/settings.html:301
@@ -1074,7 +1134,8 @@ msgstr "Close"
 msgid "Save"
 msgstr "Save"
 
-#: app/templates/admin/api_tokens.html:380 app/templates/admin/roles/list.html:147
+#: app/templates/admin/api_tokens.html:380
+#: app/templates/admin/roles/list.html:147
 #: app/templates/admin/roles/list.html:212 app/templates/admin/users.html:72
 #: app/templates/admin/users.html:112 app/templates/base.html:117
 #: app/templates/calendar/event_detail.html:26
@@ -1082,12 +1143,13 @@ msgstr "Save"
 #: app/templates/calendar/view.html:118 app/templates/clients/view.html:206
 #: app/templates/clients/view.html:273 app/templates/comments/_comment.html:35
 #: app/templates/expenses/view.html:398 app/templates/kanban/columns.html:90
-#: app/templates/projects/goods.html:81 app/templates/saved_filters/list.html:51
-#: app/templates/tasks/list.html:504
+#: app/templates/projects/goods.html:81
+#: app/templates/saved_filters/list.html:51 app/templates/tasks/list.html:504
 #: app/templates/time_entry_templates/list.html:44
-#: app/templates/weekly_goals/edit.html:93 app/templates/weekly_goals/edit.html:95
-#: templates/timer/calendar.html:222 templates/timer/calendar.html:848
-#: templates/timer/calendar.html:935 templates/timer/calendar.html:1062
+#: app/templates/weekly_goals/edit.html:93
+#: app/templates/weekly_goals/edit.html:95 templates/timer/calendar.html:222
+#: templates/timer/calendar.html:848 templates/timer/calendar.html:935
+#: templates/timer/calendar.html:1062
 msgid "Delete"
 msgstr "Delete"
 
@@ -1095,7 +1157,8 @@ msgstr "Delete"
 #: app/templates/base.html:118 app/templates/calendar/event_detail.html:22
 #: app/templates/calendar/view.html:115 app/templates/clients/view.html:198
 #: app/templates/comments/_comment.html:30 app/templates/kanban/columns.html:80
-#: app/templates/tasks/overdue.html:96 app/templates/weekly_goals/index.html:196
+#: app/templates/tasks/overdue.html:96
+#: app/templates/weekly_goals/index.html:196
 #: app/templates/weekly_goals/view.html:21 templates/timer/calendar.html:229
 #: templates/timer/calendar.html:932
 msgid "Edit"
@@ -1296,7 +1359,8 @@ msgstr "Import / Export"
 msgid "Saved Filters"
 msgstr "Toggle Filters"
 
-#: app/templates/admin/oidc_debug.html:8 app/templates/admin/oidc_debug.html:152
+#: app/templates/admin/oidc_debug.html:8
+#: app/templates/admin/oidc_debug.html:152
 #: app/templates/admin/oidc_user_detail.html:26
 #: app/templates/admin/permissions/list.html:6
 #: app/templates/admin/roles/list.html:6 app/templates/base.html:318
@@ -1374,12 +1438,8 @@ msgid "Support TimeTracker"
 msgstr "Support TimeTracker"
 
 #: app/templates/main/dashboard.html:252
-msgid ""
-"Enjoying TimeTracker? Consider buying me a coffee to support continued "
-"development!"
-msgstr ""
-"Liker du TimeTracker? Vurder å kjøpe meg en kaffe for å støtte videre "
-"utvikling!"
+msgid "Enjoying TimeTracker? Consider buying me a coffee to support continued development!"
+msgstr "Enjoying TimeTracker? Consider buying me a coffee to support continued development!"
 
 #: app/templates/base.html:577
 msgid "Made with"
@@ -1531,6 +1591,12 @@ msgstr "Back to Admin"
 msgid "Email Configuration"
 msgstr "Information"
 
+#: app/templates/admin/email_support.html:23
+msgid ""
+msgstr ""
+"Configure email settings here to save them in the database. Database "
+"settings take precedence over environment variables."
+
 #: app/templates/admin/email_support.html:31
 msgid "Enable Database Email Configuration"
 msgstr "Enable Database Email Configuration"
@@ -1558,8 +1624,8 @@ msgstr "Use SSL"
 #: app/templates/admin/email_support.html:61
 #: app/templates/admin/email_support.html:169
 #: app/templates/admin/oidc_debug.html:134
-#: app/templates/admin/oidc_user_detail.html:23 app/templates/auth/login.html:32
-#: app/templates/user/settings.html:23
+#: app/templates/admin/oidc_user_detail.html:23
+#: app/templates/auth/login.html:32 app/templates/user/settings.html:23
 msgid "Username"
 msgstr "Username"
 
@@ -1756,14 +1822,16 @@ msgstr "Information"
 #: app/templates/admin/oidc_user_detail.html:27
 #: app/templates/budget/dashboard.html:121
 #: app/templates/budget/project_detail.html:70
-#: app/templates/invoices/edit.html:236 app/templates/invoices/pdf_default.html:42
+#: app/templates/invoices/edit.html:236
+#: app/templates/invoices/pdf_default.html:42
 #: app/templates/kanban/columns.html:39 app/templates/main/help.html:187
 #: app/templates/projects/_kanban_tailwind.html:27
 #: app/templates/projects/goods.html:44 app/templates/projects/view.html:175
 #: app/templates/projects/view.html:232 app/templates/tasks/_kanban.html:1227
 #: app/templates/tasks/edit.html:92 app/templates/tasks/my_tasks.html:123
-#: app/templates/weekly_goals/edit.html:61 app/templates/weekly_goals/view.html:50
-#: app/utils/pdf_generator.py:213 templates/admin/pdf_layout.html:531
+#: app/templates/weekly_goals/edit.html:61
+#: app/templates/weekly_goals/view.html:50 app/utils/pdf_generator.py:213
+#: templates/admin/pdf_layout.html:531
 msgid "Status"
 msgstr "Status"
 
@@ -1785,8 +1853,10 @@ msgstr "Auth Method"
 msgid "Issuer"
 msgstr "Issuer"
 
-#: app/templates/admin/oidc_debug.html:44 app/templates/admin/oidc_debug.html:48
-#: app/templates/admin/oidc_debug.html:73 app/templates/admin/oidc_debug.html:74
+#: app/templates/admin/oidc_debug.html:44
+#: app/templates/admin/oidc_debug.html:48
+#: app/templates/admin/oidc_debug.html:73
+#: app/templates/admin/oidc_debug.html:74
 msgid "Not configured"
 msgstr "Not configured"
 
@@ -1817,12 +1887,14 @@ msgstr "Notes"
 msgid "Redirect URI"
 msgstr "Credit Card"
 
-#: app/templates/admin/oidc_debug.html:56 app/templates/admin/oidc_debug.html:75
+#: app/templates/admin/oidc_debug.html:56
+#: app/templates/admin/oidc_debug.html:75
 msgid "Auto-generated"
 msgstr "Auto-generated"
 
 # Toast and JavaScript UI strings
-#: app/templates/admin/oidc_debug.html:59 app/templates/admin/oidc_debug.html:109
+#: app/templates/admin/oidc_debug.html:59
+#: app/templates/admin/oidc_debug.html:109
 #, fuzzy
 msgid "Scopes"
 msgstr "Success"
@@ -1870,7 +1942,8 @@ msgstr "Provider Metadata"
 msgid "Error loading metadata:"
 msgstr "Error stopping timer"
 
-#: app/templates/admin/oidc_debug.html:89 app/templates/admin/oidc_debug.html:118
+#: app/templates/admin/oidc_debug.html:89
+#: app/templates/admin/oidc_debug.html:118
 msgid "Discovery endpoint:"
 msgstr "Discovery endpoint:"
 
@@ -1970,26 +2043,26 @@ msgstr "OIDC Subject"
 
 #: app/templates/admin/oidc_debug.html:140
 #: app/templates/admin/oidc_user_detail.html:87
-#: app/templates/admin/roles/list.html:96 app/templates/budget/dashboard.html:122
-#: app/templates/components/ui.html:381 app/templates/kanban/columns.html:42
-#: app/templates/main/dashboard.html:63 app/templates/main/search.html:39
-#: app/templates/projects/goods.html:45 app/templates/projects/view.html:235
-#: templates/timer/calendar.html:307
+#: app/templates/admin/roles/list.html:96
+#: app/templates/budget/dashboard.html:122 app/templates/components/ui.html:381
+#: app/templates/kanban/columns.html:42 app/templates/main/dashboard.html:63
+#: app/templates/main/search.html:39 app/templates/projects/goods.html:45
+#: app/templates/projects/view.html:235 templates/timer/calendar.html:307
 msgid "Actions"
 msgstr "Actions"
 
 #: app/templates/admin/oidc_debug.html:148
-#: app/templates/admin/oidc_user_detail.html:27 app/templates/clients/view.html:92
-#: app/templates/kanban/columns.html:61 app/templates/projects/view.html:88
-#: app/utils/i18n_helpers.py:62 app/utils/i18n_helpers.py:72
-#: app/utils/i18n_helpers.py:314 app/utils/i18n_helpers.py:323
-#: templates/timer/calendar.html:919
+#: app/templates/admin/oidc_user_detail.html:27
+#: app/templates/clients/view.html:92 app/templates/kanban/columns.html:61
+#: app/templates/projects/view.html:88 app/utils/i18n_helpers.py:62
+#: app/utils/i18n_helpers.py:72 app/utils/i18n_helpers.py:314
+#: app/utils/i18n_helpers.py:323 templates/timer/calendar.html:919
 msgid "Inactive"
 msgstr "Inactive"
 
 #: app/templates/admin/oidc_debug.html:152
-#: app/templates/admin/oidc_user_detail.html:26 app/templates/user/profile.html:23
-#: templates/timer/edit_timer.html:436
+#: app/templates/admin/oidc_user_detail.html:26
+#: app/templates/user/profile.html:23 templates/timer/edit_timer.html:436
 #, fuzzy
 msgid "User"
 msgstr "Username"
@@ -1999,8 +2072,8 @@ msgstr "Username"
 msgid "Never"
 msgstr "Never"
 
-#: app/templates/admin/oidc_debug.html:157 app/templates/budget/dashboard.html:172
-#: app/templates/projects/view.html:134
+#: app/templates/admin/oidc_debug.html:157
+#: app/templates/budget/dashboard.html:172 app/templates/projects/view.html:134
 #, fuzzy
 msgid "Details"
 msgstr "Meals"
@@ -2022,21 +2095,24 @@ msgstr "Configure OIDC using these environment variables:"
 msgid "Variable"
 msgstr "Partial"
 
-#: app/templates/admin/oidc_debug.html:179 app/templates/admin/roles/form.html:40
+#: app/templates/admin/oidc_debug.html:179
+#: app/templates/admin/roles/form.html:40
 #: app/templates/admin/roles/list.html:92
 #: app/templates/calendar/event_detail.html:66
-#: app/templates/calendar/event_form.html:30 app/templates/clients/create.html:34
-#: app/templates/clients/create.html:90 app/templates/clients/edit.html:33
-#: app/templates/invoices/edit.html:69 app/templates/invoices/edit.html:114
-#: app/templates/invoices/edit.html:126 app/templates/invoices/edit.html:174
-#: app/templates/invoices/edit.html:186 app/templates/invoices/edit.html:418
+#: app/templates/calendar/event_form.html:30
+#: app/templates/clients/create.html:34 app/templates/clients/create.html:90
+#: app/templates/clients/edit.html:33 app/templates/invoices/edit.html:69
+#: app/templates/invoices/edit.html:114 app/templates/invoices/edit.html:126
+#: app/templates/invoices/edit.html:174 app/templates/invoices/edit.html:186
+#: app/templates/invoices/edit.html:418
 #: app/templates/invoices/pdf_default.html:71 app/templates/main/help.html:186
-#: app/templates/projects/add_good.html:24 app/templates/projects/create.html:47
-#: app/templates/projects/create.html:390 app/templates/projects/edit.html:43
-#: app/templates/projects/edit_good.html:24 app/templates/tasks/_kanban.html:1253
-#: app/templates/tasks/create.html:34 app/templates/tasks/edit.html:55
-#: app/utils/pdf_generator.py:238 app/utils/pdf_generator_fallback.py:219
-#: templates/projects/add_cost.html:28 templates/projects/edit_cost.html:35
+#: app/templates/projects/add_good.html:24
+#: app/templates/projects/create.html:47 app/templates/projects/create.html:390
+#: app/templates/projects/edit.html:43 app/templates/projects/edit_good.html:24
+#: app/templates/tasks/_kanban.html:1253 app/templates/tasks/create.html:34
+#: app/templates/tasks/edit.html:55 app/utils/pdf_generator.py:238
+#: app/utils/pdf_generator_fallback.py:219 templates/projects/add_cost.html:28
+#: templates/projects/edit_cost.html:35
 #, fuzzy
 msgid "Description"
 msgstr "Duration"
@@ -2115,10 +2191,10 @@ msgstr "Profile"
 # Model Field Values - Status, Priority, Categories, etc.
 # Project statuses
 #: app/templates/admin/oidc_user_detail.html:27
-#: app/templates/admin/oidc_user_detail.html:71 app/templates/clients/view.html:91
-#: app/templates/kanban/columns.html:59 app/templates/kanban/edit_column.html:75
-#: app/templates/projects/view.html:87 app/templates/tasks/_kanban.html:98
-#: app/templates/weekly_goals/edit.html:66
+#: app/templates/admin/oidc_user_detail.html:71
+#: app/templates/clients/view.html:91 app/templates/kanban/columns.html:59
+#: app/templates/kanban/edit_column.html:75 app/templates/projects/view.html:87
+#: app/templates/tasks/_kanban.html:98 app/templates/weekly_goals/edit.html:66
 #: app/templates/weekly_goals/index.html:176
 #: app/templates/weekly_goals/view.html:64 app/utils/i18n_helpers.py:61
 #: app/utils/i18n_helpers.py:71 app/utils/i18n_helpers.py:261
@@ -2169,6 +2245,18 @@ msgstr "Authentication Method"
 msgid "Local"
 msgstr "total"
 
+#: app/templates/admin/oidc_user_detail.html:45
+msgid ""
+msgstr ""
+"This user was created or linked via OIDC. The issuer and subject are used"
+" to uniquely identify the user across login sessions."
+
+#: app/templates/admin/oidc_user_detail.html:49
+msgid ""
+msgstr ""
+"This user has no OIDC information. They may have been created manually or"
+" via self-registration without OIDC."
+
 #: app/templates/admin/oidc_user_detail.html:57
 msgid "Activity Statistics"
 msgstr "Activity Statistics"
@@ -2186,7 +2274,8 @@ msgid "None"
 msgstr "Done"
 
 # Timer and action messages
-#: app/templates/admin/oidc_user_detail.html:76 app/templates/user/profile.html:57
+#: app/templates/admin/oidc_user_detail.html:76
+#: app/templates/user/profile.html:57
 #, fuzzy
 msgid "Active Timer"
 msgstr "No active timer"
@@ -2237,10 +2326,21 @@ msgstr "Profile"
 msgid "No users found."
 msgstr "No timer found"
 
+#: app/templates/admin/users.html:93
+msgid ""
+msgstr ""
+"Cannot delete user \"{name}\" because they have {count} time entries. "
+"Users with existing time entries cannot be deleted."
+
 #: app/templates/admin/users.html:96
 #, fuzzy
 msgid "Cannot Delete User"
 msgstr "Delete Entry"
+
+#: app/templates/admin/users.html:108
+#, fuzzy
+msgid ""
+msgstr "Are you sure you want to delete this?"
 
 #: app/templates/admin/users.html:111
 #, fuzzy
@@ -2262,7 +2362,8 @@ msgid "Back to Roles"
 msgstr "Back to Roles"
 
 #: app/templates/admin/permissions/list.html:24
-#: app/templates/admin/roles/list.html:113 app/templates/admin/users/roles.html:44
+#: app/templates/admin/roles/list.html:113
+#: app/templates/admin/users/roles.html:44
 #, fuzzy
 msgid "permissions"
 msgstr "Version"
@@ -2275,7 +2376,15 @@ msgstr "No description available"
 msgid "About Permissions"
 msgstr "About Permissions"
 
-#: app/templates/admin/roles/form.html:17 app/templates/admin/roles/view.html:20
+#: app/templates/admin/permissions/list.html:55
+msgid ""
+msgstr ""
+"Permissions define what actions users can perform in the system. These "
+"permissions are assigned to roles, and roles are assigned to users. This "
+"provides a flexible and granular access control system."
+
+#: app/templates/admin/roles/form.html:17
+#: app/templates/admin/roles/view.html:20
 #, fuzzy
 msgid "Edit Role"
 msgstr "Edit entry"
@@ -2284,7 +2393,8 @@ msgstr "Edit entry"
 msgid "Create New Role"
 msgstr "Create New Role"
 
-#: app/templates/admin/roles/form.html:26 app/templates/admin/roles/list.html:91
+#: app/templates/admin/roles/form.html:26
+#: app/templates/admin/roles/list.html:91
 msgid "Role Name"
 msgstr "Role Name"
 
@@ -2296,7 +2406,8 @@ msgstr "A unique name for this role"
 msgid "Optional description of this role"
 msgstr "Optional description of this role"
 
-#: app/templates/admin/roles/form.html:52 app/templates/admin/roles/list.html:93
+#: app/templates/admin/roles/form.html:52
+#: app/templates/admin/roles/list.html:93
 #: app/templates/admin/roles/view.html:76
 #, fuzzy
 msgid "Permissions"
@@ -2315,7 +2426,8 @@ msgstr "Toggle Filters"
 msgid "Update Role"
 msgstr "Update Role"
 
-#: app/templates/admin/roles/form.html:95 app/templates/admin/roles/list.html:18
+#: app/templates/admin/roles/form.html:95
+#: app/templates/admin/roles/list.html:18
 msgid "Create Role"
 msgstr "Create Role"
 
@@ -2341,11 +2453,13 @@ msgstr "System Roles"
 msgid "Custom Roles"
 msgstr "Custom Roles"
 
-#: app/templates/admin/roles/list.html:74 app/templates/admin/roles/view.html:48
+#: app/templates/admin/roles/list.html:74
+#: app/templates/admin/roles/view.html:48
 msgid "Assigned Users"
 msgstr "Assigned Users"
 
-#: app/templates/admin/roles/list.html:95 app/templates/admin/roles/view.html:30
+#: app/templates/admin/roles/list.html:95
+#: app/templates/admin/roles/view.html:30
 #, fuzzy
 msgid "Type"
 msgstr "Stripe"
@@ -2369,8 +2483,9 @@ msgstr "Username"
 msgid "No users"
 msgstr "No notes"
 
-#: app/templates/admin/roles/list.html:132 app/templates/admin/users/roles.html:36
-#: app/templates/kanban/columns.html:41 app/templates/kanban/columns.html:73
+#: app/templates/admin/roles/list.html:132
+#: app/templates/admin/users/roles.html:36 app/templates/kanban/columns.html:41
+#: app/templates/kanban/columns.html:73
 msgid "System"
 msgstr "System"
 
@@ -2378,7 +2493,8 @@ msgstr "System"
 msgid "Custom"
 msgstr "Custom"
 
-#: app/templates/admin/roles/list.html:142 app/templates/admin/roles/view.html:65
+#: app/templates/admin/roles/list.html:142
+#: app/templates/admin/roles/view.html:65
 #: app/templates/budget/dashboard.html:92
 #: app/templates/projects/_kanban_tailwind.html:76
 #: app/templates/projects/view.html:274 app/templates/tasks/overdue.html:92
@@ -2404,6 +2520,13 @@ msgstr "No timer found"
 #: app/templates/admin/roles/list.html:200
 msgid "About Roles & Permissions"
 msgstr "About Roles & Permissions"
+
+#: app/templates/admin/roles/list.html:202
+msgid ""
+msgstr ""
+"Roles are collections of permissions that can be assigned to users. "
+"System roles are predefined and cannot be deleted or renamed, but custom "
+"roles can be created for your specific needs."
 
 #: app/templates/admin/roles/list.html:209
 #, fuzzy
@@ -2437,7 +2560,8 @@ msgstr "Custom Role"
 msgid "Total Permissions"
 msgstr "Total Permissions"
 
-#: app/templates/admin/roles/view.html:52 app/templates/budget/dashboard.html:86
+#: app/templates/admin/roles/view.html:52
+#: app/templates/budget/dashboard.html:86
 #: app/templates/budget/project_detail.html:279
 #: app/templates/calendar/event_detail.html:172
 #: app/templates/tasks/_kanban.html:1335 app/templates/tasks/edit.html:257
@@ -2472,6 +2596,12 @@ msgstr "Manage projects"
 #, fuzzy
 msgid "Assign Roles"
 msgstr "In Progress"
+
+#: app/templates/admin/users/roles.html:22
+msgid ""
+msgstr ""
+"Select the roles this user should have. Users inherit all permissions "
+"from their assigned roles."
 
 #: app/templates/admin/users/roles.html:54
 msgid "Update Roles"
@@ -2524,8 +2654,9 @@ msgstr "Key metrics and insights about your time tracking"
 #: app/templates/analytics/dashboard.html:42
 #: app/templates/analytics/dashboard_improved.html:35
 #: app/templates/analytics/mobile_dashboard.html:31
-#: app/templates/budget/project_detail.html:189 app/templates/clients/edit.html:81
-#: app/templates/projects/dashboard.html:48 app/templates/user/profile.html:45
+#: app/templates/budget/project_detail.html:189
+#: app/templates/clients/edit.html:81 app/templates/projects/dashboard.html:48
+#: app/templates/user/profile.html:45
 #, fuzzy
 msgid "Total Hours"
 msgstr "total"
@@ -2748,11 +2879,11 @@ msgstr "Project Completion Rate"
 #: app/templates/analytics/mobile_dashboard.html:40
 #: app/templates/main/dashboard.html:171 app/templates/main/help.html:193
 #: app/templates/projects/add_good.html:62 app/templates/projects/edit.html:56
-#: app/templates/projects/edit_good.html:62 app/templates/projects/goods.html:70
-#: app/templates/tasks/edit.html:169 app/templates/user/profile.html:110
-#: templates/timer/bulk_entry.html:207 templates/timer/calendar.html:194
-#: templates/timer/calendar.html:827 templates/timer/edit_timer.html:287
-#: templates/timer/edit_timer.html:400
+#: app/templates/projects/edit_good.html:62
+#: app/templates/projects/goods.html:70 app/templates/tasks/edit.html:169
+#: app/templates/user/profile.html:110 templates/timer/bulk_entry.html:207
+#: templates/timer/calendar.html:194 templates/timer/calendar.html:827
+#: templates/timer/edit_timer.html:287 templates/timer/edit_timer.html:400
 #, fuzzy
 msgid "Billable"
 msgstr "Set Billable"
@@ -2786,7 +2917,8 @@ msgstr "Review"
 #: app/templates/projects/archive.html:68 app/templates/tasks/create.html:74
 #: app/templates/tasks/create.html:84 app/templates/tasks/create.html:449
 #: app/templates/tasks/edit.html:98 app/templates/tasks/edit.html:645
-#: app/templates/tasks/my_tasks.html:130 app/templates/weekly_goals/edit.html:69
+#: app/templates/tasks/my_tasks.html:130
+#: app/templates/weekly_goals/edit.html:69
 #: app/templates/weekly_goals/view.html:68 app/utils/i18n_helpers.py:19
 #: app/utils/i18n_helpers.py:31 app/utils/i18n_helpers.py:85
 #: app/utils/i18n_helpers.py:97 app/utils/i18n_helpers.py:264
@@ -2894,14 +3026,14 @@ msgstr "Project Budget Status"
 #: app/templates/calendar/event_detail.html:88
 #: app/templates/calendar/event_form.html:116
 #: app/templates/invoices/create.html:19
-#: app/templates/invoices/pdf_default.html:59 app/templates/kanban/board.html:14
-#: app/templates/main/dashboard.html:57 app/templates/main/dashboard.html:210
-#: app/templates/main/search.html:33 app/templates/tasks/_kanban.html:1245
-#: app/templates/tasks/create.html:46 app/templates/tasks/edit.html:67
-#: app/templates/tasks/edit.html:195 app/templates/tasks/my_tasks.html:144
-#: app/utils/pdf_generator.py:227 templates/timer/bulk_entry.html:101
-#: templates/timer/calendar.html:143 templates/timer/calendar.html:786
-#: templates/timer/edit_timer.html:204
+#: app/templates/invoices/pdf_default.html:59
+#: app/templates/kanban/board.html:14 app/templates/main/dashboard.html:57
+#: app/templates/main/dashboard.html:210 app/templates/main/search.html:33
+#: app/templates/tasks/_kanban.html:1245 app/templates/tasks/create.html:46
+#: app/templates/tasks/edit.html:67 app/templates/tasks/edit.html:195
+#: app/templates/tasks/my_tasks.html:144 app/utils/pdf_generator.py:227
+#: templates/timer/bulk_entry.html:101 templates/timer/calendar.html:143
+#: templates/timer/calendar.html:786 templates/timer/edit_timer.html:204
 msgid "Project"
 msgstr "Project"
 
@@ -2914,15 +3046,18 @@ msgstr "Over Budget"
 
 #: app/templates/budget/dashboard.html:118
 #: app/templates/budget/project_detail.html:39
-#: app/templates/projects/dashboard.html:368 app/templates/projects/view.html:164
+#: app/templates/projects/dashboard.html:368
+#: app/templates/projects/view.html:164
 #, fuzzy
 msgid "Consumed"
 msgstr "Continue"
 
 #: app/templates/budget/dashboard.html:119
 #: app/templates/budget/project_detail.html:48
-#: app/templates/main/dashboard.html:131 app/templates/projects/dashboard.html:129
-#: app/templates/projects/dashboard.html:368 app/templates/projects/view.html:168
+#: app/templates/main/dashboard.html:131
+#: app/templates/projects/dashboard.html:129
+#: app/templates/projects/dashboard.html:368
+#: app/templates/projects/view.html:168
 #, fuzzy
 msgid "Remaining"
 msgstr "Training"
@@ -2961,7 +3096,8 @@ msgstr "Critical"
 msgid "Healthy"
 msgstr "Healthy"
 
-#: app/templates/budget/dashboard.html:180 app/templates/budget/dashboard.html:197
+#: app/templates/budget/dashboard.html:180
+#: app/templates/budget/dashboard.html:197
 msgid "No projects with budgets found"
 msgstr "No projects with budgets found"
 
@@ -3057,8 +3193,9 @@ msgstr "Cost Trend Analysis"
 msgid "Average"
 msgstr "Average"
 
-#: app/templates/budget/project_detail.html:171 app/templates/clients/view.html:15
-#: app/templates/projects/view.html:32 app/templates/tasks/view.html:20
+#: app/templates/budget/project_detail.html:171
+#: app/templates/clients/view.html:15 app/templates/projects/view.html:32
+#: app/templates/tasks/view.html:20
 #, fuzzy
 msgid "Change"
 msgstr "Cancel"
@@ -3072,8 +3209,9 @@ msgstr "Resource Allocation"
 msgid "Total Cost"
 msgstr "total"
 
-#: app/templates/budget/project_detail.html:197 app/templates/main/help.html:194
-#: app/templates/projects/create.html:66 app/templates/projects/edit.html:60
+#: app/templates/budget/project_detail.html:197
+#: app/templates/main/help.html:194 app/templates/projects/create.html:66
+#: app/templates/projects/edit.html:60
 msgid "Hourly Rate"
 msgstr "Hourly Rate"
 
@@ -3119,7 +3257,8 @@ msgid "Location"
 msgstr "Actions"
 
 #: app/templates/calendar/event_detail.html:104
-#: app/templates/calendar/event_form.html:129 app/templates/main/dashboard.html:58
+#: app/templates/calendar/event_form.html:129
+#: app/templates/main/dashboard.html:58
 #: app/templates/projects/_kanban_tailwind.html:27
 #: templates/timer/calendar.html:153 templates/timer/calendar.html:792
 #, fuzzy
@@ -3153,7 +3292,8 @@ msgstr "Hours Today"
 msgid "days before"
 msgstr "Dashboard"
 
-#: app/templates/calendar/event_detail.html:155 templates/timer/calendar.html:38
+#: app/templates/calendar/event_detail.html:155
+#: templates/timer/calendar.html:38
 msgid "Recurring"
 msgstr "Recurring"
 
@@ -3187,41 +3327,46 @@ msgid "Edit Event"
 msgstr "Edit entry"
 
 #: app/templates/calendar/event_form.html:2
-#: app/templates/calendar/event_form.html:10 app/templates/calendar/view.html:46
-#: templates/timer/calendar.html:35
+#: app/templates/calendar/event_form.html:10
+#: app/templates/calendar/view.html:46 templates/timer/calendar.html:35
 msgid "New Event"
 msgstr "New Event"
 
-#: app/templates/calendar/event_form.html:19 app/templates/invoices/edit.html:113
+#: app/templates/calendar/event_form.html:19
+#: app/templates/invoices/edit.html:113
 #, fuzzy
 msgid "Title"
 msgstr "Idle"
 
 #: app/templates/calendar/event_form.html:40
 #: app/templates/import_export/index.html:177
-#: app/templates/import_export/index.html:215 templates/timer/bulk_entry.html:137
-#: templates/timer/calendar.html:161 templates/timer/edit_timer.html:235
+#: app/templates/import_export/index.html:215
+#: templates/timer/bulk_entry.html:137 templates/timer/calendar.html:161
+#: templates/timer/edit_timer.html:235
 #, fuzzy
 msgid "Start Date"
 msgstr "Started at"
 
-#: app/templates/calendar/event_form.html:50 templates/timer/bulk_entry.html:170
-#: templates/timer/calendar.html:165 templates/timer/edit_timer.html:243
+#: app/templates/calendar/event_form.html:50
+#: templates/timer/bulk_entry.html:170 templates/timer/calendar.html:165
+#: templates/timer/edit_timer.html:243
 #, fuzzy
 msgid "Start Time"
 msgstr "Start Timer"
 
 #: app/templates/calendar/event_form.html:61
 #: app/templates/import_export/index.html:182
-#: app/templates/import_export/index.html:220 templates/timer/bulk_entry.html:141
-#: templates/timer/calendar.html:172 templates/timer/edit_timer.html:255
+#: app/templates/import_export/index.html:220
+#: templates/timer/bulk_entry.html:141 templates/timer/calendar.html:172
+#: templates/timer/edit_timer.html:255
 #, fuzzy
 msgid "End Date"
 msgstr "Date"
 
 # Mobile
-#: app/templates/calendar/event_form.html:71 templates/timer/bulk_entry.html:179
-#: templates/timer/calendar.html:176 templates/timer/edit_timer.html:263
+#: app/templates/calendar/event_form.html:71
+#: templates/timer/bulk_entry.html:179 templates/timer/calendar.html:176
+#: templates/timer/edit_timer.html:263
 #, fuzzy
 msgid "End Time"
 msgstr "Log time"
@@ -3283,7 +3428,8 @@ msgstr "1 hour before"
 msgid "1 day before"
 msgstr "1 day before"
 
-#: app/templates/calendar/event_form.html:168 app/templates/kanban/columns.html:38
+#: app/templates/calendar/event_form.html:168
+#: app/templates/kanban/columns.html:38
 #: app/templates/kanban/create_column.html:44
 #: app/templates/kanban/edit_column.html:47
 #, fuzzy
@@ -3370,7 +3516,8 @@ msgstr "Loading..."
 msgid "Event Details"
 msgstr "Recent Entries"
 
-#: app/templates/client_notes/edit.html:3 app/templates/client_notes/edit.html:9
+#: app/templates/client_notes/edit.html:3
+#: app/templates/client_notes/edit.html:9
 #, fuzzy
 msgid "Edit Client Note"
 msgstr "Edit entry"
@@ -3407,8 +3554,9 @@ msgid "Mark as important"
 msgstr "Mark as important"
 
 #: app/templates/client_notes/edit.html:83 app/templates/comments/edit.html:76
-#: app/templates/invoices/edit.html:214 app/templates/kanban/edit_column.html:86
-#: app/templates/projects/edit.html:84 app/templates/projects/edit_good.html:69
+#: app/templates/invoices/edit.html:214
+#: app/templates/kanban/edit_column.html:86 app/templates/projects/edit.html:84
+#: app/templates/projects/edit_good.html:69
 #: app/templates/weekly_goals/edit.html:100 templates/timer/edit_timer.html:327
 #: templates/timer/edit_timer.html:417
 msgid "Save Changes"
@@ -3453,6 +3601,12 @@ msgstr "Default Hourly Rate"
 #: app/templates/projects/create.html:67 app/templates/projects/create.html:386
 msgid "e.g. 75.00"
 msgstr "e.g. 75.00"
+
+#: app/templates/clients/create.html:28 app/templates/clients/edit.html:28
+msgid ""
+msgstr ""
+"This rate will be automatically filled when creating projects for this "
+"client"
 
 #: app/templates/clients/create.html:35 app/templates/projects/create.html:48
 #: app/templates/projects/edit.html:44 app/templates/tasks/create.html:35
@@ -3506,6 +3660,12 @@ msgstr "Clients"
 #: app/templates/clients/create.html:79
 msgid "Choose a clear, descriptive name for the client organization."
 msgstr "Choose a clear, descriptive name for the client organization."
+
+#: app/templates/clients/create.html:83
+msgid ""
+msgstr ""
+"Set the standard hourly rate for this client. This will automatically "
+"populate when creating new projects."
 
 #: app/templates/clients/create.html:86
 #, fuzzy
@@ -3611,6 +3771,12 @@ msgstr "Unmark"
 msgid "Mark Important"
 msgstr "Mark Important"
 
+#: app/templates/clients/view.html:221
+msgid ""
+msgstr ""
+"No notes yet. Add a note to keep track of important information about "
+"this client."
+
 #: app/templates/clients/view.html:270
 #, fuzzy
 msgid "Are you sure you want to delete this note?"
@@ -3626,7 +3792,8 @@ msgstr "Delete"
 msgid "Edited on"
 msgstr "Edit entry"
 
-#: app/templates/comments/_comment.html:39 app/templates/comments/_comment.html:82
+#: app/templates/comments/_comment.html:39
+#: app/templates/comments/_comment.html:82
 msgid "Reply"
 msgstr "Reply"
 
@@ -3703,7 +3870,8 @@ msgid "Comment Content"
 msgstr "Skip to content"
 
 #: app/templates/components/activity_feed_widget.html:6
-#: app/templates/projects/dashboard.html:237 app/templates/user/profile.html:131
+#: app/templates/projects/dashboard.html:237
+#: app/templates/user/profile.html:131
 #, fuzzy
 msgid "Recent Activity"
 msgstr "Recent Entries"
@@ -3720,7 +3888,8 @@ msgstr "Timer Status"
 
 #: app/templates/components/activity_feed_widget.html:103
 #: app/templates/components/activity_feed_widget.html:289
-#: app/templates/projects/dashboard.html:262 app/templates/user/profile.html:153
+#: app/templates/projects/dashboard.html:262
+#: app/templates/user/profile.html:153
 #, fuzzy
 msgid "No recent activity"
 msgstr "No recent entries"
@@ -3847,6 +4016,12 @@ msgstr "Import/Export Data"
 #: app/templates/import_export/index.html:8
 msgid "Import/Export"
 msgstr "Import/Export"
+
+#: app/templates/import_export/index.html:14
+msgid ""
+msgstr ""
+"Import data from other time trackers or export your data for GDPR "
+"compliance and backups"
 
 #: app/templates/import_export/index.html:24
 msgid "Import Data"
@@ -4006,10 +4181,10 @@ msgid "Client Email"
 msgstr "Clients"
 
 #: app/templates/invoices/create.html:37 app/templates/invoices/edit.html:31
-#: app/templates/invoices/pdf_default.html:41 app/templates/tasks/_kanban.html:132
-#: app/templates/tasks/_kanban.html:1271 app/templates/tasks/create.html:91
-#: app/templates/tasks/edit.html:115 app/utils/pdf_generator.py:212
-#: templates/admin/pdf_layout.html:527
+#: app/templates/invoices/pdf_default.html:41
+#: app/templates/tasks/_kanban.html:132 app/templates/tasks/_kanban.html:1271
+#: app/templates/tasks/create.html:91 app/templates/tasks/edit.html:115
+#: app/utils/pdf_generator.py:212 templates/admin/pdf_layout.html:527
 #, fuzzy
 msgid "Due Date"
 msgstr "Date"
@@ -4080,15 +4255,18 @@ msgstr "Add Item"
 
 #: app/templates/invoices/edit.html:70 app/templates/invoices/edit.html:79
 #: app/templates/invoices/edit.html:400 app/templates/projects/add_good.html:45
-#: app/templates/projects/edit_good.html:45 app/templates/projects/goods.html:41
+#: app/templates/projects/edit_good.html:45
+#: app/templates/projects/goods.html:41
 msgid "Quantity"
 msgstr "Quantity"
 
 #: app/templates/invoices/edit.html:71 app/templates/invoices/edit.html:80
-#: app/templates/invoices/edit.html:401 app/templates/invoices/pdf_default.html:73
+#: app/templates/invoices/edit.html:401
+#: app/templates/invoices/pdf_default.html:73
 #: app/templates/projects/add_good.html:50
-#: app/templates/projects/edit_good.html:50 app/templates/projects/goods.html:42
-#: app/utils/pdf_generator.py:240 app/utils/pdf_generator_fallback.py:219
+#: app/templates/projects/edit_good.html:50
+#: app/templates/projects/goods.html:42 app/utils/pdf_generator.py:240
+#: app/utils/pdf_generator_fallback.py:219
 msgid "Unit Price"
 msgstr "Unit Price"
 
@@ -4122,15 +4300,15 @@ msgstr "Add Expense"
 #: app/templates/invoices/edit.html:115 app/templates/invoices/edit.html:175
 #: app/templates/invoices/pdf_default.html:125
 #: app/templates/projects/add_good.html:29
-#: app/templates/projects/edit_good.html:29 app/templates/projects/goods.html:40
-#: app/utils/pdf_generator.py:357 templates/projects/add_cost.html:37
-#: templates/projects/edit_cost.html:44
+#: app/templates/projects/edit_good.html:29
+#: app/templates/projects/goods.html:40 app/utils/pdf_generator.py:357
+#: templates/projects/add_cost.html:37 templates/projects/edit_cost.html:44
 msgid "Category"
 msgstr "Category"
 
 #: app/templates/invoices/edit.html:116 app/templates/invoices/edit.html:139
-#: app/templates/projects/dashboard.html:370 templates/projects/add_cost.html:58
-#: templates/projects/edit_cost.html:65
+#: app/templates/projects/dashboard.html:370
+#: templates/projects/add_cost.html:58 templates/projects/edit_cost.html:65
 #, fuzzy
 msgid "Amount"
 msgstr "About"
@@ -4240,8 +4418,8 @@ msgstr "Add Good"
 
 #: app/templates/invoices/edit.html:173 app/templates/main/help.html:184
 #: app/templates/projects/add_good.html:19
-#: app/templates/projects/edit_good.html:19 app/templates/projects/goods.html:39
-#: app/templates/projects/view.html:230
+#: app/templates/projects/edit_good.html:19
+#: app/templates/projects/goods.html:39 app/templates/projects/view.html:230
 #, fuzzy
 msgid "Name"
 msgstr "Username"
@@ -4309,8 +4487,8 @@ msgstr "Goods Subtotal"
 msgid "Live Preview"
 msgstr "Review"
 
-#: app/templates/invoices/edit.html:232 app/templates/invoices/pdf_default.html:40
-#: app/utils/pdf_generator.py:211
+#: app/templates/invoices/edit.html:232
+#: app/templates/invoices/pdf_default.html:40 app/utils/pdf_generator.py:211
 msgid "Issue Date"
 msgstr "Issue Date"
 
@@ -4407,6 +4585,12 @@ msgstr "Please add at least one item, expense, or extra good to the invoice"
 #: app/templates/invoices/generate_from_time.html:6
 msgid "Generate from Time, Costs & Goods"
 msgstr "Generate from Time, Costs & Goods"
+
+#: app/templates/invoices/generate_from_time.html:7
+msgid ""
+msgstr ""
+"Select unbilled time entries, project costs, and extra goods to add to "
+"this invoice"
 
 #: app/templates/invoices/generate_from_time.html:9
 msgid "Back to Edit"
@@ -4526,6 +4710,12 @@ msgstr "This action cannot be undone."
 msgid "Are you sure you want to delete invoice"
 msgstr "Are you sure you want to delete this?"
 
+#: app/templates/invoices/list.html:85 app/templates/invoices/view.html:234
+msgid ""
+msgstr ""
+"All invoice items, extra goods, and payment records associated with this "
+"invoice will be permanently deleted."
+
 #: app/templates/invoices/pdf_default.html:5 app/utils/pdf_generator.py:116
 #: app/utils/pdf_generator.py:126
 #, fuzzy
@@ -4533,7 +4723,8 @@ msgid "Invoice"
 msgstr "Invoices"
 
 #: app/templates/invoices/pdf_default.html:17
-#: app/templates/invoices/pdf_default.html:20 templates/admin/pdf_layout.html:483
+#: app/templates/invoices/pdf_default.html:20
+#: templates/admin/pdf_layout.html:483
 msgid "Company Logo"
 msgstr "Company Logo"
 
@@ -4542,7 +4733,8 @@ msgstr "Company Logo"
 msgid "Website"
 msgstr "Website"
 
-#: app/templates/invoices/pdf_default.html:31 templates/admin/pdf_layout.html:511
+#: app/templates/invoices/pdf_default.html:31
+#: templates/admin/pdf_layout.html:511
 #, fuzzy
 msgid "Tax ID"
 msgstr "Paid"
@@ -4567,9 +4759,9 @@ msgstr "Bill To"
 msgid "Quantity (Hours)"
 msgstr "Quantity (Hours)"
 
-#: app/templates/invoices/pdf_default.html:74 app/templates/projects/goods.html:21
-#: app/utils/pdf_generator.py:241 app/utils/pdf_generator_fallback.py:219
-#: templates/admin/pdf_layout.html:559
+#: app/templates/invoices/pdf_default.html:74
+#: app/templates/projects/goods.html:21 app/utils/pdf_generator.py:241
+#: app/utils/pdf_generator_fallback.py:219 templates/admin/pdf_layout.html:559
 msgid "Total Amount"
 msgstr "Total Amount"
 
@@ -4711,6 +4903,24 @@ msgstr "Tips:"
 msgid "Drag and drop rows to reorder columns"
 msgstr "Drag and drop rows to reorder columns"
 
+#: app/templates/kanban/columns.html:114
+msgid ""
+msgstr ""
+"System columns (todo, in_progress, done) cannot be deleted but can be "
+"customized"
+
+#: app/templates/kanban/columns.html:115
+msgid ""
+msgstr ""
+"Columns marked as \"Complete\" will mark tasks as completed when dragged "
+"to that column"
+
+#: app/templates/kanban/columns.html:116
+msgid ""
+msgstr ""
+"Inactive columns are hidden from the kanban board but tasks with that "
+"status remain accessible"
+
 #: app/templates/kanban/columns.html:128
 msgid "Delete Kanban Column"
 msgstr "Delete Kanban Column"
@@ -4723,6 +4933,12 @@ msgstr "Are you sure you want to delete this?"
 #: app/templates/kanban/columns.html:141
 msgid "Key:"
 msgstr "Key:"
+
+#: app/templates/kanban/columns.html:144
+msgid ""
+msgstr ""
+"Note: Tasks with this status will remain accessible but the column will "
+"no longer appear on the kanban board."
 
 #: app/templates/kanban/columns.html:154
 #, fuzzy
@@ -4774,6 +4990,12 @@ msgstr "Column Key"
 msgid "e.g., in_review, blocked, testing"
 msgstr "e.g., in_review, blocked, testing"
 
+#: app/templates/kanban/create_column.html:31
+msgid ""
+msgstr ""
+"Unique identifier (lowercase, no spaces, use underscores). Auto-generated"
+" from label if empty."
+
 #: app/templates/kanban/create_column.html:36
 #: app/templates/kanban/edit_column.html:36
 msgid "Icon Class"
@@ -4823,7 +5045,8 @@ msgid "Info (Cyan)"
 msgstr "Info (Cyan)"
 
 #: app/templates/kanban/create_column.html:52
-#: app/templates/kanban/edit_column.html:55 app/templates/user/settings.html:122
+#: app/templates/kanban/edit_column.html:55
+#: app/templates/user/settings.html:122
 #, fuzzy
 msgid "Dark"
 msgstr "Dark mode"
@@ -4851,6 +5074,12 @@ msgstr "Create Column"
 #, fuzzy
 msgid "Note:"
 msgstr "Notes"
+
+#: app/templates/kanban/create_column.html:81
+msgid ""
+msgstr ""
+"The column will be added at the end of the board. You can reorder columns"
+" later from the management page."
 
 #: app/templates/kanban/edit_column.html:2
 #: app/templates/kanban/edit_column.html:10
@@ -4884,10 +5113,23 @@ msgstr "Inactive columns are hidden from the kanban board"
 msgid "System Column:"
 msgstr "System Column:"
 
+#: app/templates/kanban/edit_column.html:95
+msgid ""
+msgstr ""
+"This is a system column. You can customize its appearance but cannot "
+"delete it."
+
 #: app/templates/main/about.html:9
 #, fuzzy
 msgid "Professional time tracking and project management"
 msgstr "Professional Time Management"
+
+#: app/templates/main/about.html:20
+msgid ""
+msgstr ""
+"A comprehensive web-based time tracking application built with Flask, "
+"featuring project management, client organization, task management, "
+"invoicing, and advanced analytics."
 
 #: app/templates/main/about.html:28 app/templates/main/help.html:28
 #: app/templates/main/help.html:179
@@ -5427,6 +5669,12 @@ msgstr "Manage users and permissions"
 msgid "Pro Tip:"
 msgstr "Pro Tip:"
 
+#: app/templates/main/help.html:95
+msgid ""
+msgstr ""
+"Use the mobile-friendly interface to track time on the go. The timer "
+"continues running even if you close your browser!"
+
 #: app/templates/main/help.html:105
 msgid "Real-time tracking with automatic idle detection and WebSocket updates"
 msgstr "Real-time tracking with automatic idle detection and WebSocket updates"
@@ -5500,6 +5748,12 @@ msgstr "WebSocket live updates"
 msgid "Manual Time Entry"
 msgstr "Manual entry"
 
+#: app/templates/main/help.html:137
+msgid ""
+msgstr ""
+"Create time entries manually when you need to record time spent away from"
+" the computer or adjust existing entries."
+
 #: app/templates/main/help.html:140
 #, fuzzy
 msgid "Required Information"
@@ -5548,10 +5802,28 @@ msgstr "Advanced Time Entry Features"
 msgid "Bulk Entry"
 msgstr "Bulk Entry"
 
+#: app/templates/main/help.html:163
+msgid ""
+msgstr ""
+"Create multiple time entries for consecutive days with the same project "
+"and duration. Perfect for regular work patterns."
+
+#: app/templates/main/help.html:167
+msgid ""
+msgstr ""
+"Save frequently used time entries as templates for quick reuse. Saves "
+"project, task, and notes."
+
 #: app/templates/main/help.html:170
 #, fuzzy
 msgid "Calendar View"
 msgstr "Calendar"
+
+#: app/templates/main/help.html:171
+msgid ""
+msgstr ""
+"Visualize your time entries on a calendar. Drag-and-drop to reschedule or"
+" click dates to add entries."
 
 #: app/templates/main/help.html:182
 #, fuzzy
@@ -5638,6 +5910,12 @@ msgstr "Archive instead of delete when possible"
 msgid "Use billing references for external tracking"
 msgstr "Use billing references for external tracking"
 
+#: app/templates/main/help.html:226
+msgid ""
+msgstr ""
+"The client management system helps organize your work by client "
+"organizations, preventing errors and streamlining project creation."
+
 #: app/templates/main/help.html:229
 #, fuzzy
 msgid "Client Information"
@@ -5710,6 +5988,12 @@ msgstr "Cost Estimation"
 #: app/templates/main/help.html:261
 msgid "Estimated billing amounts"
 msgstr "Estimated billing amounts"
+
+#: app/templates/main/help.html:269
+msgid ""
+msgstr ""
+"Break down projects into manageable tasks with detailed tracking and "
+"progress monitoring."
 
 #: app/templates/main/help.html:272
 #, fuzzy
@@ -5860,6 +6144,12 @@ msgstr "# Headings, - Lists, [Links](url)"
 msgid "```code blocks```, tables, images"
 msgstr "```code blocks```, tables, images"
 
+#: app/templates/main/help.html:336
+msgid ""
+msgstr ""
+"Visualize your workflow with a drag-and-drop Kanban board for intuitive "
+"task management."
+
 #: app/templates/main/help.html:339
 msgid "Board Features"
 msgstr "Board Features"
@@ -5900,9 +6190,21 @@ msgstr "Click on a task card to view/edit details"
 msgid "Use filters to focus on specific work"
 msgstr "Use filters to focus on specific work"
 
+#: app/templates/main/help.html:359
+msgid ""
+msgstr ""
+"The Kanban board is perfect for sprint planning and daily standups. Each "
+"column represents a stage in your workflow!"
+
 #: app/templates/main/help.html:365
 msgid "Expense Tracking"
 msgstr "Expense Tracking"
+
+#: app/templates/main/help.html:366
+msgid ""
+msgstr ""
+"Track business expenses, manage receipts, and handle reimbursements "
+"efficiently."
 
 #: app/templates/main/help.html:369
 msgid "Expense Features"
@@ -6135,6 +6437,19 @@ msgstr "Trend analysis over time"
 msgid "Mobile-optimized charts"
 msgstr "Mobile-optimized charts"
 
+#: app/templates/main/help.html:504
+msgid ""
+msgstr ""
+"Use Saved Filters to quickly access your most common report views. Save "
+"filters for weekly reviews, monthly billing, or specific project "
+"tracking!"
+
+#: app/templates/main/help.html:511
+msgid ""
+msgstr ""
+"Boost your efficiency with keyboard shortcuts, command palette, and "
+"automation features."
+
 # Command Palette
 #: app/templates/main/help.html:514
 msgid "Command Palette"
@@ -6177,14 +6492,32 @@ msgstr "Delete Time Entry"
 msgid "Keyboard Shortcuts"
 msgstr "Keyboard Shortcuts"
 
+#: app/templates/main/help.html:539
+msgid ""
+msgstr ""
+"Navigate faster with keyboard-driven commands. Press Shift+? to see all "
+"shortcuts."
+
 #: app/templates/main/help.html:542
 #, fuzzy
 msgid "Global Search"
 msgstr "Search"
 
+#: app/templates/main/help.html:543
+msgid ""
+msgstr ""
+"Quickly find projects, tasks, clients, and time entries from anywhere in "
+"the app."
+
 #: app/templates/main/help.html:546
 msgid "Email Notifications"
 msgstr "Email Notifications"
+
+#: app/templates/main/help.html:547
+msgid ""
+msgstr ""
+"Get notified about task assignments, overdue invoices, and weekly "
+"summaries via email."
 
 #: app/templates/main/help.html:555
 msgid "Administrator Features"
@@ -6448,49 +6781,155 @@ msgstr "Troubleshooting & FAQ"
 msgid "What happens if I forget to stop my timer?"
 msgstr "What happens if I forget to stop my timer?"
 
+#: app/templates/main/help.html:691
+msgid ""
+msgstr ""
+"The timer will continue running until you stop it manually. You can see "
+"your active timer on the dashboard and timer page. The timer persists "
+"even if you close your browser or restart your device. If idle detection "
+"is enabled, the timer may pause automatically after the configured "
+"timeout period."
+
 #: app/templates/main/help.html:694
 msgid "Can I edit time entries after they're created?"
 msgstr "Can I edit time entries after they're created?"
+
+#: app/templates/main/help.html:695
+msgid ""
+msgstr ""
+"Yes, you can edit any time entry by clicking the edit button in the time "
+"entry list. You can modify the project, start/end times, notes, tags, "
+"billable status, and task assignment. Admins can edit all time entries, "
+"while regular users can only edit their own entries."
 
 #: app/templates/main/help.html:698
 msgid "How do I track time for multiple projects?"
 msgstr "How do I track time for multiple projects?"
 
+#: app/templates/main/help.html:699
+msgid ""
+msgstr ""
+"By default, you can only have one active timer at a time. To switch "
+"projects, stop your current timer and start a new one for the different "
+"project. Alternatively, you can create manual time entries for past work "
+"or configure the system to allow multiple active timers (admin setting)."
+
 #: app/templates/main/help.html:702
 msgid "How do I export my time data?"
 msgstr "How do I export my time data?"
+
+#: app/templates/main/help.html:703
+msgid ""
+msgstr ""
+"Go to the Reports page and use the \"Export CSV\" feature. You can apply "
+"filters to export specific data, or export all time entries. The CSV file"
+" includes all time entry details and can be opened in Excel or other "
+"spreadsheet applications. You can also configure the delimiter for "
+"different regional standards."
 
 #: app/templates/main/help.html:706
 msgid "What's the difference between billable and non-billable time?"
 msgstr "What's the difference between billable and non-billable time?"
 
+#: app/templates/main/help.html:707
+msgid ""
+msgstr ""
+"Billable time is tracked for client billing purposes and can have an "
+"hourly rate associated with it. Non-billable time is for internal work "
+"that doesn't get charged to clients. You can mark individual time entries"
+" as billable or non-billable, and projects can have default billable "
+"settings. This distinction is crucial for accurate invoicing and "
+"profitability analysis."
+
 #: app/templates/main/help.html:710
 msgid "How do I create an invoice from my time entries?"
 msgstr "How do I create an invoice from my time entries?"
+
+#: app/templates/main/help.html:711
+msgid ""
+msgstr ""
+"Navigate to Invoices → Create Invoice, set up the client and project "
+"details, then use \"Generate from Time Entries\" to automatically create "
+"invoice items from your tracked time. You can filter by date range and "
+"project, and the system will group time entries intelligently. Review the"
+" generated items and export as a professional PDF."
 
 #: app/templates/main/help.html:714
 msgid "Can I use TimeTracker on my mobile device?"
 msgstr "Can I use TimeTracker on my mobile device?"
 
+#: app/templates/main/help.html:715
+msgid ""
+msgstr ""
+"Yes! TimeTracker is fully responsive and works great on mobile devices. "
+"You can install it as a Progressive Web App (PWA) for a native-like "
+"experience. The mobile interface includes a bottom tab bar for easy "
+"navigation and touch-optimized controls for time tracking on the go."
+
 #: app/templates/main/help.html:718
 msgid "How do I use the command palette and keyboard shortcuts?"
 msgstr "How do I use the command palette and keyboard shortcuts?"
+
+#: app/templates/main/help.html:719
+msgid ""
+msgstr ""
+"Press the question mark key (?) to open the command palette. From there, "
+"you can type to search for any action or navigation target. Use keyboard "
+"sequences like \"g d\" for Dashboard, \"g p\" for Projects, or \"n e\" "
+"for New Entry. Press Shift+? to see all available shortcuts. Press Ctrl+K"
+" (or Cmd+K on Mac) for quick search."
 
 #: app/templates/main/help.html:722
 msgid "How do I create bulk time entries for multiple days?"
 msgstr "How do I create bulk time entries for multiple days?"
 
+#: app/templates/main/help.html:723
+msgid ""
+msgstr ""
+"Navigate to Work → Bulk Time Entry. Select your project, choose a date "
+"range, set your daily start and end times, and optionally skip weekends. "
+"The system will create identical time entries for each day in the range. "
+"This is perfect for logging regular work patterns or filling in past time"
+" when you worked consistent hours."
+
 #: app/templates/main/help.html:726
 msgid "What are time entry templates and how do I use them?"
 msgstr "What are time entry templates and how do I use them?"
+
+#: app/templates/main/help.html:727
+msgid ""
+msgstr ""
+"Time entry templates let you save frequently used time entry "
+"configurations. When creating a manual time entry, check \"Save as "
+"Template\" to save the project, task, and notes. Later, when creating new"
+" entries, you can select a template to quickly fill in these details. "
+"Templates are personal and only visible to you."
 
 #: app/templates/main/help.html:730
 msgid "How do I track expenses and add them to invoices?"
 msgstr "How do I track expenses and add them to invoices?"
 
+#: app/templates/main/help.html:731
+msgid ""
+msgstr ""
+"Go to Expenses → New Expense to record business expenses. Upload receipt "
+"images, categorize the expense, and mark it as billable if needed. When "
+"creating invoices, you can include these expenses as line items. Expenses"
+" support approval workflows, reimbursement tracking, and can be linked to"
+" specific projects."
+
 #: app/templates/main/help.html:734
 msgid "Can I use Markdown in descriptions?"
 msgstr "Can I use Markdown in descriptions?"
+
+#: app/templates/main/help.html:735
+msgid ""
+msgstr ""
+"Yes! Project and task descriptions support full Markdown formatting. You "
+"can use bold, italic, headings, lists, links, code blocks, tables, and "
+"images. This allows you to create rich, well-formatted documentation "
+"directly in your projects and tasks. The Markdown editor includes a "
+"preview mode and supports dark theme."
 
 #: app/templates/main/help.html:738
 msgid "Where can I get additional help?"
@@ -6503,6 +6942,12 @@ msgstr "This help page covers most common questions and features."
 #: app/templates/main/help.html:746
 msgid "Report issues and request features on"
 msgstr "Report issues and request features on"
+
+#: app/templates/main/help.html:751
+msgid ""
+msgstr ""
+"As an admin, you can access additional system information and diagnostics"
+" in the"
 
 #: app/templates/main/help.html:751
 #, fuzzy
@@ -6544,6 +6989,11 @@ msgstr "Results"
 #, fuzzy
 msgid "End"
 msgstr "Pending"
+
+#: app/templates/main/search.html:65
+#, fuzzy
+msgid ""
+msgstr "Are you sure you want to delete the time entry for"
 
 #: app/templates/main/search.html:85 app/templates/tasks/my_tasks.html:345
 msgid "Previous"
@@ -6590,9 +7040,9 @@ msgstr "Add Extra Good"
 msgid "Add a product or service to"
 msgstr "Add a product or service to"
 
-#: app/templates/projects/add_good.html:9 app/templates/projects/dashboard.html:9
-#: app/templates/projects/edit.html:11 app/templates/projects/edit_good.html:9
-#: app/templates/projects/goods.html:10
+#: app/templates/projects/add_good.html:9
+#: app/templates/projects/dashboard.html:9 app/templates/projects/edit.html:11
+#: app/templates/projects/edit_good.html:9 app/templates/projects/goods.html:10
 #, fuzzy
 msgid "Back to Project"
 msgstr "Select Project"
@@ -6739,6 +7189,18 @@ msgstr "Select all"
 msgid "Create new client"
 msgstr "Create new client"
 
+#: app/templates/projects/create.html:51
+msgid ""
+msgstr ""
+"Provide detailed information about the project, objectives, and "
+"deliverables..."
+
+#: app/templates/projects/create.html:54
+msgid ""
+msgstr ""
+"Optional: Add context, objectives, or specific requirements for the "
+"project"
+
 #: app/templates/projects/create.html:61
 #, fuzzy
 msgid "Billable Project"
@@ -6819,7 +7281,8 @@ msgstr "Clients"
 msgid "Choose the right client to ensure proper project organization"
 msgstr "Choose the right client to ensure proper project organization"
 
-#: app/templates/projects/create.html:329 app/templates/projects/create.html:450
+#: app/templates/projects/create.html:329
+#: app/templates/projects/create.html:450
 #, fuzzy
 msgid "Creating..."
 msgstr "Starting..."
@@ -6872,7 +7335,8 @@ msgstr "Last Year"
 msgid "estimated"
 msgstr "Started at"
 
-#: app/templates/projects/dashboard.html:66 app/templates/projects/view.html:147
+#: app/templates/projects/dashboard.html:66
+#: app/templates/projects/view.html:147
 msgid "Budget Used"
 msgstr "Budget Used"
 
@@ -7222,6 +7686,12 @@ msgstr "View Full Details"
 msgid "Create Task"
 msgstr "New Task"
 
+#: app/templates/tasks/create.html:14
+msgid ""
+msgstr ""
+"Add a new task to your project to break down work into manageable "
+"components"
+
 #: app/templates/tasks/create.html:16 app/templates/tasks/edit.html:284
 #: app/templates/tasks/overdue.html:10
 msgid "Back to Tasks"
@@ -7238,6 +7708,13 @@ msgstr "Enter a descriptive task name"
 #: app/templates/tasks/create.html:28 app/templates/tasks/edit.html:49
 msgid "Choose a clear, descriptive name that explains what needs to be done"
 msgstr "Choose a clear, descriptive name that explains what needs to be done"
+
+#: app/templates/tasks/create.html:38 app/templates/tasks/edit.html:58
+#: app/templates/tasks/edit.html:509
+msgid ""
+msgstr ""
+"Provide detailed information about the task, requirements, and any "
+"specific instructions..."
 
 #: app/templates/tasks/create.html:41 app/templates/tasks/edit.html:61
 msgid "Optional: Add context, requirements, or specific instructions for the task"
@@ -7476,6 +7953,12 @@ msgstr "Toggle Filters"
 msgid "Are you sure you want to delete the task \"{name}\"?"
 msgstr "Are you sure you want to delete this?"
 
+#: app/templates/tasks/list.html:320
+msgid ""
+msgstr ""
+"Cannot delete task \"{name}\" because it has time entries. Please delete "
+"the time entries first."
+
 #: app/templates/tasks/list.html:503 app/templates/tasks/view.html:39
 #, fuzzy
 msgid "Delete Task"
@@ -7567,7 +8050,8 @@ msgstr "Calendar"
 msgid "Created by me"
 msgstr "Created by me"
 
-#: app/templates/tasks/my_tasks.html:317 app/templates/weekly_goals/index.html:122
+#: app/templates/tasks/my_tasks.html:317
+#: app/templates/weekly_goals/index.html:122
 #, fuzzy
 msgid "View Details"
 msgstr "View All"
@@ -7752,8 +8236,7 @@ msgstr "Project"
 msgid "Member Since"
 msgstr "Member Since"
 
-#: app/templates/timer/manual_entry.html:27 app/templates/user/profile.html:77
-#: templates/timer/calendar.html:787
+#: app/templates/user/profile.html:77 templates/timer/calendar.html:787
 msgid "N/A"
 msgstr "N/A"
 
@@ -7844,6 +8327,12 @@ msgstr "Light mode"
 msgid "Time Rounding Preferences"
 msgstr "Time Rounding Preferences"
 
+#: app/templates/user/settings.html:147
+msgid ""
+msgstr ""
+"Configure how your time entries are rounded. This affects how durations "
+"are calculated when you stop timers."
+
 #: app/templates/user/settings.html:157
 #, fuzzy
 msgid "Enable Time Rounding"
@@ -7870,6 +8359,12 @@ msgstr "Rounding Method"
 msgid "Overtime Settings"
 msgstr "Timer Status"
 
+#: app/templates/user/settings.html:209
+msgid ""
+msgstr ""
+"Set your standard working hours per day. Any time worked beyond this will"
+" be counted as overtime."
+
 #: app/templates/user/settings.html:215
 msgid "Standard Hours Per Day"
 msgstr "Standard Hours Per Day"
@@ -7881,6 +8376,12 @@ msgstr "Typically 8 hours for a full-time job"
 #: app/templates/user/settings.html:230
 msgid "How it works"
 msgstr "How it works"
+
+#: app/templates/user/settings.html:233
+msgid ""
+msgstr ""
+"If you work more than your standard hours in a day, the extra time will "
+"be tracked as overtime in reports and analytics."
 
 #: app/templates/user/settings.html:243
 msgid "Regional Settings"
@@ -8112,7 +8613,8 @@ msgstr "Goal History"
 msgid "Target"
 msgstr "Urgent"
 
-#: app/templates/weekly_goals/view.html:3 app/templates/weekly_goals/view.html:12
+#: app/templates/weekly_goals/view.html:3
+#: app/templates/weekly_goals/view.html:12
 msgid "Weekly Goal Details"
 msgstr "Weekly Goal Details"
 
@@ -8242,12 +8744,14 @@ msgstr "Info"
 msgid "Invoice #: %(num)s"
 msgstr "Invoices"
 
-#: app/utils/pdf_generator_fallback.py:166 app/utils/pdf_generator_fallback.py:169
+#: app/utils/pdf_generator_fallback.py:166
+#: app/utils/pdf_generator_fallback.py:169
 #, python-format
 msgid "Issue Date: %(date)s"
 msgstr "Issue Date: %(date)s"
 
-#: app/utils/pdf_generator_fallback.py:167 app/utils/pdf_generator_fallback.py:170
+#: app/utils/pdf_generator_fallback.py:167
+#: app/utils/pdf_generator_fallback.py:170
 #, python-format
 msgid "Due Date: %(date)s"
 msgstr "Due Date: %(date)s"
@@ -8271,6 +8775,13 @@ msgstr "Drag and drop elements to design your invoice layout"
 #: templates/admin/pdf_layout.html:390
 msgid "How to use:"
 msgstr "How to use:"
+
+#: templates/admin/pdf_layout.html:391
+msgid ""
+msgstr ""
+"Click elements from the left sidebar to add them to the canvas. Click "
+"elements to select and customize them in the properties panel. Use the "
+"alignment tools and keyboard shortcuts for faster editing."
 
 #: templates/admin/pdf_layout.html:394
 #, fuzzy
@@ -8349,8 +8860,6 @@ msgstr "Idle"
 msgid "Company Info"
 msgstr "Company Logo"
 
-#: app/templates/admin/email_templates/create.html:52
-#: app/templates/admin/email_templates/edit.html:50
 #: templates/admin/pdf_layout.html:487
 #, fuzzy
 msgid "Company Name"
@@ -8366,8 +8875,6 @@ msgstr "Company Logo"
 msgid "Invoice Data"
 msgstr "Invoices"
 
-#: app/templates/admin/email_templates/create.html:49
-#: app/templates/admin/email_templates/edit.html:47
 #: templates/admin/pdf_layout.html:519
 #, fuzzy
 msgid "Invoice Number"
@@ -8722,6 +9229,12 @@ msgstr "Timer stopped. Duration:"
 msgid "Upload Backup Archive (.zip)"
 msgstr "Upload Backup Archive (.zip)"
 
+#: templates/admin/restore.html:35
+msgid ""
+msgstr ""
+"Restoring a backup will overwrite your current database and files. Ensure"
+" you have a recent backup before proceeding."
+
 #: templates/admin/restore.html:40
 #, fuzzy
 msgid "Status:"
@@ -8892,6 +9405,12 @@ msgstr "Recent Entries"
 msgid "Bulk Entry Tips"
 msgstr "Bulk Entry"
 
+#: templates/timer/bulk_entry.html:247
+msgid ""
+msgstr ""
+"Select start and end dates. Entries will be created for each day in the "
+"range."
+
 #: templates/timer/bulk_entry.html:253
 msgid "Skip Weekends"
 msgstr "Skip Weekends"
@@ -8923,7 +9442,7 @@ msgstr "System will check for existing time entries and prevent overlaps."
 msgid "No task"
 msgstr "New Task"
 
-#: app/templates/timer/manual_entry.html:131 templates/timer/bulk_entry.html:334
+#: templates/timer/bulk_entry.html:334
 #, fuzzy
 msgid "Failed to load tasks"
 msgstr "Failed to stop timer"
@@ -9269,6 +9788,12 @@ msgstr "Admin"
 msgid "Admin Mode:"
 msgstr "Admin"
 
+#: templates/timer/edit_timer.html:191
+msgid ""
+msgstr ""
+"You can edit all fields of this time entry, including project, task, "
+"start/end times, and source."
+
 #: templates/timer/edit_timer.html:213
 msgid "Select the project this time entry belongs to"
 msgstr "Select the project this time entry belongs to"
@@ -9322,8 +9847,7 @@ msgstr "Duration:"
 msgid "Describe what you worked on"
 msgstr "What are you working on?"
 
-#: app/templates/timer/manual_entry.html:87 templates/timer/edit_timer.html:312
-#: templates/timer/edit_timer.html:393
+#: templates/timer/edit_timer.html:312 templates/timer/edit_timer.html:393
 msgid "tag1, tag2"
 msgstr "tag1, tag2"
 
@@ -9367,6 +9891,12 @@ msgstr "Entry ID"
 #, fuzzy
 msgid "Admin Notice"
 msgstr "No notes"
+
+#: templates/timer/edit_timer.html:453
+msgid ""
+msgstr ""
+"As an admin, you have full editing privileges for this time entry. "
+"Changes will be logged for audit purposes."
 
 #: venv/Lib/site-packages/click/_termui_impl.py:608
 #, fuzzy
@@ -9430,6 +9960,12 @@ msgid "Takes {nargs} values but 1 was given."
 msgid_plural "Takes {nargs} values but {len} were given."
 msgstr[0] ""
 msgstr[1] ""
+
+#: venv/Lib/site-packages/click/core.py:2504
+msgid ""
+msgstr ""
+"DeprecationWarning: The {param_type} {name!r} is "
+"deprecated.{extra_message}"
 
 #: venv/Lib/site-packages/click/core.py:2956
 #: venv/Lib/site-packages/typer/core.py:553
@@ -9574,6 +10110,12 @@ msgstr "Invalid input"
 #: venv/Lib/site-packages/click/termui.py:866
 msgid "Press any key to continue..."
 msgstr "Press any key to continue..."
+
+#: venv/Lib/site-packages/click/types.py:332
+msgid ""
+msgstr ""
+"Choose from:\n"
+"\t{choices}"
 
 #: venv/Lib/site-packages/click/types.py:371
 msgid "{value!r} is not {choice}."
@@ -9878,6 +10420,137 @@ msgstr "Not a valid decimal value."
 msgid "Not a valid float value."
 msgstr "Not a valid float value."
 
+#~ msgid "Log"
+#~ msgstr "Log"
+
+#~ msgid "All rights reserved."
+#~ msgstr "All rights reserved."
+
+#~ msgid "Work"
+#~ msgstr "Work"
+
+#~ msgid "Insights"
+#~ msgstr "Insights"
+
+#~ msgid "Ctrl"
+#~ msgstr "Ctrl"
+
+#~ msgid "App installed"
+#~ msgstr "App installed"
+
+#~ msgid "Please confirm"
+#~ msgstr "Please confirm"
+
+#~ msgid "No Active Timer"
+#~ msgstr "No Active Timer"
+
+#~ msgid "Choose a project or one of its tasks to start tracking."
+#~ msgstr "Choose a project or one of its tasks to start tracking."
+
+#~ msgid "Hours This Month"
+#~ msgstr "Hours This Month"
+
+#~ msgid "Multi-day time entry"
+#~ msgstr "Multi-day time entry"
+
+#~ msgid "Today by Task"
+#~ msgstr "Today by Task"
+
+#~ msgid "Start tracking your time to see entries here"
+#~ msgstr "Start tracking your time to see entries here"
+
+#~ msgid "Select Task (Optional)"
+#~ msgstr "Select Task (Optional)"
+
+#~ msgid "Choose a task..."
+#~ msgstr "Choose a task..."
+
+#~ msgid ""
+#~ "Tasks list updates after choosing a "
+#~ "project. Leave empty to log at "
+#~ "project level."
+#~ msgstr ""
+#~ "Tasks list updates after choosing a "
+#~ "project. Leave empty to log at "
+#~ "project level."
+
+#~ msgid "Bulk action completed"
+#~ msgstr "Bulk action completed"
+
+#~ msgid "Bulk action failed"
+#~ msgstr "Bulk action failed"
+
+#~ msgid "DryTrix Logo"
+#~ msgstr "DryTrix Logo"
+
+#~ msgid "Welcome to TimeTracker"
+#~ msgstr "Welcome to TimeTracker"
+
+#~ msgid "Powered by"
+#~ msgstr "Powered by"
+
+#~ msgid "Enter your username to start tracking time"
+#~ msgstr "Enter your username to start tracking time"
+
+#~ msgid "Signing in..."
+#~ msgstr "Signing in..."
+
+#~ msgid "or"
+#~ msgstr "or"
+
+#~ msgid "Sign in with SSO"
+#~ msgstr "Sign in with SSO"
+
+#~ msgid "Internal Tool:"
+#~ msgstr "Internal Tool:"
+
+#~ msgid "This is a private time tracking application for internal use only."
+#~ msgstr "This is a private time tracking application for internal use only."
+
+#~ msgid "Plan and track work"
+#~ msgstr "Plan and track work"
+
+#~ msgid "Type a command or search..."
+#~ msgstr "Type a command or search..."
+
+# Theme toggle
+#~ msgid "Switch to light mode"
+#~ msgstr "Switch to light mode"
+
+#~ msgid "Switch to dark mode"
+#~ msgstr "Switch to dark mode"
+
+# About page
+#~ msgid "About TimeTracker"
+#~ msgstr "About TimeTracker"
+
+#~ msgid "Developed by DryTrix"
+#~ msgstr "Developed by DryTrix"
+
+#~ msgid "What is"
+#~ msgstr "What is"
+
+#~ msgid "A simple, efficient time tracking solution for teams and individuals."
+#~ msgstr "A simple, efficient time tracking solution for teams and individuals."
+
+#~ msgid ""
+#~ "It provides a simple and intuitive "
+#~ "interface for tracking time spent on "
+#~ "various projects and tasks."
+#~ msgstr ""
+#~ "It provides a simple and intuitive "
+#~ "interface for tracking time spent on "
+#~ "various projects and tasks."
+
+#~ msgid ""
+#~ "%(app)s is a web-based time "
+#~ "tracking application designed for internal "
+#~ "use within organizations."
+#~ msgstr ""
+#~ "%(app)s is a web-based time "
+#~ "tracking application designed for internal "
+#~ "use within organizations."
+
 #: app/templates/setup/initial_setup.html:30
 msgid "Privacy First"
 msgstr "Personvern først"
@@ -10034,9 +10707,21 @@ msgstr "Original:"
 msgid "to"
 msgstr "til"
 
+#: app/templates/timer/manual_entry.html:27
+msgid "N/A"
+msgstr "I/T"
+
 #: app/templates/timer/manual_entry.html:82
 msgid "What did you work on?"
 msgstr "Hva jobbet du med?"
+
+#: app/templates/timer/manual_entry.html:87
+msgid "tag1, tag2"
+msgstr "tag1, tag2"
+
+#: app/templates/timer/manual_entry.html:131
+msgid "Failed to load tasks"
+msgstr "Kunne ikke laste oppgaver"
 
 #: app/templates/tasks/list.html:299
 msgid "Move Selected Tasks to Project"
@@ -10050,24 +10735,34 @@ msgstr "Flytt oppgaver"
 msgid "Add notes about what you're working on..."
 msgstr "Legg til notater om hva du jobber med..."
 
-#: app/templates/admin/email_templates/create.html:38
 #: app/templates/admin/email_templates/edit.html:36
+#: app/templates/admin/email_templates/create.html:38
 msgid "Set as default template"
 msgstr "Sett som standardmal"
 
-#: app/templates/admin/email_templates/create.html:46
 #: app/templates/admin/email_templates/edit.html:44
+#: app/templates/admin/email_templates/create.html:46
 #: app/templates/admin/email_templates/view.html:56
 msgid "HTML Template"
 msgstr "HTML-mal"
 
-#: app/templates/admin/email_templates/create.html:55
+#: app/templates/admin/email_templates/edit.html:47
+#: app/templates/admin/email_templates/create.html:49
+msgid "Invoice Number"
+msgstr "Fakturanummer"
+
+#: app/templates/admin/email_templates/edit.html:50
+#: app/templates/admin/email_templates/create.html:52
+msgid "Company Name"
+msgstr "Firmanavn"
+
 #: app/templates/admin/email_templates/edit.html:53
+#: app/templates/admin/email_templates/create.html:55
 msgid "Custom Message"
 msgstr "Tilpasset melding"
 
-#: app/templates/admin/email_templates/create.html:58
 #: app/templates/admin/email_templates/edit.html:56
+#: app/templates/admin/email_templates/create.html:58
 msgid "More Variables"
 msgstr "Flere variabler"
 
@@ -10078,712 +10773,6 @@ msgstr "Fakturanummer eller klient"
 #: app/templates/expenses/form.html:231
 msgid "Receipt/Invoice Number"
 msgstr "Kvitterings-/Fakturanummer"
-
-msgid ""
-"Could not create your account due to a database error. Please try again "
-"later."
-msgstr ""
-"Kunne ikke opprette kontoen din på grunn av en databasefeil. Vennligst prøv "
-"igjen senere."
-
-msgid ""
-"Authentication failed: missing issuer or subject claim. Please check OIDC "
-"configuration."
-msgstr ""
-"Autentisering mislyktes: manglende issuer eller subject claim. Vennligst "
-"sjekk OIDC-konfigurasjonen."
-
-msgid ""
-"Receipt scanned successfully! You can now create an expense with the "
-"extracted data."
-msgstr ""
-"Kvittering skannet vellykket! Du kan nå opprette et utgiftspost med de "
-"utvunne dataene."
-
-msgid "Could not add extra good due to a database error. Please check server logs."
-msgstr "Kunne ikke legge til ekstra vare på grunn av en databasefeil. Vennligst sjekk serverlogger."
-
-msgid ""
-"Could not update extra good due to a database error. Please check server "
-"logs."
-msgstr ""
-"Kunne ikke oppdatere ekstra vare på grunn av en databasefeil. Vennligst "
-"sjekk serverlogger."
-
-msgid ""
-"Could not delete extra good due to a database error. Please check server "
-"logs."
-msgstr ""
-"Kunne ikke slette ekstra vare på grunn av en databasefeil. Vennligst sjekk "
-"serverlogger."
-
-msgid ""
-"Cannot start timer for an archived project. Please unarchive the project "
-"first."
-msgstr ""
-"Kan ikke starte timer for et arkivert prosjekt. Vennligst avarkivér "
-"prosjektet først."
-
-msgid ""
-"Cannot create time entries for an archived project. Please unarchive the "
-"project first."
-msgstr ""
-"Kan ikke opprette tidsregistreringer for et arkivert prosjekt. Vennligst "
-"avarkivér prosjektet først."
-
-msgid "A goal already exists for this week. Please edit the existing goal instead."
-msgstr "Et mål eksisterer allerede for denne uken. Vennligst rediger det eksisterende målet i stedet."
-
-msgid ""
-"Configure email settings here to save them in the database. Database "
-"settings take precedence over environment variables."
-msgstr ""
-"Konfigurer e-postinnstillinger her for å lagre dem i databasen. "
-"Databaseinnstillinger har forrang over miljøvariabler."
-
-msgid ""
-"This user was created or linked via OIDC. The issuer and subject are used to"
-" uniquely identify the user across login sessions."
-msgstr ""
-"Denne brukeren ble opprettet eller koblet via OIDC. Issuer og subject "
-"brukes til å unikt identifisere brukeren på tvers av innloggingsøkter."
-
-msgid ""
-"This user has no OIDC information. They may have been created manually or "
-"via self-registration without OIDC."
-msgstr ""
-"Denne brukeren har ingen OIDC-informasjon. De kan ha blitt opprettet "
-"manuelt eller via selvregistrering uten OIDC."
-
-msgid ""
-"Cannot delete user \"{name}\" because they have {count} time entries. Users "
-"with existing time entries cannot be deleted."
-msgstr ""
-"Kan ikke slette bruker \"{name}\" fordi de har {count} tidsregistreringer. "
-"Brukere med eksisterende tidsregistreringer kan ikke slettes."
-
-msgid ""
-"Are you sure you want to delete user \"{name}\"? This action cannot be "
-"undone."
-msgstr ""
-"Er du sikker på at du vil slette bruker \"{name}\"? Denne handlingen kan "
-"ikke angres."
-
-msgid ""
-"Permissions define what actions users can perform in the system. These "
-"permissions are assigned to roles, and roles are assigned to users. This "
-"provides a flexible and granular access control system."
-msgstr ""
-"Tillatelser definerer hvilke handlinger brukere kan utføre i systemet. Disse "
-"tillatelsene tildeles roller, og roller tildeles brukere. Dette gir et "
-"fleksibelt og granulært tilgangskontrollsystem."
-
-msgid ""
-"Roles are collections of permissions that can be assigned to users. System "
-"roles are predefined and cannot be deleted or renamed, but custom roles can "
-"be created for your specific needs."
-msgstr ""
-"Roller er samlinger av tillatelser som kan tildeles brukere. Systemroller "
-"er forhåndsdefinerte og kan ikke slettes eller omdøpes, men egendefinerte "
-"roller kan opprettes for dine spesifikke behov."
-
-msgid ""
-"Select the roles this user should have. Users inherit all permissions from "
-"their assigned roles."
-msgstr ""
-"Velg rollene denne brukeren skal ha. Brukere arver alle tillatelser fra sine "
-"tildelte roller."
-
-msgid "This rate will be automatically filled when creating projects for this client"
-msgstr "Denne satsen vil automatisk fylles ut når du oppretter prosjekter for denne klienten"
-
-msgid ""
-"Set the standard hourly rate for this client. This will automatically "
-"populate when creating new projects."
-msgstr ""
-"Sett standard timepris for denne klienten. Dette vil automatisk fylles ut "
-"når du oppretter nye prosjekter."
-
-msgid ""
-"No notes yet. Add a note to keep track of important information about this "
-"client."
-msgstr ""
-"Ingen notater ennå. Legg til et notat for å holde oversikt over viktig "
-"informasjon om denne klienten."
-
-msgid ""
-"Import data from other time trackers or export your data for GDPR compliance"
-" and backups"
-msgstr ""
-"Importer data fra andre tidsregistreringssystemer eller eksporter dataene "
-"dine for GDPR-samsvar og sikkerhetskopier"
-
-msgid ""
-"Select unbilled time entries, project costs, and extra goods to add to this "
-"invoice"
-msgstr ""
-"Velg ufakturerte tidsregistreringer, prosjektkostnader og ekstra varer for å "
-"legge til denne fakturaen"
-
-msgid ""
-"All invoice items, extra goods, and payment records associated with this "
-"invoice will be permanently deleted."
-msgstr ""
-"Alle fakturaelementer, ekstra varer og betalingsposter knyttet til denne "
-"fakturaen vil bli permanent slettet."
-
-msgid ""
-"System columns (todo, in_progress, done) cannot be deleted but can be "
-"customized"
-msgstr ""
-"Systemkolonner (todo, in_progress, done) kan ikke slettes, men kan "
-"tilpasses"
-
-msgid ""
-"Columns marked as \"Complete\" will mark tasks as completed when dragged to "
-"that column"
-msgstr ""
-"Kolonner merket som \"Fullført\" vil markere oppgaver som fullført når de "
-"dras til den kolonnen"
-
-msgid ""
-"Inactive columns are hidden from the kanban board but tasks with that status"
-" remain accessible"
-msgstr ""
-"Inaktive kolonner er skjult fra kanban-tavlen, men oppgaver med den "
-"statusen forblir tilgjengelige"
-
-msgid ""
-"Note: Tasks with this status will remain accessible but the column will no "
-"longer appear on the kanban board."
-msgstr ""
-"Merk: Oppgaver med denne statusen forblir tilgjengelige, men kolonnen vil "
-"ikke lenger vises på kanban-tavlen."
-
-msgid ""
-"Unique identifier (lowercase, no spaces, use underscores). Auto-generated "
-"from label if empty."
-msgstr ""
-"Unik identifikator (små bokstaver, ingen mellomrom, bruk understrek). "
-"Automatisk generert fra etikett hvis tom."
-
-msgid ""
-"The column will be added at the end of the board. You can reorder columns "
-"later from the management page."
-msgstr ""
-"Kolonnen vil bli lagt til på slutten av tavlen. Du kan omorganisere "
-"kolonner senere fra administrasjonssiden."
-
-msgid ""
-"This is a system column. You can customize its appearance but cannot delete "
-"it."
-msgstr ""
-"Dette er en systemkolonne. Du kan tilpasse utseendet, men kan ikke slette "
-"den."
-
-msgid ""
-"A comprehensive web-based time tracking application built with Flask, "
-"featuring project management, client organization, task management, "
-"invoicing, and advanced analytics."
-msgstr ""
-
-msgid ""
-"Use the mobile-friendly interface to track time on the go. The timer "
-"continues running even if you close your browser!"
-msgstr ""
-"Bruk det mobilvennlige grensesnittet for å spore tid på farten. Timeren "
-"fortsetter å kjøre selv om du lukker nettleseren!"
-
-msgid ""
-"Create time entries manually when you need to record time spent away from "
-"the computer or adjust existing entries."
-msgstr ""
-"Opprett tidsregistreringer manuelt når du trenger å registrere tid brukt "
-"borte fra datamaskinen eller justere eksisterende registreringer."
-
-msgid ""
-"Create multiple time entries for consecutive days with the same project and "
-"duration. Perfect for regular work patterns."
-msgstr ""
-"Opprett flere tidsregistreringer for påfølgende dager med samme prosjekt og "
-"varighet. Perfekt for vanlige arbeidsmønstre."
-
-msgid ""
-"Save frequently used time entries as templates for quick reuse. Saves "
-"project, task, and notes."
-msgstr ""
-"Lagre ofte brukte tidsregistreringer som maler for rask gjenbruk. Lagrer "
-"prosjekt, oppgave og notater."
-
-msgid ""
-"Visualize your time entries on a calendar. Drag-and-drop to reschedule or "
-"click dates to add entries."
-msgstr ""
-"Visualiser tidsregistreringene dine på en kalender. Dra og slipp for å "
-"omplanlegge eller klikk på datoer for å legge til registreringer."
-
-msgid ""
-"The client management system helps organize your work by client "
-"organizations, preventing errors and streamlining project creation."
-msgstr ""
-"Klientstyringssystemet hjelper deg med å organisere arbeidet ditt etter "
-"klientorganisasjoner, forhindrer feil og strømlinjeformer prosjektopprettelse."
-
-msgid ""
-"Break down projects into manageable tasks with detailed tracking and "
-"progress monitoring."
-msgstr ""
-"Bryt ned prosjekter i håndterbare oppgaver med detaljert sporing og "
-"fremdriftsmonitorering."
-
-msgid ""
-"Visualize your workflow with a drag-and-drop Kanban board for intuitive task"
-" management."
-msgstr ""
-"Visualiser arbeidsflyten din med et dra-og-slipp Kanban-brett for intuitiv "
-"oppgavestyring."
-
-msgid ""
-"The Kanban board is perfect for sprint planning and daily standups. Each "
-"column represents a stage in your workflow!"
-msgstr ""
-"Kanban-brettet er perfekt for sprintplanlegging og daglige standups. Hver "
-"kolonne representerer et stadium i arbeidsflyten din!"
-
-msgid ""
-"Track business expenses, manage receipts, and handle reimbursements "
-"efficiently."
-msgstr ""
-"Spore forretningsutgifter, administrere kvitteringer og håndtere "
-"refusjoner effektivt."
-
-msgid ""
-"Use Saved Filters to quickly access your most common report views. Save "
-"filters for weekly reviews, monthly billing, or specific project tracking!"
-msgstr ""
-"Bruk lagrede filtre for rask tilgang til de vanligste rapportvisningene. "
-"Lagre filtre for ukentlige gjennomganger, månedlig fakturering eller "
-"spesifikk prosjektsporing!"
-
-msgid ""
-"Boost your efficiency with keyboard shortcuts, command palette, and "
-"automation features."
-msgstr ""
-"Øk effektiviteten din med tastatursnarveier, kommandopalett og "
-"automatiseringsfunksjoner."
-
-msgid ""
-"Navigate faster with keyboard-driven commands. Press Shift+? to see all "
-"shortcuts."
-msgstr ""
-"Naviger raskere med tastaturstyrte kommandoer. Trykk Shift+? for å se alle "
-"snarveier."
-
-msgid ""
-"Quickly find projects, tasks, clients, and time entries from anywhere in the"
-" app."
-msgstr ""
-"Finn raskt prosjekter, oppgaver, klienter og tidsregistreringer fra hvor "
-"som helst i appen."
-
-msgid ""
-"Get notified about task assignments, overdue invoices, and weekly summaries "
-"via email."
-msgstr ""
-"Få varsler om oppgavefordelinger, forfalt fakturaer og ukentlige "
-"oppsummeringer via e-post."
-
-msgid ""
-"The timer will continue running until you stop it manually. You can see your"
-" active timer on the dashboard and timer page. The timer persists even if "
-"you close your browser or restart your device. If idle detection is enabled,"
-" the timer may pause automatically after the configured timeout period."
-msgstr ""
-"Timeren vil fortsette å kjøre til du stopper den manuelt. Du kan se den "
-"aktive timeren på dashbordet og timersiden. Timeren vedvarer selv om du "
-"lukker nettleseren eller starter enheten på nytt. Hvis inaktivitetsoppdagelse "
-"er aktivert, kan timeren pause automatisk etter den konfigurerte timeout-"
-"perioden."
-
-msgid ""
-"Yes, you can edit any time entry by clicking the edit button in the time "
-"entry list. You can modify the project, start/end times, notes, tags, "
-"billable status, and task assignment. Admins can edit all time entries, "
-"while regular users can only edit their own entries."
-msgstr ""
-"Ja, du kan redigere enhver tidsregistrering ved å klikke på redigeringsknappen "
-"i tidsregistreringslisten. Du kan endre prosjekt, start/slutt-tider, notater, "
-"tagger, fakturerbar status og oppgavefordeling. Administratorer kan redigere "
-"alle tidsregistreringer, mens vanlige brukere bare kan redigere sine egne "
-"registreringer."
-
-msgid ""
-"By default, you can only have one active timer at a time. To switch "
-"projects, stop your current timer and start a new one for the different "
-"project. Alternatively, you can create manual time entries for past work or "
-"configure the system to allow multiple active timers (admin setting)."
-msgstr ""
-"Som standard kan du bare ha én aktiv timer om gangen. For å bytte prosjekter, "
-"stopp den nåværende timeren og start en ny for det andre prosjektet. "
-"Alternativt kan du opprette manuelle tidsregistreringer for tidligere arbeid "
-"eller konfigurere systemet til å tillate flere aktive timere (admin-innstilling)."
-
-msgid ""
-"Go to the Reports page and use the \"Export CSV\" feature. You can apply "
-"filters to export specific data, or export all time entries. The CSV file "
-"includes all time entry details and can be opened in Excel or other "
-"spreadsheet applications. You can also configure the delimiter for different"
-" regional standards."
-msgstr ""
-"Gå til Rapporter-siden og bruk \"Eksporter CSV\"-funksjonen. Du kan bruke "
-"filtre for å eksportere spesifikke data, eller eksportere alle "
-"tidsregistreringer. CSV-filen inkluderer alle tidsregistreringsdetaljer og "
-"kan åpnes i Excel eller andre regnearkprogrammer. Du kan også konfigurere "
-"skilletegnet for forskjellige regionale standarder."
-
-msgid ""
-"Billable time is tracked for client billing purposes and can have an hourly "
-"rate associated with it. Non-billable time is for internal work that doesn't"
-" get charged to clients. You can mark individual time entries as billable or"
-" non-billable, and projects can have default billable settings. This "
-"distinction is crucial for accurate invoicing and profitability analysis."
-msgstr ""
-"Fakturerbar tid spores for klientfakturering og kan ha en timepris knyttet "
-"til seg. Ikke-fakturerbar tid er for internt arbeid som ikke faktureres til "
-"klienter. Du kan markere individuelle tidsregistreringer som fakturerbare "
-"eller ikke-fakturerbare, og prosjekter kan ha standard fakturerbare "
-"innstillinger. Denne distinksjonen er avgjørende for nøyaktig fakturering og "
-"lønnsomhetsanalyse."
-
-msgid ""
-"Navigate to Invoices → Create Invoice, set up the client and project "
-"details, then use \"Generate from Time Entries\" to automatically create "
-"invoice items from your tracked time. You can filter by date range and "
-"project, and the system will group time entries intelligently. Review the "
-"generated items and export as a professional PDF."
-msgstr ""
-"Naviger til Fakturaer → Opprett faktura, sett opp klient- og "
-"prosjektdetaljer, og bruk deretter \"Generer fra tidsregistreringer\" for å "
-"automatisk opprette fakturaelementer fra den sporede tiden. Du kan filtrere "
-"etter datoperiode og prosjekt, og systemet vil gruppere tidsregistreringer "
-"intelligent. Gjennomgå de genererte elementene og eksporter som en "
-"profesjonell PDF."
-
-msgid ""
-"Yes! TimeTracker is fully responsive and works great on mobile devices. You "
-"can install it as a Progressive Web App (PWA) for a native-like experience. "
-"The mobile interface includes a bottom tab bar for easy navigation and "
-"touch-optimized controls for time tracking on the go."
-msgstr ""
-"Ja! TimeTracker er fullt responsiv og fungerer utmerket på mobile enheter. "
-"Du kan installere den som en Progressive Web App (PWA) for en native-lignende "
-"opplevelse. Det mobile grensesnittet inkluderer en bunnfanebar for enkel "
-"navigasjon og berøringsoptimaliserte kontroller for tidsregistrering på "
-"farten."
-
-msgid ""
-"Press the question mark key (?) to open the command palette. From there, you"
-" can type to search for any action or navigation target. Use keyboard "
-"sequences like \"g d\" for Dashboard, \"g p\" for Projects, or \"n e\" for "
-"New Entry. Press Shift+? to see all available shortcuts. Press Ctrl+K (or "
-"Cmd+K on Mac) for quick search."
-msgstr ""
-"Trykk på spørsmålstegn-tasten (?) for å åpne kommandopaletten. Derfra kan du "
-"skrive for å søke etter en hvilken som helst handling eller navigasjonsmål. "
-"Bruk tastatursekvenser som \"g d\" for Dashboard, \"g p\" for Prosjekter, "
-"eller \"n e\" for Ny registrering. Trykk Shift+? for å se alle tilgjengelige "
-"snarveier. Trykk Ctrl+K (eller Cmd+K på Mac) for rask søk."
-
-msgid ""
-"Navigate to Work → Bulk Time Entry. Select your project, choose a date "
-"range, set your daily start and end times, and optionally skip weekends. The"
-" system will create identical time entries for each day in the range. This "
-"is perfect for logging regular work patterns or filling in past time when "
-"you worked consistent hours."
-msgstr ""
-"Naviger til Arbeid → Bulk tidsregistrering. Velg prosjektet ditt, velg en "
-"datoperiode, sett daglige start- og sluttider, og hopp eventuelt over "
-"helger. Systemet vil opprette identiske tidsregistreringer for hver dag i "
-"perioden. Dette er perfekt for å logge vanlige arbeidsmønstre eller fylle ut "
-"tidligere tid når du jobbet med konsistente timer."
-
-msgid ""
-"Time entry templates let you save frequently used time entry configurations."
-" When creating a manual time entry, check \"Save as Template\" to save the "
-"project, task, and notes. Later, when creating new entries, you can select a"
-" template to quickly fill in these details. Templates are personal and only "
-"visible to you."
-msgstr ""
-"Tidsregistreringsmaler lar deg lagre ofte brukte tidsregistreringskonfigurasjoner. "
-"Når du oppretter en manuell tidsregistrering, kryss av \"Lagre som mal\" for "
-"å lagre prosjektet, oppgaven og notatene. Senere, når du oppretter nye "
-"registreringer, kan du velge en mal for raskt å fylle ut disse detaljene. "
-"Maler er personlige og bare synlige for deg."
-
-msgid ""
-"Go to Expenses → New Expense to record business expenses. Upload receipt "
-"images, categorize the expense, and mark it as billable if needed. When "
-"creating invoices, you can include these expenses as line items. Expenses "
-"support approval workflows, reimbursement tracking, and can be linked to "
-"specific projects."
-msgstr ""
-"Gå til Utgifter → Ny utgift for å registrere forretningsutgifter. Last opp "
-"kvitteringsbilder, kategoriser utgiften og marker den som fakturerbar hvis "
-"nødvendig. Når du oppretter fakturaer, kan du inkludere disse utgiftene som "
-"linjeelementer. Utgifter støtter godkjenningsarbeidsflyter, "
-"refusjonssporing og kan kobles til spesifikke prosjekter."
-
-msgid ""
-"Yes! Project and task descriptions support full Markdown formatting. You can"
-" use bold, italic, headings, lists, links, code blocks, tables, and images. "
-"This allows you to create rich, well-formatted documentation directly in "
-"your projects and tasks. The Markdown editor includes a preview mode and "
-"supports dark theme."
-msgstr ""
-"Ja! Prosjekt- og oppgavebeskrivelser støtter full Markdown-formatering. Du "
-"kan bruke fet, kursiv, overskrifter, lister, lenker, kodeblokker, tabeller "
-"og bilder. Dette lar deg opprette rik, godt formatert dokumentasjon direkte "
-"i prosjektene og oppgavene dine. Markdown-redigereren inkluderer en "
-"forhåndsvisningsmodus og støtter mørkt tema."
-
-msgid ""
-"As an admin, you can access additional system information and diagnostics in"
-" the"
-msgstr ""
-"Som administrator kan du få tilgang til tilleggssysteminformasjon og "
-"diagnostikk i"
-
-msgid ""
-"Are you sure you want to delete this time entry? This action cannot be "
-"undone."
-msgstr ""
-"Er du sikker på at du vil slette denne tidsregistreringen? Denne handlingen "
-"kan ikke angres."
-
-msgid ""
-"Provide detailed information about the project, objectives, and "
-"deliverables..."
-msgstr ""
-"Gi detaljert informasjon om prosjektet, målene og leveransene..."
-
-msgid "Optional: Add context, objectives, or specific requirements for the project"
-msgstr "Valgfritt: Legg til kontekst, mål eller spesifikke krav for prosjektet"
-
-msgid "Add a new task to your project to break down work into manageable components"
-msgstr "Legg til en ny oppgave i prosjektet ditt for å bryte ned arbeid i håndterbare komponenter"
-
-msgid ""
-"Provide detailed information about the task, requirements, and any specific "
-"instructions..."
-msgstr ""
-"Gi detaljert informasjon om oppgaven, kravene og eventuelle spesifikke "
-"instruksjoner..."
-
-msgid ""
-"Cannot delete task \"{name}\" because it has time entries. Please delete the"
-" time entries first."
-msgstr ""
-"Kan ikke slette oppgave \"{name}\" fordi den har tidsregistreringer. "
-"Vennligst slett tidsregistreringene først."
-
-msgid ""
-"Configure how your time entries are rounded. This affects how durations are "
-"calculated when you stop timers."
-msgstr ""
-"Konfigurer hvordan tidsregistreringene dine avrundes. Dette påvirker hvordan "
-"varigheter beregnes når du stopper timere."
-
-msgid ""
-"Set your standard working hours per day. Any time worked beyond this will be"
-" counted as overtime."
-msgstr ""
-"Sett dine standard arbeidstimer per dag. All tid jobbet utover dette vil bli "
-"telt som overtid."
-
-msgid ""
-"If you work more than your standard hours in a day, the extra time will be "
-"tracked as overtime in reports and analytics."
-msgstr ""
-"Hvis du jobber mer enn standardtimene dine på en dag, vil den ekstra tiden "
-"bli sporet som overtid i rapporter og analyser."
-
-msgid ""
-"Click elements from the left sidebar to add them to the canvas. Click "
-"elements to select and customize them in the properties panel. Use the "
-"alignment tools and keyboard shortcuts for faster editing."
-msgstr ""
-"Klikk elementer fra venstre sidepanel for å legge dem til på lerretet. Klikk "
-"elementer for å velge og tilpasse dem i egenskapspanelen. Bruk "
-"justeringsverktøyene og tastatursnarveiene for raskere redigering."
-
-msgid ""
-"Restoring a backup will overwrite your current database and files. Ensure "
-"you have a recent backup before proceeding."
-msgstr ""
-"Gjenoppretting av en sikkerhetskopi vil overskrive den nåværende databasen og "
-"filene. Sørg for at du har en nylig sikkerhetskopi før du fortsetter."
-
-msgid ""
-"Select start and end dates. Entries will be created for each day in the "
-"range."
-msgstr ""
-"Velg start- og sluttdatoer. Registreringer vil bli opprettet for hver dag i "
-"perioden."
-
-msgid ""
-"You can edit all fields of this time entry, including project, task, "
-"start/end times, and source."
-msgstr ""
-"Du kan redigere alle feltene i denne tidsregistreringen, inkludert prosjekt, "
-"oppgave, start/slutt-tider og kilde."
-
-msgid ""
-"As an admin, you have full editing privileges for this time entry. Changes "
-"will be logged for audit purposes."
-msgstr ""
-"Som administrator har du full redigeringsrett for denne tidsregistreringen. "
-"Endringer vil bli logget for revisjonsformål."
-
-msgid "DeprecationWarning: The {param_type} {name!r} is deprecated.{extra_message}"
-msgstr "DeprecationWarning: {param_type} {name!r} er utdatert.{extra_message}"
-
-msgid ""
-"Choose from:\n"
-"\t{choices}"
-msgstr ""
-"Velg fra:\n"
-"\t{choices}"
-
-#~ msgid "Log"
-#~ msgstr "Log"
-
-#~ msgid "All rights reserved."
-#~ msgstr "All rights reserved."
-
-#~ msgid "Work"
-#~ msgstr "Work"
-
-#~ msgid "Insights"
-#~ msgstr "Insights"
-
-#~ msgid "Ctrl"
-#~ msgstr "Ctrl"
-
-#~ msgid "App installed"
-#~ msgstr "App installed"
-
-#~ msgid "Please confirm"
-#~ msgstr "Please confirm"
-
-#~ msgid "No Active Timer"
-#~ msgstr "No Active Timer"
-
-#~ msgid "Choose a project or one of its tasks to start tracking."
-#~ msgstr "Choose a project or one of its tasks to start tracking."
-
-#~ msgid "Hours This Month"
-#~ msgstr "Hours This Month"
-
-#~ msgid "Multi-day time entry"
-#~ msgstr "Multi-day time entry"
-
-#~ msgid "Today by Task"
-#~ msgstr "Today by Task"
-
-#~ msgid "Start tracking your time to see entries here"
-#~ msgstr "Start tracking your time to see entries here"
-
-#~ msgid "Select Task (Optional)"
-#~ msgstr "Select Task (Optional)"
-
-#~ msgid "Choose a task..."
-#~ msgstr "Choose a task..."
-
-#~ msgid ""
-#~ "Tasks list updates after choosing a "
-#~ "project. Leave empty to log at "
-#~ "project level."
-#~ msgstr ""
-#~ "Tasks list updates after choosing a "
-#~ "project. Leave empty to log at "
-#~ "project level."
-
-#~ msgid "Bulk action completed"
-#~ msgstr "Bulk action completed"
-
-#~ msgid "Bulk action failed"
-#~ msgstr "Bulk action failed"
-
-#~ msgid "DryTrix Logo"
-#~ msgstr "DryTrix Logo"
-
-#~ msgid "Welcome to TimeTracker"
-#~ msgstr "Welcome to TimeTracker"
-
-#~ msgid "Powered by"
-#~ msgstr "Powered by"
-
-#~ msgid "Enter your username to start tracking time"
-#~ msgstr "Enter your username to start tracking time"
-
-#~ msgid "Signing in..."
-#~ msgstr "Signing in..."
-
-#~ msgid "or"
-#~ msgstr "or"
-
-#~ msgid "Sign in with SSO"
-#~ msgstr "Sign in with SSO"
-
-#~ msgid "Internal Tool:"
-#~ msgstr "Internal Tool:"
-
-#~ msgid "This is a private time tracking application for internal use only."
-#~ msgstr "This is a private time tracking application for internal use only."
-
-#~ msgid "Plan and track work"
-#~ msgstr "Plan and track work"
-
-#~ msgid "Type a command or search..."
-#~ msgstr "Type a command or search..."
-
-# Theme toggle
-#~ msgid "Switch to light mode"
-#~ msgstr "Switch to light mode"
-
-#~ msgid "Switch to dark mode"
-#~ msgstr "Switch to dark mode"
-
-# About page
-#~ msgid "About TimeTracker"
-#~ msgstr "About TimeTracker"
-
-#~ msgid "Developed by DryTrix"
-#~ msgstr "Developed by DryTrix"
-
-#~ msgid "What is"
-#~ msgstr "What is"
-
-#~ msgid "A simple, efficient time tracking solution for teams and individuals."
-#~ msgstr "A simple, efficient time tracking solution for teams and individuals."
-
-#~ msgid ""
-#~ "It provides a simple and intuitive "
-#~ "interface for tracking time spent on "
-#~ "various projects and tasks."
-#~ msgstr ""
-#~ "It provides a simple and intuitive "
-#~ "interface for tracking time spent on "
-#~ "various projects and tasks."
-
-#~ msgid ""
-#~ "%(app)s is a web-based time tracking"
-#~ " application designed for internal use "
-#~ "within organizations."
-#~ msgstr ""
-#~ "%(app)s is a web-based time tracking"
-#~ " application designed for internal use "
-#~ "within organizations."
 
 #~ msgid "Learn more about "
 #~ msgstr "Learn more about "

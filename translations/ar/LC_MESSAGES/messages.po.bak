@@ -1,0 +1,704 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: TimeTracker\n"
+"Language: ar\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
+
+# Navigation and Common
+msgid "Time Tracker"
+msgstr "متتبع الوقت"
+
+msgid "Dashboard"
+msgstr "لوحة القيادة"
+
+msgid "Projects"
+msgstr "المشاريع"
+
+msgid "Clients"
+msgstr "العملاء"
+
+msgid "Tasks"
+msgstr "المهام"
+
+msgid "Log Time"
+msgstr "تسجيل الوقت"
+
+msgid "Bulk Time Entry"
+msgstr "إدخال جماعي"
+
+msgid "Calendar"
+msgstr "التقويم"
+
+msgid "Reports"
+msgstr "التقارير"
+
+msgid "Invoices"
+msgstr "الفواتير"
+
+msgid "Analytics"
+msgstr "التحليلات"
+
+msgid "Admin"
+msgstr "المسؤول"
+
+msgid "Profile"
+msgstr "الملف الشخصي"
+
+msgid "Logout"
+msgstr "تسجيل الخروج"
+
+msgid "Language"
+msgstr "اللغة"
+
+msgid "Home"
+msgstr "الصفحة الرئيسية"
+
+msgid "Log"
+msgstr "السجل"
+
+msgid "About"
+msgstr "حول"
+
+msgid "Help"
+msgstr "مساعدة"
+
+msgid "Buy me a coffee"
+msgstr "ادعمني بقهوة"
+
+msgid "All rights reserved."
+msgstr "جميع الحقوق محفوظة."
+
+msgid "Skip to content"
+msgstr "الانتقال إلى المحتوى"
+
+msgid "Work"
+msgstr "العمل"
+
+msgid "Insights"
+msgstr "الإحصاءات"
+
+msgid "Search"
+msgstr "بحث"
+
+msgid "Open Command Palette"
+msgstr "فتح لوحة الأوامر"
+
+msgid "Ctrl"
+msgstr "Ctrl"
+
+msgid "Keyboard Shortcuts"
+msgstr "اختصارات لوحة المفاتيح"
+
+msgid "Install App"
+msgstr "تثبيت التطبيق"
+
+msgid "App installed"
+msgstr "تم تثبيت التطبيق"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "Cancel"
+msgstr "إلغاء"
+
+msgid "Confirm"
+msgstr "تأكيد"
+
+msgid "Please confirm"
+msgstr "يرجى التأكيد"
+
+# Dashboard
+msgid "Welcome back,"
+msgstr "مرحباً بعودتك،"
+
+msgid "h today"
+msgstr "س اليوم"
+
+msgid "Timer Status"
+msgstr "حالة المؤقت"
+
+msgid "Timer Running"
+msgstr "المؤقت قيد التشغيل"
+
+msgid "No Active Timer"
+msgstr "لا يوجد مؤقت نشط"
+
+msgid "Choose a project or one of its tasks to start tracking."
+msgstr "اختر مشروعاً أو إحدى مهامه لبدء التتبع."
+
+msgid "Idle"
+msgstr "خامل"
+
+msgid "Started at"
+msgstr "بدأ في"
+
+msgid "Stop Timer"
+msgstr "إيقاف المؤقت"
+
+msgid "Start Timer"
+msgstr "بدء المؤقت"
+
+msgid "Hours Today"
+msgstr "ساعات اليوم"
+
+msgid "Hours This Week"
+msgstr "ساعات هذا الأسبوع"
+
+msgid "Hours This Month"
+msgstr "ساعات هذا الشهر"
+
+msgid "Quick Actions"
+msgstr "إجراءات سريعة"
+
+msgid "Manual entry"
+msgstr "إدخال يدوي"
+
+msgid "Bulk Entry"
+msgstr "إدخال جماعي"
+
+msgid "Multi-day time entry"
+msgstr "إدخال وقت متعدد الأيام"
+
+msgid "Manage projects"
+msgstr "إدارة المشاريع"
+
+msgid "View analytics"
+msgstr "عرض التحليلات"
+
+msgid "Find entries"
+msgstr "البحث عن الإدخالات"
+
+msgid "Today by Task"
+msgstr "اليوم حسب المهمة"
+
+msgid "Loading..."
+msgstr "جارٍ التحميل..."
+
+msgid "Recent Entries"
+msgstr "الإدخالات الأخيرة"
+
+msgid "View All"
+msgstr "عرض الكل"
+
+msgid "Select all"
+msgstr "تحديد الكل"
+
+msgid "Delete"
+msgstr "حذف"
+
+msgid "Set Billable"
+msgstr "تحديد كقابل للفوترة"
+
+msgid "Set Non-billable"
+msgstr "تحديد كغير قابل للفوترة"
+
+msgid "Project"
+msgstr "المشروع"
+
+msgid "Duration"
+msgstr "المدة"
+
+msgid "Date"
+msgstr "التاريخ"
+
+msgid "Notes"
+msgstr "الملاحظات"
+
+msgid "Actions"
+msgstr "الإجراءات"
+
+msgid "No notes"
+msgstr "لا توجد ملاحظات"
+
+msgid "Edit entry"
+msgstr "تحرير الإدخال"
+
+msgid "Delete entry"
+msgstr "حذف الإدخال"
+
+msgid "No recent entries"
+msgstr "لا توجد إدخالات حديثة"
+
+msgid "Start tracking your time to see entries here"
+msgstr "ابدأ بتتبع وقتك لرؤية الإدخالات هنا"
+
+msgid "Log Your First Entry"
+msgstr "سجل إدخالك الأول"
+
+msgid "Select Project"
+msgstr "اختر المشروع"
+
+msgid "Choose a project..."
+msgstr "اختر مشروعاً..."
+
+msgid "Select Task (Optional)"
+msgstr "اختر المهمة (اختياري)"
+
+msgid "Choose a task..."
+msgstr "اختر مهمة..."
+
+msgid "Tasks list updates after choosing a project. Leave empty to log at project level."
+msgstr "تتحدث قائمة المهام بعد اختيار المشروع. اترك فارغاً للتسجيل على مستوى المشروع."
+
+msgid "Notes (Optional)"
+msgstr "ملاحظات (اختياري)"
+
+msgid "What are you working on?"
+msgstr "ماذا تعمل؟"
+
+msgid "Delete Time Entry"
+msgstr "حذف إدخال الوقت"
+
+msgid "Warning:"
+msgstr "تحذير:"
+
+msgid "This action cannot be undone."
+msgstr "لا يمكن التراجع عن هذا الإجراء."
+
+msgid "Are you sure you want to delete the time entry for"
+msgstr "هل أنت متأكد من رغبتك في حذف إدخال الوقت لـ"
+
+msgid "Duration:"
+msgstr "المدة:"
+
+msgid "Delete Entry"
+msgstr "حذف الإدخال"
+
+msgid "Please select a project"
+msgstr "يرجى اختيار مشروع"
+
+msgid "Starting..."
+msgstr "جارٍ البدء..."
+
+msgid "Deleting..."
+msgstr "جارٍ الحذف..."
+
+msgid "No time tracked yet today"
+msgstr "لم يتم تتبع الوقت بعد اليوم"
+
+msgid "h"
+msgstr "س"
+
+msgid "Bulk action completed"
+msgstr "اكتمل الإجراء الجماعي"
+
+msgid "Bulk action failed"
+msgstr "فشل الإجراء الجماعي"
+
+# Login
+msgid "Login"
+msgstr "تسجيل الدخول"
+
+msgid "Company Logo"
+msgstr "شعار الشركة"
+
+msgid "DryTrix Logo"
+msgstr "DryTrix Logo"
+
+msgid "TimeTracker"
+msgstr "TimeTracker"
+
+msgid "Professional Time Management"
+msgstr "إدارة احترافية للوقت"
+
+msgid "Sign in to your account to start tracking your time"
+msgstr "سجل الدخول إلى حسابك لبدء تتبع وقتك"
+
+msgid "Welcome to TimeTracker"
+msgstr "مرحباً بك في TimeTracker"
+
+msgid "Powered by"
+msgstr "مدعوم من"
+
+msgid "Enter your username to start tracking time"
+msgstr "أدخل اسم المستخدم لبدء تتبع الوقت"
+
+msgid "Username"
+msgstr "اسم المستخدم"
+
+msgid "Enter your username"
+msgstr "أدخل اسم المستخدم"
+
+msgid "Sign In"
+msgstr "تسجيل الدخول"
+
+msgid "Signing in..."
+msgstr "جارٍ تسجيل الدخول..."
+
+msgid "Continue"
+msgstr "متابعة"
+
+msgid "or"
+msgstr "أو"
+
+msgid "Sign in with SSO"
+msgstr "تسجيل الدخول باستخدام SSO"
+
+msgid "Internal Tool"
+msgstr "أداة داخلية"
+
+msgid "Internal Tool:"
+msgstr "أداة داخلية:"
+
+msgid "This is a private time tracking application for internal use only."
+msgstr "هذا تطبيق خاص لتتبع الوقت للاستخدام الداخلي فقط."
+
+msgid "New users will be created automatically"
+msgstr "سيتم إنشاء المستخدمين الجدد تلقائياً"
+
+msgid "Version"
+msgstr "الإصدار"
+
+msgid "Please enter a username"
+msgstr "يرجى إدخال اسم مستخدم"
+
+msgid "Signing in..."
+msgstr "جارٍ تسجيل الدخول..."
+
+# Tasks
+msgid "Board"
+msgstr "اللوحة"
+
+msgid "Table"
+msgstr "الجدول"
+
+msgid "New Task"
+msgstr "مهمة جديدة"
+
+msgid "Plan and track work"
+msgstr "خطط وتتبع العمل"
+
+msgid "total"
+msgstr "المجموع"
+
+msgid "To Do"
+msgstr "للقيام به"
+
+msgid "In Progress"
+msgstr "قيد التقدم"
+
+msgid "Review"
+msgstr "مراجعة"
+
+msgid "Completed"
+msgstr "مكتمل"
+
+msgid "Filter Tasks"
+msgstr "تصفية المهام"
+
+msgid "Toggle Filters"
+msgstr "تبديل التصفية"
+
+msgid "Task name or description"
+msgstr "اسم المهمة أو الوصف"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "All Statuses"
+msgstr "جميع الحالات"
+
+msgid "Done"
+msgstr "تم"
+
+msgid "Cancelled"
+msgstr "ملغى"
+
+msgid "Priority"
+msgstr "الأولوية"
+
+msgid "All Priorities"
+msgstr "جميع الأولويات"
+
+msgid "Low"
+msgstr "منخفضة"
+
+msgid "Medium"
+msgstr "متوسطة"
+
+msgid "High"
+msgstr "عالية"
+
+msgid "Urgent"
+msgstr "عاجلة"
+
+msgid "All Projects"
+msgstr "جميع المشاريع"
+
+# Command Palette
+msgid "Command Palette"
+msgstr "لوحة الأوامر"
+
+msgid "Type a command or search..."
+msgstr "اكتب أمراً أو ابحث..."
+
+# Socket.IO messages
+msgid "Timer started for"
+msgstr "بدأ المؤقت لـ"
+
+msgid "Timer stopped. Duration:"
+msgstr "توقف المؤقت. المدة:"
+
+# Theme toggle
+msgid "Switch to light mode"
+msgstr "التبديل إلى الوضع الفاتح"
+
+msgid "Switch to dark mode"
+msgstr "التبديل إلى الوضع الداكن"
+
+msgid "Light mode"
+msgstr "الوضع الفاتح"
+
+msgid "Dark mode"
+msgstr "الوضع الداكن"
+
+# Mobile
+msgid "Log time"
+msgstr "تسجيل الوقت"
+
+# About page
+msgid "About TimeTracker"
+msgstr "حول TimeTracker"
+
+msgid "Developed by DryTrix"
+msgstr "تطوير DryTrix"
+
+msgid "What is"
+msgstr "ما هو"
+
+msgid "A simple, efficient time tracking solution for teams and individuals."
+msgstr "حل بسيط وفعال لتتبع الوقت للفرق والأفراد."
+
+msgid "It provides a simple and intuitive interface for tracking time spent on various projects and tasks."
+msgstr "يوفر واجهة بسيطة وبديهية لتتبع الوقت المستغرق في مختلف المشاريع والمهام."
+
+msgid "%(app)s is a web-based time tracking application designed for internal use within organizations."
+msgstr "%(app)s هو تطبيق ويب لتتبع الوقت مصمم للاستخدام الداخلي داخل المؤسسات."
+
+msgid "Learn more about "
+msgstr "تعرف على المزيد حول "
+
+#: app/templates/setup/initial_setup.html:30
+msgid "Privacy First"
+msgstr "الخصوصية أولاً"
+
+#: app/templates/setup/initial_setup.html:35
+msgid "Self-hosted on your server"
+msgstr "مستضاف ذاتياً على خادمك"
+
+#: app/templates/setup/initial_setup.html:41
+msgid "Anonymous telemetry (opt-in)"
+msgstr "قياس مجهول (اختياري)"
+
+#: app/templates/setup/initial_setup.html:47
+msgid "No PII collected ever"
+msgstr "لا يتم جمع بيانات شخصية أبداً"
+
+#: app/templates/setup/initial_setup.html:53
+msgid "Open source & transparent"
+msgstr "مفتوح المصدر وشفاف"
+
+#: app/templates/setup/initial_setup.html:61
+msgid "Welcome to TimeTracker"
+msgstr "مرحباً بك في TimeTracker"
+
+#: app/templates/setup/initial_setup.html:62
+msgid "Let's get you set up in just a moment"
+msgstr "دعنا نعدك في لحظة"
+
+#: app/templates/setup/initial_setup.html:69
+msgid "Thank you for choosing TimeTracker!"
+msgstr "شكراً لاختيارك TimeTracker!"
+
+#: app/templates/setup/initial_setup.html:71
+msgid "Your data stays on your server, and you have complete control."
+msgstr "تبقى بياناتك على خادمك ولديك سيطرة كاملة."
+
+#: app/templates/setup/initial_setup.html:77
+msgid "Help Us Improve (Optional)"
+msgstr "ساعدنا على التحسين (اختياري)"
+
+#: app/templates/setup/initial_setup.html:83
+msgid "Enable anonymous telemetry"
+msgstr "تفعيل القياس المجهول"
+
+#: app/templates/setup/initial_setup.html:85
+msgid "Help us understand usage patterns to improve TimeTracker"
+msgstr "ساعدنا على فهم أنماط الاستخدام لتحسين TimeTracker"
+
+#: app/templates/setup/initial_setup.html:94
+msgid "What data is collected?"
+msgstr "ما هي البيانات التي يتم جمعها؟"
+
+#: app/templates/setup/initial_setup.html:98
+msgid "What we collect:"
+msgstr "ما نجمع:"
+
+#: app/templates/setup/initial_setup.html:100
+msgid "Anonymous installation fingerprint (hashed)"
+msgstr "بصمة تثبيت مجهولة (مشفرة)"
+
+#: app/templates/setup/initial_setup.html:101
+msgid "Application version & platform info"
+msgstr "إصدار التطبيق ومعلومات المنصة"
+
+#: app/templates/setup/initial_setup.html:102
+msgid "Feature usage statistics"
+msgstr "إحصائيات استخدام الميزات"
+
+#: app/templates/setup/initial_setup.html:103
+msgid "Internal numeric IDs only"
+msgstr "معرفات رقمية داخلية فقط"
+
+#: app/templates/setup/initial_setup.html:108
+msgid "What we DON'T collect:"
+msgstr "ما لا نجمع:"
+
+#: app/templates/setup/initial_setup.html:110
+msgid "No usernames or emails"
+msgstr "لا أسماء مستخدمين أو بريد إلكتروني"
+
+#: app/templates/setup/initial_setup.html:111
+msgid "No project names or descriptions"
+msgstr "لا أسماء مشاريع أو أوصاف"
+
+#: app/templates/setup/initial_setup.html:112
+msgid "No time entry data or notes"
+msgstr "لا بيانات إدخال الوقت أو ملاحظات"
+
+#: app/templates/setup/initial_setup.html:113
+msgid "No client or business data"
+msgstr "لا بيانات عميل أو أعمال"
+
+#: app/templates/setup/initial_setup.html:114
+msgid "No IP addresses or PII"
+msgstr "لا عناوين IP أو بيانات شخصية"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Why?"
+msgstr "لماذا؟"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Anonymous usage data helps us prioritize features and fix issues."
+msgstr "بيانات الاستخدام المجهولة تساعدنا على تحديد أولويات الميزات وإصلاح المشكلات."
+
+#: app/templates/setup/initial_setup.html:121
+msgid "You can change this anytime in"
+msgstr "يمكنك تغيير هذا في أي وقت في"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Admin → Settings"
+msgstr "المسؤول → الإعدادات"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Privacy & Analytics section"
+msgstr "قسم الخصوصية والتحليلات"
+
+#: app/templates/setup/initial_setup.html:131
+msgid "Complete Setup & Continue"
+msgstr "إكمال الإعداد والمتابعة"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "By continuing, you agree to use TimeTracker under the"
+msgstr "بالمتابعة، أنت توافق على استخدام TimeTracker بموجب"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "GPL-3.0 License"
+msgstr "رخصة GPL-3.0"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Duplicate Time Entry"
+msgstr "تكرار إدخال الوقت"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Log Time Manually"
+msgstr "تسجيل الوقت يدوياً"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a copy of a previous entry with new times"
+msgstr "إنشاء نسخة من إدخال سابق بأوقات جديدة"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a new time entry"
+msgstr "إنشاء إدخال وقت جديد"
+
+#: app/templates/timer/manual_entry.html:24
+msgid "Duplicating entry:"
+msgstr "تكرار الإدخال:"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "Original:"
+msgstr "الأصلي:"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "to"
+msgstr "إلى"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "N/A"
+msgstr "غير متاح"
+
+#: app/templates/timer/manual_entry.html:82
+msgid "What did you work on?"
+msgstr "على ماذا عملت؟"
+
+#: app/templates/timer/manual_entry.html:87
+msgid "tag1, tag2"
+msgstr "tag1, tag2"
+
+#: app/templates/timer/manual_entry.html:131
+msgid "Failed to load tasks"
+msgstr "فشل تحميل المهام"
+
+#: app/templates/tasks/list.html:299
+msgid "Move Selected Tasks to Project"
+msgstr "نقل المهام المحددة إلى المشروع"
+
+#: app/templates/tasks/list.html:309
+msgid "Move Tasks"
+msgstr "نقل المهام"
+
+#: app/templates/timer/timer_page.html:135
+msgid "Add notes about what you're working on..."
+msgstr "أضف ملاحظات حول ما تعمل عليه..."
+
+#: app/templates/admin/email_templates/edit.html:36
+#: app/templates/admin/email_templates/create.html:38
+msgid "Set as default template"
+msgstr "تعيين كقالب افتراضي"
+
+#: app/templates/admin/email_templates/edit.html:44
+#: app/templates/admin/email_templates/create.html:46
+#: app/templates/admin/email_templates/view.html:56
+msgid "HTML Template"
+msgstr "قالب HTML"
+
+#: app/templates/admin/email_templates/edit.html:47
+#: app/templates/admin/email_templates/create.html:49
+msgid "Invoice Number"
+msgstr "رقم الفاتورة"
+
+#: app/templates/admin/email_templates/edit.html:50
+#: app/templates/admin/email_templates/create.html:52
+msgid "Company Name"
+msgstr "اسم الشركة"
+
+#: app/templates/admin/email_templates/edit.html:53
+#: app/templates/admin/email_templates/create.html:55
+msgid "Custom Message"
+msgstr "رسالة مخصصة"
+
+#: app/templates/admin/email_templates/edit.html:56
+#: app/templates/admin/email_templates/create.html:58
+msgid "More Variables"
+msgstr "المزيد من المتغيرات"
+
+#: app/templates/invoices/list.html:72
+msgid "Invoice number or client"
+msgstr "رقم الفاتورة أو العميل"
+
+#: app/templates/expenses/form.html:231
+msgid "Receipt/Invoice Number"
+msgstr "رقم الإيصال/الفاتورة"
+

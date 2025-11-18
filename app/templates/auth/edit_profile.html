@@ -3,7 +3,7 @@
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>
-        <h1 class="text-2xl font-bold">Edit Profile</h1>
+        <h1 class="text-2xl font-bold">{{ _('Edit Profile') }}</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">Update your personal information.</p>
     </div>
 </div>
@@ -62,7 +62,7 @@
             </div>
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
-                <input type="password" name="password" id="password" class="form-input" placeholder="Leave blank to keep current password">
+                <input type="password" name="password" id="password" class="form-input" placeholder="{{ _('Leave blank to keep current password') }}">
             </div>
             <div>
                 <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
@@ -71,7 +71,7 @@
         </div>
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end">
             <a href="{{ url_for('auth.profile') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mr-4">Cancel</a>
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Save Changes</button>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
         </div>
     </form>
 </div>

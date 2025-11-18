@@ -1,0 +1,703 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: TimeTracker\n"
+"Language: fr\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+# Navigation and Common
+msgid "Time Tracker"
+msgstr "Suivi du temps"
+
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+msgid "Projects"
+msgstr "Projets"
+
+msgid "Clients"
+msgstr "Clients"
+
+msgid "Tasks"
+msgstr "Tâches"
+
+msgid "Log Time"
+msgstr "Enregistrer le temps"
+
+msgid "Bulk Time Entry"
+msgstr "Saisie en masse"
+
+msgid "Calendar"
+msgstr "Calendrier"
+
+msgid "Reports"
+msgstr "Rapports"
+
+msgid "Invoices"
+msgstr "Factures"
+
+msgid "Analytics"
+msgstr "Analytique"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "Profile"
+msgstr "Profil"
+
+msgid "Logout"
+msgstr "Déconnexion"
+
+msgid "Language"
+msgstr "Langue"
+
+msgid "Home"
+msgstr "Accueil"
+
+msgid "Log"
+msgstr "Journal"
+
+msgid "About"
+msgstr "À propos"
+
+msgid "Help"
+msgstr "Aide"
+
+msgid "Buy me a coffee"
+msgstr "Offrez-moi un café"
+
+msgid "All rights reserved."
+msgstr "Tous droits réservés."
+
+msgid "Skip to content"
+msgstr "Passer au contenu"
+
+msgid "Work"
+msgstr "Travail"
+
+msgid "Insights"
+msgstr "Aperçus"
+
+msgid "Search"
+msgstr "Rechercher"
+
+msgid "Open Command Palette"
+msgstr "Ouvrir la palette de commandes"
+
+msgid "Ctrl"
+msgstr "Ctrl"
+
+msgid "Keyboard Shortcuts"
+msgstr "Raccourcis clavier"
+
+msgid "Install App"
+msgstr "Installer l'application"
+
+msgid "App installed"
+msgstr "Application installée"
+
+msgid "Close"
+msgstr "Fermer"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "Confirm"
+msgstr "Confirmer"
+
+msgid "Please confirm"
+msgstr "Veuillez confirmer"
+
+# Dashboard
+msgid "Welcome back,"
+msgstr "Bon retour,"
+
+msgid "h today"
+msgstr "h aujourd'hui"
+
+msgid "Timer Status"
+msgstr "État du chronomètre"
+
+msgid "Timer Running"
+msgstr "Chronomètre en cours"
+
+msgid "No Active Timer"
+msgstr "Aucun chronomètre actif"
+
+msgid "Choose a project or one of its tasks to start tracking."
+msgstr "Choisissez un projet ou une de ses tâches pour commencer le suivi."
+
+msgid "Idle"
+msgstr "Inactif"
+
+msgid "Started at"
+msgstr "Démarré à"
+
+msgid "Stop Timer"
+msgstr "Arrêter le chronomètre"
+
+msgid "Start Timer"
+msgstr "Démarrer le chronomètre"
+
+msgid "Hours Today"
+msgstr "Heures aujourd'hui"
+
+msgid "Hours This Week"
+msgstr "Heures cette semaine"
+
+msgid "Hours This Month"
+msgstr "Heures ce mois"
+
+msgid "Quick Actions"
+msgstr "Actions rapides"
+
+msgid "Manual entry"
+msgstr "Saisie manuelle"
+
+msgid "Bulk Entry"
+msgstr "Saisie en masse"
+
+msgid "Multi-day time entry"
+msgstr "Saisie de temps multi-jours"
+
+msgid "Manage projects"
+msgstr "Gérer les projets"
+
+msgid "View analytics"
+msgstr "Voir les analyses"
+
+msgid "Find entries"
+msgstr "Trouver des entrées"
+
+msgid "Today by Task"
+msgstr "Aujourd'hui par tâche"
+
+msgid "Loading..."
+msgstr "Chargement..."
+
+msgid "Recent Entries"
+msgstr "Entrées récentes"
+
+msgid "View All"
+msgstr "Voir tout"
+
+msgid "Select all"
+msgstr "Tout sélectionner"
+
+msgid "Delete"
+msgstr "Supprimer"
+
+msgid "Set Billable"
+msgstr "Marquer comme facturable"
+
+msgid "Set Non-billable"
+msgstr "Marquer comme non facturable"
+
+msgid "Project"
+msgstr "Projet"
+
+msgid "Duration"
+msgstr "Durée"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "No notes"
+msgstr "Aucune note"
+
+msgid "Edit entry"
+msgstr "Modifier l'entrée"
+
+msgid "Delete entry"
+msgstr "Supprimer l'entrée"
+
+msgid "No recent entries"
+msgstr "Aucune entrée récente"
+
+msgid "Start tracking your time to see entries here"
+msgstr "Commencez à suivre votre temps pour voir les entrées ici"
+
+msgid "Log Your First Entry"
+msgstr "Enregistrer votre première entrée"
+
+msgid "Select Project"
+msgstr "Sélectionner un projet"
+
+msgid "Choose a project..."
+msgstr "Choisissez un projet..."
+
+msgid "Select Task (Optional)"
+msgstr "Sélectionner une tâche (Optionnel)"
+
+msgid "Choose a task..."
+msgstr "Choisissez une tâche..."
+
+msgid "Tasks list updates after choosing a project. Leave empty to log at project level."
+msgstr "La liste des tâches se met à jour après avoir choisi un projet. Laissez vide pour enregistrer au niveau du projet."
+
+msgid "Notes (Optional)"
+msgstr "Notes (Optionnel)"
+
+msgid "What are you working on?"
+msgstr "Sur quoi travaillez-vous ?"
+
+msgid "Delete Time Entry"
+msgstr "Supprimer l'entrée de temps"
+
+msgid "Warning:"
+msgstr "Avertissement :"
+
+msgid "This action cannot be undone."
+msgstr "Cette action ne peut pas être annulée."
+
+msgid "Are you sure you want to delete the time entry for"
+msgstr "Êtes-vous sûr de vouloir supprimer l'entrée de temps pour"
+
+msgid "Duration:"
+msgstr "Durée :"
+
+msgid "Delete Entry"
+msgstr "Supprimer l'entrée"
+
+msgid "Please select a project"
+msgstr "Veuillez sélectionner un projet"
+
+msgid "Starting..."
+msgstr "Démarrage..."
+
+msgid "Deleting..."
+msgstr "Suppression..."
+
+msgid "No time tracked yet today"
+msgstr "Aucun temps enregistré aujourd'hui"
+
+msgid "h"
+msgstr "h"
+
+msgid "Bulk action completed"
+msgstr "Action en masse terminée"
+
+msgid "Bulk action failed"
+msgstr "Action en masse échouée"
+
+# Login
+msgid "Login"
+msgstr "Connexion"
+
+msgid "Company Logo"
+msgstr "Logo de l'entreprise"
+
+msgid "DryTrix Logo"
+msgstr "Logo DryTrix"
+
+msgid "TimeTracker"
+msgstr "TimeTracker"
+
+msgid "Professional Time Management"
+msgstr "Gestion professionnelle du temps"
+
+msgid "Sign in to your account to start tracking your time"
+msgstr "Connectez-vous à votre compte pour commencer à suivre votre temps"
+
+msgid "Welcome to TimeTracker"
+msgstr "Bienvenue sur TimeTracker"
+
+msgid "Powered by"
+msgstr "Propulsé par"
+
+msgid "Enter your username to start tracking time"
+msgstr "Entrez votre nom d'utilisateur pour commencer le suivi du temps"
+
+msgid "Username"
+msgstr "Nom d'utilisateur"
+
+msgid "Enter your username"
+msgstr "Entrez votre nom d'utilisateur"
+
+msgid "Sign In"
+msgstr "Se connecter"
+
+msgid "Signing in..."
+msgstr "Connexion en cours..."
+
+msgid "Continue"
+msgstr "Continuer"
+
+msgid "or"
+msgstr "ou"
+
+msgid "Sign in with SSO"
+msgstr "Se connecter avec SSO"
+
+msgid "Internal Tool"
+msgstr "Outil interne"
+
+msgid "Internal Tool:"
+msgstr "Outil interne :"
+
+msgid "This is a private time tracking application for internal use only."
+msgstr "Ceci est une application privée de suivi du temps pour un usage interne uniquement."
+
+msgid "New users will be created automatically"
+msgstr "Les nouveaux utilisateurs seront créés automatiquement"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Please enter a username"
+msgstr "Veuillez entrer un nom d'utilisateur"
+
+msgid "Signing in..."
+msgstr "Connexion en cours..."
+
+# Tasks
+msgid "Board"
+msgstr "Tableau"
+
+msgid "Table"
+msgstr "Table"
+
+msgid "New Task"
+msgstr "Nouvelle tâche"
+
+msgid "Plan and track work"
+msgstr "Planifier et suivre le travail"
+
+msgid "total"
+msgstr "total"
+
+msgid "To Do"
+msgstr "À faire"
+
+msgid "In Progress"
+msgstr "En cours"
+
+msgid "Review"
+msgstr "Révision"
+
+msgid "Completed"
+msgstr "Terminé"
+
+msgid "Filter Tasks"
+msgstr "Filtrer les tâches"
+
+msgid "Toggle Filters"
+msgstr "Basculer les filtres"
+
+msgid "Task name or description"
+msgstr "Nom de la tâche ou description"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "All Statuses"
+msgstr "Tous les statuts"
+
+msgid "Done"
+msgstr "Fait"
+
+msgid "Cancelled"
+msgstr "Annulé"
+
+msgid "Priority"
+msgstr "Priorité"
+
+msgid "All Priorities"
+msgstr "Toutes les priorités"
+
+msgid "Low"
+msgstr "Basse"
+
+msgid "Medium"
+msgstr "Moyenne"
+
+msgid "High"
+msgstr "Haute"
+
+msgid "Urgent"
+msgstr "Urgent"
+
+msgid "All Projects"
+msgstr "Tous les projets"
+
+# Command Palette
+msgid "Command Palette"
+msgstr "Palette de commandes"
+
+msgid "Type a command or search..."
+msgstr "Tapez une commande ou recherchez..."
+
+# Socket.IO messages
+msgid "Timer started for"
+msgstr "Chronomètre démarré pour"
+
+msgid "Timer stopped. Duration:"
+msgstr "Chronomètre arrêté. Durée :"
+
+# Theme toggle
+msgid "Switch to light mode"
+msgstr "Passer en mode clair"
+
+msgid "Switch to dark mode"
+msgstr "Passer en mode sombre"
+
+msgid "Light mode"
+msgstr "Mode clair"
+
+msgid "Dark mode"
+msgstr "Mode sombre"
+
+# Mobile
+msgid "Log time"
+msgstr "Enregistrer le temps"
+
+# About page
+msgid "About TimeTracker"
+msgstr "À propos de TimeTracker"
+
+msgid "Developed by DryTrix"
+msgstr "Développé par DryTrix"
+
+msgid "What is"
+msgstr "Qu'est-ce que"
+
+msgid "A simple, efficient time tracking solution for teams and individuals."
+msgstr "Une solution simple et efficace de suivi du temps pour les équipes et les particuliers."
+
+msgid "It provides a simple and intuitive interface for tracking time spent on various projects and tasks."
+msgstr "Il fournit une interface simple et intuitive pour suivre le temps passé sur divers projets et tâches."
+
+msgid "%(app)s is a web-based time tracking application designed for internal use within organizations."
+msgstr "%(app)s est une application web de suivi du temps conçue pour un usage interne au sein des organisations."
+
+msgid "Learn more about "
+msgstr "En savoir plus sur "
+
+#: app/templates/setup/initial_setup.html:30
+msgid "Privacy First"
+msgstr "Confidentialité d'abord"
+
+#: app/templates/setup/initial_setup.html:35
+msgid "Self-hosted on your server"
+msgstr "Auto-hébergé sur votre serveur"
+
+#: app/templates/setup/initial_setup.html:41
+msgid "Anonymous telemetry (opt-in)"
+msgstr "Télémétrie anonyme (opt-in)"
+
+#: app/templates/setup/initial_setup.html:47
+msgid "No PII collected ever"
+msgstr "Aucune donnée personnelle collectée"
+
+#: app/templates/setup/initial_setup.html:53
+msgid "Open source & transparent"
+msgstr "Open source et transparent"
+
+#: app/templates/setup/initial_setup.html:61
+msgid "Welcome to TimeTracker"
+msgstr "Bienvenue sur TimeTracker"
+
+#: app/templates/setup/initial_setup.html:62
+msgid "Let's get you set up in just a moment"
+msgstr "Configurons-vous en un instant"
+
+#: app/templates/setup/initial_setup.html:69
+msgid "Thank you for choosing TimeTracker!"
+msgstr "Merci d'avoir choisi TimeTracker !"
+
+#: app/templates/setup/initial_setup.html:71
+msgid "Your data stays on your server, and you have complete control."
+msgstr "Vos données restent sur votre serveur et vous avez un contrôle total."
+
+#: app/templates/setup/initial_setup.html:77
+msgid "Help Us Improve (Optional)"
+msgstr "Aidez-nous à nous améliorer (Optionnel)"
+
+#: app/templates/setup/initial_setup.html:83
+msgid "Enable anonymous telemetry"
+msgstr "Activer la télémétrie anonyme"
+
+#: app/templates/setup/initial_setup.html:85
+msgid "Help us understand usage patterns to improve TimeTracker"
+msgstr "Aidez-nous à comprendre les modèles d'utilisation pour améliorer TimeTracker"
+
+#: app/templates/setup/initial_setup.html:94
+msgid "What data is collected?"
+msgstr "Quelles données sont collectées ?"
+
+#: app/templates/setup/initial_setup.html:98
+msgid "What we collect:"
+msgstr "Ce que nous collectons :"
+
+#: app/templates/setup/initial_setup.html:100
+msgid "Anonymous installation fingerprint (hashed)"
+msgstr "Empreinte d'installation anonyme (hachée)"
+
+#: app/templates/setup/initial_setup.html:101
+msgid "Application version & platform info"
+msgstr "Version de l'application et informations sur la plateforme"
+
+#: app/templates/setup/initial_setup.html:102
+msgid "Feature usage statistics"
+msgstr "Statistiques d'utilisation des fonctionnalités"
+
+#: app/templates/setup/initial_setup.html:103
+msgid "Internal numeric IDs only"
+msgstr "ID numériques internes uniquement"
+
+#: app/templates/setup/initial_setup.html:108
+msgid "What we DON'T collect:"
+msgstr "Ce que nous ne collectons PAS :"
+
+#: app/templates/setup/initial_setup.html:110
+msgid "No usernames or emails"
+msgstr "Aucun nom d'utilisateur ou e-mail"
+
+#: app/templates/setup/initial_setup.html:111
+msgid "No project names or descriptions"
+msgstr "Aucun nom ou description de projet"
+
+#: app/templates/setup/initial_setup.html:112
+msgid "No time entry data or notes"
+msgstr "Aucune donnée d'entrée de temps ou note"
+
+#: app/templates/setup/initial_setup.html:113
+msgid "No client or business data"
+msgstr "Aucune donnée client ou commerciale"
+
+#: app/templates/setup/initial_setup.html:114
+msgid "No IP addresses or PII"
+msgstr "Aucune adresse IP ou donnée personnelle"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Why?"
+msgstr "Pourquoi ?"
+
+#: app/templates/setup/initial_setup.html:120
+msgid "Anonymous usage data helps us prioritize features and fix issues."
+msgstr "Les données d'utilisation anonymes nous aident à prioriser les fonctionnalités et à corriger les problèmes."
+
+#: app/templates/setup/initial_setup.html:121
+msgid "You can change this anytime in"
+msgstr "Vous pouvez modifier cela à tout moment dans"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Admin → Settings"
+msgstr "Admin → Paramètres"
+
+#: app/templates/setup/initial_setup.html:121
+msgid "Privacy & Analytics section"
+msgstr "Section Confidentialité et Analyses"
+
+#: app/templates/setup/initial_setup.html:131
+msgid "Complete Setup & Continue"
+msgstr "Terminer la configuration et continuer"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "By continuing, you agree to use TimeTracker under the"
+msgstr "En continuant, vous acceptez d'utiliser TimeTracker sous la"
+
+#: app/templates/setup/initial_setup.html:135
+msgid "GPL-3.0 License"
+msgstr "Licence GPL-3.0"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Duplicate Time Entry"
+msgstr "Dupliquer l'entrée de temps"
+
+#: app/templates/timer/manual_entry.html:12
+msgid "Log Time Manually"
+msgstr "Enregistrer le temps manuellement"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a copy of a previous entry with new times"
+msgstr "Créer une copie d'une entrée précédente avec de nouveaux horaires"
+
+#: app/templates/timer/manual_entry.html:13
+msgid "Create a new time entry"
+msgstr "Créer une nouvelle entrée de temps"
+
+#: app/templates/timer/manual_entry.html:24
+msgid "Duplicating entry:"
+msgstr "Duplication de l'entrée :"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "Original:"
+msgstr "Original :"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "to"
+msgstr "à"
+
+#: app/templates/timer/manual_entry.html:27
+msgid "N/A"
+msgstr "N/D"
+
+#: app/templates/timer/manual_entry.html:82
+msgid "What did you work on?"
+msgstr "Sur quoi avez-vous travaillé ?"
+
+#: app/templates/timer/manual_entry.html:87
+msgid "tag1, tag2"
+msgstr "tag1, tag2"
+
+#: app/templates/timer/manual_entry.html:131
+msgid "Failed to load tasks"
+msgstr "Échec du chargement des tâches"
+
+#: app/templates/tasks/list.html:299
+msgid "Move Selected Tasks to Project"
+msgstr "Déplacer les tâches sélectionnées vers le projet"
+
+#: app/templates/tasks/list.html:309
+msgid "Move Tasks"
+msgstr "Déplacer les tâches"
+
+#: app/templates/timer/timer_page.html:135
+msgid "Add notes about what you're working on..."
+msgstr "Ajouter des notes sur ce sur quoi vous travaillez..."
+
+#: app/templates/admin/email_templates/edit.html:36
+#: app/templates/admin/email_templates/create.html:38
+msgid "Set as default template"
+msgstr "Définir comme modèle par défaut"
+
+#: app/templates/admin/email_templates/edit.html:44
+#: app/templates/admin/email_templates/create.html:46
+#: app/templates/admin/email_templates/view.html:56
+msgid "HTML Template"
+msgstr "Modèle HTML"
+
+#: app/templates/admin/email_templates/edit.html:47
+#: app/templates/admin/email_templates/create.html:49
+msgid "Invoice Number"
+msgstr "Numéro de facture"
+
+#: app/templates/admin/email_templates/edit.html:50
+#: app/templates/admin/email_templates/create.html:52
+msgid "Company Name"
+msgstr "Nom de l'entreprise"
+
+#: app/templates/admin/email_templates/edit.html:53
+#: app/templates/admin/email_templates/create.html:55
+msgid "Custom Message"
+msgstr "Message personnalisé"
+
+#: app/templates/admin/email_templates/edit.html:56
+#: app/templates/admin/email_templates/create.html:58
+msgid "More Variables"
+msgstr "Plus de variables"
+
+#: app/templates/invoices/list.html:72
+msgid "Invoice number or client"
+msgstr "Numéro de facture ou client"
+
+#: app/templates/expenses/form.html:231
+msgid "Receipt/Invoice Number"
+msgstr "Numéro de reçu/facture"

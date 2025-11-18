@@ -1,9 +1,18 @@
+
 msgid ""
 msgstr ""
-"Project-Id-Version: TimeTracker\n"
+"Project-Id-Version:  TimeTracker\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-11-18 08:01+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Language-Team: de <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.14.0\n"
 
 # Navigation and Common
 msgid "Time Tracker"
@@ -238,8 +247,12 @@ msgstr "Aufgabe auswählen (Optional)"
 msgid "Choose a task..."
 msgstr "Wählen Sie eine Aufgabe..."
 
-msgid "Tasks list updates after choosing a project. Leave empty to log at project level."
-msgstr "Die Aufgabenliste wird nach Auswahl eines Projekts aktualisiert. Leer lassen, um auf Projektebene zu erfassen."
+msgid ""
+"Tasks list updates after choosing a project. Leave empty to log at project "
+"level."
+msgstr ""
+"Die Aufgabenliste wird nach Auswahl eines Projekts aktualisiert. Leer "
+"lassen, um auf Projektebene zu erfassen."
 
 msgid "Notes (Optional)"
 msgstr "Notizen (Optional)"
@@ -305,6 +318,7 @@ msgstr "Professionelles Zeitmanagement"
 msgid "Sign in to your account to start tracking your time"
 msgstr "Melden Sie sich an, um Ihre Zeit zu erfassen"
 
+#: app/templates/setup/initial_setup.html:61
 msgid "Welcome to TimeTracker"
 msgstr "Willkommen bei TimeTracker"
 
@@ -352,9 +366,6 @@ msgstr "Version"
 
 msgid "Please enter a username"
 msgstr "Bitte geben Sie einen Benutzernamen ein"
-
-msgid "Signing in..."
-msgstr "Anmeldung läuft..."
 
 # Tasks
 msgid "Board"
@@ -470,11 +481,20 @@ msgstr "Was ist"
 msgid "A simple, efficient time tracking solution for teams and individuals."
 msgstr "Eine einfache, effiziente Zeiterfassungslösung für Teams und Einzelpersonen."
 
-msgid "It provides a simple and intuitive interface for tracking time spent on various projects and tasks."
-msgstr "Sie bietet eine einfache und intuitive Oberfläche zur Erfassung der für Projekte und Aufgaben aufgewendeten Zeit."
+msgid ""
+"It provides a simple and intuitive interface for tracking time spent on "
+"various projects and tasks."
+msgstr ""
+"Sie bietet eine einfache und intuitive Oberfläche zur Erfassung der für "
+"Projekte und Aufgaben aufgewendeten Zeit."
 
-msgid "%(app)s is a web-based time tracking application designed for internal use within organizations."
-msgstr "%(app)s ist eine webbasierte Zeiterfassungsanwendung für die interne Nutzung in Organisationen."
+#, python-format
+msgid ""
+"%(app)s is a web-based time tracking application designed for internal use "
+"within organizations."
+msgstr ""
+"%(app)s ist eine webbasierte Zeiterfassungsanwendung für die interne Nutzung"
+" in Organisationen."
 
 msgid "Learn more about "
 msgstr "Erfahren Sie mehr über "
@@ -498,10 +518,6 @@ msgstr "Keine personenbezogenen Daten werden jemals gesammelt"
 #: app/templates/setup/initial_setup.html:53
 msgid "Open source & transparent"
 msgstr "Open Source & transparent"
-
-#: app/templates/setup/initial_setup.html:61
-msgid "Welcome to TimeTracker"
-msgstr "Willkommen bei TimeTracker"
 
 #: app/templates/setup/initial_setup.html:62
 msgid "Let's get you set up in just a moment"
@@ -581,7 +597,9 @@ msgstr "Warum?"
 
 #: app/templates/setup/initial_setup.html:120
 msgid "Anonymous usage data helps us prioritize features and fix issues."
-msgstr "Anonyme Nutzungsdaten helfen uns, Funktionen zu priorisieren und Probleme zu beheben."
+msgstr ""
+"Anonyme Nutzungsdaten helfen uns, Funktionen zu priorisieren und Probleme zu"
+" beheben."
 
 #: app/templates/setup/initial_setup.html:121
 msgid "You can change this anytime in"
@@ -663,34 +681,34 @@ msgstr "Aufgaben verschieben"
 msgid "Add notes about what you're working on..."
 msgstr "Notizen hinzufügen, woran Sie arbeiten..."
 
-#: app/templates/admin/email_templates/edit.html:36
 #: app/templates/admin/email_templates/create.html:38
+#: app/templates/admin/email_templates/edit.html:36
 msgid "Set as default template"
 msgstr "Als Standardvorlage festlegen"
 
-#: app/templates/admin/email_templates/edit.html:44
 #: app/templates/admin/email_templates/create.html:46
+#: app/templates/admin/email_templates/edit.html:44
 #: app/templates/admin/email_templates/view.html:56
 msgid "HTML Template"
 msgstr "HTML-Vorlage"
 
-#: app/templates/admin/email_templates/edit.html:47
 #: app/templates/admin/email_templates/create.html:49
+#: app/templates/admin/email_templates/edit.html:47
 msgid "Invoice Number"
 msgstr "Rechnungsnummer"
 
-#: app/templates/admin/email_templates/edit.html:50
 #: app/templates/admin/email_templates/create.html:52
+#: app/templates/admin/email_templates/edit.html:50
 msgid "Company Name"
 msgstr "Firmenname"
 
-#: app/templates/admin/email_templates/edit.html:53
 #: app/templates/admin/email_templates/create.html:55
+#: app/templates/admin/email_templates/edit.html:53
 msgid "Custom Message"
 msgstr "Benutzerdefinierte Nachricht"
 
-#: app/templates/admin/email_templates/edit.html:56
 #: app/templates/admin/email_templates/create.html:58
+#: app/templates/admin/email_templates/edit.html:56
 msgid "More Variables"
 msgstr "Weitere Variablen"
 
@@ -701,3 +719,6618 @@ msgstr "Rechnungsnummer oder Kunde"
 #: app/templates/expenses/form.html:231
 msgid "Receipt/Invoice Number"
 msgstr "Beleg-/Rechnungsnummer"
+
+msgid "Your session expired or the page was open too long. Please try again."
+msgstr "Ihre Sitzung ist abgelaufen oder die Seite war zu lange geöffnet. Bitte versuchen Sie es erneut."
+
+msgid "Administrator access required"
+msgstr "Administratorzugriff erforderlich"
+
+msgid "Could not update PDF layout due to a database error."
+msgstr "PDF-Layout konnte aufgrund eines Datenbankfehlers nicht aktualisiert werden."
+
+msgid "PDF layout updated successfully"
+msgstr "PDF-Layout erfolgreich aktualisiert"
+
+msgid "Could not reset PDF layout due to a database error."
+msgstr "PDF-Layout konnte aufgrund eines Datenbankfehlers nicht zurückgesetzt werden."
+
+msgid "PDF layout reset to defaults"
+msgstr "PDF-Layout auf Standardeinstellungen zurückgesetzt"
+
+msgid "Username is required"
+msgstr "Benutzername ist erforderlich"
+
+msgid ""
+"Could not create your account due to a database error. Please try again "
+"later."
+msgstr ""
+"Ihr Konto konnte aufgrund eines Datenbankfehlers nicht erstellt werden. Bitte "
+"versuchen Sie es später erneut."
+
+msgid "Welcome! Your account has been created."
+msgstr "Willkommen! Ihr Konto wurde erstellt."
+
+msgid "User not found. Please contact an administrator."
+msgstr "Benutzer nicht gefunden. Bitte kontaktieren Sie einen Administrator."
+
+msgid "Could not update your account role due to a database error."
+msgstr "Ihre Kontorolle konnte aufgrund eines Datenbankfehlers nicht aktualisiert werden."
+
+msgid "Account is disabled. Please contact an administrator."
+msgstr "Konto ist deaktiviert. Bitte kontaktieren Sie einen Administrator."
+
+#, python-format
+msgid "Welcome back, %(username)s!"
+msgstr "Willkommen zurück, %(username)s!"
+
+msgid "Unexpected error during login. Please try again or check server logs."
+msgstr "Unerwarteter Fehler beim Anmelden. Bitte versuchen Sie es erneut oder überprüfen Sie die Serverprotokolle."
+
+#, python-format
+msgid "Goodbye, %(username)s!"
+msgstr "Auf Wiedersehen, %(username)s!"
+
+msgid "Invalid avatar file type. Allowed: PNG, JPG, JPEG, GIF, WEBP"
+msgstr "Ungültiger Avatar-Dateityp. Erlaubt: PNG, JPG, JPEG, GIF, WEBP"
+
+msgid "Invalid image file."
+msgstr "Ungültige Bilddatei."
+
+msgid "Failed to save avatar on server."
+msgstr "Avatar konnte nicht auf dem Server gespeichert werden."
+
+msgid "Profile updated successfully"
+msgstr "Profil erfolgreich aktualisiert"
+
+msgid "Could not update your profile due to a database error."
+msgstr "Ihr Profil konnte aufgrund eines Datenbankfehlers nicht aktualisiert werden."
+
+msgid "Avatar removed"
+msgstr "Avatar entfernt"
+
+msgid "Failed to remove avatar."
+msgstr "Avatar konnte nicht entfernt werden."
+
+msgid "Single Sign-On is not configured yet. Please contact an administrator."
+msgstr "Single Sign-On ist noch nicht konfiguriert. Bitte kontaktieren Sie einen Administrator."
+
+msgid "Single Sign-On is not configured."
+msgstr "Single Sign-On ist nicht konfiguriert."
+
+msgid ""
+"Authentication failed: missing issuer or subject claim. Please check OIDC "
+"configuration."
+msgstr ""
+"Authentifizierung fehlgeschlagen: Fehlende Issuer- oder Subject-Ansprüche. "
+"Bitte überprüfen Sie die OIDC-Konfiguration."
+
+msgid "User account does not exist and self-registration is disabled."
+msgstr "Benutzerkonto existiert nicht und die Selbstregistrierung ist deaktiviert."
+
+msgid "Could not create your account due to a database error."
+msgstr "Ihr Konto konnte aufgrund eines Datenbankfehlers nicht erstellt werden."
+
+msgid "Unexpected error during SSO login. Please try again or contact support."
+msgstr ""
+
+msgid "Event created successfully"
+msgstr ""
+
+msgid "Event updated successfully"
+msgstr ""
+
+msgid "You do not have permission to delete this event."
+msgstr ""
+
+msgid "Failed to delete event"
+msgstr ""
+
+msgid "Event deleted successfully"
+msgstr ""
+
+#, python-format
+msgid "Error deleting event: %(error)s"
+msgstr ""
+
+msgid "Event moved successfully"
+msgstr ""
+
+msgid "Event resized successfully"
+msgstr ""
+
+msgid "You do not have permission to view this event."
+msgstr ""
+
+msgid "You do not have permission to edit this event."
+msgstr ""
+
+msgid "Note content cannot be empty"
+msgstr ""
+
+msgid "Note added successfully"
+msgstr ""
+
+msgid "Error adding note"
+msgstr ""
+
+#, python-format
+msgid "Error adding note: %(error)s"
+msgstr ""
+
+msgid "Note does not belong to this client"
+msgstr ""
+
+msgid "You do not have permission to edit this note"
+msgstr ""
+
+msgid "Error updating note"
+msgstr ""
+
+msgid "Note updated successfully"
+msgstr ""
+
+#, python-format
+msgid "Error updating note: %(error)s"
+msgstr ""
+
+msgid "You do not have permission to delete this note"
+msgstr ""
+
+msgid "Error deleting note"
+msgstr ""
+
+msgid "Note deleted successfully"
+msgstr ""
+
+#, python-format
+msgid "Error deleting note: %(error)s"
+msgstr ""
+
+msgid "You do not have permission to create clients"
+msgstr ""
+
+msgid "Comment content cannot be empty"
+msgstr ""
+
+msgid "Comment must be associated with a project or task"
+msgstr ""
+
+msgid "Comment cannot be associated with both a project and a task"
+msgstr ""
+
+msgid "Invalid parent comment"
+msgstr ""
+
+msgid "Comment added successfully"
+msgstr ""
+
+msgid "Error adding comment"
+msgstr ""
+
+#, python-format
+msgid "Error adding comment: %(error)s"
+msgstr ""
+
+msgid "You do not have permission to edit this comment"
+msgstr ""
+
+msgid "Comment updated successfully"
+msgstr ""
+
+#, python-format
+msgid "Error updating comment: %(error)s"
+msgstr ""
+
+msgid "You do not have permission to delete this comment"
+msgstr ""
+
+msgid "Comment deleted successfully"
+msgstr ""
+
+#, python-format
+msgid "Error deleting comment: %(error)s"
+msgstr ""
+
+msgid "Category name is required"
+msgstr ""
+
+msgid "Expense category created successfully"
+msgstr ""
+
+msgid "Error creating expense category"
+msgstr ""
+
+msgid "Expense category updated successfully"
+msgstr ""
+
+msgid "Error updating expense category"
+msgstr ""
+
+msgid "Expense category deactivated successfully"
+msgstr ""
+
+msgid "Error deactivating expense category"
+msgstr ""
+
+msgid "Title is required"
+msgstr ""
+
+msgid "Category is required"
+msgstr ""
+
+msgid "Amount is required"
+msgstr ""
+
+msgid "Expense date is required"
+msgstr ""
+
+msgid "Invalid date format"
+msgstr ""
+
+msgid "Invalid amount format"
+msgstr ""
+
+msgid "Expense created successfully"
+msgstr ""
+
+msgid "Error creating expense"
+msgstr ""
+
+msgid "You do not have permission to view this expense"
+msgstr ""
+
+msgid "You do not have permission to edit this expense"
+msgstr ""
+
+msgid "Cannot edit approved or reimbursed expenses"
+msgstr ""
+
+msgid "Please fill in all required fields"
+msgstr ""
+
+msgid "Expense updated successfully"
+msgstr ""
+
+msgid "Error updating expense"
+msgstr ""
+
+msgid "You do not have permission to delete this expense"
+msgstr ""
+
+msgid "Cannot delete approved or invoiced expenses"
+msgstr ""
+
+msgid "Expense deleted successfully"
+msgstr ""
+
+msgid "Error deleting expense"
+msgstr ""
+
+msgid "Only administrators can approve expenses"
+msgstr ""
+
+msgid "Only pending expenses can be approved"
+msgstr ""
+
+msgid "Expense approved successfully"
+msgstr ""
+
+msgid "Error approving expense"
+msgstr ""
+
+msgid "Only administrators can reject expenses"
+msgstr ""
+
+msgid "Only pending expenses can be rejected"
+msgstr ""
+
+msgid "Rejection reason is required"
+msgstr ""
+
+msgid "Expense rejected"
+msgstr ""
+
+msgid "Error rejecting expense"
+msgstr ""
+
+msgid "Only administrators can mark expenses as reimbursed"
+msgstr ""
+
+msgid "Only approved expenses can be marked as reimbursed"
+msgstr ""
+
+msgid "This expense is not marked as reimbursable"
+msgstr ""
+
+msgid "Expense marked as reimbursed"
+msgstr ""
+
+msgid "Error marking expense as reimbursed"
+msgstr ""
+
+msgid "OCR is not available. Please contact your administrator."
+msgstr ""
+
+msgid "No file provided"
+msgstr ""
+
+msgid "No file selected"
+msgstr ""
+
+msgid "Invalid file type. Allowed types: png, jpg, jpeg, gif, pdf"
+msgstr ""
+
+msgid ""
+"Receipt scanned successfully! You can now create an expense with the "
+"extracted data."
+msgstr ""
+
+msgid "Error scanning receipt. Please try again or enter the expense manually."
+msgstr ""
+
+msgid "No scanned receipt data found. Please scan a receipt first."
+msgstr ""
+
+msgid "Expense created successfully from scanned receipt"
+msgstr ""
+
+msgid "You do not have permission to export this invoice"
+msgstr ""
+
+#, python-format
+msgid "PDF generation failed: %(err)s. Fallback also failed: %(fb)s"
+msgstr ""
+
+msgid "Mileage entry created successfully"
+msgstr ""
+
+msgid "Error creating mileage entry"
+msgstr ""
+
+msgid "You do not have permission to view this mileage entry"
+msgstr ""
+
+msgid "You do not have permission to edit this mileage entry"
+msgstr ""
+
+msgid "Cannot edit approved or reimbursed mileage entries"
+msgstr ""
+
+msgid "Mileage entry updated successfully"
+msgstr ""
+
+msgid "Error updating mileage entry"
+msgstr ""
+
+msgid "You do not have permission to delete this mileage entry"
+msgstr ""
+
+msgid "Mileage entry deleted successfully"
+msgstr ""
+
+msgid "Error deleting mileage entry"
+msgstr ""
+
+msgid "Only administrators can approve mileage entries"
+msgstr ""
+
+msgid "Only pending mileage entries can be approved"
+msgstr ""
+
+msgid "Mileage entry approved successfully"
+msgstr ""
+
+msgid "Error approving mileage entry"
+msgstr ""
+
+msgid "Only administrators can reject mileage entries"
+msgstr ""
+
+msgid "Only pending mileage entries can be rejected"
+msgstr ""
+
+msgid "Mileage entry rejected"
+msgstr ""
+
+msgid "Error rejecting mileage entry"
+msgstr ""
+
+msgid "Only administrators can mark mileage entries as reimbursed"
+msgstr ""
+
+msgid "Only approved mileage entries can be marked as reimbursed"
+msgstr ""
+
+msgid "Mileage entry marked as reimbursed"
+msgstr ""
+
+msgid "Error marking mileage entry as reimbursed"
+msgstr ""
+
+msgid "Start date must be before end date"
+msgstr ""
+
+msgid "No per diem rate found for this location. Please configure rates first."
+msgstr ""
+
+msgid "Per diem claim created successfully"
+msgstr ""
+
+msgid "Error creating per diem claim"
+msgstr ""
+
+msgid "You do not have permission to view this per diem claim"
+msgstr ""
+
+msgid "You do not have permission to edit this per diem claim"
+msgstr ""
+
+msgid "Cannot edit approved or reimbursed per diem claims"
+msgstr ""
+
+msgid "Per diem claim updated successfully"
+msgstr ""
+
+msgid "Error updating per diem claim"
+msgstr ""
+
+msgid "You do not have permission to delete this per diem claim"
+msgstr ""
+
+msgid "Per diem claim deleted successfully"
+msgstr ""
+
+msgid "Error deleting per diem claim"
+msgstr ""
+
+msgid "Only administrators can approve per diem claims"
+msgstr ""
+
+msgid "Only pending per diem claims can be approved"
+msgstr ""
+
+msgid "Per diem claim approved successfully"
+msgstr ""
+
+msgid "Error approving per diem claim"
+msgstr ""
+
+msgid "Only administrators can reject per diem claims"
+msgstr ""
+
+msgid "Only pending per diem claims can be rejected"
+msgstr ""
+
+msgid "Per diem claim rejected"
+msgstr ""
+
+msgid "Error rejecting per diem claim"
+msgstr ""
+
+msgid "Per diem rate created successfully"
+msgstr ""
+
+msgid "Error creating per diem rate"
+msgstr ""
+
+msgid "You do not have permission to access this page"
+msgstr ""
+
+msgid "Role name is required"
+msgstr ""
+
+msgid "A role with this name already exists"
+msgstr ""
+
+msgid "Could not create role due to a database error"
+msgstr ""
+
+msgid "Role created successfully"
+msgstr ""
+
+msgid "System roles cannot be edited"
+msgstr ""
+
+msgid "Could not update role due to a database error"
+msgstr ""
+
+msgid "Role updated successfully"
+msgstr ""
+
+msgid "You do not have permission to perform this action"
+msgstr ""
+
+msgid "System roles cannot be deleted"
+msgstr ""
+
+msgid "Cannot delete role that is assigned to users. Please reassign users first."
+msgstr ""
+
+msgid "Could not delete role due to a database error"
+msgstr ""
+
+#, python-format
+msgid "Role \"%(name)s\" deleted successfully"
+msgstr ""
+
+msgid "Could not update user roles due to a database error"
+msgstr ""
+
+msgid "User roles updated successfully"
+msgstr ""
+
+msgid "Project code already in use"
+msgstr ""
+
+msgid "Project is already in favorites"
+msgstr ""
+
+msgid "Project added to favorites"
+msgstr ""
+
+msgid "Failed to add project to favorites"
+msgstr ""
+
+msgid "Project is not in favorites"
+msgstr ""
+
+msgid "Project removed from favorites"
+msgstr ""
+
+msgid "Failed to remove project from favorites"
+msgstr ""
+
+msgid "Description, category, amount, and date are required"
+msgstr ""
+
+msgid "Could not add cost due to a database error. Please check server logs."
+msgstr ""
+
+msgid "Cost added successfully"
+msgstr ""
+
+msgid "Cost not found"
+msgstr ""
+
+msgid "You do not have permission to edit this cost"
+msgstr ""
+
+msgid "Could not update cost due to a database error. Please check server logs."
+msgstr ""
+
+msgid "Cost updated successfully"
+msgstr ""
+
+msgid "You do not have permission to delete this cost"
+msgstr ""
+
+msgid "Cannot delete cost that has been invoiced"
+msgstr ""
+
+msgid "Could not delete cost due to a database error. Please check server logs."
+msgstr ""
+
+msgid "Name and unit price are required"
+msgstr ""
+
+msgid "Invalid quantity format"
+msgstr ""
+
+msgid "Invalid unit price format"
+msgstr ""
+
+msgid "Could not add extra good due to a database error. Please check server logs."
+msgstr ""
+
+msgid "Extra good added successfully"
+msgstr ""
+
+msgid "Extra good not found"
+msgstr ""
+
+msgid "You do not have permission to edit this extra good"
+msgstr ""
+
+msgid ""
+"Could not update extra good due to a database error. Please check server "
+"logs."
+msgstr ""
+
+msgid "Extra good updated successfully"
+msgstr ""
+
+msgid "You do not have permission to delete this extra good"
+msgstr ""
+
+msgid "Cannot delete extra good that has been added to an invoice"
+msgstr ""
+
+msgid ""
+"Could not delete extra good due to a database error. Please check server "
+"logs."
+msgstr ""
+
+msgid "Invalid project selected"
+msgstr ""
+
+msgid ""
+"Cannot start timer for an archived project. Please unarchive the project "
+"first."
+msgstr ""
+
+msgid "Cannot start timer for an inactive project"
+msgstr ""
+
+msgid ""
+"Cannot create time entries for an archived project. Please unarchive the "
+"project first."
+msgstr ""
+
+msgid "Cannot create time entries for an inactive project"
+msgstr ""
+
+msgid "Invalid timezone selected"
+msgstr ""
+
+msgid "Standard hours per day must be between 0.5 and 24"
+msgstr ""
+
+msgid "Settings saved successfully"
+msgstr "Einstellungen erfolgreich gespeichert"
+
+msgid "Error saving settings"
+msgstr "Fehler beim Speichern der Einstellungen"
+
+#, python-format
+msgid "Error saving settings: %(error)s"
+msgstr "Fehler beim Speichern der Einstellungen: %(error)s"
+
+msgid "Preferences updated"
+msgstr "Einstellungen aktualisiert"
+
+msgid "Language updated successfully"
+msgstr "Sprache erfolgreich aktualisiert"
+
+msgid "Invalid language"
+msgstr "Ungültige Sprache"
+
+#, python-format
+msgid "Language updated to %(language)s"
+msgstr "Sprache aktualisiert auf %(language)s"
+
+msgid "Please enter a valid target hours (greater than 0)"
+msgstr "Bitte geben Sie eine gültige Zielstundenzahl ein (größer als 0)"
+
+msgid "A goal already exists for this week. Please edit the existing goal instead."
+msgstr "Für diese Woche existiert bereits ein Ziel. Bitte bearbeiten Sie das bestehende Ziel stattdessen."
+
+msgid "Weekly time goal created successfully!"
+msgstr "Wöchentliches Zeit-Ziel erfolgreich erstellt!"
+
+msgid "Failed to create goal. Please try again."
+msgstr "Ziel konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+
+msgid "You do not have permission to view this goal"
+msgstr "Sie haben keine Berechtigung, dieses Ziel anzuzeigen"
+
+msgid "You do not have permission to edit this goal"
+msgstr "Sie haben keine Berechtigung, dieses Ziel zu bearbeiten"
+
+msgid "Weekly time goal updated successfully!"
+msgstr "Wöchentliches Zeit-Ziel erfolgreich aktualisiert!"
+
+msgid "Failed to update goal. Please try again."
+msgstr "Ziel konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+
+msgid "You do not have permission to delete this goal"
+msgstr "Sie haben keine Berechtigung, dieses Ziel zu löschen"
+
+msgid "Weekly time goal deleted successfully"
+msgstr "Wöchentliches Zeit-Ziel erfolgreich gelöscht"
+
+msgid "Failed to delete goal. Please try again."
+msgstr "Ziel konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+
+msgid "remaining"
+msgstr "verbleibend"
+
+msgid "Success"
+msgstr "Erfolg"
+
+msgid "Error"
+msgstr "Fehler"
+
+msgid "Warning"
+msgstr "Warnung"
+
+msgid "Information"
+msgstr "Information"
+
+msgid "Saving..."
+msgstr "Wird gespeichert..."
+
+msgid "Save"
+msgstr "Speichern"
+
+msgid "Edit"
+msgstr "Bearbeiten"
+
+msgid "Add"
+msgstr "Hinzufügen"
+
+msgid "Remove"
+msgstr "Entfernen"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "No"
+msgstr "Nein"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Are you sure you want to delete this?"
+msgstr "Sind Sie sicher, dass Sie dies löschen möchten?"
+
+msgid "You have unsaved changes. Are you sure you want to leave?"
+msgstr "Sie haben nicht gespeicherte Änderungen. Sind Sie sicher, dass Sie verlassen möchten?"
+
+msgid "Operation failed"
+msgstr "Vorgang fehlgeschlagen"
+
+msgid "Operation completed successfully"
+msgstr "Vorgang erfolgreich abgeschlossen"
+
+msgid "No items selected"
+msgstr "Keine Elemente ausgewählt"
+
+msgid "Invalid input"
+msgstr "Ungültige Eingabe"
+
+msgid "This field is required"
+msgstr "Dieses Feld ist erforderlich"
+
+msgid "No active timer"
+msgstr "Kein aktiver Timer"
+
+msgid "Timer stopped"
+msgstr "Timer gestoppt"
+
+msgid "Failed to stop timer"
+msgstr "Timer konnte nicht gestoppt werden"
+
+msgid "Error stopping timer"
+msgstr "Fehler beim Stoppen des Timers"
+
+msgid "No form to save"
+msgstr "Kein Formular zum Speichern"
+
+msgid "No timer found"
+msgstr "Kein Timer gefunden"
+
+msgid "Timer stopped due to inactivity"
+msgstr "Timer wegen Inaktivität gestoppt"
+
+msgid "Navigation"
+msgstr "Navigation"
+
+msgid "Time Tracking"
+msgstr "Zeiterfassung"
+
+msgid "Kanban Board"
+msgstr "Kanban-Board"
+
+msgid "Weekly Goals"
+msgstr "Wöchentliche Ziele"
+
+msgid "Templates"
+msgstr "Vorlagen"
+
+msgid "Finance & Expenses"
+msgstr "Finanzen & Ausgaben"
+
+msgid "Payments"
+msgstr "Zahlungen"
+
+msgid "Expenses"
+msgstr "Ausgaben"
+
+msgid "Mileage"
+msgstr "Kilometer"
+
+msgid "Per Diem"
+msgstr "Tagespauschale"
+
+msgid "Budget Alerts"
+msgstr "Budget-Warnungen"
+
+msgid "Tools & Data"
+msgstr ""
+
+msgid "Import / Export"
+msgstr ""
+
+msgid "Saved Filters"
+msgstr ""
+
+msgid "Admin Dashboard"
+msgstr ""
+
+msgid "Users"
+msgstr ""
+
+msgid "API Tokens"
+msgstr ""
+
+msgid "Roles & Permissions"
+msgstr ""
+
+msgid "System Settings"
+msgstr ""
+
+msgid "PDF Layout"
+msgstr ""
+
+msgid "Expense Categories"
+msgstr ""
+
+msgid "Per Diem Rates"
+msgstr ""
+
+msgid "System Info"
+msgstr ""
+
+msgid "Backups"
+msgstr ""
+
+msgid "OIDC Settings"
+msgstr ""
+
+msgid "Support TimeTracker"
+msgstr ""
+
+msgid ""
+"Enjoying TimeTracker? Consider buying me a coffee to support continued "
+"development!"
+msgstr ""
+
+msgid "Made with"
+msgstr ""
+
+msgid "by"
+msgstr ""
+
+msgid "Support TimeTracker development"
+msgstr ""
+
+msgid "Support"
+msgstr ""
+
+msgid "Enjoying TimeTracker?"
+msgstr ""
+
+msgid "Support continued development with a coffee"
+msgstr ""
+
+msgid "Dismiss"
+msgstr ""
+
+msgid "Toggle dark mode"
+msgstr ""
+
+msgid "Change language"
+msgstr ""
+
+msgid "User menu"
+msgstr ""
+
+msgid "Guest"
+msgstr ""
+
+msgid "My Profile"
+msgstr ""
+
+msgid "My Settings"
+msgstr ""
+
+msgid "Are you sure you want to"
+msgstr ""
+
+msgid "deactivate"
+msgstr ""
+
+msgid "activate"
+msgstr ""
+
+msgid "this token?"
+msgstr ""
+
+msgid "Deactivate Token"
+msgstr ""
+
+msgid "Activate Token"
+msgstr ""
+
+msgid "Deactivate"
+msgstr ""
+
+msgid "Activate"
+msgstr ""
+
+msgid "Are you sure you want to delete this token? This action cannot be undone."
+msgstr ""
+
+msgid "Delete Token"
+msgstr ""
+
+msgid "Email Configuration & Testing"
+msgstr ""
+
+msgid "Configure and test email delivery"
+msgstr ""
+
+msgid "Back to Admin"
+msgstr ""
+
+msgid "Email Configuration"
+msgstr ""
+
+msgid ""
+"Configure email settings here to save them in the database. Database "
+"settings take precedence over environment variables."
+msgstr ""
+
+msgid "Enable Database Email Configuration"
+msgstr ""
+
+msgid "Mail Server"
+msgstr ""
+
+msgid "Mail Port"
+msgstr ""
+
+msgid "Use TLS"
+msgstr ""
+
+msgid "Use SSL"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Leave empty to keep current"
+msgstr ""
+
+msgid "Default Sender"
+msgstr ""
+
+msgid "Save Configuration"
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Email Configuration Status"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Email is configured!"
+msgstr ""
+
+msgid "Your email settings are properly set up."
+msgstr ""
+
+msgid "Email is not configured"
+msgstr ""
+
+msgid "Please configure email settings in your environment variables."
+msgstr ""
+
+msgid "Configuration Errors"
+msgstr ""
+
+msgid "Configuration Warnings"
+msgstr ""
+
+msgid "Current Email Settings"
+msgstr ""
+
+msgid "Port"
+msgstr ""
+
+msgid "Password Set"
+msgstr ""
+
+msgid "Send Test Email"
+msgstr ""
+
+msgid "Recipient Email Address"
+msgstr ""
+
+msgid "Configuration Guide"
+msgstr ""
+
+msgid "To configure email, set the following environment variables:"
+msgstr ""
+
+msgid "Basic SMTP Settings"
+msgstr ""
+
+msgid "Authentication"
+msgstr ""
+
+msgid "Sender Information"
+msgstr ""
+
+msgid "Common SMTP Providers"
+msgstr ""
+
+msgid "Requires app password"
+msgstr ""
+
+msgid "Important Notes"
+msgstr ""
+
+msgid "Gmail requires an App Password if 2FA is enabled"
+msgstr ""
+
+msgid "Restart the application after changing email settings"
+msgstr ""
+
+msgid "Check firewall rules if emails are not sending"
+msgstr ""
+
+msgid "For production, use a dedicated email service like SendGrid or Amazon SES"
+msgstr ""
+
+msgid "password is set"
+msgstr ""
+
+msgid "no password set"
+msgstr ""
+
+msgid "Failed to save configuration. Please try again."
+msgstr ""
+
+msgid "Success!"
+msgstr ""
+
+msgid "Failed to refresh status. Please try again."
+msgstr ""
+
+msgid "Please enter a valid email address"
+msgstr ""
+
+msgid "Sending..."
+msgstr ""
+
+msgid "Failed to send test email. Please check your configuration."
+msgstr ""
+
+msgid "OIDC Debug Dashboard"
+msgstr ""
+
+msgid "Inspect configuration, provider metadata and OIDC users"
+msgstr ""
+
+msgid "Test Configuration"
+msgstr ""
+
+msgid "OIDC Configuration"
+msgstr ""
+
+msgid "Enabled"
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Auth Method"
+msgstr ""
+
+msgid "Issuer"
+msgstr ""
+
+msgid "Not configured"
+msgstr ""
+
+msgid "Client ID"
+msgstr ""
+
+msgid "Client Secret"
+msgstr ""
+
+msgid "Set"
+msgstr ""
+
+msgid "Not set"
+msgstr ""
+
+msgid "Redirect URI"
+msgstr ""
+
+msgid "Auto-generated"
+msgstr ""
+
+msgid "Scopes"
+msgstr ""
+
+msgid "Claim Mapping"
+msgstr ""
+
+msgid "Username Claim"
+msgstr ""
+
+msgid "Email Claim"
+msgstr ""
+
+msgid "Full Name Claim"
+msgstr ""
+
+msgid "Groups Claim"
+msgstr ""
+
+msgid "Admin Group"
+msgstr ""
+
+msgid "Admin Emails"
+msgstr ""
+
+msgid "Post-Logout URI"
+msgstr ""
+
+msgid "Provider Metadata"
+msgstr ""
+
+msgid "Error loading metadata:"
+msgstr ""
+
+msgid "Discovery endpoint:"
+msgstr ""
+
+msgid "Successfully loaded provider metadata"
+msgstr ""
+
+msgid "Endpoints"
+msgstr ""
+
+msgid "Authorization"
+msgstr ""
+
+msgid "Token"
+msgstr ""
+
+msgid "UserInfo"
+msgstr ""
+
+msgid "End Session"
+msgstr ""
+
+msgid "JWKS URI"
+msgstr ""
+
+msgid "Supported Features"
+msgstr ""
+
+msgid "Response Types"
+msgstr ""
+
+msgid "Grant Types"
+msgstr ""
+
+msgid "Auth Methods"
+msgstr ""
+
+msgid "Claims"
+msgstr ""
+
+msgid "Provider metadata not loaded. Click \"Test Configuration\" to fetch."
+msgstr ""
+
+msgid "OIDC Users"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Full Name"
+msgstr ""
+
+msgid "Role"
+msgstr ""
+
+msgid "Last Login"
+msgstr ""
+
+msgid "OIDC Subject"
+msgstr ""
+
+msgid "Inactive"
+msgstr ""
+
+msgid "User"
+msgstr ""
+
+msgid "Never"
+msgstr ""
+
+msgid "Details"
+msgstr ""
+
+msgid "No users have logged in via OIDC yet."
+msgstr ""
+
+msgid "Environment Variables Reference"
+msgstr ""
+
+msgid "Configure OIDC using these environment variables:"
+msgstr ""
+
+msgid "Variable"
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Example"
+msgstr ""
+
+msgid "Authentication method"
+msgstr ""
+
+msgid "OIDC provider issuer URL"
+msgstr ""
+
+msgid "Client ID from OIDC provider"
+msgstr ""
+
+msgid "Client secret from OIDC provider"
+msgstr ""
+
+msgid "Callback URL (optional, auto-generated)"
+msgstr ""
+
+msgid "Requested scopes"
+msgstr ""
+
+msgid "Claim containing username"
+msgstr ""
+
+msgid "Claim containing email"
+msgstr ""
+
+msgid "Claim containing full name"
+msgstr ""
+
+msgid "Claim containing groups"
+msgstr ""
+
+msgid "Group name for admin role (optional)"
+msgstr ""
+
+msgid "Comma-separated admin emails (optional)"
+msgstr ""
+
+msgid "OIDC User Details"
+msgstr ""
+
+msgid "Profile and OIDC identity for this user"
+msgstr ""
+
+msgid "Back to OIDC Debug"
+msgstr ""
+
+msgid "User Profile"
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Preferred Language"
+msgstr ""
+
+msgid "Theme"
+msgstr ""
+
+msgid "Created At"
+msgstr ""
+
+msgid "Unknown"
+msgstr ""
+
+msgid "OIDC Information"
+msgstr ""
+
+msgid "OIDC Issuer"
+msgstr ""
+
+msgid "OIDC Subject (sub)"
+msgstr ""
+
+msgid "Authentication Method"
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid ""
+"This user was created or linked via OIDC. The issuer and subject are used to"
+" uniquely identify the user across login sessions."
+msgstr ""
+
+msgid ""
+"This user has no OIDC information. They may have been created manually or "
+"via self-registration without OIDC."
+msgstr ""
+
+msgid "Activity Statistics"
+msgstr ""
+
+msgid "Time Entries"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Active Timer"
+msgstr ""
+
+msgid "Tasks Created"
+msgstr ""
+
+msgid "Edit User"
+msgstr ""
+
+msgid "View All Users"
+msgstr ""
+
+msgid "Are you sure you want to remove the company logo?"
+msgstr ""
+
+msgid "Remove Logo"
+msgstr ""
+
+msgid "Admin Access"
+msgstr ""
+
+msgid "Migrate to new role system"
+msgstr ""
+
+msgid "Migrate"
+msgstr ""
+
+msgid "Roles"
+msgstr ""
+
+msgid "No users found."
+msgstr ""
+
+msgid ""
+"Cannot delete user \"{name}\" because they have {count} time entries. Users "
+"with existing time entries cannot be deleted."
+msgstr ""
+
+msgid "Cannot Delete User"
+msgstr ""
+
+msgid ""
+"Are you sure you want to delete user \"{name}\"? This action cannot be "
+"undone."
+msgstr ""
+
+msgid "Delete User"
+msgstr ""
+
+msgid "System Permissions"
+msgstr ""
+
+msgid "All available permissions in the system"
+msgstr ""
+
+msgid "Back to Roles"
+msgstr ""
+
+msgid "permissions"
+msgstr ""
+
+msgid "No description available"
+msgstr ""
+
+msgid "About Permissions"
+msgstr ""
+
+msgid ""
+"Permissions define what actions users can perform in the system. These "
+"permissions are assigned to roles, and roles are assigned to users. This "
+"provides a flexible and granular access control system."
+msgstr ""
+
+msgid "Edit Role"
+msgstr ""
+
+msgid "Create New Role"
+msgstr ""
+
+msgid "Role Name"
+msgstr ""
+
+msgid "A unique name for this role"
+msgstr ""
+
+msgid "Optional description of this role"
+msgstr ""
+
+msgid "Permissions"
+msgstr ""
+
+msgid "Select the permissions this role should have:"
+msgstr ""
+
+msgid "Toggle All"
+msgstr ""
+
+msgid "Update Role"
+msgstr ""
+
+msgid "Create Role"
+msgstr ""
+
+msgid "Manage roles and their permissions"
+msgstr ""
+
+msgid "View Permissions"
+msgstr ""
+
+msgid "Total Roles"
+msgstr ""
+
+msgid "System Roles"
+msgstr ""
+
+msgid "Custom Roles"
+msgstr ""
+
+msgid "Assigned Users"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Default role"
+msgstr ""
+
+msgid "user"
+msgstr ""
+
+msgid "users"
+msgstr ""
+
+msgid "No users"
+msgstr ""
+
+msgid "System"
+msgstr ""
+
+msgid "Custom"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Permissions for"
+msgstr ""
+
+msgid "No permissions assigned."
+msgstr ""
+
+msgid "No roles found."
+msgstr ""
+
+msgid "About Roles & Permissions"
+msgstr ""
+
+msgid ""
+"Roles are collections of permissions that can be assigned to users. System "
+"roles are predefined and cannot be deleted or renamed, but custom roles can "
+"be created for your specific needs."
+msgstr ""
+
+msgid "Are you sure you want to delete the role"
+msgstr ""
+
+msgid "Delete Role"
+msgstr ""
+
+msgid "No description"
+msgstr ""
+
+msgid "Role Information"
+msgstr ""
+
+msgid "System Role"
+msgstr ""
+
+msgid "Custom Role"
+msgstr ""
+
+msgid "Total Permissions"
+msgstr ""
+
+msgid "Created"
+msgstr ""
+
+msgid "Users with this Role"
+msgstr ""
+
+msgid "No users assigned to this role yet."
+msgstr ""
+
+msgid "This role has no permissions assigned."
+msgstr ""
+
+msgid "Back to User"
+msgstr ""
+
+msgid "Manage Roles for"
+msgstr ""
+
+msgid "Assign Roles"
+msgstr ""
+
+msgid ""
+"Select the roles this user should have. Users inherit all permissions from "
+"their assigned roles."
+msgstr ""
+
+msgid "Update Roles"
+msgstr ""
+
+msgid "Current Effective Permissions"
+msgstr ""
+
+msgid "These are all the permissions the user currently has through their roles:"
+msgstr ""
+
+msgid "No permissions (assign roles to grant permissions)"
+msgstr ""
+
+msgid "Analytics Dashboard"
+msgstr ""
+
+msgid "Last 7 days"
+msgstr ""
+
+msgid "Last 30 days"
+msgstr ""
+
+msgid "Last 90 days"
+msgstr ""
+
+msgid "Last year"
+msgstr ""
+
+msgid "Key metrics and insights about your time tracking"
+msgstr ""
+
+msgid "Total Hours"
+msgstr ""
+
+msgid "Billable Hours"
+msgstr ""
+
+msgid "Active Projects"
+msgstr ""
+
+msgid "Avg Daily Hours"
+msgstr ""
+
+msgid "Daily Hours Trend"
+msgstr ""
+
+msgid "Billable vs Non-Billable"
+msgstr ""
+
+msgid "Hours by Project"
+msgstr ""
+
+msgid "Weekly Trends"
+msgstr ""
+
+msgid "Hours by Time of Day"
+msgstr ""
+
+msgid "Project Efficiency"
+msgstr ""
+
+msgid "User Performance"
+msgstr ""
+
+msgid "Failed to load charts. Please try again."
+msgstr ""
+
+msgid "Failed to refresh charts. Please try again."
+msgstr ""
+
+msgid "Hours"
+msgstr ""
+
+msgid "Hour of Day"
+msgstr ""
+
+msgid "Revenue"
+msgstr ""
+
+msgid "Key metrics and actionable insights"
+msgstr ""
+
+msgid "Export"
+msgstr ""
+
+msgid "vs previous period"
+msgstr ""
+
+msgid "of total"
+msgstr ""
+
+msgid "Potential Revenue"
+msgstr ""
+
+msgid "Avg rate:"
+msgstr ""
+
+msgid "Trend"
+msgstr ""
+
+msgid "active projects"
+msgstr ""
+
+msgid "Insights & Recommendations"
+msgstr ""
+
+msgid "Cumulative"
+msgstr ""
+
+msgid "Billable Distribution"
+msgstr ""
+
+msgid "Task Status Overview"
+msgstr ""
+
+msgid "Tasks Completed"
+msgstr ""
+
+msgid "Revenue by Project"
+msgstr ""
+
+msgid "Payments Over Time"
+msgstr ""
+
+msgid "Payment Status"
+msgstr ""
+
+msgid "Payment Methods"
+msgstr ""
+
+msgid "Revenue vs Payments"
+msgstr ""
+
+msgid "Collection Rate"
+msgstr ""
+
+msgid "Project Completion Rate"
+msgstr ""
+
+msgid "Billable"
+msgstr ""
+
+msgid "Non-Billable"
+msgstr ""
+
+msgid "Completion Rate (%)"
+msgstr ""
+
+msgid "Mobile insights overview"
+msgstr ""
+
+msgid "Daily Avg"
+msgstr ""
+
+msgid "Daily Hours"
+msgstr ""
+
+msgid "Top Projects"
+msgstr ""
+
+msgid "Track time. Stay organized."
+msgstr ""
+
+msgid "Sign in to your account"
+msgstr ""
+
+msgid "Sign in"
+msgstr ""
+
+msgid "Tip: Enter a new username to create your account."
+msgstr ""
+
+msgid "Or continue with"
+msgstr ""
+
+msgid "Single Sign-On"
+msgstr ""
+
+msgid "Budget Alerts & Forecasting"
+msgstr ""
+
+msgid "Monitor project budgets and forecast completion"
+msgstr ""
+
+msgid "Unacknowledged Alerts"
+msgstr ""
+
+msgid "Critical Alerts"
+msgstr ""
+
+msgid "Projects with Budgets"
+msgstr ""
+
+msgid "Warning Alerts"
+msgstr ""
+
+msgid "Active Alerts"
+msgstr ""
+
+msgid "Acknowledge"
+msgstr ""
+
+msgid "Project Budget Status"
+msgstr ""
+
+msgid "Budget"
+msgstr ""
+
+msgid "Consumed"
+msgstr ""
+
+msgid "Remaining"
+msgstr ""
+
+msgid "Progress"
+msgstr ""
+
+msgid "over"
+msgstr ""
+
+msgid "Over Budget"
+msgstr ""
+
+msgid "Critical"
+msgstr ""
+
+msgid "Healthy"
+msgstr ""
+
+msgid "No projects with budgets found"
+msgstr ""
+
+msgid "Alert acknowledged successfully"
+msgstr ""
+
+msgid "Failed to acknowledge alert"
+msgstr ""
+
+msgid "Budget Analysis & Forecasting"
+msgstr ""
+
+msgid "Back to Dashboard"
+msgstr ""
+
+msgid "View Project"
+msgstr ""
+
+msgid "Total Budget"
+msgstr ""
+
+msgid "Burn Rate Analysis"
+msgstr ""
+
+msgid "Daily Burn Rate"
+msgstr ""
+
+msgid "Weekly Burn Rate"
+msgstr ""
+
+msgid "Monthly Burn Rate"
+msgstr ""
+
+msgid "Period Total"
+msgstr ""
+
+msgid "Based on last"
+msgstr ""
+
+msgid "days"
+msgstr ""
+
+msgid "No burn rate data available"
+msgstr ""
+
+msgid "Completion Estimate"
+msgstr ""
+
+msgid "Estimated Completion Date"
+msgstr ""
+
+msgid "days remaining"
+msgstr ""
+
+msgid "Confidence Level"
+msgstr ""
+
+msgid "No completion estimate available"
+msgstr ""
+
+msgid "Cost Trend Analysis"
+msgstr ""
+
+msgid "Average"
+msgstr ""
+
+msgid "Change"
+msgstr ""
+
+msgid "Resource Allocation"
+msgstr ""
+
+msgid "Total Cost"
+msgstr ""
+
+msgid "Hourly Rate"
+msgstr ""
+
+msgid "Team Member"
+msgstr ""
+
+msgid "Cost"
+msgstr ""
+
+msgid "Hours %"
+msgstr ""
+
+msgid "Cost %"
+msgstr ""
+
+msgid "Entries"
+msgstr ""
+
+msgid "Date & Time"
+msgstr ""
+
+msgid "Location"
+msgstr ""
+
+msgid "Task"
+msgstr ""
+
+msgid "Client"
+msgstr ""
+
+msgid "Reminder"
+msgstr ""
+
+msgid "minutes before"
+msgstr ""
+
+msgid "hours before"
+msgstr ""
+
+msgid "days before"
+msgstr ""
+
+msgid "Recurring"
+msgstr ""
+
+msgid "Until"
+msgstr ""
+
+msgid "Last Updated"
+msgstr ""
+
+msgid "Back to Calendar"
+msgstr ""
+
+msgid "Delete Event"
+msgstr ""
+
+msgid "Are you sure you want to delete this event? This action cannot be undone."
+msgstr ""
+
+msgid "Edit Event"
+msgstr ""
+
+msgid "New Event"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Start Date"
+msgstr ""
+
+msgid "Start Time"
+msgstr ""
+
+msgid "End Date"
+msgstr ""
+
+msgid "End Time"
+msgstr ""
+
+msgid "All Day Event"
+msgstr ""
+
+msgid "Event Type"
+msgstr ""
+
+msgid "Event"
+msgstr ""
+
+msgid "Meeting"
+msgstr ""
+
+msgid "Appointment"
+msgstr ""
+
+msgid "Deadline"
+msgstr ""
+
+msgid "-- None --"
+msgstr ""
+
+msgid "No reminder"
+msgstr ""
+
+msgid "5 minutes before"
+msgstr ""
+
+msgid "15 minutes before"
+msgstr ""
+
+msgid "30 minutes before"
+msgstr ""
+
+msgid "1 hour before"
+msgstr ""
+
+msgid "1 day before"
+msgstr ""
+
+msgid "Color"
+msgstr ""
+
+msgid "Choose a color for this event"
+msgstr ""
+
+msgid "Private Event"
+msgstr ""
+
+msgid "Private events are only visible to you"
+msgstr ""
+
+msgid "Recurring Event"
+msgstr ""
+
+msgid "This is a recurring event"
+msgstr ""
+
+msgid "Recurrence Pattern"
+msgstr ""
+
+msgid "Use RRULE format (e.g., FREQ=WEEKLY;BYDAY=MO,WE,FR)"
+msgstr ""
+
+msgid "Recurrence End Date"
+msgstr ""
+
+msgid "Update Event"
+msgstr ""
+
+msgid "Create Event"
+msgstr ""
+
+msgid "View and manage your events, tasks, and time entries"
+msgstr ""
+
+msgid "Day"
+msgstr ""
+
+msgid "Week"
+msgstr ""
+
+msgid "Month"
+msgstr ""
+
+msgid "Today"
+msgstr ""
+
+msgid "Events"
+msgstr ""
+
+msgid "Loading calendar..."
+msgstr ""
+
+msgid "Event Details"
+msgstr ""
+
+msgid "Edit Client Note"
+msgstr ""
+
+msgid "Back to Client"
+msgstr ""
+
+msgid "Client:"
+msgstr ""
+
+msgid "Created on"
+msgstr ""
+
+msgid "Last edited on"
+msgstr ""
+
+msgid "Note Content"
+msgstr ""
+
+msgid "Internal note visible only to your team."
+msgstr ""
+
+msgid "Mark as important"
+msgstr ""
+
+msgid "Save Changes"
+msgstr ""
+
+msgid "Create Client"
+msgstr ""
+
+msgid "Add a new client to manage related projects and billing."
+msgstr ""
+
+msgid "Back to Clients"
+msgstr ""
+
+msgid "Client Name"
+msgstr ""
+
+msgid "Enter client name"
+msgstr ""
+
+msgid "Default Hourly Rate"
+msgstr ""
+
+msgid "e.g. 75.00"
+msgstr ""
+
+msgid "This rate will be automatically filled when creating projects for this client"
+msgstr ""
+
+msgid "Supports Markdown"
+msgstr ""
+
+msgid "Brief description of the client or project scope"
+msgstr ""
+
+msgid "Contact Person"
+msgstr ""
+
+msgid "Primary contact name"
+msgstr ""
+
+msgid "contact@client.com"
+msgstr ""
+
+msgid "Phone"
+msgstr ""
+
+msgid "+1 (555) 123-4567"
+msgstr ""
+
+msgid "Address"
+msgstr ""
+
+msgid "Client address"
+msgstr ""
+
+msgid "Choose a clear, descriptive name for the client organization."
+msgstr ""
+
+msgid ""
+"Set the standard hourly rate for this client. This will automatically "
+"populate when creating new projects."
+msgstr ""
+
+msgid "Contact Information"
+msgstr ""
+
+msgid "Add contact details for easy communication and record keeping."
+msgstr ""
+
+msgid "Provide context about the client relationship or typical project types."
+msgstr ""
+
+msgid "Edit Client"
+msgstr ""
+
+msgid "Update Client"
+msgstr ""
+
+msgid "Client Statistics"
+msgstr ""
+
+msgid "Total Projects"
+msgstr ""
+
+msgid "Est. Total Cost"
+msgstr ""
+
+msgid "Mark client as Inactive?"
+msgstr ""
+
+msgid "Change Client Status"
+msgstr ""
+
+msgid "Mark Inactive"
+msgstr ""
+
+msgid "Activate client?"
+msgstr ""
+
+msgid "Activate Client"
+msgstr ""
+
+msgid "Delete Client"
+msgstr ""
+
+msgid "Archived"
+msgstr ""
+
+msgid "Internal Notes"
+msgstr ""
+
+msgid "Add Note"
+msgstr ""
+
+msgid "Add an internal note about this client..."
+msgstr ""
+
+msgid "Save Note"
+msgstr ""
+
+msgid "edited"
+msgstr ""
+
+msgid "Important"
+msgstr ""
+
+msgid "Unmark"
+msgstr ""
+
+msgid "Mark Important"
+msgstr ""
+
+msgid ""
+"No notes yet. Add a note to keep track of important information about this "
+"client."
+msgstr ""
+
+msgid "Are you sure you want to delete this note?"
+msgstr ""
+
+msgid "Delete Note"
+msgstr ""
+
+msgid "Edited on"
+msgstr ""
+
+msgid "Reply"
+msgstr ""
+
+msgid "Write your reply..."
+msgstr ""
+
+msgid "Comments"
+msgstr ""
+
+msgid "Add Comment"
+msgstr ""
+
+msgid "Your Comment"
+msgstr ""
+
+msgid "Share your thoughts, updates, or questions..."
+msgstr ""
+
+msgid "You can use line breaks to format your comment."
+msgstr ""
+
+msgid "Add Image"
+msgstr ""
+
+msgid "Post Comment"
+msgstr ""
+
+msgid "No comments yet"
+msgstr ""
+
+msgid "Start the conversation by adding the first comment."
+msgstr ""
+
+msgid "Add First Comment"
+msgstr ""
+
+msgid "Edit Comment"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid "Editing comment on:"
+msgstr ""
+
+msgid "Originally posted on"
+msgstr ""
+
+msgid "Comment Content"
+msgstr ""
+
+msgid "Recent Activity"
+msgstr ""
+
+msgid "All Activities"
+msgstr ""
+
+msgid "Time Templates"
+msgstr ""
+
+msgid "No recent activity"
+msgstr ""
+
+msgid "Activity will appear here as you work"
+msgstr ""
+
+msgid "Load More"
+msgstr ""
+
+msgid "Failed to load activities"
+msgstr ""
+
+msgid "400 Bad Request"
+msgstr ""
+
+msgid "Invalid Request"
+msgstr ""
+
+msgid "The request you made is invalid or contains errors. This could be due to:"
+msgstr ""
+
+msgid "Missing or invalid form data"
+msgstr ""
+
+msgid "Malformed request parameters"
+msgstr ""
+
+msgid "Go to Dashboard"
+msgstr ""
+
+msgid "Go Back"
+msgstr ""
+
+msgid "403 Forbidden"
+msgstr ""
+
+msgid "Access Denied"
+msgstr ""
+
+msgid "You don't have permission to access this resource. This could be due to:"
+msgstr ""
+
+msgid "Insufficient privileges"
+msgstr ""
+
+msgid "Not logged in"
+msgstr ""
+
+msgid "Resource access restrictions"
+msgstr ""
+
+msgid "Page Not Found"
+msgstr ""
+
+msgid "The page you're looking for doesn't exist or has been moved."
+msgstr ""
+
+msgid "Server Error"
+msgstr ""
+
+msgid "Something went wrong on our end. Please try again later."
+msgstr ""
+
+msgid "Try Again"
+msgstr ""
+
+msgid "An error occurred while processing your request."
+msgstr ""
+
+msgid "Are you sure you want to delete this expense?"
+msgstr ""
+
+msgid "Delete Expense"
+msgstr ""
+
+msgid "Import/Export Data"
+msgstr ""
+
+msgid "Import/Export"
+msgstr ""
+
+msgid ""
+"Import data from other time trackers or export your data for GDPR compliance"
+" and backups"
+msgstr ""
+
+msgid "Import Data"
+msgstr ""
+
+msgid "CSV Import"
+msgstr ""
+
+msgid "Import time entries from a CSV file"
+msgstr ""
+
+msgid "Choose CSV File"
+msgstr ""
+
+msgid "Download Template"
+msgstr ""
+
+msgid "Import from Toggl Track"
+msgstr ""
+
+msgid "Import time entries from Toggl Track"
+msgstr ""
+
+msgid "Import from Toggl"
+msgstr ""
+
+msgid "Import from Harvest"
+msgstr ""
+
+msgid "Import time entries from Harvest"
+msgstr ""
+
+msgid "Restore from Backup"
+msgstr ""
+
+msgid "Restore data from a backup file"
+msgstr ""
+
+msgid "Restore Backup"
+msgstr ""
+
+msgid "Import History"
+msgstr ""
+
+msgid "Export Data"
+msgstr ""
+
+msgid "Full Data Export (GDPR)"
+msgstr ""
+
+msgid "Export all your personal data"
+msgstr ""
+
+msgid "Export as JSON"
+msgstr ""
+
+msgid "Export as ZIP"
+msgstr ""
+
+msgid "Filtered Export"
+msgstr ""
+
+msgid "Export specific data with filters"
+msgstr ""
+
+msgid "Export with Filters"
+msgstr ""
+
+msgid "Create Backup"
+msgstr ""
+
+msgid "Create a full database backup"
+msgstr ""
+
+msgid "Export History"
+msgstr ""
+
+msgid "API Token"
+msgstr ""
+
+msgid "Workspace ID"
+msgstr ""
+
+msgid "Import"
+msgstr ""
+
+msgid "Account ID"
+msgstr ""
+
+msgid "Create Invoice"
+msgstr ""
+
+msgid "Generate a new invoice for a project and client"
+msgstr ""
+
+msgid "Back to Invoices"
+msgstr ""
+
+msgid "Select a project"
+msgstr ""
+
+msgid "Selecting a project will auto-fill client details"
+msgstr ""
+
+msgid "Client Email"
+msgstr ""
+
+msgid "Due Date"
+msgstr ""
+
+msgid "Client Address"
+msgstr ""
+
+msgid "Tax Rate (%)"
+msgstr ""
+
+msgid "Terms"
+msgstr ""
+
+msgid "Tips"
+msgstr ""
+
+msgid "Choose the correct project to auto-fill client details."
+msgstr ""
+
+msgid "You can customize notes and terms before sending the invoice."
+msgstr ""
+
+msgid "Edit Invoice"
+msgstr ""
+
+msgid "Update invoice details, items, and terms"
+msgstr ""
+
+msgid "Invoice Items"
+msgstr ""
+
+msgid "Time-based services and hourly work"
+msgstr ""
+
+msgid "Add Item"
+msgstr ""
+
+msgid "Quantity"
+msgstr ""
+
+msgid "Unit Price"
+msgstr ""
+
+msgid "Action"
+msgstr ""
+
+msgid "e.g., Web Development Services"
+msgstr ""
+
+msgid "Remove item"
+msgstr ""
+
+msgid "Items Subtotal"
+msgstr ""
+
+msgid "Billable expenses such as travel, meals, and materials"
+msgstr ""
+
+msgid "Add Expense"
+msgstr ""
+
+msgid "Category"
+msgstr ""
+
+msgid "Amount"
+msgstr ""
+
+msgid "e.g., Travel to Client Meeting"
+msgstr ""
+
+msgid "Linked expense - title cannot be edited"
+msgstr ""
+
+msgid "Linked expense - description cannot be edited"
+msgstr ""
+
+msgid "Linked expense - category cannot be edited"
+msgstr ""
+
+msgid "Travel"
+msgstr ""
+
+msgid "Meals"
+msgstr ""
+
+msgid "Accommodation"
+msgstr ""
+
+msgid "Supplies"
+msgstr ""
+
+msgid "Software"
+msgstr ""
+
+msgid "Equipment"
+msgstr ""
+
+msgid "Services"
+msgstr ""
+
+msgid "Marketing"
+msgstr ""
+
+msgid "Training"
+msgstr ""
+
+msgid "Other"
+msgstr ""
+
+msgid "Linked expense - amount cannot be edited"
+msgstr ""
+
+msgid "Linked expense - date cannot be edited"
+msgstr ""
+
+msgid "Unlink expense from invoice"
+msgstr ""
+
+msgid "Expenses Subtotal"
+msgstr ""
+
+msgid "Extra Goods"
+msgstr ""
+
+msgid "Products, materials, licenses, and other goods"
+msgstr ""
+
+msgid "Add Good"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Qty"
+msgstr ""
+
+msgid "Price"
+msgstr ""
+
+msgid "SKU"
+msgstr ""
+
+msgid "e.g., Software License"
+msgstr ""
+
+msgid "Product"
+msgstr ""
+
+msgid "Service"
+msgstr ""
+
+msgid "Material"
+msgstr ""
+
+msgid "License"
+msgstr ""
+
+msgid "Remove good"
+msgstr ""
+
+msgid "Goods Subtotal"
+msgstr ""
+
+msgid "Live Preview"
+msgstr ""
+
+msgid "Issue Date"
+msgstr ""
+
+msgid "Payment"
+msgstr ""
+
+msgid "Currency"
+msgstr ""
+
+msgid "Items"
+msgstr ""
+
+msgid "Goods"
+msgstr ""
+
+msgid "Subtotal"
+msgstr ""
+
+msgid "Tax"
+msgstr ""
+
+msgid "Total"
+msgstr ""
+
+msgid "Amount Paid"
+msgstr ""
+
+msgid "Outstanding"
+msgstr ""
+
+msgid "Generate from Time/Costs"
+msgstr ""
+
+msgid "Record Payment"
+msgstr ""
+
+msgid "Export PDF"
+msgstr ""
+
+msgid "Export CSV"
+msgstr ""
+
+msgid "Duplicate Invoice"
+msgstr ""
+
+msgid "Are you sure you want to unlink this expense from the invoice?"
+msgstr ""
+
+msgid "Unlink Expense"
+msgstr ""
+
+msgid "Unlink"
+msgstr ""
+
+msgid "Please add at least one item, expense, or extra good to the invoice"
+msgstr ""
+
+msgid "Generate from Time, Costs & Goods"
+msgstr ""
+
+msgid ""
+"Select unbilled time entries, project costs, and extra goods to add to this "
+"invoice"
+msgstr ""
+
+msgid "Back to Edit"
+msgstr ""
+
+msgid "Unbilled Time Entries"
+msgstr ""
+
+msgid "Time Entry"
+msgstr ""
+
+msgid "No unbilled time entries found for this project."
+msgstr ""
+
+msgid "Uninvoiced Project Costs"
+msgstr ""
+
+msgid "No uninvoiced costs found for this project."
+msgstr ""
+
+msgid "Uninvoiced Billable Expenses"
+msgstr ""
+
+msgid "Vendor"
+msgstr ""
+
+msgid "No uninvoiced billable expenses found for this project."
+msgstr ""
+
+msgid "Project Extra Goods"
+msgstr ""
+
+msgid "No extra goods found for this project."
+msgstr ""
+
+msgid "Add Selected to Invoice"
+msgstr ""
+
+msgid "Selection Summary"
+msgstr ""
+
+msgid "Total available hours"
+msgstr ""
+
+msgid "Total available costs"
+msgstr ""
+
+msgid "Total available expenses"
+msgstr ""
+
+msgid "Total available goods"
+msgstr ""
+
+msgid "You can select multiple time entries, costs, expenses, and extra goods."
+msgstr ""
+
+msgid "Time entries are grouped by task or project at item creation."
+msgstr ""
+
+msgid "Costs and extra goods are added as individual invoice items."
+msgstr ""
+
+msgid "Expenses are linked to the invoice and appear in a separate section."
+msgstr ""
+
+msgid "Please select at least one time entry, cost, expense, or extra good"
+msgstr ""
+
+msgid "Delete Invoice"
+msgstr ""
+
+msgid "Are you sure you want to delete invoice"
+msgstr ""
+
+msgid ""
+"All invoice items, extra goods, and payment records associated with this "
+"invoice will be permanently deleted."
+msgstr ""
+
+msgid "Invoice"
+msgstr ""
+
+msgid "Website"
+msgstr ""
+
+msgid "Tax ID"
+msgstr ""
+
+msgid "INVOICE"
+msgstr ""
+
+msgid "Invoice #"
+msgstr ""
+
+msgid "Bill To"
+msgstr ""
+
+msgid "Quantity (Hours)"
+msgstr ""
+
+msgid "Total Amount"
+msgstr ""
+
+#, python-format
+msgid "Generated from %(num)d time entries"
+msgstr ""
+
+msgid "Expense"
+msgstr ""
+
+msgid "Subtotal:"
+msgstr ""
+
+#, python-format
+msgid "Tax (%(rate).2f%%):"
+msgstr ""
+
+msgid "Total Amount:"
+msgstr ""
+
+msgid "Notes:"
+msgstr ""
+
+msgid "Terms:"
+msgstr ""
+
+msgid "Payment Information:"
+msgstr ""
+
+msgid "Terms & Conditions:"
+msgstr ""
+
+msgid "Kanban"
+msgstr ""
+
+msgid "All"
+msgstr ""
+
+msgid "Manage Columns"
+msgstr ""
+
+msgid "Drag tasks between columns to update their status"
+msgstr ""
+
+msgid "Kanban board"
+msgstr ""
+
+msgid "moved to"
+msgstr ""
+
+msgid "No tasks in this column."
+msgstr ""
+
+msgid "Manage Kanban Columns"
+msgstr ""
+
+msgid "Customize your kanban board columns and task states"
+msgstr ""
+
+msgid "Add Column"
+msgstr ""
+
+msgid "Kanban columns list"
+msgstr ""
+
+msgid "Key"
+msgstr ""
+
+msgid "Label"
+msgstr ""
+
+msgid "Icon"
+msgstr ""
+
+msgid "Complete?"
+msgstr ""
+
+msgid "Drag to reorder"
+msgstr ""
+
+msgid "Edit column"
+msgstr ""
+
+msgid "Toggle active state"
+msgstr ""
+
+msgid "No kanban columns found. Create your first column to get started."
+msgstr ""
+
+msgid "Tips:"
+msgstr ""
+
+msgid "Drag and drop rows to reorder columns"
+msgstr ""
+
+msgid ""
+"System columns (todo, in_progress, done) cannot be deleted but can be "
+"customized"
+msgstr ""
+
+msgid ""
+"Columns marked as \"Complete\" will mark tasks as completed when dragged to "
+"that column"
+msgstr ""
+
+msgid ""
+"Inactive columns are hidden from the kanban board but tasks with that status"
+" remain accessible"
+msgstr ""
+
+msgid "Delete Kanban Column"
+msgstr ""
+
+msgid "Are you sure you want to delete the column?"
+msgstr ""
+
+msgid "Key:"
+msgstr ""
+
+msgid ""
+"Note: Tasks with this status will remain accessible but the column will no "
+"longer appear on the kanban board."
+msgstr ""
+
+msgid "Delete Column"
+msgstr ""
+
+msgid "Columns reordered successfully"
+msgstr ""
+
+msgid "Failed to reorder columns. Please try again."
+msgstr ""
+
+msgid "Create Kanban Column"
+msgstr ""
+
+msgid "Add a new column to your kanban board"
+msgstr ""
+
+msgid "Create Kanban Column form"
+msgstr ""
+
+msgid "Column Label"
+msgstr ""
+
+msgid "e.g., In Review, Blocked, Testing"
+msgstr ""
+
+msgid "The display name shown on the kanban board"
+msgstr ""
+
+msgid "Column Key"
+msgstr ""
+
+msgid "e.g., in_review, blocked, testing"
+msgstr ""
+
+msgid ""
+"Unique identifier (lowercase, no spaces, use underscores). Auto-generated "
+"from label if empty."
+msgstr ""
+
+msgid "Icon Class"
+msgstr ""
+
+msgid "Font Awesome icon class"
+msgstr ""
+
+msgid "Browse icons"
+msgstr ""
+
+msgid "Primary (Blue)"
+msgstr ""
+
+msgid "Secondary (Gray)"
+msgstr ""
+
+msgid "Success (Green)"
+msgstr ""
+
+msgid "Danger (Red)"
+msgstr ""
+
+msgid "Warning (Yellow)"
+msgstr ""
+
+msgid "Info (Cyan)"
+msgstr ""
+
+msgid "Dark"
+msgstr ""
+
+msgid "Bootstrap color class for styling"
+msgstr ""
+
+msgid "Mark as Complete State"
+msgstr ""
+
+msgid "Tasks moved to this column will be marked as completed"
+msgstr ""
+
+msgid "Create Column"
+msgstr ""
+
+msgid "Note:"
+msgstr ""
+
+msgid ""
+"The column will be added at the end of the board. You can reorder columns "
+"later from the management page."
+msgstr ""
+
+msgid "Edit Kanban Column"
+msgstr ""
+
+msgid "Modify column settings"
+msgstr ""
+
+msgid "Edit Kanban Column form"
+msgstr ""
+
+msgid "The key cannot be changed after creation"
+msgstr ""
+
+msgid "Preview"
+msgstr ""
+
+msgid "Inactive columns are hidden from the kanban board"
+msgstr ""
+
+msgid "System Column:"
+msgstr ""
+
+msgid ""
+"This is a system column. You can customize its appearance but cannot delete "
+"it."
+msgstr ""
+
+msgid "Professional time tracking and project management"
+msgstr ""
+
+msgid ""
+"A comprehensive web-based time tracking application built with Flask, "
+"featuring project management, client organization, task management, "
+"invoicing, and advanced analytics."
+msgstr ""
+
+msgid "Project Management"
+msgstr ""
+
+msgid "Invoicing"
+msgstr ""
+
+msgid "Smart Timers"
+msgstr ""
+
+msgid "Real-time tracking with idle detection and live updates"
+msgstr ""
+
+msgid "Client Management"
+msgstr ""
+
+msgid "Organize clients with contacts, rates, and project relations"
+msgstr ""
+
+msgid "Task System"
+msgstr ""
+
+msgid "Break down projects into tasks with progress tracking"
+msgstr ""
+
+msgid "PDF Invoices"
+msgstr ""
+
+msgid "Generate professional invoices from tracked time"
+msgstr ""
+
+msgid "Core Features"
+msgstr ""
+
+msgid "Start/stop timers with project and task association"
+msgstr ""
+
+msgid "Manual time entry with notes and tags"
+msgstr ""
+
+msgid "Client and project organization"
+msgstr ""
+
+msgid "Role-based access and user profiles"
+msgstr ""
+
+msgid "Advanced Features"
+msgstr ""
+
+msgid "Branded PDF invoicing with tax and payment tracking"
+msgstr ""
+
+msgid "Visual analytics and detailed reporting"
+msgstr ""
+
+msgid "REST API for integrations"
+msgstr ""
+
+msgid "PWA capabilities and mobile-friendly UI"
+msgstr ""
+
+msgid "Platform Support"
+msgstr ""
+
+msgid "Web Application"
+msgstr ""
+
+msgid "Desktop browsers (Chrome, Firefox, Safari, Edge)"
+msgstr ""
+
+msgid "Mobile responsive design"
+msgstr ""
+
+msgid "Progressive Web App (PWA)"
+msgstr ""
+
+msgid "Touch-friendly tablet interface"
+msgstr ""
+
+msgid "Operating Systems"
+msgstr ""
+
+msgid "Windows, macOS, Linux"
+msgstr ""
+
+msgid "Android and iOS (browser)"
+msgstr ""
+
+msgid "Raspberry Pi support"
+msgstr ""
+
+msgid "Dockerized deployment"
+msgstr ""
+
+msgid "Database Support"
+msgstr ""
+
+msgid "PostgreSQL (recommended)"
+msgstr ""
+
+msgid "SQLite (dev/test)"
+msgstr ""
+
+msgid "Automatic migrations with Flask-Migrate"
+msgstr ""
+
+msgid "Backup and restoration tools"
+msgstr ""
+
+msgid "Technical Specifications"
+msgstr ""
+
+msgid "Technology Stack"
+msgstr ""
+
+msgid "Backend"
+msgstr ""
+
+msgid "Frontend"
+msgstr ""
+
+msgid "Database"
+msgstr ""
+
+msgid "Deployment"
+msgstr ""
+
+msgid "Key Capabilities"
+msgstr ""
+
+msgid "Real-time"
+msgstr ""
+
+msgid "i18n"
+msgstr ""
+
+msgid "Security"
+msgstr ""
+
+msgid "Mobile"
+msgstr ""
+
+msgid "Open Source & Community"
+msgstr ""
+
+msgid "Open Source Benefits"
+msgstr ""
+
+msgid "Full source code available on GitHub"
+msgstr ""
+
+msgid "Licensed under GPL v3.0"
+msgstr ""
+
+msgid "Community-driven development"
+msgstr ""
+
+msgid "Transparent issue tracking and bug reports"
+msgstr ""
+
+msgid "Deployment Options"
+msgstr ""
+
+msgid "Docker images (GHCR)"
+msgstr ""
+
+msgid "Self-hosted deployment with full control"
+msgstr ""
+
+msgid "Cloud-ready with Compose configs"
+msgstr ""
+
+msgid "View on GitHub"
+msgstr ""
+
+msgid "Support Development"
+msgstr ""
+
+msgid "Getting Help & Resources"
+msgstr ""
+
+msgid "Documentation"
+msgstr ""
+
+msgid "Step-by-step guides for all features."
+msgstr ""
+
+msgid "View Help"
+msgstr ""
+
+msgid "System Information"
+msgstr ""
+
+msgid "Status, versions, and configuration details."
+msgstr ""
+
+msgid "Admin access required"
+msgstr ""
+
+msgid "Community Support"
+msgstr ""
+
+msgid "Report issues, request features, contribute."
+msgstr ""
+
+msgid "GitHub Issues"
+msgstr ""
+
+msgid "Here's a quick overview of your work."
+msgstr ""
+
+msgid "Timer"
+msgstr "Timer"
+
+msgid "No active timer."
+msgstr "Kein aktiver Timer."
+
+msgid "Tags"
+msgstr "Tags"
+
+msgid "Duplicate entry"
+msgstr "Eintrag duplizieren"
+
+msgid "No recent entries found."
+msgstr "Keine aktuellen Einträge gefunden."
+
+msgid "Weekly Goal"
+msgstr "Wöchentliches Ziel"
+
+msgid "Days Left"
+msgstr "Verbleibende Tage"
+
+msgid "Need"
+msgstr "Benötigt"
+
+msgid "to reach goal"
+msgstr "um Ziel zu erreichen"
+
+msgid "No Weekly Goal"
+msgstr "Kein wöchentliches Ziel"
+
+msgid "Set a weekly time goal to track your progress"
+msgstr "Legen Sie ein wöchentliches Zeitziel fest, um Ihren Fortschritt zu verfolgen"
+
+msgid "Create Goal"
+msgstr "Ziel erstellen"
+
+msgid "Top Projects (30 days)"
+msgstr "Top-Projekte (30 Tage)"
+
+msgid "No activity in the last 30 days."
+msgstr "Keine Aktivität in den letzten 30 Tagen."
+
+msgid "Task (optional)"
+msgstr "Aufgabe (optional)"
+
+msgid "Notes (optional)"
+msgstr "Notizen (optional)"
+
+msgid "Or use a template"
+msgstr "Oder verwenden Sie eine Vorlage"
+
+msgid "View all templates"
+msgstr "Alle Vorlagen anzeigen"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "Complete documentation and user guide"
+msgstr "Vollständige Dokumentation und Benutzerhandbuch"
+
+msgid "Quick Navigation"
+msgstr "Schnellnavigation"
+
+msgid "Filter sections..."
+msgstr "Abschnitte filtern..."
+
+msgid "Quick Start"
+msgstr "Schnellstart"
+
+msgid "Task Management"
+msgstr "Aufgabenverwaltung"
+
+msgid "Reports & Analytics"
+msgstr "Berichte & Analysen"
+
+msgid "Productivity Features"
+msgstr "Produktivitätsfunktionen"
+
+msgid "Admin Features"
+msgstr "Admin-Funktionen"
+
+msgid "Mobile Usage"
+msgstr "Mobile Nutzung"
+
+msgid "Troubleshooting"
+msgstr "Fehlerbehebung"
+
+msgid "TimeTracker Help Center"
+msgstr "TimeTracker Hilfezentrum"
+
+msgid "Everything you need to know to get the most out of TimeTracker"
+msgstr "Alles, was Sie wissen müssen, um das Beste aus TimeTracker herauszuholen"
+
+msgid "Start Tracking Time"
+msgstr "Zeiterfassung starten"
+
+msgid "View Projects"
+msgstr "Projekte anzeigen"
+
+msgid "Generate Reports"
+msgstr "Berichte erstellen"
+
+msgid "Quick Start Guide"
+msgstr "Schnellstart-Anleitung"
+
+msgid "For New Users"
+msgstr "Für neue Benutzer"
+
+msgid "Log in with your username (no password required)"
+msgstr "Melden Sie sich mit Ihrem Benutzernamen an (kein Passwort erforderlich)"
+
+msgid "Explore the dashboard to see your overview"
+msgstr "Erkunden Sie das Dashboard, um Ihre Übersicht zu sehen"
+
+msgid "Start your first timer on an existing project"
+msgstr "Starten Sie Ihren ersten Timer für ein bestehendes Projekt"
+
+msgid "View your time entries in reports"
+msgstr "Zeigen Sie Ihre Zeiteinträge in Berichten an"
+
+msgid "For Administrators"
+msgstr "Für Administratoren"
+
+msgid "Set up clients in the Client Management section"
+msgstr "Richten Sie Kunden im Bereich Kundenverwaltung ein"
+
+msgid "Create projects and assign them to clients"
+msgstr "Erstellen Sie Projekte und weisen Sie sie Kunden zu"
+
+msgid "Configure system settings (timezone, currency, etc.)"
+msgstr "Konfigurieren Sie Systemeinstellungen (Zeitzone, Währung usw.)"
+
+msgid "Manage users and permissions"
+msgstr "Verwalten Sie Benutzer und Berechtigungen"
+
+msgid "Pro Tip:"
+msgstr "Profi-Tipp:"
+
+msgid ""
+"Use the mobile-friendly interface to track time on the go. The timer "
+"continues running even if you close your browser!"
+msgstr ""
+"Nutzen Sie die mobile Benutzeroberfläche, um unterwegs Zeit zu erfassen. Der "
+"Timer läuft weiter, auch wenn Sie Ihren Browser schließen!"
+
+msgid "Real-time tracking with automatic idle detection and WebSocket updates"
+msgstr "Echtzeit-Tracking mit automatischer Leerlauferkennung und WebSocket-Updates"
+
+msgid "Manual Entry"
+msgstr "Manueller Eintrag"
+
+msgid "Log time manually with custom start and end times"
+msgstr "Zeit manuell mit benutzerdefinierten Start- und Endzeiten erfassen"
+
+msgid "Starting a Timer"
+msgstr "Timer starten"
+
+msgid "Navigate to the Timer page or dashboard"
+msgstr "Navigieren Sie zur Timer-Seite oder zum Dashboard"
+
+msgid "Select a project from the dropdown"
+msgstr "Wählen Sie ein Projekt aus der Dropdown-Liste"
+
+msgid "Optionally select a task for more detailed tracking"
+msgstr "Optional eine Aufgabe für detaillierteres Tracking auswählen"
+
+msgid "Add notes about what you're working on (optional)"
+msgstr "Notizen hinzufügen, woran Sie arbeiten (optional)"
+
+msgid "Add tags separated by commas (optional)"
+msgstr "Tags durch Kommas getrennt hinzufügen (optional)"
+
+msgid "Click \"Start Timer\""
+msgstr "Klicken Sie auf \"Timer starten\""
+
+msgid "Timer Features"
+msgstr "Timer-Funktionen"
+
+msgid "Real-time duration display"
+msgstr "Echtzeit-Anzeige der Dauer"
+
+msgid "Continues running if browser closes"
+msgstr "Läuft weiter, wenn der Browser geschlossen wird"
+
+msgid "Automatic idle detection (configurable)"
+msgstr "Automatische Leerlauferkennung (konfigurierbar)"
+
+msgid "One active timer per user (configurable)"
+msgstr "Ein aktiver Timer pro Benutzer (konfigurierbar)"
+
+msgid "WebSocket live updates"
+msgstr "WebSocket Live-Updates"
+
+msgid "Manual Time Entry"
+msgstr "Manuelle Zeiterfassung"
+
+msgid ""
+"Create time entries manually when you need to record time spent away from "
+"the computer or adjust existing entries."
+msgstr ""
+"Erstellen Sie Zeiteinträge manuell, wenn Sie Zeit erfassen müssen, die Sie "
+"weg vom Computer verbracht haben, oder bestehende Einträge anpassen."
+
+msgid "Required Information"
+msgstr "Erforderliche Informationen"
+
+msgid "Project selection"
+msgstr "Projektauswahl"
+
+msgid "Start date and time"
+msgstr "Startdatum und -zeit"
+
+msgid "End date and time"
+msgstr "Enddatum und -zeit"
+
+msgid "Optional Information"
+msgstr "Optionale Informationen"
+
+msgid "Task assignment"
+msgstr "Aufgabenzuweisung"
+
+msgid "Description/notes"
+msgstr "Beschreibung/Notizen"
+
+msgid "Tags for categorization"
+msgstr "Tags zur Kategorisierung"
+
+msgid "Billable status override"
+msgstr "Fakturierbar-Status überschreiben"
+
+msgid "Advanced Time Entry Features"
+msgstr "Erweiterte Zeiterfassungsfunktionen"
+
+msgid ""
+"Create multiple time entries for consecutive days with the same project and "
+"duration. Perfect for regular work patterns."
+msgstr ""
+"Erstellen Sie mehrere Zeiteinträge für aufeinanderfolgende Tage mit dem "
+"gleichen Projekt und der gleichen Dauer. Perfekt für regelmäßige "
+"Arbeitsmuster."
+
+msgid ""
+"Save frequently used time entries as templates for quick reuse. Saves "
+"project, task, and notes."
+msgstr ""
+"Speichern Sie häufig verwendete Zeiteinträge als Vorlagen zur schnellen "
+"Wiederverwendung. Speichert Projekt, Aufgabe und Notizen."
+
+msgid "Calendar View"
+msgstr "Kalenderansicht"
+
+msgid ""
+"Visualize your time entries on a calendar. Drag-and-drop to reschedule or "
+"click dates to add entries."
+msgstr ""
+"Visualisieren Sie Ihre Zeiteinträge in einem Kalender. Drag-and-Drop zum "
+"Verschieben oder klicken Sie auf Daten, um Einträge hinzuzufügen."
+
+msgid "Project Information"
+msgstr "Projektinformationen"
+
+msgid "Descriptive project name"
+msgstr "Beschreibender Projektname"
+
+msgid "Associated client organization"
+msgstr "Zugehörige Kundenorganisation"
+
+msgid "Project details and scope"
+msgstr "Projektdetails und -umfang"
+
+msgid "Active, completed, or archived"
+msgstr "Aktiv, abgeschlossen oder archiviert"
+
+msgid "Billing Information"
+msgstr "Abrechnungsinformationen"
+
+msgid "Whether time should be tracked for billing"
+msgstr "Ob Zeit für die Abrechnung erfasst werden soll"
+
+msgid "Rate for billable time calculations"
+msgstr "Satz für die Berechnung abrechenbarer Zeit"
+
+msgid "Billing Reference"
+msgstr "Abrechnungsreferenz"
+
+msgid "PO number or billing code"
+msgstr "Bestellnummer oder Abrechnungscode"
+
+msgid "Project Operations"
+msgstr "Projektoperationen"
+
+msgid "Create new projects with client relationships"
+msgstr "Neue Projekte mit Kundenbeziehungen erstellen"
+
+msgid "Edit existing projects to update details"
+msgstr "Bestehende Projekte bearbeiten, um Details zu aktualisieren"
+
+msgid "Archive projects to hide from timers (preserves data)"
+msgstr "Projekte archivieren, um sie vor Timern zu verbergen (Daten bleiben erhalten)"
+
+msgid "Delete projects (removes all associated time entries)"
+msgstr "Projekte löschen (entfernt alle zugehörigen Zeiteinträge)"
+
+msgid "Best Practices"
+msgstr "Bewährte Praktiken"
+
+msgid "Use descriptive project names"
+msgstr "Verwenden Sie beschreibende Projektnamen"
+
+msgid "Set accurate hourly rates for billing"
+msgstr "Legen Sie genaue Stundensätze für die Abrechnung fest"
+
+msgid "Archive instead of delete when possible"
+msgstr "Archivieren Sie anstatt zu löschen, wenn möglich"
+
+msgid "Use billing references for external tracking"
+msgstr "Verwenden Sie Abrechnungsreferenzen für externe Nachverfolgung"
+
+msgid ""
+"The client management system helps organize your work by client "
+"organizations, preventing errors and streamlining project creation."
+msgstr ""
+"Das Kundenverwaltungssystem hilft dabei, Ihre Arbeit nach "
+"Kundenorganisationen zu organisieren, Fehler zu vermeiden und die "
+"Projekterstellung zu optimieren."
+
+msgid "Client Information"
+msgstr "Kundeninformationen"
+
+msgid "Organization Name"
+msgstr "Organisationsname"
+
+msgid "Company or client name"
+msgstr "Firmen- oder Kundenname"
+
+msgid "Primary contact details"
+msgstr "Hauptkontaktdaten"
+
+msgid "Email & Phone"
+msgstr "E-Mail & Telefon"
+
+msgid "Contact information"
+msgstr "Kontaktinformationen"
+
+msgid "Business address"
+msgstr "Geschäftsadresse"
+
+msgid "Benefits"
+msgstr "Vorteile"
+
+msgid "Dropdown selection prevents typos"
+msgstr "Dropdown-Auswahl verhindert Tippfehler"
+
+msgid "Default rates auto-populate projects"
+msgstr "Standard-Sätze füllen Projekte automatisch aus"
+
+msgid "Consistent client naming"
+msgstr "Konsistente Kundenbenennung"
+
+msgid "Easier project organization"
+msgstr "Einfachere Projektorganisation"
+
+msgid "Project Count"
+msgstr "Projektanzahl"
+
+msgid "Total and active projects"
+msgstr "Gesamt- und aktive Projekte"
+
+msgid "Total hours worked"
+msgstr "Gesamtarbeitsstunden"
+
+msgid "Cost Estimation"
+msgstr "Kostenschätzung"
+
+msgid "Estimated billing amounts"
+msgstr "Geschätzte Abrechnungsbeträge"
+
+msgid ""
+"Break down projects into manageable tasks with detailed tracking and "
+"progress monitoring."
+msgstr ""
+"Teilen Sie Projekte in überschaubare Aufgaben mit detaillierter Nachverfolgung "
+"und Fortschrittsüberwachung auf."
+
+msgid "Task Properties"
+msgstr "Aufgabeneigenschaften"
+
+msgid "Name & Description"
+msgstr "Name & Beschreibung"
+
+msgid "Clear task identification"
+msgstr "Klare Aufgabenidentifikation"
+
+msgid "Priority Levels"
+msgstr "Prioritätsstufen"
+
+msgid "Low, Medium, High, Urgent"
+msgstr "Niedrig, Mittel, Hoch, Dringend"
+
+msgid "Due Dates"
+msgstr "Fälligkeitsdaten"
+
+msgid "Deadline tracking"
+msgstr "Fristverfolgung"
+
+msgid "Assignment"
+msgstr "Zuweisung"
+
+msgid "Task ownership"
+msgstr "Aufgabenverantwortung"
+
+msgid "Status Tracking"
+msgstr "Statusverfolgung"
+
+msgid "To Do - Not started"
+msgstr "Zu erledigen - Nicht begonnen"
+
+msgid "In Progress - Currently working"
+msgstr "In Bearbeitung - Wird gerade bearbeitet"
+
+msgid "Review - Ready for review"
+msgstr "Überprüfung - Bereit zur Überprüfung"
+
+msgid "Done - Completed"
+msgstr "Erledigt - Abgeschlossen"
+
+msgid "Cancelled - Not needed"
+msgstr "Abgebrochen - Nicht benötigt"
+
+msgid "Time Tracking Features"
+msgstr "Zeiterfassungsfunktionen"
+
+msgid "Start timers directly from tasks"
+msgstr "Timer direkt von Aufgaben aus starten"
+
+msgid "Link time entries to specific tasks"
+msgstr "Zeiteinträge mit spezifischen Aufgaben verknüpfen"
+
+msgid "Track estimated vs actual hours"
+msgstr "Geschätzte vs. tatsächliche Stunden verfolgen"
+
+msgid "Monitor task progress automatically"
+msgstr "Aufgabenfortschritt automatisch überwachen"
+
+msgid "Task Views"
+msgstr "Aufgabenansichten"
+
+msgid "My Tasks - Your assigned tasks"
+msgstr "Meine Aufgaben - Ihre zugewiesenen Aufgaben"
+
+msgid "All Tasks - Complete task list"
+msgstr "Alle Aufgaben - Vollständige Aufgabenliste"
+
+msgid "Overdue Tasks - Past due items"
+msgstr "Überfällige Aufgaben - Überfällige Elemente"
+
+msgid "Project Tasks - Tasks within projects"
+msgstr "Projektaufgaben - Aufgaben innerhalb von Projekten"
+
+msgid "Collaboration Features"
+msgstr "Kollaborationsfunktionen"
+
+msgid "Task Comments - Threaded discussions on tasks"
+msgstr "Aufgabenkommentare - Threadbasierte Diskussionen zu Aufgaben"
+
+msgid "Markdown Support - Rich formatting in descriptions"
+msgstr "Markdown-Unterstützung - Formatierte Beschreibungen"
+
+msgid "User Mentions - Tag team members (if enabled)"
+msgstr "Benutzererwähnungen - Teammitglieder markieren (wenn aktiviert)"
+
+msgid "File Attachments - Attach files to tasks (if enabled)"
+msgstr ""
+
+msgid "Markdown Formatting"
+msgstr ""
+
+msgid "Task and project descriptions support Markdown:"
+msgstr ""
+
+msgid "**Bold**, *Italic*, ~~Strikethrough~~"
+msgstr ""
+
+msgid "# Headings, - Lists, [Links](url)"
+msgstr ""
+
+msgid "```code blocks```, tables, images"
+msgstr ""
+
+msgid ""
+"Visualize your workflow with a drag-and-drop Kanban board for intuitive task"
+" management."
+msgstr ""
+
+msgid "Board Features"
+msgstr ""
+
+msgid "Customizable columns matching task statuses"
+msgstr ""
+
+msgid "Drag-and-drop tasks between columns"
+msgstr ""
+
+msgid "Filter by project, user, or priority"
+msgstr ""
+
+msgid "Quick search across all tasks"
+msgstr ""
+
+msgid "Using the Kanban Board"
+msgstr ""
+
+msgid "Access from the Tasks menu or project page"
+msgstr ""
+
+msgid "Drag tasks to different columns to change status"
+msgstr ""
+
+msgid "Click on a task card to view/edit details"
+msgstr ""
+
+msgid "Use filters to focus on specific work"
+msgstr ""
+
+msgid ""
+"The Kanban board is perfect for sprint planning and daily standups. Each "
+"column represents a stage in your workflow!"
+msgstr ""
+
+msgid "Expense Tracking"
+msgstr ""
+
+msgid ""
+"Track business expenses, manage receipts, and handle reimbursements "
+"efficiently."
+msgstr ""
+
+msgid "Expense Features"
+msgstr ""
+
+msgid "Categorize expenses (travel, meals, supplies, etc.)"
+msgstr ""
+
+msgid "Attach receipt images and documents"
+msgstr ""
+
+msgid "Track amounts, tax, and payment methods"
+msgstr ""
+
+msgid "Approval workflow for expense requests"
+msgstr ""
+
+msgid "Billing & Reimbursement"
+msgstr ""
+
+msgid "Mark expenses as billable to clients"
+msgstr ""
+
+msgid "Include expenses in client invoices"
+msgstr ""
+
+msgid "Track reimbursement status"
+msgstr ""
+
+msgid "Link expenses to specific projects"
+msgstr ""
+
+msgid "Record Expense"
+msgstr ""
+
+msgid "Enter details and upload receipt"
+msgstr ""
+
+msgid "Submit for Approval"
+msgstr ""
+
+msgid "Admin reviews and approves"
+msgstr ""
+
+msgid "Invoice/Reimburse"
+msgstr ""
+
+msgid "Add to invoice or reimburse"
+msgstr ""
+
+msgid "Track Payment"
+msgstr ""
+
+msgid "Monitor reimbursement status"
+msgstr ""
+
+msgid "Professional Invoicing"
+msgstr ""
+
+msgid "Professional PDF generation"
+msgstr ""
+
+msgid "Company branding and logos"
+msgstr ""
+
+msgid "Automatic invoice numbering"
+msgstr ""
+
+msgid "Tax calculations"
+msgstr ""
+
+msgid "Time Integration"
+msgstr ""
+
+msgid "Generate from time entries"
+msgstr ""
+
+msgid "Smart grouping by task/project"
+msgstr ""
+
+msgid "Prevent double-billing"
+msgstr ""
+
+msgid "Use project hourly rates"
+msgstr ""
+
+msgid "Set up client and project details"
+msgstr ""
+
+msgid "Add Items"
+msgstr ""
+
+msgid "Generate from time or add manually"
+msgstr ""
+
+msgid "Review & Send"
+msgstr ""
+
+msgid "Export PDF and update status"
+msgstr ""
+
+msgid "Monitor status and payments"
+msgstr ""
+
+msgid "Standard Reports"
+msgstr ""
+
+msgid "Project Report - Time breakdown by project"
+msgstr ""
+
+msgid "User Report - Individual performance metrics"
+msgstr ""
+
+msgid "Summary Report - Key metrics and trends"
+msgstr ""
+
+msgid "Time Entry Report - Detailed time logs"
+msgstr ""
+
+msgid "Export Options"
+msgstr ""
+
+msgid "CSV Export - For external analysis"
+msgstr ""
+
+msgid "Configurable delimiters"
+msgstr ""
+
+msgid "Custom date ranges"
+msgstr ""
+
+msgid "Filtered data export"
+msgstr ""
+
+msgid "Filter Options"
+msgstr ""
+
+msgid "Date Range - Custom start and end dates"
+msgstr ""
+
+msgid "Project - Filter by specific projects"
+msgstr ""
+
+msgid "User - Filter by team members"
+msgstr ""
+
+msgid "Client - Filter by client organization"
+msgstr ""
+
+msgid "Saved Filters - Save frequently used filters"
+msgstr ""
+
+msgid "Visual Analytics"
+msgstr ""
+
+msgid "Interactive bar charts"
+msgstr ""
+
+msgid "Time distribution pie charts"
+msgstr ""
+
+msgid "Trend analysis over time"
+msgstr ""
+
+msgid "Mobile-optimized charts"
+msgstr ""
+
+msgid ""
+"Use Saved Filters to quickly access your most common report views. Save "
+"filters for weekly reviews, monthly billing, or specific project tracking!"
+msgstr ""
+
+msgid ""
+"Boost your efficiency with keyboard shortcuts, command palette, and "
+"automation features."
+msgstr ""
+
+msgid "Access any feature instantly without leaving the keyboard"
+msgstr ""
+
+msgid "Opening the Command Palette"
+msgstr ""
+
+msgid "Press the question mark key"
+msgstr ""
+
+msgid "Quick search"
+msgstr ""
+
+msgid "Go to Projects"
+msgstr ""
+
+msgid "Go to Tasks"
+msgstr ""
+
+msgid "New Time Entry"
+msgstr ""
+
+msgid ""
+"Navigate faster with keyboard-driven commands. Press Shift+? to see all "
+"shortcuts."
+msgstr ""
+
+msgid "Global Search"
+msgstr ""
+
+msgid ""
+"Quickly find projects, tasks, clients, and time entries from anywhere in the"
+" app."
+msgstr ""
+
+msgid "Email Notifications"
+msgstr ""
+
+msgid ""
+"Get notified about task assignments, overdue invoices, and weekly summaries "
+"via email."
+msgstr ""
+
+msgid "Administrator Features"
+msgstr ""
+
+msgid "User Management"
+msgstr ""
+
+msgid "Create new users with flexible authentication"
+msgstr ""
+
+msgid "Assign custom roles with specific permissions"
+msgstr ""
+
+msgid "Activate/deactivate user accounts"
+msgstr ""
+
+msgid "View user statistics and activity"
+msgstr ""
+
+msgid "Generate API tokens for users"
+msgstr ""
+
+msgid "Access Control"
+msgstr ""
+
+msgid "Granular role-based permissions system"
+msgstr ""
+
+msgid "Custom roles with fine-grained access"
+msgstr ""
+
+msgid "User data access controls"
+msgstr ""
+
+msgid "OIDC/SSO integration (Azure AD, Authelia, etc.)"
+msgstr ""
+
+msgid "API token management for integrations"
+msgstr ""
+
+msgid "Authentication Methods"
+msgstr ""
+
+msgid "Username-only (simple internal use)"
+msgstr ""
+
+msgid "OIDC/SSO (enterprise authentication)"
+msgstr ""
+
+msgid "Both methods simultaneously"
+msgstr ""
+
+msgid "Automatic role assignment via groups"
+msgstr ""
+
+msgid "Role & Permission Management"
+msgstr ""
+
+msgid "Create custom roles beyond Admin/User"
+msgstr ""
+
+msgid "Set granular permissions per feature"
+msgstr ""
+
+msgid "Assign users to multiple roles"
+msgstr ""
+
+msgid "View and manage all permissions"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "Timezone and locale settings"
+msgstr ""
+
+msgid "Currency configuration"
+msgstr ""
+
+msgid "Time rounding rules"
+msgstr ""
+
+msgid "Self-registration settings"
+msgstr ""
+
+msgid "Timer Settings"
+msgstr ""
+
+msgid "Idle timeout configuration"
+msgstr ""
+
+msgid "Single active timer mode"
+msgstr ""
+
+msgid "Timer display preferences"
+msgstr ""
+
+msgid "Notification settings"
+msgstr ""
+
+msgid "Database Management"
+msgstr ""
+
+msgid "Create manual database backups"
+msgstr ""
+
+msgid "View database migration status"
+msgstr ""
+
+msgid "Monitor database performance"
+msgstr ""
+
+msgid "Clean up old data and logs"
+msgstr ""
+
+msgid "System Monitoring"
+msgstr ""
+
+msgid "View system information and health"
+msgstr ""
+
+msgid "Monitor application performance"
+msgstr ""
+
+msgid "Review system logs and errors"
+msgstr ""
+
+msgid "Mobile-Friendly Features"
+msgstr ""
+
+msgid "Optimized for phones and tablets"
+msgstr ""
+
+msgid "Touch-friendly interface"
+msgstr ""
+
+msgid "Adaptive layouts for all screen sizes"
+msgstr ""
+
+msgid "High contrast for outdoor visibility"
+msgstr ""
+
+msgid "Mobile Navigation"
+msgstr ""
+
+msgid "Bottom tab bar for easy access"
+msgstr ""
+
+msgid "Quick access to dashboard"
+msgstr ""
+
+msgid "One-tap time logging"
+msgstr ""
+
+msgid "Mobile-optimized reports"
+msgstr ""
+
+msgid "Installation"
+msgstr ""
+
+msgid "Open TimeTracker in your mobile browser"
+msgstr ""
+
+msgid "Look for \"Add to Home Screen\" option"
+msgstr ""
+
+msgid "Follow browser-specific installation prompts"
+msgstr ""
+
+msgid "Launch from your home screen like a native app"
+msgstr ""
+
+msgid "PWA Benefits"
+msgstr ""
+
+msgid "Offline capability for basic functions"
+msgstr ""
+
+msgid "Faster loading times"
+msgstr ""
+
+msgid "Native app-like experience"
+msgstr ""
+
+msgid "Push notifications (where supported)"
+msgstr ""
+
+msgid "Troubleshooting & FAQ"
+msgstr ""
+
+msgid "What happens if I forget to stop my timer?"
+msgstr ""
+
+msgid ""
+"The timer will continue running until you stop it manually. You can see your"
+" active timer on the dashboard and timer page. The timer persists even if "
+"you close your browser or restart your device. If idle detection is enabled,"
+" the timer may pause automatically after the configured timeout period."
+msgstr ""
+
+msgid "Can I edit time entries after they're created?"
+msgstr ""
+
+msgid ""
+"Yes, you can edit any time entry by clicking the edit button in the time "
+"entry list. You can modify the project, start/end times, notes, tags, "
+"billable status, and task assignment. Admins can edit all time entries, "
+"while regular users can only edit their own entries."
+msgstr ""
+
+msgid "How do I track time for multiple projects?"
+msgstr ""
+
+msgid ""
+"By default, you can only have one active timer at a time. To switch "
+"projects, stop your current timer and start a new one for the different "
+"project. Alternatively, you can create manual time entries for past work or "
+"configure the system to allow multiple active timers (admin setting)."
+msgstr ""
+
+msgid "How do I export my time data?"
+msgstr ""
+
+msgid ""
+"Go to the Reports page and use the \"Export CSV\" feature. You can apply "
+"filters to export specific data, or export all time entries. The CSV file "
+"includes all time entry details and can be opened in Excel or other "
+"spreadsheet applications. You can also configure the delimiter for different"
+" regional standards."
+msgstr ""
+
+msgid "What's the difference between billable and non-billable time?"
+msgstr ""
+
+msgid ""
+"Billable time is tracked for client billing purposes and can have an hourly "
+"rate associated with it. Non-billable time is for internal work that doesn't"
+" get charged to clients. You can mark individual time entries as billable or"
+" non-billable, and projects can have default billable settings. This "
+"distinction is crucial for accurate invoicing and profitability analysis."
+msgstr ""
+
+msgid "How do I create an invoice from my time entries?"
+msgstr ""
+
+msgid ""
+"Navigate to Invoices → Create Invoice, set up the client and project "
+"details, then use \"Generate from Time Entries\" to automatically create "
+"invoice items from your tracked time. You can filter by date range and "
+"project, and the system will group time entries intelligently. Review the "
+"generated items and export as a professional PDF."
+msgstr ""
+
+msgid "Can I use TimeTracker on my mobile device?"
+msgstr ""
+
+msgid ""
+"Yes! TimeTracker is fully responsive and works great on mobile devices. You "
+"can install it as a Progressive Web App (PWA) for a native-like experience. "
+"The mobile interface includes a bottom tab bar for easy navigation and "
+"touch-optimized controls for time tracking on the go."
+msgstr ""
+
+msgid "How do I use the command palette and keyboard shortcuts?"
+msgstr ""
+
+msgid ""
+"Press the question mark key (?) to open the command palette. From there, you"
+" can type to search for any action or navigation target. Use keyboard "
+"sequences like \"g d\" for Dashboard, \"g p\" for Projects, or \"n e\" for "
+"New Entry. Press Shift+? to see all available shortcuts. Press Ctrl+K (or "
+"Cmd+K on Mac) for quick search."
+msgstr ""
+
+msgid "How do I create bulk time entries for multiple days?"
+msgstr ""
+
+msgid ""
+"Navigate to Work → Bulk Time Entry. Select your project, choose a date "
+"range, set your daily start and end times, and optionally skip weekends. The"
+" system will create identical time entries for each day in the range. This "
+"is perfect for logging regular work patterns or filling in past time when "
+"you worked consistent hours."
+msgstr ""
+
+msgid "What are time entry templates and how do I use them?"
+msgstr ""
+
+msgid ""
+"Time entry templates let you save frequently used time entry configurations."
+" When creating a manual time entry, check \"Save as Template\" to save the "
+"project, task, and notes. Later, when creating new entries, you can select a"
+" template to quickly fill in these details. Templates are personal and only "
+"visible to you."
+msgstr ""
+
+msgid "How do I track expenses and add them to invoices?"
+msgstr ""
+
+msgid ""
+"Go to Expenses → New Expense to record business expenses. Upload receipt "
+"images, categorize the expense, and mark it as billable if needed. When "
+"creating invoices, you can include these expenses as line items. Expenses "
+"support approval workflows, reimbursement tracking, and can be linked to "
+"specific projects."
+msgstr ""
+
+msgid "Can I use Markdown in descriptions?"
+msgstr ""
+
+msgid ""
+"Yes! Project and task descriptions support full Markdown formatting. You can"
+" use bold, italic, headings, lists, links, code blocks, tables, and images. "
+"This allows you to create rich, well-formatted documentation directly in "
+"your projects and tasks. The Markdown editor includes a preview mode and "
+"supports dark theme."
+msgstr ""
+
+msgid "Where can I get additional help?"
+msgstr ""
+
+msgid "This help page covers most common questions and features."
+msgstr ""
+
+msgid "Report issues and request features on"
+msgstr ""
+
+msgid ""
+"As an admin, you can access additional system information and diagnostics in"
+" the"
+msgstr ""
+
+msgid "section."
+msgstr ""
+
+msgid "Still Need Help?"
+msgstr ""
+
+msgid "Can't find what you're looking for? Here are additional resources:"
+msgstr ""
+
+msgid "GitHub Repository"
+msgstr ""
+
+msgid "Report Issue"
+msgstr ""
+
+msgid "Search Results"
+msgstr ""
+
+msgid "Search notes or tags"
+msgstr ""
+
+msgid "Results"
+msgstr ""
+
+msgid "End"
+msgstr ""
+
+msgid ""
+"Are you sure you want to delete this time entry? This action cannot be "
+"undone."
+msgstr ""
+
+msgid "Previous"
+msgstr ""
+
+msgid "Page"
+msgstr ""
+
+msgid "of"
+msgstr ""
+
+msgid "Next"
+msgstr ""
+
+msgid "No results found"
+msgstr ""
+
+msgid "Try a different query or check your spelling."
+msgstr ""
+
+msgid "Kanban board columns"
+msgstr ""
+
+msgid "Edit swimlane"
+msgstr ""
+
+msgid "Column"
+msgstr ""
+
+msgid "Add Extra Good"
+msgstr ""
+
+msgid "Add a product or service to"
+msgstr ""
+
+msgid "Back to Project"
+msgstr ""
+
+msgid "SKU/Product Code"
+msgstr ""
+
+msgid "What happens when you archive a project?"
+msgstr ""
+
+msgid "The project will be hidden from active project lists"
+msgstr ""
+
+msgid "No new time entries can be added to this project"
+msgstr ""
+
+msgid "Existing data and time entries are preserved"
+msgstr ""
+
+msgid "You can unarchive the project later if needed"
+msgstr ""
+
+msgid "Reason for Archiving"
+msgstr ""
+
+msgid "Optional"
+msgstr ""
+
+msgid "e.g., Project completed, Client contract ended, Project cancelled, etc."
+msgstr ""
+
+msgid "Adding a reason helps with project organization and future reference."
+msgstr ""
+
+msgid "Quick Select"
+msgstr ""
+
+msgid "Project completed successfully"
+msgstr ""
+
+msgid "Project Completed"
+msgstr ""
+
+msgid "Client contract ended"
+msgstr ""
+
+msgid "Contract Ended"
+msgstr ""
+
+msgid "Project cancelled by client"
+msgstr ""
+
+msgid "Project on hold indefinitely"
+msgstr ""
+
+msgid "On Hold"
+msgstr ""
+
+msgid "Maintenance period ended"
+msgstr ""
+
+msgid "Maintenance Ended"
+msgstr ""
+
+msgid "Archive Project"
+msgstr ""
+
+msgid "Create Project"
+msgstr ""
+
+msgid "Set up a new project to organize your work and track time effectively"
+msgstr ""
+
+msgid "Back to Projects"
+msgstr ""
+
+msgid "Project Name"
+msgstr ""
+
+msgid "Enter a descriptive project name"
+msgstr ""
+
+msgid "Choose a clear, descriptive name that explains the project scope"
+msgstr ""
+
+msgid "Project Code"
+msgstr ""
+
+msgid "Short code, e.g., ABC"
+msgstr ""
+
+msgid "Optional: Short tag shown on Kanban cards"
+msgstr ""
+
+msgid "Select a client..."
+msgstr ""
+
+msgid "Create new client"
+msgstr ""
+
+msgid ""
+"Provide detailed information about the project, objectives, and "
+"deliverables..."
+msgstr ""
+
+msgid "Optional: Add context, objectives, or specific requirements for the project"
+msgstr ""
+
+msgid "Billable Project"
+msgstr ""
+
+msgid "Enable billing for this project"
+msgstr ""
+
+msgid "Leave empty for non-billable projects"
+msgstr ""
+
+msgid "PO number, contract reference, etc."
+msgstr ""
+
+msgid "Optional: Add a reference number or identifier for billing purposes"
+msgstr ""
+
+msgid "Budget Amount"
+msgstr ""
+
+msgid "e.g. 10000.00"
+msgstr ""
+
+msgid "Optional: Set a total project budget to monitor spend"
+msgstr ""
+
+msgid "Alert Threshold (%)"
+msgstr ""
+
+msgid "Notify when consumed budget exceeds this threshold"
+msgstr ""
+
+msgid "Project Creation Tips"
+msgstr ""
+
+msgid "Clear Naming"
+msgstr ""
+
+msgid "Use descriptive names that clearly indicate the project's purpose"
+msgstr ""
+
+msgid "Billing Setup"
+msgstr ""
+
+msgid "Set appropriate hourly rates based on project complexity and client budget"
+msgstr ""
+
+msgid "Detailed Description"
+msgstr ""
+
+msgid "Include project objectives, deliverables, and key requirements"
+msgstr ""
+
+msgid "Client Selection"
+msgstr ""
+
+msgid "Choose the right client to ensure proper project organization"
+msgstr ""
+
+msgid "Creating..."
+msgstr ""
+
+msgid "Could not create client. Please try again."
+msgstr ""
+
+msgid "Client created"
+msgstr ""
+
+msgid "Network error while creating client"
+msgstr ""
+
+msgid "Project Dashboard & Analytics"
+msgstr ""
+
+msgid "Budget Analysis"
+msgstr ""
+
+msgid "All Time"
+msgstr ""
+
+msgid "Last 7 Days"
+msgstr ""
+
+msgid "Last 30 Days"
+msgstr ""
+
+msgid "Last 3 Months"
+msgstr ""
+
+msgid "Last Year"
+msgstr ""
+
+msgid "estimated"
+msgstr ""
+
+msgid "Budget Used"
+msgstr ""
+
+msgid "of budget"
+msgstr ""
+
+msgid "Tasks Complete"
+msgstr ""
+
+msgid "completion"
+msgstr ""
+
+msgid "Team Members"
+msgstr ""
+
+msgid "contributing"
+msgstr ""
+
+msgid "Budget vs. Actual"
+msgstr ""
+
+msgid "No budget set for this project"
+msgstr ""
+
+msgid "Task Status Distribution"
+msgstr ""
+
+msgid "No tasks created yet"
+msgstr ""
+
+msgid "Team Member Contributions"
+msgstr ""
+
+msgid "No time entries recorded yet"
+msgstr ""
+
+msgid "Time Tracking Timeline"
+msgstr ""
+
+msgid "Select a time period to view timeline"
+msgstr ""
+
+msgid "Team Member Details"
+msgstr ""
+
+msgid "entries"
+msgstr ""
+
+msgid "tasks"
+msgstr ""
+
+msgid "No team members have logged time yet"
+msgstr ""
+
+msgid "Attention Required"
+msgstr ""
+
+msgid "task(s) are overdue"
+msgstr ""
+
+msgid "Edit Project"
+msgstr ""
+
+msgid "Edit Extra Good"
+msgstr ""
+
+msgid "Manage products and services for this project"
+msgstr ""
+
+msgid "Total Goods"
+msgstr ""
+
+msgid "Billable Amount"
+msgstr ""
+
+msgid "Categories"
+msgstr ""
+
+msgid "Invoiced"
+msgstr ""
+
+msgid "Non-billable"
+msgstr ""
+
+msgid "Are you sure you want to delete this extra good?"
+msgstr ""
+
+msgid "Delete Extra Good"
+msgstr ""
+
+msgid "No extra goods found for this project"
+msgstr ""
+
+msgid "Add Your First Good"
+msgstr ""
+
+msgid "Breakdown by Category"
+msgstr ""
+
+msgid "item(s)"
+msgstr ""
+
+msgid "Mark project as Inactive?"
+msgstr ""
+
+msgid "Change Project Status"
+msgstr ""
+
+msgid "Activate project?"
+msgstr ""
+
+msgid "Activate Project"
+msgstr ""
+
+msgid "Archive"
+msgstr ""
+
+msgid "Unarchive project?"
+msgstr ""
+
+msgid "Unarchive Project"
+msgstr ""
+
+msgid "Unarchive"
+msgstr ""
+
+msgid "Delete Project"
+msgstr ""
+
+msgid "Archive Information"
+msgstr ""
+
+msgid "Archived on:"
+msgstr ""
+
+msgid "Archived by:"
+msgstr ""
+
+msgid "Reason:"
+msgstr ""
+
+msgid "Budget Overview"
+msgstr ""
+
+msgid "Over"
+msgstr ""
+
+msgid "View Full Budget Analysis"
+msgstr ""
+
+msgid "Tasks for this project"
+msgstr ""
+
+msgid "Due"
+msgstr ""
+
+msgid "No tasks for this project."
+msgstr ""
+
+msgid "Are you sure you want to delete this filter?"
+msgstr ""
+
+msgid "Delete Filter"
+msgstr ""
+
+msgid "This will reset all keyboard shortcuts to their default values. Continue?"
+msgstr ""
+
+msgid "Reset to Defaults"
+msgstr ""
+
+msgid "Edit Task"
+msgstr ""
+
+msgid "Overdue"
+msgstr ""
+
+msgid "Failed to update status"
+msgstr ""
+
+msgid "Failed to update task status"
+msgstr ""
+
+msgid "Kanban column created"
+msgstr ""
+
+msgid "Kanban column deleted"
+msgstr ""
+
+msgid "Kanban columns reordered"
+msgstr ""
+
+msgid "Kanban column visibility changed"
+msgstr ""
+
+msgid "Kanban columns updated"
+msgstr ""
+
+msgid "Update"
+msgstr ""
+
+msgid "Failed to refresh kanban columns"
+msgstr ""
+
+msgid "Loading task details..."
+msgstr ""
+
+msgid "Assigned To"
+msgstr ""
+
+msgid "Tracked"
+msgstr ""
+
+msgid "Estimated"
+msgstr ""
+
+msgid "View Full Details"
+msgstr ""
+
+msgid "Create Task"
+msgstr ""
+
+msgid "Add a new task to your project to break down work into manageable components"
+msgstr ""
+
+msgid "Back to Tasks"
+msgstr ""
+
+msgid "Task Name"
+msgstr ""
+
+msgid "Enter a descriptive task name"
+msgstr ""
+
+msgid "Choose a clear, descriptive name that explains what needs to be done"
+msgstr ""
+
+msgid ""
+"Provide detailed information about the task, requirements, and any specific "
+"instructions..."
+msgstr ""
+
+msgid "Optional: Add context, requirements, or specific instructions for the task"
+msgstr ""
+
+msgid "Select the project this task belongs to"
+msgstr ""
+
+msgid "Initial Status"
+msgstr ""
+
+msgid "Optional: Set a deadline for this task"
+msgstr ""
+
+msgid "Estimated Hours"
+msgstr ""
+
+msgid "Optional: Estimate how long this task will take"
+msgstr ""
+
+msgid "Assign To"
+msgstr ""
+
+msgid "Unassigned"
+msgstr ""
+
+msgid "Optional: Assign this task to a team member"
+msgstr ""
+
+msgid "Task Creation Tips"
+msgstr ""
+
+msgid "Use action verbs and be specific about what needs to be done"
+msgstr ""
+
+msgid "Realistic Estimates"
+msgstr ""
+
+msgid "Consider complexity and dependencies when estimating time"
+msgstr ""
+
+msgid "Set Deadlines"
+msgstr ""
+
+msgid "Due dates help prioritize work and track progress"
+msgstr ""
+
+msgid "Priority Matters"
+msgstr ""
+
+msgid "Use priority levels to help team members focus on what's most important"
+msgstr ""
+
+#, python-format
+msgid "Update task details and settings for \"%(task)s\""
+msgstr ""
+
+msgid "Back to Task"
+msgstr ""
+
+msgid "Task Information"
+msgstr ""
+
+msgid "Update Task"
+msgstr ""
+
+msgid "Estimate used"
+msgstr ""
+
+msgid "Actual"
+msgstr ""
+
+msgid "Current Task Info"
+msgstr ""
+
+msgid "Current Status"
+msgstr ""
+
+msgid "Current Priority"
+msgstr ""
+
+msgid "Currently Assigned To"
+msgstr ""
+
+msgid "Current Due Date"
+msgstr ""
+
+msgid "Current Estimate"
+msgstr ""
+
+msgid "hours"
+msgstr ""
+
+msgid "Actual Hours"
+msgstr ""
+
+msgid "Updated"
+msgstr ""
+
+msgid "Started"
+msgstr ""
+
+msgid "View Task"
+msgstr ""
+
+msgid "Edit Tips"
+msgstr ""
+
+msgid "Status Changes"
+msgstr ""
+
+msgid "Changing status may affect time tracking and progress calculations"
+msgstr ""
+
+msgid "Due Date Updates"
+msgstr ""
+
+msgid "Consider team workload when adjusting deadlines"
+msgstr ""
+
+msgid "Assignment Changes"
+msgstr ""
+
+msgid "Notify team members when reassigning tasks"
+msgstr ""
+
+msgid "Updating..."
+msgstr ""
+
+msgid "Are you sure you want to delete the task \"{name}\"?"
+msgstr ""
+
+msgid ""
+"Cannot delete task \"{name}\" because it has time entries. Please delete the"
+" time entries first."
+msgstr ""
+
+msgid "Delete Task"
+msgstr ""
+
+msgid "Hide Filters"
+msgstr ""
+
+msgid "Show Filters"
+msgstr ""
+
+msgid "My Tasks"
+msgstr ""
+
+msgid "Tasks assigned to or created by you"
+msgstr ""
+
+msgid "Filter My Tasks"
+msgstr ""
+
+msgid "Task Type"
+msgstr ""
+
+msgid "All Types"
+msgstr ""
+
+msgid "Assigned to Me"
+msgstr ""
+
+msgid "Created by Me"
+msgstr ""
+
+msgid "Show overdue only"
+msgstr ""
+
+msgid "Apply Filters"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Created by me"
+msgstr ""
+
+msgid "View Details"
+msgstr ""
+
+msgid "My tasks pagination"
+msgstr ""
+
+msgid "..."
+msgstr ""
+
+msgid "No tasks found"
+msgstr ""
+
+msgid "You don't have any tasks assigned to you or created by you yet."
+msgstr ""
+
+msgid "Create Your First Task"
+msgstr ""
+
+msgid "View All Tasks"
+msgstr ""
+
+msgid "Overdue Tasks"
+msgstr ""
+
+msgid "Requires immediate attention"
+msgstr ""
+
+msgid "items"
+msgstr ""
+
+msgid "Overdue Tasks Detected"
+msgstr ""
+
+msgid "There are"
+msgstr ""
+
+msgid "overdue tasks that require immediate attention."
+msgstr ""
+
+msgid "Please review and update these tasks to prevent further delays."
+msgstr ""
+
+msgid "Due:"
+msgstr ""
+
+msgid "Est:"
+msgstr ""
+
+msgid "Actual:"
+msgstr ""
+
+msgid "No Overdue Tasks!"
+msgstr ""
+
+msgid "Great job! All tasks are currently on schedule."
+msgstr ""
+
+msgid "Enter new due date (YYYY-MM-DD):"
+msgstr ""
+
+msgid "Are you sure you want to extend the due date to"
+msgstr ""
+
+msgid "for all overdue tasks?"
+msgstr ""
+
+msgid "Bulk due date update feature coming soon!"
+msgstr ""
+
+msgid "Enter new priority (low/medium/high/urgent):"
+msgstr ""
+
+msgid "Are you sure you want to set priority to"
+msgstr ""
+
+msgid "Bulk priority update feature coming soon!"
+msgstr ""
+
+msgid "Invalid priority. Please use: low, medium, high, or urgent"
+msgstr ""
+
+msgid "Start task and mark as In Progress?"
+msgstr ""
+
+msgid "Change Task Status"
+msgstr ""
+
+msgid "Mark task as To Do?"
+msgstr ""
+
+msgid "Pause"
+msgstr ""
+
+msgid "Mark task as Done?"
+msgstr ""
+
+msgid "Complete Task"
+msgstr ""
+
+msgid "Complete"
+msgstr ""
+
+msgid "Reopen task to Review?"
+msgstr ""
+
+msgid "Reopen Task"
+msgstr ""
+
+msgid "Reopen"
+msgstr ""
+
+msgid "Are you sure you want to delete this template?"
+msgstr ""
+
+msgid "Delete Template"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "No project"
+msgstr ""
+
+msgid "Member Since"
+msgstr ""
+
+msgid "Recent Time Entries"
+msgstr ""
+
+msgid "In progress"
+msgstr ""
+
+msgid "View all time entries"
+msgstr ""
+
+msgid "No recent time entries"
+msgstr ""
+
+msgid "Manage your account settings and preferences"
+msgstr ""
+
+msgid "Profile Information"
+msgstr ""
+
+msgid "Username cannot be changed"
+msgstr ""
+
+msgid "Email Address"
+msgstr ""
+
+msgid "Required for email notifications"
+msgstr ""
+
+msgid "Notification Preferences"
+msgstr ""
+
+msgid "Enable Email Notifications"
+msgstr ""
+
+msgid "Master switch for all email notifications"
+msgstr ""
+
+msgid "Overdue Invoice Notifications"
+msgstr ""
+
+msgid "Task Assignment Notifications"
+msgstr ""
+
+msgid "Comment & Mention Notifications"
+msgstr ""
+
+msgid "Weekly Time Summary Email"
+msgstr ""
+
+msgid "Display Preferences"
+msgstr ""
+
+msgid "System Default"
+msgstr ""
+
+msgid "Light"
+msgstr ""
+
+msgid "Time Rounding Preferences"
+msgstr ""
+
+msgid ""
+"Configure how your time entries are rounded. This affects how durations are "
+"calculated when you stop timers."
+msgstr ""
+
+msgid "Enable Time Rounding"
+msgstr ""
+
+msgid "Round time entries to configured intervals"
+msgstr ""
+
+msgid "Rounding Interval"
+msgstr ""
+
+msgid "Time entries will be rounded to this interval"
+msgstr ""
+
+msgid "Rounding Method"
+msgstr ""
+
+msgid "Overtime Settings"
+msgstr ""
+
+msgid ""
+"Set your standard working hours per day. Any time worked beyond this will be"
+" counted as overtime."
+msgstr ""
+
+msgid "Standard Hours Per Day"
+msgstr ""
+
+msgid "Typically 8 hours for a full-time job"
+msgstr ""
+
+msgid "How it works"
+msgstr ""
+
+msgid ""
+"If you work more than your standard hours in a day, the extra time will be "
+"tracked as overtime in reports and analytics."
+msgstr ""
+
+msgid "Regional Settings"
+msgstr ""
+
+msgid "Timezone"
+msgstr ""
+
+msgid "Date Format"
+msgstr ""
+
+msgid "Time Format"
+msgstr ""
+
+msgid "Week Starts On"
+msgstr ""
+
+msgid "Sunday"
+msgstr ""
+
+msgid "Monday"
+msgstr ""
+
+msgid "Saturday"
+msgstr ""
+
+msgid "Save Settings"
+msgstr ""
+
+msgid "Time rounding is disabled. All times will be recorded exactly as tracked."
+msgstr ""
+
+msgid "No rounding - times will be recorded exactly as tracked."
+msgstr ""
+
+msgid "Actual time:"
+msgstr ""
+
+msgid "Rounded:"
+msgstr ""
+
+msgid "With "
+msgstr ""
+
+msgid " minute intervals"
+msgstr ""
+
+msgid "Create Weekly Goal"
+msgstr ""
+
+msgid "Create Weekly Time Goal"
+msgstr ""
+
+msgid "Set a target for hours to work this week"
+msgstr ""
+
+msgid "Target Hours"
+msgstr ""
+
+msgid "How many hours do you want to work this week?"
+msgstr ""
+
+msgid "Week Start Date"
+msgstr ""
+
+msgid "Leave blank to use current week (starting Monday)"
+msgstr ""
+
+msgid "Optional notes about your goal..."
+msgstr ""
+
+msgid "Quick Presets"
+msgstr ""
+
+msgid "Tips for Setting Goals"
+msgstr ""
+
+msgid "Be realistic: Consider holidays, meetings, and other commitments"
+msgstr ""
+
+msgid "Start conservative: You can always adjust your goal later"
+msgstr ""
+
+msgid "Track progress: Check your dashboard regularly to stay on track"
+msgstr ""
+
+msgid "Typical full-time: 40 hours per week (8 hours/day, 5 days)"
+msgstr ""
+
+msgid "Edit Weekly Goal"
+msgstr ""
+
+msgid "Edit Weekly Time Goal"
+msgstr ""
+
+msgid "Week Period"
+msgstr ""
+
+msgid "Current Progress"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "Are you sure you want to delete this goal?"
+msgstr ""
+
+msgid "Delete Goal"
+msgstr ""
+
+msgid "Weekly Time Goals"
+msgstr ""
+
+msgid "Set and track your weekly hour targets"
+msgstr ""
+
+msgid "New Goal"
+msgstr ""
+
+msgid "Total Goals"
+msgstr ""
+
+msgid "Success Rate"
+msgstr ""
+
+msgid "Current Week Goal"
+msgstr ""
+
+msgid "Remaining Hours"
+msgstr ""
+
+msgid "Days Remaining"
+msgstr ""
+
+msgid "Avg Hours/Day Needed"
+msgstr ""
+
+msgid "Edit Goal"
+msgstr ""
+
+msgid "No goal set for this week"
+msgstr ""
+
+msgid "Create a weekly time goal to start tracking your progress"
+msgstr ""
+
+msgid "Goal History"
+msgstr ""
+
+msgid "Target"
+msgstr ""
+
+msgid "Weekly Goal Details"
+msgstr ""
+
+msgid "Daily Breakdown"
+msgstr ""
+
+msgid "Time Entries This Week"
+msgstr ""
+
+msgid "No Project"
+msgstr ""
+
+msgid "No time entries recorded for this week yet"
+msgstr ""
+
+msgid "Draft"
+msgstr ""
+
+msgid "Sent"
+msgstr ""
+
+msgid "Paid"
+msgstr ""
+
+msgid "Unpaid"
+msgstr ""
+
+msgid "Partially Paid"
+msgstr ""
+
+msgid "Fully Paid"
+msgstr ""
+
+msgid "Overpaid"
+msgstr ""
+
+msgid "Cash"
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+msgid "Bank Transfer"
+msgstr ""
+
+msgid "Credit Card"
+msgstr ""
+
+msgid "Debit Card"
+msgstr ""
+
+msgid "PayPal"
+msgstr ""
+
+msgid "Stripe"
+msgstr ""
+
+msgid "Company Card"
+msgstr ""
+
+msgid "Pending"
+msgstr ""
+
+msgid "Approved"
+msgstr ""
+
+msgid "Rejected"
+msgstr ""
+
+msgid "Reimbursed"
+msgstr ""
+
+msgid "Processing"
+msgstr ""
+
+msgid "Partial"
+msgstr ""
+
+msgid "80% Budget Warning"
+msgstr ""
+
+msgid "Budget Limit Reached"
+msgstr ""
+
+msgid "Info"
+msgstr ""
+
+#, python-format
+msgid "Invoice #: %(num)s"
+msgstr ""
+
+#, python-format
+msgid "Issue Date: %(date)s"
+msgstr ""
+
+#, python-format
+msgid "Due Date: %(date)s"
+msgstr ""
+
+msgid "Please log in to access this page"
+msgstr ""
+
+msgid "PDF Invoice Designer"
+msgstr ""
+
+msgid "Visual Invoice Designer"
+msgstr ""
+
+msgid "Drag and drop elements to design your invoice layout"
+msgstr ""
+
+msgid "How to use:"
+msgstr ""
+
+msgid ""
+"Click elements from the left sidebar to add them to the canvas. Click "
+"elements to select and customize them in the properties panel. Use the "
+"alignment tools and keyboard shortcuts for faster editing."
+msgstr ""
+
+msgid "Keyboard Shortcuts:"
+msgstr ""
+
+msgid "Clear Canvas"
+msgstr ""
+
+msgid "Generate Preview"
+msgstr ""
+
+msgid "Save Design"
+msgstr ""
+
+msgid "View Code"
+msgstr ""
+
+msgid "Toolbox"
+msgstr ""
+
+msgid "Search elements & variables..."
+msgstr ""
+
+msgid "Elements"
+msgstr ""
+
+msgid "Variables"
+msgstr ""
+
+msgid "Basic Elements"
+msgstr ""
+
+msgid "Custom Text"
+msgstr ""
+
+msgid "Text"
+msgstr ""
+
+msgid "Heading"
+msgstr ""
+
+msgid "Line"
+msgstr ""
+
+msgid "Rectangle"
+msgstr ""
+
+msgid "Circle"
+msgstr ""
+
+msgid "Company Info"
+msgstr ""
+
+msgid "Company Details"
+msgstr ""
+
+msgid "Invoice Data"
+msgstr ""
+
+msgid "Invoice Date"
+msgstr ""
+
+msgid "Client Info"
+msgstr ""
+
+msgid "Items Table"
+msgstr ""
+
+msgid "Payment & Project"
+msgstr ""
+
+msgid "Payment Date"
+msgstr ""
+
+msgid "Payment Method"
+msgstr ""
+
+msgid "Client Phone"
+msgstr ""
+
+msgid "Advanced"
+msgstr ""
+
+msgid "QR Code"
+msgstr ""
+
+msgid "Barcode"
+msgstr ""
+
+msgid "Page Number"
+msgstr ""
+
+msgid "Current Date"
+msgstr ""
+
+msgid "Watermark"
+msgstr ""
+
+msgid "Bank Info"
+msgstr ""
+
+msgid "Invoice Fields"
+msgstr ""
+
+msgid "Invoice number"
+msgstr ""
+
+msgid "Invoice status (draft/sent/paid/overdue)"
+msgstr ""
+
+msgid "Issue date"
+msgstr ""
+
+msgid "Due date"
+msgstr ""
+
+msgid "Subtotal amount"
+msgstr ""
+
+msgid "Tax rate (%)"
+msgstr ""
+
+msgid "Tax amount"
+msgstr ""
+
+msgid "Total amount"
+msgstr ""
+
+msgid "Currency code (EUR, USD, etc)"
+msgstr ""
+
+msgid "Invoice notes"
+msgstr ""
+
+msgid "Terms & conditions"
+msgstr ""
+
+msgid "Client Fields"
+msgstr ""
+
+msgid "Client company name"
+msgstr ""
+
+msgid "Client email address"
+msgstr ""
+
+msgid "Client full address"
+msgstr ""
+
+msgid "Client contact person"
+msgstr ""
+
+msgid "Client phone number"
+msgstr ""
+
+msgid "Payment Fields"
+msgstr ""
+
+msgid "Payment status"
+msgstr ""
+
+msgid "Payment date"
+msgstr ""
+
+msgid "Payment method"
+msgstr ""
+
+msgid "Payment reference number"
+msgstr ""
+
+msgid "Amount paid"
+msgstr ""
+
+msgid "Outstanding amount"
+msgstr ""
+
+msgid "Payment notes"
+msgstr ""
+
+msgid "Project Fields"
+msgstr ""
+
+msgid "Project name"
+msgstr ""
+
+msgid "Project code"
+msgstr ""
+
+msgid "Project description"
+msgstr ""
+
+msgid "Project billing reference"
+msgstr ""
+
+msgid "Company/Settings Fields"
+msgstr ""
+
+msgid "Your company name"
+msgstr ""
+
+msgid "Your company address"
+msgstr ""
+
+msgid "Your company email"
+msgstr ""
+
+msgid "Your company phone"
+msgstr ""
+
+msgid "Your company website"
+msgstr ""
+
+msgid "Your tax ID number"
+msgstr ""
+
+msgid "Your bank account info"
+msgstr ""
+
+msgid "Default invoice terms"
+msgstr ""
+
+msgid "Default invoice notes"
+msgstr ""
+
+msgid "Date/Time Fields"
+msgstr ""
+
+msgid "Current date"
+msgstr ""
+
+msgid "Invoice creation date"
+msgstr ""
+
+msgid "Invoice last update date"
+msgstr ""
+
+msgid "Invoice Items Loop"
+msgstr ""
+
+msgid "Loop through invoice items"
+msgstr ""
+
+msgid "Item description"
+msgstr ""
+
+msgid "Item quantity"
+msgstr ""
+
+msgid "Item unit price"
+msgstr ""
+
+msgid "Item total amount"
+msgstr ""
+
+msgid "End loop"
+msgstr ""
+
+msgid "Design Canvas"
+msgstr ""
+
+msgid "Zoom In"
+msgstr ""
+
+msgid "Zoom Out"
+msgstr ""
+
+msgid "Delete Selected"
+msgstr ""
+
+msgid "Properties"
+msgstr ""
+
+msgid "Select an element to edit its properties"
+msgstr ""
+
+msgid "Generating..."
+msgstr ""
+
+msgid "Generated Code"
+msgstr ""
+
+msgid "Clear all elements?"
+msgstr ""
+
+msgid "Reset to defaults?"
+msgstr ""
+
+msgid "Reset PDF Layout"
+msgstr ""
+
+msgid "Danger Operation"
+msgstr ""
+
+msgid "Upload Backup Archive (.zip)"
+msgstr ""
+
+msgid ""
+"Restoring a backup will overwrite your current database and files. Ensure "
+"you have a recent backup before proceeding."
+msgstr ""
+
+msgid "Status:"
+msgstr ""
+
+msgid "Backup Archive (.zip)"
+msgstr ""
+
+msgid "Select a .zip archive previously created via the Backup action."
+msgstr ""
+
+msgid "Restore"
+msgstr ""
+
+msgid "Safety Tips"
+msgstr ""
+
+msgid "Verify the backup archive integrity before restoring."
+msgstr ""
+
+msgid "Ensure no active writes are occurring during restore."
+msgstr ""
+
+msgid "Keep a copy of the current data in case you need to roll back."
+msgstr ""
+
+msgid "After restore, review settings and re-run migrations if required."
+msgstr ""
+
+msgid "Add Cost"
+msgstr ""
+
+msgid "Add Cost to Project"
+msgstr ""
+
+msgid "e.g., Travel expenses to client site"
+msgstr ""
+
+msgid "Brief description of the cost"
+msgstr ""
+
+msgid "Select category"
+msgstr ""
+
+msgid "Materials"
+msgstr ""
+
+msgid "Software/Licenses"
+msgstr ""
+
+msgid "Additional details about this cost"
+msgstr ""
+
+msgid "Billable to client"
+msgstr ""
+
+msgid "If checked, this cost will be included in invoices"
+msgstr ""
+
+msgid "Edit Cost"
+msgstr ""
+
+msgid "This cost has been invoiced. Changes may affect existing invoices."
+msgstr ""
+
+msgid "Update Cost"
+msgstr ""
+
+msgid "Single Entry"
+msgstr ""
+
+msgid "Create multiple time entries for consecutive days"
+msgstr ""
+
+msgid "Bulk Entry Form"
+msgstr ""
+
+msgid "Select the project to log time for"
+msgstr ""
+
+msgid "Tasks load after selecting a project"
+msgstr ""
+
+msgid "Date Range"
+msgstr ""
+
+msgid "Skip weekends (Saturday & Sunday)"
+msgstr ""
+
+msgid "Entries will be created for these dates"
+msgstr ""
+
+msgid "Same start time for all days"
+msgstr ""
+
+msgid "Same end time for all days"
+msgstr ""
+
+msgid "What did you work on? (same notes for all entries)"
+msgstr ""
+
+msgid "tag1, tag2, tag3"
+msgstr ""
+
+msgid "Separate tags with commas (same for all entries)"
+msgstr ""
+
+msgid "Include in invoices"
+msgstr ""
+
+msgid "Create Entries"
+msgstr ""
+
+msgid "Bulk Entry Tips"
+msgstr ""
+
+msgid ""
+"Select start and end dates. Entries will be created for each day in the "
+"range."
+msgstr ""
+
+msgid "Skip Weekends"
+msgstr ""
+
+msgid "Enable to automatically skip Saturdays and Sundays from the date range."
+msgstr ""
+
+msgid "Same Time Daily"
+msgstr ""
+
+msgid "All entries will use the same start and end time each day."
+msgstr ""
+
+msgid "Conflict Check"
+msgstr ""
+
+msgid "System will check for existing time entries and prevent overlaps."
+msgstr ""
+
+msgid "No task"
+msgstr ""
+
+msgid "Total days"
+msgstr ""
+
+msgid "Weekdays only"
+msgstr ""
+
+msgid "Total hours"
+msgstr ""
+
+msgid "Entries will be created for"
+msgstr ""
+
+msgid "Agenda"
+msgstr ""
+
+msgid "iCal Format"
+msgstr ""
+
+msgid "CSV Format"
+msgstr ""
+
+msgid "All Tasks"
+msgstr ""
+
+msgid "Filter by tags..."
+msgstr ""
+
+msgid "Show billable entries only"
+msgstr ""
+
+msgid "Billable Only"
+msgstr ""
+
+msgid "Assign to project for new events..."
+msgstr ""
+
+msgid "Total Hours:"
+msgstr ""
+
+msgid "Colors assigned by project"
+msgstr ""
+
+msgid "Create Time Entry"
+msgstr ""
+
+msgid "Select a project..."
+msgstr ""
+
+msgid "Comma-separated tags"
+msgstr ""
+
+msgid "Create"
+msgstr ""
+
+msgid "Time Entry Details"
+msgstr ""
+
+msgid "Duplicate"
+msgstr ""
+
+msgid "Recurring Time Blocks"
+msgstr ""
+
+msgid "Manage your recurring time entry templates."
+msgstr ""
+
+msgid "New Recurring Block"
+msgstr ""
+
+msgid "Jump to Today"
+msgstr ""
+
+msgid "Next Week/Month"
+msgstr ""
+
+msgid "Previous Week/Month"
+msgstr ""
+
+msgid "Navigate Days"
+msgstr ""
+
+msgid "Views"
+msgstr ""
+
+msgid "Day View"
+msgstr ""
+
+msgid "Week View"
+msgstr ""
+
+msgid "Month View"
+msgstr ""
+
+msgid "Agenda View"
+msgstr ""
+
+msgid "Create New Entry"
+msgstr ""
+
+msgid "Focus Filter"
+msgstr ""
+
+msgid "Clear All Filters"
+msgstr ""
+
+msgid "Close Modal"
+msgstr ""
+
+msgid "Show This Help"
+msgstr ""
+
+msgid "Got it!"
+msgstr ""
+
+msgid "Failed to load events"
+msgstr ""
+
+msgid "Please select a project for new entries"
+msgstr ""
+
+msgid "Please select a project first"
+msgstr ""
+
+msgid "Showing billable entries only"
+msgstr ""
+
+msgid "Entry created successfully"
+msgstr ""
+
+msgid "Failed to create entry"
+msgstr ""
+
+msgid "Entry updated"
+msgstr ""
+
+msgid "Failed to update entry"
+msgstr ""
+
+msgid "Source"
+msgstr ""
+
+msgid "Automatic Timer"
+msgstr ""
+
+msgid "Are you sure you want to delete this entry?"
+msgstr ""
+
+msgid "Entry deleted"
+msgstr ""
+
+msgid "Failed to delete entry"
+msgstr ""
+
+msgid "Export started"
+msgstr ""
+
+msgid "No recurring blocks yet"
+msgstr ""
+
+msgid "Unknown Project"
+msgstr ""
+
+msgid "Failed to load recurring blocks"
+msgstr ""
+
+msgid "No events in this period"
+msgstr ""
+
+msgid "Failed to load agenda view"
+msgstr ""
+
+msgid "Failed to load event details"
+msgstr ""
+
+msgid "Are you sure you want to delete this recurring block?"
+msgstr ""
+
+msgid "Delete Recurring Block"
+msgstr ""
+
+msgid "Recurring block deleted"
+msgstr ""
+
+msgid "Failed to delete recurring block"
+msgstr ""
+
+msgid "Enter new start time (YYYY-MM-DD HH:MM):"
+msgstr ""
+
+msgid "Entry duplicated successfully"
+msgstr ""
+
+msgid "Failed to duplicate entry"
+msgstr ""
+
+msgid "Jumped to today"
+msgstr ""
+
+msgid "💡 Press ? to see keyboard shortcuts"
+msgstr ""
+
+msgid "Edit Time Entry"
+msgstr ""
+
+msgid "These updates will modify this time entry permanently."
+msgstr ""
+
+msgid "Confirm Changes"
+msgstr ""
+
+msgid "Confirm & Save"
+msgstr ""
+
+msgid "Admin Mode"
+msgstr ""
+
+msgid "Admin Mode:"
+msgstr ""
+
+msgid ""
+"You can edit all fields of this time entry, including project, task, "
+"start/end times, and source."
+msgstr ""
+
+msgid "Select the project this time entry belongs to"
+msgstr ""
+
+msgid "Task (Optional)"
+msgstr ""
+
+msgid "Select a specific task within the project"
+msgstr ""
+
+msgid "When the work started"
+msgstr ""
+
+msgid "Time the work started"
+msgstr ""
+
+msgid "When the work ended (leave empty if still running)"
+msgstr ""
+
+msgid "Time the work ended"
+msgstr ""
+
+msgid "Manual"
+msgstr ""
+
+msgid "Automatic"
+msgstr ""
+
+msgid "How this entry was created"
+msgstr ""
+
+msgid "Describe what you worked on"
+msgstr ""
+
+msgid "Separate tags with commas"
+msgstr ""
+
+msgid "Project:"
+msgstr ""
+
+msgid "Task:"
+msgstr ""
+
+msgid "Start:"
+msgstr ""
+
+msgid "End:"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Entry Details"
+msgstr ""
+
+msgid "Entry ID"
+msgstr ""
+
+msgid "Admin Notice"
+msgstr ""
+
+msgid ""
+"As an admin, you have full editing privileges for this time entry. Changes "
+"will be logged for audit purposes."
+msgstr ""
+
+msgid "{editor}: Editing failed"
+msgstr ""
+
+msgid "{editor}: Editing failed: {e}"
+msgstr ""
+
+msgid "{text} {deprecated_message}"
+msgstr ""
+
+msgid "Options"
+msgstr ""
+
+msgid "Got unexpected extra argument ({args})"
+msgid_plural "Got unexpected extra arguments ({args})"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "DeprecationWarning: The command {name!r} is deprecated.{extra_message}"
+msgstr ""
+
+msgid "Aborted!"
+msgstr ""
+
+msgid "Commands"
+msgstr ""
+
+msgid "Missing command."
+msgstr ""
+
+msgid "No such command {name!r}."
+msgstr ""
+
+msgid "Value must be an iterable."
+msgstr ""
+
+msgid "Takes {nargs} values but 1 was given."
+msgid_plural "Takes {nargs} values but {len} were given."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "DeprecationWarning: The {param_type} {name!r} is deprecated.{extra_message}"
+msgstr ""
+
+msgid "env var: {var}"
+msgstr ""
+
+msgid "default: {default}"
+msgstr ""
+
+msgid "required"
+msgstr ""
+
+msgid "(dynamic)"
+msgstr ""
+
+#, python-format
+msgid "%(prog)s, version %(version)s"
+msgstr ""
+
+msgid "Show the version and exit."
+msgstr ""
+
+msgid "Show this message and exit."
+msgstr ""
+
+msgid "Error: {message}"
+msgstr ""
+
+msgid "Try '{command} {option}' for help."
+msgstr ""
+
+msgid "Invalid value: {message}"
+msgstr ""
+
+msgid "Invalid value for {param_hint}: {message}"
+msgstr ""
+
+msgid "Missing argument"
+msgstr ""
+
+msgid "Missing option"
+msgstr ""
+
+msgid "Missing parameter"
+msgstr ""
+
+msgid "Missing {param_type}"
+msgstr ""
+
+msgid "Missing parameter: {param_name}"
+msgstr ""
+
+msgid "No such option: {name}"
+msgstr ""
+
+msgid "Did you mean {possibility}?"
+msgid_plural "(Possible options: {possibilities})"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "unknown error"
+msgstr ""
+
+msgid "Could not open file {filename!r}: {message}"
+msgstr ""
+
+msgid "Usage:"
+msgstr ""
+
+msgid "Argument {name!r} takes {nargs} values."
+msgstr ""
+
+msgid "Option {name!r} does not take a value."
+msgstr ""
+
+msgid "Option {name!r} requires an argument."
+msgid_plural "Option {name!r} requires {nargs} arguments."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Shell completion is not supported for Bash versions older than 4.4."
+msgstr ""
+
+msgid "Couldn't detect Bash version, shell completion is not supported."
+msgstr ""
+
+msgid "Repeat for confirmation"
+msgstr ""
+
+msgid "Error: The value you entered was invalid."
+msgstr ""
+
+msgid "Error: {e.message}"
+msgstr ""
+
+msgid "Error: The two entered values do not match."
+msgstr ""
+
+msgid "Error: invalid input"
+msgstr ""
+
+msgid "Press any key to continue..."
+msgstr ""
+
+msgid ""
+"Choose from:\n"
+"\t{choices}"
+msgstr ""
+
+msgid "{value!r} is not {choice}."
+msgid_plural "{value!r} is not one of {choices}."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "{value!r} does not match the format {format}."
+msgid_plural "{value!r} does not match the formats {formats}."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "{value!r} is not a valid {number_type}."
+msgstr ""
+
+msgid "{value} is not in the range {range}."
+msgstr ""
+
+msgid "{value!r} is not a valid boolean. Recognized values: {states}"
+msgstr ""
+
+msgid "{value!r} is not a valid UUID."
+msgstr ""
+
+msgid "file"
+msgstr ""
+
+msgid "directory"
+msgstr ""
+
+msgid "path"
+msgstr ""
+
+msgid "{name} {filename!r} does not exist."
+msgstr ""
+
+msgid "{name} {filename!r} is a file."
+msgstr ""
+
+msgid "{name} {filename!r} is a directory."
+msgstr ""
+
+msgid "{name} {filename!r} is not readable."
+msgstr ""
+
+msgid "{name} {filename!r} is not writable."
+msgstr ""
+
+msgid "{name} {filename!r} is not executable."
+msgstr ""
+
+msgid "{len_type} values are required, but {len_value} was given."
+msgid_plural "{len_type} values are required, but {len_value} were given."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "This field is required."
+msgstr ""
+
+msgid "File does not have an approved extension: {extensions}"
+msgstr ""
+
+msgid "File does not have an approved extension."
+msgstr ""
+
+msgid "File must be between {min_size} and {max_size} bytes."
+msgstr ""
+
+msgid "show this help message and exit"
+msgstr ""
+
+#, python-format
+msgid "%(prog)s: error: %(message)s\n"
+msgstr ""
+
+msgid "Arguments"
+msgstr ""
+
+msgid "(deprecated) "
+msgstr ""
+
+msgid "[default: {}]"
+msgstr ""
+
+msgid "[env var: {}]"
+msgstr ""
+
+msgid "[required]"
+msgstr ""
+
+msgid "Aborted."
+msgstr ""
+
+msgid "Try [blue]'{command_path} {help_option}'[/] for help."
+msgstr ""
+
+#, python-format
+msgid "Invalid field name '%s'."
+msgstr ""
+
+#, python-format
+msgid "Field must be equal to %(other_name)s."
+msgstr ""
+
+#, python-format
+msgid "Field must be at least %(min)d character long."
+msgid_plural "Field must be at least %(min)d characters long."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-format
+msgid "Field cannot be longer than %(max)d character."
+msgid_plural "Field cannot be longer than %(max)d characters."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-format
+msgid "Field must be exactly %(max)d character long."
+msgid_plural "Field must be exactly %(max)d characters long."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-format
+msgid "Field must be between %(min)d and %(max)d characters long."
+msgstr ""
+
+#, python-format
+msgid "Number must be at least %(min)s."
+msgstr ""
+
+#, python-format
+msgid "Number must be at most %(max)s."
+msgstr ""
+
+#, python-format
+msgid "Number must be between %(min)s and %(max)s."
+msgstr ""
+
+msgid "Invalid input."
+msgstr ""
+
+msgid "Invalid email address."
+msgstr ""
+
+msgid "Invalid IP address."
+msgstr ""
+
+msgid "Invalid Mac address."
+msgstr ""
+
+msgid "Invalid URL."
+msgstr ""
+
+msgid "Invalid UUID."
+msgstr ""
+
+#, python-format
+msgid "Invalid value, must be one of: %(values)s."
+msgstr ""
+
+#, python-format
+msgid "Invalid value, can't be any of: %(values)s."
+msgstr ""
+
+msgid "This field cannot be edited."
+msgstr ""
+
+msgid "This field is disabled and cannot have a value."
+msgstr ""
+
+msgid "Invalid CSRF Token."
+msgstr ""
+
+msgid "CSRF token missing."
+msgstr ""
+
+msgid "CSRF failed."
+msgstr ""
+
+msgid "CSRF token expired."
+msgstr ""
+
+msgid "Invalid Choice: could not coerce."
+msgstr ""
+
+msgid "Choices cannot be None."
+msgstr ""
+
+msgid "Not a valid choice."
+msgstr ""
+
+msgid "Invalid choice(s): one or more data inputs could not be coerced."
+msgstr ""
+
+#, python-format
+msgid "'%(value)s' is not a valid choice for this field."
+msgid_plural "'%(value)s' are not valid choices for this field."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Not a valid datetime value."
+msgstr ""
+
+msgid "Not a valid date value."
+msgstr ""
+
+msgid "Not a valid time value."
+msgstr ""
+
+msgid "Not a valid week value."
+msgstr ""
+
+msgid "Not a valid integer value."
+msgstr ""
+
+msgid "Not a valid decimal value."
+msgstr ""
+
+msgid "Not a valid float value."
+msgstr ""
+
