@@ -6,7 +6,7 @@
         <h1 class="text-2xl font-bold">Profile</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">View your account details below.</p>
     </div>
-    <a href="{{ url_for('auth.edit_profile') }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">Edit Profile</a>
+    <a href="{{ url_for('auth.edit_profile') }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Profile') }}</a>
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-8 rounded-lg shadow">
@@ -44,12 +44,12 @@
         </div>
         <div class="border-t border-border-light dark:border-border-dark"></div>
         <div>
-            <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Member Since</h2>
+            <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Member Since') }}</h2>
             <p class="mt-1 text-lg">{{ current_user.created_at.strftime('%B %d, %Y') }}</p>
         </div>
         <div class="border-t border-border-light dark:border-border-dark"></div>
         <div>
-            <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Last Login</h2>
+            <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Last Login') }}</h2>
             <p class="mt-1 text-lg">{{ current_user.last_login.strftime('%B %d, %Y at %I:%M %p') if current_user.last_login else 'Never' }}</p>
         </div>
     </div>

@@ -3,14 +3,14 @@
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': 'Time Tracking'},
-    {'text': 'Log Time' if not is_duplicate else 'Duplicate Entry'}
+    {'text': _('Time Tracking')},
+    {'text': _('Log Time') if not is_duplicate else _('Duplicate Entry')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-clock',
-    title_text='Duplicate Time Entry' if is_duplicate else 'Log Time Manually',
-    subtitle_text='Create a copy of a previous entry with new times' if is_duplicate else 'Create a new time entry',
+    title_text=_('Duplicate Time Entry') if is_duplicate else _('Log Time Manually'),
+    subtitle_text=_('Create a copy of a previous entry with new times') if is_duplicate else _('Create a new time entry'),
     breadcrumbs=breadcrumbs,
     actions_html=None
 ) }}
@@ -21,10 +21,10 @@
         <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1"></i>
         <div>
             <p class="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Duplicating entry:</strong> {{ original_entry.project.name }}{% if original_entry.task %} - {{ original_entry.task.name }}{% endif %}
+                <strong>{{ _('Duplicating entry:') }}</strong> {{ original_entry.project.name }}{% if original_entry.task %} - {{ original_entry.task.name }}{% endif %}
             </p>
             <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                Original: {{ original_entry.start_time|user_datetime('%Y-%m-%d %H:%M') }} to {{ original_entry.end_time|user_datetime('%Y-%m-%d %H:%M') if original_entry.end_time else 'N/A' }} ({{ original_entry.duration_formatted }})
+                {{ _('Original:') }} {{ original_entry.start_time|user_datetime('%Y-%m-%d %H:%M') }} {{ _('to') }} {{ original_entry.end_time|user_datetime('%Y-%m-%d %H:%M') if original_entry.end_time else _('N/A') }} ({{ original_entry.duration_formatted }})
             </p>
         </div>
     </div>
@@ -37,66 +37,66 @@
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
+                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }}</label>
                     <select name="project_id" id="project_id" required class="form-input">
-                        <option value="">Select a project</option>
+                        <option value="">{{ _('Select a project') }}</option>
                         {% for project in projects %}
                         <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
-                    <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Task (optional)</label>
+                    <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task (optional)') }}</label>
                     <select name="task_id" id="task_id" class="form-input" data-selected-task-id="{{ selected_task_id or '' }}" {% if not selected_project_id %}disabled{% endif %}>
-                        <option value="">No task</option>
+                        <option value="">{{ _('No task') }}</option>
                     </select>
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">Tasks load after selecting a project</p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Tasks load after selecting a project') }}</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Date') }}</label>
                     <input type="date" name="start_date" id="start_date" required class="form-input">
                 </div>
                 <div>
-                    <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</label>
+                    <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Time') }}</label>
                     <input type="time" name="start_time" id="start_time" required class="form-input">
                 </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Date') }}</label>
                     <input type="date" name="end_date" id="end_date" required class="form-input">
                 </div>
                 <div>
-                    <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">End Time</label>
+                    <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Time') }}</label>
                     <input type="time" name="end_time" id="end_time" required class="form-input">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-                    <textarea name="notes" id="notes" rows="4" class="form-input" placeholder="What did you work on?">{{ prefill_notes or '' }}</textarea>
+                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes') }}</label>
+                    <textarea name="notes" id="notes" rows="4" class="form-input" placeholder="{{ _('What did you work on?') }}">{{ prefill_notes or '' }}</textarea>
                 </div>
                 <div class="space-y-4">
                     <div>
-                        <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
-                        <input type="text" name="tags" id="tags" class="form-input" placeholder="tag1, tag2" value="{{ prefill_tags or '' }}">
+                        <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
+                        <input type="text" name="tags" id="tags" class="form-input" placeholder="{{ _('tag1, tag2') }}" value="{{ prefill_tags or '' }}">
                     </div>
                     <div class="flex items-center gap-3">
                         <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if prefill_billable is not defined or prefill_billable %}checked{% endif %}>
-                        <label for="billable" class="text-sm text-gray-700 dark:text-gray-300">Billable</label>
+                        <label for="billable" class="text-sm text-gray-700 dark:text-gray-300">{{ _('Billable') }}</label>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end gap-3">
-            <button type="reset" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">Clear</button>
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Log Time</button>
+            <button type="reset" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Clear') }}</button>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Log Time') }}</button>
         </div>
     </form>
 </div>
@@ -119,19 +119,21 @@ document.addEventListener('DOMContentLoaded', async function(){
     // Dynamic task loading when a project is chosen
     const projectSelect = document.getElementById('project_id');
     const taskSelect = document.getElementById('task_id');
+    const noTaskText = '{{ _('No task') }}';
+    const failedToLoadTasksText = '{{ _('Failed to load tasks') }}';
     async function loadTasks(projectId){
         if (!taskSelect) return;
         if (!projectId){
-            taskSelect.innerHTML = '<option value="">No task</option>';
+            taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             taskSelect.disabled = true;
             return;
         }
         try{
             const resp = await fetch(`/api/tasks?project_id=${projectId}`);
-            if (!resp.ok) throw new Error('Failed to load tasks');
+            if (!resp.ok) throw new Error(failedToLoadTasksText);
             const data = await resp.json();
             const tasks = Array.isArray(data.tasks) ? data.tasks : [];
-            taskSelect.innerHTML = '<option value="">No task</option>';
+            taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             tasks.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = String(t.id);
@@ -146,7 +148,7 @@ document.addEventListener('DOMContentLoaded', async function(){
             }
             taskSelect.disabled = false;
         }catch(e){
-            taskSelect.innerHTML = '<option value="">No task</option>';
+            taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             taskSelect.disabled = true;
         }
     }

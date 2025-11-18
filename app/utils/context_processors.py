@@ -80,8 +80,15 @@ def register_context_processors(app):
             current_locale = 'en'
         # Normalize to short code for comparisons (e.g., 'en' from 'en_US')
         short_locale = (current_locale.split('_', 1)[0] if current_locale else 'en')
+        
+        # Reverse-map normalized locale codes back to config keys for label lookup
+        # 'nb' (used by Flask-Babel) should map back to 'no' (used in LANGUAGES config)
+        display_locale = short_locale
+        if short_locale == 'nb':
+            display_locale = 'no'
+        
         available_languages = current_app.config.get('LANGUAGES', {}) or {}
-        current_language_label = available_languages.get(short_locale, short_locale.upper())
+        current_language_label = available_languages.get(display_locale, short_locale.upper())
         
         # Check if current language is RTL
         rtl_languages = current_app.config.get('RTL_LANGUAGES', set())
@@ -94,7 +101,7 @@ def register_context_processors(app):
             'timezone_offset': get_timezone_offset_for_timezone(timezone_name),
             'user_timezone': user_timezone,
             'current_locale': current_locale,
-            'current_language_code': short_locale,
+            'current_language_code': display_locale,  # Use display locale (e.g., 'no' not 'nb')
             'current_language_label': current_language_label,
             'is_rtl': is_rtl,
             'available_languages': available_languages,

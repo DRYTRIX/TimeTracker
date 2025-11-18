@@ -340,17 +340,38 @@ def create_app(config=None):
             if current_user and getattr(current_user, "is_authenticated", False):
                 pref = getattr(current_user, "preferred_language", None)
                 if pref:
-                    return pref
+                    # Normalize locale code (e.g., 'no' -> 'nb' for Norwegian)
+                    return _normalize_locale(pref)
             # 2) Session override (set-language route)
             if "preferred_language" in session:
-                return session.get("preferred_language")
+                return _normalize_locale(session.get("preferred_language"))
             # 3) Best match with Accept-Language
             supported = list(app.config.get("LANGUAGES", {}).keys()) or ["en"]
-            return request.accept_languages.best_match(supported) or app.config.get(
+            matched = request.accept_languages.best_match(supported) or app.config.get(
                 "BABEL_DEFAULT_LOCALE", "en"
             )
+            return _normalize_locale(matched)
         except Exception:
             return app.config.get("BABEL_DEFAULT_LOCALE", "en")
+    
+    def _normalize_locale(locale_code):
+        """Normalize locale codes for Flask-Babel compatibility.
+        
+        Some locale codes need to be normalized:
+        - 'no' -> 'nb' (Norwegian Bokmål is the standard, but we'll try 'no' first)
+        """
+        if not locale_code:
+            return 'en'
+        locale_code = locale_code.lower().strip()
+        # Try 'no' first - if translations don't exist, Flask-Babel will fall back
+        # If 'no' doesn't work, we can map to 'nb' as fallback
+        # For now, keep 'no' as-is since we have translations/nb/ directory
+        # The directory structure should match what Flask-Babel expects
+        if locale_code == 'no':
+            # Use 'nb' for Flask-Babel (standard Norwegian Bokmål locale)
+            # But ensure we have translations in both 'no' and 'nb' directories
+            return 'nb'
+        return locale_code
 
     babel.init_app(
         app,

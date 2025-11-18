@@ -23,7 +23,7 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">Admin Sections</h2>
+    <h2 class="text-lg font-semibold mb-4">{{ _('Admin Sections') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <a href="{{ url_for('admin.list_users') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
             <i class="fas fa-users mb-2"></i>
@@ -65,7 +65,7 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <h2 class="text-lg font-semibold mb-4">Recent Activity</h2>
+    <h2 class="text-lg font-semibold mb-4">{{ _('Recent Activity') }}</h2>
     <table class="w-full text-left">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>

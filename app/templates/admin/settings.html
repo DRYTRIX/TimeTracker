@@ -64,7 +64,7 @@
 
             <!-- User Management -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
-                <h2 class="text-lg font-semibold mb-4">User Management</h2>
+                <h2 class="text-lg font-semibold mb-4">{{ _('User Management') }}</h2>
                 <div class="space-y-4">
                     <div class="flex items-center">
                         <input type="checkbox" name="allow_self_register" id="allow_self_register" {% if settings.allow_self_register %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
@@ -78,10 +78,10 @@
 
             <!-- Company Branding -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
-                <h2 class="text-lg font-semibold mb-4">Company Branding</h2>
+                <h2 class="text-lg font-semibold mb-4">{{ _('Company Branding') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="company_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name</label>
+                        <label for="company_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Company Name') }}</label>
                         <input type="text" name="company_name" id="company_name" value="{{ settings.company_name }}" class="form-input">
                     </div>
                     <div>
@@ -113,7 +113,7 @@
 
             <!-- Invoice Defaults -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
-                <h2 class="text-lg font-semibold mb-4">Invoice Defaults</h2>
+                <h2 class="text-lg font-semibold mb-4">{{ _('Invoice Defaults') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="invoice_prefix" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Invoice Prefix</label>
@@ -136,7 +136,7 @@
 
             <!-- Backup Settings -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
-                <h2 class="text-lg font-semibold mb-4">Backup Settings</h2>
+                <h2 class="text-lg font-semibold mb-4">{{ _('Backup Settings') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="backup_retention_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Backup Retention (Days)</label>
@@ -151,7 +151,7 @@
 
             <!-- Export Settings -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
-                <h2 class="text-lg font-semibold mb-4">Export Settings</h2>
+                <h2 class="text-lg font-semibold mb-4">{{ _('Export Settings') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="export_delimiter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">CSV Export Delimiter</label>
@@ -166,7 +166,7 @@
 
             <!-- Analytics Settings -->
             <div>
-                <h2 class="text-lg font-semibold mb-4">Privacy & Analytics</h2>
+                <h2 class="text-lg font-semibold mb-4">{{ _('Privacy & Analytics') }}</h2>
                 <div class="space-y-4">
                     <div class="flex items-center">
                         <input type="checkbox" name="allow_analytics" id="allow_analytics" {% if settings.allow_analytics %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
@@ -187,14 +187,14 @@
         </div>
 
         <div class="mt-8 pt-6 flex justify-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Save Settings</button>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Settings') }}</button>
         </div>
     </form>
 </div>
 
 <!-- Company Logo Upload - Separate Section -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <h2 class="text-lg font-semibold mb-4">Company Logo</h2>
+    <h2 class="text-lg font-semibold mb-4">{{ _('Company Logo') }}</h2>
     
     <!-- Current Logo Display -->
     {% if settings.has_logo() %}
@@ -215,7 +215,7 @@
             </form>
         </div>
         <div class="flex items-center justify-center bg-white dark:bg-gray-900 p-6 rounded border border-gray-200 dark:border-gray-700">
-            <img src="{{ settings.get_logo_url() }}?v={{ range(1, 10000) | random }}" alt="Company Logo" class="max-h-32 max-w-full object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<p class=\'text-red-600 text-sm\'>Error loading logo</p>';">
+            <img src="{{ settings.get_logo_url() }}?v={{ range(1, 10000) | random }}" alt="{{ _('Company Logo') }}" class="max-h-32 max-w-full object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<p class=\'text-red-600 text-sm\'>Error loading logo</p>';">
         </div>
     </div>
     {% else %}
@@ -232,7 +232,7 @@
     
     <!-- Upload Form -->
     <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3">Upload New Logo</h3>
+        <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3">{{ _('Upload New Logo') }}</h3>
         <form method="POST" action="{{ url_for('admin.upload_logo') }}" enctype="multipart/form-data" id="logoUploadForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="space-y-3">
@@ -246,7 +246,7 @@
                 <div id="logoPreview" class="hidden bg-white dark:bg-gray-900 p-4 rounded border border-gray-200 dark:border-gray-700">
                     <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Preview:</p>
                     <div class="flex items-center justify-center">
-                        <img id="logoPreviewImage" src="" alt="Logo Preview" class="max-h-24 max-w-full object-contain">
+                        <img id="logoPreviewImage" src="" alt="{{ _('Logo Preview') }}" class="max-h-24 max-w-full object-contain">
                     </div>
                 </div>
                 

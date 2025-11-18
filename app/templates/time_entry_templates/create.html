@@ -10,7 +10,7 @@
            class="text-blue-600 hover:text-blue-800 dark:text-blue-400 mb-4 inline-block">
             <i class="fas fa-arrow-left mr-2"></i> Back to Templates
         </a>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Create Time Entry Template</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('Create Time Entry Template') }}</h1>
         <p class="text-gray-600 dark:text-gray-400 mt-2">Set up a reusable template for quick time tracking</p>
     </div>
 
@@ -30,7 +30,7 @@
                        value="{{ form_data.name if form_data else '' }}"
                        required 
                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                       placeholder="e.g., Daily Standup, Client Meeting">
+                       placeholder="{{ _('e.g., Daily Standup, Client Meeting') }}">
             </div>
 
             <!-- Project -->
@@ -79,7 +79,7 @@
                        step="0.25" 
                        min="0"
                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                       placeholder="e.g., 1.0, 0.5">
+                       placeholder="{{ _('e.g., 1.0, 0.5') }}">
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     Leave empty for manual timer start/stop
                 </p>
@@ -94,7 +94,7 @@
                           name="default_notes" 
                           rows="3"
                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                          placeholder="Pre-fill notes for this type of time entry">{{ form_data.default_notes if form_data else '' }}</textarea>
+                          placeholder="{{ _('Pre-fill notes for this type of time entry') }}">{{ form_data.default_notes if form_data else '' }}</textarea>
             </div>
 
             <!-- Tags -->
@@ -107,7 +107,7 @@
                        name="tags" 
                        value="{{ form_data.tags if form_data else '' }}"
                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                       placeholder="e.g., meeting, development, admin">
+                       placeholder="{{ _('e.g., meeting, development, admin') }}">
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     Comma-separated tags
                 </p>

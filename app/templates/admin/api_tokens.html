@@ -126,7 +126,7 @@
 <div id="createTokenModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Create API Token</h3>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ _('Create API Token') }}</h3>
         </div>
         <form id="createTokenForm" class="px-6 py-4">
             <div class="space-y-4">
@@ -321,7 +321,7 @@
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your API Token:</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Your API Token') }}:</label>
                 <div class="flex items-center">
                     <input type="text" id="newTokenValue" readonly 
                            class="flex-1 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md font-mono text-sm">
@@ -333,7 +333,7 @@
             </div>
 
             <div class="mt-6">
-                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Usage Examples:</h4>
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">{{ _('Usage Examples') }}:</h4>
                 <div class="space-y-2">
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Using Authorization header:</p>

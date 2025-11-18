@@ -1729,6 +1729,10 @@ function initializePDFEditor() {
         layer.add(tableGroup);
         elements.push({ type: 'items-table', node: tableGroup });
         setupSelection(tableGroup);
+        // Also setup selection on children so clicks on them select the parent Group
+        setupSelection(header);
+        setupSelection(line);
+        setupSelection(items);
         layer.draw();
     }
     
@@ -1768,13 +1772,60 @@ function initializePDFEditor() {
         layer.add(tableGroup);
         elements.push({ type: 'expenses-table', node: tableGroup });
         setupSelection(tableGroup);
+        // Also setup selection on children so clicks on them select the parent Group
+        setupSelection(header);
+        setupSelection(line);
+        setupSelection(items);
         layer.draw();
     }
     
     function setupSelection(node) {
-        node.on('click', function() {
-            selectElement(node);
+        node.on('click', function(e) {
+            // If clicking on a child of a table Group, select the Group instead
+            // UNLESS Ctrl/Cmd is held, which allows selecting the individual element
+            let targetNode = node;
+            if (node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table')) {
+                // Allow direct selection if Ctrl/Cmd is held
+                if (e.evt.ctrlKey || e.evt.metaKey) {
+                    targetNode = node;
+                } else {
+                    targetNode = node.parent;
+                }
+            }
+            selectElement(targetNode);
+            e.cancelBubble = true;
         });
+        
+        // Add double-click handler for text elements in tables to enable direct editing
+        // Check multiple ways to detect Text elements
+        const isTextNode = node.className === 'Text' || (node.getType && node.getType() === 'Text') || 
+                          (node.constructor && node.constructor.name === 'Text');
+        if (isTextNode && node.parent && node.parent.attrs && 
+            (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table')) {
+            // Change cursor on hover to indicate editability
+            node.on('mouseenter', function() {
+                stage.container().style.cursor = 'text';
+            });
+            node.on('mouseleave', function() {
+                stage.container().style.cursor = 'default';
+            });
+            
+            node.on('dblclick', function(e) {
+                // Select the individual text element for editing
+                selectElement(node);
+                e.cancelBubble = true;
+                // Focus the text content textarea in properties panel if available
+                setTimeout(() => {
+                    const propText = document.getElementById('prop-text');
+                    if (propText) {
+                        propText.disabled = false;
+                        propText.readOnly = false;
+                        propText.focus();
+                        propText.select();
+                    }
+                }, 150);
+            });
+        }
         
         // Add snap to grid on drag
         node.on('dragmove', function() {
@@ -1826,8 +1877,33 @@ function initializePDFEditor() {
     
     function updatePropertiesPanel(node) {
         const propsContent = document.getElementById('properties-content');
-        const attrs = node.attrs;
-        const className = node.className;
+        if (!propsContent) {
+            console.error('Properties content element not found!');
+            return;
+        }
+        
+        if (!node) {
+            console.error('Node is null or undefined!');
+            propsContent.innerHTML = '<p class="text-sm text-red-500">Error: No element selected</p>';
+            return;
+        }
+        
+        const attrs = node.attrs || {};
+        // Try multiple ways to detect Text elements for better compatibility
+        const className = node.className || (node.getType && node.getType()) || 'Unknown';
+        const isTextElement = className === 'Text' || (node.getType && node.getType() === 'Text') || 
+                             (node.constructor && node.constructor.name === 'Text');
+        
+        // Debug logging
+        console.log('updatePropertiesPanel called:', {
+            className: className,
+            getType: node.getType ? node.getType() : 'N/A',
+            constructorName: node.constructor ? node.constructor.name : 'unknown',
+            isTextElement: isTextElement,
+            name: attrs.name,
+            attrs: attrs,
+            node: node
+        });
         
         let html = '<div class="space-y-4">';
         
@@ -1848,11 +1924,20 @@ function initializePDFEditor() {
         html += `<input type="number" id="prop-y" value="${Math.round(attrs.y || 0)}" class="property-input">`;
         html += '</div>';
         
-        // Text-specific properties
-        if (className === 'Text') {
+        // Text-specific properties - check if it's a Text element (even if inside a table group)
+        if (isTextElement) {
+            // Properly escape text for HTML and convert \n to actual newlines
+            const textContent = (attrs.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\n/g, '\n');
+            // Use more rows for table items which might be longer
+            const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table');
+            const textareaRows = isTableText ? 8 : 3;
+            
             html += '<div class="property-group">';
             html += '<div class="property-label">Text Content</div>';
-            html += `<textarea id="prop-text" class="property-input" rows="3">${attrs.text || ''}</textarea>`;
+            html += `<textarea id="prop-text" class="property-input" rows="${textareaRows}">${textContent}</textarea>`;
+            if (isTableText) {
+                html += '<p class="text-xs text-gray-500 mt-1">Double-click table text to edit, or edit here in the properties panel.</p>';
+            }
             html += '</div>';
             
             html += '<div class="property-group">';
@@ -1947,6 +2032,139 @@ function initializePDFEditor() {
             html += '</div>';
         }
         
+        // Group-specific properties (for items-table and expenses-table)
+        // Check both className and constructor name for Groups
+        const isGroup = className === 'Group' || (node.constructor && node.constructor.name === 'Group');
+        const isTableGroup = isGroup && (attrs.name === 'items-table' || attrs.name === 'expenses-table');
+        console.log('Group check:', {
+            className: className,
+            constructorName: node.constructor ? node.constructor.name : 'unknown',
+            isGroup: isGroup,
+            name: attrs.name,
+            isTableGroup: isTableGroup
+        });
+        
+        if (isTableGroup) {
+            try {
+                // Find child elements - use getChildren() to get direct children
+                const children = node.getChildren();
+                const textElements = children.filter(child => child.className === 'Text');
+                const lineElements = children.filter(child => child.className === 'Line');
+                
+                const headerText = textElements[0]; // First text is header
+                const line = lineElements[0];
+                const itemsText = textElements[1]; // Second text is items
+                
+                const headerAttrs = headerText ? headerText.attrs : {};
+                const lineAttrs = line ? line.attrs : {};
+                const itemsAttrs = itemsText ? itemsText.attrs : {};
+                
+                // Debug logging
+                console.log('Table Group detected:', attrs.name);
+                console.log('Children count:', children.length);
+                console.log('Text elements:', textElements.length);
+                console.log('Line elements:', lineElements.length);
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Header</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Text</div>';
+                html += `<textarea id="prop-table-header-text" class="property-input" rows="2">${(headerAttrs.text || '').replace(/\\n/g, '\n')}</textarea>`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Font Size</div>';
+                html += `<input type="number" id="prop-table-header-fontSize" value="${headerAttrs.fontSize || 12}" class="property-input">`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Font Style</div>';
+                html += `<select id="prop-table-header-fontStyle" class="property-input">`;
+                html += `<option value="normal" ${headerAttrs.fontStyle === 'normal' ? 'selected' : ''}>Normal</option>`;
+                html += `<option value="bold" ${headerAttrs.fontStyle === 'bold' ? 'selected' : ''}>Bold</option>`;
+                html += `<option value="italic" ${headerAttrs.fontStyle === 'italic' ? 'selected' : ''}>Italic</option>`;
+                html += '</select>';
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Color</div>';
+                html += `<input type="color" id="prop-table-header-fill" value="${rgbToHex(headerAttrs.fill || '#000000')}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Items</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Items Template</div>';
+                html += `<textarea id="prop-table-items-text" class="property-input" rows="4">${(itemsAttrs.text || '').replace(/\\n/g, '\n')}</textarea>`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Items Font Size</div>';
+                html += `<input type="number" id="prop-table-items-fontSize" value="${itemsAttrs.fontSize || 11}" class="property-input">`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Items Color</div>';
+                html += `<input type="color" id="prop-table-items-fill" value="${rgbToHex(itemsAttrs.fill || '#000000')}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Separator Line</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Line Color</div>';
+                html += `<input type="color" id="prop-table-line-stroke" value="${rgbToHex(lineAttrs.stroke || '#000000')}" class="property-input">`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Line Width</div>';
+                html += `<input type="number" id="prop-table-line-strokeWidth" value="${lineAttrs.strokeWidth || 1}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Dimensions</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Table Width</div>';
+                const tableWidth = headerAttrs.width || itemsAttrs.width || 500;
+                html += `<input type="number" id="prop-table-width" value="${tableWidth}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+            } catch (error) {
+                console.error('Error processing table group:', error);
+                html += '<div class="property-group"><p class="text-sm text-red-500">Error loading table properties: ' + error.message + '</p></div>';
+            }
+        } else if (isGroup) {
+            // Fallback for Groups that aren't recognized as tables
+            // Show at least basic info
+            html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+            html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Group Information</div>';
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Group Name</div>';
+            html += `<input type="text" value="${attrs.name || 'Unnamed Group'}" disabled class="property-input bg-gray-100">`;
+            html += '</div>';
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Children Count</div>';
+            try {
+                const childrenCount = node.getChildren ? node.getChildren().length : (node.children ? node.children.length : 0);
+                html += `<input type="text" value="${childrenCount} children" disabled class="property-input bg-gray-100">`;
+            } catch (e) {
+                html += `<input type="text" value="Unknown" disabled class="property-input bg-gray-100">`;
+            }
+            html += '</div>';
+            html += '<p class="text-sm text-gray-500 italic mt-2">This is a Group element. If this is a table, make sure it has the name "items-table" or "expenses-table".</p>';
+            html += '</div>';
+        }
+        
         // Layer controls
         html += '<div class="property-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e5e7eb;">';
         html += '<div class="property-label">Layer Order</div>';
@@ -1960,10 +2178,20 @@ function initializePDFEditor() {
         
         html += '</div>';
         
+        console.log('Setting properties HTML, length:', html.length);
+        console.log('HTML preview (first 500 chars):', html.substring(0, 500));
         propsContent.innerHTML = html;
+        console.log('Properties HTML set successfully');
+        console.log('Properties content element exists:', !!propsContent);
+        console.log('Properties content innerHTML length after setting:', propsContent.innerHTML.length);
         
         // Attach event listeners
-        attachPropertyListeners();
+        try {
+            attachPropertyListeners();
+            console.log('Property listeners attached successfully');
+        } catch (error) {
+            console.error('Error attaching property listeners:', error);
+        }
     }
     
     function rgbToHex(color) {
@@ -1993,7 +2221,30 @@ function initializePDFEditor() {
         
         if (propX) propX.addEventListener('input', () => { selectedElement.x(parseFloat(propX.value)); layer.draw(); });
         if (propY) propY.addEventListener('input', () => { selectedElement.y(parseFloat(propY.value)); layer.draw(); });
-        if (propText) propText.addEventListener('input', () => { selectedElement.text(propText.value); layer.draw(); });
+        if (propText) {
+            // Add both input and change listeners to ensure changes are captured
+            propText.addEventListener('input', function() { 
+                if (selectedElement && selectedElement.text) {
+                    selectedElement.text(this.value); 
+                    layer.draw(); 
+                }
+            });
+            propText.addEventListener('change', function() { 
+                if (selectedElement && selectedElement.text) {
+                    selectedElement.text(this.value); 
+                    layer.draw(); 
+                }
+            });
+            // Also handle paste events
+            propText.addEventListener('paste', function() {
+                setTimeout(() => {
+                    if (selectedElement && selectedElement.text) {
+                        selectedElement.text(this.value);
+                        layer.draw();
+                    }
+                }, 10);
+            });
+        }
         if (propFontSize) propFontSize.addEventListener('input', () => { selectedElement.fontSize(parseFloat(propFontSize.value)); layer.draw(); });
         if (propFontFamily) propFontFamily.addEventListener('change', () => { selectedElement.fontFamily(propFontFamily.value); layer.draw(); });
         if (propFontStyle) propFontStyle.addEventListener('change', () => { selectedElement.fontStyle(propFontStyle.value); layer.draw(); });
@@ -2007,6 +2258,125 @@ function initializePDFEditor() {
             propOpacity.addEventListener('input', () => {
                 selectedElement.opacity(parseFloat(propOpacity.value));
                 document.getElementById('opacity-value').textContent = (propOpacity.value * 100) + '%';
+                layer.draw();
+            });
+        }
+        
+        // Table-specific property listeners
+        const propTableHeaderText = document.getElementById('prop-table-header-text');
+        const propTableHeaderFontSize = document.getElementById('prop-table-header-fontSize');
+        const propTableHeaderFontStyle = document.getElementById('prop-table-header-fontStyle');
+        const propTableHeaderFill = document.getElementById('prop-table-header-fill');
+        const propTableItemsText = document.getElementById('prop-table-items-text');
+        const propTableItemsFontSize = document.getElementById('prop-table-items-fontSize');
+        const propTableItemsFill = document.getElementById('prop-table-items-fill');
+        const propTableLineStroke = document.getElementById('prop-table-line-stroke');
+        const propTableLineStrokeWidth = document.getElementById('prop-table-line-strokeWidth');
+        const propTableWidth = document.getElementById('prop-table-width');
+        
+        if (propTableHeaderText) {
+            propTableHeaderText.addEventListener('input', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.text(propTableHeaderText.value.replace(/\n/g, '\\n'));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableHeaderFontSize) {
+            propTableHeaderFontSize.addEventListener('input', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.fontSize(parseFloat(propTableHeaderFontSize.value));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableHeaderFontStyle) {
+            propTableHeaderFontStyle.addEventListener('change', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.fontStyle(propTableHeaderFontStyle.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableHeaderFill) {
+            propTableHeaderFill.addEventListener('input', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.fill(propTableHeaderFill.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableItemsText) {
+            propTableItemsText.addEventListener('input', () => {
+                const itemsText = selectedElement.find('Text')[1];
+                if (itemsText) {
+                    itemsText.text(propTableItemsText.value.replace(/\n/g, '\\n'));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableItemsFontSize) {
+            propTableItemsFontSize.addEventListener('input', () => {
+                const itemsText = selectedElement.find('Text')[1];
+                if (itemsText) {
+                    itemsText.fontSize(parseFloat(propTableItemsFontSize.value));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableItemsFill) {
+            propTableItemsFill.addEventListener('input', () => {
+                const itemsText = selectedElement.find('Text')[1];
+                if (itemsText) {
+                    itemsText.fill(propTableItemsFill.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableLineStroke) {
+            propTableLineStroke.addEventListener('input', () => {
+                const line = selectedElement.find('Line')[0];
+                if (line) {
+                    line.stroke(propTableLineStroke.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableLineStrokeWidth) {
+            propTableLineStrokeWidth.addEventListener('input', () => {
+                const line = selectedElement.find('Line')[0];
+                if (line) {
+                    line.strokeWidth(parseFloat(propTableLineStrokeWidth.value));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableWidth) {
+            propTableWidth.addEventListener('input', () => {
+                const width = parseFloat(propTableWidth.value);
+                const headerText = selectedElement.find('Text')[0];
+                const itemsText = selectedElement.find('Text')[1];
+                const line = selectedElement.find('Line')[0];
+                
+                if (headerText) headerText.width(width);
+                if (itemsText) itemsText.width(width);
+                if (line) {
+                    const currentY = line.points()[1];
+                    line.points([0, currentY, width, currentY]);
+                }
                 layer.draw();
             });
         }
@@ -2491,8 +2861,16 @@ table tr:last-child td {
     
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
-        // Delete selected element with Delete or Backspace
-        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+        // Check if user is editing text in an input field or textarea
+        const activeElement = document.activeElement;
+        const isEditingText = activeElement && (
+            activeElement.tagName === 'INPUT' ||
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.isContentEditable
+        );
+        
+        // Delete selected element with Delete or Backspace (only if not editing text)
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement && !isEditingText) {
             e.preventDefault();
             selectedElement.destroy();
             layer.find('Transformer').forEach(t => t.destroy());
@@ -2531,8 +2909,8 @@ table tr:last-child td {
             layer.draw();
         }
         
-        // Arrow keys to move element
-        if (selectedElement && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        // Arrow keys to move element (only if not editing text)
+        if (selectedElement && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !isEditingText) {
             e.preventDefault();
             const step = e.shiftKey ? 10 : 1;
             
@@ -2623,12 +3001,18 @@ table tr:last-child td {
             stage = Konva.Node.create(json, 'canvas-container');
             layer = stage.children[0];
             
-            // Re-setup selections for all elements
-            layer.children.forEach(child => {
-                if (child !== background && child.className !== 'Transformer') {
-                    setupSelection(child);
-                }
-            });
+                // Re-setup selections for all elements
+                layer.children.forEach(child => {
+                    if (child !== background && child.className !== 'Transformer') {
+                        setupSelection(child);
+                        // If it's a table Group, also setup selection on children
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                            child.children.forEach(grandChild => {
+                                setupSelection(grandChild);
+                            });
+                        }
+                    }
+                });
             
             layer.draw();
         } catch(e) {
@@ -2728,6 +3112,12 @@ table tr:last-child td {
                         child.className !== 'Transformer' && 
                         !(child.className === 'Line' && child.attrs.name === 'grid-line')) {
                         setupSelection(child);
+                        // If it's a table Group, also setup selection on children
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                            child.children.forEach(grandChild => {
+                                setupSelection(grandChild);
+                            });
+                        }
                         elements.push({ type: child.attrs.name || child.className, node: child });
                     }
                 });

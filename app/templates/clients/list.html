@@ -16,7 +16,7 @@
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">Filter Clients</h2>
+        <h2 class="text-lg font-semibold">{{ _('Filter Clients') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
             <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
         </button>
@@ -48,7 +48,7 @@
             {{ clients|length }} client{{ 's' if clients|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('clients.export_clients', status=status, search=search) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="Export to CSV">
+            <a href="{{ url_for('clients.export_clients', status=status, search=search) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="{{ _('Export to CSV') }}">
                 <i class="fas fa-download mr-1"></i> Export
             </a>
             {% if current_user.is_admin %}

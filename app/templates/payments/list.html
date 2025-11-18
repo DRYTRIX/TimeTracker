@@ -21,11 +21,11 @@
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Payments</h3>
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Payments') }}</h3>
             <p class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{{ summary.total_payments }}</p>
         </div>
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Amount</h3>
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Amount') }}</h3>
             <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_amount) }}</p>
         </div>
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
@@ -34,7 +34,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.completed_amount) }}</p>
         </div>
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Gateway Fees</h3>
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Gateway Fees') }}</h3>
             <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_fees) }}</p>
         </div>
     </div>

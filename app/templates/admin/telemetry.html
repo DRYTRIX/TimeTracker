@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Telemetry & Analytics Dashboard</h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ _('Telemetry & Analytics Dashboard') }}</h1>
         <p class="text-gray-600">Monitor what data is being collected and manage your privacy settings</p>
     </div>
 
@@ -44,7 +44,7 @@
             <button type="submit" class="px-4 py-2 rounded-lg transition {% if telemetry.enabled %}bg-red-600 hover:bg-red-700 text-white{% else %}bg-green-600 hover:bg-green-700 text-white{% endif %}">
                 {% if telemetry.enabled %}Disable Telemetry{% else %}Enable Telemetry{% endif %}
             </button>
-            <p class="text-xs text-gray-600 mt-2">Tip: You can also manage this setting in <a href="{{ url_for('admin.settings') }}" class="text-primary hover:underline">Admin → Settings</a> (Privacy & Analytics section)</p>
+            <p class="text-xs text-gray-600 mt-2">Tip: You can also manage this setting in <a href="{{ url_for('admin.settings') }}" class="text-primary hover:underline">{{ _('Admin → Settings') }}</a> ({{ _('Privacy & Analytics') }} section)</p>
         </form>
 
         {% if telemetry.enabled %}
