@@ -1782,13 +1782,50 @@ function initializePDFEditor() {
     function setupSelection(node) {
         node.on('click', function(e) {
             // If clicking on a child of a table Group, select the Group instead
+            // UNLESS Ctrl/Cmd is held, which allows selecting the individual element
             let targetNode = node;
             if (node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table')) {
-                targetNode = node.parent;
+                // Allow direct selection if Ctrl/Cmd is held
+                if (e.evt.ctrlKey || e.evt.metaKey) {
+                    targetNode = node;
+                } else {
+                    targetNode = node.parent;
+                }
             }
             selectElement(targetNode);
             e.cancelBubble = true;
         });
+        
+        // Add double-click handler for text elements in tables to enable direct editing
+        // Check multiple ways to detect Text elements
+        const isTextNode = node.className === 'Text' || (node.getType && node.getType() === 'Text') || 
+                          (node.constructor && node.constructor.name === 'Text');
+        if (isTextNode && node.parent && node.parent.attrs && 
+            (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table')) {
+            // Change cursor on hover to indicate editability
+            node.on('mouseenter', function() {
+                stage.container().style.cursor = 'text';
+            });
+            node.on('mouseleave', function() {
+                stage.container().style.cursor = 'default';
+            });
+            
+            node.on('dblclick', function(e) {
+                // Select the individual text element for editing
+                selectElement(node);
+                e.cancelBubble = true;
+                // Focus the text content textarea in properties panel if available
+                setTimeout(() => {
+                    const propText = document.getElementById('prop-text');
+                    if (propText) {
+                        propText.disabled = false;
+                        propText.readOnly = false;
+                        propText.focus();
+                        propText.select();
+                    }
+                }, 150);
+            });
+        }
         
         // Add snap to grid on drag
         node.on('dragmove', function() {
@@ -1852,11 +1889,17 @@ function initializePDFEditor() {
         }
         
         const attrs = node.attrs || {};
-        const className = node.className || 'Unknown';
+        // Try multiple ways to detect Text elements for better compatibility
+        const className = node.className || (node.getType && node.getType()) || 'Unknown';
+        const isTextElement = className === 'Text' || (node.getType && node.getType() === 'Text') || 
+                             (node.constructor && node.constructor.name === 'Text');
         
         // Debug logging
         console.log('updatePropertiesPanel called:', {
             className: className,
+            getType: node.getType ? node.getType() : 'N/A',
+            constructorName: node.constructor ? node.constructor.name : 'unknown',
+            isTextElement: isTextElement,
             name: attrs.name,
             attrs: attrs,
             node: node
@@ -1881,11 +1924,20 @@ function initializePDFEditor() {
         html += `<input type="number" id="prop-y" value="${Math.round(attrs.y || 0)}" class="property-input">`;
         html += '</div>';
         
-        // Text-specific properties
-        if (className === 'Text') {
+        // Text-specific properties - check if it's a Text element (even if inside a table group)
+        if (isTextElement) {
+            // Properly escape text for HTML and convert \n to actual newlines
+            const textContent = (attrs.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\n/g, '\n');
+            // Use more rows for table items which might be longer
+            const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table');
+            const textareaRows = isTableText ? 8 : 3;
+            
             html += '<div class="property-group">';
             html += '<div class="property-label">Text Content</div>';
-            html += `<textarea id="prop-text" class="property-input" rows="3">${attrs.text || ''}</textarea>`;
+            html += `<textarea id="prop-text" class="property-input" rows="${textareaRows}">${textContent}</textarea>`;
+            if (isTableText) {
+                html += '<p class="text-xs text-gray-500 mt-1">Double-click table text to edit, or edit here in the properties panel.</p>';
+            }
             html += '</div>';
             
             html += '<div class="property-group">';
@@ -2169,7 +2221,30 @@ function initializePDFEditor() {
         
         if (propX) propX.addEventListener('input', () => { selectedElement.x(parseFloat(propX.value)); layer.draw(); });
         if (propY) propY.addEventListener('input', () => { selectedElement.y(parseFloat(propY.value)); layer.draw(); });
-        if (propText) propText.addEventListener('input', () => { selectedElement.text(propText.value); layer.draw(); });
+        if (propText) {
+            // Add both input and change listeners to ensure changes are captured
+            propText.addEventListener('input', function() { 
+                if (selectedElement && selectedElement.text) {
+                    selectedElement.text(this.value); 
+                    layer.draw(); 
+                }
+            });
+            propText.addEventListener('change', function() { 
+                if (selectedElement && selectedElement.text) {
+                    selectedElement.text(this.value); 
+                    layer.draw(); 
+                }
+            });
+            // Also handle paste events
+            propText.addEventListener('paste', function() {
+                setTimeout(() => {
+                    if (selectedElement && selectedElement.text) {
+                        selectedElement.text(this.value);
+                        layer.draw();
+                    }
+                }, 10);
+            });
+        }
         if (propFontSize) propFontSize.addEventListener('input', () => { selectedElement.fontSize(parseFloat(propFontSize.value)); layer.draw(); });
         if (propFontFamily) propFontFamily.addEventListener('change', () => { selectedElement.fontFamily(propFontFamily.value); layer.draw(); });
         if (propFontStyle) propFontStyle.addEventListener('change', () => { selectedElement.fontStyle(propFontStyle.value); layer.draw(); });
