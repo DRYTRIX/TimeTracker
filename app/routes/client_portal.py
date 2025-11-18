@@ -103,6 +103,15 @@ def check_client_portal_access():
         if not user.is_active:
             abort(403)
         
+        # Ensure client relationship is loaded - query directly if not loaded
+        if not user.client and user.client_id:
+            # Query the client directly if relationship not loaded
+            from app.models import Client
+            client = Client.query.get(user.client_id)
+            if not client:
+                abort(403)
+            return client
+        
         if not user.client:
             abort(403)
         

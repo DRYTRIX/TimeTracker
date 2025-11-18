@@ -28,7 +28,15 @@ def compile_po_to_mo(po_path: str, mo_path: str) -> bool:
         with open(mo_path, 'wb') as mo_file:
             write_mo(mo_file, catalog)
         return True
-    except Exception:
+    except ImportError:
+        # Babel not installed - this is expected in some environments
+        # The app will fall back to English if .mo files don't exist
+        return False
+    except Exception as e:
+        # Log the actual error for debugging
+        import logging
+        logger = logging.getLogger('timetracker')
+        logger.warning(f"Error compiling {po_path}: {e}", exc_info=True)
         return False
 
 
@@ -52,9 +60,23 @@ def ensure_translations_compiled(translations_dir: str) -> None:
             po_path = os.path.join(lang_dir, 'messages.po')
             mo_path = os.path.join(lang_dir, 'messages.mo')
             if os.path.exists(po_path) and _needs_compile(po_path, mo_path):
-                compile_po_to_mo(po_path, mo_path)
-    except Exception:
+                import logging
+                logger = logging.getLogger('timetracker')
+                logger.info(f"Compiling translations for {lang}...")
+                success = compile_po_to_mo(po_path, mo_path)
+                if success:
+                    if os.path.exists(mo_path):
+                        logger.info(f"Successfully compiled translations for {lang}")
+                    else:
+                        logger.warning(f"Compilation reported success but {mo_path} not found")
+                else:
+                    # Log failure - this is important for debugging
+                    logger.warning(f"Failed to compile translations for {lang} - translations may not work. Check if Babel is installed.")
+    except Exception as e:
         # Non-fatal; i18n will fall back to msgid if mo missing
+        import logging
+        logger = logging.getLogger('timetracker')
+        logger.warning(f"Error compiling translations: {e}")
         pass
 
 

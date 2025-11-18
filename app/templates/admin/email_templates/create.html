@@ -35,7 +35,7 @@
             <div class="md:col-span-2">
                 <label class="flex items-center">
                     <input type="checkbox" name="is_default" class="rounded border-gray-300 text-primary focus:ring-primary">
-                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Set as default template</span>
+                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Set as default template') }}</span>
                 </label>
             </div>
         </div>
@@ -43,19 +43,19 @@
         <!-- Visual Editor Section -->
         <div class="mt-6">
             <div class="flex items-center justify-between mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">HTML Template *</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('HTML Template') }} *</label>
                 <div class="flex gap-2" id="variableButtons">
                     <button type="button" data-variable="invoice.invoice_number" class="variable-btn px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">
-                        Invoice Number
+                        {{ _('Invoice Number') }}
                     </button>
                     <button type="button" data-variable="company_name" class="variable-btn px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">
-                        Company Name
+                        {{ _('Company Name') }}
                     </button>
                     <button type="button" data-variable="custom_message" class="variable-btn px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800">
-                        Custom Message
+                        {{ _('Custom Message') }}
                     </button>
                     <button type="button" id="showAllVariablesBtn" class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600">
-                        More Variables
+                        {{ _('More Variables') }}
                     </button>
                 </div>
             </div>

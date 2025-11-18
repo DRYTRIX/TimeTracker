@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_login import login_required, current_user
 from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity
 from datetime import datetime, timedelta
@@ -127,6 +127,38 @@ def about():
 def help():
     """Help page"""
     return render_template('main/help.html')
+
+@main_bp.route('/debug/i18n')
+@login_required
+def debug_i18n():
+    """Debug endpoint to check i18n status (admin only)"""
+    from flask_login import current_user
+    if not current_user.is_admin:
+        return jsonify({'error': 'Admin only'}), 403
+    
+    from flask_babel import get_locale
+    import os
+    
+    locale = str(get_locale())
+    session_lang = session.get('preferred_language')
+    user_lang = getattr(current_user, 'preferred_language', None)
+    
+    # Check if .mo file exists for current locale
+    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    translations_dir = os.path.join(base_path, 'translations')
+    mo_path = os.path.join(translations_dir, locale, 'LC_MESSAGES', 'messages.mo')
+    po_path = os.path.join(translations_dir, locale, 'LC_MESSAGES', 'messages.po')
+    
+    return jsonify({
+        'current_locale': locale,
+        'session_language': session_lang,
+        'user_language': user_lang,
+        'mo_file_exists': os.path.exists(mo_path),
+        'po_file_exists': os.path.exists(po_path),
+        'mo_path': mo_path,
+        'nb_mo_exists': os.path.exists(os.path.join(translations_dir, 'nb', 'LC_MESSAGES', 'messages.mo')),
+        'no_mo_exists': os.path.exists(os.path.join(translations_dir, 'no', 'LC_MESSAGES', 'messages.mo')),
+    })
 
 @main_bp.route('/i18n/set-language', methods=['POST', 'GET'])
 def set_language():

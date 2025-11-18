@@ -90,15 +90,18 @@ class TestClientPortalUserModel:
     def test_get_client_portal_data_with_invoices(self, app, user, test_client):
         """Test get_client_portal_data includes invoices"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
             db.session.commit()
             
-            # Handle potential session issues from audit logging
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
@@ -135,8 +138,18 @@ class TestClientPortalUserModel:
     def test_get_client_portal_data_with_time_entries(self, app, user, test_client):
         """Test get_client_portal_data includes time entries"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
+            db.session.commit()
+            
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
@@ -188,9 +201,18 @@ class TestClientPortalRoutes:
     def test_client_portal_dashboard_with_access(self, app, client, user, test_client):
         """Test dashboard accessible with portal access"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
             db.session.commit()
+            
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -202,9 +224,18 @@ class TestClientPortalRoutes:
     def test_client_portal_projects_route(self, app, client, user, test_client):
         """Test projects route"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
             db.session.commit()
+            
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -215,9 +246,18 @@ class TestClientPortalRoutes:
     def test_client_portal_invoices_route(self, app, client, user, test_client):
         """Test invoices route"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
             db.session.commit()
+            
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -228,9 +268,18 @@ class TestClientPortalRoutes:
     def test_client_portal_time_entries_route(self, app, client, user, test_client):
         """Test time entries route"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
             db.session.commit()
+            
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -241,8 +290,18 @@ class TestClientPortalRoutes:
     def test_view_invoice_belongs_to_client(self, app, client, user, test_client):
         """Test viewing invoice requires it belongs to user's client"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
+            db.session.commit()
+            
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             # Create another client
             other_client = Client(name="Other Client")
@@ -308,10 +367,18 @@ class TestAdminClientPortalManagement:
     def test_admin_can_disable_client_portal(self, app, admin_authenticated_client, user, test_client):
         """Test admin can disable client portal for user"""
         with app.app_context():
-            # Enable portal first
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
+            # Enable portal first - use no_autoflush to prevent audit logging from interfering
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.add(user)
+                db.session.flush()
+            
+            # Commit outside no_autoflush block
             db.session.commit()
+            
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             response = admin_authenticated_client.post(
                 f'/admin/users/{user.id}/edit',

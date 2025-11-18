@@ -25,7 +25,7 @@
                 <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
                     <i class="fas fa-download text-blue-600 dark:text-blue-400 text-xl"></i>
                 </div>
-                <h2 class="text-xl font-semibold ml-4 text-gray-900 dark:text-white">Create Backup</h2>
+                <h2 class="text-xl font-semibold ml-4 text-gray-900 dark:text-white">{{ _('Create Backup') }}</h2>
             </div>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
                 Create a new backup of your database. The backup will be downloaded immediately.
@@ -44,7 +44,7 @@
                 <div class="p-3 bg-green-100 dark:bg-green-900 rounded-full">
                     <i class="fas fa-upload text-green-600 dark:text-green-400 text-xl"></i>
                 </div>
-                <h2 class="text-xl font-semibold ml-4 text-gray-900 dark:text-white">Restore Backup</h2>
+                <h2 class="text-xl font-semibold ml-4 text-gray-900 dark:text-white">{{ _('Restore Backup') }}</h2>
             </div>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
                 Restore your database from a backup file. This will replace all current data.
@@ -58,7 +58,7 @@
     <!-- Existing Backups -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Existing Backups</h2>
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ _('Existing Backups') }}</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Backups stored on the server</p>
         </div>
         
@@ -121,7 +121,7 @@
         <div class="flex">
             <i class="fas fa-info-circle text-yellow-600 dark:text-yellow-400 text-xl mr-3 mt-0.5"></i>
             <div>
-                <h3 class="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">Important Information</h3>
+                <h3 class="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">{{ _('Important Information') }}</h3>
                 <ul class="text-sm text-yellow-700 dark:text-yellow-400 space-y-1">
                     <li><strong>Backup Contents:</strong> Database data, uploaded files, and application settings</li>
                     <li><strong>Automatic Backups:</strong> Configured in Settings (retention: {{ config.get('BACKUP_RETENTION_DAYS', 30) }} days)</li>
@@ -175,7 +175,7 @@
 <div id="deleteModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Confirm Deletion</h3>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ _('Confirm Deletion') }}</h3>
         </div>
         <div class="px-6 py-4">
             <p class="text-gray-700 dark:text-gray-300">

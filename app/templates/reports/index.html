@@ -161,25 +161,25 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">Report Types</h2>
+    <h2 class="text-lg font-semibold mb-4">{{ _('Report Types') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <a href="{{ url_for('reports.project_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
-            <i class="fas fa-project-diagram mr-2"></i>Project Report
+            <i class="fas fa-project-diagram mr-2"></i>{{ _('Project Report') }}
         </a>
         <a href="{{ url_for('reports.user_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
-            <i class="fas fa-users mr-2"></i>User Report
+            <i class="fas fa-users mr-2"></i>{{ _('User Report') }}
         </a>
         <a href="{{ url_for('reports.summary_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
-            <i class="fas fa-chart-bar mr-2"></i>Summary Report
+            <i class="fas fa-chart-bar mr-2"></i>{{ _('Summary Report') }}
         </a>
         <a href="{{ url_for('reports.task_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
-            <i class="fas fa-tasks mr-2"></i>Task Report
+            <i class="fas fa-tasks mr-2"></i>{{ _('Task Report') }}
         </a>
     </div>
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <h2 class="text-lg font-semibold mb-4">Recent Entries</h2>
+    <h2 class="text-lg font-semibold mb-4">{{ _('Recent Entries') }}</h2>
     <table class="w-full text-left">
         <thead>
             <tr>

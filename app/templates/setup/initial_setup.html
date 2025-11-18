@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome - TimeTracker</title>
+    <title>{{ _('Welcome') }} - TimeTracker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <script>
@@ -23,34 +23,34 @@
                 <div class="text-center">
                     <img src="{{ url_for('static', filename='images/drytrix-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
                     <h1 class="text-3xl font-bold mt-4 text-primary">TimeTracker</h1>
-                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">Track time. Stay organized.</p>
+                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
                     
                     <!-- Privacy Principles -->
                     <div class="mt-8 space-y-3 text-left">
-                        <p class="text-sm font-semibold text-text-light dark:text-text-dark mb-3">🔒 Privacy First</p>
+                        <p class="text-sm font-semibold text-text-light dark:text-text-dark mb-3">🔒 {{ _('Privacy First') }}</p>
                         <div class="flex items-start text-sm text-text-muted-light dark:text-text-muted-dark">
                             <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Self-hosted on your server</span>
+                            <span>{{ _('Self-hosted on your server') }}</span>
                         </div>
                         <div class="flex items-start text-sm text-text-muted-light dark:text-text-muted-dark">
                             <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Anonymous telemetry (opt-in)</span>
+                            <span>{{ _('Anonymous telemetry (opt-in)') }}</span>
                         </div>
                         <div class="flex items-start text-sm text-text-muted-light dark:text-text-muted-dark">
                             <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                            <span>No PII collected ever</span>
+                            <span>{{ _('No PII collected ever') }}</span>
                         </div>
                         <div class="flex items-start text-sm text-text-muted-light dark:text-text-muted-dark">
                             <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Open source & transparent</span>
+                            <span>{{ _('Open source & transparent') }}</span>
                         </div>
                     </div>
                 </div>
@@ -58,31 +58,31 @@
 
             <!-- Right side - Setup Form -->
             <div class="p-8 overflow-y-auto max-h-[90vh]">
-                <h2 class="text-2xl font-bold tracking-tight">Welcome to TimeTracker</h2>
-                <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">Let's get you set up in just a moment</p>
+                <h2 class="text-2xl font-bold tracking-tight">{{ _('Welcome to TimeTracker') }}</h2>
+                <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _("Let's get you set up in just a moment") }}</p>
 
                 <form class="mt-6 space-y-6" method="POST" action="{{ url_for('setup.initial_setup') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
                     <!-- Welcome Message -->
                     <div class="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                        <h3 class="text-sm font-semibold text-primary mb-2">🎉 Thank you for choosing TimeTracker!</h3>
+                        <h3 class="text-sm font-semibold text-primary mb-2">🎉 {{ _('Thank you for choosing TimeTracker!') }}</h3>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            Your data stays on your server, and you have complete control.
+                            {{ _('Your data stays on your server, and you have complete control.') }}
                         </p>
                     </div>
 
                     <!-- Telemetry Opt-in Section -->
                     <div class="bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg p-4">
-                        <h3 class="text-base font-semibold mb-3">📊 Help Us Improve (Optional)</h3>
+                        <h3 class="text-base font-semibold mb-3">📊 {{ _('Help Us Improve (Optional)') }}</h3>
                         
                         <div class="mb-3">
                             <label class="flex items-start cursor-pointer">
                                 <input type="checkbox" name="telemetry_enabled" class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
                                 <span class="ml-3 text-sm">
-                                    <span class="font-medium">Enable anonymous telemetry</span>
+                                    <span class="font-medium">{{ _('Enable anonymous telemetry') }}</span>
                                     <span class="block text-text-muted-light dark:text-text-muted-dark mt-1">
-                                        Help us understand usage patterns to improve TimeTracker
+                                        {{ _('Help us understand usage patterns to improve TimeTracker') }}
                                     </span>
                                 </span>
                             </label>
@@ -91,34 +91,34 @@
                         <!-- Collapsible details -->
                         <details class="text-sm mt-3">
                             <summary class="cursor-pointer font-medium text-primary hover:underline">
-                                What data is collected?
+                                {{ _('What data is collected?') }}
                             </summary>
                             <div class="mt-3 space-y-3 pl-4 border-l-2 border-primary/30">
                                 <div>
-                                    <p class="font-semibold text-green-600 dark:text-green-400">✓ What we collect:</p>
+                                    <p class="font-semibold text-green-600 dark:text-green-400">✓ {{ _('What we collect:') }}</p>
                                     <ul class="list-disc list-inside space-y-1 ml-2 text-text-muted-light dark:text-text-muted-dark">
-                                        <li>Anonymous installation fingerprint (hashed)</li>
-                                        <li>Application version & platform info</li>
-                                        <li>Feature usage statistics</li>
-                                        <li>Internal numeric IDs only</li>
+                                        <li>{{ _('Anonymous installation fingerprint (hashed)') }}</li>
+                                        <li>{{ _('Application version & platform info') }}</li>
+                                        <li>{{ _('Feature usage statistics') }}</li>
+                                        <li>{{ _('Internal numeric IDs only') }}</li>
                                     </ul>
                                 </div>
                                 
                                 <div>
-                                    <p class="font-semibold text-red-600 dark:text-red-400">✗ What we DON'T collect:</p>
+                                    <p class="font-semibold text-red-600 dark:text-red-400">✗ {{ _("What we DON'T collect:") }}</p>
                                     <ul class="list-disc list-inside space-y-1 ml-2 text-text-muted-light dark:text-text-muted-dark">
-                                        <li>No usernames or emails</li>
-                                        <li>No project names or descriptions</li>
-                                        <li>No time entry data or notes</li>
-                                        <li>No client or business data</li>
-                                        <li>No IP addresses or PII</li>
+                                        <li>{{ _('No usernames or emails') }}</li>
+                                        <li>{{ _('No project names or descriptions') }}</li>
+                                        <li>{{ _('No time entry data or notes') }}</li>
+                                        <li>{{ _('No client or business data') }}</li>
+                                        <li>{{ _('No IP addresses or PII') }}</li>
                                     </ul>
                                 </div>
 
                                 <div class="bg-primary/10 rounded p-3 text-xs">
                                     <p class="text-text-light dark:text-text-dark">
-                                        <strong>Why?</strong> Anonymous usage data helps us prioritize features and fix issues.
-                                        You can change this anytime in <strong>Admin → Settings</strong> (Privacy & Analytics section).
+                                        <strong>{{ _('Why?') }}</strong> {{ _('Anonymous usage data helps us prioritize features and fix issues.') }}
+                                        {{ _('You can change this anytime in') }} <strong>{{ _('Admin → Settings') }}</strong> ({{ _('Privacy & Analytics section') }}).
                                     </p>
                                 </div>
                             </div>
@@ -128,11 +128,11 @@
                     <!-- Submit Button -->
                     <button type="submit" class="btn btn-primary w-full">
                         <i class="fa-solid fa-check mr-2"></i>
-                        Complete Setup & Continue
+                        {{ _('Complete Setup & Continue') }}
                     </button>
 
                     <div class="text-xs text-center text-text-muted-light dark:text-text-muted-dark">
-                        <p>By continuing, you agree to use TimeTracker under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" class="text-primary hover:underline" target="_blank">GPL-3.0 License</a></p>
+                        <p>{{ _('By continuing, you agree to use TimeTracker under the') }} <a href="https://www.gnu.org/licenses/gpl-3.0.html" class="text-primary hover:underline" target="_blank">{{ _('GPL-3.0 License') }}</a></p>
                     </div>
                 </form>
             </div>

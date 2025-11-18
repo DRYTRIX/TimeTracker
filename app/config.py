@@ -119,6 +119,7 @@ class Config:
         'it': 'Italiano',
         'fi': 'Suomi',
         'es': 'Español',
+        'no': 'Norsk',
         'ar': 'العربية',
         'he': 'עברית',
     }

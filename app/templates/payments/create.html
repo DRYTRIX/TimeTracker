@@ -4,7 +4,7 @@
 <div class="container mx-auto px-4 py-6">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Record New Payment</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ _('Record New Payment') }}</h1>
         <a href="{{ url_for('payments.list_payments') }}" class="text-primary hover:text-primary-dark">
             <i class="fas fa-arrow-left mr-2"></i>Back to Payments
         </a>
@@ -41,7 +41,7 @@
 
                 <!-- Invoice Details Display -->
                 <div id="invoice-details" class="md:col-span-2 bg-background-light dark:bg-background-dark p-4 rounded-lg" style="display: none;">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Invoice Details</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Invoice Details') }}</h3>
                     <div class="grid grid-cols-3 gap-4 text-sm">
                         <div>
                             <span class="text-gray-600 dark:text-gray-400">Total Amount:</span>

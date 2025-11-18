@@ -1,67 +1,67 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header, breadcrumb_nav, badge %}
 
-{% block title %}Audit Logs - {{ config.APP_NAME }}{% endblock %}
+{% block title %}{{ _('Audit Logs') }} - {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': 'Audit Logs'}
+    {'text': _('Audit Logs')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-history',
-    title_text='Audit Logs',
-    subtitle_text='Track who changed what and when',
+    title_text=_('Audit Logs'),
+    subtitle_text=_('Track who changed what and when'),
     breadcrumbs=breadcrumbs
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">Filters</h2>
+        <h2 class="text-lg font-semibold mb-4">{{ _('Filters') }}</h2>
     <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
-            <label for="entity_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Entity Type</label>
+            <label for="entity_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Entity Type') }}</label>
             <select name="entity_type" id="entity_type" class="form-input">
-                <option value="">All Types</option>
+                <option value="">{{ _('All Types') }}</option>
                 {% for et in entity_types %}
                 <option value="{{ et }}" {% if entity_type == et %}selected{% endif %}>{{ et }}</option>
                 {% endfor %}
             </select>
         </div>
         <div>
-            <label for="entity_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Entity ID</label>
-            <input type="number" name="entity_id" id="entity_id" value="{{ entity_id or '' }}" class="form-input" placeholder="Entity ID">
+            <label for="entity_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Entity ID') }}</label>
+            <input type="number" name="entity_id" id="entity_id" value="{{ entity_id or '' }}" class="form-input" placeholder="{{ _('Entity ID') }}">
         </div>
         <div>
-            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User</label>
+            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('User') }}</label>
             <select name="user_id" id="user_id" class="form-input">
-                <option value="">All Users</option>
+                <option value="">{{ _('All Users') }}</option>
                 {% for user in users %}
                 <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ user.display_name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div>
-            <label for="action" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Action</label>
+            <label for="action" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Action') }}</label>
             <select name="action" id="action" class="form-input">
-                <option value="">All Actions</option>
-                <option value="created" {% if action == 'created' %}selected{% endif %}>Created</option>
-                <option value="updated" {% if action == 'updated' %}selected{% endif %}>Updated</option>
-                <option value="deleted" {% if action == 'deleted' %}selected{% endif %}>Deleted</option>
+                <option value="">{{ _('All Actions') }}</option>
+                <option value="created" {% if action == 'created' %}selected{% endif %}>{{ _('Created') }}</option>
+                <option value="updated" {% if action == 'updated' %}selected{% endif %}>{{ _('Updated') }}</option>
+                <option value="deleted" {% if action == 'deleted' %}selected{% endif %}>{{ _('Deleted') }}</option>
             </select>
         </div>
         <div>
-            <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Range</label>
+            <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Time Range') }}</label>
             <select name="days" id="days" class="form-input">
-                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
-                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
-                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
-                <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
-                <option value="0" {% if days == 0 %}selected{% endif %}>All time</option>
+                <option value="7" {% if days == 7 %}selected{% endif %}>{{ _('Last 7 days') }}</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>{{ _('Last 30 days') }}</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>{{ _('Last 90 days') }}</option>
+                <option value="365" {% if days == 365 %}selected{% endif %}>{{ _('Last year') }}</option>
+                <option value="0" {% if days == 0 %}selected{% endif %}>{{ _('All time') }}</option>
             </select>
         </div>
         <div class="col-span-full flex justify-end gap-2">
-            <a href="{{ url_for('audit_logs.list_audit_logs') }}" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Clear</a>
-            <button type="submit" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
+            <a href="{{ url_for('audit_logs.list_audit_logs') }}" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">{{ _('Clear') }}</a>
+            <button type="submit" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">{{ _('Filter') }}</button>
         </div>
     </form>
 </div>
@@ -72,13 +72,13 @@
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timestamp</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entity</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Field</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Change</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Timestamp') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('User') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Action') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Entity') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Field') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Change') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
