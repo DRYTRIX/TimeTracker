@@ -100,8 +100,8 @@ class TestClientPortalUserModel:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
@@ -148,8 +148,8 @@ class TestClientPortalUserModel:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
@@ -211,8 +211,8 @@ class TestClientPortalRoutes:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -234,8 +234,8 @@ class TestClientPortalRoutes:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -256,8 +256,8 @@ class TestClientPortalRoutes:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -278,8 +278,8 @@ class TestClientPortalRoutes:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
@@ -300,8 +300,8 @@ class TestClientPortalRoutes:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             # Create another client
             other_client = Client(name="Other Client")
@@ -377,8 +377,8 @@ class TestAdminClientPortalManagement:
             # Commit outside no_autoflush block
             db.session.commit()
             
-            # Refresh user to ensure fresh state
-            db.session.refresh(user)
+            # Query for user fresh in current session to avoid session attachment issues
+            user = User.query.get(user.id)
             
             response = admin_authenticated_client.post(
                 f'/admin/users/{user.id}/edit',
