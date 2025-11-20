@@ -30,19 +30,30 @@ def _get_authenticated_user(user=None):
 def get_app_timezone():
     """Get the application's configured timezone from database settings or environment."""
     try:
+        # Check if we have an application context before accessing database
+        from flask import has_app_context
+        if not has_app_context():
+            # No app context, skip database lookup
+            return os.getenv('TZ', 'Europe/Rome')
+        
         # Try to get timezone from database settings first
         from app.models import Settings
         from app import db
         
         # Check if we have a database connection
-        if db.session.is_active and not getattr(db.session, "_flushing", False):
-            try:
-                settings = Settings.get_settings()
-                if settings and settings.timezone:
-                    return settings.timezone
-            except Exception as e:
-                # Log the error but continue with fallback
-                print(f"Warning: Could not get timezone from database: {e}")
+        try:
+            if db.session.is_active and not getattr(db.session, "_flushing", False):
+                try:
+                    settings = Settings.get_settings()
+                    if settings and settings.timezone:
+                        return settings.timezone
+                except Exception as e:
+                    # Log the error but continue with fallback
+                    print(f"Warning: Could not get timezone from database: {e}")
+        except RuntimeError as e:
+            # RuntimeError typically means "Working outside of application context"
+            # Fall back to environment variable
+            pass
     except Exception as e:
         # If database is not available or settings don't exist, fall back to environment
         print(f"Warning: Database not available for timezone: {e}")
