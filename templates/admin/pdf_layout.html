@@ -2482,8 +2482,23 @@ function initializePDFEditor() {
         fd.append('css', css);
         fd.append('csrf_token', CSRF_TOKEN);
         
-        fetch(PREVIEW_URL, { method: 'POST', body: fd })
-            .then(r => r.text())
+        // Add cache-busting parameter to ensure fresh preview
+        const previewUrl = PREVIEW_URL + '?t=' + Date.now();
+        
+        fetch(previewUrl, { 
+            method: 'POST', 
+            body: fd,
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        })
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.text();
+            })
             .then(html => {
                 const doc = frame.contentDocument || frame.contentWindow.document;
                 doc.open();
@@ -2494,6 +2509,7 @@ function initializePDFEditor() {
             })
             .catch(err => {
                 loading.classList.remove('active');
+                console.error('Preview error:', err);
                 alert('Preview error: ' + err.message);
                 closePreviewModal();
             });
@@ -2519,8 +2535,10 @@ function initializePDFEditor() {
                 const fontStyleCss = fontStyle === 'italic' ? 'italic' : 'normal';
                 const color = attrs.fill || 'black';
                 const text = (attrs.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                // Preserve text alignment (Konva Text uses 'align' attribute: 'left', 'center', 'right')
+                const textAlign = attrs.align || 'left';
                 
-                bodyContent += `  <div class="element text-element" style="position:absolute;left:${x}px;top:${y}px;font-size:${fontSize}px;font-family:'${fontFamily}';font-weight:${fontWeight};font-style:${fontStyleCss};color:${color};opacity:${opacity};width:${attrs.width || 400}px">${text}</div>\n`;
+                bodyContent += `  <div class="element text-element" style="position:absolute;left:${x}px;top:${y}px;font-size:${fontSize}px;font-family:'${fontFamily}';font-weight:${fontWeight};font-style:${fontStyleCss};color:${color};opacity:${opacity};width:${attrs.width || 400}px;text-align:${textAlign}">${text}</div>\n`;
             } else if (child.className === 'Image') {
                 const w = Math.round(attrs.width || 100);
                 const h = Math.round(attrs.height || 50);
@@ -2577,16 +2595,32 @@ function initializePDFEditor() {
                 }
                 
                 if (isItemsTable) {
+                    // Extract actual header text from the table group's first Text child
+                    const children = child.getChildren ? child.getChildren() : (child.children || []);
+                    const textElements = children.filter(c => c.className === 'Text');
+                    const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                    
+                    // Parse header text (format: "Description | Qty | Price | Total" or German equivalent)
+                    // Default to English if header text is empty or doesn't contain |
+                    let headerParts = ['Description', 'Qty', 'Unit Price', 'Total'];
+                    if (headerText && headerText.includes('|')) {
+                        headerParts = headerText.split('|').map(part => part.trim()).filter(part => part.length > 0);
+                        // Ensure we have at least 4 parts, pad with defaults if needed
+                        while (headerParts.length < 4) {
+                            headerParts.push(['Description', 'Qty', 'Unit Price', 'Total'][headerParts.length]);
+                        }
+                    }
+                    
                     // Generate proper HTML table for invoice items
                     bodyContent += `  <!-- Items Table Start -->\n`;
                     bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;">\n`;
                     bodyContent += `      <thead>\n`;
                     bodyContent += `        <tr style="background-color:#f8f9fa;border-bottom:2px solid #333;">\n`;
-                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;">Description</th>\n`;
-                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:70px;">Qty</th>\n`;
-                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">Unit Price</th>\n`;
-                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">Total</th>\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;">${(headerParts[0] || 'Description').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:70px;">${(headerParts[1] || 'Qty').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">${(headerParts[2] || 'Unit Price').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">${(headerParts[3] || 'Total').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
                     bodyContent += `        </tr>\n`;
                     bodyContent += `      </thead>\n`;
                     bodyContent += `      <tbody>\n`;
@@ -2611,16 +2645,32 @@ function initializePDFEditor() {
                     bodyContent += `  </div>\n`;
                     bodyContent += `  <!-- Items Table End -->\n`;
                 } else if (isExpensesTable) {
+                    // Extract actual header text from the table group's first Text child
+                    const children = child.getChildren ? child.getChildren() : (child.children || []);
+                    const textElements = children.filter(c => c.className === 'Text');
+                    const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                    
+                    // Parse header text (format: "Expense | Date | Category | Amount" or localized)
+                    // Default to English if header text is empty or doesn't contain |
+                    let headerParts = ['Expense', 'Date', 'Category', 'Amount'];
+                    if (headerText && headerText.includes('|')) {
+                        headerParts = headerText.split('|').map(part => part.trim()).filter(part => part.length > 0);
+                        // Ensure we have at least 4 parts, pad with defaults if needed
+                        while (headerParts.length < 4) {
+                            headerParts.push(['Expense', 'Date', 'Category', 'Amount'][headerParts.length]);
+                        }
+                    }
+                    
                     // Generate proper HTML table for project expenses
                     bodyContent += `  <!-- Expenses Table Start -->\n`;
                     bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fffbf0;">\n`;
                     bodyContent += `      <thead>\n`;
                     bodyContent += `        <tr style="background-color:#fff3cd;border-bottom:2px solid #856404;">\n`;
-                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:#856404;">Expense</th>\n`;
-                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:100px;color:#856404;">Date</th>\n`;
-                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">Category</th>\n`;
-                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">Amount</th>\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:#856404;">${(headerParts[0] || 'Expense').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:100px;color:#856404;">${(headerParts[1] || 'Date').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">${(headerParts[2] || 'Category').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">${(headerParts[3] || 'Amount').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
                     bodyContent += `        </tr>\n`;
                     bodyContent += `      </thead>\n`;
                     bodyContent += `      <tbody>\n`;
@@ -2650,7 +2700,9 @@ function initializePDFEditor() {
                 child.children.forEach(c => {
                     if (c.className === 'Text') {
                             const text = (c.attrs.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            bodyContent += `    <div style="font-size:${c.attrs.fontSize || 12}px;font-weight:${c.attrs.fontStyle === 'bold' ? 'bold' : 'normal'}">${text}</div>\n`;
+                            // Preserve text alignment for text in groups
+                            const textAlign = c.attrs.align || 'left';
+                            bodyContent += `    <div style="font-size:${c.attrs.fontSize || 12}px;font-weight:${c.attrs.fontStyle === 'bold' ? 'bold' : 'normal'};text-align:${textAlign}">${text}</div>\n`;
                         } else if (c.className === 'Line') {
                             bodyContent += `    <hr style="border-top:${c.attrs.strokeWidth || 1}px solid ${c.attrs.stroke || 'black'};margin:${c.attrs.y || 0}px 0">\n`;
                         }
@@ -2661,76 +2713,15 @@ function initializePDFEditor() {
         });
         
         // Get dimensions for current page size
-        const currentSizeHtml = CURRENT_PAGE_SIZE || 'A4';
-        const dimensionsHtml = PAGE_SIZE_DIMENSIONS[currentSizeHtml] || PAGE_SIZE_DIMENSIONS['A4'];
-        const widthPxHtml = dimensionsHtml.width;
-        const heightPxHtml = dimensionsHtml.height;
-        
-        // Wrap in complete HTML document for proper PDF rendering
-        const html = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Invoice</title>
-    <style>
-        @page {
-            size: ${currentSizeHtml};
-            margin: 0;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
-        .invoice-wrapper {
-            position: relative;
-            width: ${widthPxHtml}px;
-            min-height: ${heightPxHtml}px;
-            background: white;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .element, .text-element {
-            white-space: pre-wrap;
-        }
-        .rectangle-element, .circle-element {
-            box-sizing: border-box;
-        }
-        .line-element {
-            padding: 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-        }
-        table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-            text-align: left;
-            padding: 10px;
-            border-bottom: 2px solid #333;
-        }
-        table td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        table tr:last-child td {
-            border-bottom: 2px solid #333;
-        }
-    </style>
-</head>
-<body>
-<div class="invoice-wrapper">
-${bodyContent}</div>
-</body>
-</html>`;
-        
-        // Get dimensions for current page size
         const currentSize = CURRENT_PAGE_SIZE || 'A4';
         const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
         const widthPx = dimensions.width;
         const heightPx = dimensions.height;
+        
+        // For preview, return just the body content (template HTML) wrapped in invoice-wrapper
+        // The preview endpoint will wrap it with its own HTML structure
+        const html = `<div class="invoice-wrapper">
+${bodyContent}</div>`;
         
         const css = `@page {
     size: ${currentSize};

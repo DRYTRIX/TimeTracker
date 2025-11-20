@@ -75,9 +75,67 @@ def register_template_filters(app):
 
     @app.template_filter('markdown')
     def markdown_filter(text):
-        """Render markdown to safe HTML using bleach sanitation."""
+        """Render markdown to safe HTML using bleach sanitation, preserving rich text styling."""
         if not text:
             return ""
+        
+        # Check if text appears to be pure HTML (starts with < and looks like HTML document)
+        # Only treat as HTML if it starts with a tag and doesn't look like markdown
+        import re
+        # More specific check: HTML should start with a tag and not be markdown list/bullet syntax
+        is_html = (re.match(r'^\s*<[a-z]', text, re.IGNORECASE) and 
+                  not re.match(r'^\s*[-*+]\s+', text) and  # Not markdown list
+                  not re.match(r'^\s*\d+\.\s+', text))     # Not numbered list
+        
+        if is_html:
+            if bleach is None:
+                try:
+                    from markupsafe import escape
+                    return escape(text)
+                except Exception:
+                    return text
+            # Allow style attributes for rich text preservation
+            allowed_tags = bleach.sanitizer.ALLOWED_TAGS.union({
+                'p', 'pre', 'code', 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'br', 'ul', 'ol', 'li',
+                'strong', 'em', 'b', 'i', 'u', 's', 'strike', 'blockquote', 'a', 'div', 'span',
+                'sub', 'sup', 'del', 'ins', 'mark', 'small', 'big'
+            })
+            # Build allowed_attrs with style support for common rich text elements
+            allowed_attrs = {
+                **bleach.sanitizer.ALLOWED_ATTRIBUTES,
+                'a': ['href', 'title', 'rel', 'target', 'style'],
+                'img': ['src', 'alt', 'title', 'style', 'width', 'height'],
+                'p': ['style', 'class', 'id'],
+                'div': ['style', 'class', 'id'],
+                'span': ['style', 'class', 'id'],
+                'h1': ['style', 'class', 'id'],
+                'h2': ['style', 'class', 'id'],
+                'h3': ['style', 'class', 'id'],
+                'h4': ['style', 'class', 'id'],
+                'h5': ['style', 'class', 'id'],
+                'h6': ['style', 'class', 'id'],
+                'strong': ['style', 'class', 'id'],
+                'em': ['style', 'class', 'id'],
+                'b': ['style', 'class', 'id'],
+                'i': ['style', 'class', 'id'],
+                'u': ['style', 'class', 'id'],
+                's': ['style', 'class', 'id'],
+                'strike': ['style', 'class', 'id'],
+                'blockquote': ['style', 'class', 'id'],
+                'ul': ['style', 'class', 'id', 'type'],
+                'ol': ['style', 'class', 'id', 'type', 'start'],
+                'li': ['style', 'class', 'id'],
+                'table': ['style', 'class', 'id'],
+                'thead': ['style', 'class', 'id'],
+                'tbody': ['style', 'class', 'id'],
+                'tr': ['style', 'class', 'id'],
+                'th': ['style', 'class', 'id'],
+                'td': ['style', 'class', 'id'],
+            }
+            return bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+        
+        # Process as markdown
         if _md is None:
             # Fallback: escape and basic nl2br
             try:
@@ -86,14 +144,49 @@ def register_template_filters(app):
                 return text
             return escape(text).replace('\n', '<br>')
 
-        html = _md.markdown(text, extensions=['extra', 'sane_lists', 'smarty'])
+        # Convert markdown to HTML
+        html = _md.markdown(text, extensions=['extra', 'sane_lists', 'smarty', 'codehilite'])
         if bleach is None:
             return html
-        allowed_tags = bleach.sanitizer.ALLOWED_TAGS.union({'p','pre','code','img','h1','h2','h3','h4','h5','h6','table','thead','tbody','tr','th','td','hr','br','ul','ol','li','strong','em','blockquote','a'})
+        
+        # Sanitize the HTML output from markdown
+        allowed_tags = bleach.sanitizer.ALLOWED_TAGS.union({
+            'p', 'pre', 'code', 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'br', 'ul', 'ol', 'li',
+            'strong', 'em', 'b', 'i', 'u', 's', 'strike', 'blockquote', 'a', 'div', 'span',
+            'sub', 'sup', 'del', 'ins', 'mark', 'small', 'big'
+        })
+        # Build allowed_attrs with style support for common rich text elements
         allowed_attrs = {
             **bleach.sanitizer.ALLOWED_ATTRIBUTES,
-            'a': ['href', 'title', 'rel', 'target'],
-            'img': ['src', 'alt', 'title'],
+            'a': ['href', 'title', 'rel', 'target', 'style'],
+            'img': ['src', 'alt', 'title', 'style', 'width', 'height'],
+            'p': ['style', 'class', 'id'],
+            'div': ['style', 'class', 'id'],
+            'span': ['style', 'class', 'id'],
+            'h1': ['style', 'class', 'id'],
+            'h2': ['style', 'class', 'id'],
+            'h3': ['style', 'class', 'id'],
+            'h4': ['style', 'class', 'id'],
+            'h5': ['style', 'class', 'id'],
+            'h6': ['style', 'class', 'id'],
+            'strong': ['style', 'class', 'id'],
+            'em': ['style', 'class', 'id'],
+            'b': ['style', 'class', 'id'],
+            'i': ['style', 'class', 'id'],
+            'u': ['style', 'class', 'id'],
+            's': ['style', 'class', 'id'],
+            'strike': ['style', 'class', 'id'],
+            'blockquote': ['style', 'class', 'id'],
+            'ul': ['style', 'class', 'id', 'type'],
+            'ol': ['style', 'class', 'id', 'type', 'start'],
+            'li': ['style', 'class', 'id'],
+            'table': ['style', 'class', 'id'],
+            'thead': ['style', 'class', 'id'],
+            'tbody': ['style', 'class', 'id'],
+            'tr': ['style', 'class', 'id'],
+            'th': ['style', 'class', 'id'],
+            'td': ['style', 'class', 'id'],
         }
         return bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
 
