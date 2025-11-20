@@ -958,14 +958,32 @@
             
             // Save to database if user is logged in
             {% if current_user.is_authenticated %}
-            fetch('/api/preferences', {
+            fetch('/api/theme', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ theme: newTheme })
-            }).catch(err => console.error('Failed to save theme preference:', err));
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Failed to save theme preference');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('Theme preference saved:', data.theme);
+                }
+            })
+            .catch(err => {
+                console.error('Failed to save theme preference:', err);
+                // Don't show error toast for theme changes - it's not critical
+                // The theme change already worked locally, just didn't persist
+            });
             {% endif %}
         });
 

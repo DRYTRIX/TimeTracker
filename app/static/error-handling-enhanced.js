@@ -10,6 +10,9 @@ class EnhancedErrorHandler {
         this.isOnline = navigator.onLine;
         this.retryAttempts = new Map();
         this.maxRetries = 3;
+        // Track recent errors to prevent duplicates
+        this.recentErrors = new Map(); // message -> timestamp
+        this.errorDeduplicationWindow = 60000; // 1 minute - don't show same error twice within this window
         this.init();
     }
 
@@ -427,11 +430,41 @@ class EnhancedErrorHandler {
     }
 
     showError(message, title = 'Error') {
+        // Check for duplicates before showing
+        if (this.isDuplicateError(message)) {
+            console.warn('Duplicate error suppressed:', message);
+            return;
+        }
+        
         if (window.toastManager) {
             window.toastManager.error(message, title);
         } else {
             console.error(title + ':', message);
         }
+    }
+    
+    /**
+     * Check if an error message was recently shown (deduplication)
+     */
+    isDuplicateError(message) {
+        const now = Date.now();
+        const lastShown = this.recentErrors.get(message);
+        
+        if (lastShown && (now - lastShown) < this.errorDeduplicationWindow) {
+            return true; // This error was shown recently
+        }
+        
+        // Update the timestamp for this error
+        this.recentErrors.set(message, now);
+        
+        // Clean up old entries (older than deduplication window)
+        for (const [msg, timestamp] of this.recentErrors.entries()) {
+            if (now - timestamp >= this.errorDeduplicationWindow) {
+                this.recentErrors.delete(msg);
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -593,6 +626,18 @@ class EnhancedErrorHandler {
 
         const userFriendlyMessage = 'An unexpected error occurred. Please refresh the page or contact support if the problem persists.';
         
+        // Check if we've shown this error recently
+        if (this.isDuplicateError(userFriendlyMessage)) {
+            // Log to console but don't show duplicate toast
+            console.error('JavaScript Error (duplicate suppressed):', {
+                error,
+                message,
+                filename,
+                lineno
+            });
+            return;
+        }
+        
         this.showError(userFriendlyMessage, 'Application Error');
         
         // Log to console for debugging
@@ -610,6 +655,13 @@ class EnhancedErrorHandler {
         }
 
         const userFriendlyMessage = 'An operation failed unexpectedly. Please try again or contact support if the problem persists.';
+        
+        // Check if we've shown this error recently
+        if (this.isDuplicateError(userFriendlyMessage)) {
+            // Log to console but don't show duplicate toast
+            console.error('Unhandled Rejection (duplicate suppressed):', reason);
+            return;
+        }
         
         this.showError(userFriendlyMessage, 'Operation Failed');
         

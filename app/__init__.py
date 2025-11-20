@@ -278,9 +278,9 @@ def create_app(config=None):
     if (not app.config.get("TESTING")) and (not scheduler.running):
         from app.utils.scheduled_tasks import register_scheduled_tasks
         scheduler.start()
-        # Register tasks after app context is available
+        # Register tasks after app context is available, passing app instance
         with app.app_context():
-            register_scheduled_tasks(scheduler)
+            register_scheduled_tasks(scheduler, app=app)
     
     # Only initialize CSRF protection if enabled
     if app.config.get('WTF_CSRF_ENABLED'):
