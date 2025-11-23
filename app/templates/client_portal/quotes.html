@@ -1,0 +1,80 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Quotes') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Quotes')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-contract',
+    title_text=_('Quotes'),
+    subtitle_text=_('Quotes for %(client_name)s', client_name=client.name),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if quotes %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-3">{{ _('Quote Number') }}</th>
+                    <th class="p-3">{{ _('Title') }}</th>
+                    <th class="p-3">{{ _('Date') }}</th>
+                    <th class="p-3">{{ _('Valid Until') }}</th>
+                    <th class="p-3">{{ _('Amount') }}</th>
+                    <th class="p-3">{{ _('Status') }}</th>
+                    <th class="p-3">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for quote in quotes %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                    <td class="p-3">
+                        <a href="{{ url_for('client_portal.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline font-medium">
+                            {{ quote.quote_number }}
+                        </a>
+                    </td>
+                    <td class="p-3">{{ quote.title }}</td>
+                    <td class="p-3">{{ quote.created_at.strftime('%Y-%m-%d') if quote.created_at else 'N/A' }}</td>
+                    <td class="p-3">
+                        {% if quote.valid_until %}
+                            {{ quote.valid_until.strftime('%Y-%m-%d') }}
+                            {% if quote.is_expired %}
+                            <span class="text-red-600 text-xs ml-1">({{ _('Expired') }})</span>
+                            {% endif %}
+                        {% else %}
+                            {{ _('N/A') }}
+                        {% endif %}
+                    </td>
+                    <td class="p-3 font-medium">{{ "%.2f"|format(quote.total_amount) }} {{ quote.currency_code }}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            {% if quote.status == 'accepted' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                            {% elif quote.status == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                            {% elif quote.status == 'expired' %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
+                            {% elif quote.status == 'sent' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                            {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                            {{ quote.status|title }}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <a href="{{ url_for('client_portal.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline text-sm">
+                            {{ _('View') }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No quotes found.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+

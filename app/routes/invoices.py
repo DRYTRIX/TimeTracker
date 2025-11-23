@@ -135,6 +135,26 @@ def create_invoice():
             flash('Selected project not found', 'error')
             return render_template('invoices/create.html')
         
+        # Get quote_id from project if it exists
+        quote_id = project.quote_id if hasattr(project, 'quote_id') else None
+        
+        # If quote exists, try to get payment terms and calculate due_date
+        quote = None
+        if quote_id:
+            from app.models import Quote
+            quote = Quote.query.get(quote_id)
+            if quote and quote.payment_terms:
+                # Calculate due_date from payment terms
+                calculated_due_date = quote.calculate_due_date_from_payment_terms()
+                if calculated_due_date:
+                    try:
+                        due_date = calculated_due_date
+                        # Override if user provided a different due_date
+                        if due_date_str:
+                            due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        pass  # Use calculated date if parsing fails
+        
         # Generate invoice number
         invoice_number = Invoice.generate_invoice_number()
         
@@ -157,6 +177,7 @@ def create_invoice():
             due_date=due_date,
             created_by=current_user.id,
             client_id=project.client_id,
+            quote_id=quote_id,
             client_email=client_email,
             client_address=client_address,
             tax_rate=tax_rate,

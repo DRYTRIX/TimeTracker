@@ -1,0 +1,68 @@
+@page {
+    size: A4;
+    margin: 2cm;
+    @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 10pt;
+        color: #666;
+    }
+}
+
+:root {
+    --primary: #2563eb;
+    --primary-600: #1d4ed8;
+    --text: #0f172a;
+    --muted: #475569;
+    --border: #e2e8f0;
+    --bg: #ffffff;
+    --bg-alt: #f8fafc;
+}
+
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--text);
+    margin: 0; padding: 0; background: var(--bg); font-size: 12pt;
+}
+.wrapper { padding: 24px 28px; }
+.quote-header { display:flex; align-items:flex-start; justify-content:space-between; border-bottom:2px solid var(--border); padding-bottom:16px; margin-bottom:18px; }
+.brand { display:flex; gap:16px; align-items:center; }
+.company-logo { max-width:140px; max-height:70px; display:block; }
+.company-name { font-size:22pt; font-weight:700; margin:0; color:var(--primary); }
+.company-meta span { display:block; color:var(--muted); font-size:10pt; }
+.quote-meta { text-align:right; }
+.quote-title { font-size:26pt; font-weight:800; color:var(--primary); margin:0 0 8px 0; }
+.meta-grid { display:grid; grid-template-columns:auto auto; gap:4px 16px; font-size:10.5pt; }
+.label { color:var(--muted); font-weight:600; }
+.value { color:var(--text); font-weight:600; }
+
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
+.card { background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+.section-title { font-size:12pt; font-weight:700; color:var(--primary-600); margin:0 0 8px 0; }
+.small { color:var(--muted); font-size:10pt; }
+
+table { width:100%; border-collapse:collapse; margin-top:4px; }
+thead { display: table-header-group; }
+tfoot { display: table-footer-group; }
+thead th { background:var(--bg-alt); color:var(--muted); font-weight:700; border:1px solid var(--border); padding:10px; font-size:10.5pt; text-align:left; }
+tbody td { border:1px solid var(--border); padding:10px; font-size:10.5pt; }
+tfoot td { border:1px solid var(--border); padding:10px; font-weight:700; }
+.num { text-align:right; }
+.desc { width:50%; }
+
+tr, td, th { break-inside: avoid; page-break-inside: avoid; }
+.card, .quote-header, .two-col { break-inside: avoid; page-break-inside: avoid; }
+h4 { break-after: avoid; }
+
+.totals { margin-top:6px; }
+.note { margin-top:10px; }
+.footer { border-top:1px solid var(--border); margin-top:18px; padding-top:10px; color:var(--muted); font-size:10pt; }
+
+.client-email { color:var(--muted); font-size:10pt; margin-top:4px; }
+.client-address { color:var(--muted); font-size:10pt; margin-top:4px; }
+.quote-description { color:var(--muted); font-size:10pt; margin-top:4px; }
+.description-section { margin-top:16px; }
+.terms-section { margin-top:16px; }
+.additional-info { margin-top:18px; }
+.bank-info { margin-top:8px; }
+

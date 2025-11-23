@@ -2630,6 +2630,162 @@ def create_comment():
     return jsonify({'message': 'Comment created successfully', 'comment': cmt.to_dict()}), 201
 
 
+@api_v1_bp.route('/quotes', methods=['GET'])
+@require_api_token('read:quotes')
+def list_quotes():
+    """List quotes
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote
+    status = request.args.get('status')
+    client_id = request.args.get('client_id', type=int)
+    limit = request.args.get('limit', 100, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    
+    query = Quote.query
+    if status:
+        query = query.filter_by(status=status)
+    if client_id:
+        query = query.filter_by(client_id=client_id)
+    
+    quotes = query.order_by(Quote.created_at.desc()).limit(limit).offset(offset).all()
+    return jsonify({'quotes': [q.to_dict() for q in quotes]}), 200
+
+
+@api_v1_bp.route('/quotes/<int:quote_id>', methods=['GET'])
+@require_api_token('read:quotes')
+def get_quote(quote_id):
+    """Get quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote
+    quote = Quote.query.get_or_404(quote_id)
+    return jsonify({'quote': quote.to_dict()}), 200
+
+
+@api_v1_bp.route('/quotes', methods=['POST'])
+@require_api_token('write:quotes')
+def create_quote():
+    """Create quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote, QuoteItem
+    from decimal import Decimal
+    
+    data = request.get_json() or {}
+    quote_number = data.get('quote_number') or Quote.generate_quote_number()
+    client_id = data.get('client_id')
+    title = data.get('title', '').strip()
+    
+    if not client_id or not title:
+        return jsonify({'error': 'client_id and title are required'}), 400
+    
+    quote = Quote(
+        quote_number=quote_number,
+        client_id=client_id,
+        title=title,
+        created_by=g.api_user.id,
+        description=data.get('description'),
+        tax_rate=Decimal(str(data.get('tax_rate', 0))),
+        currency_code=data.get('currency_code', 'EUR'),
+        payment_terms=data.get('payment_terms'),
+        requires_approval=data.get('requires_approval', False),
+        approval_level=data.get('approval_level', 1)
+    )
+    
+    db.session.add(quote)
+    db.session.flush()
+    
+    # Add items
+    items = data.get('items', [])
+    for item_data in items:
+        item = QuoteItem(
+            quote_id=quote.id,
+            description=item_data.get('description', ''),
+            quantity=Decimal(str(item_data.get('quantity', 1))),
+            unit_price=Decimal(str(item_data.get('unit_price', 0))),
+            unit=item_data.get('unit')
+        )
+        db.session.add(item)
+    
+    quote.calculate_totals()
+    db.session.commit()
+    
+    return jsonify({'message': 'Quote created successfully', 'quote': quote.to_dict()}), 201
+
+
+@api_v1_bp.route('/quotes/<int:quote_id>', methods=['PUT', 'PATCH'])
+@require_api_token('write:quotes')
+def update_quote(quote_id):
+    """Update quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote, QuoteItem
+    from decimal import Decimal
+    
+    quote = Quote.query.get_or_404(quote_id)
+    data = request.get_json() or {}
+    
+    # Update fields
+    if 'title' in data:
+        quote.title = data['title'].strip()
+    if 'description' in data:
+        quote.description = data['description'].strip() if data['description'] else None
+    if 'tax_rate' in data:
+        quote.tax_rate = Decimal(str(data['tax_rate']))
+    if 'currency_code' in data:
+        quote.currency_code = data['currency_code']
+    if 'payment_terms' in data:
+        quote.payment_terms = data['payment_terms']
+    if 'status' in data:
+        quote.status = data['status']
+    
+    # Update items if provided
+    if 'items' in data:
+        # Delete existing items
+        for item in quote.items:
+            db.session.delete(item)
+        
+        # Add new items
+        for item_data in data['items']:
+            item = QuoteItem(
+                quote_id=quote.id,
+                description=item_data.get('description', ''),
+                quantity=Decimal(str(item_data.get('quantity', 1))),
+                unit_price=Decimal(str(item_data.get('unit_price', 0))),
+                unit=item_data.get('unit')
+            )
+            db.session.add(item)
+    
+    quote.calculate_totals()
+    db.session.commit()
+    
+    return jsonify({'message': 'Quote updated successfully', 'quote': quote.to_dict()}), 200
+
+
+@api_v1_bp.route('/quotes/<int:quote_id>', methods=['DELETE'])
+@require_api_token('write:quotes')
+def delete_quote(quote_id):
+    """Delete quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote
+    quote = Quote.query.get_or_404(quote_id)
+    db.session.delete(quote)
+    db.session.commit()
+    return jsonify({'message': 'Quote deleted successfully'}), 200
+
+
 @api_v1_bp.route('/comments/<int:comment_id>', methods=['PUT', 'PATCH'])
 @require_api_token('write:comments')
 def update_comment(comment_id):

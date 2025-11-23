@@ -39,6 +39,10 @@ from .audit_log import AuditLog
 from .recurring_invoice import RecurringInvoice
 from .invoice_email import InvoiceEmail
 from .webhook import Webhook, WebhookDelivery
+from .quote import Quote, QuoteItem, QuotePDFTemplate
+from .quote_attachment import QuoteAttachment
+from .quote_template import QuoteTemplate
+from .quote_version import QuoteVersion
 
 __all__ = [
     "User",
@@ -86,4 +90,10 @@ __all__ = [
     "InvoiceEmail",
     "Webhook",
     "WebhookDelivery",
+    "Quote",
+    "QuoteItem",
+    "QuotePDFTemplate",
+    "QuoteAttachment",
+    "QuoteTemplate",
+    "QuoteVersion",
 ]

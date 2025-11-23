@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Expiring Soon</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 2px solid #f59e0b;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #f59e0b;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            margin-bottom: 20px;
+        }
+        .quote-details {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .quote-details p {
+            margin: 5px 0;
+        }
+        .warning {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #f59e0b;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠ Quote Expiring Soon</h1>
+        </div>
+        <div class="content">
+            <p>Hello {{ user.display_name or user.username }},</p>
+            <p>Quote <strong>{{ quote.quote_number }}</strong> will expire in <strong>{{ days_remaining }} day{% if days_remaining != 1 %}s{% endif %}</strong>.</p>
+            
+            <div class="warning">
+                <strong>Action Required:</strong> You may want to follow up with the client before the quote expires.
+            </div>
+            
+            <div class="quote-details">
+                <p><strong>Quote Number:</strong> {{ quote.quote_number }}</p>
+                <p><strong>Title:</strong> {{ quote.title }}</p>
+                <p><strong>Client:</strong> {{ quote.client.name if quote.client else 'N/A' }}</p>
+                <p><strong>Total Amount:</strong> {{ quote.currency_code }} {{ "%.2f"|format(quote.total_amount) }}</p>
+                <p><strong>Valid Until:</strong> {{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else 'N/A' }}</p>
+                <p><strong>Days Remaining:</strong> {{ days_remaining }}</p>
+            </div>
+            
+            <a href="{{ url_for('quotes.view_quote', quote_id=quote.id, _external=True) }}" class="button">View Quote</a>
+        </div>
+        <div class="footer">
+            <p>TimeTracker - Time Tracking & Project Management</p>
+        </div>
+    </div>
+</body>
+</html>
+
