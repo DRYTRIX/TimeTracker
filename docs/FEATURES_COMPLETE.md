@@ -12,14 +12,15 @@
 3. [Project Management](#project-management)
 4. [Task Management](#task-management)
 5. [Client Management](#client-management)
-6. [Invoicing & Billing](#invoicing--billing)
-7. [Financial Management](#financial-management)
-8. [Reporting & Analytics](#reporting--analytics)
-9. [User Management & Security](#user-management--security)
-10. [Productivity Features](#productivity-features)
-11. [Administration](#administration)
-12. [Integration & API](#integration--api)
-13. [Technical Features](#technical-features)
+6. [CRM Features](#crm-features)
+7. [Invoicing & Billing](#invoicing--billing)
+8. [Financial Management](#financial-management)
+9. [Reporting & Analytics](#reporting--analytics)
+10. [User Management & Security](#user-management--security)
+11. [Productivity Features](#productivity-features)
+12. [Administration](#administration)
+13. [Integration & API](#integration--api)
+14. [Technical Features](#technical-features)
 
 ---
 
@@ -326,18 +327,110 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ---
 
+## CRM Features
+
+### Contact Management
+
+#### 40. **Multiple Contacts per Client**
+- Unlimited contacts per client
+- Contact information (name, email, phone, mobile)
+- Contact title and department
+- Contact roles (primary, billing, technical, contact)
+- Primary contact designation
+- Contact tags and notes
+- Contact status (active/inactive)
+
+#### 41. **Contact Communication History**
+- Track all communications with contacts
+- Communication types (email, call, meeting, note, message)
+- Communication direction (inbound, outbound)
+- Communication dates and follow-up dates
+- Link communications to projects, quotes, deals
+- Communication status tracking
+- Full communication history per contact
+
+### Sales Pipeline Management
+
+#### 42. **Deal/Opportunity Tracking**
+- Create and manage sales deals
+- Deal stages (prospecting, qualification, proposal, negotiation, closed_won, closed_lost)
+- Deal value and currency
+- Win probability (0-100%)
+- Expected close date
+- Weighted value calculation (value × probability)
+- Deal status (open, won, lost, cancelled)
+- Loss reason tracking
+
+#### 43. **Visual Pipeline View**
+- Kanban-style pipeline visualization
+- Deal cards by stage
+- Drag-and-drop deal movement (future enhancement)
+- Pipeline filtering by owner
+- Deal count per stage
+- Quick deal details
+
+#### 44. **Deal Activities**
+- Track activities on deals
+- Activity types (call, email, meeting, note, stage_change, status_change)
+- Activity dates and due dates
+- Activity status (completed, pending, cancelled)
+- Activity history per deal
+
+#### 45. **Deal Relationships**
+- Link deals to clients
+- Link deals to contacts
+- Link deals to leads
+- Link deals to quotes
+- Link deals to projects
+- Deal owner assignment
+
+### Lead Management
+
+#### 46. **Lead Capture & Management**
+- Create and manage leads
+- Lead information (name, company, email, phone)
+- Lead title and source tracking
+- Lead status (new, contacted, qualified, converted, lost)
+- Lead scoring (0-100)
+- Estimated value
+- Lead tags and notes
+
+#### 47. **Lead Conversion**
+- Convert leads to clients
+- Convert leads to deals
+- Automatic contact creation from lead
+- Conversion tracking
+- Conversion date and user
+- Lead conversion history
+
+#### 48. **Lead Activities**
+- Track activities on leads
+- Activity types (call, email, meeting, note, status_change, score_change)
+- Activity dates and due dates
+- Activity status tracking
+- Activity history per lead
+
+#### 49. **Lead Scoring**
+- Manual lead scoring (0-100)
+- Score-based filtering
+- Score-based sorting
+- Visual score indicators
+- Score history tracking
+
+---
+
 ## Invoicing & Billing
 
 ### Core Invoicing Features
 
-#### 40. **Invoice Creation**
+#### 50. **Invoice Creation**
 - Generate invoices from time entries
 - Manual invoice creation
 - Invoice templates
 - Custom line items
 - Multiple invoice formats
 
-#### 41. **Invoice Management**
+#### 51. **Invoice Management**
 - Invoice list view with filtering
 - Invoice status tracking (Draft, Sent, Paid, Overdue, Cancelled)
 - Invoice editing
@@ -970,6 +1063,9 @@ Task CRUD, Kanban board, comments, priorities, assignment, filtering, export, ac
 ### Client Management (6 features)
 Client CRUD, notes, billing rates, prepaid consumption, export
 
+### CRM Features (10 features)
+Multiple contacts per client, communication history, deal tracking, pipeline view, deal activities, lead management, lead conversion, lead activities, lead scoring
+
 ### Invoicing (13 features)
 Invoice creation, templates, PDF export, status management, tax calculation, multi-currency, recurring invoices, email, numbering, export
 
@@ -998,7 +1094,7 @@ Docker, database support, HTTPS, monitoring, i18n, PWA, responsive design, real-
 
 ## Total Feature Count
 
-**120+ Features** across 12 major categories
+**130+ Features** across 13 major categories
 
 ---
 

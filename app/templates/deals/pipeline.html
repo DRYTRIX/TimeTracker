@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}Sales Pipeline - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Deals', 'url': url_for('deals.list_deals')},
+    {'text': 'Pipeline View'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-columns',
+    title_text='Sales Pipeline',
+    subtitle_text='Visual pipeline view of all deals',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Deal</a>'
+) }}
+
+<div class="overflow-x-auto">
+    <div class="flex gap-4 min-w-max pb-4">
+        {% for stage in pipeline_stages %}
+        <div class="flex-shrink-0 w-80">
+            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-4">
+                <h3 class="font-semibold mb-3 text-sm uppercase text-text-muted-light dark:text-text-muted-dark">
+                    {{ stage|replace('_', ' ')|title }}
+                    <span class="ml-2 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">
+                        {{ deals_by_stage[stage]|length }}
+                    </span>
+                </h3>
+                <div class="space-y-3">
+                    {% for deal in deals_by_stage[stage] %}
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded border border-border-light dark:border-border-dark hover:shadow-md transition cursor-pointer"
+                         onclick="window.location.href='{{ url_for('deals.view_deal', deal_id=deal.id) }}'">
+                        <h4 class="font-medium text-sm mb-1">{{ deal.name }}</h4>
+                        {% if deal.client %}
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{{ deal.client.name }}</p>
+                        {% endif %}
+                        {% if deal.value %}
+                        <p class="text-sm font-semibold text-primary">{{ deal.currency_code }} {{ '%.2f'|format(deal.value) }}</p>
+                        {% endif %}
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ deal.probability }}%</span>
+                            {% if deal.expected_close_date %}
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ deal.expected_close_date.strftime('%m/%d') }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+

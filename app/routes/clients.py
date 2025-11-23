@@ -3,7 +3,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db
-from app.models import Client, Project
+from app.models import Client, Project, Contact
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
@@ -202,6 +202,19 @@ def view_client(client_id):
     
     # Get projects for this client
     projects = Project.query.filter_by(client_id=client.id).order_by(Project.name).all()
+    
+    # Get contacts for this client (if CRM tables exist)
+    contacts = []
+    primary_contact = None
+    try:
+        from app.models import Contact
+        contacts = Contact.get_active_contacts(client_id)
+        primary_contact = Contact.get_primary_contact(client_id)
+    except Exception as e:
+        # CRM tables might not exist yet if migration 063 hasn't run
+        current_app.logger.warning(f"Could not load contacts for client {client_id}: {e}")
+        contacts = []
+        primary_contact = None
 
     prepaid_overview = None
     if client.prepaid_plan_enabled:
@@ -217,7 +230,12 @@ def view_client(client_id):
             'remaining_hours': float(remaining_hours),
         }
     
-    return render_template('clients/view.html', client=client, projects=projects, prepaid_overview=prepaid_overview)
+    return render_template('clients/view.html', 
+                         client=client, 
+                         projects=projects, 
+                         contacts=contacts,
+                         primary_contact=primary_contact,
+                         prepaid_overview=prepaid_overview)
 
 @clients_bp.route('/clients/<int:client_id>/edit', methods=['GET', 'POST'])
 @login_required

@@ -52,6 +52,12 @@ from .project_stock_allocation import ProjectStockAllocation
 from .supplier import Supplier
 from .supplier_stock_item import SupplierStockItem
 from .purchase_order import PurchaseOrder, PurchaseOrderItem
+from .contact import Contact
+from .contact_communication import ContactCommunication
+from .deal import Deal
+from .deal_activity import DealActivity
+from .lead import Lead
+from .lead_activity import LeadActivity
 
 __all__ = [
     "User",
@@ -115,4 +121,10 @@ __all__ = [
     "SupplierStockItem",
     "PurchaseOrder",
     "PurchaseOrderItem",
+    "Contact",
+    "ContactCommunication",
+    "Deal",
+    "DealActivity",
+    "Lead",
+    "LeadActivity",
 ]
