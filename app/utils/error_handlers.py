@@ -1,154 +1,196 @@
-from flask import render_template, request, jsonify
-from werkzeug.exceptions import HTTPException
-import traceback
+"""
+Enhanced error handling utilities.
+Provides consistent error handling across the application.
+"""
 
-def get_user_friendly_message(status_code, error_description=None):
-    """Get user-friendly error messages"""
-    messages = {
-        400: {
-            'title': 'Invalid Request',
-            'message': 'The request was invalid. Please check your input and try again.',
-            'recovery': ['Go to Dashboard', 'Go Back']
-        },
-        401: {
-            'title': 'Authentication Required',
-            'message': 'You need to log in to access this feature.',
-            'recovery': ['Go to Login']
-        },
-        403: {
-            'title': 'Access Denied',
-            'message': 'You don\'t have permission to perform this action.',
-            'recovery': ['Go to Dashboard', 'Go Back']
-        },
-        404: {
-            'title': 'Page Not Found',
-            'message': 'The page or resource you\'re looking for was not found.',
-            'recovery': ['Go to Dashboard', 'Go Back']
-        },
-        409: {
-            'title': 'Conflict',
-            'message': 'This action conflicts with existing data. Please refresh and try again.',
-            'recovery': ['Refresh Page', 'Go Back']
-        },
-        422: {
-            'title': 'Validation Error',
-            'message': 'Please check your input and try again.',
-            'recovery': ['Go Back']
-        },
-        429: {
-            'title': 'Too Many Requests',
-            'message': 'You\'ve made too many requests. Please wait a moment and try again.',
-            'recovery': ['Refresh Page']
-        },
-        500: {
-            'title': 'Server Error',
-            'message': 'A server error occurred. Our team has been notified. Please try again later.',
-            'recovery': ['Refresh Page', 'Go to Dashboard']
-        },
-        502: {
-            'title': 'Service Unavailable',
-            'message': 'The server is temporarily unavailable. Please try again later.',
-            'recovery': ['Refresh Page']
-        },
-        503: {
-            'title': 'Service Unavailable',
-            'message': 'Service temporarily unavailable. Please try again in a few moments.',
-            'recovery': ['Refresh Page']
-        },
-        504: {
-            'title': 'Request Timeout',
-            'message': 'The request took too long. Please try again.',
-            'recovery': ['Refresh Page', 'Go Back']
-        }
-    }
-    
-    if status_code in messages:
-        msg = messages[status_code].copy()
-        if error_description:
-            msg['message'] = f"{msg['message']} ({error_description})"
-        return msg
-    
-    return {
-        'title': 'Error',
-        'message': error_description or 'An error occurred. Please try again.',
-        'recovery': ['Go to Dashboard', 'Go Back']
-    }
+from typing import Dict, Any, Optional
+from flask import jsonify, request, current_app
+from werkzeug.exceptions import HTTPException
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from marshmallow import ValidationError
+from app.utils.api_responses import error_response, validation_error_response, handle_validation_error
+
 
 def register_error_handlers(app):
-    """Register error handlers for the application"""
-    
-    @app.errorhandler(404)
-    def not_found_error(error):
-        if request.path.startswith('/api/'):
-            error_info = get_user_friendly_message(404)
-            return jsonify({
-                'error': error_info['message'],
-                'title': error_info['title'],
-                'recovery': error_info['recovery']
-            }), 404
-        error_info = get_user_friendly_message(404)
-        return render_template('errors/404.html', error_info=error_info), 404
-    
-    @app.errorhandler(500)
-    def internal_error(error):
-        if request.path.startswith('/api/'):
-            error_info = get_user_friendly_message(500)
-            return jsonify({
-                'error': error_info['message'],
-                'title': error_info['title'],
-                'recovery': error_info['recovery']
-            }), 500
-        error_info = get_user_friendly_message(500)
-        return render_template('errors/500.html', error_info=error_info), 500
-    
-    @app.errorhandler(403)
-    def forbidden_error(error):
-        if request.path.startswith('/api/'):
-            error_info = get_user_friendly_message(403)
-            return jsonify({
-                'error': error_info['message'],
-                'title': error_info['title'],
-                'recovery': error_info['recovery']
-            }), 403
-        error_info = get_user_friendly_message(403)
-        return render_template('errors/403.html', error_info=error_info), 403
+    """Register error handlers for the Flask app"""
     
     @app.errorhandler(400)
-    def bad_request_error(error):
-        if request.path.startswith('/api/'):
-            error_info = get_user_friendly_message(400)
-            return jsonify({
-                'error': error_info['message'],
-                'title': error_info['title'],
-                'recovery': error_info['recovery']
-            }), 400
-        error_info = get_user_friendly_message(400)
-        return render_template('errors/400.html', error_info=error_info), 400
+    def bad_request(error):
+        """Handle 400 Bad Request errors"""
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message=str(error.description) if hasattr(error, 'description') else 'Bad request',
+                error_code='bad_request',
+                status_code=400
+            )
+        return error, 400
+    
+    @app.errorhandler(401)
+    def unauthorized(error):
+        """Handle 401 Unauthorized errors"""
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message='Authentication required',
+                error_code='unauthorized',
+                status_code=401
+            )
+        return error, 401
+    
+    @app.errorhandler(403)
+    def forbidden(error):
+        """Handle 403 Forbidden errors"""
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message='Insufficient permissions',
+                error_code='forbidden',
+                status_code=403
+            )
+        return error, 403
+    
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 Not Found errors"""
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message='Resource not found',
+                error_code='not_found',
+                status_code=404
+            )
+        return error, 404
+    
+    @app.errorhandler(409)
+    def conflict(error):
+        """Handle 409 Conflict errors (e.g., duplicate entries)"""
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message=str(error.description) if hasattr(error, 'description') else 'Resource conflict',
+                error_code='conflict',
+                status_code=409
+            )
+        return error, 409
+    
+    @app.errorhandler(422)
+    def unprocessable_entity(error):
+        """Handle 422 Unprocessable Entity errors"""
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message='Unprocessable entity',
+                error_code='unprocessable_entity',
+                status_code=422
+            )
+        return error, 422
+    
+    @app.errorhandler(ValidationError)
+    def handle_marshmallow_validation_error(error):
+        """Handle Marshmallow validation errors"""
+        if request.is_json or request.path.startswith('/api/'):
+            return handle_validation_error(error)
+        # For HTML forms, flash the error
+        from flask import flash
+        flash('Validation error: ' + str(error.messages), 'error')
+        return error, 400
+    
+    @app.errorhandler(IntegrityError)
+    def handle_integrity_error(error):
+        """Handle database integrity errors"""
+        current_app.logger.error(f"Integrity error: {error}")
+        
+        if request.is_json or request.path.startswith('/api/'):
+            # Try to extract meaningful error message
+            error_msg = 'Database integrity error'
+            if 'UNIQUE constraint' in str(error.orig):
+                error_msg = 'Duplicate entry - this record already exists'
+            elif 'FOREIGN KEY constraint' in str(error.orig):
+                error_msg = 'Referenced record does not exist'
+            
+            return error_response(
+                message=error_msg,
+                error_code='integrity_error',
+                status_code=409
+            )
+        
+        from flask import flash
+        flash('Database error occurred', 'error')
+        return error, 409
+    
+    @app.errorhandler(SQLAlchemyError)
+    def handle_sqlalchemy_error(error):
+        """Handle SQLAlchemy errors"""
+        current_app.logger.error(f"SQLAlchemy error: {error}")
+        
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message='Database error occurred',
+                error_code='database_error',
+                status_code=500
+            )
+        
+        from flask import flash
+        flash('Database error occurred', 'error')
+        return error, 500
     
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):
-        if request.path.startswith('/api/'):
-            error_info = get_user_friendly_message(error.code, error.description)
-            return jsonify({
-                'error': error_info['message'],
-                'title': error_info['title'],
-                'recovery': error_info['recovery']
-            }), error.code
-        error_info = get_user_friendly_message(error.code, error.description)
-        return render_template('errors/generic.html', error=error, error_info=error_info), error.code
+        """Handle HTTP exceptions"""
+        if request.is_json or request.path.startswith('/api/'):
+            return error_response(
+                message=error.description or 'An error occurred',
+                error_code=error.code,
+                status_code=error.code
+            )
+        return error
     
     @app.errorhandler(Exception)
-    def handle_exception(error):
-        # Log the error
-        app.logger.error(f'Unhandled exception: {error}')
-        app.logger.error(traceback.format_exc())
+    def handle_generic_exception(error):
+        """Handle all other exceptions"""
+        current_app.logger.exception(f"Unhandled exception: {error}")
         
-        if request.path.startswith('/api/'):
-            error_info = get_user_friendly_message(500)
-            return jsonify({
-                'error': error_info['message'],
-                'title': error_info['title'],
-                'recovery': error_info['recovery']
-            }), 500
-        error_info = get_user_friendly_message(500)
-        return render_template('errors/500.html', error_info=error_info), 500
+        if request.is_json or request.path.startswith('/api/'):
+            # Don't expose internal error details in production
+            if current_app.config.get('FLASK_DEBUG'):
+                return error_response(
+                    message=str(error),
+                    error_code='internal_error',
+                    status_code=500,
+                    details={'type': type(error).__name__}
+                )
+            else:
+                return error_response(
+                    message='An internal error occurred',
+                    error_code='internal_error',
+                    status_code=500
+                )
+        
+        from flask import flash
+        flash('An error occurred. Please try again.', 'error')
+        return error, 500
+
+
+def create_error_response(
+    message: str,
+    error_code: str = 'error',
+    status_code: int = 400,
+    details: Optional[Dict[str, Any]] = None
+) -> tuple:
+    """
+    Create a standardized error response.
+    
+    Args:
+        message: Error message
+        error_code: Error code
+        status_code: HTTP status code
+        details: Optional additional details
+        
+    Returns:
+        Tuple of (response_dict, status_code)
+    """
+    response = {
+        'success': False,
+        'error': error_code,
+        'message': message
+    }
+    
+    if details:
+        response['details'] = details
+    
+    return response, status_code
