@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ 'Edit' if deal else 'Create' }} Deal - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Deals', 'url': url_for('deals.list_deals')},
+    {'text': 'Edit Deal' if deal else 'Create Deal'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-handshake',
+    title_text='Edit Deal' if deal else 'Create Deal',
+    subtitle_text='Manage deal information',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <label for="name" class="block text-sm font-medium mb-2">{{ _('Deal Name') }} *</label>
+                <input type="text" name="name" id="name" value="{{ deal.name if deal else '' }}" class="form-input" required>
+            </div>
+            
+            <div>
+                <label for="client_id" class="block text-sm font-medium mb-2">{{ _('Client') }}</label>
+                <select name="client_id" id="client_id" class="form-input">
+                    <option value="">{{ _('Select Client') }}</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if deal and deal.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="contact_id" class="block text-sm font-medium mb-2">{{ _('Contact') }}</label>
+                <select name="contact_id" id="contact_id" class="form-input">
+                    <option value="">{{ _('Select Contact') }}</option>
+                    {% if contacts %}
+                    {% for contact in contacts %}
+                    <option value="{{ contact.id }}" {% if deal and deal.contact_id == contact.id %}selected{% endif %}>{{ contact.full_name }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="stage" class="block text-sm font-medium mb-2">{{ _('Stage') }} *</label>
+                <select name="stage" id="stage" class="form-input" required>
+                    {% for stage_name in pipeline_stages %}
+                    <option value="{{ stage_name }}" {% if deal and deal.stage == stage_name %}selected{% elif not deal and stage_name == 'prospecting' %}selected{% endif %}>{{ stage_name|replace('_', ' ')|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="value" class="block text-sm font-medium mb-2">{{ _('Deal Value') }}</label>
+                <input type="number" step="0.01" name="value" id="value" value="{{ '%.2f'|format(deal.value) if deal and deal.value else '' }}" class="form-input">
+            </div>
+            
+            <div>
+                <label for="currency_code" class="block text-sm font-medium mb-2">{{ _('Currency') }}</label>
+                <select name="currency_code" id="currency_code" class="form-input">
+                    <option value="EUR" {% if deal and deal.currency_code == 'EUR' or not deal %}selected{% endif %}>EUR</option>
+                    <option value="USD" {% if deal and deal.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                    <option value="GBP" {% if deal and deal.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="probability" class="block text-sm font-medium mb-2">{{ _('Win Probability') }} (%)</label>
+                <input type="number" min="0" max="100" name="probability" id="probability" value="{{ deal.probability if deal else 50 }}" class="form-input" required>
+            </div>
+            
+            <div>
+                <label for="expected_close_date" class="block text-sm font-medium mb-2">{{ _('Expected Close Date') }}</label>
+                <input type="date" name="expected_close_date" id="expected_close_date" value="{{ deal.expected_close_date.strftime('%Y-%m-%d') if deal and deal.expected_close_date else '' }}" class="form-input">
+            </div>
+            
+            {% if quotes %}
+            <div>
+                <label for="related_quote_id" class="block text-sm font-medium mb-2">{{ _('Related Quote') }}</label>
+                <select name="related_quote_id" id="related_quote_id" class="form-input">
+                    <option value="">{{ _('Select Quote') }}</option>
+                    {% for quote in quotes %}
+                    <option value="{{ quote.id }}" {% if deal and deal.related_quote_id == quote.id %}selected{% endif %}>{{ quote.quote_number }} - {{ quote.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
+                <textarea name="description" id="description" rows="4" class="form-input">{{ deal.description if deal else '' }}</textarea>
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="notes" class="block text-sm font-medium mb-2">{{ _('Notes') }}</label>
+                <textarea name="notes" id="notes" rows="4" class="form-input">{{ deal.notes if deal else '' }}</textarea>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Save Deal') }}
+            </button>
+            <a href="{% if deal %}{{ url_for('deals.view_deal', deal_id=deal.id) }}{% else %}{{ url_for('deals.list_deals') }}{% endif %}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

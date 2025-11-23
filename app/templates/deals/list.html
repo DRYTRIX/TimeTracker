@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}Deals - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Deals'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-handshake',
+    title_text='Deals',
+    subtitle_text='Manage your sales pipeline',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Deal</a> <a href="' + url_for("deals.pipeline_view") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>Pipeline View</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }}</label>
+            <select name="status" id="status" class="form-input">
+                <option value="open" {% if status == 'open' %}selected{% endif %}>{{ _('Open') }}</option>
+                <option value="won" {% if status == 'won' %}selected{% endif %}>{{ _('Won') }}</option>
+                <option value="lost" {% if status == 'lost' %}selected{% endif %}>{{ _('Lost') }}</option>
+            </select>
+        </div>
+        <div>
+            <label for="stage" class="block text-sm font-medium mb-2">{{ _('Stage') }}</label>
+            <select name="stage" id="stage" class="form-input">
+                <option value="">{{ _('All Stages') }}</option>
+                {% for stage_name in pipeline_stages %}
+                <option value="{{ stage_name }}" {% if stage == stage_name %}selected{% endif %}>{{ stage_name|replace('_', ' ')|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if deals %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="pb-3 text-sm font-medium">{{ _('Deal Name') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Client') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Stage') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Value') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Probability') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Expected Close') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for deal in deals %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td class="py-3">
+                        <a href="{{ url_for('deals.view_deal', deal_id=deal.id) }}" class="text-primary hover:underline font-medium">{{ deal.name }}</a>
+                    </td>
+                    <td class="py-3">{{ deal.client.name if deal.client else 'N/A' }}</td>
+                    <td class="py-3">
+                        <span class="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                            {{ deal.stage|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td class="py-3">
+                        {% if deal.value %}
+                        {{ deal.currency_code }} {{ '%.2f'|format(deal.value) }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td class="py-3">{{ deal.probability }}%</td>
+                    <td class="py-3">{{ deal.expected_close_date.strftime('%Y-%m-%d') if deal.expected_close_date else 'N/A' }}</td>
+                    <td class="py-3">
+                        <a href="{{ url_for('deals.view_deal', deal_id=deal.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <i class="fas fa-handshake text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No deals found') }}</p>
+        <a href="{{ url_for('deals.create_deal') }}" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            {{ _('Create First Deal') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

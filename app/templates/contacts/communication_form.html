@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}Add Communication - {{ contact.full_name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Clients', 'url': url_for('clients.list_clients')},
+    {'text': contact.client.name, 'url': url_for('clients.view_client', client_id=contact.client_id)},
+    {'text': 'Contacts', 'url': url_for('contacts.list_contacts', client_id=contact.client_id)},
+    {'text': contact.full_name, 'url': url_for('contacts.view_contact', contact_id=contact.id)},
+    {'text': 'Add Communication'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-comments',
+    title_text='Add Communication',
+    subtitle_text='Record communication with ' + contact.full_name,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="type" class="block text-sm font-medium mb-2">{{ _('Type') }} *</label>
+                <select name="type" id="type" class="form-input" required>
+                    <option value="email">{{ _('Email') }}</option>
+                    <option value="call">{{ _('Call') }}</option>
+                    <option value="meeting">{{ _('Meeting') }}</option>
+                    <option value="note">{{ _('Note') }}</option>
+                    <option value="message">{{ _('Message') }}</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="direction" class="block text-sm font-medium mb-2">{{ _('Direction') }} *</label>
+                <select name="direction" id="direction" class="form-input" required>
+                    <option value="outbound">{{ _('Outbound') }}</option>
+                    <option value="inbound">{{ _('Inbound') }}</option>
+                </select>
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="subject" class="block text-sm font-medium mb-2">{{ _('Subject') }}</label>
+                <input type="text" name="subject" id="subject" class="form-input">
+            </div>
+            
+            <div>
+                <label for="communication_date" class="block text-sm font-medium mb-2">{{ _('Date') }} *</label>
+                <input type="datetime-local" name="communication_date" id="communication_date" class="form-input" required>
+            </div>
+            
+            <div>
+                <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }}</label>
+                <select name="status" id="status" class="form-input">
+                    <option value="completed">{{ _('Completed') }}</option>
+                    <option value="pending">{{ _('Pending') }}</option>
+                    <option value="scheduled">{{ _('Scheduled') }}</option>
+                    <option value="cancelled">{{ _('Cancelled') }}</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="follow_up_date" class="block text-sm font-medium mb-2">{{ _('Follow-up Date') }}</label>
+                <input type="datetime-local" name="follow_up_date" id="follow_up_date" class="form-input">
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="content" class="block text-sm font-medium mb-2">{{ _('Content/Notes') }}</label>
+                <textarea name="content" id="content" rows="6" class="form-input"></textarea>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Save Communication') }}
+            </button>
+            <a href="{{ url_for('contacts.view_contact', contact_id=contact.id) }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Set default date to now
+document.getElementById('communication_date').value = new Date().toISOString().slice(0, 16);
+</script>
+{% endblock %}
+

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}Contacts - {{ client.name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Clients', 'url': url_for('clients.list_clients')},
+    {'text': client.name, 'url': url_for('clients.view_client', client_id=client.id)},
+    {'text': 'Contacts'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-address-book',
+    title_text='Contacts',
+    subtitle_text='Manage contacts for ' + client.name,
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("contacts.create_contact", client_id=client.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Add Contact</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if contacts %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Name') }}</th>
+                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Title') }}</th>
+                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Email') }}</th>
+                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Phone') }}</th>
+                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Role') }}</th>
+                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contact in contacts %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td class="py-3">
+                        <div class="flex items-center">
+                            {{ contact.full_name }}
+                            {% if contact.is_primary %}
+                            <span class="ml-2 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded">{{ _('Primary') }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="py-3">{{ contact.title or 'N/A' }}</td>
+                    <td class="py-3">
+                        {% if contact.email %}
+                        <a href="mailto:{{ contact.email }}" class="text-primary hover:underline">{{ contact.email }}</a>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td class="py-3">{{ contact.phone or 'N/A' }}</td>
+                    <td class="py-3">{{ contact.role|title }}</td>
+                    <td class="py-3">
+                        <div class="flex gap-2">
+                            <a href="{{ url_for('contacts.view_contact', contact_id=contact.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
+                            <a href="{{ url_for('contacts.edit_contact', contact_id=contact.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>
+                            {% if not contact.is_primary %}
+                            <form method="POST" action="{{ url_for('contacts.set_primary_contact', contact_id=contact.id) }}" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-primary hover:underline text-sm">{{ _('Set Primary') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <i class="fas fa-address-book text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No contacts found') }}</p>
+        <a href="{{ url_for('contacts.create_contact', client_id=client.id) }}" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            {{ _('Add First Contact') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

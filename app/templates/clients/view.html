@@ -40,7 +40,47 @@
     <!-- Left Column: Client Details -->
     <div class="lg:col-span-1 space-y-6">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <h2 class="text-lg font-semibold mb-4">Contact Information</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">Contacts</h2>
+                <a href="{{ url_for('contacts.list_contacts', client_id=client.id) }}" class="text-primary hover:underline text-sm">
+                    {{ _('Manage') }} <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            {% if contacts %}
+            <div class="space-y-3">
+                {% for contact in contacts[:3] %}
+                <div class="border-l-4 border-primary pl-3 py-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium">{{ contact.full_name }}</p>
+                            {% if contact.title %}
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ contact.title }}</p>
+                            {% endif %}
+                            {% if contact.is_primary %}
+                            <span class="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded mt-1 inline-block">{{ _('Primary') }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if contact.email %}
+                    <a href="mailto:{{ contact.email }}" class="text-sm text-primary hover:underline mt-1 block">{{ contact.email }}</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if contacts|length > 3 %}
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center">
+                    {{ contacts|length - 3 }} {{ _('more contact(s)') }}
+                </p>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark text-sm mb-3">{{ _('No contacts yet') }}</p>
+            <a href="{{ url_for('contacts.create_contact', client_id=client.id) }}" class="text-primary hover:underline text-sm">
+                <i class="fas fa-plus mr-1"></i>{{ _('Add Contact') }}
+            </a>
+            {% endif %}
+        </div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Legacy Contact Info') }}</h2>
             <div class="space-y-4">
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Contact Person</h3>
