@@ -2,7 +2,7 @@ from flask import Blueprint, request, redirect, url_for, flash, jsonify, render_
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Comment, Project, Task
+from app.models import Comment, Project, Task, Quote
 from app.utils.db import safe_commit
 
 comments_bp = Blueprint('comments', __name__)
@@ -15,36 +15,44 @@ def create_comment():
         content = request.form.get('content', '').strip()
         project_id = request.form.get('project_id', type=int)
         task_id = request.form.get('task_id', type=int)
+        quote_id = request.form.get('quote_id', type=int)
         parent_id = request.form.get('parent_id', type=int)
+        is_internal = request.form.get('is_internal', 'true').lower() == 'true'
         
         # Validation
         if not content:
             flash(_('Comment content cannot be empty'), 'error')
             return redirect(request.referrer or url_for('main.dashboard'))
         
-        if not project_id and not task_id:
-            flash(_('Comment must be associated with a project or task'), 'error')
+        if not project_id and not task_id and not quote_id:
+            flash(_('Comment must be associated with a project, task, or quote'), 'error')
             return redirect(request.referrer or url_for('main.dashboard'))
         
-        if project_id and task_id:
-            flash(_('Comment cannot be associated with both a project and a task'), 'error')
+        # Ensure only one target is set
+        targets = [x for x in [project_id, task_id, quote_id] if x is not None]
+        if len(targets) > 1:
+            flash(_('Comment cannot be associated with multiple targets'), 'error')
             return redirect(request.referrer or url_for('main.dashboard'))
         
-        # Verify project or task exists
+        # Verify target exists
         if project_id:
             target = Project.query.get_or_404(project_id)
             target_type = 'project'
-        else:
+        elif task_id:
             target = Task.query.get_or_404(task_id)
             target_type = 'task'
             project_id = target.project_id  # For redirects
+        else:
+            target = Quote.query.get_or_404(quote_id)
+            target_type = 'quote'
         
         # If this is a reply, verify parent comment exists
         if parent_id:
             parent_comment = Comment.query.get_or_404(parent_id)
             # Verify parent is for the same target
             if (project_id and parent_comment.project_id != project_id) or \
-               (task_id and parent_comment.task_id != task_id):
+               (task_id and parent_comment.task_id != task_id) or \
+               (quote_id and parent_comment.quote_id != quote_id):
                 flash(_('Invalid parent comment'), 'error')
                 return redirect(request.referrer or url_for('main.dashboard'))
         
@@ -54,7 +62,9 @@ def create_comment():
             user_id=current_user.id,
             project_id=project_id if target_type == 'project' else None,
             task_id=task_id if target_type == 'task' else None,
-            parent_id=parent_id
+            quote_id=quote_id if target_type == 'quote' else None,
+            parent_id=parent_id,
+            is_internal=is_internal
         )
         
         db.session.add(comment)
@@ -80,8 +90,10 @@ def create_comment():
         return redirect(url_for('projects.view_project', project_id=project_id))
     elif task_id:
         return redirect(url_for('tasks.view_task', task_id=task_id))
+    elif quote_id:
+        return redirect(url_for('quotes.view_quote', quote_id=quote_id))
     else:
-        return redirect(url_for('main.dashboard'))
+        return redirect(request.referrer or url_for('main.dashboard'))
 
 @comments_bp.route('/comments/<int:comment_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -115,6 +127,8 @@ def edit_comment(comment_id):
                 return redirect(url_for('projects.view_project', project_id=comment.project_id))
             elif comment.task_id:
                 return redirect(url_for('tasks.view_task', task_id=comment.task_id))
+            elif comment.quote_id:
+                return redirect(url_for('quotes.view_quote', quote_id=comment.quote_id))
             else:
                 return redirect(url_for('main.dashboard'))
         
@@ -137,6 +151,7 @@ def delete_comment(comment_id):
     try:
         project_id = comment.project_id
         task_id = comment.task_id
+        quote_id = comment.quote_id
         comment_id_for_log = comment.id
         
         comment.delete_comment(current_user)
@@ -152,6 +167,8 @@ def delete_comment(comment_id):
             return redirect(url_for('projects.view_project', project_id=project_id))
         elif task_id:
             return redirect(url_for('tasks.view_task', task_id=task_id))
+        elif quote_id:
+            return redirect(url_for('quotes.view_quote', quote_id=quote_id))
         else:
             return redirect(url_for('main.dashboard'))
     
@@ -162,26 +179,33 @@ def delete_comment(comment_id):
 @comments_bp.route('/api/comments')
 @login_required
 def list_comments():
-    """API endpoint to get comments for a project or task"""
+    """API endpoint to get comments for a project, task, or quote"""
     project_id = request.args.get('project_id', type=int)
     task_id = request.args.get('task_id', type=int)
+    quote_id = request.args.get('quote_id', type=int)
     include_replies = request.args.get('include_replies', 'true').lower() == 'true'
+    include_internal = request.args.get('include_internal', 'true').lower() == 'true'
     
-    if not project_id and not task_id:
-        return jsonify({'error': 'project_id or task_id is required'}), 400
+    targets = [x for x in [project_id, task_id, quote_id] if x is not None]
+    if len(targets) == 0:
+        return jsonify({'error': 'project_id, task_id, or quote_id is required'}), 400
     
-    if project_id and task_id:
-        return jsonify({'error': 'Cannot specify both project_id and task_id'}), 400
+    if len(targets) > 1:
+        return jsonify({'error': 'Cannot specify multiple targets'}), 400
     
     try:
         if project_id:
             # Verify project exists
             project = Project.query.get_or_404(project_id)
             comments = Comment.get_project_comments(project_id, include_replies)
-        else:
+        elif task_id:
             # Verify task exists
             task = Task.query.get_or_404(task_id)
             comments = Comment.get_task_comments(task_id, include_replies)
+        else:
+            # Verify quote exists
+            quote = Quote.query.get_or_404(quote_id)
+            comments = Comment.get_quote_comments(quote_id, include_replies, include_internal)
         
         return jsonify({
             'success': True,

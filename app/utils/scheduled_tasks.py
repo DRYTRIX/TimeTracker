@@ -4,8 +4,8 @@ import logging
 from datetime import datetime, timedelta
 from flask import current_app
 from app import db
-from app.models import Invoice, User, TimeEntry, Project, BudgetAlert, RecurringInvoice
-from app.utils.email import send_overdue_invoice_notification, send_weekly_summary
+from app.models import Invoice, User, TimeEntry, Project, BudgetAlert, RecurringInvoice, Quote
+from app.utils.email import send_overdue_invoice_notification, send_weekly_summary, send_quote_expired_notification
 from app.utils.budget_forecasting import check_budget_alerts
 
 
@@ -341,6 +341,18 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True
         )
         logger.info("Registered webhook retry task")
+        
+        # Check for expiring quotes daily at 9:30 AM
+        scheduler.add_job(
+            func=check_expiring_quotes,
+            trigger='cron',
+            hour=9,
+            minute=30,
+            id='check_expiring_quotes',
+            name='Check for expiring quotes',
+            replace_existing=True
+        )
+        logger.info("Registered expiring quotes check task")
     
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
@@ -362,4 +374,71 @@ def retry_failed_webhooks():
             logger.info(f"Retried {retried_count} failed webhook deliveries")
     except Exception as e:
         logger.error(f"Error retrying failed webhooks: {e}")
+
+
+def check_expiring_quotes():
+    """Check for quotes expiring soon and send reminders
+    
+    This task should be run daily to check for quotes that are expiring
+    within the next 7 days, 3 days, and 1 day, and send reminders.
+    """
+    with current_app.app_context():
+        try:
+            from app.utils.timezone import local_now
+            from datetime import timedelta
+            from app.utils.email import send_quote_expiring_reminder
+            
+            logger.info("Checking for expiring quotes...")
+            
+            today = local_now().date()
+            seven_days = today + timedelta(days=7)
+            
+            # Get quotes that are sent and expiring soon
+            expiring_quotes = Quote.query.filter(
+                Quote.status == 'sent',
+                Quote.valid_until.isnot(None),
+                Quote.valid_until >= today,
+                Quote.valid_until <= seven_days
+            ).all()
+            
+            logger.info(f"Found {len(expiring_quotes)} quotes expiring soon")
+            
+            notifications_sent = 0
+            for quote in expiring_quotes:
+                if not quote.valid_until:
+                    continue
+                
+                days_until_expiry = (quote.valid_until - today).days
+                
+                # Send reminders at 7 days, 3 days, and 1 day before expiration
+                if days_until_expiry not in [7, 3, 1]:
+                    continue
+                
+                # Get users to notify (creator and admins)
+                users_to_notify = set()
+                
+                # Add the quote creator
+                if quote.creator:
+                    users_to_notify.add(quote.creator)
+                
+                # Add all admins
+                admins = User.query.filter_by(role='admin', is_active=True).all()
+                users_to_notify.update(admins)
+                
+                # Send notifications
+                for user in users_to_notify:
+                    if user.email and user.email_notifications:
+                        try:
+                            send_quote_expiring_reminder(quote, user, days_until_expiry)
+                            notifications_sent += 1
+                            logger.info(f"Sent expiration reminder for quote {quote.quote_number} to {user.username} ({days_until_expiry} days remaining)")
+                        except Exception as e:
+                            logger.error(f"Failed to send reminder to {user.username}: {e}")
+            
+            logger.info(f"Sent {notifications_sent} quote expiration reminders")
+            return notifications_sent
+        
+        except Exception as e:
+            logger.error(f"Error checking expiring quotes: {e}")
+            return 0
 

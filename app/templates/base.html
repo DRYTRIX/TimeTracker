@@ -208,11 +208,13 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('clients.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') %}
+                {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
                 {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') %}
+                {% set pdf_open = ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Toggle sidebar') }}" title="{{ _('Toggle sidebar') }}">
@@ -242,6 +244,7 @@
                             {% set nav_active_timer = ep.startswith('timer.') %}
                             {% set nav_active_projects = ep.startswith('projects.') %}
                             {% set nav_active_clients = ep.startswith('clients.') %}
+                            {% set nav_active_quotes = ep.startswith('quotes.') %}
                             {% set nav_active_tasks = ep.startswith('tasks.') %}
                             {% set nav_active_kanban = ep.startswith('kanban.') %}
                             {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
@@ -257,11 +260,6 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_clients %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('clients.list_clients') }}">
-                                    <i class="fas fa-users w-4 mr-2"></i>{{ _('Clients') }}
-                                </a>
-                            </li>
-                            <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_tasks %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('tasks.list_tasks') }}">
                                     <i class="fas fa-tasks w-4 mr-2"></i>{{ _('Tasks') }}
                                 </a>
@@ -274,6 +272,27 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_goals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('weekly_goals.index') }}">
                                     <i class="fas fa-bullseye w-4 mr-2"></i>{{ _('Weekly Goals') }}
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="mt-2">
+                        <button onclick="toggleDropdown('crmDropdown')" data-dropdown="crmDropdown" class="w-full flex items-center p-2 rounded-lg {% if crm_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                            <i class="fas fa-handshake w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('CRM') }}</span>
+                            <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
+                        </button>
+                        <ul id="crmDropdown" class="{% if not crm_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            {% set nav_active_clients = ep.startswith('clients.') %}
+                            {% set nav_active_quotes = ep.startswith('quotes.') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_clients %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('clients.list_clients') }}">
+                                    <i class="fas fa-users w-4 mr-2"></i>{{ _('Clients') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_quotes %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('quotes.list_quotes') }}">
+                                    <i class="fas fa-file-contract w-4 mr-2"></i>{{ _('Quotes') }}
                                 </a>
                             </li>
                         </ul>
@@ -426,10 +445,25 @@
                                     <i class="fas fa-envelope-open-text w-4 mr-2"></i>{{ _('Email Templates') }}
                                 </a>
                             </li>
+                            <!-- PDF Templates Submenu -->
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
-                                    <i class="fas fa-file-pdf w-4 mr-2"></i>{{ _('PDF Layout') }}
-                                </a>
+                                <button onclick="toggleDropdown('pdfDropdown', event)" data-dropdown="pdfDropdown" class="w-full flex items-center px-2 py-1 rounded {% if pdf_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-file-pdf w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('PDF Templates') }}</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <ul id="pdfDropdown" class="{% if pdf_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    <li>
+                                        <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
+                                            <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice PDF') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="block px-2 py-1 rounded {% if ep == 'admin.quote_pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.quote_pdf_layout') }}">
+                                            <i class="fas fa-file-contract w-4 mr-2"></i>{{ _('Quote PDF') }}
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                             {% endif %}
                             
@@ -987,13 +1021,29 @@
             {% endif %}
         });
 
-        function toggleDropdown(id) {
+        function toggleDropdown(id, event) {
+            if (event) {
+                event.stopPropagation(); // Prevent event bubbling for nested dropdowns
+            }
             const dropdown = document.getElementById(id);
             const isCurrentlyHidden = dropdown.classList.contains('hidden');
             
-            // Close all other dropdowns in the sidebar (accordion behavior)
-            const allSidebarDropdowns = ['workDropdown', 'financeDropdown', 'adminDropdown'];
+            // Define nested dropdowns and their parent dropdowns
+            const nestedDropdowns = {
+                'pdfDropdown': 'adminDropdown'
+            };
+            
+            // If this is a nested dropdown, don't close its parent
+            const parentDropdown = nestedDropdowns[id];
+            
+            // Close all other top-level dropdowns in the sidebar (accordion behavior)
+            // Note: Nested dropdowns (like pdfDropdown) are not in this list, so they work independently
+            const allSidebarDropdowns = ['workDropdown', 'financeDropdown', 'adminDropdown', 'crmDropdown', 'toolsDropdown'];
             allSidebarDropdowns.forEach(dropdownId => {
+                // Don't close the parent if this is a nested dropdown
+                if (dropdownId === parentDropdown) {
+                    return;
+                }
                 if (dropdownId !== id) {
                     const otherDropdown = document.getElementById(dropdownId);
                     if (otherDropdown) {

@@ -6,7 +6,7 @@ invoices, and time entries. Uses separate authentication from regular users.
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, session
 from flask_babel import gettext as _
 from app import db
-from app.models import Client, Project, Invoice, TimeEntry, User
+from app.models import Client, Project, Invoice, TimeEntry, User, Quote
 from app.utils.db import safe_commit
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -396,6 +396,48 @@ def view_invoice(invoice_id):
         'client_portal/invoice_detail.html',
         client=client,
         invoice=invoice
+    )
+
+
+@client_portal_bp.route('/client-portal/quotes')
+def quotes():
+    """List all quotes visible to the client"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+    
+    # Get quotes visible to client
+    quotes_list = Quote.query.filter_by(
+        client_id=client.id,
+        visible_to_client=True
+    ).order_by(Quote.created_at.desc()).all()
+    
+    return render_template(
+        'client_portal/quotes.html',
+        client=client,
+        quotes=quotes_list
+    )
+
+
+@client_portal_bp.route('/client-portal/quotes/<int:quote_id>')
+def view_quote(quote_id):
+    """View a specific quote"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+    
+    # Verify quote belongs to this client and is visible
+    quote = Quote.query.get_or_404(quote_id)
+    if quote.client_id != client.id or not quote.visible_to_client:
+        flash(_('Quote not found.'), 'error')
+        abort(404)
+    
+    return render_template(
+        'client_portal/quote_detail.html',
+        client=client,
+        quote=quote
     )
 
 

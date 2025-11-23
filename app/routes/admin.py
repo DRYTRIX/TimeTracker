@@ -3,7 +3,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db, limiter
-from app.models import User, Project, TimeEntry, Settings, Invoice
+from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem
 from datetime import datetime
 from sqlalchemy import text
 import os
@@ -505,6 +505,109 @@ def pdf_layout_reset():
     return redirect(url_for('admin.pdf_layout'))
 
 
+@admin_bp.route('/admin/quote-pdf-layout', methods=['GET', 'POST'])
+@limiter.limit("30 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def quote_pdf_layout():
+    """Edit PDF quote layout template (HTML and CSS) by page size."""
+    from app.models import QuotePDFTemplate
+    
+    # Get page size from query parameter or form, default to A4
+    page_size = request.args.get('size', request.form.get('page_size', 'A4'))
+    
+    # Ensure valid page size
+    valid_sizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid']
+    if page_size not in valid_sizes:
+        page_size = 'A4'
+    
+    # Get or create template for this page size
+    template = QuotePDFTemplate.get_template(page_size)
+    
+    if request.method == 'POST':
+        html_template = request.form.get('quote_pdf_template_html', '')
+        css_template = request.form.get('quote_pdf_template_css', '')
+        design_json = request.form.get('design_json', '')
+        
+        # Update template
+        template.template_html = html_template
+        template.template_css = css_template
+        template.design_json = design_json
+        template.updated_at = datetime.utcnow()
+        
+        if not safe_commit('admin_update_quote_pdf_layout'):
+            flash(_('Could not update PDF layout due to a database error.'), 'error')
+        else:
+            flash(_('PDF layout updated successfully'), 'success')
+        return redirect(url_for('admin.quote_pdf_layout', size=page_size))
+    
+    # Get all templates for dropdown
+    all_templates = QuotePDFTemplate.get_all_templates()
+    
+    # Provide initial defaults
+    initial_html = template.template_html or ''
+    initial_css = template.template_css or ''
+    design_json = template.design_json or ''
+    
+    # Load default template if empty
+    try:
+        if not initial_html:
+            env = current_app.jinja_env
+            html_src, _unused1, _unused2 = env.loader.get_source(env, 'quotes/pdf_default.html')
+            try:
+                import re as _re
+                m = _re.search(r'<body[^>]*>([\s\S]*?)</body>', html_src, _re.IGNORECASE)
+                initial_html = (m.group(1).strip() if m else html_src)
+            except Exception:
+                pass
+        if not initial_css:
+            env = current_app.jinja_env
+            css_src, _unused3, _unused4 = env.loader.get_source(env, 'quotes/pdf_styles_default.css')
+            initial_css = css_src
+    except Exception:
+        pass
+    
+    return render_template('admin/quote_pdf_layout.html', 
+                         settings=Settings.get_settings(), 
+                         initial_html=initial_html, 
+                         initial_css=initial_css, 
+                         design_json=design_json,
+                         page_size=page_size,
+                         all_templates=all_templates)
+
+
+@admin_bp.route('/admin/quote-pdf-layout/reset', methods=['POST'])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def quote_pdf_layout_reset():
+    """Reset quote PDF layout to defaults (clear custom templates)."""
+    from app.models import QuotePDFTemplate
+    
+    # Get page size from query parameter or form, default to A4
+    page_size = request.args.get('size', request.form.get('page_size', 'A4'))
+    
+    # Ensure valid page size
+    valid_sizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid']
+    if page_size not in valid_sizes:
+        page_size = 'A4'
+    
+    # Get or create template for this page size
+    template = QuotePDFTemplate.get_template(page_size)
+    
+    # Clear template
+    template.template_html = ''
+    template.template_css = ''
+    template.design_json = ''
+    template.updated_at = datetime.utcnow()
+    
+    if not safe_commit('admin_reset_quote_pdf_layout'):
+        flash(_('Could not reset PDF layout due to a database error.'), 'error')
+    else:
+        flash(_('PDF layout reset to defaults'), 'success')
+    return redirect(url_for('admin.quote_pdf_layout', size=page_size))
+
+
 @admin_bp.route('/admin/pdf-layout/debug', methods=['GET'])
 @login_required
 @admin_or_permission_required('manage_settings')
@@ -797,6 +900,227 @@ def pdf_layout_preview():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Preview</title>
+    <style>{css}</style>
+</head>
+<body>
+{body_html}
+</body>
+</html>"""
+    return page_html
+
+@admin_bp.route('/admin/quote-pdf-layout/preview', methods=['POST'])
+@limiter.limit("60 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def quote_pdf_layout_preview():
+    """Render a live preview of the provided HTML/CSS using a quote context."""
+    html = request.form.get('html', '')
+    css = request.form.get('css', '')
+    quote_id = request.form.get('quote_id', type=int)
+    quote = None
+    if quote_id:
+        quote = Quote.query.get(quote_id)
+    if quote is None:
+        quote = Quote.query.order_by(Quote.id.desc()).first()
+    settings_obj = Settings.get_settings()
+    
+    # Provide a minimal mock quote if none exists to avoid template errors
+    from types import SimpleNamespace
+    if quote is None:
+        from datetime import date, datetime
+        quote = SimpleNamespace(
+            id=1,
+            quote_number='Q-0001',
+            title='Sample Quote',
+            description='Sample quote description',
+            status='draft',
+            client_id=1,
+            client=SimpleNamespace(
+                name='Sample Client',
+                email='client@example.com',
+                address='123 Sample Street\nSample City, ST 12345',
+                phone='+1 234 567 8900'
+            ),
+            project_id=None,
+            project=None,
+            items=[],
+            subtotal=0.0,
+            discount_type=None,
+            discount_amount=0.0,
+            discount_reason=None,
+            coupon_code=None,
+            tax_rate=0.0,
+            tax_amount=0.0,
+            total_amount=0.0,
+            currency_code='EUR',
+            valid_until=date.today(),
+            sent_at=None,
+            accepted_at=None,
+            notes='',
+            terms='',
+            payment_terms=None,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            created_by=1,
+        )
+    # Ensure at least one sample item to avoid undefined 'item' in templates that reference it outside loops
+    sample_item = SimpleNamespace(description='Sample item', quantity=1.0, unit_price=0.0, total_amount=0.0)
+    
+    # Create a wrapper object with converted Query objects to lists
+    quote_wrapper = SimpleNamespace()
+    
+    # Copy all simple attributes from the quote
+    for attr in ['id', 'quote_number', 'title', 'description', 'status', 'client_id', 'project_id',
+                 'subtotal', 'discount_type', 'discount_amount', 'discount_reason', 'coupon_code',
+                 'tax_rate', 'tax_amount', 'total_amount', 'currency_code', 'valid_until',
+                 'sent_at', 'accepted_at', 'notes', 'terms', 'payment_terms',
+                 'created_at', 'updated_at', 'created_by']:
+        try:
+            setattr(quote_wrapper, attr, getattr(quote, attr))
+        except AttributeError:
+            pass
+    
+    # Copy relationship attributes (project, client)
+    try:
+        quote_wrapper.project = quote.project
+    except:
+        quote_wrapper.project = None
+    
+    try:
+        quote_wrapper.client = quote.client
+    except:
+        quote_wrapper.client = SimpleNamespace(
+            name='Sample Client',
+            email='client@example.com',
+            address='123 Sample Street\nSample City, ST 12345',
+            phone='+1 234 567 8900'
+        )
+    
+    # Convert items from Query to list
+    try:
+        if hasattr(quote, 'items') and hasattr(quote.items, 'all'):
+            # It's a SQLAlchemy Query object - call .all() to get list
+            items_list = quote.items.all()
+            if not items_list:
+                # No items in database, add sample
+                items_list = [sample_item]
+            quote_wrapper.items = items_list
+        elif hasattr(quote, 'items') and isinstance(quote.items, list):
+            # Already a list
+            quote_wrapper.items = quote.items if quote.items else [sample_item]
+        else:
+            # Fallback
+            quote_wrapper.items = [sample_item]
+    except Exception as e:
+        print(f"Error converting quote items: {e}")
+        quote_wrapper.items = [sample_item]
+    
+    # Use the wrapper instead of the original quote
+    quote = quote_wrapper
+    
+    # Helper: sanitize Jinja blocks to fix entities/smart quotes inserted by editor
+    def _sanitize_jinja_blocks(raw: str) -> str:
+        try:
+            import re as _re
+            import html as _html
+            smart_map = {
+                '\u201c': '"', '\u201d': '"',  # " " -> "
+                '\u2018': "'", '\u2019': "'",  # ' ' -> '
+                '\u00a0': ' ',                   # nbsp
+                '\u200b': '', '\u200c': '', '\u200d': '',  # zero-width
+            }
+            def _fix_quotes(s: str) -> str:
+                for k, v in smart_map.items():
+                    s = s.replace(k, v)
+                return s
+            def _clean(match):
+                open_tag = match.group(1)
+                inner = match.group(2)
+                # Remove any HTML tags GrapesJS may have inserted inside Jinja braces
+                inner = _re.sub(r'</?[^>]+?>', '', inner)
+                # Decode HTML entities
+                inner = _html.unescape(inner)
+                # Fix smart quotes and nbsp
+                inner = _fix_quotes(inner)
+                # Trim excessive whitespace around pipes and parentheses
+                inner = _re.sub(r'\s+\|\s+', ' | ', inner)
+                inner = _re.sub(r'\(\s+', '(', inner)
+                inner = _re.sub(r'\s+\)', ')', inner)
+                # Normalize _("...") -> _('...')
+                inner = inner.replace('_("', "_('").replace('")', "')")
+                return f"{open_tag}{inner}{' }}' if open_tag == '{{ ' else ' %}'}"
+            pattern = _re.compile(r'({{\s|{%\s)([\s\S]*?)(?:}}|%})')
+            return _re.sub(pattern, _clean, raw)
+        except Exception:
+            return raw
+
+    sanitized = _sanitize_jinja_blocks(html)
+
+    # Wrap provided HTML with a minimal page and CSS
+    try:
+        from pathlib import Path as _Path
+        # Provide helpers as callables since templates may use function-style helpers
+        try:
+            from babel.dates import format_date as _babel_format_date
+        except Exception:
+            _babel_format_date = None
+        def _format_date(value, format='medium'):
+            try:
+                if _babel_format_date:
+                    if format == 'full':
+                        return _babel_format_date(value, format='full')
+                    if format == 'long':
+                        return _babel_format_date(value, format='long')
+                    if format == 'short':
+                        return _babel_format_date(value, format='short')
+                    return _babel_format_date(value, format='medium')
+                return value.strftime('%Y-%m-%d')
+            except Exception:
+                return str(value)
+        def _format_money(value):
+            try:
+                return f"{float(value):,.2f} {settings_obj.currency}"
+            except Exception:
+                return f"{value} {settings_obj.currency}"
+        
+        # Helper function for logo - converts to base64 data URI
+        def _get_logo_base64(logo_path):
+            try:
+                if not logo_path or not os.path.exists(logo_path):
+                    return None
+                import base64
+                import mimetypes
+                with open(logo_path, 'rb') as f:
+                    data = base64.b64encode(f.read()).decode('utf-8')
+                mime_type, _ = mimetypes.guess_type(logo_path)
+                if not mime_type:
+                    mime_type = 'image/png'
+                return f'data:{mime_type};base64,{data}'
+            except Exception as e:
+                print(f"Error loading logo: {e}")
+                return None
+        
+        body_html = render_template_string(
+            sanitized,
+            quote=quote,
+            settings=settings_obj,
+            Path=_Path,
+            format_date=_format_date,
+            format_money=_format_money,
+            get_logo_base64=_get_logo_base64,
+            item=sample_item,
+        )
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        body_html = f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>" + sanitized
+    # Build complete HTML page with embedded styles
+    page_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Preview</title>
     <style>{css}</style>
 </head>
 <body>
