@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Movements', 'url': url_for('inventory.list_movements')},
+    {'text': 'Record Movement'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-exchange-alt',
+    title_text='Record Stock Movement',
+    subtitle_text='Record inventory adjustment or movement',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-2xl mx-auto">
+    <form method="POST" action="{{ url_for('inventory.new_movement') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="space-y-6">
+            <div>
+                <label for="movement_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Movement Type') }} *</label>
+                <select name="movement_type" id="movement_type" class="form-input" required>
+                    <option value="adjustment">{{ _('Adjustment') }}</option>
+                    <option value="transfer">{{ _('Transfer') }}</option>
+                    <option value="sale">{{ _('Sale') }}</option>
+                    <option value="purchase">{{ _('Purchase') }}</option>
+                    <option value="return">{{ _('Return') }}</option>
+                    <option value="waste">{{ _('Waste') }}</option>
+                </select>
+            </div>
+            <div>
+                <label for="stock_item_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Stock Item') }} *</label>
+                <select name="stock_item_id" id="stock_item_id" class="form-input" required>
+                    <option value="">{{ _('Select Item') }}</option>
+                    {% for item in stock_items %}
+                    <option value="{{ item.id }}">{{ item.sku }} - {{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Warehouse') }} *</label>
+                <select name="warehouse_id" id="warehouse_id" class="form-input" required>
+                    <option value="">{{ _('Select Warehouse') }}</option>
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.id }}">{{ warehouse.code }} - {{ warehouse.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Quantity') }} *</label>
+                <input type="number" name="quantity" id="quantity" step="0.01" class="form-input" required>
+                <p class="mt-1 text-sm text-gray-500">{{ _('Use positive values for additions, negative for removals') }}</p>
+            </div>
+            <div>
+                <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Reason') }}</label>
+                <input type="text" name="reason" id="reason" class="form-input" placeholder="{{ _('e.g., Physical count correction') }}">
+            </div>
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                <textarea name="notes" id="notes" rows="3" class="form-input"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <a href="{{ url_for('inventory.list_movements') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Record Movement') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

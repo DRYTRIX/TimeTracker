@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Transfers', 'url': url_for('inventory.list_transfers')},
+    {'text': 'New Transfer'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-truck',
+    title_text='New Stock Transfer',
+    subtitle_text='Transfer stock between warehouses',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-2xl mx-auto">
+    <form method="POST" action="{{ url_for('inventory.new_transfer') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="space-y-6">
+            <div>
+                <label for="stock_item_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Stock Item') }} *</label>
+                <select name="stock_item_id" id="stock_item_id" class="form-input" required>
+                    <option value="">{{ _('Select Item') }}</option>
+                    {% for item in stock_items %}
+                    <option value="{{ item.id }}">{{ item.sku }} - {{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="from_warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('From Warehouse') }} *</label>
+                <select name="from_warehouse_id" id="from_warehouse_id" class="form-input" required>
+                    <option value="">{{ _('Select Source Warehouse') }}</option>
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.id }}">{{ warehouse.code }} - {{ warehouse.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="to_warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('To Warehouse') }} *</label>
+                <select name="to_warehouse_id" id="to_warehouse_id" class="form-input" required>
+                    <option value="">{{ _('Select Destination Warehouse') }}</option>
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.id }}">{{ warehouse.code }} - {{ warehouse.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Quantity') }} *</label>
+                <input type="number" name="quantity" id="quantity" step="0.01" min="0.01" class="form-input" required>
+            </div>
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                <textarea name="notes" id="notes" rows="3" class="form-input" placeholder="{{ _('Optional notes about this transfer') }}"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <a href="{{ url_for('inventory.list_transfers') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Create Transfer') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

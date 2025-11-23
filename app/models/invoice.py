@@ -313,16 +313,28 @@ class InvoiceItem(db.Model):
     # Time entry reference (optional)
     time_entry_ids = db.Column(db.String(500), nullable=True)  # Comma-separated IDs
     
+    # Inventory integration
+    stock_item_id = db.Column(db.Integer, db.ForeignKey('stock_items.id'), nullable=True, index=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)
+    is_stock_item = db.Column(db.Boolean, default=False, nullable=False)
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
-    def __init__(self, invoice_id, description, quantity, unit_price, time_entry_ids=None):
+    # Relationships
+    stock_item = db.relationship('StockItem', foreign_keys=[stock_item_id], lazy='joined')
+    warehouse = db.relationship('Warehouse', foreign_keys=[warehouse_id], lazy='joined')
+    
+    def __init__(self, invoice_id, description, quantity, unit_price, time_entry_ids=None, stock_item_id=None, warehouse_id=None):
         self.invoice_id = invoice_id
         self.description = description
         self.quantity = Decimal(str(quantity))
         self.unit_price = Decimal(str(unit_price))
         self.total_amount = self.quantity * self.unit_price
         self.time_entry_ids = time_entry_ids
+        self.stock_item_id = stock_item_id
+        self.warehouse_id = warehouse_id
+        self.is_stock_item = stock_item_id is not None
     
     def __repr__(self):
         return f'<InvoiceItem {self.description} ({self.quantity}h @ {self.unit_price})>'
@@ -337,5 +349,8 @@ class InvoiceItem(db.Model):
             'unit_price': float(self.unit_price),
             'total_amount': float(self.total_amount),
             'time_entry_ids': self.time_entry_ids,
+            'stock_item_id': self.stock_item_id,
+            'warehouse_id': self.warehouse_id,
+            'is_stock_item': self.is_stock_item,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

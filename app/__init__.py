@@ -872,6 +872,7 @@ def create_app(config=None):
     from app.routes.webhooks import webhooks_bp
     from app.routes.client_portal import client_portal_bp
     from app.routes.quotes import quotes_bp
+    from app.routes.inventory import inventory_bp
     try:
         from app.routes.audit_logs import audit_logs_bp
         app.register_blueprint(audit_logs_bp)
@@ -918,6 +919,7 @@ def create_app(config=None):
     app.register_blueprint(import_export_bp)
     app.register_blueprint(webhooks_bp)
     app.register_blueprint(quotes_bp)
+    app.register_blueprint(inventory_bp)
     # audit_logs_bp is registered above with error handling
 
     # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)

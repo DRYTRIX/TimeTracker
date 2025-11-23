@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Reports', 'url': url_for('inventory.reports_dashboard')},
+    {'text': 'Stock Valuation'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-coins',
+    title_text='Stock Valuation Report',
+    subtitle_text='Inventory value by warehouse and category',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Warehouse') }}</label>
+            <select name="warehouse_id" id="warehouse_id" class="form-input">
+                <option value="">{{ _('All Warehouses') }}</option>
+                {% for warehouse in warehouses %}
+                <option value="{{ warehouse.id }}" {% if selected_warehouse_id == warehouse.id %}selected{% endif %}>{{ warehouse.code }} - {{ warehouse.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Category') }}</label>
+            <select name="category" id="category" class="form-input">
+                <option value="">{{ _('All Categories') }}</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">{{ _('Inventory Valuation') }}</h2>
+        <div class="text-right">
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Value') }}</p>
+            <p class="text-2xl font-bold text-primary">{{ "%.2f"|format(total_value) }} EUR</p>
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="table table-zebra w-full text-left">
+            <thead>
+                <tr>
+                    <th class="p-4">{{ _('Warehouse') }}</th>
+                    <th class="p-4">{{ _('Item') }}</th>
+                    <th class="p-4">{{ _('SKU') }}</th>
+                    <th class="p-4">{{ _('Category') }}</th>
+                    <th class="p-4">{{ _('Quantity') }}</th>
+                    <th class="p-4">{{ _('Unit Cost') }}</th>
+                    <th class="p-4">{{ _('Total Value') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item_data in items_with_value %}
+                <tr>
+                    <td class="p-4">
+                        <a href="{{ url_for('inventory.view_warehouse', warehouse_id=item_data.stock.warehouse_id) }}" class="text-primary hover:underline">
+                            {{ item_data.stock.warehouse.code }}
+                        </a>
+                    </td>
+                    <td class="p-4">
+                        <a href="{{ url_for('inventory.view_stock_item', item_id=item_data.stock.stock_item_id) }}" class="text-primary hover:underline">
+                            {{ item_data.stock.stock_item.name }}
+                        </a>
+                    </td>
+                    <td class="p-4 font-mono text-sm">{{ item_data.stock.stock_item.sku }}</td>
+                    <td class="p-4">{{ item_data.stock.stock_item.category or '—' }}</td>
+                    <td class="p-4">{{ item_data.stock.quantity_on_hand }}</td>
+                    <td class="p-4">{{ "%.2f"|format(item_data.stock.stock_item.default_cost or 0) }} EUR</td>
+                    <td class="p-4 font-semibold">{{ "%.2f"|format(item_data.value) }} EUR</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-gray-500">
+                        {{ _('No items found with cost information.') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="font-bold">
+                    <td colspan="6" class="p-4 text-right">{{ _('Total Value') }}:</td>
+                    <td class="p-4">{{ "%.2f"|format(total_value) }} EUR</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

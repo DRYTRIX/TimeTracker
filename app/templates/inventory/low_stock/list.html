@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Low Stock Alerts'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-exclamation-triangle',
+    title_text='Low Stock Alerts',
+    subtitle_text='Items below reorder point',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    {% if low_stock_items %}
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Warehouse') }}</th>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('On Hand') }}</th>
+                <th class="p-4">{{ _('Reorder Point') }}</th>
+                <th class="p-4">{{ _('Shortfall') }}</th>
+                <th class="p-4">{{ _('Reorder Qty') }}</th>
+                <th class="p-4">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in low_stock_items %}
+            <tr>
+                <td class="p-4 font-medium">{{ alert.warehouse.code }} - {{ alert.warehouse.name }}</td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=alert.item.id) }}" class="text-primary hover:underline">
+                        {{ alert.item.name }} ({{ alert.item.sku }})
+                    </a>
+                </td>
+                <td class="p-4 text-amber-600 font-semibold">{{ alert.quantity_on_hand }}</td>
+                <td class="p-4">{{ alert.reorder_point }}</td>
+                <td class="p-4 text-rose-600 font-semibold">{{ alert.shortfall }}</td>
+                <td class="p-4">{{ alert.reorder_quantity or '—' }}</td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=alert.item.id) }}" class="text-primary hover:underline">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="p-8 text-center text-gray-500">
+        {{ _('No low stock alerts. All items are above reorder point.') }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

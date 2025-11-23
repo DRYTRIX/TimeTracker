@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Reports', 'url': url_for('inventory.reports_dashboard')},
+    {'text': 'Turnover Analysis'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-chart-line',
+    title_text='Inventory Turnover Analysis',
+    subtitle_text='Item turnover rates and sales analysis',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date From') }}</label>
+            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
+        </div>
+        <div>
+            <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date To') }}</label>
+            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <div class="mb-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            {{ _('Turnover rate indicates how many times inventory is sold and replaced in a year. Higher rates indicate faster-moving items.') }}
+        </p>
+    </div>
+    
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('SKU') }}</th>
+                <th class="p-4">{{ _('Total Sold') }}</th>
+                <th class="p-4">{{ _('Avg Stock Level') }}</th>
+                <th class="p-4">{{ _('Turnover Rate') }}</th>
+                <th class="p-4">{{ _('Status') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in turnover_data %}
+            <tr>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=data.item.id) }}" class="text-primary hover:underline">
+                        {{ data.item.name }}
+                    </a>
+                </td>
+                <td class="p-4 font-mono text-sm">{{ data.item.sku }}</td>
+                <td class="p-4">{{ "%.2f"|format(data.total_sold) }}</td>
+                <td class="p-4">{{ "%.2f"|format(data.avg_stock) }}</td>
+                <td class="p-4 font-semibold">{{ "%.2f"|format(data.turnover_rate) }}</td>
+                <td class="p-4">
+                    {% if data.turnover_rate >= 4 %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Fast Moving') }}</span>
+                    {% elif data.turnover_rate >= 2 %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Normal') }}</span>
+                    {% elif data.turnover_rate >= 1 %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">{{ _('Slow Moving') }}</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Very Slow') }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="p-8 text-center text-gray-500">
+                    {{ _('No sales data found for the selected period.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

@@ -280,11 +280,20 @@ def edit_invoice(invoice_id):
                     quantity = Decimal(quantities[i])
                     unit_price = Decimal(unit_prices[i])
                     
+                    # Get stock item info if provided
+                    stock_item_id = request.form.getlist('item_stock_item_id[]')
+                    warehouse_id = request.form.getlist('item_warehouse_id[]')
+                    
+                    stock_item_id_val = int(stock_item_id[i]) if i < len(stock_item_id) and stock_item_id[i] and stock_item_id[i].strip() else None
+                    warehouse_id_val = int(warehouse_id[i]) if i < len(warehouse_id) and warehouse_id[i] and warehouse_id[i].strip() else None
+                    
                     item = InvoiceItem(
                         invoice_id=invoice.id,
                         description=descriptions[i].strip(),
                         quantity=quantity,
-                        unit_price=unit_price
+                        unit_price=unit_price,
+                        stock_item_id=stock_item_id_val,
+                        warehouse_id=warehouse_id_val
                     )
                     db.session.add(item)
                 except ValueError:
@@ -344,6 +353,34 @@ def edit_invoice(invoice_id):
                     flash(f'Invalid quantity or price for extra good {i+1}', 'error')
                     continue
         
+        # Reserve stock for invoice items with stock items
+        from app.models import StockReservation
+        
+        for item in invoice.items:
+            if item.is_stock_item and item.stock_item_id and item.warehouse_id:
+                # Check if reservation already exists
+                existing = StockReservation.query.filter_by(
+                    stock_item_id=item.stock_item_id,
+                    warehouse_id=item.warehouse_id,
+                    reservation_type='invoice',
+                    reservation_id=invoice.id,
+                    status='reserved'
+                ).first()
+                
+                if not existing:
+                    try:
+                        StockReservation.create_reservation(
+                            stock_item_id=item.stock_item_id,
+                            warehouse_id=item.warehouse_id,
+                            quantity=item.quantity,
+                            reservation_type='invoice',
+                            reservation_id=invoice.id,
+                            reserved_by=current_user.id,
+                            expires_in_days=None  # Invoice reservations don't expire
+                        )
+                    except ValueError as e:
+                        flash(_('Warning: Could not reserve stock for item %(item)s: %(error)s', item=item.description, error=str(e)), 'warning')
+        
         # Calculate totals
         invoice.calculate_totals()
         if not safe_commit('edit_invoice', {'invoice_id': invoice.id}):
@@ -354,10 +391,31 @@ def edit_invoice(invoice_id):
         return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
     
     # GET request - show edit form
-    from app.models import InvoiceTemplate
+    from app.models import InvoiceTemplate, StockItem, Warehouse
+    import json
     projects = Project.query.filter_by(status='active').order_by(Project.name).all()
     email_templates = InvoiceTemplate.query.order_by(InvoiceTemplate.name).all()
-    return render_template('invoices/edit.html', invoice=invoice, projects=projects, email_templates=email_templates)
+    stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
+    
+    # Prepare stock items and warehouses for JavaScript
+    stock_items_json = json.dumps([{
+        'id': item.id,
+        'sku': item.sku,
+        'name': item.name,
+        'default_price': float(item.default_price) if item.default_price else None,
+        'default_cost': float(item.default_cost) if item.default_cost else None,
+        'unit': item.unit or 'pcs',
+        'description': item.name
+    } for item in stock_items])
+    
+    warehouses_json = json.dumps([{
+        'id': wh.id,
+        'code': wh.code,
+        'name': wh.name
+    } for wh in warehouses])
+    
+    return render_template('invoices/edit.html', invoice=invoice, projects=projects, email_templates=email_templates, stock_items=stock_items, warehouses=warehouses, stock_items_json=stock_items_json, warehouses_json=warehouses_json)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/status', methods=['POST'])
 @login_required
@@ -381,6 +439,45 @@ def update_invoice_status(invoice_id):
         invoice.payment_status = 'fully_paid'
         if not invoice.payment_date:
             invoice.payment_date = datetime.utcnow().date()
+    
+    # Reduce stock when invoice is sent or paid (if configured)
+    from app.models import StockMovement, StockReservation
+    import os
+    
+    reduce_on_sent = os.getenv('INVENTORY_REDUCE_ON_INVOICE_SENT', 'true').lower() == 'true'
+    reduce_on_paid = os.getenv('INVENTORY_REDUCE_ON_INVOICE_PAID', 'false').lower() == 'true'
+    
+    if (new_status == 'sent' and reduce_on_sent) or (new_status == 'paid' and reduce_on_paid):
+        for item in invoice.items:
+            if item.is_stock_item and item.stock_item_id and item.warehouse_id:
+                try:
+                    # Fulfill any existing reservations
+                    reservation = StockReservation.query.filter_by(
+                        stock_item_id=item.stock_item_id,
+                        warehouse_id=item.warehouse_id,
+                        reservation_type='invoice',
+                        reservation_id=invoice.id,
+                        status='reserved'
+                    ).first()
+                    
+                    if reservation:
+                        reservation.fulfill()
+                    
+                    # Create stock movement (sale)
+                    StockMovement.record_movement(
+                        movement_type='sale',
+                        stock_item_id=item.stock_item_id,
+                        warehouse_id=item.warehouse_id,
+                        quantity=-item.quantity,  # Negative for removal
+                        moved_by=current_user.id,
+                        reference_type='invoice',
+                        reference_id=invoice.id,
+                        unit_cost=item.stock_item.default_cost if item.stock_item else None,
+                        reason=f'Invoice {invoice.invoice_number}',
+                        update_stock=True
+                    )
+                except Exception as e:
+                    flash(_('Warning: Could not reduce stock for item %(item)s: %(error)s', item=item.description, error=str(e)), 'warning')
     
     if not safe_commit('update_invoice_status', {'invoice_id': invoice.id, 'status': new_status}):
         return jsonify({'error': 'Database error while updating status'}), 500

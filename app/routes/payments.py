@@ -221,6 +221,43 @@ def create_payment():
             # Update invoice status if fully paid
             if invoice.payment_status == 'fully_paid':
                 invoice.status = 'paid'
+                
+                # Reduce stock when invoice is fully paid (if configured)
+                from app.models import StockMovement, StockReservation
+                import os
+                
+                reduce_on_paid = os.getenv('INVENTORY_REDUCE_ON_INVOICE_PAID', 'false').lower() == 'true'
+                if reduce_on_paid:
+                    for item in invoice.items:
+                        if item.is_stock_item and item.stock_item_id and item.warehouse_id:
+                            try:
+                                # Fulfill any existing reservations
+                                reservation = StockReservation.query.filter_by(
+                                    stock_item_id=item.stock_item_id,
+                                    warehouse_id=item.warehouse_id,
+                                    reservation_type='invoice',
+                                    reservation_id=invoice.id,
+                                    status='reserved'
+                                ).first()
+                                
+                                if reservation:
+                                    reservation.fulfill()
+                                
+                                # Create stock movement (sale)
+                                StockMovement.record_movement(
+                                    movement_type='sale',
+                                    stock_item_id=item.stock_item_id,
+                                    warehouse_id=item.warehouse_id,
+                                    quantity=-item.quantity,  # Negative for removal
+                                    moved_by=current_user.id,
+                                    reference_type='invoice',
+                                    reference_id=invoice.id,
+                                    unit_cost=item.stock_item.default_cost if item.stock_item else None,
+                                    reason=f'Invoice {invoice.invoice_number} payment',
+                                    update_stock=True
+                                )
+                            except Exception as e:
+                                pass  # Don't fail payment creation on stock errors
         
         if not safe_commit('create_payment', {'invoice_id': invoice_id, 'amount': float(amount)}):
             flash('Could not create payment due to a database error. Please check server logs.', 'error')

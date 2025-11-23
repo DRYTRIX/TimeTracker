@@ -69,18 +69,34 @@
                     
                     <!-- Items header (desktop) -->
                     <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase">
-                        <div class="md:col-span-6">{{ _('Description') }}</div>
-                        <div class="md:col-span-2">{{ _('Quantity') }}</div>
-                        <div class="md:col-span-3">{{ _('Unit Price') }}</div>
+                        <div class="md:col-span-2">{{ _('Stock Item') }}</div>
+                        <div class="md:col-span-2">{{ _('Warehouse') }}</div>
+                        <div class="md:col-span-4">{{ _('Description') }}</div>
+                        <div class="md:col-span-1">{{ _('Quantity') }}</div>
+                        <div class="md:col-span-2">{{ _('Unit Price') }}</div>
                         <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
                     </div>
                     
                     <div id="invoice-items" class="space-y-2">
                         {% for item in invoice.items %}
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition">
-                            <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" value="{{ item.description }}" class="md:col-span-6 form-input" data-calc-trigger>
-                            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" class="md:col-span-2 form-input item-quantity" data-calc-trigger>
-                            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="md:col-span-3 form-input item-price" data-calc-trigger>
+                            <input type="hidden" name="item_stock_item_id[]" value="{{ item.stock_item_id if item.stock_item_id else '' }}">
+                            <input type="hidden" name="item_warehouse_id[]" value="{{ item.warehouse_id if item.warehouse_id else '' }}">
+                            <select class="md:col-span-2 form-input item-stock-select text-sm" data-row-index="{{ loop.index0 }}" title="{{ _('Select Stock Item') }}">
+                                <option value="">{{ _('None') }}</option>
+                                {% for stock_item in stock_items %}
+                                <option value="{{ stock_item.id }}" data-price="{{ stock_item.default_price or 0 }}" data-unit="{{ stock_item.unit }}" data-description="{{ stock_item.name }}" {% if item.stock_item_id == stock_item.id %}selected{% endif %}>{{ stock_item.sku }} - {{ stock_item.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <select class="md:col-span-2 form-input item-warehouse-select text-sm" data-row-index="{{ loop.index0 }}" title="{{ _('Select Warehouse') }}">
+                                <option value="">{{ _('None') }}</option>
+                                {% for warehouse in warehouses %}
+                                <option value="{{ warehouse.id }}" {% if item.warehouse_id == warehouse.id %}selected{% endif %}>{{ warehouse.code }} - {{ warehouse.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" value="{{ item.description }}" class="md:col-span-4 form-input item-description" data-calc-trigger>
+                            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" class="md:col-span-1 form-input item-quantity" data-calc-trigger>
+                            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="md:col-span-2 form-input item-price" data-calc-trigger>
                             <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -393,22 +409,123 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('preview-outstanding').textContent = outstanding.toFixed(2);
     }
     
+    // Stock items and warehouses data
+    const stockItems = {{ stock_items_json | safe if stock_items_json else '[]' }};
+    const warehouses = {{ warehouses_json | safe if warehouses_json else '[]' }};
+    
+    // Handle stock item selection
+    function setupStockItemHandlers() {
+        document.querySelectorAll('.item-stock-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('.invoice-item-row');
+                const stockItemId = this.value;
+                const selectedOption = this.options[this.selectedIndex];
+                const hiddenStockInput = row.querySelector('input[name="item_stock_item_id[]"]');
+                
+                hiddenStockInput.value = stockItemId || '';
+                
+                if (stockItemId && selectedOption) {
+                    const price = parseFloat(selectedOption.dataset.price || 0);
+                    const description = selectedOption.dataset.description || '';
+                    
+                    // Auto-populate fields
+                    if (description && !row.querySelector('.item-description').value) {
+                        row.querySelector('.item-description').value = description;
+                    }
+                    if (price > 0 && !row.querySelector('.item-price').value) {
+                        row.querySelector('.item-price').value = price.toFixed(2);
+                    }
+                    calculateTotals();
+                }
+            });
+        });
+    }
+    
     // Add item button
     const addBtn = document.getElementById('add-item');
     addBtn && addBtn.addEventListener('click', function() {
         const row = document.createElement('div');
-        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition space-y-2';
+        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition';
+        
+        // Build stock items dropdown
+        let stockItemsHtml = '<option value="">{{ _("None") }}</option>';
+        if (stockItems && Array.isArray(stockItems)) {
+            stockItems.forEach(item => {
+                const price = item.default_price || 0;
+                const unit = item.unit || '';
+                const desc = item.description || item.name || '';
+                stockItemsHtml += '<option value="' + item.id + '" data-price="' + price + '" data-unit="' + unit + '" data-description="' + desc.replace(/"/g, '&quot;') + '">' + item.sku + ' - ' + item.name + '</option>';
+            });
+        }
+        
+        // Build warehouses dropdown
+        let warehousesHtml = '<option value="">{{ _("None") }}</option>';
+        if (warehouses && Array.isArray(warehouses)) {
+            warehouses.forEach(wh => {
+                warehousesHtml += '<option value="' + wh.id + '">' + wh.code + ' - ' + wh.name + '</option>';
+            });
+        }
+        
         row.innerHTML = `
-            <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" class="md:col-span-6 form-input" data-calc-trigger>
-            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="1" step="0.01" min="0" class="md:col-span-2 form-input item-quantity" data-calc-trigger>
-            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" step="0.01" min="0" class="md:col-span-3 form-input item-price" data-calc-trigger>
+            <input type="hidden" name="item_stock_item_id[]" value="">
+            <input type="hidden" name="item_warehouse_id[]" value="">
+            <select class="md:col-span-2 form-input item-stock-select text-sm">
+                ${stockItemsHtml}
+            </select>
+            <select class="md:col-span-2 form-input item-warehouse-select text-sm">
+                ${warehousesHtml}
+            </select>
+            <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" class="md:col-span-4 form-input item-description" data-calc-trigger>
+            <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="1" step="0.01" min="0" class="md:col-span-1 form-input item-quantity" data-calc-trigger>
+            <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" step="0.01" min="0" class="md:col-span-2 form-input item-price" data-calc-trigger>
             <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
                 <i class="fas fa-trash"></i>
             </button>
         `;
         itemsContainer.appendChild(row);
+        
+        // Setup handlers for new row
+        const stockSelect = row.querySelector('.item-stock-select');
+        stockSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const hiddenStockInput = row.querySelector('input[name="item_stock_item_id[]"]');
+            hiddenStockInput.value = this.value || '';
+            
+            if (this.value && selectedOption) {
+                const price = parseFloat(selectedOption.dataset.price || 0);
+                const description = selectedOption.dataset.description || '';
+                if (description) row.querySelector('.item-description').value = description;
+                if (price > 0) row.querySelector('.item-price').value = price.toFixed(2);
+                calculateTotals();
+            }
+        });
+        
+        const warehouseSelect = row.querySelector('.item-warehouse-select');
+        warehouseSelect.addEventListener('change', function() {
+            const hiddenWarehouseInput = row.querySelector('input[name="item_warehouse_id[]"]');
+            hiddenWarehouseInput.value = this.value || '';
+        });
+        
+        // Setup calculation triggers
+        row.querySelectorAll('[data-calc-trigger]').forEach(input => {
+            input.addEventListener('input', calculateTotals);
+        });
+        
         calculateTotals();
-        row.querySelector('.item-quantity').focus();
+        setupStockItemHandlers();
+        row.querySelector('.item-stock-select').focus();
+    });
+    
+    // Initialize stock item handlers for existing rows
+    setupStockItemHandlers();
+    
+    // Setup warehouse handlers
+    document.querySelectorAll('.item-warehouse-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const row = this.closest('.invoice-item-row');
+            const hiddenWarehouseInput = row.querySelector('input[name="item_warehouse_id[]"]');
+            hiddenWarehouseInput.value = this.value || '';
+        });
     });
 
     // Add good button

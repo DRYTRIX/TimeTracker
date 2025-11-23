@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Suppliers', 'url': url_for('inventory.list_suppliers')},
+    {'text': supplier.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-truck',
+    title_text=supplier.name,
+    subtitle_text=supplier.code,
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("inventory.edit_supplier", supplier_id=supplier.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>Edit</a>' if (current_user.is_admin or has_permission('manage_inventory')) else None
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Supplier Details -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Supplier Details') }}</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Code') }}</label>
+                    <p class="mt-1 font-mono">{{ supplier.code }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Status') }}</label>
+                    <p class="mt-1">
+                        {% if supplier.is_active %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% if supplier.description %}
+                <div class="col-span-2">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Description') }}</label>
+                    <p class="mt-1">{{ supplier.description }}</p>
+                </div>
+                {% endif %}
+                {% if supplier.contact_person %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Contact Person') }}</label>
+                    <p class="mt-1">{{ supplier.contact_person }}</p>
+                </div>
+                {% endif %}
+                {% if supplier.email %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Email') }}</label>
+                    <p class="mt-1">
+                        <a href="mailto:{{ supplier.email }}" class="text-primary hover:underline">{{ supplier.email }}</a>
+                    </p>
+                </div>
+                {% endif %}
+                {% if supplier.phone %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Phone') }}</label>
+                    <p class="mt-1">
+                        <a href="tel:{{ supplier.phone }}" class="text-primary hover:underline">{{ supplier.phone }}</a>
+                    </p>
+                </div>
+                {% endif %}
+                {% if supplier.address %}
+                <div class="col-span-2">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Address') }}</label>
+                    <p class="mt-1">{{ supplier.address }}</p>
+                </div>
+                {% endif %}
+                {% if supplier.website %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Website') }}</label>
+                    <p class="mt-1">
+                        <a href="{{ supplier.website }}" target="_blank" rel="noopener" class="text-primary hover:underline">{{ supplier.website }}</a>
+                    </p>
+                </div>
+                {% endif %}
+                {% if supplier.tax_id %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Tax ID') }}</label>
+                    <p class="mt-1">{{ supplier.tax_id }}</p>
+                </div>
+                {% endif %}
+                {% if supplier.payment_terms %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Payment Terms') }}</label>
+                    <p class="mt-1">{{ supplier.payment_terms }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Currency') }}</label>
+                    <p class="mt-1">{{ supplier.currency_code }}</p>
+                </div>
+                {% if supplier.notes %}
+                <div class="col-span-2">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Notes') }}</label>
+                    <p class="mt-1">{{ supplier.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stock Items from this Supplier -->
+        {% if supplier_items %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Stock Items from this Supplier') }}</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full text-left">
+                    <thead>
+                        <tr>
+                            <th class="p-4">{{ _('Item') }}</th>
+                            <th class="p-4">{{ _('Supplier SKU') }}</th>
+                            <th class="p-4">{{ _('Unit Cost') }}</th>
+                            <th class="p-4">{{ _('MOQ') }}</th>
+                            <th class="p-4">{{ _('Lead Time') }}</th>
+                            <th class="p-4">{{ _('Preferred') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for supplier_item in supplier_items %}
+                        <tr>
+                            <td class="p-4 font-medium">
+                                <a href="{{ url_for('inventory.view_stock_item', item_id=supplier_item.stock_item_id) }}" class="text-primary hover:underline">
+                                    {{ supplier_item.stock_item.name }} ({{ supplier_item.stock_item.sku }})
+                                </a>
+                            </td>
+                            <td class="p-4 font-mono text-sm">{{ supplier_item.supplier_sku or '—' }}</td>
+                            <td class="p-4">
+                                {% if supplier_item.unit_cost %}
+                                    {{ "%.2f"|format(supplier_item.unit_cost) }} {{ supplier_item.currency_code }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="p-4">{{ supplier_item.minimum_order_quantity or '—' }}</td>
+                            <td class="p-4">
+                                {% if supplier_item.lead_time_days %}
+                                    {{ supplier_item.lead_time_days }} {{ _('days') }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="p-4">
+                                {% if supplier_item.is_preferred %}
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        <i class="fas fa-star"></i> {{ _('Preferred') }}
+                                    </span>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <p class="text-gray-500 text-center">{{ _('No stock items associated with this supplier.') }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <!-- Summary -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Stock Items') }}</label>
+                    <p class="text-2xl font-bold mt-1">{{ supplier_items|length }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Preferred Items') }}</label>
+                    <p class="text-xl font-semibold mt-1">
+                        {{ supplier_items|selectattr('is_preferred', 'equalto', True)|list|length }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

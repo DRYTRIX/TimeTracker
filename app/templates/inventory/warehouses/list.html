@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Warehouses'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-warehouse',
+    title_text='Warehouses',
+    subtitle_text='Manage warehouse locations',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("inventory.new_warehouse") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Warehouse</a>' if (current_user.is_admin or has_permission('manage_warehouses')) else None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Code') }}</th>
+                <th class="p-4">{{ _('Name') }}</th>
+                <th class="p-4">{{ _('Contact Person') }}</th>
+                <th class="p-4">{{ _('Contact Email') }}</th>
+                <th class="p-4">{{ _('Status') }}</th>
+                <th class="p-4">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for warehouse in warehouses %}
+            <tr>
+                <td class="p-4 font-mono text-sm">{{ warehouse.code }}</td>
+                <td class="p-4 font-medium">
+                    <a href="{{ url_for('inventory.view_warehouse', warehouse_id=warehouse.id) }}" class="text-primary hover:underline">
+                        {{ warehouse.name }}
+                    </a>
+                </td>
+                <td class="p-4">{{ warehouse.contact_person or '—' }}</td>
+                <td class="p-4">
+                    {% if warehouse.contact_email %}
+                        <a href="mailto:{{ warehouse.contact_email }}" class="text-primary hover:underline">{{ warehouse.contact_email }}</a>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if warehouse.is_active %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_warehouse', warehouse_id=warehouse.id) }}" class="text-primary hover:underline mr-3">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    {% if current_user.is_admin or has_permission('manage_warehouses') %}
+                    <a href="{{ url_for('inventory.edit_warehouse', warehouse_id=warehouse.id) }}" class="text-primary hover:underline">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="p-8 text-center text-gray-500">
+                    {{ _('No warehouses found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
