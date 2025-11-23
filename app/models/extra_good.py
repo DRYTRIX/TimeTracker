@@ -29,8 +29,14 @@ class ExtraGood(db.Model):
     billable = db.Column(db.Boolean, default=True, nullable=False)
     sku = db.Column(db.String(100), nullable=True)  # Stock Keeping Unit / Product Code
     
+    # Inventory integration
+    stock_item_id = db.Column(db.Integer, db.ForeignKey('stock_items.id'), nullable=True, index=True)
+    
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Relationships
+    stock_item = db.relationship('StockItem', foreign_keys=[stock_item_id], lazy='joined')
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -40,7 +46,7 @@ class ExtraGood(db.Model):
     
     def __init__(self, name, unit_price, quantity=1, created_by=None, project_id=None, 
                  invoice_id=None, description=None, category='product', billable=True, 
-                 sku=None, currency_code='EUR'):
+                 sku=None, currency_code='EUR', stock_item_id=None):
         """Initialize an ExtraGood instance.
         
         Args:
@@ -65,6 +71,7 @@ class ExtraGood(db.Model):
         self.currency_code = currency_code
         self.billable = billable
         self.sku = sku.strip() if sku else None
+        self.stock_item_id = stock_item_id
         self.created_by = created_by
         self.project_id = project_id
         self.invoice_id = invoice_id
@@ -92,6 +99,7 @@ class ExtraGood(db.Model):
             'currency_code': self.currency_code,
             'billable': self.billable,
             'sku': self.sku,
+            'stock_item_id': self.stock_item_id,
             'created_by': self.created_by,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

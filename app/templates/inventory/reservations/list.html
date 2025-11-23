@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Reservations'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bookmark',
+    title_text='Stock Reservations',
+    subtitle_text='Manage reserved stock for quotes and invoices',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Status') }}</label>
+            <select name="status" id="status" class="form-input">
+                <option value="all" {% if status == 'all' %}selected{% endif %}>{{ _('All') }}</option>
+                <option value="reserved" {% if status == 'reserved' %}selected{% endif %}>{{ _('Reserved') }}</option>
+                <option value="fulfilled" {% if status == 'fulfilled' %}selected{% endif %}>{{ _('Fulfilled') }}</option>
+                <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                <option value="expired" {% if status == 'expired' %}selected{% endif %}>{{ _('Expired') }}</option>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('Warehouse') }}</th>
+                <th class="p-4">{{ _('Quantity') }}</th>
+                <th class="p-4">{{ _('Type') }}</th>
+                <th class="p-4">{{ _('Reference') }}</th>
+                <th class="p-4">{{ _('Status') }}</th>
+                <th class="p-4">{{ _('Reserved At') }}</th>
+                <th class="p-4">{{ _('Expires At') }}</th>
+                <th class="p-4">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reservation in reservations %}
+            <tr>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=reservation.stock_item_id) }}" class="text-primary hover:underline">
+                        {{ reservation.stock_item.name }} ({{ reservation.stock_item.sku }})
+                    </a>
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_warehouse', warehouse_id=reservation.warehouse_id) }}" class="text-primary hover:underline">
+                        {{ reservation.warehouse.code }}
+                    </a>
+                </td>
+                <td class="p-4 font-semibold">{{ reservation.quantity }}</td>
+                <td class="p-4 capitalize">{{ reservation.reservation_type }}</td>
+                <td class="p-4">
+                    {% if reservation.reservation_type == 'invoice' %}
+                        <a href="{{ url_for('invoices.view_invoice', invoice_id=reservation.reservation_id) }}" class="text-primary hover:underline">
+                            Invoice #{{ reservation.reservation_id }}
+                        </a>
+                    {% elif reservation.reservation_type == 'quote' %}
+                        <a href="{{ url_for('quotes.view_quote', quote_id=reservation.reservation_id) }}" class="text-primary hover:underline">
+                            Quote #{{ reservation.reservation_id }}
+                        </a>
+                    {% else %}
+                        {{ reservation.reservation_type }} #{{ reservation.reservation_id }}
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if reservation.status == 'reserved' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Reserved') }}</span>
+                    {% elif reservation.status == 'fulfilled' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Fulfilled') }}</span>
+                    {% elif reservation.status == 'cancelled' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Cancelled') }}</span>
+                    {% elif reservation.status == 'expired' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">{{ _('Expired') }}</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">{{ reservation.reserved_at.strftime('%Y-%m-%d %H:%M') if reservation.reserved_at else '—' }}</td>
+                <td class="p-4">
+                    {% if reservation.expires_at %}
+                        {{ reservation.expires_at.strftime('%Y-%m-%d') if reservation.expires_at else '—' }}
+                        {% if reservation.is_expired %}
+                            <span class="ml-2 text-amber-500" title="{{ _('Expired') }}"><i class="fas fa-exclamation-triangle"></i></span>
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if reservation.status == 'reserved' and (current_user.is_admin or has_permission('manage_stock_reservations')) %}
+                        <form method="POST" action="{{ url_for('inventory.fulfill_reservation', reservation_id=reservation.id) }}" class="inline mr-2">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-green-600 hover:underline" onclick="return confirm('{{ _('Fulfill this reservation?') }}')">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('inventory.cancel_reservation', reservation_id=reservation.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('{{ _('Cancel this reservation?') }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="p-8 text-center text-gray-500">
+                    {{ _('No reservations found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

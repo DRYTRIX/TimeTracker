@@ -387,16 +387,28 @@ class QuoteItem(db.Model):
     # Optional fields
     unit = db.Column(db.String(20), nullable=True)  # 'hours', 'days', 'items', etc.
     
+    # Inventory integration
+    stock_item_id = db.Column(db.Integer, db.ForeignKey('stock_items.id'), nullable=True, index=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)
+    is_stock_item = db.Column(db.Boolean, default=False, nullable=False)
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     
-    def __init__(self, quote_id, description, quantity, unit_price, unit=None):
+    # Relationships
+    stock_item = db.relationship('StockItem', foreign_keys=[stock_item_id], lazy='joined')
+    warehouse = db.relationship('Warehouse', foreign_keys=[warehouse_id], lazy='joined')
+    
+    def __init__(self, quote_id, description, quantity, unit_price, unit=None, stock_item_id=None, warehouse_id=None):
         self.quote_id = quote_id
         self.description = description.strip()
         self.quantity = Decimal(str(quantity))
         self.unit_price = Decimal(str(unit_price))
         self.total_amount = self.quantity * self.unit_price
         self.unit = unit.strip() if unit else None
+        self.stock_item_id = stock_item_id
+        self.warehouse_id = warehouse_id
+        self.is_stock_item = stock_item_id is not None
     
     def __repr__(self):
         return f'<QuoteItem {self.description} ({self.quantity} @ {self.unit_price})>'
@@ -411,6 +423,9 @@ class QuoteItem(db.Model):
             'unit_price': float(self.unit_price),
             'total_amount': float(self.total_amount),
             'unit': self.unit,
+            'stock_item_id': self.stock_item_id,
+            'warehouse_id': self.warehouse_id,
+            'is_stock_item': self.is_stock_item,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 

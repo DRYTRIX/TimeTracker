@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Warehouses', 'url': url_for('inventory.list_warehouses')},
+    {'text': warehouse.name if warehouse else 'New Warehouse'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-warehouse',
+    title_text=warehouse.name if warehouse else 'New Warehouse',
+    subtitle_text='Create or edit warehouse' if not warehouse else 'Edit warehouse',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-4xl mx-auto">
+    <form method="POST" action="{% if warehouse %}{{ url_for('inventory.edit_warehouse', warehouse_id=warehouse.id) }}{% else %}{{ url_for('inventory.new_warehouse') }}{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Warehouse Code') }} *</label>
+                <input type="text" name="code" id="code" value="{{ warehouse.code if warehouse else '' }}" class="form-input" required>
+                <p class="mt-1 text-sm text-gray-500">{{ _('Unique code for this warehouse (e.g., WH-001)') }}</p>
+            </div>
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Name') }} *</label>
+                <input type="text" name="name" id="name" value="{{ warehouse.name if warehouse else '' }}" class="form-input" required>
+            </div>
+            <div class="md:col-span-2">
+                <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Address') }}</label>
+                <textarea name="address" id="address" rows="3" class="form-input">{{ warehouse.address if warehouse else '' }}</textarea>
+            </div>
+            <div>
+                <label for="contact_person" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Contact Person') }}</label>
+                <input type="text" name="contact_person" id="contact_person" value="{{ warehouse.contact_person if warehouse else '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="contact_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Contact Email') }}</label>
+                <input type="email" name="contact_email" id="contact_email" value="{{ warehouse.contact_email if warehouse else '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="contact_phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Contact Phone') }}</label>
+                <input type="tel" name="contact_phone" id="contact_phone" value="{{ warehouse.contact_phone if warehouse else '' }}" class="form-input">
+            </div>
+            <div class="md:col-span-2">
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                <textarea name="notes" id="notes" rows="3" class="form-input">{{ warehouse.notes if warehouse else '' }}</textarea>
+            </div>
+            <div class="md:col-span-2">
+                <label class="flex items-center">
+                    <input type="checkbox" name="is_active" {% if not warehouse or warehouse.is_active %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    <span class="ml-2 text-sm">{{ _('Active') }}</span>
+                </label>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <a href="{{ url_for('inventory.list_warehouses') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Save') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

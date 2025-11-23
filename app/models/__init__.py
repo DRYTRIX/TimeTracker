@@ -43,6 +43,15 @@ from .quote import Quote, QuoteItem, QuotePDFTemplate
 from .quote_attachment import QuoteAttachment
 from .quote_template import QuoteTemplate
 from .quote_version import QuoteVersion
+from .warehouse import Warehouse
+from .stock_item import StockItem
+from .warehouse_stock import WarehouseStock
+from .stock_movement import StockMovement
+from .stock_reservation import StockReservation
+from .project_stock_allocation import ProjectStockAllocation
+from .supplier import Supplier
+from .supplier_stock_item import SupplierStockItem
+from .purchase_order import PurchaseOrder, PurchaseOrderItem
 
 __all__ = [
     "User",
@@ -96,4 +105,14 @@ __all__ = [
     "QuoteAttachment",
     "QuoteTemplate",
     "QuoteVersion",
+    "Warehouse",
+    "StockItem",
+    "WarehouseStock",
+    "StockMovement",
+    "StockReservation",
+    "ProjectStockAllocation",
+    "Supplier",
+    "SupplierStockItem",
+    "PurchaseOrder",
+    "PurchaseOrderItem",
 ]

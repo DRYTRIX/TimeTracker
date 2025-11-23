@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Purchase Orders'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-shopping-cart',
+    title_text='Purchase Orders',
+    subtitle_text='Manage purchase orders to suppliers',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("inventory.new_purchase_order") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Purchase Order</a>' if (current_user.is_admin or has_permission('manage_inventory')) else None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Status') }}</label>
+            <select name="status" id="status" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>{{ _('Draft') }}</option>
+                <option value="sent" {% if selected_status == 'sent' %}selected{% endif %}>{{ _('Sent') }}</option>
+                <option value="confirmed" {% if selected_status == 'confirmed' %}selected{% endif %}>{{ _('Confirmed') }}</option>
+                <option value="received" {% if selected_status == 'received' %}selected{% endif %}>{{ _('Received') }}</option>
+                <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+            </select>
+        </div>
+        <div>
+            <label for="supplier_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Supplier') }}</label>
+            <select name="supplier_id" id="supplier_id" class="form-input">
+                <option value="">{{ _('All Suppliers') }}</option>
+                {% for supplier in suppliers %}
+                <option value="{{ supplier.id }}" {% if selected_supplier_id == supplier.id %}selected{% endif %}>{{ supplier.code }} - {{ supplier.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('PO Number') }}</th>
+                <th class="p-4">{{ _('Supplier') }}</th>
+                <th class="p-4">{{ _('Order Date') }}</th>
+                <th class="p-4">{{ _('Expected Delivery') }}</th>
+                <th class="p-4">{{ _('Status') }}</th>
+                <th class="p-4">{{ _('Total Amount') }}</th>
+                <th class="p-4">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for po in purchase_orders %}
+            <tr>
+                <td class="p-4 font-mono text-sm font-medium">
+                    <a href="{{ url_for('inventory.view_purchase_order', po_id=po.id) }}" class="text-primary hover:underline">
+                        {{ po.po_number }}
+                    </a>
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_supplier', supplier_id=po.supplier_id) }}" class="text-primary hover:underline">
+                        {{ po.supplier.name }}
+                    </a>
+                </td>
+                <td class="p-4">{{ po.order_date.strftime('%Y-%m-%d') if po.order_date else '—' }}</td>
+                <td class="p-4">{{ po.expected_delivery_date.strftime('%Y-%m-%d') if po.expected_delivery_date else '—' }}</td>
+                <td class="p-4">
+                    {% if po.status == 'draft' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Draft') }}</span>
+                    {% elif po.status == 'sent' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Sent') }}</span>
+                    {% elif po.status == 'confirmed' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">{{ _('Confirmed') }}</span>
+                    {% elif po.status == 'received' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Received') }}</span>
+                    {% elif po.status == 'cancelled' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Cancelled') }}</span>
+                    {% endif %}
+                </td>
+                <td class="p-4 font-medium">
+                    {{ "%.2f"|format(po.total_amount) }} {{ po.currency_code }}
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_purchase_order', po_id=po.id) }}" class="text-primary hover:underline mr-3">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="p-8 text-center text-gray-500">
+                    {{ _('No purchase orders found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

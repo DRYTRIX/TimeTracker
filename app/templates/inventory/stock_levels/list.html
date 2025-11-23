@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Levels'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-list-ul',
+    title_text='Stock Levels',
+    subtitle_text='View inventory levels across warehouses',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Warehouse') }}</label>
+            <select name="warehouse_id" id="warehouse_id" class="form-input">
+                <option value="">{{ _('All Warehouses') }}</option>
+                {% for wh in warehouses %}
+                <option value="{{ wh.id }}" {% if selected_warehouse_id == wh.id %}selected{% endif %}>{{ wh.code }} - {{ wh.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }}</label>
+            <select name="category" id="category" class="form-input">
+                <option value="">{{ _('All Categories') }}</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Warehouse') }}</th>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('On Hand') }}</th>
+                <th class="p-4">{{ _('Reserved') }}</th>
+                <th class="p-4">{{ _('Available') }}</th>
+                <th class="p-4">{{ _('Location') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stock_levels %}
+            <tr>
+                <td class="p-4 font-medium">{{ stock.warehouse.code }} - {{ stock.warehouse.name }}</td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=stock.stock_item.id) }}" class="text-primary hover:underline">
+                        {{ stock.stock_item.name }} ({{ stock.stock_item.sku }})
+                    </a>
+                </td>
+                <td class="p-4">{{ stock.quantity_on_hand }}</td>
+                <td class="p-4">{{ stock.quantity_reserved }}</td>
+                <td class="p-4">
+                    {{ stock.quantity_available }}
+                    {% if stock.stock_item.reorder_point and stock.quantity_on_hand < stock.stock_item.reorder_point %}
+                        <span class="ml-2 text-amber-500" title="{{ _('Low Stock') }}"><i class="fas fa-exclamation-triangle"></i></span>
+                    {% endif %}
+                </td>
+                <td class="p-4">{{ stock.location or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="p-8 text-center text-gray-500">
+                    {{ _('No stock levels found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

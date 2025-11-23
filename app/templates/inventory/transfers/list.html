@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Transfers'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-truck',
+    title_text='Stock Transfers',
+    subtitle_text='View transfers between warehouses',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("inventory.new_transfer") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Transfer</a>' if (current_user.is_admin or has_permission('transfer_stock')) else None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date From') }}</label>
+            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
+        </div>
+        <div>
+            <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date To') }}</label>
+            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Date') }}</th>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('From Warehouse') }}</th>
+                <th class="p-4">{{ _('To Warehouse') }}</th>
+                <th class="p-4">{{ _('Quantity') }}</th>
+                <th class="p-4">{{ _('User') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transfer_id, movements in transfer_groups.items() %}
+                {% if movements|length >= 2 %}
+                    {% set out_movement = movements|selectattr('quantity', 'lt', 0)|first %}
+                    {% set in_movement = movements|selectattr('quantity', 'gt', 0)|first %}
+                    {% if out_movement and in_movement %}
+                    <tr>
+                        <td class="p-4">{{ out_movement.moved_at.strftime('%Y-%m-%d %H:%M') if out_movement.moved_at else '—' }}</td>
+                        <td class="p-4">
+                            <a href="{{ url_for('inventory.view_stock_item', item_id=out_movement.stock_item_id) }}" class="text-primary hover:underline">
+                                {{ out_movement.stock_item.name }} ({{ out_movement.stock_item.sku }})
+                            </a>
+                        </td>
+                        <td class="p-4">
+                            <a href="{{ url_for('inventory.view_warehouse', warehouse_id=out_movement.warehouse_id) }}" class="text-primary hover:underline">
+                                {{ out_movement.warehouse.code }}
+                            </a>
+                        </td>
+                        <td class="p-4">
+                            <a href="{{ url_for('inventory.view_warehouse', warehouse_id=in_movement.warehouse_id) }}" class="text-primary hover:underline">
+                                {{ in_movement.warehouse.code }}
+                            </a>
+                        </td>
+                        <td class="p-4 font-semibold">{{ in_movement.quantity }}</td>
+                        <td class="p-4">{{ out_movement.moved_by_user.username if out_movement.moved_by_user else '—' }}</td>
+                    </tr>
+                    {% endif %}
+                {% endif %}
+            {% else %}
+            <tr>
+                <td colspan="6" class="p-8 text-center text-gray-500">
+                    {{ _('No transfers found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

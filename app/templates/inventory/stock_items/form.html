@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Items', 'url': url_for('inventory.list_stock_items')},
+    {'text': item.name if item else 'New Stock Item'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-cubes',
+    title_text=item.name if item else 'New Stock Item',
+    subtitle_text='Create or edit stock item' if not item else 'Edit stock item',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-4xl mx-auto">
+    <form method="POST" action="{% if item %}{{ url_for('inventory.edit_stock_item', item_id=item.id) }}{% else %}{{ url_for('inventory.new_stock_item') }}{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="sku" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('SKU') }} *</label>
+                <input type="text" name="sku" id="sku" value="{{ item.sku if item else '' }}" class="form-input" required>
+            </div>
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Name') }} *</label>
+                <input type="text" name="name" id="name" value="{{ item.name if item else '' }}" class="form-input" required>
+            </div>
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Description') }}</label>
+                <textarea name="description" id="description" rows="3" class="form-input">{{ item.description if item else '' }}</textarea>
+            </div>
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Category') }}</label>
+                <input type="text" name="category" id="category" value="{{ item.category if item else '' }}" class="form-input" list="categories">
+                <datalist id="categories">
+                    <option value="Electronics">
+                    <option value="Tools">
+                    <option value="Materials">
+                    <option value="Services">
+                </datalist>
+            </div>
+            <div>
+                <label for="unit" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Unit') }}</label>
+                <input type="text" name="unit" id="unit" value="{{ item.unit if item else 'pcs' }}" class="form-input">
+            </div>
+            <div>
+                <label for="barcode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Barcode') }}</label>
+                <input type="text" name="barcode" id="barcode" value="{{ item.barcode if item else '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Currency') }}</label>
+                <select name="currency_code" id="currency_code" class="form-input">
+                    <option value="EUR" {% if not item or item.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
+                    <option value="USD" {% if item and item.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                    <option value="GBP" {% if item and item.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                </select>
+            </div>
+            <div>
+                <label for="default_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Default Cost') }}</label>
+                <input type="number" name="default_cost" id="default_cost" value="{{ item.default_cost if item else '' }}" step="0.01" class="form-input">
+            </div>
+            <div>
+                <label for="default_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Default Price') }}</label>
+                <input type="number" name="default_price" id="default_price" value="{{ item.default_price if item else '' }}" step="0.01" class="form-input">
+            </div>
+            <div>
+                <label for="reorder_point" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Reorder Point') }}</label>
+                <input type="number" name="reorder_point" id="reorder_point" value="{{ item.reorder_point if item else '' }}" step="0.01" class="form-input">
+            </div>
+            <div>
+                <label for="reorder_quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Reorder Quantity') }}</label>
+                <input type="number" name="reorder_quantity" id="reorder_quantity" value="{{ item.reorder_quantity if item else '' }}" step="0.01" class="form-input">
+            </div>
+            <div class="md:col-span-2">
+                <label for="image_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Image URL') }}</label>
+                <input type="url" name="image_url" id="image_url" value="{{ item.image_url if item else '' }}" class="form-input">
+            </div>
+            <div class="md:col-span-2">
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                <textarea name="notes" id="notes" rows="3" class="form-input">{{ item.notes if item else '' }}</textarea>
+            </div>
+            <div class="md:col-span-2 space-y-2">
+                <label class="flex items-center">
+                    <input type="checkbox" name="is_active" {% if not item or item.is_active %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    <span class="ml-2 text-sm">{{ _('Active') }}</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="is_trackable" {% if not item or item.is_trackable %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    <span class="ml-2 text-sm">{{ _('Track Inventory') }}</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Suppliers Section -->
+        <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Suppliers') }}</h3>
+            <p class="text-sm text-gray-500 mb-4">{{ _('Manage multiple suppliers for this item with different pricing.') }}</p>
+            
+            <div id="suppliers-container" class="space-y-4">
+                {% if item %}
+                    {% for supplier_item in item.supplier_items.filter_by(is_active=True).all() %}
+                    <div class="supplier-row grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <input type="hidden" name="supplier_item_id[]" value="{{ supplier_item.id }}">
+                        <select name="supplier_id[]" class="md:col-span-3 form-input text-sm" required>
+                            <option value="">{{ _('Select Supplier') }}</option>
+                            {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}" {% if supplier_item.supplier_id == supplier.id %}selected{% endif %}>{{ supplier.code }} - {{ supplier.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="supplier_sku[]" placeholder="{{ _('Supplier SKU') }}" value="{{ supplier_item.supplier_sku or '' }}" class="md:col-span-2 form-input text-sm">
+                        <input type="number" name="supplier_unit_cost[]" placeholder="{{ _('Unit Cost') }}" value="{{ supplier_item.unit_cost or '' }}" step="0.01" class="md:col-span-2 form-input text-sm">
+                        <input type="number" name="supplier_moq[]" placeholder="{{ _('MOQ') }}" value="{{ supplier_item.minimum_order_quantity or '' }}" step="0.01" class="md:col-span-1 form-input text-sm">
+                        <input type="number" name="supplier_lead_time[]" placeholder="{{ _('Lead Time (days)') }}" value="{{ supplier_item.lead_time_days or '' }}" class="md:col-span-1 form-input text-sm">
+                        <label class="md:col-span-1 flex items-center">
+                            <input type="checkbox" name="supplier_preferred[]" value="{{ supplier_item.id }}" {% if supplier_item.is_preferred %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                            <span class="ml-2 text-xs">{{ _('Preferred') }}</span>
+                        </label>
+                        <button type="button" class="remove-supplier md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition text-sm" title="{{ _('Remove') }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <button type="button" id="add-supplier" class="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <i class="fas fa-plus mr-2"></i>{{ _('Add Supplier') }}
+            </button>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <a href="{{ url_for('inventory.list_stock_items') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Save') }}
+            </button>
+        </div>
+    </form>
+</div>
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const suppliersContainer = document.getElementById('suppliers-container');
+    const addSupplierBtn = document.getElementById('add-supplier');
+    const suppliers = {{ suppliers | tojson if suppliers else '[]' }};
+    
+    // Add supplier row
+    addSupplierBtn.addEventListener('click', function() {
+        const row = document.createElement('div');
+        row.className = 'supplier-row grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+        
+        let suppliersHtml = '<option value="">{{ _("Select Supplier") }}</option>';
+        suppliers.forEach(supplier => {
+            suppliersHtml += '<option value="' + supplier.id + '">' + supplier.code + ' - ' + supplier.name + '</option>';
+        });
+        
+        row.innerHTML = 
+            '<input type="hidden" name="supplier_item_id[]" value="">' +
+            '<select name="supplier_id[]" class="md:col-span-3 form-input text-sm" required>' + suppliersHtml + '</select>' +
+            '<input type="text" name="supplier_sku[]" placeholder="{{ _("Supplier SKU") }}" class="md:col-span-2 form-input text-sm">' +
+            '<input type="number" name="supplier_unit_cost[]" placeholder="{{ _("Unit Cost") }}" step="0.01" class="md:col-span-2 form-input text-sm">' +
+            '<input type="number" name="supplier_moq[]" placeholder="{{ _("MOQ") }}" step="0.01" class="md:col-span-1 form-input text-sm">' +
+            '<input type="number" name="supplier_lead_time[]" placeholder="{{ _("Lead Time (days)") }}" class="md:col-span-1 form-input text-sm">' +
+            '<label class="md:col-span-1 flex items-center">' +
+                '<input type="checkbox" name="supplier_preferred[]" value="" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">' +
+                '<span class="ml-2 text-xs">{{ _("Preferred") }}</span>' +
+            '</label>' +
+            '<button type="button" class="remove-supplier md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition text-sm" title="{{ _("Remove") }}">' +
+                '<i class="fas fa-trash"></i>' +
+            '</button>';
+        
+        suppliersContainer.appendChild(row);
+        
+        // Setup remove button
+        row.querySelector('.remove-supplier').addEventListener('click', function() {
+            row.remove();
+        });
+    });
+    
+    // Setup remove buttons for existing rows
+    document.querySelectorAll('.remove-supplier').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.closest('.supplier-row').remove();
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}
+

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Suppliers', 'url': url_for('inventory.list_suppliers')},
+    {'text': supplier.name if supplier else 'New Supplier'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-truck',
+    title_text=supplier.name if supplier else 'New Supplier',
+    subtitle_text='Create or edit supplier' if not supplier else 'Edit supplier',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-4xl mx-auto">
+    <form method="POST" action="{% if supplier %}{{ url_for('inventory.edit_supplier', supplier_id=supplier.id) }}{% else %}{{ url_for('inventory.new_supplier') }}{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Supplier Code') }} *</label>
+                <input type="text" name="code" id="code" value="{{ supplier.code if supplier else '' }}" class="form-input" required>
+                <p class="mt-1 text-sm text-gray-500">{{ _('Unique code for this supplier (e.g., SUP-001)') }}</p>
+            </div>
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Name') }} *</label>
+                <input type="text" name="name" id="name" value="{{ supplier.name if supplier else '' }}" class="form-input" required>
+            </div>
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Description') }}</label>
+                <textarea name="description" id="description" rows="2" class="form-input">{{ supplier.description if supplier else '' }}</textarea>
+            </div>
+            <div>
+                <label for="contact_person" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Contact Person') }}</label>
+                <input type="text" name="contact_person" id="contact_person" value="{{ supplier.contact_person if supplier else '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Email') }}</label>
+                <input type="email" name="email" id="email" value="{{ supplier.email if supplier else '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Phone') }}</label>
+                <input type="tel" name="phone" id="phone" value="{{ supplier.phone if supplier else '' }}" class="form-input">
+            </div>
+            <div class="md:col-span-2">
+                <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Address') }}</label>
+                <textarea name="address" id="address" rows="3" class="form-input">{{ supplier.address if supplier else '' }}</textarea>
+            </div>
+            <div>
+                <label for="website" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Website') }}</label>
+                <input type="url" name="website" id="website" value="{{ supplier.website if supplier else '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="tax_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Tax ID') }}</label>
+                <input type="text" name="tax_id" id="tax_id" value="{{ supplier.tax_id if supplier else '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="payment_terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Payment Terms') }}</label>
+                <input type="text" name="payment_terms" id="payment_terms" value="{{ supplier.payment_terms if supplier else '' }}" class="form-input" placeholder="{{ _('e.g., Net 30, Net 60') }}">
+            </div>
+            <div>
+                <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Currency') }}</label>
+                <select name="currency_code" id="currency_code" class="form-input">
+                    <option value="EUR" {% if not supplier or supplier.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
+                    <option value="USD" {% if supplier and supplier.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                    <option value="GBP" {% if supplier and supplier.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                    <option value="CHF" {% if supplier and supplier.currency_code == 'CHF' %}selected{% endif %}>CHF</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                <textarea name="notes" id="notes" rows="3" class="form-input">{{ supplier.notes if supplier else '' }}</textarea>
+            </div>
+            <div class="md:col-span-2">
+                <label class="flex items-center">
+                    <input type="checkbox" name="is_active" {% if not supplier or supplier.is_active %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    <span class="ml-2 text-sm">{{ _('Active') }}</span>
+                </label>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <a href="{{ url_for('inventory.list_suppliers') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Save') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

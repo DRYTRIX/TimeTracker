@@ -230,16 +230,23 @@ def create_quote():
         item_quantities = request.form.getlist('item_quantity[]')
         item_prices = request.form.getlist('item_price[]')
         item_units = request.form.getlist('item_unit[]')
+        item_stock_ids = request.form.getlist('item_stock_item_id[]')
+        item_warehouse_ids = request.form.getlist('item_warehouse_id[]')
         
-        for desc, qty, price, unit in zip(item_descriptions, item_quantities, item_prices, item_units):
+        for desc, qty, price, unit, stock_id, wh_id in zip(item_descriptions, item_quantities, item_prices, item_units, item_stock_ids, item_warehouse_ids):
             if desc.strip():
                 try:
+                    stock_item_id = int(stock_id) if stock_id and stock_id.strip() else None
+                    warehouse_id = int(wh_id) if wh_id and wh_id.strip() else None
+                    
                     item = QuoteItem(
                         quote_id=quote.id,
                         description=desc.strip(),
                         quantity=Decimal(qty) if qty else Decimal('1'),
                         unit_price=Decimal(price) if price else Decimal('0'),
-                        unit=unit.strip() if unit else None
+                        unit=unit.strip() if unit else None,
+                        stock_item_id=stock_item_id,
+                        warehouse_id=warehouse_id
                     )
                     db.session.add(item)
                 except (ValueError, InvalidOperation):
@@ -374,9 +381,21 @@ def edit_quote(quote_id):
                 db.session.delete(item)
         
         # Update or create items
-        for item_id, desc, qty, price, unit in zip(item_ids, item_descriptions, item_quantities, item_prices, item_units):
+        item_stock_ids = request.form.getlist('item_stock_item_id[]')
+        item_warehouse_ids = request.form.getlist('item_warehouse_id[]')
+        
+        # Pad lists to match length
+        while len(item_stock_ids) < len(item_ids):
+            item_stock_ids.append('')
+        while len(item_warehouse_ids) < len(item_ids):
+            item_warehouse_ids.append('')
+        
+        for item_id, desc, qty, price, unit, stock_id, wh_id in zip(item_ids, item_descriptions, item_quantities, item_prices, item_units, item_stock_ids, item_warehouse_ids):
             if desc.strip():
                 try:
+                    stock_item_id = int(stock_id) if stock_id and stock_id.strip() else None
+                    warehouse_id = int(wh_id) if wh_id and wh_id.strip() else None
+                    
                     if item_id:
                         # Update existing item
                         item = QuoteItem.query.get(item_id)
@@ -386,6 +405,9 @@ def edit_quote(quote_id):
                             item.unit_price = Decimal(price) if price else Decimal('0')
                             item.total_amount = item.quantity * item.unit_price
                             item.unit = unit.strip() if unit else None
+                            item.stock_item_id = stock_item_id
+                            item.warehouse_id = warehouse_id
+                            item.is_stock_item = stock_item_id is not None
                     else:
                         # Create new item
                         item = QuoteItem(
@@ -393,7 +415,9 @@ def edit_quote(quote_id):
                             description=desc.strip(),
                             quantity=Decimal(qty) if qty else Decimal('1'),
                             unit_price=Decimal(price) if price else Decimal('0'),
-                            unit=unit.strip() if unit else None
+                            unit=unit.strip() if unit else None,
+                            stock_item_id=stock_item_id,
+                            warehouse_id=warehouse_id
                         )
                         db.session.add(item)
                 except (ValueError, InvalidOperation):
@@ -403,7 +427,13 @@ def edit_quote(quote_id):
         
         if not safe_commit('edit_quote', {'quote_id': quote_id}):
             flash(_('Could not update quote due to a database error. Please check server logs.'), 'error')
-            return render_template('quotes/edit.html', quote=quote, clients=Client.get_active_clients())
+            from app.models import StockItem, Warehouse
+            import json
+            stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+            warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
+            stock_items_json = json.dumps([{'id': item.id, 'sku': item.sku, 'name': item.name, 'default_price': float(item.default_price) if item.default_price else None, 'unit': item.unit or 'pcs', 'description': item.name} for item in stock_items])
+            warehouses_json = json.dumps([{'id': wh.id, 'code': wh.code, 'name': wh.name} for wh in warehouses])
+            return render_template('quotes/edit.html', quote=quote, clients=Client.get_active_clients(), stock_items=stock_items, warehouses=warehouses, stock_items_json=stock_items_json, warehouses_json=warehouses_json)
         
         log_event("quote.updated", 
                  user_id=current_user.id, 
@@ -417,7 +447,13 @@ def edit_quote(quote_id):
         flash(_('Quote updated successfully'), 'success')
         return redirect(url_for('quotes.view_quote', quote_id=quote_id))
     
-    return render_template('quotes/edit.html', quote=quote, clients=Client.get_active_clients())
+    from app.models import StockItem, Warehouse
+    import json
+    stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
+    stock_items_json = json.dumps([{'id': item.id, 'sku': item.sku, 'name': item.name, 'default_price': float(item.default_price) if item.default_price else None, 'unit': item.unit or 'pcs', 'description': item.name} for item in stock_items])
+    warehouses_json = json.dumps([{'id': wh.id, 'code': wh.code, 'name': wh.name} for wh in warehouses])
+    return render_template('quotes/edit.html', quote=quote, clients=Client.get_active_clients(), stock_items=stock_items, warehouses=warehouses, stock_items_json=stock_items_json, warehouses_json=warehouses_json)
 
 @quotes_bp.route('/quotes/<int:quote_id>/send', methods=['POST'])
 @login_required
@@ -438,6 +474,28 @@ def send_quote(quote_id):
     except ValueError as e:
         flash(_('Cannot send quote: %(error)s', error=str(e)), 'error')
         return redirect(url_for('quotes.view_quote', quote_id=quote_id))
+    
+    # Reserve stock for quote items if enabled
+    from app.models import StockReservation
+    import os
+    
+    auto_reserve_on_send = os.getenv('INVENTORY_AUTO_RESERVE_ON_QUOTE_SENT', 'false').lower() == 'true'
+    if auto_reserve_on_send:
+        for item in quote.items:
+            if item.is_stock_item and item.stock_item_id and item.warehouse_id:
+                try:
+                    expires_in_days = get_setting('INVENTORY_QUOTE_RESERVATION_EXPIRY_DAYS', 30)
+                    StockReservation.create_reservation(
+                        stock_item_id=item.stock_item_id,
+                        warehouse_id=item.warehouse_id,
+                        quantity=item.quantity,
+                        reservation_type='quote',
+                        reservation_id=quote.id,
+                        reserved_by=current_user.id,
+                        expires_in_days=expires_in_days
+                    )
+                except ValueError as e:
+                    flash(_('Warning: Could not reserve stock for item %(item)s: %(error)s', item=item.description, error=str(e)), 'warning')
     
     if not safe_commit('send_quote', {'quote_id': quote_id}):
         flash(_('Could not send quote due to a database error. Please check server logs.'), 'error')
@@ -511,6 +569,36 @@ def accept_quote(quote_id):
             flash(_('Could not accept quote: %(error)s', error=str(e)), 'error')
             db.session.rollback()
             return redirect(url_for('quotes.view_quote', quote_id=quote_id))
+        
+        # Reserve stock for quote items when accepted (if not already reserved)
+        from app.models import StockReservation
+        import os
+        
+        for item in quote.items:
+            if item.is_stock_item and item.stock_item_id and item.warehouse_id:
+                # Check if reservation already exists
+                existing = StockReservation.query.filter_by(
+                    stock_item_id=item.stock_item_id,
+                    warehouse_id=item.warehouse_id,
+                    reservation_type='quote',
+                    reservation_id=quote.id,
+                    status='reserved'
+                ).first()
+                
+                if not existing:
+                    try:
+                        expires_in_days = int(os.getenv('INVENTORY_QUOTE_RESERVATION_EXPIRY_DAYS', '30'))
+                        StockReservation.create_reservation(
+                            stock_item_id=item.stock_item_id,
+                            warehouse_id=item.warehouse_id,
+                            quantity=item.quantity,
+                            reservation_type='quote',
+                            reservation_id=quote.id,
+                            reserved_by=current_user.id,
+                            expires_in_days=expires_in_days
+                        )
+                    except ValueError as e:
+                        flash(_('Warning: Could not reserve stock for item %(item)s: %(error)s', item=item.description, error=str(e)), 'warning')
         
         if not safe_commit('accept_quote', {'quote_id': quote_id, 'project_id': project.id}):
             flash(_('Could not accept quote due to a database error. Please check server logs.'), 'error')

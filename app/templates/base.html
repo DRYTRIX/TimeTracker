@@ -211,6 +211,7 @@
                 {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') %}
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
+                {% set inventory_open = ep.startswith('inventory.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
                 {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') %}
@@ -350,6 +351,81 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_budget %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('budget_alerts.budget_dashboard') }}">
                                     <i class="fas fa-exclamation-triangle w-4 mr-2"></i>{{ _('Budget Alerts') }}
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="mt-2">
+                        <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" class="w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                            <i class="fas fa-boxes w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Inventory') }}</span>
+                            <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
+                        </button>
+                        <ul id="inventoryDropdown" class="{% if not inventory_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            {% set nav_active_stock_items = ep.startswith('inventory.list_stock_items') or ep.startswith('inventory.view_stock_item') or ep.startswith('inventory.new_stock_item') or ep.startswith('inventory.edit_stock_item') %}
+                            {% set nav_active_warehouses = ep.startswith('inventory.list_warehouses') or ep.startswith('inventory.view_warehouse') or ep.startswith('inventory.new_warehouse') or ep.startswith('inventory.edit_warehouse') %}
+                            {% set nav_active_suppliers = ep.startswith('inventory.list_suppliers') or ep.startswith('inventory.view_supplier') or ep.startswith('inventory.new_supplier') or ep.startswith('inventory.edit_supplier') %}
+                            {% set nav_active_stock_levels = ep.startswith('inventory.stock_levels') %}
+                            {% set nav_active_movements = ep.startswith('inventory.list_movements') or ep.startswith('inventory.new_movement') %}
+                            {% set nav_active_transfers = ep.startswith('inventory.list_transfers') or ep.startswith('inventory.new_transfer') %}
+                            {% set nav_active_adjustments = ep.startswith('inventory.list_adjustments') or ep.startswith('inventory.new_adjustment') %}
+                            {% set nav_active_reservations = ep.startswith('inventory.list_reservations') %}
+                            {% set nav_active_low_stock = ep.startswith('inventory.low_stock_alerts') %}
+                            {% set nav_active_reports = ep.startswith('inventory.reports') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_stock_items %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_stock_items') }}">
+                                    <i class="fas fa-cubes w-4 mr-2"></i>{{ _('Stock Items') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_warehouses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_warehouses') }}">
+                                    <i class="fas fa-warehouse w-4 mr-2"></i>{{ _('Warehouses') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_suppliers %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_suppliers') }}">
+                                    <i class="fas fa-truck w-4 mr-2"></i>{{ _('Suppliers') }}
+                                </a>
+                            </li>
+                            {% set nav_active_purchase_orders = ep.startswith('inventory.list_purchase_orders') or ep.startswith('inventory.view_purchase_order') or ep.startswith('inventory.new_purchase_order') or ep.startswith('inventory.receive_purchase_order') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_purchase_orders %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_purchase_orders') }}">
+                                    <i class="fas fa-shopping-cart w-4 mr-2"></i>{{ _('Purchase Orders') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_stock_levels %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.stock_levels') }}">
+                                    <i class="fas fa-list-ul w-4 mr-2"></i>{{ _('Stock Levels') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_movements %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_movements') }}">
+                                    <i class="fas fa-exchange-alt w-4 mr-2"></i>{{ _('Stock Movements') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_transfers %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_transfers') }}">
+                                    <i class="fas fa-truck w-4 mr-2"></i>{{ _('Transfers') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_adjustments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_adjustments') }}">
+                                    <i class="fas fa-edit w-4 mr-2"></i>{{ _('Adjustments') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_reservations %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.list_reservations') }}">
+                                    <i class="fas fa-bookmark w-4 mr-2"></i>{{ _('Reservations') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_low_stock %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.low_stock_alerts') }}">
+                                    <i class="fas fa-exclamation-triangle w-4 mr-2"></i>{{ _('Low Stock Alerts') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('inventory.reports_dashboard') }}">
+                                    <i class="fas fa-chart-pie w-4 mr-2"></i>{{ _('Reports') }}
                                 </a>
                             </li>
                         </ul>

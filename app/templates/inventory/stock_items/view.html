@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Items', 'url': url_for('inventory.list_stock_items')},
+    {'text': item.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-cube',
+    title_text=item.name,
+    subtitle_text=item.sku,
+    breadcrumbs=breadcrumbs,
+    actions_html=('<a href="' + url_for("inventory.edit_stock_item", item_id=item.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors mr-2"><i class="fas fa-edit mr-2"></i>Edit</a>' if (current_user.is_admin or has_permission('manage_stock_items')) else '') +
+                  ('<a href="' + url_for("inventory.stock_item_history", item_id=item.id) + '" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors mr-2"><i class="fas fa-history mr-2"></i>History</a>' if (current_user.is_admin or has_permission('view_stock_history')) else '') +
+                  ('<a href="' + url_for("inventory.stock_levels_by_item", item_id=item.id) + '" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"><i class="fas fa-list-ul mr-2"></i>Stock Levels</a>' if (current_user.is_admin or has_permission('view_stock_levels')) else '')
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Item Details -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Item Details') }}</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('SKU') }}</label>
+                    <p class="mt-1 font-mono">{{ item.sku }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Category') }}</label>
+                    <p class="mt-1">{{ item.category or '—' }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Unit') }}</label>
+                    <p class="mt-1">{{ item.unit }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Barcode') }}</label>
+                    <p class="mt-1 font-mono">{{ item.barcode or '—' }}</p>
+                </div>
+                {% if item.description %}
+                <div class="col-span-2">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Description') }}</label>
+                    <p class="mt-1">{{ item.description }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Default Cost') }}</label>
+                    <p class="mt-1">{{ "%.2f"|format(item.default_cost) if item.default_cost else '—' }} {{ item.currency_code }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Default Price') }}</label>
+                    <p class="mt-1">{{ "%.2f"|format(item.default_price) if item.default_price else '—' }} {{ item.currency_code }}</p>
+                </div>
+                <!-- Suppliers -->
+                {% if item.supplier_items.filter_by(is_active=True).count() > 0 %}
+                <div class="col-span-2">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Suppliers') }}</label>
+                    <div class="mt-2 space-y-2">
+                        {% for supplier_item in item.supplier_items.filter_by(is_active=True).all() %}
+                        <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <a href="{{ url_for('inventory.view_supplier', supplier_id=supplier_item.supplier_id) }}" class="text-primary hover:underline font-medium">
+                                        {{ supplier_item.supplier.name }}
+                                    </a>
+                                    {% if supplier_item.is_preferred %}
+                                        <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                            <i class="fas fa-star"></i> {{ _('Preferred') }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">
+                                    {% if supplier_item.unit_cost %}
+                                        {{ "%.2f"|format(supplier_item.unit_cost) }} {{ supplier_item.currency_code }}
+                                    {% endif %}
+                                    {% if supplier_item.supplier_sku %}
+                                        | SKU: {{ supplier_item.supplier_sku }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if item.reorder_point %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Reorder Point') }}</label>
+                    <p class="mt-1">{{ item.reorder_point }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Reorder Quantity') }}</label>
+                    <p class="mt-1">{{ item.reorder_quantity or '—' }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Status') }}</label>
+                    <p class="mt-1">
+                        {% if item.is_active %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Trackable') }}</label>
+                    <p class="mt-1">
+                        {% if item.is_trackable %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Yes') }}</span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('No') }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Levels by Warehouse -->
+        {% if item.is_trackable and stock_levels %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Stock Levels by Warehouse') }}</h2>
+            <table class="table table-zebra w-full text-left">
+                <thead>
+                    <tr>
+                        <th class="p-4">{{ _('Warehouse') }}</th>
+                        <th class="p-4">{{ _('On Hand') }}</th>
+                        <th class="p-4">{{ _('Reserved') }}</th>
+                        <th class="p-4">{{ _('Available') }}</th>
+                        <th class="p-4">{{ _('Location') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stock_levels %}
+                    <tr>
+                        <td class="p-4 font-medium">
+                            <a href="{{ url_for('inventory.view_warehouse', warehouse_id=stock.warehouse_id) }}" class="text-primary hover:underline">
+                                {{ stock.warehouse.code }} - {{ stock.warehouse.name }}
+                            </a>
+                        </td>
+                        <td class="p-4">{{ stock.quantity_on_hand }}</td>
+                        <td class="p-4">{{ stock.quantity_reserved }}</td>
+                        <td class="p-4">
+                            {{ stock.quantity_available }}
+                            {% if item.reorder_point and stock.quantity_on_hand < item.reorder_point %}
+                                <span class="ml-2 text-amber-500" title="{{ _('Low Stock') }}"><i class="fas fa-exclamation-triangle"></i></span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4">{{ stock.location or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Recent Movements -->
+        {% if recent_movements %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Recent Stock Movements') }}</h2>
+            <table class="table table-zebra w-full text-left">
+                <thead>
+                    <tr>
+                        <th class="p-4">{{ _('Date') }}</th>
+                        <th class="p-4">{{ _('Type') }}</th>
+                        <th class="p-4">{{ _('Warehouse') }}</th>
+                        <th class="p-4">{{ _('Quantity') }}</th>
+                        <th class="p-4">{{ _('Reason') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in recent_movements %}
+                    <tr>
+                        <td class="p-4">{{ movement.moved_at.strftime('%Y-%m-%d %H:%M') if movement.moved_at else '—' }}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
+                                {{ movement.movement_type }}
+                            </span>
+                        </td>
+                        <td class="p-4">{{ movement.warehouse.code }}</td>
+                        <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ '+' if movement.quantity > 0 else '' }}{{ movement.quantity }}
+                        </td>
+                        <td class="p-4">{{ movement.reason or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="space-y-6">
+        <!-- Summary Card -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
+            {% if item.is_trackable %}
+            <div class="space-y-3">
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total On Hand') }}</label>
+                    <p class="text-2xl font-bold mt-1">{{ item.total_quantity_on_hand or 0 }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Reserved') }}</label>
+                    <p class="text-xl font-semibold mt-1">{{ item.total_quantity_reserved or 0 }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Available') }}</label>
+                    <p class="text-2xl font-bold text-primary mt-1">{{ item.total_quantity_available or 0 }}</p>
+                </div>
+                {% if item.is_low_stock %}
+                <div class="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p class="text-sm text-amber-800 dark:text-amber-200">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>{{ _('Low Stock Alert') }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-gray-500">{{ _('This item is not trackable.') }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Active Reservations -->
+        {% if active_reservations %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Active Reservations') }}</h3>
+            <div class="space-y-2">
+                {% for reservation in active_reservations %}
+                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <p class="text-sm font-medium">{{ reservation.quantity }} {{ item.unit }}</p>
+                    <p class="text-xs text-gray-500">{{ reservation.reservation_type }} #{{ reservation.reservation_id }}</p>
+                    <p class="text-xs text-gray-500">{{ reservation.warehouse.code }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

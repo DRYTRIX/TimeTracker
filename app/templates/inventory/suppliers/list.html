@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Suppliers'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-truck',
+    title_text='Suppliers',
+    subtitle_text='Manage suppliers and vendors',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("inventory.new_supplier") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Supplier</a>' if (current_user.is_admin or has_permission('manage_inventory')) else None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Search') }}</label>
+            <input type="text" name="search" id="search" value="{{ search }}" placeholder="{{ _('Code, name, email') }}" class="form-input">
+        </div>
+        <div>
+            <label for="active" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Status') }}</label>
+            <select name="active" id="active" class="form-input">
+                <option value="true" {% if active_only %}selected{% endif %}>{{ _('Active Only') }}</option>
+                <option value="false" {% if not active_only %}selected{% endif %}>{{ _('All') }}</option>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Code') }}</th>
+                <th class="p-4">{{ _('Name') }}</th>
+                <th class="p-4">{{ _('Contact Person') }}</th>
+                <th class="p-4">{{ _('Email') }}</th>
+                <th class="p-4">{{ _('Phone') }}</th>
+                <th class="p-4">{{ _('Status') }}</th>
+                <th class="p-4">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for supplier in suppliers %}
+            <tr>
+                <td class="p-4 font-mono text-sm">{{ supplier.code }}</td>
+                <td class="p-4 font-medium">
+                    <a href="{{ url_for('inventory.view_supplier', supplier_id=supplier.id) }}" class="text-primary hover:underline">
+                        {{ supplier.name }}
+                    </a>
+                </td>
+                <td class="p-4">{{ supplier.contact_person or '—' }}</td>
+                <td class="p-4">
+                    {% if supplier.email %}
+                        <a href="mailto:{{ supplier.email }}" class="text-primary hover:underline">{{ supplier.email }}</a>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if supplier.phone %}
+                        <a href="tel:{{ supplier.phone }}" class="text-primary hover:underline">{{ supplier.phone }}</a>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if supplier.is_active %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_supplier', supplier_id=supplier.id) }}" class="text-primary hover:underline mr-3">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    {% if current_user.is_admin or has_permission('manage_inventory') %}
+                    <a href="{{ url_for('inventory.edit_supplier', supplier_id=supplier.id) }}" class="text-primary hover:underline">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="p-8 text-center text-gray-500">
+                    {{ _('No suppliers found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
