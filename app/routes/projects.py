@@ -23,10 +23,12 @@ projects_bp = Blueprint('projects', __name__)
 @projects_bp.route('/projects')
 @login_required
 def list_projects():
-    """List all projects"""
+    """List all projects - REFACTORED to use service layer with eager loading"""
     # Track page view
     from app import track_page_view
     track_page_view("projects_list")
+    
+    from app.services import ProjectService
     
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'active')
@@ -34,44 +36,17 @@ def list_projects():
     search = request.args.get('search', '').strip()
     favorites_only = request.args.get('favorites', '').lower() == 'true'
     
-    query = Project.query
+    project_service = ProjectService()
     
-    # Filter by favorites if requested
-    if favorites_only:
-        # Join with user_favorite_projects table
-        query = query.join(
-            UserFavoriteProject,
-            db.and_(
-                UserFavoriteProject.project_id == Project.id,
-                UserFavoriteProject.user_id == current_user.id
-            )
-        )
-    
-    # Filter by status (use Project.status to be explicit)
-    if status == 'active':
-        query = query.filter(Project.status == 'active')
-    elif status == 'archived':
-        query = query.filter(Project.status == 'archived')
-    elif status == 'inactive':
-        query = query.filter(Project.status == 'inactive')
-    
-    if client_name:
-        query = query.join(Client).filter(Client.name == client_name)
-    
-    if search:
-        like = f"%{search}%"
-        query = query.filter(
-            db.or_(
-                Project.name.ilike(like),
-                Project.description.ilike(like)
-            )
-        )
-    
-    # Get all projects for the current page
-    projects_pagination = query.order_by(Project.name).paginate(
+    # Use service layer to get projects (prevents N+1 queries)
+    result = project_service.list_projects(
+        status=status,
+        client_name=client_name if client_name else None,
+        search=search if search else None,
+        favorites_only=favorites_only,
+        user_id=current_user.id if favorites_only else None,
         page=page,
-        per_page=20,
-        error_out=False
+        per_page=20
     )
     
     # Get user's favorite project IDs for quick lookup in template
@@ -83,7 +58,8 @@ def list_projects():
     
     return render_template(
         'projects/list.html',
-        projects=projects_pagination.items,
+        projects=result['projects'],
+        pagination=result['pagination'],
         status=status,
         clients=client_list,
         favorite_project_ids=favorite_project_ids,
@@ -372,65 +348,34 @@ def create_project():
 @projects_bp.route('/projects/<int:project_id>')
 @login_required
 def view_project(project_id):
-    """View project details and time entries"""
-    project = Project.query.get_or_404(project_id)
+    """View project details and time entries - REFACTORED to use service layer with eager loading"""
+    from app.services import ProjectService
     
-    # Get time entries for this project
     page = request.args.get('page', 1, type=int)
-    entries_pagination = project.time_entries.filter(
-        TimeEntry.end_time.isnot(None)
-    ).order_by(
-        TimeEntry.start_time.desc()
-    ).paginate(
-        page=page,
-        per_page=50,
-        error_out=False
+    project_service = ProjectService()
+    
+    # Get all project view data using service layer (prevents N+1 queries)
+    result = project_service.get_project_view_data(
+        project_id=project_id,
+        time_entries_page=page,
+        time_entries_per_page=50
     )
     
-    # Get tasks for this project
-    tasks = project.tasks.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
-    
-    # Get user totals
-    user_totals = project.get_user_totals()
-    
-    # Get comments for this project
-    from app.models import Comment
-    comments = Comment.get_project_comments(project_id, include_replies=True)
-    
-    # Get recent project costs (latest 5)
-    recent_costs = ProjectCost.query.filter_by(project_id=project_id).order_by(
-        ProjectCost.cost_date.desc()
-    ).limit(5).all()
-    
-    # Get total cost count
-    total_costs_count = ProjectCost.query.filter_by(project_id=project_id).count()
-    
-    # Get kanban columns for this project - force fresh data
-    db.session.expire_all()
-    if KanbanColumn:
-        # Try to get project-specific columns first
-        kanban_columns = KanbanColumn.get_active_columns(project_id=project_id)
-        # If no project-specific columns exist, fall back to global columns
-        if not kanban_columns:
-            kanban_columns = KanbanColumn.get_active_columns(project_id=None)
-            # If still no global columns exist, initialize default global columns
-            if not kanban_columns:
-                KanbanColumn.initialize_default_columns(project_id=None)
-                kanban_columns = KanbanColumn.get_active_columns(project_id=None)
-    else:
-        kanban_columns = []
+    if not result.get('success'):
+        flash(_('Project not found'), 'error')
+        return redirect(url_for('projects.list_projects'))
     
     # Prevent browser caching of kanban board
     response = render_template('projects/view.html', 
-                         project=project, 
-                         entries=entries_pagination.items,
-                         pagination=entries_pagination,
-                         tasks=tasks,
-                         user_totals=user_totals,
-                         comments=comments,
-                         recent_costs=recent_costs,
-                         total_costs_count=total_costs_count,
-                         kanban_columns=kanban_columns)
+                         project=result['project'], 
+                         entries=result['time_entries_pagination'].items,
+                         pagination=result['time_entries_pagination'],
+                         tasks=result['tasks'],
+                         user_totals=result['user_totals'],
+                         comments=result['comments'],
+                         recent_costs=result['recent_costs'],
+                         total_costs_count=result['total_costs_count'],
+                         kanban_columns=result['kanban_columns'])
     resp = make_response(response)
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'

@@ -1,18 +1,40 @@
 """
 Service for reporting and analytics business logic.
+
+This service handles all reporting operations including:
+- Time tracking summaries
+- Project reports
+- User reports
+- Payment statistics
+- Comparison reports (month-over-month, etc.)
+
+All methods use the repository pattern for data access and include
+optimized queries to prevent performance issues.
+
+Example:
+    service = ReportingService()
+    summary = service.get_reports_summary(user_id=1, is_admin=False)
 """
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from app import db
 from app.repositories import TimeEntryRepository, ProjectRepository, InvoiceRepository, ExpenseRepository
-from app.models import TimeEntry, Project, Invoice, Expense
+from app.models import TimeEntry, Project, Invoice, Expense, Payment, User
+from sqlalchemy import func
 
 
 class ReportingService:
-    """Service for reporting operations"""
+    """
+    Service for reporting and analytics operations.
+    
+    Provides comprehensive reporting capabilities with optimized queries
+    and aggregated statistics.
+    """
     
     def __init__(self):
+        """Initialize ReportingService with required repositories."""
         self.time_entry_repo = TimeEntryRepository()
         self.project_repo = ProjectRepository()
         self.invoice_repo = InvoiceRepository()
@@ -74,6 +96,123 @@ class ReportingService:
             'total_entries': len(entries),
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat()
+        }
+    
+    def get_reports_summary(
+        self,
+        user_id: Optional[int] = None,
+        is_admin: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Get comprehensive reports summary for dashboard.
+        Uses optimized queries to prevent N+1 problems.
+        
+        Args:
+            user_id: User ID for filtering (non-admin users)
+            is_admin: Whether user is admin
+            
+        Returns:
+            dict with summary statistics including:
+            - total_hours, billable_hours
+            - active_projects, total_users
+            - payment statistics
+            - recent_entries
+            - month-over-month comparison
+        """
+        # Build base queries
+        totals_query = db.session.query(func.sum(TimeEntry.duration_seconds)).filter(
+            TimeEntry.end_time.isnot(None)
+        )
+        billable_query = db.session.query(func.sum(TimeEntry.duration_seconds)).filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.billable == True
+        )
+        entries_query = TimeEntry.query.filter(TimeEntry.end_time.isnot(None))
+        
+        # Apply user filter if not admin
+        if not is_admin and user_id:
+            totals_query = totals_query.filter(TimeEntry.user_id == user_id)
+            billable_query = billable_query.filter(TimeEntry.user_id == user_id)
+            entries_query = entries_query.filter(TimeEntry.user_id == user_id)
+        
+        total_seconds = totals_query.scalar() or 0
+        billable_seconds = billable_query.scalar() or 0
+        
+        # Get payment statistics (last 30 days)
+        payment_query = db.session.query(
+            func.sum(Payment.amount).label('total_payments'),
+            func.count(Payment.id).label('payment_count'),
+            func.sum(Payment.gateway_fee).label('total_fees')
+        ).filter(
+            Payment.payment_date >= datetime.utcnow() - timedelta(days=30),
+            Payment.status == 'completed'
+        )
+        
+        if not is_admin and user_id:
+            payment_query = payment_query.join(Invoice).join(Project).join(TimeEntry).filter(
+                TimeEntry.user_id == user_id
+            )
+        
+        payment_result = payment_query.first()
+        
+        # Get project and user counts
+        active_projects = Project.query.filter_by(status='active').count()
+        total_users = User.query.filter_by(is_active=True).count() if is_admin else 1
+        
+        summary = {
+            'total_hours': round(total_seconds / 3600, 2),
+            'billable_hours': round(billable_seconds / 3600, 2),
+            'active_projects': active_projects,
+            'total_users': total_users,
+            'total_payments': float(payment_result.total_payments or 0) if payment_result else 0,
+            'payment_count': payment_result.payment_count or 0 if payment_result else 0,
+            'payment_fees': float(payment_result.total_fees or 0) if payment_result else 0,
+        }
+        
+        # Get recent entries with eager loading
+        from sqlalchemy.orm import joinedload
+        recent_entries = entries_query.options(
+            joinedload(TimeEntry.project),
+            joinedload(TimeEntry.user),
+            joinedload(TimeEntry.task)
+        ).order_by(TimeEntry.start_time.desc()).limit(10).all()
+        
+        # Get comparison data for this month vs last month
+        now = datetime.utcnow()
+        this_month_start = datetime(now.year, now.month, 1)
+        last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
+        last_month_end = this_month_start - timedelta(seconds=1)
+        
+        # Get hours for this month
+        this_month_query = db.session.query(func.sum(TimeEntry.duration_seconds)).filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= this_month_start,
+            TimeEntry.start_time <= now
+        )
+        if not is_admin and user_id:
+            this_month_query = this_month_query.filter(TimeEntry.user_id == user_id)
+        this_month_seconds = this_month_query.scalar() or 0
+        
+        # Get hours for last month
+        last_month_query = db.session.query(func.sum(TimeEntry.duration_seconds)).filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= last_month_start,
+            TimeEntry.start_time <= last_month_end
+        )
+        if not is_admin and user_id:
+            last_month_query = last_month_query.filter(TimeEntry.user_id == user_id)
+        last_month_seconds = last_month_query.scalar() or 0
+        
+        comparison = {
+            'this_month': {'hours': round(this_month_seconds / 3600, 2)},
+            'last_month': {'hours': round(last_month_seconds / 3600, 2)},
+            'change': ((this_month_seconds - last_month_seconds) / last_month_seconds * 100) if last_month_seconds > 0 else 0
+        }
+        
+        return {
+            'summary': summary,
+            'recent_entries': recent_entries,
+            'comparison': comparison
         }
     
     def get_project_summary(

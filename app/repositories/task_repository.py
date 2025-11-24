@@ -31,7 +31,8 @@ class TaskRepository(BaseRepository[Task]):
         if include_relations:
             query = query.options(
                 joinedload(Task.project),
-                joinedload(Task.assignee) if hasattr(Task, 'assignee') else query
+                joinedload(Task.assigned_user),
+                joinedload(Task.creator)
             )
         
         return query.order_by(Task.priority.desc(), Task.due_date.asc()).all()
