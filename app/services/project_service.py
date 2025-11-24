@@ -3,9 +3,10 @@ Service for project business logic.
 """
 
 from typing import Optional, List, Dict, Any
+from flask_sqlalchemy import Pagination
 from app import db
 from app.repositories import ProjectRepository, ClientRepository
-from app.models import Project
+from app.models import Project, TimeEntry
 from app.constants import ProjectStatus
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
@@ -13,9 +14,33 @@ from app.constants import WebhookEvent
 
 
 class ProjectService:
-    """Service for project operations"""
+    """
+    Service for project business logic operations.
+    
+    This service handles all project-related business logic including:
+    - Creating and updating projects
+    - Listing projects with filtering and pagination
+    - Getting project details with related data
+    - Archiving projects
+    
+    All methods use the repository pattern for data access and include
+    eager loading to prevent N+1 query problems.
+    
+    Example:
+        service = ProjectService()
+        result = service.create_project(
+            name="New Project",
+            client_id=1,
+            created_by=user_id
+        )
+        if result['success']:
+            project = result['project']
+    """
     
     def __init__(self):
+        """
+        Initialize ProjectService with required repositories.
+        """
         self.project_repo = ProjectRepository()
         self.client_repo = ClientRepository()
     
@@ -160,4 +185,204 @@ class ProjectService:
             client_id=client_id,
             include_relations=True
         )
+    
+    def get_project_with_details(
+        self,
+        project_id: int,
+        include_time_entries: bool = True,
+        include_tasks: bool = True,
+        include_comments: bool = True,
+        include_costs: bool = True
+    ) -> Optional[Project]:
+        """
+        Get project with all related data using eager loading to prevent N+1 queries.
+        
+        Args:
+            project_id: The project ID
+            include_time_entries: Whether to include time entries
+            include_tasks: Whether to include tasks
+            include_comments: Whether to include comments
+            include_costs: Whether to include costs
+            
+        Returns:
+            Project with eagerly loaded relations, or None if not found
+        """
+        from sqlalchemy.orm import joinedload
+        from app.models import Task, Comment, ProjectCost
+        
+        query = self.project_repo.query().filter_by(id=project_id)
+        
+        # Eagerly load client
+        query = query.options(joinedload(Project.client))
+        
+        # Conditionally load relations
+        if include_time_entries:
+            query = query.options(joinedload(Project.time_entries).joinedload(TimeEntry.user))
+            query = query.options(joinedload(Project.time_entries).joinedload(TimeEntry.task))
+        
+        if include_tasks:
+            query = query.options(joinedload(Project.tasks).joinedload(Task.assignee))
+        
+        if include_comments:
+            query = query.options(joinedload(Project.comments).joinedload(Comment.user))
+        
+        if include_costs:
+            query = query.options(joinedload(Project.costs))
+        
+        return query.first()
+    
+    def list_projects(
+        self,
+        status: Optional[str] = None,
+        client_name: Optional[str] = None,
+        search: Optional[str] = None,
+        favorites_only: bool = False,
+        user_id: Optional[int] = None,
+        page: int = 1,
+        per_page: int = 20
+    ) -> Dict[str, Any]:
+        """
+        List projects with filtering and pagination.
+        Uses eager loading to prevent N+1 queries.
+        
+        Returns:
+            dict with 'projects', 'pagination', and 'total' keys
+        """
+        from sqlalchemy.orm import joinedload
+        from app.models import UserFavoriteProject, Client
+        
+        query = self.project_repo.query()
+        
+        # Eagerly load client to prevent N+1
+        query = query.options(joinedload(Project.client))
+        
+        # Filter by favorites if requested
+        if favorites_only and user_id:
+            query = query.join(
+                UserFavoriteProject,
+                db.and_(
+                    UserFavoriteProject.project_id == Project.id,
+                    UserFavoriteProject.user_id == user_id
+                )
+            )
+        
+        # Filter by status
+        if status:
+            query = query.filter(Project.status == status)
+        
+        # Filter by client name
+        if client_name:
+            query = query.join(Client).filter(Client.name == client_name)
+        
+        # Search filter
+        if search:
+            like = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Project.name.ilike(like),
+                    Project.description.ilike(like)
+                )
+            )
+        
+        # Order and paginate
+        query = query.order_by(Project.name)
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        return {
+            'projects': pagination.items,
+            'pagination': pagination,
+            'total': pagination.total
+        }
+    
+    def get_project_view_data(
+        self,
+        project_id: int,
+        time_entries_page: int = 1,
+        time_entries_per_page: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Get all data needed for project view page.
+        Uses eager loading to prevent N+1 queries.
+        
+        Returns:
+            dict with 'project', 'time_entries_pagination', 'tasks', 'comments', 
+            'recent_costs', 'total_costs_count', 'user_totals', 'kanban_columns'
+        """
+        from sqlalchemy.orm import joinedload
+        from app.models import Task, Comment, ProjectCost, KanbanColumn
+        from app.repositories import TimeEntryRepository
+        
+        # Get project with eager loading
+        project = self.get_project_with_details(
+            project_id=project_id,
+            include_time_entries=True,
+            include_tasks=True,
+            include_comments=True,
+            include_costs=True
+        )
+        
+        if not project:
+            return {
+                'success': False,
+                'message': 'Project not found',
+                'error': 'not_found'
+            }
+        
+        # Get time entries with pagination and eager loading
+        time_entry_repo = TimeEntryRepository()
+        entries_query = time_entry_repo.query().filter(
+            TimeEntry.project_id == project_id,
+            TimeEntry.end_time.isnot(None)
+        ).options(
+            joinedload(TimeEntry.user),
+            joinedload(TimeEntry.task)
+        ).order_by(TimeEntry.start_time.desc())
+        
+        entries_pagination = entries_query.paginate(
+            page=time_entries_page,
+            per_page=time_entries_per_page,
+            error_out=False
+        )
+        
+        # Get tasks with eager loading (already loaded but need to order)
+        tasks = Task.query.filter_by(project_id=project_id).options(
+            joinedload(Task.assignee)
+        ).order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
+        
+        # Get comments (already loaded via relationship)
+        from app.models import Comment
+        comments = Comment.get_project_comments(project_id, include_replies=True)
+        
+        # Get recent costs (already loaded but need to order)
+        recent_costs = ProjectCost.query.filter_by(project_id=project_id).order_by(
+            ProjectCost.cost_date.desc()
+        ).limit(5).all()
+        
+        # Get total cost count
+        total_costs_count = ProjectCost.query.filter_by(project_id=project_id).count()
+        
+        # Get user totals
+        user_totals = project.get_user_totals()
+        
+        # Get kanban columns
+        kanban_columns = []
+        if KanbanColumn:
+            kanban_columns = KanbanColumn.get_active_columns(project_id=project_id)
+            if not kanban_columns:
+                kanban_columns = KanbanColumn.get_active_columns(project_id=None)
+                if not kanban_columns:
+                    KanbanColumn.initialize_default_columns(project_id=None)
+                    kanban_columns = KanbanColumn.get_active_columns(project_id=None)
+        
+        return {
+            'success': True,
+            'project': project,
+            'time_entries_pagination': entries_pagination,
+            'tasks': tasks,
+            'comments': comments,
+            'recent_costs': recent_costs,
+            'total_costs_count': total_costs_count,
+            'user_totals': user_totals,
+            'kanban_columns': kanban_columns
+        }
 

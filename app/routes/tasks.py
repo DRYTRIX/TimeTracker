@@ -16,7 +16,9 @@ tasks_bp = Blueprint('tasks', __name__)
 @tasks_bp.route('/tasks')
 @login_required
 def list_tasks():
-    """List all tasks with filtering options"""
+    """List all tasks with filtering options - REFACTORED to use service layer with eager loading"""
+    from app.services import TaskService
+    
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', '')
     priority = request.args.get('priority', '')
@@ -26,64 +28,22 @@ def list_tasks():
     overdue_param = request.args.get('overdue', '').strip().lower()
     overdue = overdue_param in ['1', 'true', 'on', 'yes']
     
-    query = Task.query
-    
-    # Apply filters
-    if status:
-        query = query.filter_by(status=status)
-    
-    if priority:
-        query = query.filter_by(priority=priority)
-    
-    if project_id:
-        query = query.filter_by(project_id=project_id)
-    
-    if assigned_to:
-        query = query.filter_by(assigned_to=assigned_to)
-    
-    if search:
-        like = f"%{search}%"
-        query = query.filter(
-            db.or_(
-                Task.name.ilike(like),
-                Task.description.ilike(like)
-            )
-        )
-    
-    # Overdue filter (uses application's local date)
-    if overdue:
-        today_local = now_in_app_timezone().date()
-        query = query.filter(
-            Task.due_date < today_local,
-            Task.status.in_(['todo', 'in_progress', 'review'])
-        )
-    
-    # Show user's tasks first, then others
-    if not current_user.is_admin:
-        query = query.filter(
-            db.or_(
-                Task.assigned_to == current_user.id,
-                Task.created_by == current_user.id
-            )
-        )
-    
-    # Check if any filters are active
-    has_filters = bool(status or priority or project_id or assigned_to or search or overdue)
-    
-    # If no filters are active, show all tasks; otherwise use pagination
-    if has_filters:
-        per_page = 20
-    else:
-        # Use a very large number to effectively show all tasks
-        per_page = 10000
-    
-    tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).paginate(
+    # Use service layer to get tasks (prevents N+1 queries)
+    task_service = TaskService()
+    result = task_service.list_tasks(
+        status=status if status else None,
+        priority=priority if priority else None,
+        project_id=project_id,
+        assigned_to=assigned_to,
+        search=search if search else None,
+        overdue=overdue,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
         page=page,
-        per_page=per_page,
-        error_out=False
+        per_page=20
     )
     
-    # Get filter options
+    # Get filter options (these could also be cached)
     projects = Project.query.filter_by(status='active').order_by(Project.name).all()
     users = User.query.order_by(User.username).all()
     # Force fresh kanban columns from database (no cache)
@@ -93,8 +53,8 @@ def list_tasks():
     # Prevent browser caching of kanban board
     response = render_template(
         'tasks/list.html',
-        tasks=tasks.items,
-        pagination=tasks,
+        tasks=result['tasks'],
+        pagination=result['pagination'],
         projects=projects,
         users=users,
         kanban_columns=kanban_columns,
@@ -151,22 +111,28 @@ def create_task():
                 flash(_('Invalid due date format'), 'error')
                 return render_template('tasks/create.html')
         
-        # Create task
-        task = Task(
-            project_id=project_id,
+        # Use service layer to create task
+        from app.services import TaskService
+        task_service = TaskService()
+        
+        result = task_service.create_task(
             name=name,
+            project_id=project_id,
             description=description,
+            assignee_id=assigned_to,
             priority=priority,
-            estimated_hours=estimated_hours,
             due_date=due_date,
-            assigned_to=assigned_to,
+            estimated_hours=estimated_hours,
             created_by=current_user.id
         )
         
-        db.session.add(task)
-        if not safe_commit('create_task', {'project_id': project_id, 'name': name}):
-            flash(_('Could not create task due to a database error. Please check server logs.'), 'error')
-            return render_template('tasks/create.html')
+        if not result['success']:
+            flash(_(result['message']), 'error')
+            projects = Project.query.filter_by(status='active').order_by(Project.name).all()
+            users = User.query.order_by(User.username).all()
+            return render_template('tasks/create.html', projects=projects, users=users)
+        
+        task = result['task']
         
         # Log task creation
         app_module.log_event("task.created", 
@@ -205,18 +171,33 @@ def create_task():
 @tasks_bp.route('/tasks/<int:task_id>')
 @login_required
 def view_task(task_id):
-    """View task details"""
-    task = Task.query.get_or_404(task_id)
+    """View task details - REFACTORED to use service layer with eager loading"""
+    from app.services import TaskService
+    
+    task_service = TaskService()
+    
+    # Get task with all relations using eager loading (prevents N+1 queries)
+    task = task_service.get_task_with_details(
+        task_id=task_id,
+        include_time_entries=True,
+        include_comments=True,
+        include_activities=True
+    )
+    
+    if not task:
+        flash(_('Task not found'), 'error')
+        return redirect(url_for('tasks.list_tasks'))
     
     # Check if user has access to this task
     if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
         flash(_('You do not have access to this task'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
-    # Get time entries for this task
-    time_entries = task.time_entries.order_by(TimeEntry.start_time.desc()).all()
-    # Recent activity entries
-    activities = task.activities.order_by(TaskActivity.created_at.desc()).limit(20).all()
+    # Get time entries (already loaded via eager loading, but need to order)
+    time_entries = sorted(task.time_entries, key=lambda e: e.start_time if e.start_time else datetime.min, reverse=True)
+    
+    # Recent activity entries (already loaded)
+    activities = sorted(task.activities, key=lambda a: a.created_at if a.created_at else datetime.min, reverse=True)[:20]
     
     # Get comments for this task
     from app.models import Comment

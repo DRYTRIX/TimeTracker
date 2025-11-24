@@ -188,6 +188,32 @@ def create_app(config=None):
     """Application factory pattern"""
     app = Flask(__name__)
 
+    # Validate environment variables on startup (non-blocking warnings in dev, errors in prod)
+    try:
+        from app.utils.env_validation import validate_all
+        is_production = os.getenv("FLASK_ENV", "production") == "production"
+        is_valid, results = validate_all(raise_on_error=is_production)
+        
+        if not is_valid:
+            if is_production:
+                app.logger.error("Environment validation failed - see details below")
+            else:
+                app.logger.warning("Environment validation warnings - see details below")
+            
+            if results.get('warnings'):
+                for warning in results['warnings']:
+                    app.logger.warning(f"  - {warning}")
+            
+            if results.get('production', {}).get('issues'):
+                for issue in results['production']['issues']:
+                    if is_production:
+                        app.logger.error(f"  - {issue}")
+                    else:
+                        app.logger.warning(f"  - {issue}")
+    except Exception as e:
+        # Don't fail app startup if validation itself fails
+        app.logger.warning(f"Environment validation check failed: {e}")
+
     # Make app aware of reverse proxy (scheme/host/port) for correct URL generation & cookies
     # Trust a single proxy by default; adjust via env if needed
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
@@ -544,6 +570,16 @@ def create_app(config=None):
 
     # Setup logging (including JSON logging)
     setup_logging(app)
+    
+    # Enable query logging in development mode
+    if app.config.get('FLASK_DEBUG') or app.config.get('TESTING'):
+        try:
+            from app.utils.query_logging import enable_query_logging, enable_query_counting
+            enable_query_logging(app, slow_query_threshold=0.1)
+            enable_query_counting(app)
+            app.logger.info("Query logging enabled (development mode)")
+        except Exception as e:
+            app.logger.warning(f"Could not enable query logging: {e}")
 
     # Load analytics configuration (embedded at build time)
     from app.config.analytics_defaults import get_analytics_config, has_analytics_configured
@@ -876,6 +912,7 @@ def create_app(config=None):
     from app.routes.contacts import contacts_bp
     from app.routes.deals import deals_bp
     from app.routes.leads import leads_bp
+    from app.routes.kiosk import kiosk_bp
     try:
         from app.routes.audit_logs import audit_logs_bp
         app.register_blueprint(audit_logs_bp)
@@ -923,6 +960,7 @@ def create_app(config=None):
     app.register_blueprint(webhooks_bp)
     app.register_blueprint(quotes_bp)
     app.register_blueprint(inventory_bp)
+    app.register_blueprint(kiosk_bp)
     app.register_blueprint(contacts_bp)
     app.register_blueprint(deals_bp)
     app.register_blueprint(leads_bp)

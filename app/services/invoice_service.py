@@ -186,4 +186,108 @@ class InvoiceService:
             'message': 'Invoice marked as paid',
             'invoice': invoice
         }
+    
+    def list_invoices(
+        self,
+        status: Optional[str] = None,
+        payment_status: Optional[str] = None,
+        search: Optional[str] = None,
+        user_id: Optional[int] = None,
+        is_admin: bool = False
+    ) -> Dict[str, Any]:
+        """
+        List invoices with filtering.
+        Uses eager loading to prevent N+1 queries.
+        
+        Args:
+            status: Filter by invoice status
+            payment_status: Filter by payment status
+            search: Search in invoice number or client name
+            user_id: User ID for filtering (non-admin users)
+            is_admin: Whether user is admin
+            
+        Returns:
+            dict with 'invoices', 'summary' keys
+        """
+        from sqlalchemy.orm import joinedload
+        from datetime import date
+        
+        query = self.invoice_repo.query()
+        
+        # Eagerly load relations to prevent N+1
+        query = query.options(
+            joinedload(Invoice.project),
+            joinedload(Invoice.client)
+        )
+        
+        # Permission filter - non-admins only see their invoices
+        if not is_admin and user_id:
+            query = query.filter(Invoice.created_by == user_id)
+        
+        # Apply filters
+        if status:
+            query = query.filter(Invoice.status == status)
+        
+        if payment_status:
+            query = query.filter(Invoice.payment_status == payment_status)
+        
+        if search:
+            like = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Invoice.invoice_number.ilike(like),
+                    Invoice.client_name.ilike(like)
+                )
+            )
+        
+        # Order by creation date
+        invoices = query.order_by(Invoice.created_at.desc()).all()
+        
+        # Calculate overdue status
+        today = date.today()
+        for invoice in invoices:
+            if invoice.due_date and invoice.due_date < today and invoice.payment_status != 'fully_paid' and invoice.status != 'paid':
+                invoice._is_overdue = True
+            else:
+                invoice._is_overdue = False
+        
+        # Calculate summary statistics
+        if is_admin:
+            all_invoices = Invoice.query.all()
+        else:
+            all_invoices = Invoice.query.filter_by(created_by=user_id).all() if user_id else []
+        
+        total_invoices = len(all_invoices)
+        total_amount = sum(invoice.total_amount for invoice in all_invoices)
+        actual_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices)
+        fully_paid_amount = sum(invoice.total_amount for invoice in all_invoices if invoice.payment_status == 'fully_paid')
+        partially_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices if invoice.payment_status == 'partially_paid')
+        overdue_amount = sum(invoice.outstanding_amount for invoice in all_invoices if invoice.status == 'overdue')
+        
+        summary = {
+            'total_invoices': total_invoices,
+            'total_amount': float(total_amount),
+            'paid_amount': float(actual_paid_amount),
+            'fully_paid_amount': float(fully_paid_amount),
+            'partially_paid_amount': float(partially_paid_amount),
+            'overdue_amount': float(overdue_amount),
+            'outstanding_amount': float(total_amount - actual_paid_amount)
+        }
+        
+        return {
+            'invoices': invoices,
+            'summary': summary
+        }
+    
+    def get_invoice_with_details(self, invoice_id: int) -> Optional[Invoice]:
+        """
+        Get invoice with all related data using eager loading.
+        
+        Args:
+            invoice_id: The invoice ID
+            
+        Returns:
+            Invoice with eagerly loaded relations, or None if not found
+        """
+        return self.invoice_repo.get_with_relations(invoice_id)
 

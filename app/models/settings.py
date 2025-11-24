@@ -43,6 +43,13 @@ class Settings(db.Model):
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
     
+    # Kiosk mode settings
+    kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    kiosk_auto_logout_minutes = db.Column(db.Integer, default=15, nullable=False)
+    kiosk_allow_camera_scanning = db.Column(db.Boolean, default=True, nullable=False)
+    kiosk_require_reason_for_adjustments = db.Column(db.Boolean, default=False, nullable=False)
+    kiosk_default_movement_type = db.Column(db.String(20), default='adjustment', nullable=False)
+    
     # Email configuration settings (stored in database, takes precedence over environment variables)
     mail_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable database-backed email config
     mail_server = db.Column(db.String(255), default='', nullable=True)
@@ -88,6 +95,13 @@ class Settings(db.Model):
         self.invoice_start_number = kwargs.get('invoice_start_number', 1000)
         self.invoice_terms = kwargs.get('invoice_terms', 'Payment is due within 30 days of invoice date.')
         self.invoice_notes = kwargs.get('invoice_notes', 'Thank you for your business!')
+        
+        # Kiosk mode defaults
+        self.kiosk_mode_enabled = kwargs.get('kiosk_mode_enabled', False)
+        self.kiosk_auto_logout_minutes = kwargs.get('kiosk_auto_logout_minutes', 15)
+        self.kiosk_allow_camera_scanning = kwargs.get('kiosk_allow_camera_scanning', True)
+        self.kiosk_require_reason_for_adjustments = kwargs.get('kiosk_require_reason_for_adjustments', False)
+        self.kiosk_default_movement_type = kwargs.get('kiosk_default_movement_type', 'adjustment')
         
         # Email configuration defaults
         self.mail_enabled = kwargs.get('mail_enabled', False)
@@ -190,9 +204,23 @@ class Settings(db.Model):
     @classmethod
     def get_settings(cls):
         """Get the singleton settings instance, creating it if it doesn't exist"""
-        settings = cls.query.first()
-        if settings:
-            return settings
+        try:
+            settings = cls.query.first()
+            if settings:
+                return settings
+        except Exception as e:
+            # Handle case where columns don't exist yet (migration not run)
+            # Log but don't fail - return fallback instance
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not query settings (migration may not be run): {e}")
+            # Rollback the failed transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            # Return fallback instance with defaults
+            return cls()
         
         # Avoid performing session writes during flush/commit phases.
         # When called from default column factories (e.g., created_at=local_now),

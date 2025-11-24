@@ -21,92 +21,26 @@ reports_bp = Blueprint('reports', __name__)
 @reports_bp.route('/reports')
 @login_required
 def reports():
-    """Main reports page"""
-    # Aggregate totals (scope by user unless admin)
-    totals_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
-        TimeEntry.end_time.isnot(None)
-    )
-    billable_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.billable == True
-    )
-
-    entries_query = TimeEntry.query.filter(TimeEntry.end_time.isnot(None))
-
-    if not current_user.is_admin:
-        totals_query = totals_query.filter(TimeEntry.user_id == current_user.id)
-        billable_query = billable_query.filter(TimeEntry.user_id == current_user.id)
-        entries_query = entries_query.filter(TimeEntry.user_id == current_user.id)
-
-    total_seconds = totals_query.scalar() or 0
-    billable_seconds = billable_query.scalar() or 0
-
-    # Get payment statistics (last 30 days)
-    payment_query = db.session.query(
-        func.sum(Payment.amount).label('total_payments'),
-        func.count(Payment.id).label('payment_count'),
-        func.sum(Payment.gateway_fee).label('total_fees')
-    ).filter(
-        Payment.payment_date >= datetime.utcnow() - timedelta(days=30),
-        Payment.status == 'completed'
-    )
+    """Main reports page - REFACTORED to use service layer with optimized queries"""
+    from app.services import ReportingService
     
-    if not current_user.is_admin:
-        payment_query = payment_query.join(Invoice).join(Project).join(TimeEntry).filter(
-            TimeEntry.user_id == current_user.id
-        )
-    
-    payment_result = payment_query.first()
-    
-    summary = {
-        'total_hours': round(total_seconds / 3600, 2),
-        'billable_hours': round(billable_seconds / 3600, 2),
-        'active_projects': Project.query.filter_by(status='active').count(),
-        'total_users': User.query.filter_by(is_active=True).count(),
-        'total_payments': float(payment_result.total_payments or 0) if payment_result else 0,
-        'payment_count': payment_result.payment_count or 0 if payment_result else 0,
-        'payment_fees': float(payment_result.total_fees or 0) if payment_result else 0,
-    }
-
-    recent_entries = entries_query.order_by(TimeEntry.start_time.desc()).limit(10).all()
+    # Use service layer to get reports summary (optimized queries)
+    reporting_service = ReportingService()
+    result = reporting_service.get_reports_summary(
+        user_id=current_user.id,
+        is_admin=current_user.is_admin
+    )
     
     # Track report access
     log_event("report.viewed", user_id=current_user.id, report_type="summary")
     track_event(current_user.id, "report.viewed", {"report_type": "summary"})
-
-    # Get comparison data for this month vs last month
-    now = datetime.utcnow()
-    this_month_start = datetime(now.year, now.month, 1)
-    last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
-    last_month_end = this_month_start - timedelta(seconds=1)
     
-    # Get hours for this month
-    this_month_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= this_month_start,
-        TimeEntry.start_time <= now
+    return render_template(
+        'reports/index.html',
+        summary=result['summary'],
+        recent_entries=result['recent_entries'],
+        comparison=result['comparison']
     )
-    if not current_user.is_admin:
-        this_month_query = this_month_query.filter(TimeEntry.user_id == current_user.id)
-    this_month_seconds = this_month_query.scalar() or 0
-    
-    # Get hours for last month
-    last_month_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= last_month_start,
-        TimeEntry.start_time <= last_month_end
-    )
-    if not current_user.is_admin:
-        last_month_query = last_month_query.filter(TimeEntry.user_id == current_user.id)
-    last_month_seconds = last_month_query.scalar() or 0
-    
-    comparison = {
-        'this_month': {'hours': round(this_month_seconds / 3600, 2)},
-        'last_month': {'hours': round(last_month_seconds / 3600, 2)},
-        'change': ((this_month_seconds - last_month_seconds) / last_month_seconds * 100) if last_month_seconds > 0 else 0
-    }
-    
-    return render_template('reports/index.html', summary=summary, recent_entries=recent_entries, comparison=comparison)
 
 @reports_bp.route('/reports/comparison')
 @login_required

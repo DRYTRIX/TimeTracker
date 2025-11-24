@@ -340,6 +340,15 @@ def settings():
         settings_obj.allow_analytics = installation_config.get_telemetry_preference()
         db.session.commit()
     
+    # Prepare kiosk settings with safe defaults (in case migration hasn't run)
+    kiosk_settings = {
+        'kiosk_mode_enabled': getattr(settings_obj, 'kiosk_mode_enabled', False),
+        'kiosk_auto_logout_minutes': getattr(settings_obj, 'kiosk_auto_logout_minutes', 15),
+        'kiosk_allow_camera_scanning': getattr(settings_obj, 'kiosk_allow_camera_scanning', True),
+        'kiosk_require_reason_for_adjustments': getattr(settings_obj, 'kiosk_require_reason_for_adjustments', False),
+        'kiosk_default_movement_type': getattr(settings_obj, 'kiosk_default_movement_type', 'adjustment')
+    }
+    
     if request.method == 'POST':
         # Validate timezone
         timezone = request.form.get('timezone') or settings_obj.timezone
@@ -376,6 +385,17 @@ def settings():
         settings_obj.invoice_terms = request.form.get('invoice_terms', 'Payment is due within 30 days of invoice date.')
         settings_obj.invoice_notes = request.form.get('invoice_notes', 'Thank you for your business!')
         
+        # Update kiosk mode settings (if columns exist)
+        try:
+            settings_obj.kiosk_mode_enabled = request.form.get('kiosk_mode_enabled') == 'on'
+            settings_obj.kiosk_auto_logout_minutes = int(request.form.get('kiosk_auto_logout_minutes', 15))
+            settings_obj.kiosk_allow_camera_scanning = request.form.get('kiosk_allow_camera_scanning') == 'on'
+            settings_obj.kiosk_require_reason_for_adjustments = request.form.get('kiosk_require_reason_for_adjustments') == 'on'
+            settings_obj.kiosk_default_movement_type = request.form.get('kiosk_default_movement_type', 'adjustment')
+        except AttributeError:
+            # Kiosk columns don't exist yet (migration not run)
+            pass
+        
         # Update privacy and analytics settings
         allow_analytics = request.form.get('allow_analytics') == 'on'
         old_analytics_state = settings_obj.allow_analytics
@@ -392,11 +412,20 @@ def settings():
         
         if not safe_commit('admin_update_settings'):
             flash(_('Could not update settings due to a database error. Please check server logs.'), 'error')
-            return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
+            return render_template('admin/settings.html', settings=settings_obj, timezones=timezones, kiosk_settings=kiosk_settings)
         flash(_('Settings updated successfully'), 'success')
         return redirect(url_for('admin.settings'))
     
-    return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
+    # Update kiosk_settings after potential POST update
+    kiosk_settings = {
+        'kiosk_mode_enabled': getattr(settings_obj, 'kiosk_mode_enabled', False),
+        'kiosk_auto_logout_minutes': getattr(settings_obj, 'kiosk_auto_logout_minutes', 15),
+        'kiosk_allow_camera_scanning': getattr(settings_obj, 'kiosk_allow_camera_scanning', True),
+        'kiosk_require_reason_for_adjustments': getattr(settings_obj, 'kiosk_require_reason_for_adjustments', False),
+        'kiosk_default_movement_type': getattr(settings_obj, 'kiosk_default_movement_type', 'adjustment')
+    }
+    
+    return render_template('admin/settings.html', settings=settings_obj, timezones=timezones, kiosk_settings=kiosk_settings)
 
 
 @admin_bp.route('/admin/pdf-layout', methods=['GET', 'POST'])

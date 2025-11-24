@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('Kiosk Login') }} - {{ app_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    <style>
+        body {
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen">
+    <div class="min-h-screen flex items-center justify-center px-4 py-12">
+        <div class="w-full max-w-6xl">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
+                    <!-- Left side: Logo and branding -->
+                    <div class="hidden md:flex items-center justify-center p-12 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/10">
+                        <div class="text-center max-w-md">
+                            <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/20 mb-6">
+                                <img src="{{ url_for('static', filename='images/drytrix-logo.svg') }}" alt="logo" class="w-16 h-16">
+                            </div>
+                            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-3">Kiosk Mode</h1>
+                            <p class="text-gray-600 dark:text-gray-400 mb-8">{{ _('Quick access for warehouse operations') }}</p>
+                            <div class="space-y-4 text-left">
+                                <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <i class="fas fa-barcode text-primary"></i>
+                                    </div>
+                                    <span>{{ _('Barcode scanning') }}</span>
+                                </div>
+                                <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <i class="fas fa-boxes text-primary"></i>
+                                    </div>
+                                    <span>{{ _('Stock management') }}</span>
+                                </div>
+                                <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <i class="fas fa-clock text-primary"></i>
+                                    </div>
+                                    <span>{{ _('Time tracking') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right side: Login form -->
+                    <div class="p-8 sm:p-12">
+                        <div class="flex justify-between items-start mb-8">
+                            <div>
+                                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">{{ _('Sign in to Kiosk Mode') }}</h2>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Select your username to continue') }}</p>
+                            </div>
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" title="{{ _('Toggle Theme') }}" id="theme-toggle" aria-label="{{ _('Toggle dark mode') }}">
+                        <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
+                        <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
+                    </button>
+                        </div>
+
+                        <!-- Messages -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                <div class="mb-6 space-y-2">
+                                    {% for category, message in messages %}
+                                        <div class="alert alert-{{ category }} rounded-lg p-3">
+                                            {{ message }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+
+                        <!-- Login Form -->
+                        <form method="POST" action="{{ url_for('kiosk.kiosk_login') }}" class="space-y-6">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            
+                            <!-- User Selection Grid -->
+                            {% if users %}
+                            <div>
+                                <label class="block mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ _('Select User') }}</label>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {% for user in users %}
+                                        <button type="button" 
+                                                class="bg-gray-50 dark:bg-gray-900/50 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md min-h-[100px] flex flex-col items-center justify-center gap-3 group"
+                                                onclick="selectUser('{{ user.username }}')">
+                                            <div class="w-12 h-12 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+                                                <i class="fas fa-user text-primary text-lg group-hover:scale-110 transition-transform"></i>
+                                            </div>
+                                            <div class="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-primary transition-colors">{{ user.username }}</div>
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Username Input -->
+                            <div>
+                                <label for="username" class="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ _('Username') }}</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-user text-gray-400"></i>
+                                    </div>
+                                    <input type="text" 
+                                           id="username" 
+                                           name="username" 
+                                           autocomplete="username"
+                                           class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all"
+                                           placeholder="{{ _('your-username') }}"
+                                           autocomplete="off"
+                                           autofocus
+                                           required>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+                                {{ _('Sign in') }}
+                            </button>
+                        </form>
+
+                        <div class="mt-6 text-center">
+                            <a href="{{ url_for('auth.login') }}" class="text-sm text-primary hover:text-primary/80 hover:underline transition-colors">
+                                {{ _('Standard Login') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages (hidden; converted to toasts) -->
+    <div id="flash-messages-container" class="hidden">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-danger{% elif category == 'warning' %}alert-warning{% else %}alert-info{% endif %}" data-toast-message="{{ message }}" data-toast-type="{{ category }}"></div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+    <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='toast-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
+
+    <style>
+        /* Ensure only one theme icon is visible at a time */
+        #theme-toggle-dark-icon.hidden,
+        #theme-toggle-light-icon.hidden {
+            display: none !important;
+        }
+        #theme-toggle-dark-icon:not(.hidden) ~ #theme-toggle-light-icon:not(.hidden),
+        #theme-toggle-light-icon:not(.hidden) ~ #theme-toggle-dark-icon:not(.hidden) {
+            display: none !important;
+        }
+    </style>
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            // toggle icons inside button
+            const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+            const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+            
+            if (themeToggleDarkIcon && themeToggleLightIcon) {
+                themeToggleDarkIcon.classList.toggle('hidden');
+                themeToggleLightIcon.classList.toggle('hidden');
+            }
+
+            var newTheme;
+            // if set via local storage previously
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                    newTheme = 'dark';
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                    newTheme = 'light';
+                }
+            // if NOT set via local storage previously
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                    newTheme = 'light';
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                    newTheme = 'dark';
+                }
+            }
+        }
+
+        // Initialize theme icons - run after DOM is ready
+        (function() {
+            function initThemeIcons() {
+                const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+                const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+                if (!themeToggleDarkIcon || !themeToggleLightIcon) {
+                    return; // Elements not found yet
+                }
+
+                // Force both to be hidden first
+                themeToggleDarkIcon.classList.add('hidden');
+                themeToggleLightIcon.classList.add('hidden');
+
+                // Show the correct icon based on current theme
+                const isDark = localStorage.getItem('color-theme') === 'dark' || 
+                              (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                
+                if (isDark) {
+                    themeToggleLightIcon.classList.remove('hidden');
+                } else {
+                    themeToggleDarkIcon.classList.remove('hidden');
+                }
+            }
+            
+            // Run immediately and also on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initThemeIcons);
+            } else {
+                initThemeIcons();
+            }
+        })();
+
+        function selectUser(username) {
+            document.getElementById('username').value = username;
+            document.getElementById('username').focus();
+        }
+
+        // Auto-submit on Enter
+        document.getElementById('username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.form.submit();
+            }
+        });
+
+        // Focus on input on load
+        window.addEventListener('load', function() {
+            document.getElementById('username').focus();
+        });
+    </script>
+</body>
+</html>
