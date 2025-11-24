@@ -6,6 +6,7 @@ This module provides API endpoints for managing budget alerts and forecasting.
 
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
+from flask_babel import _
 from app import db, log_event, track_event
 from app.models import Project, BudgetAlert, User
 from app.utils.budget_forecasting import (
@@ -339,14 +340,14 @@ def project_budget_detail(project_id):
         ).first() is not None
         
         if not has_access:
-            flash('You do not have access to this project.', 'error')
+            flash(_('You do not have access to this project.'), 'error')
             return redirect(url_for('budget_alerts.budget_dashboard'))
     
     # Get budget status
     budget_status = get_budget_status(project_id)
     
     if not budget_status:
-        flash('This project does not have a budget set.', 'warning')
+        flash(_('This project does not have a budget set.'), 'warning')
         return redirect(url_for('budget_alerts.budget_dashboard'))
     
     # Get burn rate

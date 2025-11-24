@@ -108,7 +108,7 @@
         
         <div class="flex justify-end space-x-4">
             <a href="{{ url_for('recurring_invoices.view_recurring_invoice', recurring_id=recurring.id) }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</a>
-            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">Update Recurring Invoice</button>
+            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Update Recurring Invoice') }}</button>
         </div>
     </form>
 </div>

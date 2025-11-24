@@ -126,20 +126,20 @@ def create_task():
         
         # Validate required fields
         if not project_id or not name:
-            flash('Project and task name are required', 'error')
+            flash(_('Project and task name are required'), 'error')
             return render_template('tasks/create.html')
         
         # Validate project exists
         project = Project.query.get(project_id)
         if not project:
-            flash('Selected project does not exist', 'error')
+            flash(_('Selected project does not exist'), 'error')
             return render_template('tasks/create.html')
         
         # Parse estimated hours
         try:
             estimated_hours = float(estimated_hours) if estimated_hours else None
         except ValueError:
-            flash('Invalid estimated hours format', 'error')
+            flash(_('Invalid estimated hours format'), 'error')
             return render_template('tasks/create.html')
         
         # Parse due date
@@ -148,7 +148,7 @@ def create_task():
             try:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash('Invalid due date format', 'error')
+                flash(_('Invalid due date format'), 'error')
                 return render_template('tasks/create.html')
         
         # Create task
@@ -165,7 +165,7 @@ def create_task():
         
         db.session.add(task)
         if not safe_commit('create_task', {'project_id': project_id, 'name': name}):
-            flash('Could not create task due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create task due to a database error. Please check server logs.'), 'error')
             return render_template('tasks/create.html')
         
         # Log task creation
@@ -210,7 +210,7 @@ def view_task(task_id):
     
     # Check if user has access to this task
     if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
-        flash('You do not have access to this task', 'error')
+        flash(_('You do not have access to this task'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     # Get time entries for this task
@@ -232,7 +232,7 @@ def edit_task(task_id):
     
     # Check if user can edit this task
     if not current_user.is_admin and task.created_by != current_user.id:
-        flash('You can only edit tasks you created', 'error')
+        flash(_('You can only edit tasks you created'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     if request.method == 'POST':
@@ -249,23 +249,23 @@ def edit_task(task_id):
         
         # Validate required fields
         if not name:
-            flash('Task name is required', 'error')
+            flash(_('Task name is required'), 'error')
             return render_template('tasks/edit.html', task=task, projects=projects, users=users)
 
         # Validate project selection
         if not project_id:
-            flash('Project is required', 'error')
+            flash(_('Project is required'), 'error')
             return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         new_project = Project.query.filter_by(id=project_id, status='active').first()
         if not new_project:
-            flash('Selected project does not exist or is inactive', 'error')
+            flash(_('Selected project does not exist or is inactive'), 'error')
             return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         
         # Parse estimated hours
         try:
             estimated_hours = float(estimated_hours) if estimated_hours else None
         except ValueError:
-            flash('Invalid estimated hours format', 'error')
+            flash(_('Invalid estimated hours format'), 'error')
             return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         
         # Parse due date
@@ -274,7 +274,7 @@ def edit_task(task_id):
             try:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash('Invalid due date format', 'error')
+                flash(_('Invalid due date format'), 'error')
                 return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         
         # Update task
@@ -313,7 +313,7 @@ def edit_task(task_id):
                         task.updated_at = now_in_app_timezone()
                         db.session.add(TaskActivity(task_id=task.id, user_id=current_user.id, event='reopen', details='Task reopened to In Progress'))
                         if not safe_commit('edit_task_reopen_in_progress', {'task_id': task.id}):
-                            flash('Could not update status due to a database error. Please check server logs.', 'error')
+                            flash(_('Could not update status due to a database error. Please check server logs.'), 'error')
                         return render_template('tasks/edit.html', task=task, projects=projects, users=users)
                     else:
                         task.start_task()
@@ -347,7 +347,7 @@ def edit_task(task_id):
         task.updated_at = now_in_app_timezone()
         
         if not safe_commit('edit_task', {'task_id': task.id}):
-            flash('Could not update task due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update task due to a database error. Please check server logs.'), 'error')
             return render_template('tasks/edit.html', task=task, projects=projects, users=users)
         
         # Log task update
@@ -390,13 +390,13 @@ def update_task_status(task_id):
     
     # Check if user can update this task
     if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
-        flash('You do not have permission to update this task', 'error')
+        flash(_('You do not have permission to update this task'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     # Validate status against configured kanban columns for this task's project
     valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)
     if new_status not in valid_statuses:
-        flash('Invalid status', 'error')
+        flash(_('Invalid status'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     # Update status
@@ -475,7 +475,7 @@ def update_task_priority(task_id):
     
     # Check if user can update this task
     if not current_user.is_admin and task.created_by != current_user.id:
-        flash('You can only update tasks you created', 'error')
+        flash(_('You can only update tasks you created'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     try:
@@ -495,20 +495,20 @@ def assign_task(task_id):
     
     # Check if user can assign this task
     if not current_user.is_admin and task.created_by != current_user.id:
-        flash('You can only assign tasks you created', 'error')
+        flash(_('You can only assign tasks you created'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     if user_id:
         user = User.query.get(user_id)
         if not user:
-            flash('Selected user does not exist', 'error')
+            flash(_('Selected user does not exist'), 'error')
             return redirect(url_for('tasks.view_task', task_id=task.id))
     
     task.reassign(user_id)
     if user_id:
         flash(f'Task assigned to {user.username}', 'success')
     else:
-        flash('Task unassigned', 'success')
+        flash(_('Task unassigned'), 'success')
     
     return redirect(url_for('tasks.view_task', task_id=task.id))
 
@@ -520,12 +520,12 @@ def delete_task(task_id):
     
     # Check if user can delete this task
     if not current_user.is_admin and task.created_by != current_user.id:
-        flash('You can only delete tasks you created', 'error')
+        flash(_('You can only delete tasks you created'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     # Check if task has time entries
     if task.time_entries.count() > 0:
-        flash('Cannot delete task with existing time entries', 'error')
+        flash(_('Cannot delete task with existing time entries'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task.id))
     
     task_name = task.name
@@ -546,7 +546,7 @@ def delete_task(task_id):
     
     db.session.delete(task)
     if not safe_commit('delete_task', {'task_id': task_id_for_log}):
-        flash('Could not delete task due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete task due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('tasks.view_task', task_id=task_id_for_log))
     
     # Log task deletion
@@ -563,7 +563,7 @@ def bulk_delete_tasks():
     task_ids = request.form.getlist('task_ids[]')
     
     if not task_ids:
-        flash('No tasks selected for deletion', 'warning')
+        flash(_('No tasks selected for deletion'), 'warning')
         return redirect(url_for('tasks.list_tasks'))
     
     deleted_count = 0
@@ -609,7 +609,7 @@ def bulk_delete_tasks():
     # Commit all deletions
     if deleted_count > 0:
         if not safe_commit('bulk_delete_tasks', {'count': deleted_count}):
-            flash('Could not delete tasks due to a database error. Please check server logs.', 'error')
+            flash(_('Could not delete tasks due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('tasks.list_tasks'))
     
     # Show appropriate messages
@@ -630,11 +630,11 @@ def bulk_update_status():
     new_status = request.form.get('status', '').strip()
     
     if not task_ids:
-        flash('No tasks selected', 'warning')
+        flash(_('No tasks selected'), 'warning')
         return redirect(url_for('tasks.list_tasks'))
     
     if not new_status:
-        flash('Invalid status value', 'error')
+        flash(_('Invalid status value'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     updated_count = 0
@@ -671,7 +671,7 @@ def bulk_update_status():
     
     if updated_count > 0:
         if not safe_commit('bulk_update_task_status', {'count': updated_count, 'status': new_status}):
-            flash('Could not update tasks due to a database error', 'error')
+            flash(_('Could not update tasks due to a database error'), 'error')
             return redirect(url_for('tasks.list_tasks'))
         
         flash(f'Successfully updated {updated_count} task{"s" if updated_count != 1 else ""} to {new_status}', 'success')
@@ -690,11 +690,11 @@ def bulk_update_priority():
     new_priority = request.form.get('priority', '').strip()
     
     if not task_ids:
-        flash('No tasks selected', 'warning')
+        flash(_('No tasks selected'), 'warning')
         return redirect(url_for('tasks.list_tasks'))
     
     if not new_priority or new_priority not in ['low', 'medium', 'high', 'urgent']:
-        flash('Invalid priority value', 'error')
+        flash(_('Invalid priority value'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     updated_count = 0
@@ -721,7 +721,7 @@ def bulk_update_priority():
     
     if updated_count > 0:
         if not safe_commit('bulk_update_task_priority', {'count': updated_count, 'priority': new_priority}):
-            flash('Could not update tasks due to a database error', 'error')
+            flash(_('Could not update tasks due to a database error'), 'error')
             return redirect(url_for('tasks.list_tasks'))
         
         flash(f'Successfully updated {updated_count} task{"s" if updated_count != 1 else ""} to {new_priority} priority', 'success')
@@ -740,17 +740,17 @@ def bulk_assign_tasks():
     assigned_to = request.form.get('assigned_to', type=int)
     
     if not task_ids:
-        flash('No tasks selected', 'warning')
+        flash(_('No tasks selected'), 'warning')
         return redirect(url_for('tasks.list_tasks'))
     
     if not assigned_to:
-        flash('No user selected for assignment', 'error')
+        flash(_('No user selected for assignment'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     # Verify user exists
     user = User.query.get(assigned_to)
     if not user:
-        flash('Invalid user selected', 'error')
+        flash(_('Invalid user selected'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     updated_count = 0
@@ -777,7 +777,7 @@ def bulk_assign_tasks():
     
     if updated_count > 0:
         if not safe_commit('bulk_assign_tasks', {'count': updated_count, 'assigned_to': assigned_to}):
-            flash('Could not assign tasks due to a database error', 'error')
+            flash(_('Could not assign tasks due to a database error'), 'error')
             return redirect(url_for('tasks.list_tasks'))
         
         flash(f'Successfully assigned {updated_count} task{"s" if updated_count != 1 else ""} to {user.display_name}', 'success')
@@ -796,17 +796,17 @@ def bulk_move_project():
     new_project_id = request.form.get('project_id', type=int)
     
     if not task_ids:
-        flash('No tasks selected', 'warning')
+        flash(_('No tasks selected'), 'warning')
         return redirect(url_for('tasks.list_tasks'))
     
     if not new_project_id:
-        flash('No project selected', 'error')
+        flash(_('No project selected'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     # Verify project exists and is active
     new_project = Project.query.filter_by(id=new_project_id, status='active').first()
     if not new_project:
-        flash('Invalid project selected', 'error')
+        flash(_('Invalid project selected'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     updated_count = 0
@@ -848,7 +848,7 @@ def bulk_move_project():
     
     if updated_count > 0:
         if not safe_commit('bulk_move_project', {'count': updated_count, 'project_id': new_project_id}):
-            flash('Could not move tasks due to a database error', 'error')
+            flash(_('Could not move tasks due to a database error'), 'error')
             return redirect(url_for('tasks.list_tasks'))
         
         flash(f'Successfully moved {updated_count} task{"s" if updated_count != 1 else ""} to {new_project.name}', 'success')
@@ -1055,7 +1055,7 @@ def my_tasks():
 def overdue_tasks():
     """Show all overdue tasks"""
     if not current_user.is_admin:
-        flash('Only administrators can view all overdue tasks', 'error')
+        flash(_('Only administrators can view all overdue tasks'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
     tasks = Task.get_overdue_tasks()

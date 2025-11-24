@@ -45,14 +45,14 @@ def list_payments():
             date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
             query = query.filter(Payment.payment_date >= date_from_obj)
         except ValueError:
-            flash('Invalid from date format', 'error')
+            flash(_('Invalid from date format'), 'error')
     
     if date_to:
         try:
             date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
             query = query.filter(Payment.payment_date <= date_to_obj)
         except ValueError:
-            flash('Invalid to date format', 'error')
+            flash(_('Invalid to date format'), 'error')
     
     # Apply invoice filter
     if invoice_id:
@@ -117,7 +117,7 @@ def view_payment(payment_id):
     
     # Check access permissions
     if not current_user.is_admin and payment.invoice.created_by != current_user.id:
-        flash('You do not have permission to view this payment', 'error')
+        flash(_('You do not have permission to view this payment'), 'error')
         return redirect(url_for('payments.list_payments'))
     
     return render_template('payments/view.html', payment=payment)
@@ -141,31 +141,31 @@ def create_payment():
         
         # Validate required fields
         if not invoice_id or not amount_str or not payment_date_str:
-            flash('Invoice, amount, and payment date are required', 'error')
+            flash(_('Invoice, amount, and payment date are required'), 'error')
             invoices = get_user_invoices()
             return render_template('payments/create.html', invoices=invoices)
         
         # Get invoice
         invoice = Invoice.query.get(invoice_id)
         if not invoice:
-            flash('Selected invoice not found', 'error')
+            flash(_('Selected invoice not found'), 'error')
             invoices = get_user_invoices()
             return render_template('payments/create.html', invoices=invoices)
         
         # Check access permissions
         if not current_user.is_admin and invoice.created_by != current_user.id:
-            flash('You do not have permission to add payments to this invoice', 'error')
+            flash(_('You do not have permission to add payments to this invoice'), 'error')
             return redirect(url_for('payments.list_payments'))
         
         # Validate and parse amount
         try:
             amount = Decimal(amount_str)
             if amount <= 0:
-                flash('Payment amount must be greater than zero', 'error')
+                flash(_('Payment amount must be greater than zero'), 'error')
                 invoices = get_user_invoices()
                 return render_template('payments/create.html', invoices=invoices)
         except (ValueError, InvalidOperation):
-            flash('Invalid payment amount', 'error')
+            flash(_('Invalid payment amount'), 'error')
             invoices = get_user_invoices()
             return render_template('payments/create.html', invoices=invoices)
         
@@ -173,7 +173,7 @@ def create_payment():
         try:
             payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
         except ValueError:
-            flash('Invalid payment date format', 'error')
+            flash(_('Invalid payment date format'), 'error')
             invoices = get_user_invoices()
             return render_template('payments/create.html', invoices=invoices)
         
@@ -183,11 +183,11 @@ def create_payment():
             try:
                 gateway_fee = Decimal(gateway_fee_str)
                 if gateway_fee < 0:
-                    flash('Gateway fee cannot be negative', 'error')
+                    flash(_('Gateway fee cannot be negative'), 'error')
                     invoices = get_user_invoices()
                     return render_template('payments/create.html', invoices=invoices)
             except (ValueError, InvalidOperation):
-                flash('Invalid gateway fee amount', 'error')
+                flash(_('Invalid gateway fee amount'), 'error')
                 invoices = get_user_invoices()
                 return render_template('payments/create.html', invoices=invoices)
         
@@ -260,7 +260,7 @@ def create_payment():
                                 pass  # Don't fail payment creation on stock errors
         
         if not safe_commit('create_payment', {'invoice_id': invoice_id, 'amount': float(amount)}):
-            flash('Could not create payment due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create payment due to a database error. Please check server logs.'), 'error')
             invoices = get_user_invoices()
             return render_template('payments/create.html', invoices=invoices)
         
@@ -304,7 +304,7 @@ def edit_payment(payment_id):
     
     # Check access permissions
     if not current_user.is_admin and payment.invoice.created_by != current_user.id:
-        flash('You do not have permission to edit this payment', 'error')
+        flash(_('You do not have permission to edit this payment'), 'error')
         return redirect(url_for('payments.list_payments'))
     
     if request.method == 'POST':
@@ -327,17 +327,17 @@ def edit_payment(payment_id):
         try:
             amount = Decimal(amount_str)
             if amount <= 0:
-                flash('Payment amount must be greater than zero', 'error')
+                flash(_('Payment amount must be greater than zero'), 'error')
                 return render_template('payments/edit.html', payment=payment)
         except (ValueError, InvalidOperation):
-            flash('Invalid payment amount', 'error')
+            flash(_('Invalid payment amount'), 'error')
             return render_template('payments/edit.html', payment=payment)
         
         # Validate and parse payment date
         try:
             payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
         except ValueError:
-            flash('Invalid payment date format', 'error')
+            flash(_('Invalid payment date format'), 'error')
             return render_template('payments/edit.html', payment=payment)
         
         # Parse gateway fee if provided
@@ -346,10 +346,10 @@ def edit_payment(payment_id):
             try:
                 gateway_fee = Decimal(gateway_fee_str)
                 if gateway_fee < 0:
-                    flash('Gateway fee cannot be negative', 'error')
+                    flash(_('Gateway fee cannot be negative'), 'error')
                     return render_template('payments/edit.html', payment=payment)
             except (ValueError, InvalidOperation):
-                flash('Invalid gateway fee amount', 'error')
+                flash(_('Invalid gateway fee amount'), 'error')
                 return render_template('payments/edit.html', payment=payment)
         
         # Update payment
@@ -386,7 +386,7 @@ def edit_payment(payment_id):
             invoice.status = 'sent'
         
         if not safe_commit('edit_payment', {'payment_id': payment_id}):
-            flash('Could not update payment due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update payment due to a database error. Please check server logs.'), 'error')
             return render_template('payments/edit.html', payment=payment)
         
         # Track event
@@ -396,7 +396,7 @@ def edit_payment(payment_id):
             'status': status
         })
         
-        flash('Payment updated successfully', 'success')
+        flash(_('Payment updated successfully'), 'success')
         return redirect(url_for('payments.view_payment', payment_id=payment.id))
     
     # GET request - show edit form
@@ -410,7 +410,7 @@ def delete_payment(payment_id):
     
     # Check access permissions
     if not current_user.is_admin and payment.invoice.created_by != current_user.id:
-        flash('You do not have permission to delete this payment', 'error')
+        flash(_('You do not have permission to delete this payment'), 'error')
         return redirect(url_for('payments.list_payments'))
     
     # Store info for invoice update
@@ -430,7 +430,7 @@ def delete_payment(payment_id):
     db.session.delete(payment)
     
     if not safe_commit('delete_payment', {'payment_id': payment_id}):
-        flash('Could not delete payment due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete payment due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('payments.view_payment', payment_id=payment_id))
     
     # Track event
@@ -439,7 +439,7 @@ def delete_payment(payment_id):
         'invoice_id': invoice.id
     })
     
-    flash('Payment deleted successfully', 'success')
+    flash(_('Payment deleted successfully'), 'success')
     return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
 
 @payments_bp.route('/payments/bulk-delete', methods=['POST'])
@@ -449,7 +449,7 @@ def bulk_delete_payments():
     payment_ids = request.form.getlist('payment_ids[]')
     
     if not payment_ids:
-        flash('No payments selected for deletion', 'warning')
+        flash(_('No payments selected for deletion'), 'warning')
         return redirect(url_for('payments.list_payments'))
     
     deleted_count = 0
@@ -494,7 +494,7 @@ def bulk_delete_payments():
     # Commit all deletions
     if deleted_count > 0:
         if not safe_commit('bulk_delete_payments', {'count': deleted_count}):
-            flash('Could not delete payments due to a database error. Please check server logs.', 'error')
+            flash(_('Could not delete payments due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('payments.list_payments'))
     
     # Show appropriate messages
@@ -514,13 +514,13 @@ def bulk_update_status():
     new_status = request.form.get('status', '').strip()
     
     if not payment_ids:
-        flash('No payments selected', 'warning')
+        flash(_('No payments selected'), 'warning')
         return redirect(url_for('payments.list_payments'))
     
     # Validate status
     valid_statuses = ['completed', 'pending', 'failed', 'refunded']
     if not new_status or new_status not in valid_statuses:
-        flash('Invalid status value', 'error')
+        flash(_('Invalid status value'), 'error')
         return redirect(url_for('payments.list_payments'))
     
     updated_count = 0
@@ -565,7 +565,7 @@ def bulk_update_status():
     
     if updated_count > 0:
         if not safe_commit('bulk_update_payment_status', {'count': updated_count, 'status': new_status}):
-            flash('Could not update payments due to a database error', 'error')
+            flash(_('Could not update payments due to a database error'), 'error')
             return redirect(url_for('payments.list_payments'))
         
         flash(f'Successfully updated {updated_count} payment{"s" if updated_count != 1 else ""} to {new_status}', 'success')

@@ -3010,22 +3010,22 @@ table tr:last-child td {
     const canvasToolbar = document.querySelector('.canvas-toolbar');
     if (canvasToolbar) {
         const alignmentButtons = `
-            <button type="button" onclick="alignElements('left')" title="Align Left">
+            <button type="button" onclick="alignElements('left')" title="{{ _('Align Left') }}">
                 <i class="fas fa-align-left"></i>
             </button>
-            <button type="button" onclick="alignElements('center-h')" title="Center Horizontally">
+            <button type="button" onclick="alignElements('center-h')" title="{{ _('Center Horizontally') }}">
                 <i class="fas fa-align-center"></i>
             </button>
-            <button type="button" onclick="alignElements('right')" title="Align Right">
+            <button type="button" onclick="alignElements('right')" title="{{ _('Align Right') }}">
                 <i class="fas fa-align-right"></i>
             </button>
-            <button type="button" onclick="alignElements('top')" title="Align Top">
+            <button type="button" onclick="alignElements('top')" title="{{ _('Align Top') }}">
                 <i class="fas fa-arrow-up"></i>
             </button>
-            <button type="button" onclick="alignElements('center-v')" title="Center Vertically">
+            <button type="button" onclick="alignElements('center-v')" title="{{ _('Center Vertically') }}">
                 <i class="fas fa-arrows-alt-v"></i>
             </button>
-            <button type="button" onclick="alignElements('bottom')" title="Align Bottom">
+            <button type="button" onclick="alignElements('bottom')" title="{{ _('Align Bottom') }}">
                 <i class="fas fa-arrow-down"></i>
             </button>
         `;

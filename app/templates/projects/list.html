@@ -67,10 +67,10 @@
         <div class="flex items-center gap-2">
             <!-- View Toggle -->
             <div class="flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-1">
-                <button type="button" id="listViewBtn" onclick="setViewMode('list')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn active" data-view="list" title="List View">
+                <button type="button" id="listViewBtn" onclick="setViewMode('list')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn active" data-view="list" title="{{ _('List View') }}">
                     <i class="fas fa-list"></i>
                 </button>
-                <button type="button" id="gridViewBtn" onclick="setViewMode('grid')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn" data-view="grid" title="Grid View">
+                <button type="button" id="gridViewBtn" onclick="setViewMode('grid')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn" data-view="grid" title="{{ _('Grid View') }}">
                     <i class="fas fa-th"></i>
                 </button>
             </div>
@@ -205,13 +205,13 @@
                     <div class="flex gap-1">
                         <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
                            class="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" 
-                           title="View Project">
+                           title="{{ _('View Project') }}">
                             <i class="fas fa-eye text-xs"></i>
                         </a>
                         {% if current_user.is_admin or has_permission('edit_projects') %}
                         <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" 
                            class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" 
-                           title="Edit Project">
+                           title="{{ _('Edit Project') }}">
                             <i class="fas fa-edit text-xs"></i>
                         </a>
                         {% endif %}

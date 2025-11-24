@@ -13,13 +13,13 @@
     subtitle_text='Recurring Invoice Template',
     breadcrumbs=breadcrumbs,
     actions_html=''
-        + '<a href="' + url_for("recurring_invoices.edit_recurring_invoice", recurring_id=recurring.id) + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mr-2">Edit</a>'
-        + '<button onclick="generateInvoice(' + recurring.id|string + ')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Generate Now</button>'
+        + '<a href="' + url_for("recurring_invoices.edit_recurring_invoice", recurring_id=recurring.id) + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mr-2">' + _('Edit') + '</a>'
+        + '<button onclick="generateInvoice(' + recurring.id|string + ')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">' + _('Generate Now') + '</button>'
 ) }}
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold mb-4">Template Details</h3>
+        <h3 class="text-lg font-semibold mb-4">{{ _('Template Details') }}</h3>
         <dl class="space-y-2">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.project.name if recurring.project else 'N/A' }}</dd>
@@ -50,7 +50,7 @@
     </div>
     
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold mb-4">Invoice Settings</h3>
+        <h3 class="text-lg font-semibold mb-4">{{ _('Invoice Settings') }}</h3>
         <dl class="space-y-2">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Due Date (Days)</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.due_date_days }} days from issue date</dd>
@@ -89,7 +89,7 @@
 
 {% if generated_invoices %}
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <h3 class="text-lg font-semibold mb-4">Recently Generated Invoices</h3>
+    <h3 class="text-lg font-semibold mb-4">{{ _('Recently Generated Invoices') }}</h3>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800">

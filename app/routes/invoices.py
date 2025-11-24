@@ -114,25 +114,25 @@ def create_invoice():
         
         # Validate required fields
         if not project_id or not client_name or not due_date_str:
-            flash('Project, client name, and due date are required', 'error')
+            flash(_('Project, client name, and due date are required'), 'error')
             return render_template('invoices/create.html')
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
         except ValueError:
-            flash('Invalid due date format', 'error')
+            flash(_('Invalid due date format'), 'error')
             return render_template('invoices/create.html')
         
         try:
             tax_rate = Decimal(tax_rate)
         except ValueError:
-            flash('Invalid tax rate format', 'error')
+            flash(_('Invalid tax rate format'), 'error')
             return render_template('invoices/create.html')
         
         # Get project
         project = Project.query.get(project_id)
         if not project:
-            flash('Selected project not found', 'error')
+            flash(_('Selected project not found'), 'error')
             return render_template('invoices/create.html')
         
         # Get quote_id from project if it exists
@@ -188,7 +188,7 @@ def create_invoice():
         
         db.session.add(invoice)
         if not safe_commit('create_invoice', {'invoice_number': invoice_number, 'project_id': project_id}):
-            flash('Could not create invoice due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create invoice due to a database error. Please check server logs.'), 'error')
             return render_template('invoices/create.html')
         
         # Track invoice created
@@ -223,7 +223,7 @@ def view_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to view this invoice', 'error')
+        flash(_('You do not have permission to view this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Track invoice previewed
@@ -251,7 +251,7 @@ def edit_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to edit this invoice', 'error')
+        flash(_('You do not have permission to edit this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     if request.method == 'POST':
@@ -384,10 +384,10 @@ def edit_invoice(invoice_id):
         # Calculate totals
         invoice.calculate_totals()
         if not safe_commit('edit_invoice', {'invoice_id': invoice.id}):
-            flash('Could not update invoice due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update invoice due to a database error. Please check server logs.'), 'error')
             return render_template('invoices/edit.html', invoice=invoice, projects=Project.query.filter_by(status='active').order_by(Project.name).all())
         
-        flash('Invoice updated successfully', 'success')
+        flash(_('Invoice updated successfully'), 'success')
         return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
     
     # GET request - show edit form
@@ -493,13 +493,13 @@ def delete_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to delete this invoice', 'error')
+        flash(_('You do not have permission to delete this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     invoice_number = invoice.invoice_number
     db.session.delete(invoice)
     if not safe_commit('delete_invoice', {'invoice_id': invoice.id}):
-        flash('Could not delete invoice due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete invoice due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     flash(f'Invoice {invoice_number} deleted successfully', 'success')
@@ -512,7 +512,7 @@ def bulk_delete_invoices():
     invoice_ids = request.form.getlist('invoice_ids[]')
     
     if not invoice_ids:
-        flash('No invoices selected for deletion', 'warning')
+        flash(_('No invoices selected for deletion'), 'warning')
         return redirect(url_for('invoices.list_invoices'))
     
     deleted_count = 0
@@ -544,7 +544,7 @@ def bulk_delete_invoices():
     # Commit all deletions
     if deleted_count > 0:
         if not safe_commit('bulk_delete_invoices', {'count': deleted_count}):
-            flash('Could not delete invoices due to a database error. Please check server logs.', 'error')
+            flash(_('Could not delete invoices due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('invoices.list_invoices'))
     
     # Show appropriate messages
@@ -564,13 +564,13 @@ def bulk_update_status():
     new_status = request.form.get('status', '').strip()
     
     if not invoice_ids:
-        flash('No invoices selected', 'warning')
+        flash(_('No invoices selected'), 'warning')
         return redirect(url_for('invoices.list_invoices'))
     
     # Validate status
     valid_statuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled']
     if not new_status or new_status not in valid_statuses:
-        flash('Invalid status value', 'error')
+        flash(_('Invalid status value'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     updated_count = 0
@@ -605,7 +605,7 @@ def bulk_update_status():
     
     if updated_count > 0:
         if not safe_commit('bulk_update_invoice_status', {'count': updated_count, 'status': new_status}):
-            flash('Could not update invoices due to a database error', 'error')
+            flash(_('Could not update invoices due to a database error'), 'error')
             return redirect(url_for('invoices.list_invoices'))
         
         flash(f'Successfully updated {updated_count} invoice{"s" if updated_count != 1 else ""} to {new_status}', 'success')
@@ -623,7 +623,7 @@ def generate_from_time(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to edit this invoice', 'error')
+        flash(_('You do not have permission to edit this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     if request.method == 'POST':
@@ -634,7 +634,7 @@ def generate_from_time(invoice_id):
         selected_goods = request.form.getlist('extra_goods[]')
         
         if not selected_entries and not selected_costs and not selected_expenses and not selected_goods:
-            flash('No time entries, costs, expenses, or extra goods selected', 'error')
+            flash(_('No time entries, costs, expenses, or extra goods selected'), 'error')
             return redirect(url_for('invoices.generate_from_time', invoice_id=invoice.id))
         
         # Clear existing items
@@ -738,10 +738,10 @@ def generate_from_time(invoice_id):
         # Calculate totals
         invoice.calculate_totals()
         if not safe_commit('generate_from_time', {'invoice_id': invoice.id}):
-            flash('Could not generate items due to a database error. Please check server logs.', 'error')
+            flash(_('Could not generate items due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('invoices.edit_invoice', invoice_id=invoice.id))
         
-        flash('Invoice items generated successfully from time entries and costs', 'success')
+        flash(_('Invoice items generated successfully from time entries and costs'), 'success')
         if total_prepaid_allocated and total_prepaid_allocated > 0:
             flash(
                 _('Applied %(hours)s prepaid hours for %(client)s before billing overages.',
@@ -839,7 +839,7 @@ def export_invoice_csv(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to export this invoice', 'error')
+        flash(_('You do not have permission to export this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Create CSV output
@@ -970,7 +970,7 @@ def duplicate_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and original_invoice.created_by != current_user.id:
-        flash('You do not have permission to duplicate this invoice', 'error')
+        flash(_('You do not have permission to duplicate this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Generate new invoice number
@@ -994,7 +994,7 @@ def duplicate_invoice(invoice_id):
     
     db.session.add(new_invoice)
     if not safe_commit('duplicate_invoice_create', {'source_invoice_id': original_invoice.id, 'new_invoice_number': new_invoice_number}):
-        flash('Could not duplicate invoice due to a database error. Please check server logs.', 'error')
+        flash(_('Could not duplicate invoice due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Duplicate items
@@ -1025,7 +1025,7 @@ def duplicate_invoice(invoice_id):
     # Calculate totals
     new_invoice.calculate_totals()
     if not safe_commit('duplicate_invoice_finalize', {'invoice_id': new_invoice.id}):
-        flash('Could not finalize duplicated invoice due to a database error. Please check server logs.', 'error')
+        flash(_('Could not finalize duplicated invoice due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     flash(f'Invoice {new_invoice_number} created as duplicate', 'success')

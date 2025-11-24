@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
+from flask_babel import _
 from app import db, log_event, track_event
 from app.models import User, Project, TimeEntry, Settings, Task, ProjectCost, Client, Payment, Invoice
 from datetime import datetime, timedelta
@@ -178,7 +179,7 @@ def project_report():
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
     except ValueError:
-        flash('Invalid date format', 'error')
+        flash(_('Invalid date format'), 'error')
         return render_template('reports/project_report.html', projects=projects, users=users)
     
     # Get time entries
@@ -323,7 +324,7 @@ def user_report():
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
     except ValueError:
-        flash('Invalid date format', 'error')
+        flash(_('Invalid date format'), 'error')
         return render_template('reports/user_report.html', users=users, projects=projects)
     
     # Get time entries
@@ -457,7 +458,7 @@ def export_csv():
             "Invalid date format for CSV export",
             {"start_date": start_date, "end_date": end_date}
         )
-        flash('Invalid date format', 'error')
+        flash(_('Invalid date format'), 'error')
         return redirect(url_for('reports.reports'))
     
     # Get time entries
@@ -653,7 +654,7 @@ def task_report():
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
     except ValueError:
-        flash('Invalid date format', 'error')
+        flash(_('Invalid date format'), 'error')
         return render_template('reports/task_report.html', projects=projects, users=users)
 
     # Base tasks query: finished tasks
@@ -737,7 +738,7 @@ def export_excel():
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
     except ValueError:
-        flash('Invalid date format', 'error')
+        flash(_('Invalid date format'), 'error')
         return redirect(url_for('reports.reports'))
     
     # Get time entries
@@ -797,7 +798,7 @@ def export_project_excel():
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
     except ValueError:
-        flash('Invalid date format', 'error')
+        flash(_('Invalid date format'), 'error')
         return redirect(url_for('reports.project_report'))
     
     # Get time entries

@@ -31,7 +31,7 @@
                     </label>
                     <input type="text" name="trip_purpose" id="trip_purpose" required
                            value="{{ per_diem.trip_purpose if per_diem else '' }}"
-                           placeholder="e.g., Business trip to Berlin"
+                           placeholder="{{ _('e.g., Business trip to Berlin') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -59,7 +59,7 @@
                     </label>
                     <input type="text" name="country" id="country" required
                            value="{{ per_diem.country if per_diem else '' }}"
-                           placeholder="e.g., DE, US, GB"
+                           placeholder="{{ _('e.g., DE, US, GB') }}"
                            maxlength="2"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
@@ -70,7 +70,7 @@
                     </label>
                     <input type="text" name="city" id="city"
                            value="{{ per_diem.city if per_diem and per_diem.city else '' }}"
-                           placeholder="e.g., Berlin"
+                           placeholder="{{ _('e.g., Berlin') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
             </div>
@@ -194,7 +194,7 @@
                 Notes
             </label>
             <textarea name="notes" id="notes" rows="3"
-                      placeholder="Additional notes..."
+                      placeholder="{{ _('Additional notes...') }}"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ per_diem.notes if per_diem else '' }}</textarea>
         </div>
         

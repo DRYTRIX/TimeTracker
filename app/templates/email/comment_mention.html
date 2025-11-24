@@ -67,7 +67,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>💬 You Were Mentioned</h1>
+        <h1>💬 {{ _('You Were Mentioned') }}</h1>
     </div>
     
     <div class="content">
@@ -87,7 +87,7 @@
         
         <center>
             <a href="{{ url_for('tasks.edit_task', task_id=task.id, _external=True) }}" class="button">
-                View Task & Reply
+                {{ _('View Task & Reply') }}
             </a>
         </center>
     </div>

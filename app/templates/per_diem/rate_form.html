@@ -38,7 +38,7 @@
                     </label>
                     <input type="text" name="country" id="country" required
                            value="{{ rate.country if rate else '' }}"
-                           placeholder="e.g., DE, US, GB"
+                           placeholder="{{ _('e.g., DE, US, GB') }}"
                            maxlength="2"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
@@ -49,7 +49,7 @@
                     </label>
                     <input type="text" name="city" id="city"
                            value="{{ rate.city if rate and rate.city else '' }}"
-                           placeholder="e.g., Berlin"
+                           placeholder="{{ _('e.g., Berlin') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
             </div>
@@ -159,7 +159,7 @@
                 Notes
             </label>
             <textarea name="notes" id="notes" rows="3"
-                      placeholder="Additional notes about this rate..."
+                      placeholder="{{ _('Additional notes about this rate...') }}"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ rate.notes if rate else '' }}</textarea>
         </div>
         

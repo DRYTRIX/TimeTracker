@@ -64,7 +64,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>✓ Quote Approved</h1>
+            <h1>✓ {{ _('Quote Approved') }}</h1>
         </div>
         <div class="content">
             <p>Hello {{ user.display_name or user.username }},</p>
@@ -81,7 +81,7 @@
             
             <p>You can now send this quote to the client.</p>
             
-            <a href="{{ url_for('quotes.view_quote', quote_id=quote.id, _external=True) }}" class="button">View Quote</a>
+            <a href="{{ url_for('quotes.view_quote', quote_id=quote.id, _external=True) }}" class="button">{{ _('View Quote') }}</a>
         </div>
         <div class="footer">
             <p>TimeTracker - Time Tracking & Project Management</p>

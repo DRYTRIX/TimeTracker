@@ -19,7 +19,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Main Details -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4">Change Information</h2>
+        <h2 class="text-xl font-semibold mb-4">{{ _('Change Information') }}</h2>
         <dl class="space-y-4">
             <div>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Timestamp</dt>
@@ -77,7 +77,7 @@
     <!-- Change Details -->
     {% if audit_log.field_name %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4">Change Details</h2>
+        <h2 class="text-xl font-semibold mb-4">{{ _('Change Details') }}</h2>
         <div class="space-y-4">
             {% if audit_log.old_value %}
             <div>
@@ -101,7 +101,7 @@
     
     <!-- Request Information -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow lg:col-span-2">
-        <h2 class="text-xl font-semibold mb-4">Request Information</h2>
+        <h2 class="text-xl font-semibold mb-4">{{ _('Request Information') }}</h2>
         <dl class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {% if audit_log.ip_address %}
             <div>

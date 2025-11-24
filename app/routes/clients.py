@@ -102,7 +102,7 @@ def create_client():
         if not name:
             if wants_json:
                 return jsonify({'error': 'validation_error', 'messages': ['Client name is required']}), 400
-            flash('Client name is required', 'error')
+            flash(_('Client name is required'), 'error')
             try:
                 current_app.logger.warning("Validation failed: missing client name")
             except Exception:
@@ -113,7 +113,7 @@ def create_client():
         if Client.query.filter_by(name=name).first():
             if wants_json:
                 return jsonify({'error': 'validation_error', 'messages': ['A client with this name already exists']}), 400
-            flash('A client with this name already exists', 'error')
+            flash(_('A client with this name already exists'), 'error')
             try:
                 current_app.logger.warning("Validation failed: duplicate client name '%s'", name)
             except Exception:
@@ -126,7 +126,7 @@ def create_client():
         except (InvalidOperation, ValueError):
             if wants_json:
                 return jsonify({'error': 'validation_error', 'messages': ['Invalid hourly rate format']}), 400
-            flash('Invalid hourly rate format', 'error')
+            flash(_('Invalid hourly rate format'), 'error')
             try:
                 current_app.logger.warning("Validation failed: invalid hourly rate '%s'", default_hourly_rate)
             except Exception:
@@ -173,7 +173,7 @@ def create_client():
         if not safe_commit('create_client', {'name': name}):
             if wants_json:
                 return jsonify({'error': 'db_error', 'message': 'Could not create client due to a database error.'}), 500
-            flash('Could not create client due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create client due to a database error. Please check server logs.'), 'error')
             return render_template('clients/create.html')
         
         # Log client creation
@@ -245,7 +245,7 @@ def edit_client(client_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('edit_clients'):
-        flash('You do not have permission to edit clients', 'error')
+        flash(_('You do not have permission to edit clients'), 'error')
         return redirect(url_for('clients.view_client', client_id=client_id))
     
     if request.method == 'POST':
@@ -261,20 +261,20 @@ def edit_client(client_id):
         
         # Validate required fields
         if not name:
-            flash('Client name is required', 'error')
+            flash(_('Client name is required'), 'error')
             return render_template('clients/edit.html', client=client)
         
         # Check if client name already exists (excluding current client)
         existing = Client.query.filter_by(name=name).first()
         if existing and existing.id != client.id:
-            flash('A client with this name already exists', 'error')
+            flash(_('A client with this name already exists'), 'error')
             return render_template('clients/edit.html', client=client)
         
         # Validate hourly rate
         try:
             default_hourly_rate = Decimal(default_hourly_rate) if default_hourly_rate else None
         except (InvalidOperation, ValueError):
-            flash('Invalid hourly rate format', 'error')
+            flash(_('Invalid hourly rate format'), 'error')
             return render_template('clients/edit.html', client=client)
 
         try:
@@ -336,7 +336,7 @@ def edit_client(client_id):
         client.updated_at = datetime.utcnow()
         
         if not safe_commit('edit_client', {'client_id': client.id}):
-            flash('Could not update client due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update client due to a database error. Please check server logs.'), 'error')
             return render_template('clients/edit.html', client=client)
         
         # Log client update
@@ -418,11 +418,11 @@ def archive_client(client_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('edit_clients'):
-        flash('You do not have permission to archive clients', 'error')
+        flash(_('You do not have permission to archive clients'), 'error')
         return redirect(url_for('clients.view_client', client_id=client_id))
     
     if client.status == 'inactive':
-        flash('Client is already inactive', 'info')
+        flash(_('Client is already inactive'), 'info')
     else:
         client.archive()
         app_module.log_event("client.archived", user_id=current_user.id, client_id=client.id)
@@ -439,11 +439,11 @@ def activate_client(client_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('edit_clients'):
-        flash('You do not have permission to activate clients', 'error')
+        flash(_('You do not have permission to activate clients'), 'error')
         return redirect(url_for('clients.view_client', client_id=client_id))
     
     if client.status == 'active':
-        flash('Client is already active', 'info')
+        flash(_('Client is already active'), 'info')
     else:
         client.activate()
         flash(f'Client "{client.name}" activated successfully', 'success')
@@ -458,19 +458,19 @@ def delete_client(client_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('delete_clients'):
-        flash('You do not have permission to delete clients', 'error')
+        flash(_('You do not have permission to delete clients'), 'error')
         return redirect(url_for('clients.view_client', client_id=client_id))
     
     # Check if client has projects
     if client.projects.count() > 0:
-        flash('Cannot delete client with existing projects', 'error')
+        flash(_('Cannot delete client with existing projects'), 'error')
         return redirect(url_for('clients.view_client', client_id=client_id))
     
     client_name = client.name
     client_id_for_log = client.id
     db.session.delete(client)
     if not safe_commit('delete_client', {'client_id': client.id}):
-        flash('Could not delete client due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete client due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('clients.view_client', client_id=client.id))
     
     # Log client deletion
@@ -486,13 +486,13 @@ def bulk_delete_clients():
     """Delete multiple clients at once"""
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('delete_clients'):
-        flash('You do not have permission to delete clients', 'error')
+        flash(_('You do not have permission to delete clients'), 'error')
         return redirect(url_for('clients.list_clients'))
     
     client_ids = request.form.getlist('client_ids[]')
     
     if not client_ids:
-        flash('No clients selected for deletion', 'warning')
+        flash(_('No clients selected for deletion'), 'warning')
         return redirect(url_for('clients.list_clients'))
     
     deleted_count = 0
@@ -531,7 +531,7 @@ def bulk_delete_clients():
     # Commit all deletions
     if deleted_count > 0:
         if not safe_commit('bulk_delete_clients', {'count': deleted_count}):
-            flash('Could not delete clients due to a database error. Please check server logs.', 'error')
+            flash(_('Could not delete clients due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('clients.list_clients'))
     
     # Show appropriate messages
@@ -542,7 +542,7 @@ def bulk_delete_clients():
         flash(f'Skipped {skipped_count} client{"s" if skipped_count != 1 else ""}: {", ".join(errors[:3])}{"..." if len(errors) > 3 else ""}', 'warning')
     
     if deleted_count == 0 and skipped_count == 0:
-        flash('No clients were deleted', 'info')
+        flash(_('No clients were deleted'), 'info')
     
     return redirect(url_for('clients.list_clients'))
 
@@ -552,18 +552,18 @@ def bulk_status_change():
     """Change status for multiple clients at once"""
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('edit_clients'):
-        flash('You do not have permission to change client status', 'error')
+        flash(_('You do not have permission to change client status'), 'error')
         return redirect(url_for('clients.list_clients'))
     
     client_ids = request.form.getlist('client_ids[]')
     new_status = request.form.get('new_status', '').strip()
     
     if not client_ids:
-        flash('No clients selected', 'warning')
+        flash(_('No clients selected'), 'warning')
         return redirect(url_for('clients.list_clients'))
     
     if new_status not in ['active', 'inactive']:
-        flash('Invalid status', 'error')
+        flash(_('Invalid status'), 'error')
         return redirect(url_for('clients.list_clients'))
     
     updated_count = 0
@@ -592,7 +592,7 @@ def bulk_status_change():
     # Commit all changes
     if updated_count > 0:
         if not safe_commit('bulk_status_change_clients', {'count': updated_count, 'status': new_status}):
-            flash('Could not update client status due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update client status due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('clients.list_clients'))
     
     # Show appropriate messages
@@ -604,7 +604,7 @@ def bulk_status_change():
         flash(f'Some clients could not be updated: {", ".join(errors[:3])}{"..." if len(errors) > 3 else ""}', 'warning')
     
     if updated_count == 0:
-        flash('No clients were updated', 'info')
+        flash(_('No clients were updated'), 'info')
     
     return redirect(url_for('clients.list_clients'))
 
