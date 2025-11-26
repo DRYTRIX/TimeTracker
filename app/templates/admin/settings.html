@@ -164,6 +164,119 @@
                 </div>
             </div>
 
+            <!-- Kiosk Mode Settings -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('Kiosk Mode') }}</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="kiosk_mode_enabled" id="kiosk_mode_enabled" {% if kiosk_settings.kiosk_mode_enabled %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="kiosk_mode_enabled" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                            {{ _('Enable Kiosk Mode') }}
+                        </label>
+                    </div>
+                    <p class="ml-6 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Kiosk mode provides a simplified interface for warehouse operations with barcode scanning and time tracking. Access at') }} <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">/kiosk/login</code>
+                    </p>
+                    {% if kiosk_settings.kiosk_mode_enabled %}
+                    <div class="ml-6 grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label for="kiosk_auto_logout_minutes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Auto-Logout Timeout (Minutes)') }}</label>
+                            <input type="number" name="kiosk_auto_logout_minutes" id="kiosk_auto_logout_minutes" value="{{ kiosk_settings.kiosk_auto_logout_minutes }}" min="1" max="60" class="form-input">
+                        </div>
+                        <div>
+                            <label for="kiosk_default_movement_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default Movement Type') }}</label>
+                            <select name="kiosk_default_movement_type" id="kiosk_default_movement_type" class="form-input">
+                                <option value="adjustment" {% if kiosk_settings.kiosk_default_movement_type == 'adjustment' %}selected{% endif %}>{{ _('Adjustment') }}</option>
+                                <option value="transfer" {% if kiosk_settings.kiosk_default_movement_type == 'transfer' %}selected{% endif %}>{{ _('Transfer') }}</option>
+                                <option value="sale" {% if kiosk_settings.kiosk_default_movement_type == 'sale' %}selected{% endif %}>{{ _('Sale') }}</option>
+                                <option value="purchase" {% if kiosk_settings.kiosk_default_movement_type == 'purchase' %}selected{% endif %}>{{ _('Purchase') }}</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="kiosk_allow_camera_scanning" id="kiosk_allow_camera_scanning" {% if kiosk_settings.kiosk_allow_camera_scanning %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <label for="kiosk_allow_camera_scanning" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                {{ _('Allow Camera-Based Barcode Scanning') }}
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="kiosk_require_reason_for_adjustments" id="kiosk_require_reason_for_adjustments" {% if kiosk_settings.kiosk_require_reason_for_adjustments %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <label for="kiosk_require_reason_for_adjustments" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                {{ _('Require Reason for Stock Adjustments') }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Integration OAuth Credentials -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('Integration OAuth Credentials') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Configure OAuth client credentials for integrations. These settings take precedence over environment variables. Leave client secret empty to keep the current value.') }}
+                </p>
+                
+                <!-- Jira -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-jira text-blue-600 mr-2"></i>Jira
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="jira_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="jira_client_id" id="jira_client_id" value="{{ settings.jira_client_id or '' }}" class="form-input" placeholder="{{ _('Jira OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="jira_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="jira_client_secret" id="jira_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.jira_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slack -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-slack text-purple-600 mr-2"></i>Slack
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="slack_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="slack_client_id" id="slack_client_id" value="{{ settings.slack_client_id or '' }}" class="form-input" placeholder="{{ _('Slack OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="slack_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="slack_client_secret" id="slack_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.slack_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GitHub -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-github text-gray-800 dark:text-gray-200 mr-2"></i>GitHub
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="github_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="github_client_id" id="github_client_id" value="{{ settings.github_client_id or '' }}" class="form-input" placeholder="{{ _('GitHub OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="github_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="github_client_secret" id="github_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.github_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Analytics Settings -->
             <div>
                 <h2 class="text-lg font-semibold mb-4">{{ _('Privacy & Analytics') }}</h2>

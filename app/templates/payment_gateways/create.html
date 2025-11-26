@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Configure Payment Gateway') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Configure Payment Gateway') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Set up payment processing for online invoice payments') }}</p>
+    </div>
+    <a href="{{ url_for('payment_gateways.list_gateways') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Gateways') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('payment_gateways.create_gateway') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Gateway Name') }} *</label>
+                <input type="text" id="name" name="name" required class="form-input" placeholder="{{ _('e.g., Stripe Production') }}">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('A descriptive name for this gateway configuration') }}</p>
+            </div>
+            
+            <div>
+                <label for="provider" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Provider') }} *</label>
+                <select id="provider" name="provider" required class="form-input" onchange="updateProviderFields()">
+                    <option value="">{{ _('Select provider...') }}</option>
+                    <option value="stripe">Stripe</option>
+                    <option value="paypal">PayPal</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="stripeFields" class="hidden border-t border-border-light dark:border-border-dark pt-4 mb-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Stripe Configuration') }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="api_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('API Key') }} *</label>
+                    <input type="password" id="api_key" name="api_key" class="form-input" placeholder="sk_test_...">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Your Stripe secret key') }}</p>
+                </div>
+                <div>
+                    <label for="publishable_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Publishable Key') }} *</label>
+                    <input type="text" id="publishable_key" name="publishable_key" class="form-input" placeholder="pk_test_...">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Your Stripe publishable key') }}</p>
+                </div>
+                <div class="md:col-span-2">
+                    <label for="webhook_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Webhook Secret') }}</label>
+                    <input type="password" id="webhook_secret" name="webhook_secret" class="form-input" placeholder="whsec_...">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Webhook signing secret for verifying webhook events') }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="paypalFields" class="hidden border-t border-border-light dark:border-border-dark pt-4 mb-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('PayPal Configuration') }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client ID') }} *</label>
+                    <input type="text" id="client_id" name="client_id" class="form-input">
+                </div>
+                <div>
+                    <label for="client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Secret') }} *</label>
+                    <input type="password" id="client_secret" name="client_secret" class="form-input">
+                </div>
+            </div>
+        </div>
+        
+        <div class="border-t border-border-light dark:border-border-dark pt-4 mb-6">
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input type="checkbox" id="is_test_mode" name="is_test_mode" class="rounded border-gray-300 text-primary shadow-sm">
+                {{ _('Test Mode') }}
+            </label>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Enable test mode for development and testing') }}</p>
+        </div>
+        
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('payment_gateways.list_gateways') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Save Gateway') }}</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateProviderFields() {
+    const provider = document.getElementById('provider').value;
+    document.getElementById('stripeFields').classList.add('hidden');
+    document.getElementById('paypalFields').classList.add('hidden');
+    
+    if (provider === 'stripe') {
+        document.getElementById('stripeFields').classList.remove('hidden');
+    } else if (provider === 'paypal') {
+        document.getElementById('paypalFields').classList.remove('hidden');
+    }
+}
+</script>
+{% endblock %}
+

@@ -25,77 +25,28 @@ logger = logging.getLogger(__name__)
 @invoices_bp.route('/invoices')
 @login_required
 def list_invoices():
-    """List all invoices"""
+    """List all invoices - REFACTORED to use service layer with eager loading"""
     # Track invoice page viewed
     track_invoice_page_viewed(current_user.id)
+    
+    from app.services import InvoiceService
     
     # Get filter parameters
     status = request.args.get('status', '').strip()
     payment_status = request.args.get('payment_status', '').strip()
     search_query = request.args.get('search', '').strip()
     
-    # Build query
-    if current_user.is_admin:
-        query = Invoice.query
-    else:
-        query = Invoice.query.filter_by(created_by=current_user.id)
+    # Use service layer to get invoices (prevents N+1 queries)
+    invoice_service = InvoiceService()
+    result = invoice_service.list_invoices(
+        status=status if status else None,
+        payment_status=payment_status if payment_status else None,
+        search=search_query if search_query else None,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin
+    )
     
-    # Apply status filter
-    if status:
-        query = query.filter(Invoice.status == status)
-    
-    # Apply payment status filter
-    if payment_status:
-        query = query.filter(Invoice.payment_status == payment_status)
-    
-    # Apply search filter
-    if search_query:
-        like = f"%{search_query}%"
-        query = query.filter(
-            db.or_(
-                Invoice.invoice_number.ilike(like),
-                Invoice.client_name.ilike(like)
-            )
-        )
-    
-    # Get invoices
-    invoices = query.order_by(Invoice.created_at.desc()).all()
-    
-    # Calculate overdue status for each invoice
-    today = date.today()
-    for invoice in invoices:
-        # Always set _is_overdue attribute to avoid template errors
-        if invoice.due_date and invoice.due_date < today and invoice.payment_status != 'fully_paid' and invoice.status != 'paid':
-            invoice._is_overdue = True
-        else:
-            invoice._is_overdue = False
-    
-    # Get summary statistics (from all invoices, not filtered)
-    if current_user.is_admin:
-        all_invoices = Invoice.query.all()
-    else:
-        all_invoices = Invoice.query.filter_by(created_by=current_user.id).all()
-    
-    total_invoices = len(all_invoices)
-    total_amount = sum(invoice.total_amount for invoice in all_invoices)
-    
-    # Use payment tracking for more accurate statistics
-    actual_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices)
-    fully_paid_amount = sum(invoice.total_amount for invoice in all_invoices if invoice.payment_status == 'fully_paid')
-    partially_paid_amount = sum(invoice.amount_paid or 0 for invoice in all_invoices if invoice.payment_status == 'partially_paid')
-    overdue_amount = sum(invoice.outstanding_amount for invoice in all_invoices if invoice.status == 'overdue')
-    
-    summary = {
-        'total_invoices': total_invoices,
-        'total_amount': float(total_amount),
-        'paid_amount': float(actual_paid_amount),
-        'fully_paid_amount': float(fully_paid_amount),
-        'partially_paid_amount': float(partially_paid_amount),
-        'overdue_amount': float(overdue_amount),
-        'outstanding_amount': float(total_amount - actual_paid_amount)
-    }
-    
-    return render_template('invoices/list.html', invoices=invoices, summary=summary)
+    return render_template('invoices/list.html', invoices=result['invoices'], summary=result['summary'])
 
 @invoices_bp.route('/invoices/create', methods=['GET', 'POST'])
 @login_required
@@ -114,26 +65,46 @@ def create_invoice():
         
         # Validate required fields
         if not project_id or not client_name or not due_date_str:
-            flash('Project, client name, and due date are required', 'error')
+            flash(_('Project, client name, and due date are required'), 'error')
             return render_template('invoices/create.html')
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
         except ValueError:
-            flash('Invalid due date format', 'error')
+            flash(_('Invalid due date format'), 'error')
             return render_template('invoices/create.html')
         
         try:
             tax_rate = Decimal(tax_rate)
         except ValueError:
-            flash('Invalid tax rate format', 'error')
+            flash(_('Invalid tax rate format'), 'error')
             return render_template('invoices/create.html')
         
         # Get project
         project = Project.query.get(project_id)
         if not project:
-            flash('Selected project not found', 'error')
+            flash(_('Selected project not found'), 'error')
             return render_template('invoices/create.html')
+        
+        # Get quote_id from project if it exists
+        quote_id = project.quote_id if hasattr(project, 'quote_id') else None
+        
+        # If quote exists, try to get payment terms and calculate due_date
+        quote = None
+        if quote_id:
+            from app.models import Quote
+            quote = Quote.query.get(quote_id)
+            if quote and quote.payment_terms:
+                # Calculate due_date from payment terms
+                calculated_due_date = quote.calculate_due_date_from_payment_terms()
+                if calculated_due_date:
+                    try:
+                        due_date = calculated_due_date
+                        # Override if user provided a different due_date
+                        if due_date_str:
+                            due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        pass  # Use calculated date if parsing fails
         
         # Generate invoice number
         invoice_number = Invoice.generate_invoice_number()
@@ -157,6 +128,7 @@ def create_invoice():
             due_date=due_date,
             created_by=current_user.id,
             client_id=project.client_id,
+            quote_id=quote_id,
             client_email=client_email,
             client_address=client_address,
             tax_rate=tax_rate,
@@ -167,7 +139,7 @@ def create_invoice():
         
         db.session.add(invoice)
         if not safe_commit('create_invoice', {'invoice_number': invoice_number, 'project_id': project_id}):
-            flash('Could not create invoice due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create invoice due to a database error. Please check server logs.'), 'error')
             return render_template('invoices/create.html')
         
         # Track invoice created
@@ -202,7 +174,7 @@ def view_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to view this invoice', 'error')
+        flash(_('You do not have permission to view this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Track invoice previewed
@@ -220,7 +192,12 @@ def view_invoice(invoice_id):
         .order_by(InvoiceEmail.sent_at.desc())\
         .all()
     
-    return render_template('invoices/view.html', invoice=invoice, email_templates=email_templates, email_history=email_history)
+    # Get approval information
+    from app.services.invoice_approval_service import InvoiceApprovalService
+    approval_service = InvoiceApprovalService()
+    approval = approval_service.get_invoice_approval(invoice_id)
+    
+    return render_template('invoices/view.html', invoice=invoice, email_templates=email_templates, email_history=email_history, approval=approval)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -230,7 +207,7 @@ def edit_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to edit this invoice', 'error')
+        flash(_('You do not have permission to edit this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     if request.method == 'POST':
@@ -259,11 +236,20 @@ def edit_invoice(invoice_id):
                     quantity = Decimal(quantities[i])
                     unit_price = Decimal(unit_prices[i])
                     
+                    # Get stock item info if provided
+                    stock_item_id = request.form.getlist('item_stock_item_id[]')
+                    warehouse_id = request.form.getlist('item_warehouse_id[]')
+                    
+                    stock_item_id_val = int(stock_item_id[i]) if i < len(stock_item_id) and stock_item_id[i] and stock_item_id[i].strip() else None
+                    warehouse_id_val = int(warehouse_id[i]) if i < len(warehouse_id) and warehouse_id[i] and warehouse_id[i].strip() else None
+                    
                     item = InvoiceItem(
                         invoice_id=invoice.id,
                         description=descriptions[i].strip(),
                         quantity=quantity,
-                        unit_price=unit_price
+                        unit_price=unit_price,
+                        stock_item_id=stock_item_id_val,
+                        warehouse_id=warehouse_id_val
                     )
                     db.session.add(item)
                 except ValueError:
@@ -323,20 +309,69 @@ def edit_invoice(invoice_id):
                     flash(f'Invalid quantity or price for extra good {i+1}', 'error')
                     continue
         
+        # Reserve stock for invoice items with stock items
+        from app.models import StockReservation
+        
+        for item in invoice.items:
+            if item.is_stock_item and item.stock_item_id and item.warehouse_id:
+                # Check if reservation already exists
+                existing = StockReservation.query.filter_by(
+                    stock_item_id=item.stock_item_id,
+                    warehouse_id=item.warehouse_id,
+                    reservation_type='invoice',
+                    reservation_id=invoice.id,
+                    status='reserved'
+                ).first()
+                
+                if not existing:
+                    try:
+                        StockReservation.create_reservation(
+                            stock_item_id=item.stock_item_id,
+                            warehouse_id=item.warehouse_id,
+                            quantity=item.quantity,
+                            reservation_type='invoice',
+                            reservation_id=invoice.id,
+                            reserved_by=current_user.id,
+                            expires_in_days=None  # Invoice reservations don't expire
+                        )
+                    except ValueError as e:
+                        flash(_('Warning: Could not reserve stock for item %(item)s: %(error)s', item=item.description, error=str(e)), 'warning')
+        
         # Calculate totals
         invoice.calculate_totals()
         if not safe_commit('edit_invoice', {'invoice_id': invoice.id}):
-            flash('Could not update invoice due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update invoice due to a database error. Please check server logs.'), 'error')
             return render_template('invoices/edit.html', invoice=invoice, projects=Project.query.filter_by(status='active').order_by(Project.name).all())
         
-        flash('Invoice updated successfully', 'success')
+        flash(_('Invoice updated successfully'), 'success')
         return redirect(url_for('invoices.view_invoice', invoice_id=invoice.id))
     
     # GET request - show edit form
-    from app.models import InvoiceTemplate
+    from app.models import InvoiceTemplate, StockItem, Warehouse
+    import json
     projects = Project.query.filter_by(status='active').order_by(Project.name).all()
     email_templates = InvoiceTemplate.query.order_by(InvoiceTemplate.name).all()
-    return render_template('invoices/edit.html', invoice=invoice, projects=projects, email_templates=email_templates)
+    stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
+    
+    # Prepare stock items and warehouses for JavaScript
+    stock_items_json = json.dumps([{
+        'id': item.id,
+        'sku': item.sku,
+        'name': item.name,
+        'default_price': float(item.default_price) if item.default_price else None,
+        'default_cost': float(item.default_cost) if item.default_cost else None,
+        'unit': item.unit or 'pcs',
+        'description': item.name
+    } for item in stock_items])
+    
+    warehouses_json = json.dumps([{
+        'id': wh.id,
+        'code': wh.code,
+        'name': wh.name
+    } for wh in warehouses])
+    
+    return render_template('invoices/edit.html', invoice=invoice, projects=projects, email_templates=email_templates, stock_items=stock_items, warehouses=warehouses, stock_items_json=stock_items_json, warehouses_json=warehouses_json)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/status', methods=['POST'])
 @login_required
@@ -361,6 +396,45 @@ def update_invoice_status(invoice_id):
         if not invoice.payment_date:
             invoice.payment_date = datetime.utcnow().date()
     
+    # Reduce stock when invoice is sent or paid (if configured)
+    from app.models import StockMovement, StockReservation
+    import os
+    
+    reduce_on_sent = os.getenv('INVENTORY_REDUCE_ON_INVOICE_SENT', 'true').lower() == 'true'
+    reduce_on_paid = os.getenv('INVENTORY_REDUCE_ON_INVOICE_PAID', 'false').lower() == 'true'
+    
+    if (new_status == 'sent' and reduce_on_sent) or (new_status == 'paid' and reduce_on_paid):
+        for item in invoice.items:
+            if item.is_stock_item and item.stock_item_id and item.warehouse_id:
+                try:
+                    # Fulfill any existing reservations
+                    reservation = StockReservation.query.filter_by(
+                        stock_item_id=item.stock_item_id,
+                        warehouse_id=item.warehouse_id,
+                        reservation_type='invoice',
+                        reservation_id=invoice.id,
+                        status='reserved'
+                    ).first()
+                    
+                    if reservation:
+                        reservation.fulfill()
+                    
+                    # Create stock movement (sale)
+                    StockMovement.record_movement(
+                        movement_type='sale',
+                        stock_item_id=item.stock_item_id,
+                        warehouse_id=item.warehouse_id,
+                        quantity=-item.quantity,  # Negative for removal
+                        moved_by=current_user.id,
+                        reference_type='invoice',
+                        reference_id=invoice.id,
+                        unit_cost=item.stock_item.default_cost if item.stock_item else None,
+                        reason=f'Invoice {invoice.invoice_number}',
+                        update_stock=True
+                    )
+                except Exception as e:
+                    flash(_('Warning: Could not reduce stock for item %(item)s: %(error)s', item=item.description, error=str(e)), 'warning')
+    
     if not safe_commit('update_invoice_status', {'invoice_id': invoice.id, 'status': new_status}):
         return jsonify({'error': 'Database error while updating status'}), 500
     
@@ -375,13 +449,13 @@ def delete_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to delete this invoice', 'error')
+        flash(_('You do not have permission to delete this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     invoice_number = invoice.invoice_number
     db.session.delete(invoice)
     if not safe_commit('delete_invoice', {'invoice_id': invoice.id}):
-        flash('Could not delete invoice due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete invoice due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     flash(f'Invoice {invoice_number} deleted successfully', 'success')
@@ -394,7 +468,7 @@ def bulk_delete_invoices():
     invoice_ids = request.form.getlist('invoice_ids[]')
     
     if not invoice_ids:
-        flash('No invoices selected for deletion', 'warning')
+        flash(_('No invoices selected for deletion'), 'warning')
         return redirect(url_for('invoices.list_invoices'))
     
     deleted_count = 0
@@ -426,7 +500,7 @@ def bulk_delete_invoices():
     # Commit all deletions
     if deleted_count > 0:
         if not safe_commit('bulk_delete_invoices', {'count': deleted_count}):
-            flash('Could not delete invoices due to a database error. Please check server logs.', 'error')
+            flash(_('Could not delete invoices due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('invoices.list_invoices'))
     
     # Show appropriate messages
@@ -446,13 +520,13 @@ def bulk_update_status():
     new_status = request.form.get('status', '').strip()
     
     if not invoice_ids:
-        flash('No invoices selected', 'warning')
+        flash(_('No invoices selected'), 'warning')
         return redirect(url_for('invoices.list_invoices'))
     
     # Validate status
     valid_statuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled']
     if not new_status or new_status not in valid_statuses:
-        flash('Invalid status value', 'error')
+        flash(_('Invalid status value'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     updated_count = 0
@@ -487,7 +561,7 @@ def bulk_update_status():
     
     if updated_count > 0:
         if not safe_commit('bulk_update_invoice_status', {'count': updated_count, 'status': new_status}):
-            flash('Could not update invoices due to a database error', 'error')
+            flash(_('Could not update invoices due to a database error'), 'error')
             return redirect(url_for('invoices.list_invoices'))
         
         flash(f'Successfully updated {updated_count} invoice{"s" if updated_count != 1 else ""} to {new_status}', 'success')
@@ -505,7 +579,7 @@ def generate_from_time(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to edit this invoice', 'error')
+        flash(_('You do not have permission to edit this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     if request.method == 'POST':
@@ -516,7 +590,7 @@ def generate_from_time(invoice_id):
         selected_goods = request.form.getlist('extra_goods[]')
         
         if not selected_entries and not selected_costs and not selected_expenses and not selected_goods:
-            flash('No time entries, costs, expenses, or extra goods selected', 'error')
+            flash(_('No time entries, costs, expenses, or extra goods selected'), 'error')
             return redirect(url_for('invoices.generate_from_time', invoice_id=invoice.id))
         
         # Clear existing items
@@ -620,10 +694,10 @@ def generate_from_time(invoice_id):
         # Calculate totals
         invoice.calculate_totals()
         if not safe_commit('generate_from_time', {'invoice_id': invoice.id}):
-            flash('Could not generate items due to a database error. Please check server logs.', 'error')
+            flash(_('Could not generate items due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('invoices.edit_invoice', invoice_id=invoice.id))
         
-        flash('Invoice items generated successfully from time entries and costs', 'success')
+        flash(_('Invoice items generated successfully from time entries and costs'), 'success')
         if total_prepaid_allocated and total_prepaid_allocated > 0:
             flash(
                 _('Applied %(hours)s prepaid hours for %(client)s before billing overages.',
@@ -721,7 +795,7 @@ def export_invoice_csv(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        flash('You do not have permission to export this invoice', 'error')
+        flash(_('You do not have permission to export this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Create CSV output
@@ -852,7 +926,7 @@ def duplicate_invoice(invoice_id):
     
     # Check access permissions
     if not current_user.is_admin and original_invoice.created_by != current_user.id:
-        flash('You do not have permission to duplicate this invoice', 'error')
+        flash(_('You do not have permission to duplicate this invoice'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Generate new invoice number
@@ -876,7 +950,7 @@ def duplicate_invoice(invoice_id):
     
     db.session.add(new_invoice)
     if not safe_commit('duplicate_invoice_create', {'source_invoice_id': original_invoice.id, 'new_invoice_number': new_invoice_number}):
-        flash('Could not duplicate invoice due to a database error. Please check server logs.', 'error')
+        flash(_('Could not duplicate invoice due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     # Duplicate items
@@ -907,7 +981,7 @@ def duplicate_invoice(invoice_id):
     # Calculate totals
     new_invoice.calculate_totals()
     if not safe_commit('duplicate_invoice_finalize', {'invoice_id': new_invoice.id}):
-        flash('Could not finalize duplicated invoice due to a database error. Please check server logs.', 'error')
+        flash(_('Could not finalize duplicated invoice due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('invoices.list_invoices'))
     
     flash(f'Invoice {new_invoice_number} created as duplicate', 'success')

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.name }} - {{ _('Project Template') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ template.name }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">
+            {% if template.category %}<span class="inline-block px-2 py-1 text-xs bg-primary/10 text-primary rounded mr-2">{{ template.category }}</span>{% endif %}
+            {% if template.is_public %}<span class="text-green-600 dark:text-green-400"><i class="fas fa-globe mr-1"></i>{{ _('Public') }}</span>{% endif %}
+        </p>
+    </div>
+    <div class="flex gap-2 mt-4 md:mt-0">
+        {% if template.created_by == current_user.id %}
+        <a href="{{ url_for('project_templates.edit_template', template_id=template.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+            <i class="fas fa-edit mr-2"></i>{{ _('Edit') }}
+        </a>
+        {% endif %}
+        <a href="{{ url_for('project_templates.create_project_from_template', template_id=template.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create Project') }}
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+        {% if template.description %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-3">{{ _('Description') }}</h2>
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ template.description }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Project Configuration') }}</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Billable') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ _('Yes') if template.config.get('billable') else _('No') }}</dd>
+                </div>
+                {% if template.config.get('hourly_rate') %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Hourly Rate') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.config.get('hourly_rate') }}</dd>
+                </div>
+                {% endif %}
+                {% if template.config.get('estimated_hours') %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Estimated Hours') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.config.get('estimated_hours') }}</dd>
+                </div>
+                {% endif %}
+                {% if template.config.get('budget_amount') %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Budget Amount') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.config.get('budget_amount') }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+        
+        {% if template.tasks %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Template Tasks') }} ({{ template.tasks|length }})</h2>
+            <div class="space-y-2">
+                {% for task in template.tasks %}
+                <div class="border border-border-light dark:border-border-dark rounded-lg p-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-medium">{{ task.get('name', 'Untitled Task') }}</h4>
+                            {% if task.get('estimated_hours') %}
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                <i class="fas fa-clock mr-1"></i>{{ task.get('estimated_hours') }} {{ _('hours') }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700">
+                            {{ task.get('priority', 'medium')|title }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Template Info') }}</h3>
+            <dl class="space-y-3">
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.created_at.strftime('%Y-%m-%d') }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Usage Count') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.usage_count }}</dd>
+                </div>
+                {% if template.last_used_at %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Last Used') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.last_used_at.strftime('%Y-%m-%d') }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+        
+        {% if template.tags %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Tags') }}</h3>
+            <div class="flex flex-wrap gap-2">
+                {% for tag in template.tags %}
+                <span class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

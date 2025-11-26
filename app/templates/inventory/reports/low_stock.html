@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Reports', 'url': url_for('inventory.reports_dashboard')},
+    {'text': 'Low Stock Report'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-exclamation-triangle',
+    title_text='Low Stock Report',
+    subtitle_text='Items below reorder point',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    {% if low_stock_items %}
+    <div class="mb-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            {{ _('Found %(count)s items below their reorder point.', count=low_stock_items|length) }}
+        </p>
+    </div>
+    
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('SKU') }}</th>
+                <th class="p-4">{{ _('Warehouse') }}</th>
+                <th class="p-4">{{ _('Quantity On Hand') }}</th>
+                <th class="p-4">{{ _('Reorder Point') }}</th>
+                <th class="p-4">{{ _('Shortfall') }}</th>
+                <th class="p-4">{{ _('Reorder Quantity') }}</th>
+                <th class="p-4">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item_data in low_stock_items %}
+            <tr>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=item_data.item.id) }}" class="text-primary hover:underline font-medium">
+                        {{ item_data.item.name }}
+                    </a>
+                </td>
+                <td class="p-4 font-mono text-sm">{{ item_data.item.sku }}</td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_warehouse', warehouse_id=item_data.warehouse.id) }}" class="text-primary hover:underline">
+                        {{ item_data.warehouse.code }}
+                    </a>
+                </td>
+                <td class="p-4 font-semibold text-red-600">{{ item_data.quantity_on_hand }}</td>
+                <td class="p-4">{{ item_data.reorder_point }}</td>
+                <td class="p-4 font-semibold text-red-600">{{ item_data.shortfall }}</td>
+                <td class="p-4">{{ item_data.reorder_quantity }}</td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.new_purchase_order') }}" class="text-primary hover:underline text-sm">
+                        <i class="fas fa-shopping-cart mr-1"></i>{{ _('Create PO') }}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="p-8 text-center">
+        <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
+        <p class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('All Stock Levels are Good') }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('No items are currently below their reorder point.') }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

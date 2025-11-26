@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Project Template') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Edit Project Template') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ template.name }}</p>
+    </div>
+    <a href="{{ url_for('project_templates.view_template', template_id=template.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Template') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('project_templates.edit_template', template_id=template.id) }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="md:col-span-2">
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Template Name') }} *</label>
+                <input type="text" id="name" name="name" required class="form-input" value="{{ template.name }}">
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                <textarea id="description" name="description" rows="3" class="form-input">{{ template.description or '' }}</textarea>
+            </div>
+            
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }}</label>
+                <input type="text" id="category" name="category" class="form-input" value="{{ template.category or '' }}">
+            </div>
+            
+            <div>
+                <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
+                <input type="text" id="tags" name="tags" class="form-input" value="{{ template.tags|join(', ') if template.tags else '' }}">
+            </div>
+        </div>
+        
+        <div class="border-t border-border-light dark:border-border-dark pt-4 mb-4">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Project Configuration') }}</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" id="billable" name="billable" {% if template.config.get('billable', True) %}checked{% endif %} class="rounded border-gray-300 text-primary shadow-sm">
+                        {{ _('Billable Project') }}
+                    </label>
+                </div>
+                
+                <div>
+                    <label for="hourly_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default Hourly Rate') }}</label>
+                    <input type="number" step="0.01" id="hourly_rate" name="hourly_rate" class="form-input" value="{{ template.config.get('hourly_rate', '') }}">
+                </div>
+                
+                <div>
+                    <label for="estimated_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                    <input type="number" step="0.1" id="estimated_hours" name="estimated_hours" class="form-input" value="{{ template.config.get('estimated_hours', '') }}">
+                </div>
+                
+                <div>
+                    <label for="budget_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Budget Amount') }}</label>
+                    <input type="number" step="0.01" id="budget_amount" name="budget_amount" class="form-input" value="{{ template.config.get('budget_amount', '') }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="border-t border-border-light dark:border-border-dark pt-4 mb-4">
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input type="checkbox" id="is_public" name="is_public" {% if template.is_public %}checked{% endif %} class="rounded border-gray-300 text-primary shadow-sm">
+                {{ _('Make this template public (visible to all users)') }}
+            </label>
+        </div>
+        
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('project_templates.view_template', template_id=template.id) }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Update Template') }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -35,6 +35,13 @@ from app.models import (
     InvoiceTemplate,
     Webhook,
     WebhookDelivery,
+    Warehouse,
+    StockItem,
+    WarehouseStock,
+    StockMovement,
+    StockReservation,
+    Supplier,
+    PurchaseOrder,
 )
 from app.utils.api_auth import require_api_token
 from datetime import datetime, timedelta
@@ -2630,6 +2637,162 @@ def create_comment():
     return jsonify({'message': 'Comment created successfully', 'comment': cmt.to_dict()}), 201
 
 
+@api_v1_bp.route('/quotes', methods=['GET'])
+@require_api_token('read:quotes')
+def list_quotes():
+    """List quotes
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote
+    status = request.args.get('status')
+    client_id = request.args.get('client_id', type=int)
+    limit = request.args.get('limit', 100, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    
+    query = Quote.query
+    if status:
+        query = query.filter_by(status=status)
+    if client_id:
+        query = query.filter_by(client_id=client_id)
+    
+    quotes = query.order_by(Quote.created_at.desc()).limit(limit).offset(offset).all()
+    return jsonify({'quotes': [q.to_dict() for q in quotes]}), 200
+
+
+@api_v1_bp.route('/quotes/<int:quote_id>', methods=['GET'])
+@require_api_token('read:quotes')
+def get_quote(quote_id):
+    """Get quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote
+    quote = Quote.query.get_or_404(quote_id)
+    return jsonify({'quote': quote.to_dict()}), 200
+
+
+@api_v1_bp.route('/quotes', methods=['POST'])
+@require_api_token('write:quotes')
+def create_quote():
+    """Create quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote, QuoteItem
+    from decimal import Decimal
+    
+    data = request.get_json() or {}
+    quote_number = data.get('quote_number') or Quote.generate_quote_number()
+    client_id = data.get('client_id')
+    title = data.get('title', '').strip()
+    
+    if not client_id or not title:
+        return jsonify({'error': 'client_id and title are required'}), 400
+    
+    quote = Quote(
+        quote_number=quote_number,
+        client_id=client_id,
+        title=title,
+        created_by=g.api_user.id,
+        description=data.get('description'),
+        tax_rate=Decimal(str(data.get('tax_rate', 0))),
+        currency_code=data.get('currency_code', 'EUR'),
+        payment_terms=data.get('payment_terms'),
+        requires_approval=data.get('requires_approval', False),
+        approval_level=data.get('approval_level', 1)
+    )
+    
+    db.session.add(quote)
+    db.session.flush()
+    
+    # Add items
+    items = data.get('items', [])
+    for item_data in items:
+        item = QuoteItem(
+            quote_id=quote.id,
+            description=item_data.get('description', ''),
+            quantity=Decimal(str(item_data.get('quantity', 1))),
+            unit_price=Decimal(str(item_data.get('unit_price', 0))),
+            unit=item_data.get('unit')
+        )
+        db.session.add(item)
+    
+    quote.calculate_totals()
+    db.session.commit()
+    
+    return jsonify({'message': 'Quote created successfully', 'quote': quote.to_dict()}), 201
+
+
+@api_v1_bp.route('/quotes/<int:quote_id>', methods=['PUT', 'PATCH'])
+@require_api_token('write:quotes')
+def update_quote(quote_id):
+    """Update quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote, QuoteItem
+    from decimal import Decimal
+    
+    quote = Quote.query.get_or_404(quote_id)
+    data = request.get_json() or {}
+    
+    # Update fields
+    if 'title' in data:
+        quote.title = data['title'].strip()
+    if 'description' in data:
+        quote.description = data['description'].strip() if data['description'] else None
+    if 'tax_rate' in data:
+        quote.tax_rate = Decimal(str(data['tax_rate']))
+    if 'currency_code' in data:
+        quote.currency_code = data['currency_code']
+    if 'payment_terms' in data:
+        quote.payment_terms = data['payment_terms']
+    if 'status' in data:
+        quote.status = data['status']
+    
+    # Update items if provided
+    if 'items' in data:
+        # Delete existing items
+        for item in quote.items:
+            db.session.delete(item)
+        
+        # Add new items
+        for item_data in data['items']:
+            item = QuoteItem(
+                quote_id=quote.id,
+                description=item_data.get('description', ''),
+                quantity=Decimal(str(item_data.get('quantity', 1))),
+                unit_price=Decimal(str(item_data.get('unit_price', 0))),
+                unit=item_data.get('unit')
+            )
+            db.session.add(item)
+    
+    quote.calculate_totals()
+    db.session.commit()
+    
+    return jsonify({'message': 'Quote updated successfully', 'quote': quote.to_dict()}), 200
+
+
+@api_v1_bp.route('/quotes/<int:quote_id>', methods=['DELETE'])
+@require_api_token('write:quotes')
+def delete_quote(quote_id):
+    """Delete quote
+    ---
+    tags:
+      - Quotes
+    """
+    from app.models import Quote
+    quote = Quote.query.get_or_404(quote_id)
+    db.session.delete(quote)
+    db.session.commit()
+    return jsonify({'message': 'Quote deleted successfully'}), 200
+
+
 @api_v1_bp.route('/comments/<int:comment_id>', methods=['PUT', 'PATCH'])
 @require_api_token('write:comments')
 def update_comment(comment_id):
@@ -3929,6 +4092,379 @@ def list_webhook_events():
     events = WebhookService.get_available_events()
     
     return jsonify({'events': events})
+
+
+# ==================== Inventory ====================
+
+@api_v1_bp.route('/inventory/items', methods=['GET'])
+@require_api_token('read:projects')  # Use existing scope for now
+def list_stock_items_api():
+    """List stock items"""
+    search = request.args.get('search', '').strip()
+    category = request.args.get('category', '')
+    active_only = request.args.get('active_only', 'true').lower() == 'true'
+    
+    query = StockItem.query
+    
+    if active_only:
+        query = query.filter_by(is_active=True)
+    
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            or_(
+                StockItem.sku.ilike(like),
+                StockItem.name.ilike(like),
+                StockItem.barcode.ilike(like)
+            )
+        )
+    
+    if category:
+        query = query.filter_by(category=category)
+    
+    result = paginate_query(query.order_by(StockItem.name))
+    result['items'] = [item.to_dict() for item in result['items']]
+    
+    return jsonify(result)
+
+
+@api_v1_bp.route('/inventory/items/<int:item_id>', methods=['GET'])
+@require_api_token('read:projects')
+def get_stock_item_api(item_id):
+    """Get stock item details"""
+    item = StockItem.query.get_or_404(item_id)
+    return jsonify({'item': item.to_dict()})
+
+
+@api_v1_bp.route('/inventory/items/<int:item_id>/availability', methods=['GET'])
+@require_api_token('read:projects')
+def get_stock_availability_api(item_id):
+    """Get stock availability for an item across warehouses"""
+    item = StockItem.query.get_or_404(item_id)
+    warehouse_id = request.args.get('warehouse_id', type=int)
+    
+    query = WarehouseStock.query.filter_by(stock_item_id=item_id)
+    if warehouse_id:
+        query = query.filter_by(warehouse_id=warehouse_id)
+    
+    stock_levels = query.all()
+    
+    availability = []
+    for stock in stock_levels:
+        availability.append({
+            'warehouse_id': stock.warehouse_id,
+            'warehouse_code': stock.warehouse.code,
+            'warehouse_name': stock.warehouse.name,
+            'quantity_on_hand': float(stock.quantity_on_hand),
+            'quantity_reserved': float(stock.quantity_reserved),
+            'quantity_available': float(stock.quantity_available),
+            'location': stock.location
+        })
+    
+    return jsonify({
+        'item_id': item_id,
+        'item_sku': item.sku,
+        'item_name': item.name,
+        'availability': availability
+    })
+
+
+@api_v1_bp.route('/inventory/warehouses', methods=['GET'])
+@require_api_token('read:projects')
+def list_warehouses_api():
+    """List warehouses"""
+    active_only = request.args.get('active_only', 'true').lower() == 'true'
+    
+    query = Warehouse.query
+    if active_only:
+        query = query.filter_by(is_active=True)
+    
+    result = paginate_query(query.order_by(Warehouse.code))
+    result['items'] = [wh.to_dict() for wh in result['items']]
+    
+    return jsonify(result)
+
+
+@api_v1_bp.route('/inventory/stock-levels', methods=['GET'])
+@require_api_token('read:projects')
+def get_stock_levels_api():
+    """Get stock levels"""
+    warehouse_id = request.args.get('warehouse_id', type=int)
+    stock_item_id = request.args.get('stock_item_id', type=int)
+    category = request.args.get('category', '')
+    
+    query = WarehouseStock.query.join(StockItem).join(Warehouse)
+    
+    if warehouse_id:
+        query = query.filter_by(warehouse_id=warehouse_id)
+    
+    if stock_item_id:
+        query = query.filter_by(stock_item_id=stock_item_id)
+    
+    if category:
+        query = query.filter(StockItem.category == category)
+    
+    stock_levels = query.order_by(Warehouse.code, StockItem.name).all()
+    
+    levels = []
+    for stock in stock_levels:
+        levels.append({
+            'warehouse': stock.warehouse.to_dict(),
+            'stock_item': stock.stock_item.to_dict(),
+            'quantity_on_hand': float(stock.quantity_on_hand),
+            'quantity_reserved': float(stock.quantity_reserved),
+            'quantity_available': float(stock.quantity_available),
+            'location': stock.location
+        })
+    
+    return jsonify({'stock_levels': levels})
+
+
+@api_v1_bp.route('/inventory/movements', methods=['POST'])
+@require_api_token('write:projects')
+def create_stock_movement_api():
+    """Create a stock movement"""
+    data = request.get_json() or {}
+    
+    movement_type = data.get('movement_type', 'adjustment')
+    stock_item_id = data.get('stock_item_id')
+    warehouse_id = data.get('warehouse_id')
+    quantity = data.get('quantity')
+    reason = data.get('reason')
+    notes = data.get('notes')
+    reference_type = data.get('reference_type')
+    reference_id = data.get('reference_id')
+    unit_cost = data.get('unit_cost')
+    
+    if not stock_item_id or not warehouse_id or quantity is None:
+        return jsonify({'error': 'stock_item_id, warehouse_id, and quantity are required'}), 400
+    
+    try:
+        from decimal import Decimal
+        movement, updated_stock = StockMovement.record_movement(
+            movement_type=movement_type,
+            stock_item_id=stock_item_id,
+            warehouse_id=warehouse_id,
+            quantity=Decimal(str(quantity)),
+            moved_by=g.api_user.id,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            unit_cost=Decimal(str(unit_cost)) if unit_cost else None,
+            reason=reason,
+            notes=notes,
+            update_stock=True
+        )
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Stock movement recorded successfully',
+            'movement': movement.to_dict(),
+            'updated_stock': updated_stock.to_dict() if updated_stock else None
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+# ==================== Suppliers API ====================
+
+@api_v1_bp.route('/inventory/suppliers', methods=['GET'])
+@require_api_token('read:projects')
+def list_suppliers_api():
+    """List suppliers"""
+    from app.models import Supplier
+    from sqlalchemy import or_
+    
+    search = request.args.get('search', '').strip()
+    active_only = request.args.get('active_only', 'true').lower() == 'true'
+    
+    query = Supplier.query
+    
+    if active_only:
+        query = query.filter_by(is_active=True)
+    
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            or_(
+                Supplier.code.ilike(like),
+                Supplier.name.ilike(like)
+            )
+        )
+    
+    result = paginate_query(query.order_by(Supplier.name))
+    result['items'] = [supplier.to_dict() for supplier in result['items']]
+    
+    return jsonify(result)
+
+
+@api_v1_bp.route('/inventory/suppliers/<int:supplier_id>', methods=['GET'])
+@require_api_token('read:projects')
+def get_supplier_api(supplier_id):
+    """Get supplier details"""
+    from app.models import Supplier
+    supplier = Supplier.query.get_or_404(supplier_id)
+    return jsonify({'supplier': supplier.to_dict()})
+
+
+@api_v1_bp.route('/inventory/suppliers/<int:supplier_id>/stock-items', methods=['GET'])
+@require_api_token('read:projects')
+def get_supplier_stock_items_api(supplier_id):
+    """Get stock items from a supplier"""
+    from app.models import Supplier, SupplierStockItem
+    
+    supplier = Supplier.query.get_or_404(supplier_id)
+    supplier_items = SupplierStockItem.query.join(Supplier).filter(
+        Supplier.id == supplier_id,
+        SupplierStockItem.is_active == True
+    ).all()
+    
+    items = []
+    for si in supplier_items:
+        item_dict = si.to_dict()
+        item_dict['stock_item'] = si.stock_item.to_dict() if si.stock_item else None
+        items.append(item_dict)
+    
+    return jsonify({'items': items})
+
+
+# ==================== Purchase Orders API ====================
+
+@api_v1_bp.route('/inventory/purchase-orders', methods=['GET'])
+@require_api_token('read:projects')
+def list_purchase_orders_api():
+    """List purchase orders"""
+    from app.models import PurchaseOrder
+    from sqlalchemy import or_
+    
+    status = request.args.get('status', '')
+    supplier_id = request.args.get('supplier_id', type=int)
+    
+    query = PurchaseOrder.query
+    
+    if status:
+        query = query.filter_by(status=status)
+    
+    if supplier_id:
+        query = query.filter_by(supplier_id=supplier_id)
+    
+    result = paginate_query(query.order_by(PurchaseOrder.order_date.desc()))
+    result['items'] = [po.to_dict() for po in result['items']]
+    
+    return jsonify(result)
+
+
+@api_v1_bp.route('/inventory/purchase-orders/<int:po_id>', methods=['GET'])
+@require_api_token('read:projects')
+def get_purchase_order_api(po_id):
+    """Get purchase order details"""
+    from app.models import PurchaseOrder
+    purchase_order = PurchaseOrder.query.get_or_404(po_id)
+    return jsonify({'purchase_order': purchase_order.to_dict()})
+
+
+@api_v1_bp.route('/inventory/purchase-orders', methods=['POST'])
+@require_api_token('write:projects')
+def create_purchase_order_api():
+    """Create a purchase order"""
+    from app.models import PurchaseOrder, PurchaseOrderItem, Supplier
+    from datetime import datetime
+    from decimal import Decimal
+    
+    data = request.get_json() or {}
+    
+    supplier_id = data.get('supplier_id')
+    if not supplier_id:
+        return jsonify({'error': 'supplier_id is required'}), 400
+    
+    try:
+        # Generate PO number
+        last_po = PurchaseOrder.query.order_by(PurchaseOrder.id.desc()).first()
+        next_id = (last_po.id + 1) if last_po else 1
+        po_number = f"PO-{datetime.now().strftime('%Y%m%d')}-{next_id:04d}"
+        
+        order_date = datetime.strptime(data.get('order_date'), '%Y-%m-%d').date() if data.get('order_date') else datetime.now().date()
+        expected_delivery_date = datetime.strptime(data.get('expected_delivery_date'), '%Y-%m-%d').date() if data.get('expected_delivery_date') else None
+        
+        purchase_order = PurchaseOrder(
+            po_number=po_number,
+            supplier_id=supplier_id,
+            order_date=order_date,
+            created_by=g.api_user.id,
+            expected_delivery_date=expected_delivery_date,
+            notes=data.get('notes'),
+            internal_notes=data.get('internal_notes'),
+            currency_code=data.get('currency_code', 'EUR')
+        )
+        db.session.add(purchase_order)
+        db.session.flush()
+        
+        # Handle items
+        items = data.get('items', [])
+        for item_data in items:
+            item = PurchaseOrderItem(
+                purchase_order_id=purchase_order.id,
+                description=item_data.get('description', ''),
+                quantity_ordered=Decimal(str(item_data.get('quantity_ordered', 1))),
+                unit_cost=Decimal(str(item_data.get('unit_cost', 0))),
+                stock_item_id=item_data.get('stock_item_id'),
+                supplier_stock_item_id=item_data.get('supplier_stock_item_id'),
+                supplier_sku=item_data.get('supplier_sku'),
+                warehouse_id=item_data.get('warehouse_id'),
+                currency_code=purchase_order.currency_code
+            )
+            db.session.add(item)
+        
+        purchase_order.calculate_totals()
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Purchase order created successfully',
+            'purchase_order': purchase_order.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+@api_v1_bp.route('/inventory/purchase-orders/<int:po_id>/receive', methods=['POST'])
+@require_api_token('write:projects')
+def receive_purchase_order_api(po_id):
+    """Receive a purchase order"""
+    from app.models import PurchaseOrder
+    from datetime import datetime
+    
+    purchase_order = PurchaseOrder.query.get_or_404(po_id)
+    data = request.get_json() or {}
+    
+    try:
+        from decimal import Decimal
+        
+        # Update received quantities if provided
+        items_data = data.get('items', [])
+        if items_data:
+            for item_data in items_data:
+                item_id = item_data.get('item_id')
+                quantity_received = item_data.get('quantity_received')
+                if item_id and quantity_received is not None:
+                    item = purchase_order.items.filter_by(id=item_id).first()
+                    if item:
+                        item.quantity_received = Decimal(str(quantity_received))
+        
+        received_date_str = data.get('received_date')
+        received_date = datetime.strptime(received_date_str, '%Y-%m-%d').date() if received_date_str else datetime.now().date()
+        purchase_order.mark_as_received(received_date)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Purchase order received successfully',
+            'purchase_order': purchase_order.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
 
 
 # ==================== Error Handlers ====================

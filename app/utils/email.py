@@ -798,3 +798,293 @@ Thank you for your business!
         
         return False, None, f'Failed to send invoice email: {str(e)}'
 
+
+def send_quote_sent_notification(quote, user):
+    """Send notification when a quote is sent to client
+    
+    Args:
+        quote: Quote object
+        user: User object (quote creator or admin)
+    """
+    if not user.email or not user.email_notifications:
+        return
+    
+    subject = f"Quote {quote.quote_number} has been sent to {quote.client.name if quote.client else 'client'}"
+    
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+Quote {quote.quote_number} has been sent to the client.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Sent At: {quote.sent_at.strftime('%Y-%m-%d %H:%M') if quote.sent_at else 'N/A'}
+
+View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
+
+---
+TimeTracker - Time Tracking & Project Management
+    """
+    
+    html_body = render_template(
+        'email/quote_sent.html',
+        user=user,
+        quote=quote
+    )
+    
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_accepted_notification(quote, user):
+    """Send notification when a quote is accepted
+    
+    Args:
+        quote: Quote object
+        user: User object (quote creator or admin)
+    """
+    if not user.email or not user.email_notifications:
+        return
+    
+    subject = f"Quote {quote.quote_number} has been accepted"
+    
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+Great news! Quote {quote.quote_number} has been accepted by the client.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Accepted At: {quote.accepted_at.strftime('%Y-%m-%d %H:%M') if quote.accepted_at else 'N/A'}
+- Project: {'Created' if quote.has_project else 'Not yet created'}
+
+View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
+
+---
+TimeTracker - Time Tracking & Project Management
+    """
+    
+    html_body = render_template(
+        'email/quote_accepted.html',
+        user=user,
+        quote=quote
+    )
+    
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_rejected_notification(quote, user):
+    """Send notification when a quote is rejected
+    
+    Args:
+        quote: Quote object
+        user: User object (quote creator or admin)
+    """
+    if not user.email or not user.email_notifications:
+        return
+    
+    subject = f"Quote {quote.quote_number} has been rejected"
+    
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+Quote {quote.quote_number} has been rejected by the client.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Rejected At: {quote.rejected_at.strftime('%Y-%m-%d %H:%M') if quote.rejected_at else 'N/A'}
+
+View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
+
+---
+TimeTracker - Time Tracking & Project Management
+    """
+    
+    html_body = render_template(
+        'email/quote_rejected.html',
+        user=user,
+        quote=quote
+    )
+    
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_expired_notification(quote, user):
+    """Send notification when a quote expires
+    
+    Args:
+        quote: Quote object
+        user: User object (quote creator or admin)
+    """
+    if not user.email or not user.email_notifications:
+        return
+    
+    subject = f"Quote {quote.quote_number} has expired"
+    
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+Quote {quote.quote_number} has expired.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Valid Until: {quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else 'N/A'}
+
+You may want to follow up with the client or create a new quote.
+
+View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
+
+---
+TimeTracker - Time Tracking & Project Management
+    """
+    
+    html_body = render_template(
+        'email/quote_expired.html',
+        user=user,
+        quote=quote
+    )
+    
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_email(quote, recipient_email, sender_user=None, custom_message=None):
+    """Send a quote via email with PDF attachment
+    
+    Args:
+        quote: Quote object
+        recipient_email: Email address to send to
+        sender_user: User object who is sending (for tracking)
+        custom_message: Optional custom message to include in email
+        
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    try:
+        from app.models import Settings
+        from flask import current_app
+        from flask_mail import Message
+        from flask import render_template
+        from app import mail, db
+        
+        current_app.logger.info(f"[QUOTE EMAIL] Sending quote {quote.quote_number} to {recipient_email}")
+        
+        # Generate PDF
+        pdf_bytes = None
+        try:
+            # Try to use QuotePDFGenerator if it exists
+            try:
+                from app.utils.pdf_generator import QuotePDFGenerator
+                settings = Settings.get_settings()
+                pdf_generator = QuotePDFGenerator(quote, settings=settings, page_size='A4')
+                pdf_bytes = pdf_generator.generate_pdf()
+            except ImportError:
+                # Fallback to simple PDF generation
+                from app.utils.pdf_generator_fallback import QuotePDFGeneratorFallback
+                settings = Settings.get_settings()
+                pdf_generator = QuotePDFGeneratorFallback(quote, settings=settings)
+                pdf_bytes = pdf_generator.generate_pdf()
+            
+            if not pdf_bytes:
+                raise ValueError("PDF generator returned None")
+            current_app.logger.info(f"[QUOTE EMAIL] PDF generated successfully - size: {len(pdf_bytes)} bytes")
+        except Exception as pdf_error:
+            current_app.logger.error(f"[QUOTE EMAIL] PDF generation failed: {pdf_error}")
+            current_app.logger.exception("[QUOTE EMAIL] PDF generation error details:")
+            return False, f'PDF generation failed: {str(pdf_error)}'
+        
+        # Get settings for email subject/body
+        settings = Settings.get_settings()
+        company_name = settings.company_name if settings else 'Your Company'
+        
+        # Create email subject
+        subject = f"Quote {quote.quote_number} from {company_name}"
+        
+        # Create email body
+        text_body = f"""
+Hello,
+
+Please find attached quote {quote.quote_number} for your review.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Valid Until: {quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else 'N/A'}
+- Amount: {quote.currency_code} {quote.total_amount}
+
+"""
+        
+        if custom_message:
+            text_body += f"\n{custom_message}\n\n"
+        
+        text_body += f"""
+Please review the attached quote and let us know if you have any questions.
+
+Thank you for your interest!
+
+---
+{company_name}
+"""
+        
+        # Render HTML template
+        html_body = None
+        try:
+            html_body = render_template(
+                'email/quote.html',
+                quote=quote,
+                company_name=company_name,
+                custom_message=custom_message
+            )
+        except Exception as template_error:
+            current_app.logger.warning(f"[QUOTE EMAIL] HTML template not available: {template_error}")
+            html_body = None
+        
+        # Send email synchronously to catch errors
+        attachments = [
+            (f'quote_{quote.quote_number}.pdf', 'application/pdf', pdf_bytes)
+        ]
+        
+        # Create message
+        msg = Message(
+            subject=subject,
+            recipients=[recipient_email],
+            body=text_body,
+            html=html_body,
+            sender=current_app.config['MAIL_DEFAULT_SENDER']
+        )
+        
+        # Add attachments
+        for filename, content_type, data in attachments:
+            msg.attach(filename, content_type, data)
+        
+        # Send synchronously to catch errors
+        try:
+            current_app.logger.info(f"[QUOTE EMAIL] Attempting to send email to {recipient_email}")
+            mail.send(msg)
+            current_app.logger.info(f"[QUOTE EMAIL] ✓ Email sent successfully to {recipient_email}")
+        except Exception as send_error:
+            current_app.logger.error(f"[QUOTE EMAIL] ✗ Failed to send email: {type(send_error).__name__}: {str(send_error)}")
+            current_app.logger.exception("[QUOTE EMAIL] Email send error details:")
+            raise send_error
+        
+        # Mark quote as sent if it's still draft
+        if quote.status == 'draft':
+            quote.send()
+            db.session.commit()
+        
+        return True, 'Email sent successfully'
+    except Exception as e:
+        current_app.logger.error(f"[QUOTE EMAIL] Exception in send_quote_email: {e}", exc_info=True)
+        db.session.rollback()
+        return False, f'Failed to send email: {str(e)}'
+

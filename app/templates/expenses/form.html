@@ -31,7 +31,7 @@
                     </label>
                     <input type="text" name="title" id="title" required
                            value="{{ expense.title if expense else '' }}"
-                           placeholder="e.g., Flight to Berlin"
+                           placeholder="{{ _('e.g., Flight to Berlin') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -40,7 +40,7 @@
                         Description
                     </label>
                     <textarea name="description" id="description" rows="3"
-                              placeholder="Additional details about the expense..."
+                              placeholder="{{ _('Additional details about the expense...') }}"
                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ expense.description if expense else '' }}</textarea>
                 </div>
                 
@@ -198,7 +198,7 @@
                     </label>
                     <input type="text" name="vendor" id="vendor"
                            value="{{ expense.vendor if expense else '' }}"
-                           placeholder="e.g., Lufthansa"
+                           placeholder="{{ _('e.g., Lufthansa') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
             </div>
@@ -232,7 +232,7 @@
                     </label>
                     <input type="text" name="receipt_number" id="receipt_number"
                            value="{{ expense.receipt_number if expense else '' }}"
-                           placeholder="e.g., INV-2024-001"
+                           placeholder="{{ _('e.g., INV-2024-001') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
             </div>
@@ -243,7 +243,7 @@
                 </label>
                 <input type="text" name="tags" id="tags"
                        value="{{ expense.tags if expense else '' }}"
-                       placeholder="e.g., conference, client-meeting, urgent"
+                       placeholder="{{ _('e.g., conference, client-meeting, urgent') }}"
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
             </div>
             
@@ -252,7 +252,7 @@
                     Notes
                 </label>
                 <textarea name="notes" id="notes" rows="3"
-                          placeholder="Additional notes..."
+                          placeholder="{{ _('Additional notes...') }}"
                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ expense.notes if expense else '' }}</textarea>
             </div>
         </div>

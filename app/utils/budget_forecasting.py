@@ -51,6 +51,8 @@ def calculate_burn_rate(project_id: int, days: int = 30) -> Dict:
     hourly_rate = project.hourly_rate or Decimal('0')
     
     for entry in time_entries:
+        if entry.duration_seconds is None:
+            continue
         hours = Decimal(str(entry.duration_seconds / 3600))
         time_cost += hours * hourly_rate
     
@@ -274,6 +276,8 @@ def analyze_cost_trends(project_id: int, days: int = 90, granularity: str = 'wee
     period_costs = defaultdict(float)
     
     for entry in time_entries:
+        if entry.duration_seconds is None:
+            continue
         period_key = _get_period_key(entry.start_time.date(), granularity)
         hours = entry.duration_seconds / 3600
         cost = hours * hourly_rate
@@ -422,6 +426,8 @@ def _calculate_confidence(project_id: int, days: int) -> str:
     ).all()
     
     for entry in time_entries:
+        if entry.duration_seconds is None:
+            continue
         day = entry.start_time.date()
         hours = entry.duration_seconds / 3600
         daily_costs[day] += hours * hourly_rate

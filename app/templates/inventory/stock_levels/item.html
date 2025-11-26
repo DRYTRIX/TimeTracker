@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Items', 'url': url_for('inventory.list_stock_items')},
+    {'text': item.name, 'url': url_for('inventory.view_stock_item', item_id=item.id)},
+    {'text': 'Stock Levels'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-list-ul',
+    title_text='Stock Levels - ' + item.name,
+    subtitle_text=item.sku,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Warehouse') }}</th>
+                <th class="p-4">{{ _('Quantity On Hand') }}</th>
+                <th class="p-4">{{ _('Quantity Reserved') }}</th>
+                <th class="p-4">{{ _('Available') }}</th>
+                <th class="p-4">{{ _('Location') }}</th>
+                <th class="p-4">{{ _('Last Counted') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stock_levels %}
+            <tr>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_warehouse', warehouse_id=stock.warehouse_id) }}" class="text-primary hover:underline font-medium">
+                        {{ stock.warehouse.code }} - {{ stock.warehouse.name }}
+                    </a>
+                </td>
+                <td class="p-4 font-semibold">{{ stock.quantity_on_hand }}</td>
+                <td class="p-4">{{ stock.quantity_reserved }}</td>
+                <td class="p-4 {% if stock.quantity_available < 0 %}text-red-600{% elif stock.quantity_available == 0 %}text-amber-600{% else %}text-green-600{% endif %} font-semibold">
+                    {{ stock.quantity_available }}
+                </td>
+                <td class="p-4">{{ stock.location or '—' }}</td>
+                <td class="p-4">
+                    {% if stock.last_counted_at %}
+                        {{ stock.last_counted_at.strftime('%Y-%m-%d') }}
+                    {% else %}
+                        — 
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="p-8 text-center text-gray-500">
+                    {{ _('No stock found for this item in any warehouse.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="font-bold">
+                <td class="p-4">{{ _('Total') }}:</td>
+                <td class="p-4">{{ stock_levels|sum(attribute='quantity_on_hand') }}</td>
+                <td class="p-4">{{ stock_levels|sum(attribute='quantity_reserved') }}</td>
+                <td class="p-4">{{ stock_levels|sum(attribute='quantity_available') }}</td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}
+

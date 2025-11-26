@@ -52,7 +52,7 @@
                     </label>
                     <input type="text" name="purpose" id="purpose" required
                            value="{{ mileage.purpose if mileage else '' }}"
-                           placeholder="e.g., Client meeting, Site visit"
+                           placeholder="{{ _('e.g., Client meeting, Site visit') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -61,7 +61,7 @@
                         Description
                     </label>
                     <textarea name="description" id="description" rows="2"
-                              placeholder="Additional details..."
+                              placeholder="{{ _('Additional details...') }}"
                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ mileage.description if mileage else '' }}</textarea>
                 </div>
             </div>
@@ -80,7 +80,7 @@
                     </label>
                     <input type="text" name="start_location" id="start_location" required
                            value="{{ mileage.start_location if mileage else '' }}"
-                           placeholder="e.g., Office, Home"
+                           placeholder="{{ _('e.g., Office, Home') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -90,7 +90,7 @@
                     </label>
                     <input type="text" name="end_location" id="end_location" required
                            value="{{ mileage.end_location if mileage else '' }}"
-                           placeholder="e.g., Client site, Airport"
+                           placeholder="{{ _('e.g., Client site, Airport') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -121,7 +121,7 @@
                     </label>
                     <input type="number" name="start_odometer" id="start_odometer" step="1"
                            value="{{ mileage.start_odometer if mileage and mileage.start_odometer else '' }}"
-                           placeholder="e.g., 12345"
+                           placeholder="{{ _('e.g., 12345') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -131,7 +131,7 @@
                     </label>
                     <input type="number" name="end_odometer" id="end_odometer" step="1"
                            value="{{ mileage.end_odometer if mileage and mileage.end_odometer else '' }}"
-                           placeholder="e.g., 12400"
+                           placeholder="{{ _('e.g., 12400') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -181,7 +181,7 @@
                     </label>
                     <input type="text" name="vehicle_description" id="vehicle_description"
                            value="{{ mileage.vehicle_description if mileage and mileage.vehicle_description else '' }}"
-                           placeholder="e.g., VW Golf"
+                           placeholder="{{ _('e.g., VW Golf') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
                 
@@ -191,7 +191,7 @@
                     </label>
                     <input type="text" name="license_plate" id="license_plate"
                            value="{{ mileage.license_plate if mileage and mileage.license_plate else '' }}"
-                           placeholder="e.g., ABC-123"
+                           placeholder="{{ _('e.g., ABC-123') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
             </div>
@@ -242,7 +242,7 @@
                 Notes
             </label>
             <textarea name="notes" id="notes" rows="3"
-                      placeholder="Additional notes..."
+                      placeholder="{{ _('Additional notes...') }}"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ mileage.notes if mileage else '' }}</textarea>
         </div>
         

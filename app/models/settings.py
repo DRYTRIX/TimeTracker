@@ -43,6 +43,13 @@ class Settings(db.Model):
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
     
+    # Kiosk mode settings
+    kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    kiosk_auto_logout_minutes = db.Column(db.Integer, default=15, nullable=False)
+    kiosk_allow_camera_scanning = db.Column(db.Boolean, default=True, nullable=False)
+    kiosk_require_reason_for_adjustments = db.Column(db.Boolean, default=False, nullable=False)
+    kiosk_default_movement_type = db.Column(db.String(20), default='adjustment', nullable=False)
+    
     # Email configuration settings (stored in database, takes precedence over environment variables)
     mail_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable database-backed email config
     mail_server = db.Column(db.String(255), default='', nullable=True)
@@ -52,6 +59,17 @@ class Settings(db.Model):
     mail_username = db.Column(db.String(255), default='', nullable=True)
     mail_password = db.Column(db.String(255), default='', nullable=True)  # Store encrypted in production
     mail_default_sender = db.Column(db.String(255), default='', nullable=True)
+    
+    # Integration OAuth credentials (stored in database, takes precedence over environment variables)
+    # Jira
+    jira_client_id = db.Column(db.String(255), default='', nullable=True)
+    jira_client_secret = db.Column(db.String(255), default='', nullable=True)  # Store encrypted in production
+    # Slack
+    slack_client_id = db.Column(db.String(255), default='', nullable=True)
+    slack_client_secret = db.Column(db.String(255), default='', nullable=True)  # Store encrypted in production
+    # GitHub
+    github_client_id = db.Column(db.String(255), default='', nullable=True)
+    github_client_secret = db.Column(db.String(255), default='', nullable=True)  # Store encrypted in production
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -89,6 +107,13 @@ class Settings(db.Model):
         self.invoice_terms = kwargs.get('invoice_terms', 'Payment is due within 30 days of invoice date.')
         self.invoice_notes = kwargs.get('invoice_notes', 'Thank you for your business!')
         
+        # Kiosk mode defaults
+        self.kiosk_mode_enabled = kwargs.get('kiosk_mode_enabled', False)
+        self.kiosk_auto_logout_minutes = kwargs.get('kiosk_auto_logout_minutes', 15)
+        self.kiosk_allow_camera_scanning = kwargs.get('kiosk_allow_camera_scanning', True)
+        self.kiosk_require_reason_for_adjustments = kwargs.get('kiosk_require_reason_for_adjustments', False)
+        self.kiosk_default_movement_type = kwargs.get('kiosk_default_movement_type', 'adjustment')
+        
         # Email configuration defaults
         self.mail_enabled = kwargs.get('mail_enabled', False)
         self.mail_server = kwargs.get('mail_server', '')
@@ -98,6 +123,14 @@ class Settings(db.Model):
         self.mail_username = kwargs.get('mail_username', '')
         self.mail_password = kwargs.get('mail_password', '')
         self.mail_default_sender = kwargs.get('mail_default_sender', '')
+        
+        # Integration OAuth credentials defaults
+        self.jira_client_id = kwargs.get('jira_client_id', '')
+        self.jira_client_secret = kwargs.get('jira_client_secret', '')
+        self.slack_client_id = kwargs.get('slack_client_id', '')
+        self.slack_client_secret = kwargs.get('slack_client_secret', '')
+        self.github_client_id = kwargs.get('github_client_id', '')
+        self.github_client_secret = kwargs.get('github_client_secret', '')
     
     def __repr__(self):
         return f'<Settings {self.id}>'
@@ -144,6 +177,34 @@ class Settings(db.Model):
             }
         return None
     
+    def get_integration_credentials(self, provider: str) -> dict:
+        """Get integration OAuth credentials, preferring database settings over environment variables.
+        
+        Args:
+            provider: One of 'jira', 'slack', or 'github'
+            
+        Returns:
+            dict with 'client_id' and 'client_secret' keys, or empty dict if not configured
+        """
+        import os
+        
+        if provider == 'jira':
+            client_id = self.jira_client_id or os.getenv('JIRA_CLIENT_ID', '')
+            client_secret = self.jira_client_secret or os.getenv('JIRA_CLIENT_SECRET', '')
+        elif provider == 'slack':
+            client_id = self.slack_client_id or os.getenv('SLACK_CLIENT_ID', '')
+            client_secret = self.slack_client_secret or os.getenv('SLACK_CLIENT_SECRET', '')
+        elif provider == 'github':
+            client_id = self.github_client_id or os.getenv('GITHUB_CLIENT_ID', '')
+            client_secret = self.github_client_secret or os.getenv('GITHUB_CLIENT_SECRET', '')
+        else:
+            return {}
+        
+        return {
+            'client_id': client_id,
+            'client_secret': client_secret
+        }
+    
     def to_dict(self):
         """Convert settings to dictionary for API responses"""
         return {
@@ -183,6 +244,12 @@ class Settings(db.Model):
             'mail_username': self.mail_username,
             'mail_password_set': bool(self.mail_password),  # Don't expose actual password
             'mail_default_sender': self.mail_default_sender,
+            'jira_client_id': self.jira_client_id or '',
+            'jira_client_secret_set': bool(self.jira_client_secret),  # Don't expose actual secret
+            'slack_client_id': self.slack_client_id or '',
+            'slack_client_secret_set': bool(self.slack_client_secret),  # Don't expose actual secret
+            'github_client_id': self.github_client_id or '',
+            'github_client_secret_set': bool(self.github_client_secret),  # Don't expose actual secret
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
@@ -190,9 +257,23 @@ class Settings(db.Model):
     @classmethod
     def get_settings(cls):
         """Get the singleton settings instance, creating it if it doesn't exist"""
-        settings = cls.query.first()
-        if settings:
-            return settings
+        try:
+            settings = cls.query.first()
+            if settings:
+                return settings
+        except Exception as e:
+            # Handle case where columns don't exist yet (migration not run)
+            # Log but don't fail - return fallback instance
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not query settings (migration may not be run): {e}")
+            # Rollback the failed transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            # Return fallback instance with defaults
+            return cls()
         
         # Avoid performing session writes during flush/commit phases.
         # When called from default column factories (e.g., created_at=local_now),

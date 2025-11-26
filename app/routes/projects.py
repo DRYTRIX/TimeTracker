@@ -23,10 +23,12 @@ projects_bp = Blueprint('projects', __name__)
 @projects_bp.route('/projects')
 @login_required
 def list_projects():
-    """List all projects"""
+    """List all projects - REFACTORED to use service layer with eager loading"""
     # Track page view
     from app import track_page_view
     track_page_view("projects_list")
+    
+    from app.services import ProjectService
     
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'active')
@@ -34,44 +36,17 @@ def list_projects():
     search = request.args.get('search', '').strip()
     favorites_only = request.args.get('favorites', '').lower() == 'true'
     
-    query = Project.query
+    project_service = ProjectService()
     
-    # Filter by favorites if requested
-    if favorites_only:
-        # Join with user_favorite_projects table
-        query = query.join(
-            UserFavoriteProject,
-            db.and_(
-                UserFavoriteProject.project_id == Project.id,
-                UserFavoriteProject.user_id == current_user.id
-            )
-        )
-    
-    # Filter by status (use Project.status to be explicit)
-    if status == 'active':
-        query = query.filter(Project.status == 'active')
-    elif status == 'archived':
-        query = query.filter(Project.status == 'archived')
-    elif status == 'inactive':
-        query = query.filter(Project.status == 'inactive')
-    
-    if client_name:
-        query = query.join(Client).filter(Client.name == client_name)
-    
-    if search:
-        like = f"%{search}%"
-        query = query.filter(
-            db.or_(
-                Project.name.ilike(like),
-                Project.description.ilike(like)
-            )
-        )
-    
-    # Get all projects for the current page
-    projects_pagination = query.order_by(Project.name).paginate(
+    # Use service layer to get projects (prevents N+1 queries)
+    result = project_service.list_projects(
+        status=status,
+        client_name=client_name if client_name else None,
+        search=search if search else None,
+        favorites_only=favorites_only,
+        user_id=current_user.id if favorites_only else None,
         page=page,
-        per_page=20,
-        error_out=False
+        per_page=20
     )
     
     # Get user's favorite project IDs for quick lookup in template
@@ -83,7 +58,8 @@ def list_projects():
     
     return render_template(
         'projects/list.html',
-        projects=projects_pagination.items,
+        projects=result['projects'],
+        pagination=result['pagination'],
         status=status,
         clients=client_list,
         favorite_project_ids=favorite_project_ids,
@@ -218,7 +194,7 @@ def create_project():
         
         # Validate required fields
         if not name or not client_id:
-            flash('Project name and client are required', 'error')
+            flash(_('Project name and client are required'), 'error')
             try:
                 current_app.logger.warning("Validation failed: missing required fields for project creation")
             except Exception:
@@ -228,7 +204,7 @@ def create_project():
         # Get client and validate
         client = Client.query.get(client_id)
         if not client:
-            flash('Selected client not found', 'error')
+            flash(_('Selected client not found'), 'error')
             try:
                 current_app.logger.warning("Validation failed: client not found (id=%s)", client_id)
             except Exception:
@@ -239,7 +215,7 @@ def create_project():
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
-            flash('Invalid hourly rate format', 'error')
+            flash(_('Invalid hourly rate format'), 'error')
         # Validate budgets
         budget_amount = None
         budget_threshold_percent = None
@@ -249,7 +225,7 @@ def create_project():
                 if budget_amount < 0:
                     raise ValueError('Budget cannot be negative')
             except Exception:
-                flash('Invalid budget amount', 'error')
+                flash(_('Invalid budget amount'), 'error')
                 return render_template('projects/create.html', clients=Client.get_active_clients())
         if budget_threshold_raw:
             try:
@@ -257,12 +233,12 @@ def create_project():
                 if budget_threshold_percent < 0 or budget_threshold_percent > 100:
                     raise ValueError('Invalid threshold')
             except Exception:
-                flash('Invalid budget threshold percent (0-100)', 'error')
+                flash(_('Invalid budget threshold percent (0-100)'), 'error')
                 return render_template('projects/create.html', clients=Client.get_active_clients())
         
         # Check if project name already exists
         if Project.query.filter_by(name=name).first():
-            flash('A project with this name already exists', 'error')
+            flash(_('A project with this name already exists'), 'error')
             try:
                 current_app.logger.warning("Validation failed: duplicate project name '%s'", name)
             except Exception:
@@ -294,7 +270,7 @@ def create_project():
         
         db.session.add(project)
         if not safe_commit('create_project', {'name': name, 'client_id': client_id}):
-            flash('Could not create project due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create project due to a database error. Please check server logs.'), 'error')
             return render_template('projects/create.html', clients=Client.get_active_clients())
         
         # Track project created event
@@ -372,65 +348,34 @@ def create_project():
 @projects_bp.route('/projects/<int:project_id>')
 @login_required
 def view_project(project_id):
-    """View project details and time entries"""
-    project = Project.query.get_or_404(project_id)
+    """View project details and time entries - REFACTORED to use service layer with eager loading"""
+    from app.services import ProjectService
     
-    # Get time entries for this project
     page = request.args.get('page', 1, type=int)
-    entries_pagination = project.time_entries.filter(
-        TimeEntry.end_time.isnot(None)
-    ).order_by(
-        TimeEntry.start_time.desc()
-    ).paginate(
-        page=page,
-        per_page=50,
-        error_out=False
+    project_service = ProjectService()
+    
+    # Get all project view data using service layer (prevents N+1 queries)
+    result = project_service.get_project_view_data(
+        project_id=project_id,
+        time_entries_page=page,
+        time_entries_per_page=50
     )
     
-    # Get tasks for this project
-    tasks = project.tasks.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
-    
-    # Get user totals
-    user_totals = project.get_user_totals()
-    
-    # Get comments for this project
-    from app.models import Comment
-    comments = Comment.get_project_comments(project_id, include_replies=True)
-    
-    # Get recent project costs (latest 5)
-    recent_costs = ProjectCost.query.filter_by(project_id=project_id).order_by(
-        ProjectCost.cost_date.desc()
-    ).limit(5).all()
-    
-    # Get total cost count
-    total_costs_count = ProjectCost.query.filter_by(project_id=project_id).count()
-    
-    # Get kanban columns for this project - force fresh data
-    db.session.expire_all()
-    if KanbanColumn:
-        # Try to get project-specific columns first
-        kanban_columns = KanbanColumn.get_active_columns(project_id=project_id)
-        # If no project-specific columns exist, fall back to global columns
-        if not kanban_columns:
-            kanban_columns = KanbanColumn.get_active_columns(project_id=None)
-            # If still no global columns exist, initialize default global columns
-            if not kanban_columns:
-                KanbanColumn.initialize_default_columns(project_id=None)
-                kanban_columns = KanbanColumn.get_active_columns(project_id=None)
-    else:
-        kanban_columns = []
+    if not result.get('success'):
+        flash(_('Project not found'), 'error')
+        return redirect(url_for('projects.list_projects'))
     
     # Prevent browser caching of kanban board
     response = render_template('projects/view.html', 
-                         project=project, 
-                         entries=entries_pagination.items,
-                         pagination=entries_pagination,
-                         tasks=tasks,
-                         user_totals=user_totals,
-                         comments=comments,
-                         recent_costs=recent_costs,
-                         total_costs_count=total_costs_count,
-                         kanban_columns=kanban_columns)
+                         project=result['project'], 
+                         entries=result['time_entries_pagination'].items,
+                         pagination=result['time_entries_pagination'],
+                         tasks=result['tasks'],
+                         user_totals=result['user_totals'],
+                         comments=result['comments'],
+                         recent_costs=result['recent_costs'],
+                         total_costs_count=result['total_costs_count'],
+                         kanban_columns=result['kanban_columns'])
     resp = make_response(response)
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
@@ -636,20 +581,20 @@ def edit_project(project_id):
         
         # Validate required fields
         if not name or not client_id:
-            flash('Project name and client are required', 'error')
+            flash(_('Project name and client are required'), 'error')
             return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
         
         # Get client and validate
         client = Client.query.get(client_id)
         if not client:
-            flash('Selected client not found', 'error')
+            flash(_('Selected client not found'), 'error')
             return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
         
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
-            flash('Invalid hourly rate format', 'error')
+            flash(_('Invalid hourly rate format'), 'error')
             return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
 
         # Validate budgets
@@ -660,7 +605,7 @@ def edit_project(project_id):
                 if budget_amount < 0:
                     raise ValueError('Budget cannot be negative')
             except Exception:
-                flash('Invalid budget amount', 'error')
+                flash(_('Invalid budget amount'), 'error')
                 return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
         budget_threshold_percent = project.budget_threshold_percent or 80
         if budget_threshold_raw:
@@ -669,13 +614,13 @@ def edit_project(project_id):
                 if budget_threshold_percent < 0 or budget_threshold_percent > 100:
                     raise ValueError('Invalid threshold')
             except Exception:
-                flash('Invalid budget threshold percent (0-100)', 'error')
+                flash(_('Invalid budget threshold percent (0-100)'), 'error')
                 return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
         
         # Check if project name already exists (excluding current project)
         existing = Project.query.filter_by(name=name).first()
         if existing and existing.id != project.id:
-            flash('A project with this name already exists', 'error')
+            flash(_('A project with this name already exists'), 'error')
             return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
 
         # Validate code uniqueness if provided
@@ -699,7 +644,7 @@ def edit_project(project_id):
         project.updated_at = datetime.utcnow()
         
         if not safe_commit('edit_project', {'project_id': project.id}):
-            flash('Could not update project due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update project due to a database error. Please check server logs.'), 'error')
             return render_template('projects/edit.html', project=project, clients=Client.get_active_clients())
         
         # Log activity
@@ -727,7 +672,7 @@ def archive_project(project_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('archive_projects'):
-        flash('You do not have permission to archive projects', 'error')
+        flash(_('You do not have permission to archive projects'), 'error')
         return redirect(url_for('projects.view_project', project_id=project_id))
     
     if request.method == 'GET':
@@ -735,7 +680,7 @@ def archive_project(project_id):
         return render_template('projects/archive.html', project=project)
     
     if project.status == 'archived':
-        flash('Project is already archived', 'info')
+        flash(_('Project is already archived'), 'info')
     else:
         reason = request.form.get('reason', '').strip()
         project.archive(user_id=current_user.id, reason=reason if reason else None)
@@ -774,11 +719,11 @@ def unarchive_project(project_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('archive_projects'):
-        flash('You do not have permission to unarchive projects', 'error')
+        flash(_('You do not have permission to unarchive projects'), 'error')
         return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'active':
-        flash('Project is already active', 'info')
+        flash(_('Project is already active'), 'info')
     else:
         project.unarchive()
         
@@ -810,11 +755,11 @@ def deactivate_project(project_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('edit_projects'):
-        flash('You do not have permission to deactivate projects', 'error')
+        flash(_('You do not have permission to deactivate projects'), 'error')
         return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'inactive':
-        flash('Project is already inactive', 'info')
+        flash(_('Project is already inactive'), 'info')
     else:
         project.deactivate()
         # Log project deactivation
@@ -832,11 +777,11 @@ def activate_project(project_id):
     
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('edit_projects'):
-        flash('You do not have permission to activate projects', 'error')
+        flash(_('You do not have permission to activate projects'), 'error')
         return redirect(url_for('projects.view_project', project_id=project_id))
     
     if project.status == 'active':
-        flash('Project is already active', 'info')
+        flash(_('Project is already active'), 'info')
     else:
         project.activate()
         # Log project activation
@@ -855,7 +800,7 @@ def delete_project(project_id):
     
     # Check if project has time entries
     if project.time_entries.count() > 0:
-        flash('Cannot delete project with existing time entries', 'error')
+        flash(_('Cannot delete project with existing time entries'), 'error')
         return redirect(url_for('projects.view_project', project_id=project_id))
     
     project_name = project.name
@@ -875,7 +820,7 @@ def delete_project(project_id):
     
     db.session.delete(project)
     if not safe_commit('delete_project', {'project_id': project_id_copy}):
-        flash('Could not delete project due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete project due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('projects.view_project', project_id=project_id_copy))
     
     flash(f'Project "{project_name}" deleted successfully', 'success')
@@ -887,13 +832,13 @@ def bulk_delete_projects():
     """Delete multiple projects at once"""
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('delete_projects'):
-        flash('You do not have permission to delete projects', 'error')
+        flash(_('You do not have permission to delete projects'), 'error')
         return redirect(url_for('projects.list_projects'))
     
     project_ids = request.form.getlist('project_ids[]')
     
     if not project_ids:
-        flash('No projects selected for deletion', 'warning')
+        flash(_('No projects selected for deletion'), 'warning')
         return redirect(url_for('projects.list_projects'))
     
     deleted_count = 0
@@ -932,7 +877,7 @@ def bulk_delete_projects():
     # Commit all deletions
     if deleted_count > 0:
         if not safe_commit('bulk_delete_projects', {'count': deleted_count}):
-            flash('Could not delete projects due to a database error. Please check server logs.', 'error')
+            flash(_('Could not delete projects due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('projects.list_projects'))
     
     # Show appropriate messages
@@ -943,7 +888,7 @@ def bulk_delete_projects():
         flash(f'Skipped {skipped_count} project{"s" if skipped_count != 1 else ""}: {", ".join(errors[:3])}{"..." if len(errors) > 3 else ""}', 'warning')
     
     if deleted_count == 0 and skipped_count == 0:
-        flash('No projects were deleted', 'info')
+        flash(_('No projects were deleted'), 'info')
     
     return redirect(url_for('projects.list_projects'))
 
@@ -953,7 +898,7 @@ def bulk_status_change():
     """Change status for multiple projects at once"""
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission('edit_projects'):
-        flash('You do not have permission to change project status', 'error')
+        flash(_('You do not have permission to change project status'), 'error')
         return redirect(url_for('projects.list_projects'))
     
     project_ids = request.form.getlist('project_ids[]')
@@ -961,11 +906,11 @@ def bulk_status_change():
     archive_reason = request.form.get('archive_reason', '').strip() if new_status == 'archived' else None
     
     if not project_ids:
-        flash('No projects selected', 'warning')
+        flash(_('No projects selected'), 'warning')
         return redirect(url_for('projects.list_projects'))
     
     if new_status not in ['active', 'inactive', 'archived']:
-        flash('Invalid status', 'error')
+        flash(_('Invalid status'), 'error')
         return redirect(url_for('projects.list_projects'))
     
     updated_count = 0
@@ -1023,7 +968,7 @@ def bulk_status_change():
     # Commit all changes
     if updated_count > 0:
         if not safe_commit('bulk_status_change_projects', {'count': updated_count, 'status': new_status}):
-            flash('Could not update project status due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update project status due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('projects.list_projects'))
     
     # Show appropriate messages
@@ -1035,7 +980,7 @@ def bulk_status_change():
         flash(f'Some projects could not be updated: {", ".join(errors[:3])}{"..." if len(errors) > 3 else ""}', 'warning')
     
     if updated_count == 0:
-        flash('No projects were updated', 'info')
+        flash(_('No projects were updated'), 'info')
     
     return redirect(url_for('projects.list_projects'))
 

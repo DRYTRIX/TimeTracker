@@ -122,14 +122,14 @@
 <div id="variablesModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Available Variables</h3>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ _('Available Variables') }}</h3>
             <button id="closeVariablesModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <h4 class="font-semibold text-sm mb-2 text-gray-700 dark:text-gray-300">Invoice Variables</h4>
+                <h4 class="font-semibold text-sm mb-2 text-gray-700 dark:text-gray-300">{{ _('Invoice Variables') }}</h4>
                 <div class="space-y-1">
                     <button data-variable="invoice.invoice_number" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
                         <code>{{ '{{ invoice.invoice_number }}' }}</code>
@@ -152,7 +152,7 @@
                 </div>
             </div>
             <div>
-                <h4 class="font-semibold text-sm mb-2 text-gray-700 dark:text-gray-300">Other Variables</h4>
+                <h4 class="font-semibold text-sm mb-2 text-gray-700 dark:text-gray-300">{{ _('Other Variables') }}</h4>
                 <div class="space-y-1">
                     <button data-variable="company_name" class="modal-variable-btn w-full text-left px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
                         <code>{{ '{{ company_name }}' }}</code>

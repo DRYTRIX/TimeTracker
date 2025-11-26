@@ -181,7 +181,7 @@
         <!-- Recent Projects Quick Access -->
         {% if recent_projects %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
-            <h2 class="text-lg font-semibold mb-4">Recent Projects</h2>
+            <h2 class="text-lg font-semibold mb-4">{{ _('Recent Projects') }}</h2>
             <div class="space-y-2">
                 {% for project in recent_projects %}
                 <button type="button" 
@@ -199,7 +199,7 @@
         
         <!-- Quick Stats -->
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
-            <h2 class="text-lg font-semibold mb-4">Today's Stats</h2>
+            <h2 class="text-lg font-semibold mb-4">{{ _("Today's Stats") }}</h2>
             <div class="space-y-3">
                 <div class="flex justify-between items-center">
                     <span class="text-text-muted-light dark:text-text-muted-dark">Total Hours</span>

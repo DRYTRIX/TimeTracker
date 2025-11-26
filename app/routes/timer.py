@@ -44,7 +44,7 @@ def start_timer():
             db.session.commit()
     
     if not project_id:
-        flash('Project is required', 'error')
+        flash(_('Project is required'), 'error')
         current_app.logger.warning("Start timer failed: missing project_id")
         return redirect(url_for('main.dashboard'))
     
@@ -69,7 +69,7 @@ def start_timer():
     if task_id:
         task = Task.query.filter_by(id=task_id, project_id=project_id).first()
         if not task:
-            flash('Selected task is invalid for the chosen project', 'error')
+            flash(_('Selected task is invalid for the chosen project'), 'error')
             current_app.logger.warning("Start timer failed: task_id=%s does not belong to project_id=%s", task_id, project_id)
             return redirect(url_for('main.dashboard'))
     else:
@@ -78,7 +78,7 @@ def start_timer():
     # Check if user already has an active timer
     active_timer = current_user.active_timer
     if active_timer:
-        flash('You already have an active timer. Stop it before starting a new one.', 'error')
+        flash(_('You already have an active timer. Stop it before starting a new one.'), 'error')
         current_app.logger.info("Start timer blocked: user already has an active timer")
         return redirect(url_for('main.dashboard'))
     
@@ -95,7 +95,7 @@ def start_timer():
     
     db.session.add(new_timer)
     if not safe_commit('start_timer', {'user_id': current_user.id, 'project_id': project_id, 'task_id': task_id}):
-        flash('Could not start timer due to a database error. Please check server logs.', 'error')
+        flash(_('Could not start timer due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('main.dashboard'))
     current_app.logger.info("Started new timer id=%s for user=%s project_id=%s task_id=%s", new_timer.id, current_user.username, project_id, task_id)
     
@@ -169,18 +169,18 @@ def start_timer_from_template(template_id):
     # Check if user already has an active timer
     active_timer = current_user.active_timer
     if active_timer:
-        flash('You already have an active timer. Stop it before starting a new one.', 'error')
+        flash(_('You already have an active timer. Stop it before starting a new one.'), 'error')
         return redirect(url_for('main.dashboard'))
     
     # Validate template has required data
     if not template.project_id:
-        flash('Template must have a project to start a timer', 'error')
+        flash(_('Template must have a project to start a timer'), 'error')
         return redirect(url_for('time_entry_templates.list_templates'))
     
     # Check if project is active
     project = Project.query.get(template.project_id)
     if not project or project.status != 'active':
-        flash('Cannot start timer for this project', 'error')
+        flash(_('Cannot start timer for this project'), 'error')
         return redirect(url_for('time_entry_templates.list_templates'))
     
     # Create new timer from template
@@ -202,7 +202,7 @@ def start_timer_from_template(template_id):
     template.record_usage()
     
     if not safe_commit('start_timer_from_template', {'template_id': template_id}):
-        flash('Could not start timer due to a database error. Please check server logs.', 'error')
+        flash(_('Could not start timer due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('time_entry_templates.list_templates'))
     
     # Track events
@@ -247,7 +247,7 @@ def start_timer_for_project(project_id):
     # Check if user already has an active timer
     active_timer = current_user.active_timer
     if active_timer:
-        flash('You already have an active timer. Stop it before starting a new one.', 'error')
+        flash(_('You already have an active timer. Stop it before starting a new one.'), 'error')
         current_app.logger.info("Start timer (GET) blocked: user already has an active timer")
         return redirect(url_for('main.dashboard'))
     
@@ -263,7 +263,7 @@ def start_timer_for_project(project_id):
     
     db.session.add(new_timer)
     if not safe_commit('start_timer_for_project', {'user_id': current_user.id, 'project_id': project_id, 'task_id': task_id}):
-        flash('Could not start timer due to a database error. Please check server logs.', 'error')
+        flash(_('Could not start timer due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('main.dashboard'))
     current_app.logger.info("Started new timer id=%s for user=%s project_id=%s task_id=%s", new_timer.id, current_user.username, project_id, task_id)
     
@@ -296,7 +296,7 @@ def stop_timer():
     current_app.logger.info("POST /timer/stop user=%s active_timer=%s", current_user.username, bool(active_timer))
     
     if not active_timer:
-        flash('No active timer to stop', 'error')
+        flash(_('No active timer to stop'), 'error')
         return redirect(url_for('main.dashboard'))
     
     # Stop the timer
@@ -394,7 +394,7 @@ def edit_timer(timer_id):
     
     # Check if user can edit this timer
     if timer.user_id != current_user.id and not current_user.is_admin:
-        flash('You can only edit your own timers', 'error')
+        flash(_('You can only edit your own timers'), 'error')
         return redirect(url_for('main.dashboard'))
     
     if request.method == 'POST':
@@ -412,7 +412,7 @@ def edit_timer(timer_id):
                 if new_project:
                     timer.project_id = new_project_id
                 else:
-                    flash('Invalid project selected', 'error')
+                    flash(_('Invalid project selected'), 'error')
                     return render_template('timer/edit_timer.html', timer=timer, 
                                         projects=Project.query.filter_by(status='active').order_by(Project.name).all(),
                                         tasks=[] if not new_project_id else Task.query.filter_by(project_id=new_project_id).order_by(Task.name).all())
@@ -425,7 +425,7 @@ def edit_timer(timer_id):
                     if new_task:
                         timer.task_id = new_task_id
                     else:
-                        flash('Invalid task selected for the chosen project', 'error')
+                        flash(_('Invalid task selected for the chosen project'), 'error')
                         return render_template('timer/edit_timer.html', timer=timer, 
                                             projects=Project.query.filter_by(status='active').order_by(Project.name).all(),
                                             tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all())
@@ -448,14 +448,14 @@ def edit_timer(timer_id):
                     from app.models.time_entry import local_now
                     current_time = local_now()
                     if new_start_time > current_time:
-                        flash('Start time cannot be in the future', 'error')
+                        flash(_('Start time cannot be in the future'), 'error')
                         return render_template('timer/edit_timer.html', timer=timer, 
                                             projects=Project.query.filter_by(status='active').order_by(Project.name).all(),
                                             tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all())
                     
                     timer.start_time = new_start_time
                 except ValueError:
-                    flash('Invalid start date/time format', 'error')
+                    flash(_('Invalid start date/time format'), 'error')
                     return render_template('timer/edit_timer.html', timer=timer, 
                                         projects=Project.query.filter_by(status='active').order_by(Project.name).all(),
                                         tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all())
@@ -468,7 +468,7 @@ def edit_timer(timer_id):
                     
                     # Validate that end time is after start time
                     if new_end_time <= timer.start_time:
-                        flash('End time must be after start time', 'error')
+                        flash(_('End time must be after start time'), 'error')
                         return render_template('timer/edit_timer.html', timer=timer, 
                                             projects=Project.query.filter_by(status='active').order_by(Project.name).all(),
                                             tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all())
@@ -477,7 +477,7 @@ def edit_timer(timer_id):
                     # Recalculate duration
                     timer.calculate_duration()
                 except ValueError:
-                    flash('Invalid end date/time format', 'error')
+                    flash(_('Invalid end date/time format'), 'error')
                     return render_template('timer/edit_timer.html', timer=timer, 
                                         projects=Project.query.filter_by(status='active').order_by(Project.name).all(),
                                         tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all())
@@ -488,10 +488,10 @@ def edit_timer(timer_id):
                 timer.source = new_source
         
         if not safe_commit('edit_timer', {'timer_id': timer.id}):
-            flash('Could not update timer due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update timer due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('main.dashboard'))
         
-        flash('Timer updated successfully', 'success')
+        flash(_('Timer updated successfully'), 'success')
         return redirect(url_for('main.dashboard'))
     
     # Get projects and tasks for admin users
@@ -512,18 +512,18 @@ def delete_timer(timer_id):
     
     # Check if user can delete this timer
     if timer.user_id != current_user.id and not current_user.is_admin:
-        flash('You can only delete your own timers', 'error')
+        flash(_('You can only delete your own timers'), 'error')
         return redirect(url_for('main.dashboard'))
     
     # Don't allow deletion of active timers
     if timer.is_active:
-        flash('Cannot delete an active timer', 'error')
+        flash(_('Cannot delete an active timer'), 'error')
         return redirect(url_for('main.dashboard'))
     
     project_name = timer.project.name
     db.session.delete(timer)
     if not safe_commit('delete_timer', {'timer_id': timer.id}):
-        flash('Could not delete timer due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete timer due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('main.dashboard'))
     
     flash(f'Timer for {project_name} deleted successfully', 'success')
@@ -576,7 +576,7 @@ def manual_entry():
         
         # Validate required fields
         if not all([project_id, start_date, start_time, end_date, end_time]):
-            flash('All fields are required', 'error')
+            flash(_('All fields are required'), 'error')
             return render_template('timer/manual_entry.html', projects=active_projects, 
                                 selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
@@ -601,7 +601,7 @@ def manual_entry():
         if task_id:
             task = Task.query.filter_by(id=task_id, project_id=project_id).first()
             if not task:
-                flash('Invalid task selected', 'error')
+                flash(_('Invalid task selected'), 'error')
                 return render_template('timer/manual_entry.html', projects=active_projects,
                                     selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
@@ -610,7 +610,7 @@ def manual_entry():
             start_time_parsed = parse_local_datetime(start_date, start_time)
             end_time_parsed = parse_local_datetime(end_date, end_time)
         except ValueError:
-            flash('Invalid date/time format', 'error')
+            flash(_('Invalid date/time format'), 'error')
             return render_template('timer/manual_entry.html', projects=active_projects,
                                 selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
@@ -635,7 +635,7 @@ def manual_entry():
         
         db.session.add(entry)
         if not safe_commit('manual_entry', {'user_id': current_user.id, 'project_id': project_id, 'task_id': task_id}):
-            flash('Could not create manual entry due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create manual entry due to a database error. Please check server logs.'), 'error')
             return render_template('timer/manual_entry.html', projects=active_projects, 
                                 selected_project_id=project_id, selected_task_id=task_id, template_data=template_data)
         
@@ -694,7 +694,7 @@ def bulk_entry():
         
         # Validate required fields
         if not all([project_id, start_date, end_date, start_time, end_time]):
-            flash('All fields are required', 'error')
+            flash(_('All fields are required'), 'error')
             return render_template('timer/bulk_entry.html', projects=active_projects, 
                                 selected_project_id=project_id, selected_task_id=task_id)
         
@@ -719,7 +719,7 @@ def bulk_entry():
         if task_id:
             task = Task.query.filter_by(id=task_id, project_id=project_id).first()
             if not task:
-                flash('Invalid task selected', 'error')
+                flash(_('Invalid task selected'), 'error')
                 return render_template('timer/bulk_entry.html', projects=active_projects,
                                     selected_project_id=project_id, selected_task_id=task_id)
         
@@ -730,17 +730,17 @@ def bulk_entry():
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
             
             if end_date_obj < start_date_obj:
-                flash('End date must be after or equal to start date', 'error')
+                flash(_('End date must be after or equal to start date'), 'error')
                 return render_template('timer/bulk_entry.html', projects=active_projects,
                                     selected_project_id=project_id, selected_task_id=task_id)
             
             # Check for reasonable date range (max 31 days)
             if (end_date_obj - start_date_obj).days > 31:
-                flash('Date range cannot exceed 31 days', 'error')
+                flash(_('Date range cannot exceed 31 days'), 'error')
                 return render_template('timer/bulk_entry.html', projects=active_projects,
                                     selected_project_id=project_id, selected_task_id=task_id)
         except ValueError:
-            flash('Invalid date format', 'error')
+            flash(_('Invalid date format'), 'error')
             return render_template('timer/bulk_entry.html', projects=active_projects,
                                 selected_project_id=project_id, selected_task_id=task_id)
         
@@ -754,7 +754,7 @@ def bulk_entry():
                 return render_template('timer/bulk_entry.html', projects=active_projects,
                                     selected_project_id=project_id, selected_task_id=task_id)
         except ValueError:
-            flash('Invalid time format', 'error')
+            flash(_('Invalid time format'), 'error')
             return render_template('timer/bulk_entry.html', projects=active_projects,
                                 selected_project_id=project_id, selected_task_id=task_id)
         
@@ -772,7 +772,7 @@ def bulk_entry():
             current_date += timedelta(days=1)
         
         if not dates_to_create:
-            flash('No valid dates found in the selected range', 'error')
+            flash(_('No valid dates found in the selected range'), 'error')
             return render_template('timer/bulk_entry.html', projects=active_projects,
                                 selected_project_id=project_id, selected_task_id=task_id)
         
@@ -824,7 +824,7 @@ def bulk_entry():
                 created_entries.append(entry)
             
             if not safe_commit('bulk_entry', {'user_id': current_user.id, 'project_id': project_id, 'count': len(created_entries)}):
-                flash('Could not create bulk entries due to a database error. Please check server logs.', 'error')
+                flash(_('Could not create bulk entries due to a database error. Please check server logs.'), 'error')
                 return render_template('timer/bulk_entry.html', projects=active_projects, 
                                     selected_project_id=project_id, selected_task_id=task_id)
             
@@ -839,7 +839,7 @@ def bulk_entry():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception("Error creating bulk entries: %s", e)
-            flash('An error occurred while creating bulk entries. Please try again.', 'error')
+            flash(_('An error occurred while creating bulk entries. Please try again.'), 'error')
             return render_template('timer/bulk_entry.html', projects=active_projects, 
                                 selected_project_id=project_id, selected_task_id=task_id)
     
@@ -940,7 +940,7 @@ def duplicate_timer(timer_id):
     
     # Check if user can duplicate this timer
     if timer.user_id != current_user.id and not current_user.is_admin:
-        flash('You can only duplicate your own timers', 'error')
+        flash(_('You can only duplicate your own timers'), 'error')
         return redirect(url_for('main.dashboard'))
     
     # Get active projects for dropdown
@@ -979,7 +979,7 @@ def resume_timer(timer_id):
     
     # Check if user can resume this timer
     if timer.user_id != current_user.id and not current_user.is_admin:
-        flash('You can only resume your own timers', 'error')
+        flash(_('You can only resume your own timers'), 'error')
         return redirect(url_for('main.dashboard'))
     
     # Check if user already has an active timer
@@ -1028,7 +1028,7 @@ def resume_timer(timer_id):
     
     db.session.add(new_timer)
     if not safe_commit('resume_timer', {'user_id': current_user.id, 'original_timer_id': timer_id, 'project_id': timer.project_id}):
-        flash('Could not resume timer due to a database error. Please check server logs.', 'error')
+        flash(_('Could not resume timer due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('main.dashboard'))
     
     current_app.logger.info("Resumed timer id=%s from original timer=%s for user=%s project_id=%s", 

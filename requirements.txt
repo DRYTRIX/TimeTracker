@@ -74,3 +74,11 @@ marshmallow==3.20.1
 
 # OCR for receipt scanning
 pytesseract==0.3.10
+
+# Payment Gateway Integration
+stripe==7.0.0
+
+# Calendar Integration
+google-api-python-client==2.100.0
+google-auth-httplib2==0.1.1
+google-auth-oauthlib==1.1.0

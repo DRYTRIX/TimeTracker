@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ _('Kiosk Mode') }} - {{ app_name }}{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Kiosk Mode - Inventory and Time Tracking">
+    <meta name="theme-color" content="#3b82f6">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+    <script>
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    <style>
+        /* Kiosk-specific overrides */
+        body.kiosk-mode {
+            overflow-x: hidden;
+        }
+        .kiosk-mode #sidebar,
+        .kiosk-mode #mainContent {
+            margin-left: 0 !important;
+        }
+        .kiosk-mode #sidebar {
+            display: none !important;
+        }
+        /* Navigation border-bottom with 3px */
+        .border-b-3 {
+            border-bottom-width: 3px;
+        }
+        /* Screen reader only - for ARIA live regions */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        /* Enhanced focus indicators - using Tailwind's focus-visible */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+        }
+        /* Visual hierarchy improvements */
+        .kiosk-card {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .dark .kiosk-card {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+        }
+        .kiosk-card-elevated {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .dark .kiosk-card-elevated {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="kiosk-mode bg-background-light dark:bg-background-dark">
+    <!-- Kiosk Header -->
+    <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Left: User Info -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                    <div class="hidden sm:block">
+                        <span class="font-semibold text-gray-900 dark:text-white text-sm">{{ current_user.username }}</span>
+                    </div>
+                </div>
+
+                <!-- Center: Timer Display -->
+                <div class="flex-1 flex justify-center">
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700" id="kiosk-timer-display">
+                        {% block timer_display %}
+                        {% if active_timer is defined and active_timer %}
+                            <i class="fas fa-clock text-primary text-sm"></i>
+                            <span id="timer-time" class="font-mono font-bold text-primary text-lg">{{ active_timer.duration_formatted }}</span>
+                            <span class="text-xs font-medium text-gray-600 dark:text-gray-400 hidden sm:inline">{{ active_timer.project.name if active_timer.project else '' }}</span>
+                        {% else %}
+                            <i class="fas fa-clock text-gray-400 text-sm"></i>
+                            <span class="text-gray-500 dark:text-gray-400 font-medium text-sm">{{ _('No active timer') }}</span>
+                        {% endif %}
+                        {% endblock %}
+                    </div>
+                </div>
+
+                <!-- Right: Actions -->
+                <div class="flex items-center gap-1">
+                    <!-- Keyboard Shortcuts Help -->
+                    <button type="button" onclick="document.getElementById('keyboard-help')?.classList.toggle('hidden')" class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-w-[48px] min-h-[48px] flex items-center justify-center" title="{{ _('Keyboard Shortcuts (Press ?)') }}" aria-label="{{ _('Show keyboard shortcuts') }}" aria-expanded="false" aria-controls="keyboard-help">
+                        <i class="fas fa-question-circle w-5 h-5" aria-hidden="true"></i>
+                    </button>
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 rounded-lg text-sm p-2.5 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="{{ _('Toggle dark mode') }}" aria-pressed="false">
+                        <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5" aria-hidden="true"></i>
+                        <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5" aria-hidden="true"></i>
+                    </button>
+                    <!-- Fullscreen Toggle -->
+                    <button type="button" onclick="toggleFullscreen()" class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-w-[48px] min-h-[48px] flex items-center justify-center" title="{{ _('Toggle Fullscreen') }}" aria-label="{{ _('Toggle Fullscreen') }}">
+                        <i class="fas fa-expand w-5 h-5" aria-hidden="true"></i>
+                    </button>
+                    <!-- Logout -->
+                    <form method="POST" action="{{ url_for('kiosk.kiosk_logout') }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors ml-1 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px]" aria-label="{{ _('Logout from kiosk mode') }}">
+                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                            <span class="hidden sm:inline">{{ _('Logout') }}</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Kiosk Navigation Menu -->
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-16 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center gap-1 overflow-x-auto">
+                <a href="{{ url_for('kiosk.kiosk_dashboard') }}" class="nav-link flex items-center px-4 sm:px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 border-b-2 border-transparent hover:text-primary hover:border-primary/50 transition-all whitespace-nowrap {% if request.endpoint == 'kiosk.kiosk_dashboard' %}text-primary border-primary{% endif %}" data-tab="scan" onclick="event.preventDefault(); if(window.switchToTab) { window.switchToTab('scan'); } else { window.location.href = this.href; }">
+                    <i class="fas fa-barcode mr-2 text-sm"></i>
+                    {{ _('Scan') }}
+                </a>
+                <a href="{{ url_for('kiosk.kiosk_dashboard') }}#adjust" class="nav-link flex items-center px-4 sm:px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 border-b-2 border-transparent hover:text-primary hover:border-primary/50 transition-all whitespace-nowrap" data-tab="adjust" onclick="event.preventDefault(); if(window.switchToTab) { window.switchToTab('adjust'); } else { window.location.href = this.href; }">
+                    <i class="fas fa-edit mr-2 text-sm"></i>
+                    {{ _('Adjust Stock') }}
+                </a>
+                <a href="{{ url_for('kiosk.kiosk_dashboard') }}#transfer" class="nav-link flex items-center px-4 sm:px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 border-b-2 border-transparent hover:text-primary hover:border-primary/50 transition-all whitespace-nowrap" data-tab="transfer" onclick="event.preventDefault(); if(window.switchToTab) { window.switchToTab('transfer'); } else { window.location.href = this.href; }">
+                    <i class="fas fa-exchange-alt mr-2 text-sm"></i>
+                    {{ _('Transfer') }}
+                </a>
+                <a href="{{ url_for('kiosk.kiosk_dashboard') }}#timer" class="nav-link flex items-center px-4 sm:px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 border-b-2 border-transparent hover:text-primary hover:border-primary/50 transition-all whitespace-nowrap" data-tab="timer" onclick="event.preventDefault(); if(window.switchToTab) { window.switchToTab('timer'); } else { window.location.href = this.href; }">
+                    <i class="fas fa-clock mr-2 text-sm"></i>
+                    {{ _('Timer') }}
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ARIA Live Region for Dynamic Updates -->
+    <div id="aria-live-status" class="sr-only" aria-live="polite" aria-atomic="true" role="status"></div>
+    <div id="aria-live-alert" class="sr-only" aria-live="assertive" aria-atomic="true" role="alert"></div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" role="main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6" role="alert">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} mb-2">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+    <style>
+        /* Ensure only one theme icon is visible at a time */
+        #theme-toggle-dark-icon.hidden,
+        #theme-toggle-light-icon.hidden {
+            display: none !important;
+        }
+        #theme-toggle-dark-icon:not(.hidden) ~ #theme-toggle-light-icon:not(.hidden),
+        #theme-toggle-light-icon:not(.hidden) ~ #theme-toggle-dark-icon:not(.hidden) {
+            display: none !important;
+        }
+    </style>
+    <script>
+        // Theme Toggle - Match original app implementation exactly
+        function initThemeToggle() {
+            var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+            var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+            if (!themeToggleDarkIcon || !themeToggleLightIcon) {
+                return; // Elements not found yet
+            }
+
+            // Force both to be hidden first
+            themeToggleDarkIcon.classList.add('hidden');
+            themeToggleLightIcon.classList.add('hidden');
+            
+            // Show the correct icon based on current theme
+            const isDark = localStorage.getItem('color-theme') === 'dark' || 
+                          (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            
+            if (isDark) {
+                themeToggleLightIcon.classList.remove('hidden');
+            } else {
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+        }
+        
+        // Run initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initThemeToggle);
+        } else {
+            initThemeToggle();
+        }
+        
+        var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        var themeToggleBtn = document.getElementById('theme-toggle');
+
+        if (themeToggleBtn && themeToggleDarkIcon && themeToggleLightIcon) {
+            themeToggleBtn.addEventListener('click', function() {
+                // toggle icons inside button - ensure only one is visible
+                themeToggleDarkIcon.classList.toggle('hidden');
+                themeToggleLightIcon.classList.toggle('hidden');
+
+                var newTheme;
+                // if set via local storage previously
+                if (localStorage.getItem('color-theme')) {
+                    if (localStorage.getItem('color-theme') === 'light') {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('color-theme', 'dark');
+                        newTheme = 'dark';
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('color-theme', 'light');
+                        newTheme = 'light';
+                    }
+                // if NOT set via local storage previously
+                } else {
+                    if (document.documentElement.classList.contains('dark')) {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('color-theme', 'light');
+                        newTheme = 'light';
+                    } else {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('color-theme', 'dark');
+                        newTheme = 'dark';
+                    }
+                }
+                
+                // Save to database if user is logged in
+                {% if current_user.is_authenticated %}
+                fetch('/api/theme', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ theme: newTheme })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Failed to save theme preference');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        console.log('Theme preference saved:', data.theme);
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to save theme preference:', err);
+                });
+                {% endif %}
+            });
+        }
+
+        // Initialize theme from user preference (after page load)
+        (function() {
+            {% if current_user.is_authenticated and current_user.theme %}
+            var userTheme = '{{ current_user.theme }}';
+            if (userTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            } else if (userTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else if (userTheme === 'system') {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+            {% else %}
+            // If no user theme, use localStorage or system preference
+            var savedTheme = localStorage.getItem('color-theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+            }
+            {% endif %}
+        })();
+
+        // Fullscreen Toggle
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Tab switching helper - works with both navigation menu and tab buttons
+        function switchToTab(tabName) {
+            // Show/hide barcode scanner section
+            const barcodeSection = document.getElementById('barcode-scanner-section');
+            if (barcodeSection) {
+                if (tabName === 'scan') {
+                    barcodeSection.style.display = 'block';
+                } else {
+                    barcodeSection.style.display = 'none';
+                }
+            }
+            
+            // Hide operations section for scan tab, show for others
+            const operationsSection = document.getElementById('operations-section');
+            if (operationsSection) {
+                if (tabName === 'scan') {
+                    operationsSection.style.display = 'none';
+                } else {
+                    operationsSection.style.display = 'block';
+                }
+            }
+            
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.kiosk-tab-content');
+            tabContents.forEach(c => {
+                c.style.display = 'none';
+            });
+            
+            // Clear any item display when switching to scan
+            if (tabName === 'scan') {
+                // Use the centralized clear function if available
+                if (window.clearItemContent) {
+                    window.clearItemContent();
+                } else {
+                    // Fallback clearing
+                    const itemSection = document.getElementById('item-section');
+                    const operationsSection = document.getElementById('operations-section');
+                    const stockLevelsDiv = document.getElementById('stock-levels');
+                    if (itemSection) itemSection.style.display = 'none';
+                    if (operationsSection) operationsSection.style.display = 'none';
+                    if (stockLevelsDiv) stockLevelsDiv.innerHTML = '';
+                }
+                // Clear barcode status
+                const barcodeStatus = document.getElementById('barcode-status');
+                if (barcodeStatus) {
+                    barcodeStatus.innerHTML = '';
+                    barcodeStatus.className = '';
+                }
+            }
+            
+            // Remove active state from all tabs
+            const tabButtons = document.querySelectorAll('.kiosk-tab');
+            tabButtons.forEach(t => {
+                t.classList.remove('border-primary', 'text-primary');
+                t.classList.add('border-transparent', 'text-gray-600', 'dark:text-gray-400');
+            });
+            
+            // Show the target tab content
+            const targetContent = document.getElementById('tab-' + tabName);
+            if (targetContent) {
+                targetContent.style.display = 'block';
+            }
+            
+            // Activate the corresponding tab button
+            tabButtons.forEach(t => {
+                if (t.getAttribute('data-tab') === tabName) {
+                    t.classList.remove('border-transparent', 'text-gray-600', 'dark:text-gray-400');
+                    t.classList.add('border-primary', 'text-primary');
+                }
+            });
+            
+            // Update navigation menu active state - clear ALL classes first
+            const navItems = document.querySelectorAll('nav a.nav-link');
+            navItems.forEach(item => {
+                // Remove all text color classes
+                item.classList.remove('text-primary', 'text-gray-700', 'dark:text-gray-300', 'text-text-muted-light', 'dark:text-text-muted-dark');
+                // Remove all border classes
+                item.classList.remove('border-primary', 'border-transparent');
+                // Remove background classes
+                item.classList.remove('bg-background-light', 'dark:bg-background-dark');
+                // Add default inactive state
+                item.classList.add('text-gray-700', 'dark:text-gray-300', 'border-transparent');
+            });
+            
+            // Find and activate the corresponding nav item
+            const navItem = Array.from(navItems).find(item => {
+                const tabAttr = item.getAttribute('data-tab');
+                return tabAttr === tabName;
+            });
+            if (navItem) {
+                // Remove inactive classes
+                navItem.classList.remove('text-gray-700', 'dark:text-gray-300', 'border-transparent');
+                // Add active classes
+                navItem.classList.add('text-primary', 'border-primary');
+            }
+        }
+
+        // Make functions globally available immediately
+        window.toggleFullscreen = toggleFullscreen;
+        window.switchToTab = switchToTab;
+        
+        // Global confirmation dialog (matching main app)
+        window.showConfirm = function(message, opts){
+            try {
+                const options = Object.assign({
+                    title: '',
+                    confirmText: 'Confirm',
+                    cancelText: 'Cancel',
+                    variant: 'primary' // 'primary' | 'danger' | 'warning'
+                }, opts || {});
+                return new Promise((resolve) => {
+                    // Build overlay
+                    const overlay = document.createElement('div');
+                    overlay.className = 'fixed inset-0 z-[2000] flex items-center justify-center';
+                    overlay.innerHTML = `
+                        <div class="absolute inset-0 bg-black/50" data-close></div>
+                        <div class="relative bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl w-full max-w-md mx-4">
+                            <div class="p-6">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-12 h-12 rounded-full ${options.variant==='danger' ? 'bg-rose-100 dark:bg-rose-900/30' : (options.variant==='warning' ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-sky-100 dark:bg-sky-900/30')} flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle ${options.variant==='danger' ? 'text-rose-600 dark:text-rose-400' : (options.variant==='warning' ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400')}"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        ${options.title ? `<h3 class="text-lg font-semibold mb-1">${options.title}</h3>` : ''}
+                                        <p class="text-sm">${message || ''}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-6 flex justify-end gap-3">
+                                    <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors" data-cancel>${options.cancelText}</button>
+                                    <button type="button" class="px-4 py-2 ${options.variant==='danger' ? 'bg-rose-600 hover:bg-rose-700' : (options.variant==='warning' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-primary hover:bg-primary/90')} text-white rounded-lg transition-colors" data-confirm>${options.confirmText}</button>
+                                </div>
+                            </div>
+                        </div>`;
+
+                    function cleanup(result){
+                        try { document.body.removeChild(overlay); } catch(_) {}
+                        resolve(result);
+                    }
+
+                    overlay.addEventListener('click', (e) => {
+                        if (e.target.hasAttribute('data-close') || e.target.closest('[data-close]')) cleanup(false);
+                        if (e.target.hasAttribute('data-cancel') || e.target.closest('[data-cancel]')) cleanup(false);
+                        if (e.target.hasAttribute('data-confirm') || e.target.closest('[data-confirm]')) cleanup(true);
+                    });
+                    document.addEventListener('keydown', function onKey(e){
+                        if (e.key === 'Escape'){ cleanup(false); document.removeEventListener('keydown', onKey); }
+                        if (e.key === 'Enter'){ cleanup(true); document.removeEventListener('keydown', onKey); }
+                    });
+                    document.body.appendChild(overlay);
+                    // Focus confirm button
+                    setTimeout(() => { try { overlay.querySelector('[data-confirm]').focus(); } catch(_) {} }, 0);
+                });
+            } catch(_) {
+                // Absolute fallback if anything goes wrong
+                try { return Promise.resolve(window.confirm(message)); } catch(__) { return Promise.resolve(false); }
+            }
+        };
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+

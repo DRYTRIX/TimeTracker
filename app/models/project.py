@@ -10,6 +10,7 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False, index=True)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False, index=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id'), nullable=True, index=True)
     description = db.Column(db.Text, nullable=True)
     billable = db.Column(db.Boolean, default=True, nullable=False)
     hourly_rate = db.Column(db.Numeric(9, 2), nullable=True)

@@ -62,13 +62,13 @@ def create_recurring_invoice():
         
         # Validate required fields
         if not name or not project_id or not client_id or not frequency or not next_run_date_str:
-            flash('Name, project, client, frequency, and next run date are required', 'error')
+            flash(_('Name, project, client, frequency, and next run date are required'), 'error')
             return render_template('recurring_invoices/create.html')
         
         try:
             next_run_date = datetime.strptime(next_run_date_str, '%Y-%m-%d').date()
         except ValueError:
-            flash('Invalid next run date format', 'error')
+            flash(_('Invalid next run date format'), 'error')
             return render_template('recurring_invoices/create.html')
         
         end_date = None
@@ -76,20 +76,20 @@ def create_recurring_invoice():
             try:
                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash('Invalid end date format', 'error')
+                flash(_('Invalid end date format'), 'error')
                 return render_template('recurring_invoices/create.html')
         
         try:
             tax_rate = Decimal(tax_rate)
         except ValueError:
-            flash('Invalid tax rate format', 'error')
+            flash(_('Invalid tax rate format'), 'error')
             return render_template('recurring_invoices/create.html')
         
         # Get project and client
         project = Project.query.get(project_id)
         client = Client.query.get(client_id)
         if not project or not client:
-            flash('Selected project or client not found', 'error')
+            flash(_('Selected project or client not found'), 'error')
             return render_template('recurring_invoices/create.html')
         
         # Get currency from settings
@@ -126,7 +126,7 @@ def create_recurring_invoice():
         
         db.session.add(recurring)
         if not safe_commit('create_recurring_invoice', {'name': name, 'project_id': project_id}):
-            flash('Could not create recurring invoice due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create recurring invoice due to a database error. Please check server logs.'), 'error')
             return render_template('recurring_invoices/create.html')
         
         flash(f'Recurring invoice "{name}" created successfully', 'success')
@@ -155,7 +155,7 @@ def view_recurring_invoice(recurring_id):
     
     # Check access permissions
     if not current_user.is_admin and recurring.created_by != current_user.id:
-        flash('You do not have permission to view this recurring invoice', 'error')
+        flash(_('You do not have permission to view this recurring invoice'), 'error')
         return redirect(url_for('recurring_invoices.list_recurring_invoices'))
     
     # Get generated invoices
@@ -172,7 +172,7 @@ def edit_recurring_invoice(recurring_id):
     
     # Check access permissions
     if not current_user.is_admin and recurring.created_by != current_user.id:
-        flash('You do not have permission to edit this recurring invoice', 'error')
+        flash(_('You do not have permission to edit this recurring invoice'), 'error')
         return redirect(url_for('recurring_invoices.list_recurring_invoices'))
     
     if request.method == 'POST':
@@ -197,10 +197,10 @@ def edit_recurring_invoice(recurring_id):
         recurring.is_active = request.form.get('is_active') == 'on'
         
         if not safe_commit('edit_recurring_invoice', {'recurring_id': recurring.id}):
-            flash('Could not update recurring invoice due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update recurring invoice due to a database error. Please check server logs.'), 'error')
             return render_template('recurring_invoices/edit.html', recurring=recurring, projects=Project.query.filter_by(status='active').order_by(Project.name).all(), clients=Client.query.filter_by(status='active').order_by(Client.name).all())
         
-        flash('Recurring invoice updated successfully', 'success')
+        flash(_('Recurring invoice updated successfully'), 'success')
         return redirect(url_for('recurring_invoices.view_recurring_invoice', recurring_id=recurring.id))
     
     # GET request - show edit form
@@ -217,13 +217,13 @@ def delete_recurring_invoice(recurring_id):
     
     # Check access permissions
     if not current_user.is_admin and recurring.created_by != current_user.id:
-        flash('You do not have permission to delete this recurring invoice', 'error')
+        flash(_('You do not have permission to delete this recurring invoice'), 'error')
         return redirect(url_for('recurring_invoices.list_recurring_invoices'))
     
     name = recurring.name
     db.session.delete(recurring)
     if not safe_commit('delete_recurring_invoice', {'recurring_id': recurring.id}):
-        flash('Could not delete recurring invoice due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete recurring invoice due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('recurring_invoices.list_recurring_invoices'))
     
     flash(f'Recurring invoice "{name}" deleted successfully', 'success')

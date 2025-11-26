@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, empty_state %}
+
+{% block title %}{{ _('Pending Approvals') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Invoice Approvals'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-check-circle',
+    title_text='Pending Approvals',
+    subtitle_text='Invoices awaiting your approval',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if approvals %}
+    <div class="space-y-4">
+        {% for approval in approvals %}
+        <div class="border border-border-light dark:border-border-dark rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-3">
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold mb-1">
+                        <a href="{{ url_for('invoices.view_invoice', invoice_id=approval.invoice_id) }}" class="hover:text-primary transition-colors">
+                            {{ _('Invoice') }} #{{ approval.invoice.invoice_number }}
+                        </a>
+                    </h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Requested by') }}: {{ approval.requester.username }} • 
+                        {{ _('Stage') }} {{ approval.current_stage + 1 }}/{{ approval.total_stages }}
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <form method="POST" action="{{ url_for('invoice_approvals.approve', approval_id=approval.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-check mr-1"></i>{{ _('Approve') }}
+                        </button>
+                    </form>
+                    <button onclick="showRejectModal({{ approval.id }})" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
+                    </button>
+                </div>
+            </div>
+            
+            {% if approval.stages and approval.current_stage < approval.stages|length %}
+            <div class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <strong>{{ _('Current Approver') }}:</strong> 
+                    {% set current_stage = approval.stages[approval.current_stage] %}
+                    {% if current_stage.get('approver_id') == current_user.id %}
+                    <span class="text-primary font-semibold">{{ _('You') }}</span>
+                    {% else %}
+                    {{ User.query.get(current_stage.get('approver_id')).username if User.query.get(current_stage.get('approver_id')) else _('Unknown') }}
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    {{ empty_state(
+        'fas fa-check-circle',
+        _('No Pending Approvals'),
+        _('You have no invoices awaiting your approval.'),
+        type='no-data'
+    ) }}
+    {% endif %}
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl p-6 max-w-md w-full">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Reject Invoice Approval') }}</h3>
+        <form id="rejectForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Reason for Rejection') }} *</label>
+                <textarea id="reason" name="reason" required rows="4" class="form-input" placeholder="{{ _('Please provide a reason for rejecting this invoice...') }}"></textarea>
+            </div>
+            <div class="flex justify-end gap-4">
+                <button type="button" onclick="closeRejectModal()" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</button>
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">{{ _('Reject') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showRejectModal(approvalId) {
+    const form = document.getElementById('rejectForm');
+    form.action = '{{ url_for("invoice_approvals.reject", approval_id=0) }}'.replace('0', approvalId);
+    document.getElementById('rejectModal').classList.remove('hidden');
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').classList.add('hidden');
+    document.getElementById('reason').value = '';
+}
+</script>
+{% endblock %}
+

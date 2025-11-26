@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Levels', 'url': url_for('inventory.stock_levels')},
+    {'text': warehouse.code}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-list-ul',
+    title_text='Stock Levels - ' + warehouse.code,
+    subtitle_text=warehouse.name,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Category') }}</label>
+            <select name="category" id="category" class="form-input">
+                <option value="">{{ _('All Categories') }}</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-center">
+            <label class="flex items-center">
+                <input type="checkbox" name="low_stock" value="true" {% if low_stock_only %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <span class="ml-2 text-sm">{{ _('Low Stock Only') }}</span>
+            </label>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('SKU') }}</th>
+                <th class="p-4">{{ _('Category') }}</th>
+                <th class="p-4">{{ _('Quantity On Hand') }}</th>
+                <th class="p-4">{{ _('Quantity Reserved') }}</th>
+                <th class="p-4">{{ _('Available') }}</th>
+                <th class="p-4">{{ _('Reorder Point') }}</th>
+                <th class="p-4">{{ _('Status') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stock_levels %}
+            <tr>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=stock.stock_item_id) }}" class="text-primary hover:underline font-medium">
+                        {{ stock.stock_item.name }}
+                    </a>
+                </td>
+                <td class="p-4 font-mono text-sm">{{ stock.stock_item.sku }}</td>
+                <td class="p-4">{{ stock.stock_item.category or '—' }}</td>
+                <td class="p-4 font-semibold">{{ stock.quantity_on_hand }}</td>
+                <td class="p-4">{{ stock.quantity_reserved }}</td>
+                <td class="p-4 {% if stock.quantity_available < 0 %}text-red-600{% elif stock.quantity_available == 0 %}text-amber-600{% else %}text-green-600{% endif %} font-semibold">
+                    {{ stock.quantity_available }}
+                </td>
+                <td class="p-4">{{ stock.stock_item.reorder_point or '—' }}</td>
+                <td class="p-4">
+                    {% if stock.stock_item.reorder_point and stock.quantity_on_hand < stock.stock_item.reorder_point %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Low Stock') }}</span>
+                    {% elif stock.quantity_available < 0 %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">{{ _('Oversold') }}</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('OK') }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="p-8 text-center text-gray-500">
+                    {{ _('No stock items found in this warehouse.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

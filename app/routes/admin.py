@@ -3,7 +3,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db, limiter
-from app.models import User, Project, TimeEntry, Settings, Invoice
+from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem
 from datetime import datetime
 from sqlalchemy import text
 import os
@@ -159,22 +159,22 @@ def create_user():
         role = request.form.get('role', 'user')
         
         if not username:
-            flash('Username is required', 'error')
+            flash(_('Username is required'), 'error')
             return render_template('admin/user_form.html', user=None)
         
         # Check if user already exists
         if User.query.filter_by(username=username).first():
-            flash('User already exists', 'error')
+            flash(_('User already exists'), 'error')
             return render_template('admin/user_form.html', user=None)
         
         # Create user
         user = User(username=username, role=role)
         db.session.add(user)
         if not safe_commit('admin_create_user', {'username': username}):
-            flash('Could not create user due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create user due to a database error. Please check server logs.'), 'error')
             return render_template('admin/user_form.html', user=None)
         
-        flash(f'User "{username}" created successfully', 'success')
+        flash(_('User "%(username)s" created successfully', username=username), 'success')
         return redirect(url_for('admin.list_users'))
     
     return render_template('admin/user_form.html', user=None)
@@ -196,18 +196,18 @@ def edit_user(user_id):
         client_id = request.form.get('client_id', '').strip()
         
         if not username:
-            flash('Username is required', 'error')
+            flash(_('Username is required'), 'error')
             return render_template('admin/user_form.html', user=user, clients=clients)
         
         # Check if username is already taken by another user
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and existing_user.id != user.id:
-            flash('Username already exists', 'error')
+            flash(_('Username already exists'), 'error')
             return render_template('admin/user_form.html', user=user, clients=clients)
         
         # Validate client portal settings
         if client_portal_enabled and not client_id:
-            flash('Please select a client when enabling client portal access.', 'error')
+            flash(_('Please select a client when enabling client portal access.'), 'error')
             return render_template('admin/user_form.html', user=user, clients=clients)
         
         # Update user
@@ -218,10 +218,10 @@ def edit_user(user_id):
         user.client_id = int(client_id) if client_id else None
         
         if not safe_commit('admin_edit_user', {'user_id': user.id}):
-            flash('Could not update user due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update user due to a database error. Please check server logs.'), 'error')
             return render_template('admin/user_form.html', user=user, clients=clients)
         
-        flash(f'User "{username}" updated successfully', 'success')
+        flash(_('User "%(username)s" updated successfully', username=username), 'success')
         return redirect(url_for('admin.list_users'))
     
     return render_template('admin/user_form.html', user=user, clients=clients)
@@ -237,21 +237,21 @@ def delete_user(user_id):
     if user.is_admin:
         admin_count = User.query.filter_by(role='admin', is_active=True).count()
         if admin_count <= 1:
-            flash('Cannot delete the last administrator', 'error')
+            flash(_('Cannot delete the last administrator'), 'error')
             return redirect(url_for('admin.list_users'))
     
     # Don't allow deleting users with time entries
     if user.time_entries.count() > 0:
-        flash('Cannot delete user with existing time entries', 'error')
+        flash(_('Cannot delete user with existing time entries'), 'error')
         return redirect(url_for('admin.list_users'))
     
     username = user.username
     db.session.delete(user)
     if not safe_commit('admin_delete_user', {'user_id': user.id}):
-        flash('Could not delete user due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete user due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('admin.list_users'))
     
-    flash(f'User "{username}" deleted successfully', 'success')
+    flash(_('User "%(username)s" deleted successfully', username=username), 'success')
     return redirect(url_for('admin.list_users'))
 
 @admin_bp.route('/admin/telemetry')
@@ -311,9 +311,9 @@ def toggle_telemetry():
     app_module.track_event(current_user.id, "admin.telemetry_toggled", {"enabled": new_state})
     
     if new_state:
-        flash('Telemetry has been enabled. Thank you for helping us improve!', 'success')
+        flash(_('Telemetry has been enabled. Thank you for helping us improve!'), 'success')
     else:
-        flash('Telemetry has been disabled.', 'info')
+        flash(_('Telemetry has been disabled.'), 'info')
     
     return redirect(url_for('admin.telemetry_dashboard'))
 
@@ -340,6 +340,15 @@ def settings():
         settings_obj.allow_analytics = installation_config.get_telemetry_preference()
         db.session.commit()
     
+    # Prepare kiosk settings with safe defaults (in case migration hasn't run)
+    kiosk_settings = {
+        'kiosk_mode_enabled': getattr(settings_obj, 'kiosk_mode_enabled', False),
+        'kiosk_auto_logout_minutes': getattr(settings_obj, 'kiosk_auto_logout_minutes', 15),
+        'kiosk_allow_camera_scanning': getattr(settings_obj, 'kiosk_allow_camera_scanning', True),
+        'kiosk_require_reason_for_adjustments': getattr(settings_obj, 'kiosk_require_reason_for_adjustments', False),
+        'kiosk_default_movement_type': getattr(settings_obj, 'kiosk_default_movement_type', 'adjustment')
+    }
+    
     if request.method == 'POST':
         # Validate timezone
         timezone = request.form.get('timezone') or settings_obj.timezone
@@ -347,7 +356,7 @@ def settings():
             import pytz
             pytz.timezone(timezone)  # This will raise an exception if timezone is invalid
         except pytz.exceptions.UnknownTimeZoneError:
-            flash(f'Invalid timezone: {timezone}', 'error')
+            flash(_('Invalid timezone: %(timezone)s', timezone=timezone), 'error')
             return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
         
         # Update basic settings
@@ -376,6 +385,44 @@ def settings():
         settings_obj.invoice_terms = request.form.get('invoice_terms', 'Payment is due within 30 days of invoice date.')
         settings_obj.invoice_notes = request.form.get('invoice_notes', 'Thank you for your business!')
         
+        # Update kiosk mode settings (if columns exist)
+        try:
+            settings_obj.kiosk_mode_enabled = request.form.get('kiosk_mode_enabled') == 'on'
+            settings_obj.kiosk_auto_logout_minutes = int(request.form.get('kiosk_auto_logout_minutes', 15))
+            settings_obj.kiosk_allow_camera_scanning = request.form.get('kiosk_allow_camera_scanning') == 'on'
+            settings_obj.kiosk_require_reason_for_adjustments = request.form.get('kiosk_require_reason_for_adjustments') == 'on'
+            settings_obj.kiosk_default_movement_type = request.form.get('kiosk_default_movement_type', 'adjustment')
+        except AttributeError:
+            # Kiosk columns don't exist yet (migration not run)
+            pass
+        
+        # Update integration OAuth credentials (if columns exist)
+        try:
+            if 'jira_client_id' in request.form:
+                settings_obj.jira_client_id = request.form.get('jira_client_id', '').strip()
+            if 'jira_client_secret' in request.form:
+                new_secret = request.form.get('jira_client_secret', '').strip()
+                # Only update if a new value is provided (don't clear if empty)
+                if new_secret:
+                    settings_obj.jira_client_secret = new_secret
+            
+            if 'slack_client_id' in request.form:
+                settings_obj.slack_client_id = request.form.get('slack_client_id', '').strip()
+            if 'slack_client_secret' in request.form:
+                new_secret = request.form.get('slack_client_secret', '').strip()
+                if new_secret:
+                    settings_obj.slack_client_secret = new_secret
+            
+            if 'github_client_id' in request.form:
+                settings_obj.github_client_id = request.form.get('github_client_id', '').strip()
+            if 'github_client_secret' in request.form:
+                new_secret = request.form.get('github_client_secret', '').strip()
+                if new_secret:
+                    settings_obj.github_client_secret = new_secret
+        except AttributeError:
+            # Integration credential columns don't exist yet (migration not run)
+            pass
+        
         # Update privacy and analytics settings
         allow_analytics = request.form.get('allow_analytics') == 'on'
         old_analytics_state = settings_obj.allow_analytics
@@ -391,12 +438,21 @@ def settings():
             app_module.track_event(current_user.id, "admin.analytics_toggled", {"enabled": allow_analytics})
         
         if not safe_commit('admin_update_settings'):
-            flash('Could not update settings due to a database error. Please check server logs.', 'error')
-            return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
-        flash('Settings updated successfully', 'success')
+            flash(_('Could not update settings due to a database error. Please check server logs.'), 'error')
+            return render_template('admin/settings.html', settings=settings_obj, timezones=timezones, kiosk_settings=kiosk_settings)
+        flash(_('Settings updated successfully'), 'success')
         return redirect(url_for('admin.settings'))
     
-    return render_template('admin/settings.html', settings=settings_obj, timezones=timezones)
+    # Update kiosk_settings after potential POST update
+    kiosk_settings = {
+        'kiosk_mode_enabled': getattr(settings_obj, 'kiosk_mode_enabled', False),
+        'kiosk_auto_logout_minutes': getattr(settings_obj, 'kiosk_auto_logout_minutes', 15),
+        'kiosk_allow_camera_scanning': getattr(settings_obj, 'kiosk_allow_camera_scanning', True),
+        'kiosk_require_reason_for_adjustments': getattr(settings_obj, 'kiosk_require_reason_for_adjustments', False),
+        'kiosk_default_movement_type': getattr(settings_obj, 'kiosk_default_movement_type', 'adjustment')
+    }
+    
+    return render_template('admin/settings.html', settings=settings_obj, timezones=timezones, kiosk_settings=kiosk_settings)
 
 
 @admin_bp.route('/admin/pdf-layout', methods=['GET', 'POST'])
@@ -503,6 +559,109 @@ def pdf_layout_reset():
     else:
         flash(_('PDF layout reset to defaults'), 'success')
     return redirect(url_for('admin.pdf_layout'))
+
+
+@admin_bp.route('/admin/quote-pdf-layout', methods=['GET', 'POST'])
+@limiter.limit("30 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def quote_pdf_layout():
+    """Edit PDF quote layout template (HTML and CSS) by page size."""
+    from app.models import QuotePDFTemplate
+    
+    # Get page size from query parameter or form, default to A4
+    page_size = request.args.get('size', request.form.get('page_size', 'A4'))
+    
+    # Ensure valid page size
+    valid_sizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid']
+    if page_size not in valid_sizes:
+        page_size = 'A4'
+    
+    # Get or create template for this page size
+    template = QuotePDFTemplate.get_template(page_size)
+    
+    if request.method == 'POST':
+        html_template = request.form.get('quote_pdf_template_html', '')
+        css_template = request.form.get('quote_pdf_template_css', '')
+        design_json = request.form.get('design_json', '')
+        
+        # Update template
+        template.template_html = html_template
+        template.template_css = css_template
+        template.design_json = design_json
+        template.updated_at = datetime.utcnow()
+        
+        if not safe_commit('admin_update_quote_pdf_layout'):
+            flash(_('Could not update PDF layout due to a database error.'), 'error')
+        else:
+            flash(_('PDF layout updated successfully'), 'success')
+        return redirect(url_for('admin.quote_pdf_layout', size=page_size))
+    
+    # Get all templates for dropdown
+    all_templates = QuotePDFTemplate.get_all_templates()
+    
+    # Provide initial defaults
+    initial_html = template.template_html or ''
+    initial_css = template.template_css or ''
+    design_json = template.design_json or ''
+    
+    # Load default template if empty
+    try:
+        if not initial_html:
+            env = current_app.jinja_env
+            html_src, _unused1, _unused2 = env.loader.get_source(env, 'quotes/pdf_default.html')
+            try:
+                import re as _re
+                m = _re.search(r'<body[^>]*>([\s\S]*?)</body>', html_src, _re.IGNORECASE)
+                initial_html = (m.group(1).strip() if m else html_src)
+            except Exception:
+                pass
+        if not initial_css:
+            env = current_app.jinja_env
+            css_src, _unused3, _unused4 = env.loader.get_source(env, 'quotes/pdf_styles_default.css')
+            initial_css = css_src
+    except Exception:
+        pass
+    
+    return render_template('admin/quote_pdf_layout.html', 
+                         settings=Settings.get_settings(), 
+                         initial_html=initial_html, 
+                         initial_css=initial_css, 
+                         design_json=design_json,
+                         page_size=page_size,
+                         all_templates=all_templates)
+
+
+@admin_bp.route('/admin/quote-pdf-layout/reset', methods=['POST'])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def quote_pdf_layout_reset():
+    """Reset quote PDF layout to defaults (clear custom templates)."""
+    from app.models import QuotePDFTemplate
+    
+    # Get page size from query parameter or form, default to A4
+    page_size = request.args.get('size', request.form.get('page_size', 'A4'))
+    
+    # Ensure valid page size
+    valid_sizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid']
+    if page_size not in valid_sizes:
+        page_size = 'A4'
+    
+    # Get or create template for this page size
+    template = QuotePDFTemplate.get_template(page_size)
+    
+    # Clear template
+    template.template_html = ''
+    template.template_css = ''
+    template.design_json = ''
+    template.updated_at = datetime.utcnow()
+    
+    if not safe_commit('admin_reset_quote_pdf_layout'):
+        flash(_('Could not reset PDF layout due to a database error.'), 'error')
+    else:
+        flash(_('PDF layout reset to defaults'), 'success')
+    return redirect(url_for('admin.quote_pdf_layout', size=page_size))
 
 
 @admin_bp.route('/admin/pdf-layout/debug', methods=['GET'])
@@ -805,6 +964,227 @@ def pdf_layout_preview():
 </html>"""
     return page_html
 
+@admin_bp.route('/admin/quote-pdf-layout/preview', methods=['POST'])
+@limiter.limit("60 per minute")
+@login_required
+@admin_or_permission_required('manage_settings')
+def quote_pdf_layout_preview():
+    """Render a live preview of the provided HTML/CSS using a quote context."""
+    html = request.form.get('html', '')
+    css = request.form.get('css', '')
+    quote_id = request.form.get('quote_id', type=int)
+    quote = None
+    if quote_id:
+        quote = Quote.query.get(quote_id)
+    if quote is None:
+        quote = Quote.query.order_by(Quote.id.desc()).first()
+    settings_obj = Settings.get_settings()
+    
+    # Provide a minimal mock quote if none exists to avoid template errors
+    from types import SimpleNamespace
+    if quote is None:
+        from datetime import date, datetime
+        quote = SimpleNamespace(
+            id=1,
+            quote_number='Q-0001',
+            title='Sample Quote',
+            description='Sample quote description',
+            status='draft',
+            client_id=1,
+            client=SimpleNamespace(
+                name='Sample Client',
+                email='client@example.com',
+                address='123 Sample Street\nSample City, ST 12345',
+                phone='+1 234 567 8900'
+            ),
+            project_id=None,
+            project=None,
+            items=[],
+            subtotal=0.0,
+            discount_type=None,
+            discount_amount=0.0,
+            discount_reason=None,
+            coupon_code=None,
+            tax_rate=0.0,
+            tax_amount=0.0,
+            total_amount=0.0,
+            currency_code='EUR',
+            valid_until=date.today(),
+            sent_at=None,
+            accepted_at=None,
+            notes='',
+            terms='',
+            payment_terms=None,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            created_by=1,
+        )
+    # Ensure at least one sample item to avoid undefined 'item' in templates that reference it outside loops
+    sample_item = SimpleNamespace(description='Sample item', quantity=1.0, unit_price=0.0, total_amount=0.0)
+    
+    # Create a wrapper object with converted Query objects to lists
+    quote_wrapper = SimpleNamespace()
+    
+    # Copy all simple attributes from the quote
+    for attr in ['id', 'quote_number', 'title', 'description', 'status', 'client_id', 'project_id',
+                 'subtotal', 'discount_type', 'discount_amount', 'discount_reason', 'coupon_code',
+                 'tax_rate', 'tax_amount', 'total_amount', 'currency_code', 'valid_until',
+                 'sent_at', 'accepted_at', 'notes', 'terms', 'payment_terms',
+                 'created_at', 'updated_at', 'created_by']:
+        try:
+            setattr(quote_wrapper, attr, getattr(quote, attr))
+        except AttributeError:
+            pass
+    
+    # Copy relationship attributes (project, client)
+    try:
+        quote_wrapper.project = quote.project
+    except:
+        quote_wrapper.project = None
+    
+    try:
+        quote_wrapper.client = quote.client
+    except:
+        quote_wrapper.client = SimpleNamespace(
+            name='Sample Client',
+            email='client@example.com',
+            address='123 Sample Street\nSample City, ST 12345',
+            phone='+1 234 567 8900'
+        )
+    
+    # Convert items from Query to list
+    try:
+        if hasattr(quote, 'items') and hasattr(quote.items, 'all'):
+            # It's a SQLAlchemy Query object - call .all() to get list
+            items_list = quote.items.all()
+            if not items_list:
+                # No items in database, add sample
+                items_list = [sample_item]
+            quote_wrapper.items = items_list
+        elif hasattr(quote, 'items') and isinstance(quote.items, list):
+            # Already a list
+            quote_wrapper.items = quote.items if quote.items else [sample_item]
+        else:
+            # Fallback
+            quote_wrapper.items = [sample_item]
+    except Exception as e:
+        print(f"Error converting quote items: {e}")
+        quote_wrapper.items = [sample_item]
+    
+    # Use the wrapper instead of the original quote
+    quote = quote_wrapper
+    
+    # Helper: sanitize Jinja blocks to fix entities/smart quotes inserted by editor
+    def _sanitize_jinja_blocks(raw: str) -> str:
+        try:
+            import re as _re
+            import html as _html
+            smart_map = {
+                '\u201c': '"', '\u201d': '"',  # " " -> "
+                '\u2018': "'", '\u2019': "'",  # ' ' -> '
+                '\u00a0': ' ',                   # nbsp
+                '\u200b': '', '\u200c': '', '\u200d': '',  # zero-width
+            }
+            def _fix_quotes(s: str) -> str:
+                for k, v in smart_map.items():
+                    s = s.replace(k, v)
+                return s
+            def _clean(match):
+                open_tag = match.group(1)
+                inner = match.group(2)
+                # Remove any HTML tags GrapesJS may have inserted inside Jinja braces
+                inner = _re.sub(r'</?[^>]+?>', '', inner)
+                # Decode HTML entities
+                inner = _html.unescape(inner)
+                # Fix smart quotes and nbsp
+                inner = _fix_quotes(inner)
+                # Trim excessive whitespace around pipes and parentheses
+                inner = _re.sub(r'\s+\|\s+', ' | ', inner)
+                inner = _re.sub(r'\(\s+', '(', inner)
+                inner = _re.sub(r'\s+\)', ')', inner)
+                # Normalize _("...") -> _('...')
+                inner = inner.replace('_("', "_('").replace('")', "')")
+                return f"{open_tag}{inner}{' }}' if open_tag == '{{ ' else ' %}'}"
+            pattern = _re.compile(r'({{\s|{%\s)([\s\S]*?)(?:}}|%})')
+            return _re.sub(pattern, _clean, raw)
+        except Exception:
+            return raw
+
+    sanitized = _sanitize_jinja_blocks(html)
+
+    # Wrap provided HTML with a minimal page and CSS
+    try:
+        from pathlib import Path as _Path
+        # Provide helpers as callables since templates may use function-style helpers
+        try:
+            from babel.dates import format_date as _babel_format_date
+        except Exception:
+            _babel_format_date = None
+        def _format_date(value, format='medium'):
+            try:
+                if _babel_format_date:
+                    if format == 'full':
+                        return _babel_format_date(value, format='full')
+                    if format == 'long':
+                        return _babel_format_date(value, format='long')
+                    if format == 'short':
+                        return _babel_format_date(value, format='short')
+                    return _babel_format_date(value, format='medium')
+                return value.strftime('%Y-%m-%d')
+            except Exception:
+                return str(value)
+        def _format_money(value):
+            try:
+                return f"{float(value):,.2f} {settings_obj.currency}"
+            except Exception:
+                return f"{value} {settings_obj.currency}"
+        
+        # Helper function for logo - converts to base64 data URI
+        def _get_logo_base64(logo_path):
+            try:
+                if not logo_path or not os.path.exists(logo_path):
+                    return None
+                import base64
+                import mimetypes
+                with open(logo_path, 'rb') as f:
+                    data = base64.b64encode(f.read()).decode('utf-8')
+                mime_type, _ = mimetypes.guess_type(logo_path)
+                if not mime_type:
+                    mime_type = 'image/png'
+                return f'data:{mime_type};base64,{data}'
+            except Exception as e:
+                print(f"Error loading logo: {e}")
+                return None
+        
+        body_html = render_template_string(
+            sanitized,
+            quote=quote,
+            settings=settings_obj,
+            Path=_Path,
+            format_date=_format_date,
+            format_money=_format_money,
+            get_logo_base64=_get_logo_base64,
+            item=sample_item,
+        )
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        body_html = f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>" + sanitized
+    # Build complete HTML page with embedded styles
+    page_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Preview</title>
+    <style>{css}</style>
+</head>
+<body>
+{body_html}
+</body>
+</html>"""
+    return page_html
+
 @admin_bp.route('/admin/upload-logo', methods=['POST'])
 @limiter.limit("10 per minute")
 @login_required
@@ -812,12 +1192,12 @@ def pdf_layout_preview():
 def upload_logo():
     """Upload company logo"""
     if 'logo' not in request.files:
-        flash('No logo file selected', 'error')
+        flash(_('No logo file selected'), 'error')
         return redirect(url_for('admin.settings'))
     
     file = request.files['logo']
     if file.filename == '':
-        flash('No logo file selected', 'error')
+        flash(_('No logo file selected'), 'error')
         return redirect(url_for('admin.settings'))
     
     if file and allowed_logo_file(file.filename):
@@ -833,7 +1213,7 @@ def upload_logo():
             img.verify()
             file.stream.seek(0)
         except Exception:
-            flash('Invalid image file.', 'error')
+            flash(_('Invalid image file.'), 'error')
             return redirect(url_for('admin.settings'))
 
         # Save file
@@ -860,12 +1240,12 @@ def upload_logo():
         
         settings_obj.company_logo_filename = unique_filename
         if not safe_commit('admin_upload_logo'):
-            flash('Could not save logo due to a database error. Please check server logs.', 'error')
+            flash(_('Could not save logo due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('admin.settings'))
         
-        flash('Company logo uploaded successfully! You can see it in the "Current Company Logo" section above. It will appear on invoices and PDF documents.', 'success')
+        flash(_('Company logo uploaded successfully! You can see it in the "Current Company Logo" section above. It will appear on invoices and PDF documents.'), 'success')
     else:
-        flash('Invalid file type. Allowed types: PNG, JPG, JPEG, GIF, SVG, WEBP', 'error')
+        flash(_('Invalid file type. Allowed types: PNG, JPG, JPEG, GIF, SVG, WEBP'), 'error')
     
     return redirect(url_for('admin.settings'))
 
@@ -888,11 +1268,11 @@ def remove_logo():
         # Clear filename from database
         settings_obj.company_logo_filename = ''
         if not safe_commit('admin_remove_logo'):
-            flash('Could not remove logo due to a database error. Please check server logs.', 'error')
+            flash(_('Could not remove logo due to a database error. Please check server logs.'), 'error')
             return redirect(url_for('admin.settings'))
-        flash('Company logo removed successfully. Upload a new logo in the section below if needed.', 'success')
+        flash(_('Company logo removed successfully. Upload a new logo in the section below if needed.'), 'success')
     else:
-        flash('No logo to remove', 'info')
+        flash(_('No logo to remove'), 'info')
     
     return redirect(url_for('admin.settings'))
 
@@ -951,12 +1331,12 @@ def create_backup_manual():
     try:
         archive_path = create_backup(current_app)
         if not archive_path or not os.path.exists(archive_path):
-            flash('Backup failed: archive not created', 'error')
+            flash(_('Backup failed: archive not created'), 'error')
             return redirect(url_for('admin.backups_management'))
         # Stream file to user
         return send_file(archive_path, as_attachment=True)
     except Exception as e:
-        flash(f'Backup failed: {e}', 'error')
+        flash(_('Backup failed: %(error)s', error=str(e)), 'error')
         return redirect(url_for('admin.backups_management'))
 
 
@@ -968,14 +1348,14 @@ def download_backup(filename):
     # Security: only allow downloading .zip files, no path traversal
     filename = secure_filename(filename)
     if not filename.endswith('.zip'):
-        flash('Invalid file type', 'error')
+        flash(_('Invalid file type'), 'error')
         return redirect(url_for('admin.backups_management'))
     
     backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..')), 'backups')
     filepath = os.path.join(backups_dir, filename)
     
     if not os.path.exists(filepath):
-        flash('Backup file not found', 'error')
+        flash(_('Backup file not found'), 'error')
         return redirect(url_for('admin.backups_management'))
     
     return send_file(filepath, as_attachment=True)
@@ -989,7 +1369,7 @@ def delete_backup(filename):
     # Security: only allow deleting .zip files, no path traversal
     filename = secure_filename(filename)
     if not filename.endswith('.zip'):
-        flash('Invalid file type', 'error')
+        flash(_('Invalid file type'), 'error')
         return redirect(url_for('admin.backups_management'))
     
     backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..')), 'backups')
@@ -998,11 +1378,11 @@ def delete_backup(filename):
     try:
         if os.path.exists(filepath):
             os.remove(filepath)
-            flash(f'Backup "{filename}" deleted successfully', 'success')
+            flash(_('Backup "%(filename)s" deleted successfully', filename=filename), 'success')
         else:
-            flash('Backup file not found', 'error')
+            flash(_('Backup file not found'), 'error')
     except Exception as e:
-        flash(f'Failed to delete backup: {e}', 'error')
+        flash(_('Failed to delete backup: %(error)s', error=str(e)), 'error')
     
     return redirect(url_for('admin.backups_management'))
 
@@ -1020,11 +1400,11 @@ def restore(filename=None):
         if filename:
             filename = secure_filename(filename)
             if not filename.lower().endswith('.zip'):
-                flash('Invalid file type. Please select a .zip backup archive.', 'error')
+                flash(_('Invalid file type. Please select a .zip backup archive.'), 'error')
                 return redirect(url_for('admin.backups_management'))
             temp_path = os.path.join(backups_dir, filename)
             if not os.path.exists(temp_path):
-                flash('Backup file not found.', 'error')
+                flash(_('Backup file not found.'), 'error')
                 return redirect(url_for('admin.backups_management'))
             # Copy to temp location for processing
             actual_restore_path = os.path.join(backups_dir, f"restore_{uuid.uuid4().hex[:8]}_{filename}")
@@ -1035,14 +1415,14 @@ def restore(filename=None):
             file = request.files['backup_file']
             uploaded_filename = secure_filename(file.filename)
             if not uploaded_filename.lower().endswith('.zip'):
-                flash('Invalid file type. Please upload a .zip backup archive.', 'error')
+                flash(_('Invalid file type. Please upload a .zip backup archive.'), 'error')
                 return redirect(url_for('admin.restore'))
             # Save temporarily under project backups
             os.makedirs(backups_dir, exist_ok=True)
             temp_path = os.path.join(backups_dir, f"restore_{uuid.uuid4().hex[:8]}_{uploaded_filename}")
             file.save(temp_path)
         else:
-            flash('No backup file provided', 'error')
+            flash(_('No backup file provided'), 'error')
             return redirect(url_for('admin.restore'))
 
         # Initialize progress state
@@ -1076,7 +1456,7 @@ def restore(filename=None):
         t = threading.Thread(target=_do_restore, daemon=True)
         t.start()
 
-        flash('Restore started. You can monitor progress on this page.', 'info')
+        flash(_('Restore started. You can monitor progress on this page.'), 'info')
         return redirect(url_for('admin.restore', token=token))
     # GET
     token = request.args.get('token')
@@ -1195,12 +1575,12 @@ def oidc_test():
     
     auth_method = (getattr(Config, 'AUTH_METHOD', 'local') or 'local').strip().lower()
     if auth_method not in ('oidc', 'both'):
-        flash('OIDC is not enabled. Set AUTH_METHOD to "oidc" or "both".', 'warning')
+        flash(_('OIDC is not enabled. Set AUTH_METHOD to "oidc" or "both".'), 'warning')
         return redirect(url_for('admin.oidc_debug'))
     
     issuer = getattr(Config, 'OIDC_ISSUER', None)
     if not issuer:
-        flash('OIDC_ISSUER is not configured', 'error')
+        flash(_('OIDC_ISSUER is not configured'), 'error')
         return redirect(url_for('admin.oidc_debug'))
     
     # Test 1: Check if discovery document is accessible
@@ -1210,18 +1590,18 @@ def oidc_test():
         response = requests.get(well_known_url, timeout=10)
         response.raise_for_status()
         discovery_doc = response.json()
-        flash(f'✓ Discovery document fetched successfully from {well_known_url}', 'success')
+        flash(_('✓ Discovery document fetched successfully from %(url)s', url=well_known_url), 'success')
         current_app.logger.info("OIDC Test: Discovery document retrieved, issuer=%s", discovery_doc.get('issuer'))
     except requests.exceptions.Timeout:
-        flash(f'✗ Timeout fetching discovery document from {well_known_url}', 'error')
+        flash(_('✗ Timeout fetching discovery document from %(url)s', url=well_known_url), 'error')
         current_app.logger.error("OIDC Test: Timeout fetching discovery document")
         return redirect(url_for('admin.oidc_debug'))
     except requests.exceptions.RequestException as e:
-        flash(f'✗ Failed to fetch discovery document: {str(e)}', 'error')
+        flash(_('✗ Failed to fetch discovery document: %(error)s', error=str(e)), 'error')
         current_app.logger.error("OIDC Test: Failed to fetch discovery document: %s", str(e))
         return redirect(url_for('admin.oidc_debug'))
     except Exception as e:
-        flash(f'✗ Unexpected error: {str(e)}', 'error')
+        flash(_('✗ Unexpected error: %(error)s', error=str(e)), 'error')
         current_app.logger.error("OIDC Test: Unexpected error: %s", str(e))
         return redirect(url_for('admin.oidc_debug'))
     
@@ -1229,36 +1609,36 @@ def oidc_test():
     try:
         client = oauth.create_client('oidc')
         if client:
-            flash('✓ OAuth client is registered in application', 'success')
+            flash(_('✓ OAuth client is registered in application'), 'success')
             current_app.logger.info("OIDC Test: OAuth client registered")
         else:
-            flash('✗ OAuth client is not registered', 'error')
+            flash(_('✗ OAuth client is not registered'), 'error')
             current_app.logger.error("OIDC Test: OAuth client not registered")
     except Exception as e:
-        flash(f'✗ Failed to create OAuth client: {str(e)}', 'error')
+        flash(_('✗ Failed to create OAuth client: %(error)s', error=str(e)), 'error')
         current_app.logger.error("OIDC Test: Failed to create OAuth client: %s", str(e))
     
     # Test 3: Verify required endpoints are present
     required_endpoints = ['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']
     for endpoint in required_endpoints:
         if endpoint in discovery_doc:
-            flash(f'✓ {endpoint}: {discovery_doc[endpoint]}', 'info')
+            flash(_('✓ %(endpoint)s: %(url)s', endpoint=endpoint, url=discovery_doc[endpoint]), 'info')
         else:
-            flash(f'✗ Missing {endpoint} in discovery document', 'warning')
+            flash(_('✗ Missing %(endpoint)s in discovery document', endpoint=endpoint), 'warning')
     
     # Test 4: Check supported scopes
     supported_scopes = discovery_doc.get('scopes_supported', [])
     requested_scopes = getattr(Config, 'OIDC_SCOPES', 'openid profile email').split()
     for scope in requested_scopes:
         if scope in supported_scopes:
-            flash(f'✓ Scope "{scope}" is supported by provider', 'info')
+            flash(_('✓ Scope "%(scope)s" is supported by provider', scope=scope), 'info')
         else:
-            flash(f'⚠ Scope "{scope}" may not be supported by provider (supported: {", ".join(supported_scopes)})', 'warning')
+            flash(_('⚠ Scope "%(scope)s" may not be supported by provider (supported: %(supported)s)', scope=scope, supported=', '.join(supported_scopes)), 'warning')
     
     # Test 5: Check claims
     supported_claims = discovery_doc.get('claims_supported', [])
     if supported_claims:
-        flash(f'ℹ Provider supports claims: {", ".join(supported_claims)}', 'info')
+        flash(_('ℹ Provider supports claims: %(claims)s', claims=', '.join(supported_claims)), 'info')
         
         # Check if configured claims are supported
         claim_checks = {
@@ -1270,11 +1650,11 @@ def oidc_test():
         
         for claim_type, claim_name in claim_checks.items():
             if claim_name in supported_claims:
-                flash(f'✓ Configured {claim_type} claim "{claim_name}" is supported', 'info')
+                flash(_('✓ Configured %(claim_type)s claim "%(claim_name)s" is supported', claim_type=claim_type, claim_name=claim_name), 'info')
             else:
-                flash(f'⚠ Configured {claim_type} claim "{claim_name}" not in supported claims list (may still work)', 'warning')
+                flash(_('⚠ Configured %(claim_type)s claim "%(claim_name)s" not in supported claims list (may still work)', claim_type=claim_type, claim_name=claim_name), 'warning')
     
-    flash('OIDC configuration test completed', 'info')
+    flash(_('OIDC configuration test completed'), 'info')
     return redirect(url_for('admin.oidc_debug'))
 
 

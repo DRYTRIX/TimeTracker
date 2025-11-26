@@ -1,12 +1,14 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db
-from app.models import CalendarEvent, Task, Project, Client, TimeEntry
+from app.models import CalendarEvent, Task, Project, Client, TimeEntry, CalendarIntegration
+from app.services.calendar_integration_service import CalendarIntegrationService
 from datetime import datetime, timedelta
 from app.utils.db import safe_commit
 from app.utils.timezone import now_in_app_timezone
 from app.utils.permissions import check_permission
+import os
 
 calendar_bp = Blueprint('calendar', __name__)
 
@@ -425,4 +427,38 @@ def edit_event(event_id):
         tasks=tasks,
         edit_mode=True
     )
+
+
+@calendar_bp.route('/calendar/integrations')
+@login_required
+def list_integrations():
+    """List calendar integrations"""
+    service = CalendarIntegrationService()
+    integrations = service.get_user_integrations(current_user.id)
+    return render_template('calendar/integrations.html', integrations=integrations)
+
+
+@calendar_bp.route('/calendar/integrations/google/connect')
+@login_required
+def connect_google():
+    """Connect Google Calendar"""
+    # This would initiate OAuth flow
+    # For now, return a placeholder
+    flash(_('Google Calendar integration coming soon.'), 'info')
+    return redirect(url_for('calendar.list_integrations'))
+
+
+@calendar_bp.route('/calendar/integrations/<int:integration_id>/disconnect', methods=['POST'])
+@login_required
+def disconnect_integration(integration_id):
+    """Disconnect a calendar integration"""
+    service = CalendarIntegrationService()
+    result = service.deactivate_integration(integration_id, current_user.id)
+    
+    if result['success']:
+        flash(_('Calendar integration disconnected successfully.'), 'success')
+    else:
+        flash(result['message'], 'error')
+    
+    return redirect(url_for('calendar.list_integrations'))
 

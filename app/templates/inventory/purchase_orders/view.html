@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Purchase Orders', 'url': url_for('inventory.list_purchase_orders')},
+    {'text': purchase_order.po_number}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-shopping-cart',
+    title_text=purchase_order.po_number,
+    subtitle_text=purchase_order.supplier.name,
+    breadcrumbs=breadcrumbs,
+    actions_html=('<a href="' + url_for("inventory.list_purchase_orders") + '" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors mr-2"><i class="fas fa-arrow-left mr-2"></i>Back</a>' +
+                  ('<a href="' + url_for("inventory.edit_purchase_order", po_id=purchase_order.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors mr-2"><i class="fas fa-edit mr-2"></i>Edit</a>' if (purchase_order.status != 'received' and purchase_order.status != 'cancelled' and (current_user.is_admin or has_permission('manage_inventory'))) else '') +
+                  ('<form method="POST" action="' + url_for("inventory.send_purchase_order", po_id=purchase_order.id) + '" class="inline-block mr-2"><input type="hidden" name="csrf_token" value="' + csrf_token() + '"><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-paper-plane mr-2"></i>Send</button></form>' if (purchase_order.status == 'draft' and (current_user.is_admin or has_permission('manage_inventory'))) else '') +
+                  ('<form method="POST" action="' + url_for("inventory.cancel_purchase_order", po_id=purchase_order.id) + '" class="inline-block mr-2"><input type="hidden" name="csrf_token" value="' + csrf_token() + '"><button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors" onclick="return confirm(\'' + _('Are you sure you want to cancel this purchase order?') + '\')"><i class="fas fa-times mr-2"></i>Cancel</button></form>' if (purchase_order.status not in ['received', 'cancelled'] and (current_user.is_admin or has_permission('manage_inventory'))) else '') +
+                  ('<form method="POST" action="' + url_for("inventory.delete_purchase_order", po_id=purchase_order.id) + '" class="inline-block"><input type="hidden" name="csrf_token" value="' + csrf_token() + '"><button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors" onclick="return confirm(\'' + _('Are you sure you want to delete this purchase order?') + '\')"><i class="fas fa-trash mr-2"></i>Delete</button></form>' if (purchase_order.status not in ['received', 'cancelled'] and (current_user.is_admin or has_permission('manage_inventory'))) else '')) if (current_user.is_admin or has_permission('view_inventory')) else None
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Purchase Order Details -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Purchase Order Details') }}</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('PO Number') }}</label>
+                    <p class="mt-1 font-mono font-semibold">{{ purchase_order.po_number }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Status') }}</label>
+                    <p class="mt-1">
+                        {% if purchase_order.status == 'draft' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Draft') }}</span>
+                        {% elif purchase_order.status == 'sent' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Sent') }}</span>
+                        {% elif purchase_order.status == 'confirmed' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">{{ _('Confirmed') }}</span>
+                        {% elif purchase_order.status == 'received' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Received') }}</span>
+                        {% elif purchase_order.status == 'cancelled' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Cancelled') }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Supplier') }}</label>
+                    <p class="mt-1">
+                        <a href="{{ url_for('inventory.view_supplier', supplier_id=purchase_order.supplier_id) }}" class="text-primary hover:underline">
+                            {{ purchase_order.supplier.name }}
+                        </a>
+                    </p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Order Date') }}</label>
+                    <p class="mt-1">{{ purchase_order.order_date.strftime('%Y-%m-%d') if purchase_order.order_date else '—' }}</p>
+                </div>
+                {% if purchase_order.expected_delivery_date %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Expected Delivery') }}</label>
+                    <p class="mt-1">{{ purchase_order.expected_delivery_date.strftime('%Y-%m-%d') }}</p>
+                </div>
+                {% endif %}
+                {% if purchase_order.received_date %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Received Date') }}</label>
+                    <p class="mt-1">{{ purchase_order.received_date.strftime('%Y-%m-%d') }}</p>
+                </div>
+                {% endif %}
+                {% if purchase_order.notes %}
+                <div class="col-span-2">
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Notes') }}</label>
+                    <p class="mt-1">{{ purchase_order.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Items -->
+        {% if purchase_order.items.count() > 0 %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Items') }}</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full text-left">
+                    <thead>
+                        <tr>
+                            <th class="p-4">{{ _('Item') }}</th>
+                            <th class="p-4">{{ _('Description') }}</th>
+                            <th class="p-4">{{ _('Quantity Ordered') }}</th>
+                            <th class="p-4">{{ _('Quantity Received') }}</th>
+                            <th class="p-4">{{ _('Unit Cost') }}</th>
+                            <th class="p-4">{{ _('Line Total') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in purchase_order.items %}
+                        <tr>
+                            <td class="p-4">
+                                {% if item.stock_item %}
+                                    <a href="{{ url_for('inventory.view_stock_item', item_id=item.stock_item_id) }}" class="text-primary hover:underline">
+                                        {{ item.stock_item.sku }}
+                                    </a>
+                                {% else %}
+                                    {{ item.supplier_sku or '—' }}
+                                {% endif %}
+                            </td>
+                            <td class="p-4">{{ item.description }}</td>
+                            <td class="p-4">{{ item.quantity_ordered }}</td>
+                            <td class="p-4 {% if item.quantity_received < item.quantity_ordered %}text-amber-600{% else %}text-green-600{% endif %}">
+                                {{ item.quantity_received }}
+                            </td>
+                            <td class="p-4">{{ "%.2f"|format(item.unit_cost) }} {{ item.currency_code }}</td>
+                            <td class="p-4 font-medium">{{ "%.2f"|format(item.line_total) }} {{ item.currency_code }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="5" class="p-4 text-right">{{ _('Subtotal') }}:</td>
+                            <td class="p-4">{{ "%.2f"|format(purchase_order.subtotal) }} {{ purchase_order.currency_code }}</td>
+                        </tr>
+                        {% if purchase_order.shipping_cost > 0 %}
+                        <tr>
+                            <td colspan="5" class="p-4 text-right">{{ _('Shipping') }}:</td>
+                            <td class="p-4">{{ "%.2f"|format(purchase_order.shipping_cost) }} {{ purchase_order.currency_code }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if purchase_order.tax_amount > 0 %}
+                        <tr>
+                            <td colspan="5" class="p-4 text-right">{{ _('Tax') }}:</td>
+                            <td class="p-4">{{ "%.2f"|format(purchase_order.tax_amount) }} {{ purchase_order.currency_code }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr class="font-bold text-lg">
+                            <td colspan="5" class="p-4 text-right">{{ _('Total') }}:</td>
+                            <td class="p-4">{{ "%.2f"|format(purchase_order.total_amount) }} {{ purchase_order.currency_code }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Receive Purchase Order Form -->
+        {% if purchase_order.status != 'received' and purchase_order.status != 'cancelled' %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Receive Purchase Order') }}</h2>
+            <form method="POST" action="{{ url_for('inventory.receive_purchase_order', po_id=purchase_order.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-4">
+                    <label for="received_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Received Date') }}</label>
+                    <input type="date" name="received_date" id="received_date" value="{{ datetime.now().strftime('%Y-%m-%d') }}" class="form-input">
+                </div>
+                <div class="space-y-2 mb-4">
+                    {% for item in purchase_order.items %}
+                    <div class="flex items-center gap-4 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                        <span class="flex-1 text-sm">{{ item.description }}</span>
+                        <span class="text-sm text-gray-500">Ordered: {{ item.quantity_ordered }}</span>
+                        <input type="hidden" name="item_id[]" value="{{ item.id }}">
+                        <input type="number" name="quantity_received[]" value="{{ item.quantity_received or item.quantity_ordered }}" step="0.01" min="0" max="{{ item.quantity_ordered }}" class="w-24 form-input text-sm" placeholder="{{ _('Received') }}">
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>{{ _('Mark as Received') }}
+                </button>
+            </form>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <p class="text-gray-500 text-center">{{ _('No items in this purchase order.') }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <!-- Summary -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Items') }}</label>
+                    <p class="text-2xl font-bold mt-1">{{ purchase_order.items.count() }}</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Amount') }}</label>
+                    <p class="text-2xl font-bold text-primary mt-1">
+                        {{ "%.2f"|format(purchase_order.total_amount) }} {{ purchase_order.currency_code }}
+                    </p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Created') }}</label>
+                    <p class="text-sm mt-1">{{ purchase_order.created_at.strftime('%Y-%m-%d %H:%M') if purchase_order.created_at else '—' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

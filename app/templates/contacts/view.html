@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ contact.full_name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Clients', 'url': url_for('clients.list_clients')},
+    {'text': contact.client.name, 'url': url_for('clients.view_client', client_id=contact.client_id)},
+    {'text': 'Contacts', 'url': url_for('contacts.list_contacts', client_id=contact.client_id)},
+    {'text': contact.full_name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-user',
+    title_text=contact.full_name,
+    subtitle_text=contact.title or 'Contact',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("contacts.edit_contact", contact_id=contact.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>Edit</a>'
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Contact Information') }}</h2>
+            <div class="space-y-4">
+                {% if contact.is_primary %}
+                <div class="px-3 py-1 bg-primary/10 text-primary rounded text-sm inline-block mb-2">
+                    {{ _('Primary Contact') }}
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Email') }}</h3>
+                    <p>{% if contact.email %}<a href="mailto:{{ contact.email }}" class="text-primary hover:underline">{{ contact.email }}</a>{% else %}N/A{% endif %}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Phone') }}</h3>
+                    <p>{{ contact.phone or 'N/A' }}</p>
+                </div>
+                {% if contact.mobile %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Mobile') }}</h3>
+                    <p>{{ contact.mobile }}</p>
+                </div>
+                {% endif %}
+                {% if contact.title %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Title') }}</h3>
+                    <p>{{ contact.title }}</p>
+                </div>
+                {% endif %}
+                {% if contact.department %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Department') }}</h3>
+                    <p>{{ contact.department }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Role') }}</h3>
+                    <p>{{ contact.role|title }}</p>
+                </div>
+                {% if contact.address %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Address') }}</h3>
+                    <p class="whitespace-pre-line">{{ contact.address }}</p>
+                </div>
+                {% endif %}
+                {% if contact.notes %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Notes') }}</h3>
+                    <p class="whitespace-pre-line">{{ contact.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">{{ _('Communication History') }}</h2>
+                <a href="{{ url_for('contacts.create_communication', contact_id=contact.id) }}" class="bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors text-sm">
+                    <i class="fas fa-plus mr-1"></i>{{ _('Add Communication') }}
+                </a>
+            </div>
+            {% if communications %}
+            <div class="space-y-4">
+                {% for comm in communications %}
+                <div class="border-l-4 border-primary pl-4 py-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-medium">{{ comm.subject or comm.type|title }}</h3>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ comm.communication_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                            {% if comm.content %}
+                            <p class="mt-2 text-sm">{{ comm.content }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded">{{ comm.type|title }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No communications recorded') }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

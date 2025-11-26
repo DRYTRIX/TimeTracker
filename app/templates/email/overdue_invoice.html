@@ -62,7 +62,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>⚠️ Invoice Overdue</h1>
+        <h1>⚠️ {{ _('Invoice Overdue') }}</h1>
     </div>
     
     <div class="content">
@@ -103,7 +103,7 @@
         
         <center>
             <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id, _external=True) }}" class="button">
-                View Invoice
+                {{ _('View Invoice') }}
             </a>
         </center>
     </div>

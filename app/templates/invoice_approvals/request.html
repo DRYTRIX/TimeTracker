@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Request Invoice Approval') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Request Invoice Approval') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Invoice') }} #{{ invoice.invoice_number }}</p>
+    </div>
+    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Invoice') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('invoice_approvals.request_approval', invoice_id=invoice.id) }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Select Approvers') }}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Select one or more users who need to approve this invoice. Approvals will be processed in order.') }}</p>
+            
+            <div class="space-y-2 max-h-64 overflow-y-auto border border-border-light dark:border-border-dark rounded-lg p-4">
+                {% for user in users %}
+                <label class="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer">
+                    <input type="checkbox" name="approver_ids" value="{{ user.id }}" class="rounded border-gray-300 text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <div>
+                        <div class="font-medium">{{ user.username }}</div>
+                        {% if user.full_name %}
+                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ user.full_name }}</div>
+                        {% endif %}
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Request Approval') }}</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const checked = document.querySelectorAll('input[name="approver_ids"]:checked');
+    if (checked.length === 0) {
+        e.preventDefault();
+        alert('{{ _("Please select at least one approver.") }}');
+        return false;
+    }
+    
+    // Convert to JSON array
+    const approvers = Array.from(checked).map(cb => parseInt(cb.value));
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'approvers';
+    input.value = JSON.stringify(approvers);
+    this.appendChild(input);
+});
+</script>
+{% endblock %}
+

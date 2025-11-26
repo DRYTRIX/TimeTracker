@@ -73,6 +73,20 @@ DEFAULT_PERMISSIONS = [
     {'name': 'manage_roles', 'description': 'Create, edit, and delete roles', 'category': 'administration'},
     {'name': 'manage_permissions', 'description': 'Assign permissions to roles', 'category': 'administration'},
     {'name': 'view_permissions', 'description': 'View permissions and roles', 'category': 'administration'},
+    
+    # Inventory Management Permissions
+    {'name': 'view_inventory', 'description': 'View inventory items and stock levels', 'category': 'inventory'},
+    {'name': 'manage_stock_items', 'description': 'Create, edit, and delete stock items', 'category': 'inventory'},
+    {'name': 'manage_warehouses', 'description': 'Create, edit, and delete warehouses', 'category': 'inventory'},
+    {'name': 'view_stock_levels', 'description': 'View current stock levels', 'category': 'inventory'},
+    {'name': 'manage_stock_movements', 'description': 'Record stock movements and adjustments', 'category': 'inventory'},
+    {'name': 'transfer_stock', 'description': 'Transfer stock between warehouses', 'category': 'inventory'},
+    {'name': 'view_stock_history', 'description': 'View stock movement history', 'category': 'inventory'},
+    {'name': 'manage_stock_reservations', 'description': 'Create and manage stock reservations', 'category': 'inventory'},
+    {'name': 'view_inventory_reports', 'description': 'View inventory reports', 'category': 'inventory'},
+    {'name': 'approve_stock_adjustments', 'description': 'Approve stock adjustments (if approval workflow enabled)', 'category': 'inventory'},
+    {'name': 'manage_suppliers', 'description': 'Create, edit, and delete suppliers', 'category': 'inventory'},
+    {'name': 'manage_purchase_orders', 'description': 'Create, edit, and manage purchase orders', 'category': 'inventory'},
 ]
 
 
@@ -103,6 +117,10 @@ DEFAULT_ROLES = {
             'view_users', 'create_users', 'edit_users', 'delete_users',
             # System
             'manage_settings', 'view_system_info', 'manage_backups', 'manage_telemetry', 'view_audit_logs',
+            # Inventory
+            'view_inventory', 'manage_stock_items', 'manage_warehouses', 'view_stock_levels', 'manage_stock_movements',
+            'transfer_stock', 'view_stock_history', 'manage_stock_reservations', 'view_inventory_reports', 'approve_stock_adjustments',
+            'manage_suppliers', 'manage_purchase_orders',
         ]
     },
     'manager': {
@@ -123,6 +141,9 @@ DEFAULT_ROLES = {
             'view_all_reports', 'export_reports', 'create_saved_reports',
             # Users
             'view_users',
+            # Inventory
+            'view_inventory', 'view_stock_levels', 'manage_stock_movements', 'transfer_stock',
+            'view_stock_history', 'manage_stock_reservations', 'view_inventory_reports',
         ]
     },
     'user': {
@@ -141,6 +162,8 @@ DEFAULT_ROLES = {
             'view_own_invoices',
             # Reports
             'view_own_reports', 'export_reports',
+            # Inventory
+            'view_inventory', 'view_stock_levels',
         ]
     },
     'viewer': {
@@ -153,6 +176,8 @@ DEFAULT_ROLES = {
             'view_clients',
             'view_own_invoices',
             'view_own_reports',
+            # Inventory
+            'view_inventory', 'view_stock_levels',
         ]
     }
 }

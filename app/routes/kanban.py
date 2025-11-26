@@ -81,7 +81,7 @@ def create_column():
         
         # Validate required fields
         if not key or not label:
-            flash('Key and label are required', 'error')
+            flash(_('Key and label are required'), 'error')
             from app.models import Project
             projects = Project.query.filter_by(status='active').order_by(Project.name).all()
             return render_template('kanban/create_column.html', projects=projects, project_id=project_id)
@@ -131,7 +131,7 @@ def create_column():
         
         # Now commit the transaction
         if not safe_commit('create_kanban_column', {'key': key, 'project_id': project_id}):
-            flash('Could not create column due to a database error. Please check server logs.', 'error')
+            flash(_('Could not create column due to a database error. Please check server logs.'), 'error')
             from app.models import Project
             projects = Project.query.filter_by(status='active').order_by(Project.name).all()
             return render_template('kanban/create_column.html', projects=projects, project_id=project_id)
@@ -174,7 +174,7 @@ def edit_column(column_id):
         
         # Validate required fields
         if not label:
-            flash('Label is required', 'error')
+            flash(_('Label is required'), 'error')
             return render_template('kanban/edit_column.html', column=column)
         
         # Update column
@@ -195,7 +195,7 @@ def edit_column(column_id):
         
         # Now commit the transaction
         if not safe_commit('edit_kanban_column', {'column_id': column_id}):
-            flash('Could not update column due to a database error. Please check server logs.', 'error')
+            flash(_('Could not update column due to a database error. Please check server logs.'), 'error')
             return render_template('kanban/edit_column.html', column=column)
         
         print(f"[KANBAN] Column {column_id} updated and committed to database successfully")
@@ -227,7 +227,7 @@ def delete_column(column_id):
     
     # Check if system column
     if column.is_system:
-        flash('System columns cannot be deleted', 'error')
+        flash(_('System columns cannot be deleted'), 'error')
         redirect_url = url_for('kanban.list_columns')
         if column.project_id:
             redirect_url = url_for('kanban.list_columns', project_id=column.project_id)
@@ -263,7 +263,7 @@ def delete_column(column_id):
     
     # Now commit the transaction
     if not safe_commit('delete_kanban_column', {'column_id': column_id}):
-        flash('Could not delete column due to a database error. Please check server logs.', 'error')
+        flash(_('Could not delete column due to a database error. Please check server logs.'), 'error')
         redirect_url = url_for('kanban.list_columns')
         if project_id:
             redirect_url = url_for('kanban.list_columns', project_id=project_id)
@@ -307,7 +307,7 @@ def toggle_column(column_id):
     
     # Now commit the transaction
     if not safe_commit('toggle_kanban_column', {'column_id': column_id}):
-        flash('Could not toggle column due to a database error. Please check server logs.', 'error')
+        flash(_('Could not toggle column due to a database error. Please check server logs.'), 'error')
         return redirect(url_for('kanban.list_columns'))
     
     print(f"[KANBAN] Column {column_id} toggled and committed to database successfully")
