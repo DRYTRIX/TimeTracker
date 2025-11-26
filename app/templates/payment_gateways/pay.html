@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Pay Invoice') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <h1 class="text-2xl font-bold mb-4">{{ _('Pay Invoice') }}</h1>
+        <div class="space-y-2 mb-6">
+            <div class="flex justify-between">
+                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Invoice Number') }}:</span>
+                <span class="font-medium">#{{ invoice.invoice_number }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Amount Due') }}:</span>
+                <span class="font-bold text-lg">{{ invoice.currency_code }} {{ "%.2f"|format(invoice.total_amount) }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Due Date') }}:</span>
+                <span>{{ invoice.due_date.strftime('%Y-%m-%d') }}</span>
+            </div>
+        </div>
+    </div>
+    
+    {% if gateway.provider == 'stripe' %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <form method="POST" action="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                {{ _('You will be redirected to a secure payment page to complete your payment.') }}
+            </p>
+            
+            <div class="flex justify-end gap-4">
+                <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-credit-card mr-2"></i>{{ _('Continue to Payment') }}
+                </button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            {{ _('Payment gateway not yet supported. Please contact support.') }}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

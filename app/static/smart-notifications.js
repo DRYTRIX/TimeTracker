@@ -44,7 +44,7 @@ class SmartNotificationManager {
                     this.showNotification({
                         title: 'Notifications Enabled',
                         body: 'You will now receive notifications for important events',
-                        icon: '/static/images/drytrix-logo.svg',
+                        icon: '/static/images/timetracker-logo.svg',
                         type: 'success'
                     });
                 }
@@ -135,8 +135,8 @@ class SmartNotificationManager {
 
         const options = {
             body: notification.message,
-            icon: '/static/images/drytrix-logo.svg',
-            badge: '/static/images/drytrix-logo.svg',
+            icon: '/static/images/timetracker-logo.svg',
+            badge: '/static/images/timetracker-logo.svg',
             tag: notification.group || notification.id,
             requireInteraction: notification.priority === 'high',
             silent: !this.preferences.sound

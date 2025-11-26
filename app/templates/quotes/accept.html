@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Accept Quote') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Accept Quote') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ quote.quote_number }}</p>
+    </div>
+    <a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Quote') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Quote Details') }}</h2>
+    <dl class="grid grid-cols-2 gap-4">
+        <div>
+            <dt class="font-medium text-gray-700 dark:text-gray-300">{{ _('Title') }}</dt>
+            <dd class="text-gray-600 dark:text-gray-400">{{ quote.title }}</dd>
+        </div>
+        <div>
+            <dt class="font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</dt>
+            <dd class="text-gray-600 dark:text-gray-400">{{ quote.client.name }}</dd>
+        </div>
+        {% if quote.total_amount %}
+        <div>
+            <dt class="font-medium text-gray-700 dark:text-gray-300">{{ _('Total Amount') }}</dt>
+            <dd class="text-gray-600 dark:text-gray-400">{{ "%.2f"|format(quote.total_amount) }} {{ quote.currency_code }}</dd>
+        </div>
+        {% endif %}
+        {% if quote.hourly_rate %}
+        <div>
+            <dt class="font-medium text-gray-700 dark:text-gray-300">{{ _('Hourly Rate') }}</dt>
+            <dd class="text-gray-600 dark:text-gray-400">{{ "%.2f"|format(quote.hourly_rate) }} {{ quote.currency_code }}</dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Create Project') }}</h2>
+    <p class="text-gray-600 dark:text-gray-400 mb-4">{{ _('Accepting this quote will create a new project with the budget from the quote.') }}</p>
+    
+    <form method="POST" action="{{ url_for('quotes.accept_quote', quote_id=quote.id) }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="mb-4">
+            <label for="project_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project Name') }} *</label>
+            <input type="text" id="project_name" name="project_name" required value="{{ quote.title }}" placeholder="{{ _('Project name') }}" class="form-input">
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The project will be created with the budget from the quote') }}</p>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+            <a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">{{ _('Accept Quote & Create Project') }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

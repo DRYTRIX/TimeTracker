@@ -15,6 +15,7 @@ class Invoice(db.Model):
     client_address = db.Column(db.Text, nullable=True)
     # Link to clients table (enforced by DB schema)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False, index=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id'), nullable=True, index=True)
     
     # Invoice details
     issue_date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
@@ -50,6 +51,7 @@ class Invoice(db.Model):
     # Relationships
     project = db.relationship('Project', backref='invoices')
     client = db.relationship('Client', backref='invoices')
+    quote = db.relationship('Quote', backref='invoices')
     creator = db.relationship('User', backref='created_invoices')
     items = db.relationship('InvoiceItem', backref='invoice', lazy='dynamic', cascade='all, delete-orphan')
     payments = db.relationship('Payment', backref='invoice', lazy='dynamic', cascade='all, delete-orphan')
@@ -65,6 +67,7 @@ class Invoice(db.Model):
         self.due_date = due_date
         self.created_by = created_by
         self.client_id = client_id
+        self.quote_id = kwargs.get('quote_id')
         
         # Set optional fields
         self.client_email = kwargs.get('client_email')
@@ -238,6 +241,7 @@ class Invoice(db.Model):
             'client_email': self.client_email,
             'client_address': self.client_address,
             'client_id': self.client_id,
+            'quote_id': self.quote_id,
             'issue_date': self.issue_date.isoformat() if self.issue_date else None,
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'status': self.status,
@@ -309,16 +313,28 @@ class InvoiceItem(db.Model):
     # Time entry reference (optional)
     time_entry_ids = db.Column(db.String(500), nullable=True)  # Comma-separated IDs
     
+    # Inventory integration
+    stock_item_id = db.Column(db.Integer, db.ForeignKey('stock_items.id'), nullable=True, index=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)
+    is_stock_item = db.Column(db.Boolean, default=False, nullable=False)
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
-    def __init__(self, invoice_id, description, quantity, unit_price, time_entry_ids=None):
+    # Relationships
+    stock_item = db.relationship('StockItem', foreign_keys=[stock_item_id], lazy='joined')
+    warehouse = db.relationship('Warehouse', foreign_keys=[warehouse_id], lazy='joined')
+    
+    def __init__(self, invoice_id, description, quantity, unit_price, time_entry_ids=None, stock_item_id=None, warehouse_id=None):
         self.invoice_id = invoice_id
         self.description = description
         self.quantity = Decimal(str(quantity))
         self.unit_price = Decimal(str(unit_price))
         self.total_amount = self.quantity * self.unit_price
         self.time_entry_ids = time_entry_ids
+        self.stock_item_id = stock_item_id
+        self.warehouse_id = warehouse_id
+        self.is_stock_item = stock_item_id is not None
     
     def __repr__(self):
         return f'<InvoiceItem {self.description} ({self.quantity}h @ {self.unit_price})>'
@@ -333,5 +349,8 @@ class InvoiceItem(db.Model):
             'unit_price': float(self.unit_price),
             'total_amount': float(self.total_amount),
             'time_entry_ids': self.time_entry_ids,
+            'stock_item_id': self.stock_item_id,
+            'warehouse_id': self.warehouse_id,
+            'is_stock_item': self.is_stock_item,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

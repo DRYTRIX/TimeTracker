@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, empty_state %}
+
+{% block title %}{{ _('Payment Gateways') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Payment Gateways'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-credit-card',
+    title_text='Payment Gateways',
+    subtitle_text='Configure payment processing',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("payment_gateways.create_gateway") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Add Gateway</a>' if (current_user.is_admin or has_permission('admin_access')) else None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if gateways %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-border-light dark:divide-border-dark">
+            <thead>
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Name') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Provider') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Status') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Mode') }}</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-light dark:divide-border-dark">
+                {% for gateway in gateways %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-medium">{{ gateway.name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded bg-primary/10 text-primary">{{ gateway.provider|title }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if gateway.is_active %}
+                        <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ _('Inactive') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if gateway.is_test_mode %}
+                        <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">{{ _('Test Mode') }}</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Production') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{{ url_for('payment_gateways.create_gateway') }}?edit={{ gateway.id }}" class="text-primary hover:text-primary/80 mr-4">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {% set action_html = '' %}
+    {% if current_user.is_admin or has_permission('admin_access') %}
+        {% set action_html = '<a href="' + url_for('payment_gateways.create_gateway') + '" class="btn btn-primary">' + _('Add Gateway') + '</a>' %}
+    {% endif %}
+    {{ empty_state(
+        'fas fa-credit-card',
+        _('No Payment Gateways'),
+        _('Configure a payment gateway to enable online invoice payments.'),
+        actions_html=action_html if action_html else None
+    ) }}
+    {% endif %}
+</div>
+{% endblock %}
+

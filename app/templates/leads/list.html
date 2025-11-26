@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}Leads - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Leads'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-user-plus',
+    title_text='Leads',
+    subtitle_text='Manage potential clients',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("leads.create_lead") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Lead</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label for="search" class="block text-sm font-medium mb-2">{{ _('Search') }}</label>
+            <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input" placeholder="{{ _('Name, company, email...') }}">
+        </div>
+        <div>
+            <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }}</label>
+            <select name="status" id="status" class="form-input">
+                <option value="">{{ _('All Statuses') }}</option>
+                {% for status_name in lead_statuses %}
+                <option value="{{ status_name }}" {% if status == status_name %}selected{% endif %}>{{ status_name|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="source" class="block text-sm font-medium mb-2">{{ _('Source') }}</label>
+            <input type="text" name="source" id="source" value="{{ source or '' }}" class="form-input" placeholder="{{ _('Website, referral...') }}">
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if leads %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="pb-3 text-sm font-medium">{{ _('Name') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Company') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Email') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Status') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Score') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Source') }}</th>
+                    <th class="pb-3 text-sm font-medium">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td class="py-3">
+                        <a href="{{ url_for('leads.view_lead', lead_id=lead.id) }}" class="text-primary hover:underline font-medium">{{ lead.full_name }}</a>
+                    </td>
+                    <td class="py-3">{{ lead.company_name or 'N/A' }}</td>
+                    <td class="py-3">
+                        {% if lead.email %}
+                        <a href="mailto:{{ lead.email }}" class="text-primary hover:underline">{{ lead.email }}</a>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td class="py-3">
+                        <span class="px-2 py-1 text-xs rounded {% if lead.status == 'qualified' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% elif lead.status == 'new' %}bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200{% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200{% endif %}">
+                            {{ lead.status|title }}
+                        </span>
+                    </td>
+                    <td class="py-3">
+                        <span class="px-2 py-1 text-xs rounded {% if lead.score >= 70 %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% elif lead.score >= 40 %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200{% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200{% endif %}">
+                            {{ lead.score }}
+                        </span>
+                    </td>
+                    <td class="py-3">{{ lead.source or 'N/A' }}</td>
+                    <td class="py-3">
+                        <a href="{{ url_for('leads.view_lead', lead_id=lead.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <i class="fas fa-user-plus text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No leads found') }}</p>
+        <a href="{{ url_for('leads.create_lead') }}" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            {{ _('Create First Lead') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

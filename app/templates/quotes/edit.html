@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Edit Quote') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Quotes', 'url': url_for('quotes.list_quotes')},
+    {'text': quote.quote_number, 'url': url_for('quotes.view_quote', quote_id=quote.id)},
+    {'text': 'Edit'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-contract',
+    title_text='Edit Quote',
+    subtitle_text=quote.quote_number,
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("quotes.view_quote", quote_id=quote.id) + '" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"><i class="fas fa-arrow-left mr-2"></i>Back</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('quotes.edit_quote', quote_id=quote.id) }}" novalidate id="quote-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Basic Information Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-border-light dark:border-border-dark flex items-center">
+                <i class="fas fa-info-circle mr-2 text-primary"></i>{{ _('Basic Information') }}
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Title') }} <span class="text-red-500">*</span></label>
+                    <input type="text" id="title" name="title" required value="{{ quote.title }}" placeholder="{{ _('Quote title') }}" class="form-input">
+                </div>
+                <div>
+                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Client') }}</label>
+                    <select id="client_id" name="client_id" class="form-input" disabled>
+                        <option value="{{ quote.client_id }}" selected>{{ quote.client.name }}</option>
+                    </select>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>{{ _('Client cannot be changed') }}
+                    </p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Description') }}</label>
+                <textarea id="description" name="description" rows="4" placeholder="{{ _('Quote description') }}" class="form-input">{{ quote.description or '' }}</textarea>
+            </div>
+        </div>
+
+        <!-- Quote Items Section -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-border-light dark:border-border-dark">
+                <h2 class="text-xl font-semibold flex items-center">
+                    <i class="fas fa-list mr-2 text-primary"></i>{{ _('Quote Items') }}
+                    <span id="items-count" class="ml-2 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">{{ quote.items.count() if quote.items else 0 }}</span>
+                </h2>
+                <button type="button" id="add-item" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition shadow-sm">
+                    <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
+                </button>
+            </div>
+            
+            <!-- Items header (desktop) -->
+            <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase">
+                <div class="md:col-span-2">{{ _('Stock Item') }}</div>
+                <div class="md:col-span-2">{{ _('Warehouse') }}</div>
+                <div class="md:col-span-2">{{ _('Description') }}</div>
+                <div class="md:col-span-1">{{ _('Quantity') }}</div>
+                <div class="md:col-span-1">{{ _('Unit') }}</div>
+                <div class="md:col-span-2">{{ _('Unit Price') }}</div>
+                <div class="md:col-span-1">{{ _('Total') }}</div>
+                <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
+            </div>
+            
+            <div id="quote-items" class="space-y-2">
+                {% for item in quote.items %}
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 quote-item-row hover:shadow-sm transition">
+                    <input type="hidden" name="item_id[]" value="{{ item.id }}">
+                    <input type="hidden" name="item_stock_item_id[]" value="{{ item.stock_item_id if item.stock_item_id else '' }}">
+                    <input type="hidden" name="item_warehouse_id[]" value="{{ item.warehouse_id if item.warehouse_id else '' }}">
+                    <select class="md:col-span-2 form-input item-stock-select text-sm" title="{{ _('Select Stock Item') }}">
+                        <option value="">{{ _('None') }}</option>
+                        {% for stock_item in stock_items %}
+                        <option value="{{ stock_item.id }}" data-price="{{ stock_item.default_price or 0 }}" data-unit="{{ stock_item.unit }}" data-description="{{ stock_item.name }}" {% if item.stock_item_id == stock_item.id %}selected{% endif %}>{{ stock_item.sku }} - {{ stock_item.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select class="md:col-span-2 form-input item-warehouse-select text-sm" title="{{ _('Select Warehouse') }}">
+                        <option value="">{{ _('None') }}</option>
+                        {% for warehouse in warehouses %}
+                        <option value="{{ warehouse.id }}" {% if item.warehouse_id == warehouse.id %}selected{% endif %}>{{ warehouse.code }} - {{ warehouse.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="item_description[]" placeholder="{{ _('Item description') }}" value="{{ item.description }}" class="md:col-span-2 form-input item-description" data-calc-trigger>
+                    <input type="number" name="item_quantity[]" placeholder="{{ _('Qty') }}" value="{{ item.quantity }}" step="0.01" min="0" class="md:col-span-1 form-input item-quantity" data-calc-trigger>
+                    <input type="text" name="item_unit[]" placeholder="{{ _('Unit') }}" value="{{ item.unit or '' }}" class="md:col-span-1 form-input item-unit" placeholder="hrs, pcs, etc.">
+                    <input type="number" name="item_price[]" placeholder="{{ _('Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="md:col-span-2 form-input item-price" data-calc-trigger>
+                    <div class="md:col-span-1 flex items-center font-medium item-total">{{ "%.2f"|format(item.total_amount) }}</div>
+                    <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div id="items-subtotal" class="mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <div class="flex justify-between items-center text-sm font-medium">
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Subtotal') }}:</span>
+                    <span class="text-lg font-bold text-primary"><span id="items-subtotal-amount">{{ "%.2f"|format(quote.subtotal) if quote.subtotal else '0.00' }}</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Details Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-border-light dark:border-border-dark flex items-center">
+                <i class="fas fa-dollar-sign mr-2 text-primary"></i>{{ _('Financial Details') }}
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Tax Rate (%)') }}</label>
+                    <input type="number" step="0.01" min="0" max="100" id="tax_rate" name="tax_rate" value="{{ quote.tax_rate or 0 }}" class="form-input" data-calc-trigger>
+                </div>
+                <div>
+                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Currency') }}</label>
+                    <select id="currency_code" name="currency_code" class="form-input">
+                        <option value="EUR" {% if quote.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
+                        <option value="USD" {% if quote.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="GBP" {% if quote.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="valid_until" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Valid Until') }}</label>
+                    <input type="date" id="valid_until" name="valid_until" value="{{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else '' }}" class="form-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Terms Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-border-light dark:border-border-dark flex items-center">
+                <i class="fas fa-calendar-alt mr-2 text-primary"></i>{{ _('Payment Terms') }}
+            </h2>
+            <div>
+                <label for="payment_terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Payment Terms') }}</label>
+                <select id="payment_terms" name="payment_terms" class="form-input">
+                    <option value="">{{ _('Select payment terms') }}</option>
+                    <option value="Due on Receipt" {% if quote.payment_terms == 'Due on Receipt' %}selected{% endif %}>{{ _('Due on Receipt') }}</option>
+                    <option value="Net 15" {% if quote.payment_terms == 'Net 15' %}selected{% endif %}>Net 15</option>
+                    <option value="Net 30" {% if quote.payment_terms == 'Net 30' %}selected{% endif %}>Net 30</option>
+                    <option value="Net 45" {% if quote.payment_terms == 'Net 45' %}selected{% endif %}>Net 45</option>
+                    <option value="Net 60" {% if quote.payment_terms == 'Net 60' %}selected{% endif %}>Net 60</option>
+                    <option value="Net 90" {% if quote.payment_terms == 'Net 90' %}selected{% endif %}>Net 90</option>
+                    <option value="2/10 Net 30" {% if quote.payment_terms == '2/10 Net 30' %}selected{% endif %}>2/10 Net 30</option>
+                </select>
+                <input type="text" id="payment_terms_custom" name="payment_terms" value="{{ quote.payment_terms or '' }}" placeholder="{{ _('Or enter custom payment terms') }}" class="form-input mt-2" {% if quote.payment_terms and quote.payment_terms not in ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60', 'Net 90', '2/10 Net 30'] %}style="display: block;"{% else %}style="display: none;"{% endif %}>
+                <button type="button" onclick="document.getElementById('payment_terms').style.display='none'; document.getElementById('payment_terms_custom').style.display='block';" class="text-sm text-primary mt-1 hover:underline">
+                    <i class="fas fa-edit mr-1"></i>{{ _('Use custom terms') }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Discount Section -->
+        <div class="mb-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fas fa-tag mr-2 text-primary"></i>{{ _('Discount') }}
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div>
+                    <label for="discount_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Discount Type') }}</label>
+                    <select id="discount_type" name="discount_type" class="form-input">
+                        <option value="">{{ _('No Discount') }}</option>
+                        <option value="percentage" {% if quote.discount_type == 'percentage' %}selected{% endif %}>{{ _('Percentage (%)') }}</option>
+                        <option value="fixed" {% if quote.discount_type == 'fixed' %}selected{% endif %}>{{ _('Fixed Amount') }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="discount_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Discount Amount') }}</label>
+                    <input type="number" step="0.01" min="0" id="discount_amount" name="discount_amount" value="{{ quote.discount_amount or '' }}" placeholder="{{ _('0.00') }}" class="form-input">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="coupon_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Coupon Code') }}</label>
+                    <input type="text" id="coupon_code" name="coupon_code" value="{{ quote.coupon_code or '' }}" placeholder="{{ _('Optional coupon code') }}" class="form-input" style="text-transform: uppercase;">
+                </div>
+                <div>
+                    <label for="discount_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Discount Reason') }}</label>
+                    <input type="text" id="discount_reason" name="discount_reason" value="{{ quote.discount_reason or '' }}" placeholder="{{ _('Reason for discount') }}" class="form-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Information Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-border-light dark:border-border-dark flex items-center">
+                <i class="fas fa-file-alt mr-2 text-primary"></i>{{ _('Additional Information') }}
+            </h2>
+            <div class="mb-4">
+                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Internal Notes') }}</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="{{ _('Internal notes (not visible to client)') }}" class="form-input">{{ quote.notes or '' }}</textarea>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('These notes are only visible to your team') }}</p>
+            </div>
+            <div>
+                <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Terms and Conditions') }}</label>
+                <textarea id="terms" name="terms" rows="4" placeholder="{{ _('Terms and conditions') }}" class="form-input">{{ quote.terms or '' }}</textarea>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('These terms will be visible to the client') }}</p>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="mt-8 pt-6 border-t border-border-light dark:border-border-dark flex justify-end gap-3">
+            <a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ _('Update Quote') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsContainer = document.getElementById('quote-items');
+    const addItemBtn = document.getElementById('add-item');
+    let itemIndex = 0;
+    
+    // Stock items and warehouses data
+    const stockItems = {{ stock_items_json | safe if stock_items_json else '[]' }};
+    const warehouses = {{ warehouses_json | safe if warehouses_json else '[]' }};
+    
+    // Handle stock item selection
+    function setupStockItemHandlers() {
+        document.querySelectorAll('.item-stock-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('.quote-item-row');
+                const stockItemId = this.value;
+                const selectedOption = this.options[this.selectedIndex];
+                const hiddenStockInput = row.querySelector('input[name="item_stock_item_id[]"]');
+                
+                hiddenStockInput.value = stockItemId || '';
+                
+                if (stockItemId && selectedOption) {
+                    const price = parseFloat(selectedOption.dataset.price || 0);
+                    const description = selectedOption.dataset.description || '';
+                    const unit = selectedOption.dataset.unit || '';
+                    
+                    // Auto-populate fields
+                    if (description && !row.querySelector('.item-description').value) {
+                        row.querySelector('.item-description').value = description;
+                    }
+                    if (price > 0 && !row.querySelector('.item-price').value) {
+                        row.querySelector('.item-price').value = price.toFixed(2);
+                    }
+                    if (unit && !row.querySelector('.item-unit').value) {
+                        row.querySelector('.item-unit').value = unit;
+                    }
+                    calculateTotals();
+                }
+            });
+        });
+    }
+    
+    // Add new item row
+    function addItemRow(item = null) {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 quote-item-row hover:shadow-sm transition';
+        
+        // Build stock items dropdown
+        let stockItemsHtml = '<option value="">{{ _("None") }}</option>';
+        if (stockItems && Array.isArray(stockItems)) {
+            stockItems.forEach(stockItem => {
+                const price = stockItem.default_price || 0;
+                const unit = stockItem.unit || '';
+                const desc = stockItem.description || stockItem.name || '';
+                stockItemsHtml += '<option value="' + stockItem.id + '" data-price="' + price + '" data-unit="' + unit + '" data-description="' + desc.replace(/"/g, '&quot;') + '">' + stockItem.sku + ' - ' + stockItem.name + '</option>';
+            });
+        }
+        
+        // Build warehouses dropdown
+        let warehousesHtml = '<option value="">{{ _("None") }}</option>';
+        if (warehouses && Array.isArray(warehouses)) {
+            warehouses.forEach(wh => {
+                warehousesHtml += '<option value="' + wh.id + '">' + wh.code + ' - ' + wh.name + '</option>';
+            });
+        }
+        
+        // Translated strings
+        const placeholderDesc = '{{ _("Item description") }}';
+        const placeholderQty = '{{ _("Qty") }}';
+        const placeholderUnit = '{{ _("Unit") }}';
+        const placeholderPrice = '{{ _("Price") }}';
+        const removeTitle = '{{ _("Remove item") }}';
+        
+        row.innerHTML = 
+            '<input type="hidden" name="item_id[]" value="' + (item ? item.id : '') + '">' +
+            '<input type="hidden" name="item_stock_item_id[]" value="' + (item && item.stock_item_id ? item.stock_item_id : '') + '">' +
+            '<input type="hidden" name="item_warehouse_id[]" value="' + (item && item.warehouse_id ? item.warehouse_id : '') + '">' +
+            '<select class="md:col-span-2 form-input item-stock-select text-sm">' + stockItemsHtml + '</select>' +
+            '<select class="md:col-span-2 form-input item-warehouse-select text-sm">' + warehousesHtml + '</select>' +
+            '<input type="text" name="item_description[]" placeholder="' + placeholderDesc + '" value="' + (item ? (item.description || '').replace(/"/g, '&quot;') : '') + '" class="md:col-span-2 form-input item-description" data-calc-trigger>' +
+            '<input type="number" name="item_quantity[]" placeholder="' + placeholderQty + '" value="' + (item ? item.quantity : '1') + '" step="0.01" min="0" class="md:col-span-1 form-input item-quantity" data-calc-trigger>' +
+            '<input type="text" name="item_unit[]" placeholder="' + placeholderUnit + '" value="' + (item ? (item.unit || '') : '') + '" class="md:col-span-1 form-input item-unit" placeholder="hrs, pcs, etc.">' +
+            '<input type="number" name="item_price[]" placeholder="' + placeholderPrice + '" value="' + (item ? item.unit_price : '') + '" step="0.01" min="0" class="md:col-span-2 form-input item-price" data-calc-trigger>' +
+            '<div class="md:col-span-1 flex items-center font-medium item-total">0.00</div>' +
+            '<button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="' + removeTitle + '">' +
+                '<i class="fas fa-trash"></i>' +
+            '</button>';
+        itemsContainer.appendChild(row);
+        
+        // Setup handlers for new row
+        const stockSelect = row.querySelector('.item-stock-select');
+        stockSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const hiddenStockInput = row.querySelector('input[name="item_stock_item_id[]"]');
+            hiddenStockInput.value = this.value || '';
+            
+            if (this.value && selectedOption) {
+                const price = parseFloat(selectedOption.dataset.price || 0);
+                const description = selectedOption.dataset.description || '';
+                const unit = selectedOption.dataset.unit || '';
+                if (description) row.querySelector('.item-description').value = description;
+                if (price > 0) row.querySelector('.item-price').value = price.toFixed(2);
+                if (unit) row.querySelector('.item-unit').value = unit;
+                calculateTotals();
+            }
+        });
+        
+        const warehouseSelect = row.querySelector('.item-warehouse-select');
+        warehouseSelect.addEventListener('change', function() {
+            const hiddenWarehouseInput = row.querySelector('input[name="item_warehouse_id[]"]');
+            hiddenWarehouseInput.value = this.value || '';
+        });
+        
+        // Add event listeners
+        row.querySelector('.remove-item').addEventListener('click', function() {
+            row.remove();
+            calculateTotals();
+        });
+        
+        // Add calculation triggers
+        row.querySelectorAll('[data-calc-trigger]').forEach(input => {
+            input.addEventListener('input', calculateTotals);
+        });
+        
+        setupStockItemHandlers();
+        itemIndex++;
+        calculateTotals();
+    }
+    
+    // Initialize stock item handlers for existing rows
+    setupStockItemHandlers();
+    
+    // Setup warehouse handlers
+    document.querySelectorAll('.item-warehouse-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const row = this.closest('.quote-item-row');
+            const hiddenWarehouseInput = row.querySelector('input[name="item_warehouse_id[]"]');
+            hiddenWarehouseInput.value = this.value || '';
+        });
+    });
+    
+    // Calculate totals
+    function calculateTotals() {
+        let itemsTotal = 0;
+        let itemsCount = 0;
+        
+        document.querySelectorAll('.quote-item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-quantity')?.value || 0);
+            const price = parseFloat(row.querySelector('.item-price')?.value || 0);
+            const total = qty * price;
+            
+            if (qty > 0 && price > 0) {
+                itemsTotal += total;
+                itemsCount++;
+            }
+            
+            // Update row total
+            const totalEl = row.querySelector('.item-total');
+            if (totalEl) {
+                totalEl.textContent = total.toFixed(2);
+            }
+        });
+        
+        // Update subtotal
+        document.getElementById('items-subtotal-amount').textContent = itemsTotal.toFixed(2);
+        document.getElementById('items-count').textContent = itemsCount;
+    }
+    
+    // Add item button
+    addItemBtn.addEventListener('click', function() {
+        addItemRow();
+    });
+    
+    // Add event listeners to existing items
+    document.querySelectorAll('.quote-item-row').forEach(row => {
+        row.querySelector('.remove-item').addEventListener('click', function() {
+            row.remove();
+            calculateTotals();
+        });
+        
+        row.querySelectorAll('[data-calc-trigger]').forEach(input => {
+            input.addEventListener('input', calculateTotals);
+        });
+    });
+    
+    // Calculate on tax rate change
+    document.getElementById('tax_rate')?.addEventListener('input', calculateTotals);
+    
+    // Initial calculation
+    calculateTotals();
+});
+</script>
+{% endblock %}

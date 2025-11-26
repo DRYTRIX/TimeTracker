@@ -6,6 +6,7 @@ Handles first-time setup and telemetry opt-in.
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
+from flask_babel import _
 from app.utils.installation import get_installation_config
 from app import log_event, track_event
 
@@ -33,9 +34,9 @@ def initial_setup():
         
         # Show success message
         if telemetry_enabled:
-            flash('Setup complete! Thank you for helping us improve TimeTracker.', 'success')
+            flash(_('Setup complete! Thank you for helping us improve TimeTracker.'), 'success')
         else:
-            flash('Setup complete! Telemetry is disabled.', 'success')
+            flash(_('Setup complete! Telemetry is disabled.'), 'success')
         
         return redirect(url_for('main.dashboard'))
     

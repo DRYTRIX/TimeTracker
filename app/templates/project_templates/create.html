@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Create Project Template') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Create Project Template') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Create a reusable template for quick project setup') }}</p>
+    </div>
+    <a href="{{ url_for('project_templates.list_templates') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Templates') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('project_templates.create_template') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="md:col-span-2">
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Template Name') }} *</label>
+                <input type="text" id="name" name="name" required class="form-input" placeholder="{{ _('e.g., Web Development Project') }}">
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                <textarea id="description" name="description" rows="3" class="form-input" placeholder="{{ _('Describe what this template is used for...') }}"></textarea>
+            </div>
+            
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }}</label>
+                <input type="text" id="category" name="category" class="form-input" placeholder="{{ _('e.g., Web Development, Marketing') }}">
+            </div>
+            
+            <div>
+                <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
+                <input type="text" id="tags" name="tags" class="form-input" placeholder="{{ _('Comma-separated tags') }}">
+            </div>
+        </div>
+        
+        <div class="border-t border-border-light dark:border-border-dark pt-4 mb-4">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Project Configuration') }}</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" id="billable" name="billable" checked class="rounded border-gray-300 text-primary shadow-sm">
+                        {{ _('Billable Project') }}
+                    </label>
+                </div>
+                
+                <div>
+                    <label for="hourly_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default Hourly Rate') }}</label>
+                    <input type="number" step="0.01" id="hourly_rate" name="hourly_rate" class="form-input" placeholder="75.00">
+                </div>
+                
+                <div>
+                    <label for="estimated_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                    <input type="number" step="0.1" id="estimated_hours" name="estimated_hours" class="form-input">
+                </div>
+                
+                <div>
+                    <label for="budget_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Budget Amount') }}</label>
+                    <input type="number" step="0.01" id="budget_amount" name="budget_amount" class="form-input">
+                </div>
+            </div>
+        </div>
+        
+        <div class="border-t border-border-light dark:border-border-dark pt-4 mb-4">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Template Tasks') }}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Tasks will be created when a project is created from this template') }}</p>
+            <div id="tasks-container">
+                <div class="task-item border border-border-light dark:border-border-dark rounded-lg p-4 mb-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task Name') }}</label>
+                            <input type="text" name="task_names[]" class="form-input" placeholder="{{ _('Task name') }}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Priority') }}</label>
+                            <select name="task_priorities[]" class="form-input">
+                                <option value="low">{{ _('Low') }}</option>
+                                <option value="medium" selected>{{ _('Medium') }}</option>
+                                <option value="high">{{ _('High') }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                            <input type="number" step="0.1" name="task_hours[]" class="form-input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" onclick="addTaskItem()" class="mt-2 text-primary hover:underline">
+                <i class="fas fa-plus mr-1"></i>{{ _('Add Task') }}
+            </button>
+        </div>
+        
+        <div class="border-t border-border-light dark:border-border-dark pt-4 mb-4">
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input type="checkbox" id="is_public" name="is_public" class="rounded border-gray-300 text-primary shadow-sm">
+                {{ _('Make this template public (visible to all users)') }}
+            </label>
+        </div>
+        
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('project_templates.list_templates') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Template') }}</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function addTaskItem() {
+    const container = document.getElementById('tasks-container');
+    const newItem = container.firstElementChild.cloneNode(true);
+    newItem.querySelectorAll('input, select').forEach(el => el.value = '');
+    container.appendChild(newItem);
+}
+
+// Convert form data to JSON for tasks
+document.querySelector('form').addEventListener('submit', function(e) {
+    const tasks = [];
+    const taskItems = document.querySelectorAll('.task-item');
+    taskItems.forEach(item => {
+        const name = item.querySelector('input[name="task_names[]"]').value;
+        if (name) {
+            tasks.push({
+                name: name,
+                priority: item.querySelector('select[name="task_priorities[]"]').value,
+                estimated_hours: item.querySelector('input[name="task_hours[]"]').value || null,
+                status: 'todo'
+            });
+        }
+    });
+    
+    const tasksInput = document.createElement('input');
+    tasksInput.type = 'hidden';
+    tasksInput.name = 'tasks';
+    tasksInput.value = JSON.stringify(tasks);
+    this.appendChild(tasksInput);
+});
+</script>
+{% endblock %}
+

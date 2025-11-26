@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Reports'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-chart-pie',
+    title_text='Inventory Reports',
+    subtitle_text='Inventory analytics and reporting',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Items') }}</p>
+                <p class="text-3xl font-bold mt-2">{{ total_items }}</p>
+            </div>
+            <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <i class="fas fa-cubes text-blue-600 dark:text-blue-400 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Warehouses') }}</p>
+                <p class="text-3xl font-bold mt-2">{{ total_warehouses }}</p>
+            </div>
+            <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <i class="fas fa-warehouse text-green-600 dark:text-green-400 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Inventory Value') }}</p>
+                <p class="text-3xl font-bold mt-2">{{ "%.2f"|format(total_value) }} EUR</p>
+            </div>
+            <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <i class="fas fa-euro-sign text-purple-600 dark:text-purple-400 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Low Stock Items') }}</p>
+                <p class="text-3xl font-bold mt-2 {% if low_stock_count > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ low_stock_count }}</p>
+            </div>
+            <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Available Reports') }}</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ url_for('inventory.reports_valuation') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-coins text-2xl mb-2"></i>
+            <p class="font-semibold">{{ _('Stock Valuation') }}</p>
+            <p class="text-sm opacity-90">{{ _('View inventory value by warehouse') }}</p>
+        </a>
+        
+        <a href="{{ url_for('inventory.reports_movement_history') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-history text-2xl mb-2"></i>
+            <p class="font-semibold">{{ _('Movement History') }}</p>
+            <p class="text-sm opacity-90">{{ _('Detailed movement log') }}</p>
+        </a>
+        
+        <a href="{{ url_for('inventory.reports_turnover') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-chart-line text-2xl mb-2"></i>
+            <p class="font-semibold">{{ _('Turnover Analysis') }}</p>
+            <p class="text-sm opacity-90">{{ _('Inventory turnover rates') }}</p>
+        </a>
+        
+        <a href="{{ url_for('inventory.reports_low_stock') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+            <p class="font-semibold">{{ _('Low Stock Report') }}</p>
+            <p class="text-sm opacity-90">{{ _('Items below reorder point') }}</p>
+        </a>
+    </div>
+</div>
+{% endblock %}
+

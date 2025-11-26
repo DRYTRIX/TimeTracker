@@ -39,6 +39,30 @@ from .audit_log import AuditLog
 from .recurring_invoice import RecurringInvoice
 from .invoice_email import InvoiceEmail
 from .webhook import Webhook, WebhookDelivery
+from .quote import Quote, QuoteItem, QuotePDFTemplate
+from .quote_attachment import QuoteAttachment
+from .quote_template import QuoteTemplate
+from .quote_version import QuoteVersion
+from .warehouse import Warehouse
+from .stock_item import StockItem
+from .warehouse_stock import WarehouseStock
+from .stock_movement import StockMovement
+from .stock_reservation import StockReservation
+from .project_stock_allocation import ProjectStockAllocation
+from .supplier import Supplier
+from .supplier_stock_item import SupplierStockItem
+from .purchase_order import PurchaseOrder, PurchaseOrderItem
+from .contact import Contact
+from .contact_communication import ContactCommunication
+from .deal import Deal
+from .deal_activity import DealActivity
+from .lead import Lead
+from .lead_activity import LeadActivity
+from .project_template import ProjectTemplate
+from .invoice_approval import InvoiceApproval
+from .payment_gateway import PaymentGateway, PaymentTransaction
+from .calendar_integration import CalendarIntegration, CalendarSyncEvent
+from .integration import Integration, IntegrationCredential, IntegrationEvent
 
 __all__ = [
     "User",
@@ -86,4 +110,35 @@ __all__ = [
     "InvoiceEmail",
     "Webhook",
     "WebhookDelivery",
+    "Quote",
+    "QuoteItem",
+    "QuotePDFTemplate",
+    "QuoteAttachment",
+    "QuoteTemplate",
+    "QuoteVersion",
+    "Warehouse",
+    "StockItem",
+    "WarehouseStock",
+    "StockMovement",
+    "StockReservation",
+    "ProjectStockAllocation",
+    "Supplier",
+    "SupplierStockItem",
+    "PurchaseOrder",
+    "PurchaseOrderItem",
+    "Contact",
+    "ContactCommunication",
+    "Deal",
+    "DealActivity",
+    "Lead",
+    "LeadActivity",
+    "ProjectTemplate",
+    "InvoiceApproval",
+    "PaymentGateway",
+    "PaymentTransaction",
+    "CalendarIntegration",
+    "CalendarSyncEvent",
+    "Integration",
+    "IntegrationCredential",
+    "IntegrationEvent",
 ]

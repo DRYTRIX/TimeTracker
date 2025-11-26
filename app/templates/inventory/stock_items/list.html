@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Stock Items'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-cubes',
+    title_text='Stock Items',
+    subtitle_text='Manage your inventory items',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("inventory.new_stock_item") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Stock Item</a>' if (current_user.is_admin or has_permission('manage_stock_items')) else None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Search') }}</label>
+            <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input" placeholder="{{ _('SKU, Name, Barcode...') }}">
+        </div>
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }}</label>
+            <select name="category" id="category" class="form-input">
+                <option value="">{{ _('All Categories') }}</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <label class="flex items-center">
+                <input type="checkbox" name="active" value="true" {% if active_only %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <span class="ml-2 text-sm">{{ _('Active Only') }}</span>
+            </label>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('SKU') }}</th>
+                <th class="p-4">{{ _('Name') }}</th>
+                <th class="p-4">{{ _('Category') }}</th>
+                <th class="p-4">{{ _('Unit') }}</th>
+                <th class="p-4">{{ _('Total Qty') }}</th>
+                <th class="p-4">{{ _('Available') }}</th>
+                <th class="p-4">{{ _('Status') }}</th>
+                <th class="p-4">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="p-4 font-mono text-sm">{{ item.sku }}</td>
+                <td class="p-4 font-medium">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=item.id) }}" class="text-primary hover:underline">
+                        {{ item.name }}
+                    </a>
+                </td>
+                <td class="p-4">{{ item.category or '—' }}</td>
+                <td class="p-4">{{ item.unit }}</td>
+                <td class="p-4">
+                    {% if item.is_trackable %}
+                        {{ item.total_quantity_on_hand or 0 }}
+                    {% else %}
+                        <span class="text-gray-400">N/A</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if item.is_trackable %}
+                        {{ item.total_quantity_available or 0 }}
+                        {% if item.is_low_stock %}
+                            <span class="ml-2 text-amber-500" title="{{ _('Low Stock') }}"><i class="fas fa-exclamation-triangle"></i></span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-gray-400">N/A</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if item.is_active %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=item.id) }}" class="text-primary hover:underline mr-3">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    {% if current_user.is_admin or has_permission('manage_stock_items') %}
+                    <a href="{{ url_for('inventory.edit_stock_item', item_id=item.id) }}" class="text-primary hover:underline">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="p-8 text-center text-gray-500">
+                    {{ _('No stock items found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

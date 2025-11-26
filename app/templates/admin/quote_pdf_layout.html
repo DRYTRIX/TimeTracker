@@ -1,0 +1,3333 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('PDF Quote Designer') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Main Layout */
+.designer-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr 400px;
+    gap: 1rem;
+    min-height: 700px;
+}
+
+@media (max-width: 1536px) {
+    .designer-layout {
+        grid-template-columns: 200px 1fr 350px;
+    }
+}
+
+@media (max-width: 1280px) {
+    .designer-layout {
+        grid-template-columns: 1fr;
+    }
+    .sidebar, .properties-panel {
+        display: none;
+    }
+}
+
+/* Sidebar - Elements */
+.sidebar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    color: white;
+    overflow-y: auto;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Search Box */
+.search-box {
+    margin-bottom: 1rem;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 0.875rem;
+}
+
+.search-box input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-box input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Tabs */
+.sidebar-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-tab {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    opacity: 0.7;
+}
+
+.sidebar-tab:hover {
+    opacity: 1;
+}
+
+.sidebar-tab.active {
+    opacity: 1;
+    border-bottom-color: white;
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.element-group {
+    margin-bottom: 1.5rem;
+}
+
+.element-group-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+}
+
+.element-item {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    cursor: move;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.element-item:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateX(5px);
+}
+
+.element-item i {
+    font-size: 1.25rem;
+}
+
+.element-item span {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Variable Items */
+.variable-item {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.variable-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.variable-name {
+    font-family: 'Courier New', monospace;
+    font-size: 0.813rem;
+    color: #fbbf24;
+    margin-bottom: 0.25rem;
+}
+
+.variable-desc {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+/* Canvas Area */
+.canvas-area {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.canvas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+    background: #f9fafb;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.dark .canvas-header {
+    background: #374151;
+    border-bottom-color: #4b5563;
+}
+
+.dark .canvas-header h3 {
+    color: #f9fafb;
+}
+
+.canvas-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.canvas-header-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.page-size-selector-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-size-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .page-size-label {
+        color: #d1d5db;
+    }
+}
+
+.page-size-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: white;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dark .page-size-select {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .page-size-select:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+}
+
+.dark .page-size-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.page-size-select:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+}
+
+.page-size-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.canvas-toolbar {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.canvas-toolbar button {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.dark .canvas-toolbar button {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .canvas-toolbar button:hover {
+    background: #4b5563;
+    border-color: #667eea;
+}
+
+.canvas-toolbar button:hover {
+    background: #f3f4f6;
+    border-color: #667eea;
+}
+
+#canvas-container {
+    flex: 1;
+    border: 2px dashed #e5e7eb;
+    border-radius: 0.5rem;
+    position: relative;
+    background: #fafafa;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 600px;
+    padding: 20px;
+}
+
+#canvas-container > div {
+    margin: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+/* Preview Modal */
+.preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+}
+
+.preview-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+}
+
+.preview-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dark .preview-modal-content {
+    background: #1f2937;
+    color: #f9fafb;
+}
+
+.preview-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.dark .preview-modal-header {
+    border-bottom-color: #4b5563;
+}
+
+.preview-modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: #1f2937;
+}
+
+.dark .preview-modal-header h3 {
+    color: #f9fafb;
+}
+
+.preview-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.preview-modal-close:hover {
+    color: #1f2937;
+}
+
+.dark .preview-modal-close {
+    color: #9ca3af;
+}
+
+.dark .preview-modal-close:hover {
+    color: #f9fafb;
+}
+
+.preview-modal-body {
+    flex: 1;
+    position: relative;
+    padding: 1.5rem;
+    overflow: auto;
+    min-height: 600px;
+    max-height: calc(90vh - 80px);
+}
+
+#preview-frame {
+    width: 100%;
+    min-height: 600px;
+    border: none;
+    border-radius: 0.5rem;
+    background: white;
+}
+
+.dark #preview-frame {
+    background: #374151;
+}
+
+.preview-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 0.5rem;
+}
+
+.dark .preview-loading {
+    background: rgba(31, 41, 55, 0.95);
+}
+
+.preview-loading.active {
+    display: flex;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Properties Panel */
+.properties-panel {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    padding: 1.5rem;
+    max-height: 700px;
+    overflow-y: auto;
+}
+
+.dark .properties-panel {
+    background: #1f2937;
+    color: #f9fafb;
+}
+
+.dark .properties-panel h3 {
+    color: #f9fafb;
+    border-bottom-color: #4b5563;
+}
+
+.properties-panel h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+    color: #1f2937;
+}
+
+.property-group {
+    margin-bottom: 1.5rem;
+}
+
+.property-label {
+    font-size: 0.813rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.dark .property-label {
+    color: #d1d5db;
+}
+
+.property-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: white;
+    color: #1f2937;
+}
+
+.dark .property-input {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .property-input:disabled {
+    background: #1f2937;
+    color: #6b7280;
+}
+
+.dark .property-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.property-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.property-input:disabled {
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+/* Action Bar */
+.action-bar {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/* Button dark mode support */
+.dark .btn {
+    color: #f9fafb;
+}
+
+.dark .btn-secondary {
+    background: #4b5563;
+    border-color: #6b7280;
+    color: #f9fafb;
+}
+
+.dark .btn-secondary:hover {
+    background: #6b7280;
+    border-color: #9ca3af;
+}
+
+.dark .btn-primary {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.dark .btn-primary:hover {
+    background: #5568d3;
+}
+
+.dark .btn-info {
+    background: #0ea5e9;
+    border-color: #0ea5e9;
+}
+
+.dark .btn-info:hover {
+    background: #0284c7;
+}
+
+.dark .btn-danger {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+
+.dark .btn-danger:hover {
+    background: #dc2626;
+}
+
+/* Info Box */
+.info-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+            <i class="fas fa-paint-brush text-purple-600"></i>
+            {{ _('Visual Quote Designer') }}
+        </h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark mt-1">
+            {{ _('Drag and drop elements to design your quote layout') }}
+        </p>
+    </div>
+</div>
+
+<!-- Info Box -->
+<div class="info-box">
+    <p>
+        <i class="fas fa-info-circle mr-2"></i>
+        <strong>{{ _('How to use:') }}</strong> 
+        {{ _('Click elements from the left sidebar to add them to the canvas. Click elements to select and customize them in the properties panel. Use the alignment tools and keyboard shortcuts for faster editing.') }}
+    </p>
+    <p style="margin-top: 0.5rem; font-size: 0.813rem;">
+        <strong>{{ _('Keyboard Shortcuts:') }}</strong>
+        <span style="opacity: 0.9;">
+            Delete/Backspace = Remove | Ctrl+C = Copy | Ctrl+V = Paste | Ctrl+D = Duplicate | Arrow Keys = Move (+ Shift for 10px steps)
+        </span>
+    </p>
+</div>
+
+<!-- Action Bar -->
+<div class="action-bar">
+    <button id="btn-clear" type="button" class="btn btn-secondary">
+        <i class="fas fa-eraser mr-2"></i>{{ _('Clear Canvas') }}
+    </button>
+    <button id="btn-preview" type="button" class="btn btn-info">
+        <i class="fas fa-eye mr-2"></i>{{ _('Generate Preview') }}
+    </button>
+    <button id="btn-save" type="button" class="btn btn-primary">
+        <i class="fas fa-save mr-2"></i>{{ _('Save Design') }}
+    </button>
+    <button id="btn-code" type="button" class="btn btn-secondary">
+        <i class="fas fa-code mr-2"></i>{{ _('View Code') }}
+    </button>
+    <label class="inline-flex items-center ml-4">
+        <input type="checkbox" id="snap-to-grid" class="mr-2" checked>
+        <span>{{ _('Snap to Grid (10px)') }}</span>
+    </label>
+    <form id="form-reset" method="POST" action="{{ url_for('admin.quote_pdf_layout_reset') }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="button" onclick="confirmResetPdfLayout()" class="btn btn-danger">
+            <i class="fas fa-undo mr-2"></i>{{ _('Reset') }}
+        </button>
+    </form>
+</div>
+
+<!-- Main Designer Layout -->
+<div class="designer-layout">
+    <!-- LEFT: Elements Sidebar -->
+    <div class="sidebar">
+        <h3>
+            <i class="fas fa-cube"></i>
+            {{ _('Toolbox') }}
+        </h3>
+        
+        <!-- Search Box -->
+        <div class="search-box">
+            <input type="text" id="sidebar-search" placeholder="{{ _('Search elements & variables...') }}">
+        </div>
+        
+        <!-- Tabs -->
+        <div class="sidebar-tabs">
+            <div class="sidebar-tab active" data-tab="elements">
+                <i class="fas fa-shapes mr-1"></i>{{ _('Elements') }}
+            </div>
+            <div class="sidebar-tab" data-tab="variables">
+                <i class="fas fa-code mr-1"></i>{{ _('Variables') }}
+            </div>
+        </div>
+        
+        <!-- Sidebar Content -->
+        <div class="sidebar-content">
+            <!-- Elements Tab -->
+            <div id="tab-elements" class="tab-pane active">
+        <div class="element-group">
+                    <div class="element-group-title">{{ _('Basic Elements') }}</div>
+                    <div class="element-item" data-type="custom-text">
+                        <i class="fas fa-edit"></i>
+                        <span>{{ _('Custom Text') }}</span>
+                    </div>
+            <div class="element-item" data-type="text" data-content="Sample Text">
+                <i class="fas fa-font"></i>
+                <span>{{ _('Text') }}</span>
+            </div>
+            <div class="element-item" data-type="heading" data-content="QUOTE">
+                <i class="fas fa-heading"></i>
+                <span>{{ _('Heading') }}</span>
+            </div>
+            <div class="element-item" data-type="line">
+                <i class="fas fa-minus"></i>
+                <span>{{ _('Line') }}</span>
+            </div>
+                    <div class="element-item" data-type="rectangle">
+                        <i class="fas fa-square"></i>
+                        <span>{{ _('Rectangle') }}</span>
+                    </div>
+                    <div class="element-item" data-type="circle">
+                        <i class="fas fa-circle"></i>
+                        <span>{{ _('Circle') }}</span>
+            </div>
+        </div>
+        
+        <div class="element-group">
+            <div class="element-group-title">{{ _('Company Info') }}</div>
+            <div class="element-item" data-type="logo">
+                <i class="fas fa-image"></i>
+                <span>{{ _('Company Logo') }}</span>
+            </div>
+            <div class="element-item" data-type="company-name">
+                <i class="fas fa-building"></i>
+                <span>{{ _('Company Name') }}</span>
+            </div>
+            <div class="element-item" data-type="company-info">
+                <i class="fas fa-address-card"></i>
+                <span>{{ _('Company Details') }}</span>
+            </div>
+            <div class="element-item" data-type="company-address">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ _('Address') }}</span>
+            </div>
+            <div class="element-item" data-type="company-email">
+                <i class="fas fa-envelope"></i>
+                <span>{{ _('Email') }}</span>
+            </div>
+            <div class="element-item" data-type="company-phone">
+                <i class="fas fa-phone"></i>
+                <span>{{ _('Phone') }}</span>
+            </div>
+            <div class="element-item" data-type="company-website">
+                <i class="fas fa-globe"></i>
+                <span>{{ _('Website') }}</span>
+            </div>
+            <div class="element-item" data-type="company-tax-id">
+                <i class="fas fa-file-invoice"></i>
+                <span>{{ _('Tax ID') }}</span>
+            </div>
+        </div>
+        
+        <div class="element-group">
+            <div class="element-group-title">{{ _('Quote Data') }}</div>
+            <div class="element-item" data-type="invoice-number">
+                <i class="fas fa-hashtag"></i>
+                <span>{{ _('Quote Number') }}</span>
+            </div>
+            <div class="element-item" data-type="invoice-date">
+                <i class="fas fa-calendar"></i>
+                <span>{{ _('Quote Date') }}</span>
+            </div>
+            <div class="element-item" data-type="due-date">
+                <i class="fas fa-calendar-check"></i>
+                <span>{{ _('Due Date') }}</span>
+            </div>
+            <div class="element-item" data-type="invoice-status">
+                <i class="fas fa-info-circle"></i>
+                <span>{{ _('Status') }}</span>
+            </div>
+            <div class="element-item" data-type="client-info">
+                <i class="fas fa-user"></i>
+                <span>{{ _('Client Info') }}</span>
+            </div>
+            <div class="element-item" data-type="client-name">
+                <i class="fas fa-user-circle"></i>
+                <span>{{ _('Client Name') }}</span>
+            </div>
+            <div class="element-item" data-type="client-address">
+                <i class="fas fa-map-marker"></i>
+                <span>{{ _('Client Address') }}</span>
+            </div>
+            <div class="element-item" data-type="quote-items-table">
+                <i class="fas fa-table"></i>
+                <span>{{ _('Quote Items Table') }}</span>
+            </div>
+            <div class="element-item" data-type="subtotal">
+                <i class="fas fa-coins"></i>
+                <span>{{ _('Subtotal') }}</span>
+            </div>
+            <div class="element-item" data-type="tax">
+                <i class="fas fa-percent"></i>
+                <span>{{ _('Tax') }}</span>
+            </div>
+            <div class="element-item" data-type="totals">
+                <i class="fas fa-calculator"></i>
+                <span>{{ _('Total Amount') }}</span>
+            </div>
+            <div class="element-item" data-type="notes">
+                <i class="fas fa-sticky-note"></i>
+                <span>{{ _('Notes') }}</span>
+            </div>
+            <div class="element-item" data-type="terms">
+                <i class="fas fa-file-contract"></i>
+                <span>{{ _('Terms') }}</span>
+            </div>
+        </div>
+        
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Payment & Project') }}</div>
+                    <div class="element-item" data-type="payment-date">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>{{ _('Payment Date') }}</span>
+                    </div>
+                    <div class="element-item" data-type="payment-method">
+                        <i class="fas fa-credit-card"></i>
+                        <span>{{ _('Payment Method') }}</span>
+                    </div>
+                    <div class="element-item" data-type="payment-status">
+                        <i class="fas fa-check-circle"></i>
+                        <span>{{ _('Payment Status') }}</span>
+                    </div>
+                    <div class="element-item" data-type="amount-paid">
+                        <i class="fas fa-dollar-sign"></i>
+                        <span>{{ _('Amount Paid') }}</span>
+                    </div>
+                    <div class="element-item" data-type="outstanding-amount">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>{{ _('Outstanding') }}</span>
+                    </div>
+                    <div class="element-item" data-type="project-name">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>{{ _('Project Name') }}</span>
+                    </div>
+                    <div class="element-item" data-type="client-email">
+                        <i class="fas fa-at"></i>
+                        <span>{{ _('Client Email') }}</span>
+                    </div>
+                    <div class="element-item" data-type="client-phone">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>{{ _('Client Phone') }}</span>
+                    </div>
+                </div>
+                
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Advanced') }}</div>
+                    <div class="element-item" data-type="qr-code">
+                        <i class="fas fa-qrcode"></i>
+                        <span>{{ _('QR Code') }}</span>
+                    </div>
+                    <div class="element-item" data-type="barcode">
+                        <i class="fas fa-barcode"></i>
+                        <span>{{ _('Barcode') }}</span>
+                    </div>
+                    <div class="element-item" data-type="page-number">
+                        <i class="fas fa-file-alt"></i>
+                        <span>{{ _('Page Number') }}</span>
+                    </div>
+                    <div class="element-item" data-type="date-now">
+                        <i class="fas fa-clock"></i>
+                        <span>{{ _('Current Date') }}</span>
+                    </div>
+                    <div class="element-item" data-type="watermark">
+                        <i class="fas fa-stamp"></i>
+                        <span>{{ _('Watermark') }}</span>
+                    </div>
+                    <div class="element-item" data-type="bank-info">
+                        <i class="fas fa-university"></i>
+                        <span>{{ _('Bank Info') }}</span>
+                    </div>
+                    <div class="element-item" data-type="currency">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>{{ _('Currency') }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Variables Tab -->
+            <div id="tab-variables" class="tab-pane">
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Quote Fields') }}</div>
+                    <div class="variable-item" data-variable="invoice.invoice_number">
+                        <div class="variable-name">{{ '{{' }} invoice.invoice_number {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Quote number') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.status">
+                        <div class="variable-name">{{ '{{' }} invoice.status {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Quote status (draft/sent/paid/overdue)') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_date(invoice.issue_date)">
+                        <div class="variable-name">{{ '{{' }} format_date(invoice.issue_date) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Issue date') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_date(invoice.due_date)">
+                        <div class="variable-name">{{ '{{' }} format_date(invoice.due_date) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Due date') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(invoice.subtotal)">
+                        <div class="variable-name">{{ '{{' }} format_money(invoice.subtotal) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Subtotal amount') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.tax_rate">
+                        <div class="variable-name">{{ '{{' }} invoice.tax_rate {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Tax rate (%)') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(invoice.tax_amount)">
+                        <div class="variable-name">{{ '{{' }} format_money(invoice.tax_amount) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Tax amount') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(invoice.total_amount)">
+                        <div class="variable-name">{{ '{{' }} format_money(invoice.total_amount) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Total amount') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.currency_code">
+                        <div class="variable-name">{{ '{{' }} invoice.currency_code {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Currency code (EUR, USD, etc)') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.notes">
+                        <div class="variable-name">{{ '{{' }} invoice.notes {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Quote notes') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.terms">
+                        <div class="variable-name">{{ '{{' }} invoice.terms {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Terms & conditions') }}</div>
+                    </div>
+                </div>
+                
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Client Fields') }}</div>
+                    <div class="variable-item" data-variable="invoice.client_name">
+                        <div class="variable-name">{{ '{{' }} invoice.client_name {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Client company name') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.client_email">
+                        <div class="variable-name">{{ '{{' }} invoice.client_email {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Client email address') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.client_address">
+                        <div class="variable-name">{{ '{{' }} invoice.client_address {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Client full address') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.client.contact_person">
+                        <div class="variable-name">{{ '{{' }} invoice.client.contact_person {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Client contact person') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.client.phone">
+                        <div class="variable-name">{{ '{{' }} invoice.client.phone {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Client phone number') }}</div>
+                    </div>
+                </div>
+                
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Payment Fields') }}</div>
+                    <div class="variable-item" data-variable="quote.status">
+                        <div class="variable-name">{{ '{{' }} quote.status {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Quote status') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_date(quote.accepted_at)">
+                        <div class="variable-name">{{ '{{' }} format_date(quote.accepted_at) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Quote accepted date') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="quote.visible_to_client">
+                        <div class="variable-name">{{ '{{' }} invoice.payment_method {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Payment method') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.payment_reference">
+                        <div class="variable-name">{{ '{{' }} invoice.payment_reference {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Payment reference number') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(invoice.amount_paid)">
+                        <div class="variable-name">{{ '{{' }} format_money(invoice.amount_paid) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Amount paid') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(invoice.outstanding_amount)">
+                        <div class="variable-name">{{ '{{' }} format_money(invoice.outstanding_amount) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Outstanding amount') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.payment_notes">
+                        <div class="variable-name">{{ '{{' }} invoice.payment_notes {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Payment notes') }}</div>
+                    </div>
+                </div>
+                
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Project Fields') }}</div>
+                    <div class="variable-item" data-variable="invoice.project.name">
+                        <div class="variable-name">{{ '{{' }} invoice.project.name {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Project name') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.project.code">
+                        <div class="variable-name">{{ '{{' }} invoice.project.code {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Project code') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.project.description">
+                        <div class="variable-name">{{ '{{' }} invoice.project.description {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Project description') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.project.billing_ref">
+                        <div class="variable-name">{{ '{{' }} invoice.project.billing_ref {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Project billing reference') }}</div>
+                    </div>
+                </div>
+                
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Company/Settings Fields') }}</div>
+                    <div class="variable-item" data-variable="settings.company_name">
+                        <div class="variable-name">{{ '{{' }} settings.company_name {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Your company name') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.company_address">
+                        <div class="variable-name">{{ '{{' }} settings.company_address {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Your company address') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.company_email">
+                        <div class="variable-name">{{ '{{' }} settings.company_email {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Your company email') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.company_phone">
+                        <div class="variable-name">{{ '{{' }} settings.company_phone {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Your company phone') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.company_website">
+                        <div class="variable-name">{{ '{{' }} settings.company_website {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Your company website') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.company_tax_id">
+                        <div class="variable-name">{{ '{{' }} settings.company_tax_id {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Your tax ID number') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.company_bank_info">
+                        <div class="variable-name">{{ '{{' }} settings.company_bank_info {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Your bank account info') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.invoice_terms">
+                        <div class="variable-name">{{ '{{' }} settings.invoice_terms {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Default invoice terms') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="settings.invoice_notes">
+                        <div class="variable-name">{{ '{{' }} settings.invoice_notes {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Default invoice notes') }}</div>
+                    </div>
+                </div>
+                
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Date/Time Fields') }}</div>
+                    <div class="variable-item" data-variable="format_date(now)">
+                        <div class="variable-name">{{ '{{' }} format_date(now) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Current date') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_date(invoice.created_at)">
+                        <div class="variable-name">{{ '{{' }} format_date(invoice.created_at) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Quote creation date') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_date(invoice.updated_at)">
+                        <div class="variable-name">{{ '{{' }} format_date(invoice.updated_at) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Quote last update date') }}</div>
+                    </div>
+                </div>
+                
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Quote Items Loop') }}</div>
+                    <div class="variable-item" data-variable="for-loop-start">
+                        <div class="variable-name">{{ '{%' }} for item in invoice.items {{ '%}' }}</div>
+                        <div class="variable-desc">{{ _('Loop through invoice items') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="item.description">
+                        <div class="variable-name">{{ '{{' }} item.description {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Item description') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="item.quantity">
+                        <div class="variable-name">{{ '{{' }} item.quantity {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Item quantity') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(item.unit_price)">
+                        <div class="variable-name">{{ '{{' }} format_money(item.unit_price) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Item unit price') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(item.total_amount)">
+                        <div class="variable-name">{{ '{{' }} format_money(item.total_amount) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Item total amount') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="for-loop-end">
+                        <div class="variable-name">{{ '{%' }} endfor {{ '%}' }}</div>
+                        <div class="variable-desc">{{ _('End loop') }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER: Canvas Area -->
+    <div class="canvas-area">
+        <div class="canvas-header">
+            <h3>
+                <i class="fas fa-palette"></i>
+                {{ _('Design Canvas') }}
+            </h3>
+            <div class="canvas-header-controls">
+                <div class="page-size-selector-group">
+                    <label class="page-size-label">{{ _('Page Size:') }}</label>
+                    <select id="page-size-selector" class="page-size-select">
+                        {% if all_templates %}
+                            {% for template in all_templates %}
+                                <option value="{{ template.page_size }}" {% if template.page_size == page_size %}selected{% endif %}>
+                                    {{ template.page_size }}
+                                </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="A4" {% if page_size == 'A4' %}selected{% endif %}>A4</option>
+                            <option value="Letter" {% if page_size == 'Letter' %}selected{% endif %}>Letter</option>
+                            <option value="Legal" {% if page_size == 'Legal' %}selected{% endif %}>Legal</option>
+                            <option value="A3" {% if page_size == 'A3' %}selected{% endif %}>A3</option>
+                            <option value="A5" {% if page_size == 'A5' %}selected{% endif %}>A5</option>
+                            <option value="Tabloid" {% if page_size == 'Tabloid' %}selected{% endif %}>Tabloid</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="canvas-toolbar">
+                    <button type="button" id="btn-zoom-in" title="{{ _('Zoom In') }}">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button type="button" id="btn-zoom-out" title="{{ _('Zoom Out') }}">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button type="button" id="btn-delete" title="{{ _('Delete Selected') }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="canvas-container"></div>
+    </div>
+
+    <!-- RIGHT: Properties Panel -->
+    <div class="properties-panel">
+        <h3>
+            <i class="fas fa-sliders-h"></i>
+            {{ _('Properties') }}
+        </h3>
+        <div id="properties-content">
+            <p class="text-sm text-gray-500 italic">{{ _('Select an element to edit its properties') }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="preview-modal" style="display: none;">
+    <div class="preview-modal-overlay" id="preview-modal-overlay"></div>
+    <div class="preview-modal-content">
+        <div class="preview-modal-header">
+            <h3>{{ _('PDF Preview') }}</h3>
+            <button class="preview-modal-close" id="preview-modal-close" type="button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="preview-modal-body">
+            <div class="preview-loading" id="preview-loading">
+                <div class="text-center">
+                    <div class="spinner mb-3"></div>
+                    <p class="text-sm text-gray-600 font-medium">{{ _('Generating...') }}</p>
+                </div>
+            </div>
+            <iframe id="preview-frame" style="width: 100%; height: 100%; border: none; border-radius: 0.5rem;"></iframe>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Save Form -->
+<form id="form-save" method="POST" action="{{ url_for('admin.quote_pdf_layout') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="page_size" id="save-page-size" value="{{ page_size }}">
+    <textarea id="save-html" name="quote_pdf_template_html"></textarea>
+    <textarea id="save-css" name="quote_pdf_template_css"></textarea>
+    <textarea id="save-json" name="design_json"></textarea>
+</form>
+
+<!-- Code Modal (initially hidden) -->
+<div id="code-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">{{ _('Generated Code') }}</h3>
+            <button type="button" id="close-modal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-2">HTML:</label>
+                <textarea id="code-html" class="w-full h-48 p-3 border rounded font-mono text-sm" readonly></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">CSS:</label>
+                <textarea id="code-css" class="w-full h-48 p-3 border rounded font-mono text-sm" readonly></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<!-- Load Konva.js from CDN (jsDelivr is whitelisted in CSP) -->
+<script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js" crossorigin="anonymous"></script>
+
+<script>
+console.log('PDF Editor script starting...');
+
+const CSRF_TOKEN = {{ csrf_token()|tojson }};
+const PREVIEW_URL = {{ url_for('admin.quote_pdf_layout_preview')|tojson }};
+const LOGO_URL = {{ (settings.get_logo_url() if settings.has_logo() else '')|tojson }};
+const SAVED_DESIGN_JSON = {{ (design_json if design_json else '')|tojson }};
+const CURRENT_PAGE_SIZE = {{ page_size|tojson }};
+
+// Page size dimensions in pixels at 72 DPI
+const PAGE_SIZE_DIMENSIONS = {
+    'A4': { width: 595, height: 842 },
+    'Letter': { width: 612, height: 792 },
+    'Legal': { width: 612, height: 1008 },
+    'A3': { width: 842, height: 1191 },
+    'A5': { width: 420, height: 595 },
+    'Tabloid': { width: 792, height: 1224 }
+};
+
+// Wait for Konva.js to load
+let konvaLoadAttempts = 0;
+const maxKonvaLoadAttempts = 100; // 5 seconds max wait
+
+function initializePDFEditor() {
+    konvaLoadAttempts++;
+    
+    if (typeof Konva === 'undefined') {
+        if (konvaLoadAttempts >= maxKonvaLoadAttempts) {
+            console.error('❌ Konva.js failed to load after 5 seconds');
+            const container = document.getElementById('canvas-container');
+            if (container) {
+                container.innerHTML = '<div style="padding: 40px; text-align: center; background: #fee; border: 2px solid red; border-radius: 8px; margin: 20px;">' +
+                    '<h3 style="color: #d00; margin-bottom: 10px;">⚠️ Konva.js Library Failed to Load</h3>' +
+                    '<p>The canvas library could not be loaded. This might be due to:</p>' +
+                    '<ul style="text-align: left; display: inline-block; margin: 10px auto;">' +
+                    '<li>Network connectivity issues</li>' +
+                    '<li>CDN being blocked</li>' +
+                    '<li>Firewall/proxy restrictions</li>' +
+                    '</ul>' +
+                    '<p><strong>Try:</strong></p>' +
+                    '<ul style="text-align: left; display: inline-block; margin: 10px auto;">' +
+                    '<li>Refresh the page (Ctrl+F5)</li>' +
+                    '<li>Check your internet connection</li>' +
+                    '<li>Try a different network</li>' +
+                    '<li>Check browser console for errors (F12)</li>' +
+                    '</ul>' +
+                    '</div>';
+            }
+            return;
+        }
+        console.log('Waiting for Konva.js to load... (attempt ' + konvaLoadAttempts + '/' + maxKonvaLoadAttempts + ')');
+        setTimeout(initializePDFEditor, 50);
+        return;
+    }
+    
+    console.log('✅ Konva.js loaded successfully, initializing editor...');
+    
+    // Initialize Konva Stage
+    const container = document.getElementById('canvas-container');
+    const currentSize = CURRENT_PAGE_SIZE || 'A4';
+    const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+    let width = dimensions.width;
+    let height = dimensions.height;
+    
+    let stage = new Konva.Stage({
+        container: 'canvas-container',
+        width: width,
+        height: height,
+        draggable: false
+    });
+    
+    let layer = new Konva.Layer();
+    stage.add(layer);
+    
+    // Store elements for export
+    const elements = [];
+    let selectedElement = null;
+    let snapToGrid = true;
+    const gridSize = 10;
+    
+    // Base fit scale (for auto-fitting to container)
+    let baseFitScale = 1;
+    let zoomScale = 1; // Zoom scale applied on top of base fit scale
+    
+    // Auto-fit scaling function to fit canvas within container
+    function fitCanvasToContainer() {
+        if (!container || !stage) return;
+        
+        // Get container dimensions (accounting for padding/borders)
+        const containerRect = container.getBoundingClientRect();
+        const containerWidth = containerRect.width - 40; // Account for padding
+        const containerHeight = containerRect.height - 40;
+        
+        // Skip if container not ready
+        if (containerWidth <= 0 || containerHeight <= 0) return;
+        
+        // Get actual page dimensions
+        const pageWidth = width;
+        const pageHeight = height;
+        
+        // Calculate scale to fit within container while maintaining aspect ratio
+        const scaleX = containerWidth / pageWidth;
+        const scaleY = containerHeight / pageHeight;
+        baseFitScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+        
+        // Reset zoom when fitting
+        zoomScale = 1;
+        
+        // Apply base fit scale
+        stage.scale({ x: baseFitScale, y: baseFitScale });
+        
+        // Redraw
+        layer.draw();
+        
+        console.log(`Canvas fitted: scale=${baseFitScale.toFixed(2)}, container=${containerWidth}x${containerHeight}, page=${pageWidth}x${pageHeight}`);
+    }
+    
+    // Fit canvas on initialization (after a short delay to ensure container is rendered)
+    setTimeout(() => {
+        fitCanvasToContainer();
+    }, 100);
+    
+    // Fit canvas on window resize
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(fitCanvasToContainer, 250);
+    });
+    
+    // Add background with grid
+    let background = new Konva.Rect({
+        x: 0,
+        y: 0,
+        width: width,
+        height: height,
+        fill: 'white',
+        name: 'background'
+    });
+    layer.add(background);
+    
+    // Add grid lines
+    function drawGrid() {
+        // Get current stage dimensions
+        const stageWidth = stage.width();
+        const stageHeight = stage.height();
+        
+        // Remove old grid if exists
+        layer.find('.grid-line').forEach(line => line.destroy());
+        
+        // Draw vertical lines
+        for (let i = 0; i < stageWidth / gridSize; i++) {
+            const line = new Konva.Line({
+                points: [i * gridSize, 0, i * gridSize, stageHeight],
+                stroke: '#e0e0e0',
+                strokeWidth: i % 5 === 0 ? 0.5 : 0.25,
+                name: 'grid-line',
+                listening: false
+            });
+            layer.add(line);
+            line.moveToBottom();
+        }
+        
+        // Draw horizontal lines
+        for (let i = 0; i < stageHeight / gridSize; i++) {
+            const line = new Konva.Line({
+                points: [0, i * gridSize, stageWidth, i * gridSize],
+                stroke: '#e0e0e0',
+                strokeWidth: i % 5 === 0 ? 0.5 : 0.25,
+                name: 'grid-line',
+                listening: false
+            });
+            layer.add(line);
+            line.moveToBottom();
+        }
+        
+        if (background) {
+            background.moveToBottom();
+        }
+        layer.draw();
+    }
+    
+    drawGrid();
+    
+    // Element templates
+    {% raw %}
+    const templates = {
+        // Basic elements
+        'text': { text: 'Sample Text', fontSize: 14, fontFamily: 'Arial' },
+        'heading': { text: 'QUOTE', fontSize: 28, fontFamily: 'Arial', fontStyle: 'bold' },
+        
+        // Company info
+        'company-name': { text: '{{ settings.company_name }}', fontSize: 20, fontFamily: 'Arial', fontStyle: 'bold' },
+        'company-info': { text: '{{ settings.company_address }}\\n{{ settings.company_email }}\\n{{ settings.company_phone }}', fontSize: 12 },
+        'company-address': { text: '{{ settings.company_address }}', fontSize: 12 },
+        'company-email': { text: 'Email: {{ settings.company_email }}', fontSize: 12 },
+        'company-phone': { text: 'Phone: {{ settings.company_phone }}', fontSize: 12 },
+        'company-website': { text: '{{ settings.company_website }}', fontSize: 12 },
+        'company-tax-id': { text: 'Tax ID: {{ settings.company_tax_id }}', fontSize: 12 },
+        
+        // Quote data
+        'quote-number': { text: 'Quote #: {{ quote.quote_number }}', fontSize: 14, fontStyle: 'bold' },
+        'quote-date': { text: 'Date: {{ format_date(quote.created_at) }}', fontSize: 12 },
+        'valid-until': { text: 'Valid Until: {{ format_date(quote.valid_until) }}', fontSize: 12 },
+        'quote-status': { text: 'Status: {{ quote.status|upper }}', fontSize: 12 },
+        'client-info': { text: 'Quote For:\\n{{ quote.client.name }}\\n{{ quote.client.address }}', fontSize: 12 },
+        'client-name': { text: '{{ quote.client.name }}', fontSize: 14, fontStyle: 'bold' },
+        'client-address': { text: '{{ quote.client.address }}', fontSize: 12 },
+        'subtotal': { text: 'Subtotal: {{ format_money(quote.subtotal) }}', fontSize: 14 },
+        'tax': { text: 'Tax ({{ quote.tax_rate }}%): {{ format_money(quote.tax_amount) }}', fontSize: 14 },
+        'totals': { text: 'Total: {{ format_money(quote.total_amount) }}', fontSize: 16, fontStyle: 'bold' },
+        'notes': { text: 'Notes: {{ quote.notes }}', fontSize: 11 },
+        'terms': { text: 'Terms: {{ quote.terms }}', fontSize: 10 },
+        
+        // Quote specific
+        'quote-title': { text: 'Title: {{ quote.title }}', fontSize: 12 },
+        'quote-description': { text: 'Description: {{ quote.description }}', fontSize: 11 },
+        'accepted-date': { text: 'Accepted Date: {{ format_date(quote.accepted_at) if quote.accepted_at else "N/A" }}', fontSize: 12 },
+        'sent-date': { text: 'Sent Date: {{ format_date(quote.sent_at) if quote.sent_at else "N/A" }}', fontSize: 12 },
+        'client-email': { text: 'Email: {{ quote.client.email or "" }}', fontSize: 12 },
+        'client-phone': { text: 'Phone: {{ quote.client.phone or "" }}', fontSize: 12 },
+        
+        // Advanced
+        'qr-code': { text: '[QR Code: {{ quote.quote_number }}]', fontSize: 10 },
+        'barcode': { text: '{{ quote.quote_number }}', fontSize: 10 },
+        'page-number': { text: 'Page 1', fontSize: 10 },
+        'date-now': { text: '{{ format_date(now) }}', fontSize: 10 },
+        'watermark': { text: 'CONFIDENTIAL', fontSize: 48, fontStyle: 'bold', opacity: 0.1 },
+        'bank-info': { text: 'Bank Account:\\n{{ settings.company_bank_info }}', fontSize: 11 },
+        'currency': { text: 'Currency: {{ quote.currency_code }}', fontSize: 12 }
+    };
+    {% endraw %}
+    
+    // Tab switching
+    document.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetTab = this.dataset.tab;
+            
+            // Update tabs
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            document.getElementById('tab-' + targetTab).classList.add('active');
+        });
+    });
+    
+    // Search functionality
+    const searchBox = document.getElementById('sidebar-search');
+    searchBox.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        // Search in elements tab
+        const elementItems = document.querySelectorAll('#tab-elements .element-item');
+        elementItems.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchTerm) || searchTerm === '') {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Search in variables tab
+        const variableItems = document.querySelectorAll('#tab-variables .variable-item');
+        variableItems.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchTerm) || searchTerm === '') {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Show/hide group titles
+        document.querySelectorAll('.element-group').forEach(group => {
+            const visibleItems = Array.from(group.querySelectorAll('.element-item, .variable-item'))
+                .filter(item => item.style.display !== 'none');
+            group.style.display = visibleItems.length > 0 ? 'block' : 'none';
+        });
+    });
+    
+    // Handle variable clicks (add as custom text)
+    document.querySelectorAll('.variable-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const variable = this.dataset.variable;
+            let text;
+            
+            // Handle special loop variables
+            if (variable === 'for-loop-start') {
+                {% raw %}
+                text = '{% for item in quote.items %}';
+                {% endraw %}
+            } else if (variable === 'for-loop-end') {
+                {% raw %}
+                text = '{% endfor %}';
+                {% endraw %}
+            } else {
+                {% raw %}
+                text = '{{ ' + variable + ' }}';
+                {% endraw %}
+            }
+            
+            addElement('custom-text', 100, 100, text);
+        });
+    });
+    
+    // Drag from sidebar
+    document.querySelectorAll('.element-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const type = this.dataset.type;
+            
+            // Handle custom text with prompt
+            if (type === 'custom-text') {
+                {% raw %}
+                const customText = prompt('Enter text (you can use variables like {{ invoice.invoice_number }}):', 'Custom Text');
+                {% endraw %}
+                if (customText !== null) {
+                    addElement('custom-text', 100, 100, customText);
+                }
+                return;
+            }
+            
+            addElement(type, 100, 100);
+        });
+    });
+    
+    function addElement(type, x, y, customText) {
+        // Handle custom text
+        if (type === 'custom-text' || customText) {
+            const text = new Konva.Text({
+                x: x,
+                y: y,
+                text: customText || 'Custom Text',
+                fontSize: 14,
+                fontFamily: 'Arial',
+                fill: 'black',
+                draggable: true,
+                width: 400,
+                name: 'custom-text'
+            });
+            
+            layer.add(text);
+            elements.push({ type: 'custom-text', node: text });
+            setupSelection(text);
+            layer.draw();
+            return;
+        }
+        
+        const template = templates[type];
+        
+        // Handle special cases first
+            if (type === 'line') {
+                const line = new Konva.Line({
+                    points: [x, y, x + 200, y],
+                    stroke: 'black',
+                    strokeWidth: 2,
+                draggable: true,
+                name: 'line'
+                });
+                layer.add(line);
+                elements.push({ type: 'line', node: line });
+                setupSelection(line);
+            layer.draw();
+                return;
+            }
+        
+        if (type === 'rectangle') {
+            const rect = new Konva.Rect({
+                x: x,
+                y: y,
+                width: 150,
+                height: 100,
+                fill: 'transparent',
+                stroke: 'black',
+                strokeWidth: 2,
+                draggable: true,
+                name: 'rectangle'
+            });
+            layer.add(rect);
+            elements.push({ type: 'rectangle', node: rect });
+            setupSelection(rect);
+            layer.draw();
+            return;
+        }
+        
+        if (type === 'circle') {
+            const circle = new Konva.Circle({
+                x: x + 50,
+                y: y + 50,
+                radius: 50,
+                fill: 'transparent',
+                stroke: 'black',
+                strokeWidth: 2,
+                draggable: true,
+                name: 'circle'
+            });
+            layer.add(circle);
+            elements.push({ type: 'circle', node: circle });
+            setupSelection(circle);
+            layer.draw();
+            return;
+        }
+        
+            if (type === 'logo' && LOGO_URL) {
+                Konva.Image.fromURL(LOGO_URL, function(image) {
+                    image.setAttrs({
+                        x: x,
+                        y: y,
+                        width: 100,
+                        height: 50,
+                    draggable: true,
+                    name: 'logo'
+                    });
+                    layer.add(image);
+                    elements.push({ type: 'logo', node: image });
+                    setupSelection(image);
+                    layer.draw();
+                });
+                return;
+            }
+        
+            if (type === 'quote-items-table') {
+                addTable(x, y);
+            return;
+        }
+        
+            // Removed expenses-table for quotes
+            if (false && type === 'expenses-table') {
+                addExpensesTable(x, y);
+            return;
+        }
+        
+        // Handle text-based elements
+        if (!template) return;
+        
+        const text = new Konva.Text({
+            x: x,
+            y: y,
+            text: template.text,
+            fontSize: template.fontSize || 14,
+            fontFamily: template.fontFamily || 'Arial',
+            fontStyle: template.fontStyle || 'normal',
+            fill: 'black',
+            draggable: true,
+            width: 400,
+            opacity: template.opacity !== undefined ? template.opacity : 1,
+            name: type
+        });
+        
+        layer.add(text);
+        elements.push({ type: type, node: text, template: template });
+        setupSelection(text);
+        layer.draw();
+    }
+    
+    function addTable(x, y) {
+        const tableGroup = new Konva.Group({
+            x: x,
+            y: y,
+            draggable: true,
+            name: 'quote-items-table'
+        });
+        
+        const header = new Konva.Text({
+            text: 'Description | Qty | Price | Total',
+            fontSize: 12,
+            fontStyle: 'bold',
+            fill: 'black',
+            width: 500
+        });
+        
+        const line = new Konva.Line({
+            points: [0, 20, 500, 20],
+            stroke: 'black',
+            strokeWidth: 1
+        });
+        
+        {% raw %}
+        const items = new Konva.Text({
+            y: 25,
+            text: '{% for item in quote.items %}\\n{{ item.description }} | {{ item.quantity }} | {{ format_money(item.unit_price) }} | {{ format_money(item.total_amount) }}\\n{% endfor %}',
+            fontSize: 11,
+            fill: 'black',
+            width: 500
+        });
+        {% endraw %}
+        
+        tableGroup.add(header, line, items);
+        layer.add(tableGroup);
+        elements.push({ type: 'quote-items-table', node: tableGroup });
+        setupSelection(tableGroup);
+        // Also setup selection on children so clicks on them select the parent Group
+        setupSelection(header);
+        setupSelection(line);
+        setupSelection(items);
+        layer.draw();
+    }
+    
+    function addExpensesTable(x, y) {
+        const tableGroup = new Konva.Group({
+            x: x,
+            y: y,
+            draggable: true,
+            name: 'quote-items-table'
+        });
+        
+        const header = new Konva.Text({
+            text: 'Expense | Date | Category | Amount',
+            fontSize: 12,
+            fontStyle: 'bold',
+            fill: '#856404',
+            width: 500
+        });
+        
+        const line = new Konva.Line({
+            points: [0, 20, 500, 20],
+            stroke: '#856404',
+            strokeWidth: 1
+        });
+        
+        {% raw %}
+        const items = new Konva.Text({
+            y: 25,
+            text: '{% for expense in invoice.expenses %}\\n{{ expense.title }} | {{ expense.expense_date }} | {{ expense.category }} | {{ format_money(expense.total_amount) }}\\n{% endfor %}',
+            fontSize: 11,
+            fill: '#856404',
+            width: 500
+        });
+        {% endraw %}
+        
+        tableGroup.add(header, line, items);
+        layer.add(tableGroup);
+        // Removed expenses table for quotes
+        setupSelection(tableGroup);
+        // Also setup selection on children so clicks on them select the parent Group
+        setupSelection(header);
+        setupSelection(line);
+        setupSelection(items);
+        layer.draw();
+    }
+    
+    function setupSelection(node) {
+        node.on('click', function(e) {
+            // If clicking on a child of a table Group, select the Group instead
+            // UNLESS Ctrl/Cmd is held, which allows selecting the individual element
+            let targetNode = node;
+            if (node.parent && node.parent.attrs && (node.parent.attrs.name === 'quote-items-table')) {
+                // Allow direct selection if Ctrl/Cmd is held
+                if (e.evt.ctrlKey || e.evt.metaKey) {
+                    targetNode = node;
+                } else {
+                    targetNode = node.parent;
+                }
+            }
+            selectElement(targetNode);
+            e.cancelBubble = true;
+        });
+        
+        // Add double-click handler for text elements in tables to enable direct editing
+        // Check multiple ways to detect Text elements
+        const isTextNode = node.className === 'Text' || (node.getType && node.getType() === 'Text') || 
+                          (node.constructor && node.constructor.name === 'Text');
+        if (isTextNode && node.parent && node.parent.attrs && 
+            (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table')) {
+            // Change cursor on hover to indicate editability
+            node.on('mouseenter', function() {
+                stage.container().style.cursor = 'text';
+            });
+            node.on('mouseleave', function() {
+                stage.container().style.cursor = 'default';
+            });
+            
+            node.on('dblclick', function(e) {
+                // Select the individual text element for editing
+                selectElement(node);
+                e.cancelBubble = true;
+                // Focus the text content textarea in properties panel if available
+                setTimeout(() => {
+                    const propText = document.getElementById('prop-text');
+                    if (propText) {
+                        propText.disabled = false;
+                        propText.readOnly = false;
+                        propText.focus();
+                        propText.select();
+                    }
+                }, 150);
+            });
+        }
+        
+        // Add snap to grid on drag
+        node.on('dragmove', function() {
+            if (snapToGrid) {
+                node.position({
+                    x: Math.round(node.x() / gridSize) * gridSize,
+                    y: Math.round(node.y() / gridSize) * gridSize
+                });
+            }
+        });
+        
+        node.on('dragend', function() {
+            // Update properties panel if visible
+            const propX = document.getElementById('prop-x');
+            const propY = document.getElementById('prop-y');
+            if (propX) propX.value = Math.round(node.x());
+            if (propY) propY.value = Math.round(node.y());
+        });
+    }
+    
+    // Snap to grid toggle
+    document.getElementById('snap-to-grid')?.addEventListener('change', function(e) {
+        snapToGrid = e.target.checked;
+    });
+    
+    function selectElement(node) {
+        // Remove previous selection
+        layer.find('Transformer').forEach(t => t.destroy());
+        
+        selectedElement = node;
+        
+        const transformer = new Konva.Transformer({
+            nodes: [node],
+            enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+            boundBoxFunc: function(oldBox, newBox) {
+                if (newBox.width < 20 || newBox.height < 20) {
+                    return oldBox;
+                }
+                return newBox;
+            }
+        });
+        
+        layer.add(transformer);
+        layer.draw();
+        
+        // Update properties panel
+        updatePropertiesPanel(node);
+    }
+    
+    function updatePropertiesPanel(node) {
+        const propsContent = document.getElementById('properties-content');
+        if (!propsContent) {
+            console.error('Properties content element not found!');
+            return;
+        }
+        
+        if (!node) {
+            console.error('Node is null or undefined!');
+            propsContent.innerHTML = '<p class="text-sm text-red-500">Error: No element selected</p>';
+            return;
+        }
+        
+        const attrs = node.attrs || {};
+        // Try multiple ways to detect Text elements for better compatibility
+        const className = node.className || (node.getType && node.getType()) || 'Unknown';
+        const isTextElement = className === 'Text' || (node.getType && node.getType() === 'Text') || 
+                             (node.constructor && node.constructor.name === 'Text');
+        
+        // Debug logging
+        console.log('updatePropertiesPanel called:', {
+            className: className,
+            getType: node.getType ? node.getType() : 'N/A',
+            constructorName: node.constructor ? node.constructor.name : 'unknown',
+            isTextElement: isTextElement,
+            name: attrs.name,
+            attrs: attrs,
+            node: node
+        });
+        
+        let html = '<div class="space-y-4">';
+        
+        // Element type
+        html += '<div class="property-group">';
+        html += '<div class="property-label">Element Type</div>';
+        html += `<input type="text" value="${attrs.name || className}" disabled class="property-input bg-gray-100">`;
+        html += '</div>';
+        
+        // Position
+        html += '<div class="property-group">';
+        html += '<div class="property-label">Position X</div>';
+        html += `<input type="number" id="prop-x" value="${Math.round(attrs.x || 0)}" class="property-input">`;
+        html += '</div>';
+        
+        html += '<div class="property-group">';
+        html += '<div class="property-label">Position Y</div>';
+        html += `<input type="number" id="prop-y" value="${Math.round(attrs.y || 0)}" class="property-input">`;
+        html += '</div>';
+        
+        // Text-specific properties - check if it's a Text element (even if inside a table group)
+        if (isTextElement) {
+            // Properly escape text for HTML and convert \n to actual newlines
+            const textContent = (attrs.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\n/g, '\n');
+            // Use more rows for table items which might be longer
+            const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table');
+            const textareaRows = isTableText ? 8 : 3;
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Text Content</div>';
+            html += `<textarea id="prop-text" class="property-input" rows="${textareaRows}">${textContent}</textarea>`;
+            if (isTableText) {
+                html += '<p class="text-xs text-gray-500 mt-1">Double-click table text to edit, or edit here in the properties panel.</p>';
+            }
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Font Size</div>';
+            html += `<input type="number" id="prop-fontSize" value="${attrs.fontSize || 14}" class="property-input">`;
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Font Family</div>';
+            html += `<select id="prop-fontFamily" class="property-input">`;
+            const fonts = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Helvetica'];
+            fonts.forEach(font => {
+                const selected = (attrs.fontFamily === font) ? 'selected' : '';
+                html += `<option value="${font}" ${selected}>${font}</option>`;
+            });
+            html += '</select>';
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Font Style</div>';
+            html += `<select id="prop-fontStyle" class="property-input">`;
+            html += `<option value="normal" ${attrs.fontStyle === 'normal' ? 'selected' : ''}>Normal</option>`;
+            html += `<option value="bold" ${attrs.fontStyle === 'bold' ? 'selected' : ''}>Bold</option>`;
+            html += `<option value="italic" ${attrs.fontStyle === 'italic' ? 'selected' : ''}>Italic</option>`;
+            html += '</select>';
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Text Color</div>';
+            html += `<input type="color" id="prop-fill" value="${rgbToHex(attrs.fill || '#000000')}" class="property-input">`;
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Width</div>';
+            html += `<input type="number" id="prop-width" value="${attrs.width || 400}" class="property-input">`;
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Opacity</div>';
+            html += `<input type="range" id="prop-opacity" min="0" max="1" step="0.1" value="${attrs.opacity !== undefined ? attrs.opacity : 1}" class="property-input">`;
+            html += `<span id="opacity-value">${(attrs.opacity !== undefined ? attrs.opacity : 1) * 100}%</span>`;
+            html += '</div>';
+        }
+        
+        // Shape-specific properties
+        if (className === 'Rect' || className === 'Circle') {
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Fill Color</div>';
+            html += `<input type="color" id="prop-fill" value="${rgbToHex(attrs.fill || '#ffffff')}" class="property-input">`;
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Stroke Color</div>';
+            html += `<input type="color" id="prop-stroke" value="${rgbToHex(attrs.stroke || '#000000')}" class="property-input">`;
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Stroke Width</div>';
+            html += `<input type="number" id="prop-strokeWidth" value="${attrs.strokeWidth || 1}" class="property-input">`;
+            html += '</div>';
+            
+            if (className === 'Rect') {
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Width</div>';
+                html += `<input type="number" id="prop-width" value="${attrs.width || 100}" class="property-input">`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Height</div>';
+                html += `<input type="number" id="prop-height" value="${attrs.height || 100}" class="property-input">`;
+                html += '</div>';
+            }
+            
+            if (className === 'Circle') {
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Radius</div>';
+                html += `<input type="number" id="prop-radius" value="${attrs.radius || 50}" class="property-input">`;
+                html += '</div>';
+            }
+        }
+        
+        // Line-specific properties
+        if (className === 'Line') {
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Stroke Color</div>';
+            html += `<input type="color" id="prop-stroke" value="${rgbToHex(attrs.stroke || '#000000')}" class="property-input">`;
+            html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Stroke Width</div>';
+            html += `<input type="number" id="prop-strokeWidth" value="${attrs.strokeWidth || 1}" class="property-input">`;
+            html += '</div>';
+        }
+        
+        // Group-specific properties (for items-table and expenses-table)
+        // Check both className and constructor name for Groups
+        const isGroup = className === 'Group' || (node.constructor && node.constructor.name === 'Group');
+        const isTableGroup = isGroup && (attrs.name === 'items-table' || attrs.name === 'expenses-table');
+        console.log('Group check:', {
+            className: className,
+            constructorName: node.constructor ? node.constructor.name : 'unknown',
+            isGroup: isGroup,
+            name: attrs.name,
+            isTableGroup: isTableGroup
+        });
+        
+        if (isTableGroup) {
+            try {
+                // Find child elements - use getChildren() to get direct children
+                const children = node.getChildren();
+                const textElements = children.filter(child => child.className === 'Text');
+                const lineElements = children.filter(child => child.className === 'Line');
+                
+                const headerText = textElements[0]; // First text is header
+                const line = lineElements[0];
+                const itemsText = textElements[1]; // Second text is items
+                
+                const headerAttrs = headerText ? headerText.attrs : {};
+                const lineAttrs = line ? line.attrs : {};
+                const itemsAttrs = itemsText ? itemsText.attrs : {};
+                
+                // Debug logging
+                console.log('Table Group detected:', attrs.name);
+                console.log('Children count:', children.length);
+                console.log('Text elements:', textElements.length);
+                console.log('Line elements:', lineElements.length);
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Header</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Text</div>';
+                html += `<textarea id="prop-table-header-text" class="property-input" rows="2">${(headerAttrs.text || '').replace(/\\n/g, '\n')}</textarea>`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Font Size</div>';
+                html += `<input type="number" id="prop-table-header-fontSize" value="${headerAttrs.fontSize || 12}" class="property-input">`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Font Style</div>';
+                html += `<select id="prop-table-header-fontStyle" class="property-input">`;
+                html += `<option value="normal" ${headerAttrs.fontStyle === 'normal' ? 'selected' : ''}>Normal</option>`;
+                html += `<option value="bold" ${headerAttrs.fontStyle === 'bold' ? 'selected' : ''}>Bold</option>`;
+                html += `<option value="italic" ${headerAttrs.fontStyle === 'italic' ? 'selected' : ''}>Italic</option>`;
+                html += '</select>';
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Header Color</div>';
+                html += `<input type="color" id="prop-table-header-fill" value="${rgbToHex(headerAttrs.fill || '#000000')}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Items</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Items Template</div>';
+                html += `<textarea id="prop-table-items-text" class="property-input" rows="4">${(itemsAttrs.text || '').replace(/\\n/g, '\n')}</textarea>`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Items Font Size</div>';
+                html += `<input type="number" id="prop-table-items-fontSize" value="${itemsAttrs.fontSize || 11}" class="property-input">`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Items Color</div>';
+                html += `<input type="color" id="prop-table-items-fill" value="${rgbToHex(itemsAttrs.fill || '#000000')}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Separator Line</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Line Color</div>';
+                html += `<input type="color" id="prop-table-line-stroke" value="${rgbToHex(lineAttrs.stroke || '#000000')}" class="property-input">`;
+                html += '</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Line Width</div>';
+                html += `<input type="number" id="prop-table-line-strokeWidth" value="${lineAttrs.strokeWidth || 1}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+                
+                html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+                html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Dimensions</div>';
+                
+                html += '<div class="property-group">';
+                html += '<div class="property-label">Table Width</div>';
+                const tableWidth = headerAttrs.width || itemsAttrs.width || 500;
+                html += `<input type="number" id="prop-table-width" value="${tableWidth}" class="property-input">`;
+                html += '</div>';
+                
+                html += '</div>';
+            } catch (error) {
+                console.error('Error processing table group:', error);
+                html += '<div class="property-group"><p class="text-sm text-red-500">Error loading table properties: ' + error.message + '</p></div>';
+            }
+        } else if (isGroup) {
+            // Fallback for Groups that aren't recognized as tables
+            // Show at least basic info
+            html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+            html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Group Information</div>';
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Group Name</div>';
+            html += `<input type="text" value="${attrs.name || 'Unnamed Group'}" disabled class="property-input bg-gray-100">`;
+            html += '</div>';
+            html += '<div class="property-group">';
+            html += '<div class="property-label">Children Count</div>';
+            try {
+                const childrenCount = node.getChildren ? node.getChildren().length : (node.children ? node.children.length : 0);
+                html += `<input type="text" value="${childrenCount} children" disabled class="property-input bg-gray-100">`;
+            } catch (e) {
+                html += `<input type="text" value="Unknown" disabled class="property-input bg-gray-100">`;
+            }
+            html += '</div>';
+            html += '<p class="text-sm text-gray-500 italic mt-2">This is a Group element. If this is a table, make sure it has the name "items-table" or "expenses-table".</p>';
+            html += '</div>';
+        }
+        
+        // Layer controls
+        html += '<div class="property-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e5e7eb;">';
+        html += '<div class="property-label">Layer Order</div>';
+        html += '<div style="display: flex; gap: 0.5rem;">';
+        html += '<button onclick="moveLayer(\'up\')" class="btn btn-sm btn-secondary flex-1"><i class="fas fa-arrow-up"></i></button>';
+        html += '<button onclick="moveLayer(\'down\')" class="btn btn-sm btn-secondary flex-1"><i class="fas fa-arrow-down"></i></button>';
+        html += '<button onclick="moveLayer(\'top\')" class="btn btn-sm btn-secondary flex-1"><i class="fas fa-angle-double-up"></i></button>';
+        html += '<button onclick="moveLayer(\'bottom\')" class="btn btn-sm btn-secondary flex-1"><i class="fas fa-angle-double-down"></i></button>';
+        html += '</div>';
+        html += '</div>';
+        
+        html += '</div>';
+        
+        console.log('Setting properties HTML, length:', html.length);
+        console.log('HTML preview (first 500 chars):', html.substring(0, 500));
+        propsContent.innerHTML = html;
+        console.log('Properties HTML set successfully');
+        console.log('Properties content element exists:', !!propsContent);
+        console.log('Properties content innerHTML length after setting:', propsContent.innerHTML.length);
+        
+        // Attach event listeners
+        try {
+            attachPropertyListeners();
+            console.log('Property listeners attached successfully');
+        } catch (error) {
+            console.error('Error attaching property listeners:', error);
+        }
+    }
+    
+    function rgbToHex(color) {
+        if (color.startsWith('#')) return color;
+        if (color === 'transparent') return '#ffffff';
+        if (color === 'black') return '#000000';
+        if (color === 'white') return '#ffffff';
+        return color;
+    }
+    
+    function attachPropertyListeners() {
+        if (!selectedElement) return;
+        
+        const propX = document.getElementById('prop-x');
+        const propY = document.getElementById('prop-y');
+        const propText = document.getElementById('prop-text');
+        const propFontSize = document.getElementById('prop-fontSize');
+        const propFontFamily = document.getElementById('prop-fontFamily');
+        const propFontStyle = document.getElementById('prop-fontStyle');
+        const propFill = document.getElementById('prop-fill');
+        const propStroke = document.getElementById('prop-stroke');
+        const propStrokeWidth = document.getElementById('prop-strokeWidth');
+        const propWidth = document.getElementById('prop-width');
+        const propHeight = document.getElementById('prop-height');
+        const propRadius = document.getElementById('prop-radius');
+        const propOpacity = document.getElementById('prop-opacity');
+        
+        if (propX) propX.addEventListener('input', () => { selectedElement.x(parseFloat(propX.value)); layer.draw(); });
+        if (propY) propY.addEventListener('input', () => { selectedElement.y(parseFloat(propY.value)); layer.draw(); });
+        if (propText) {
+            // Add both input and change listeners to ensure changes are captured
+            propText.addEventListener('input', function() { 
+                if (selectedElement && selectedElement.text) {
+                    selectedElement.text(this.value); 
+                    layer.draw(); 
+                }
+            });
+            propText.addEventListener('change', function() { 
+                if (selectedElement && selectedElement.text) {
+                    selectedElement.text(this.value); 
+                    layer.draw(); 
+                }
+            });
+            // Also handle paste events
+            propText.addEventListener('paste', function() {
+                setTimeout(() => {
+                    if (selectedElement && selectedElement.text) {
+                        selectedElement.text(this.value);
+                        layer.draw();
+                    }
+                }, 10);
+            });
+        }
+        if (propFontSize) propFontSize.addEventListener('input', () => { selectedElement.fontSize(parseFloat(propFontSize.value)); layer.draw(); });
+        if (propFontFamily) propFontFamily.addEventListener('change', () => { selectedElement.fontFamily(propFontFamily.value); layer.draw(); });
+        if (propFontStyle) propFontStyle.addEventListener('change', () => { selectedElement.fontStyle(propFontStyle.value); layer.draw(); });
+        if (propFill) propFill.addEventListener('input', () => { selectedElement.fill(propFill.value); layer.draw(); });
+        if (propStroke) propStroke.addEventListener('input', () => { selectedElement.stroke(propStroke.value); layer.draw(); });
+        if (propStrokeWidth) propStrokeWidth.addEventListener('input', () => { selectedElement.strokeWidth(parseFloat(propStrokeWidth.value)); layer.draw(); });
+        if (propWidth) propWidth.addEventListener('input', () => { selectedElement.width(parseFloat(propWidth.value)); layer.draw(); });
+        if (propHeight) propHeight.addEventListener('input', () => { selectedElement.height(parseFloat(propHeight.value)); layer.draw(); });
+        if (propRadius) propRadius.addEventListener('input', () => { selectedElement.radius(parseFloat(propRadius.value)); layer.draw(); });
+        if (propOpacity) {
+            propOpacity.addEventListener('input', () => {
+                selectedElement.opacity(parseFloat(propOpacity.value));
+                document.getElementById('opacity-value').textContent = (propOpacity.value * 100) + '%';
+                layer.draw();
+            });
+        }
+        
+        // Table-specific property listeners
+        const propTableHeaderText = document.getElementById('prop-table-header-text');
+        const propTableHeaderFontSize = document.getElementById('prop-table-header-fontSize');
+        const propTableHeaderFontStyle = document.getElementById('prop-table-header-fontStyle');
+        const propTableHeaderFill = document.getElementById('prop-table-header-fill');
+        const propTableItemsText = document.getElementById('prop-table-items-text');
+        const propTableItemsFontSize = document.getElementById('prop-table-items-fontSize');
+        const propTableItemsFill = document.getElementById('prop-table-items-fill');
+        const propTableLineStroke = document.getElementById('prop-table-line-stroke');
+        const propTableLineStrokeWidth = document.getElementById('prop-table-line-strokeWidth');
+        const propTableWidth = document.getElementById('prop-table-width');
+        
+        if (propTableHeaderText) {
+            propTableHeaderText.addEventListener('input', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.text(propTableHeaderText.value.replace(/\n/g, '\\n'));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableHeaderFontSize) {
+            propTableHeaderFontSize.addEventListener('input', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.fontSize(parseFloat(propTableHeaderFontSize.value));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableHeaderFontStyle) {
+            propTableHeaderFontStyle.addEventListener('change', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.fontStyle(propTableHeaderFontStyle.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableHeaderFill) {
+            propTableHeaderFill.addEventListener('input', () => {
+                const headerText = selectedElement.find('Text')[0];
+                if (headerText) {
+                    headerText.fill(propTableHeaderFill.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableItemsText) {
+            propTableItemsText.addEventListener('input', () => {
+                const itemsText = selectedElement.find('Text')[1];
+                if (itemsText) {
+                    itemsText.text(propTableItemsText.value.replace(/\n/g, '\\n'));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableItemsFontSize) {
+            propTableItemsFontSize.addEventListener('input', () => {
+                const itemsText = selectedElement.find('Text')[1];
+                if (itemsText) {
+                    itemsText.fontSize(parseFloat(propTableItemsFontSize.value));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableItemsFill) {
+            propTableItemsFill.addEventListener('input', () => {
+                const itemsText = selectedElement.find('Text')[1];
+                if (itemsText) {
+                    itemsText.fill(propTableItemsFill.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableLineStroke) {
+            propTableLineStroke.addEventListener('input', () => {
+                const line = selectedElement.find('Line')[0];
+                if (line) {
+                    line.stroke(propTableLineStroke.value);
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableLineStrokeWidth) {
+            propTableLineStrokeWidth.addEventListener('input', () => {
+                const line = selectedElement.find('Line')[0];
+                if (line) {
+                    line.strokeWidth(parseFloat(propTableLineStrokeWidth.value));
+                    layer.draw();
+                }
+            });
+        }
+        
+        if (propTableWidth) {
+            propTableWidth.addEventListener('input', () => {
+                const width = parseFloat(propTableWidth.value);
+                const headerText = selectedElement.find('Text')[0];
+                const itemsText = selectedElement.find('Text')[1];
+                const line = selectedElement.find('Line')[0];
+                
+                if (headerText) headerText.width(width);
+                if (itemsText) itemsText.width(width);
+                if (line) {
+                    const currentY = line.points()[1];
+                    line.points([0, currentY, width, currentY]);
+                }
+                layer.draw();
+            });
+        }
+    }
+    
+    // Layer management functions
+    window.moveLayer = function(direction) {
+        if (!selectedElement) return;
+        
+        if (direction === 'up') {
+            selectedElement.moveUp();
+        } else if (direction === 'down') {
+            selectedElement.moveDown();
+        } else if (direction === 'top') {
+            selectedElement.moveToTop();
+        } else if (direction === 'bottom') {
+            selectedElement.moveToBottom();
+        }
+        
+        layer.draw();
+    };
+    
+    // Toolbar actions
+    document.getElementById('btn-delete').addEventListener('click', function() {
+        if (selectedElement) {
+            selectedElement.destroy();
+            layer.find('Transformer').forEach(t => t.destroy());
+            selectedElement = null;
+            layer.draw();
+        }
+    });
+    
+    document.getElementById('btn-clear').addEventListener('click', async function() {
+        const confirmed = await showConfirm(
+            '{{ _("Clear all elements?") }}',
+            {
+                title: '{{ _("Clear Canvas") }}',
+                confirmText: '{{ _("Clear") }}',
+                cancelText: '{{ _("Cancel") }}',
+                variant: 'warning'
+            }
+        );
+        if (confirmed) {
+            layer.destroyChildren();
+            layer.add(background);
+            elements.length = 0;
+            selectedElement = null;
+            layer.draw();
+        }
+    });
+    
+    // Zoom controls (zoom scale is declared above with baseFitScale)
+    document.getElementById('btn-zoom-in').addEventListener('click', function() {
+        zoomScale = Math.min(zoomScale + 0.1, 2);
+        stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
+        layer.draw();
+    });
+    
+    document.getElementById('btn-zoom-out').addEventListener('click', function() {
+        zoomScale = Math.max(zoomScale - 0.1, 0.5);
+        stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
+        layer.draw();
+    });
+    
+    // Generate preview
+    const previewModal = document.getElementById('preview-modal');
+    const previewModalOverlay = document.getElementById('preview-modal-overlay');
+    const previewModalClose = document.getElementById('preview-modal-close');
+    
+    function openPreviewModal() {
+        previewModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closePreviewModal() {
+        previewModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    
+    previewModalOverlay.addEventListener('click', closePreviewModal);
+    previewModalClose.addEventListener('click', closePreviewModal);
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && previewModal.style.display === 'block') {
+            closePreviewModal();
+        }
+    });
+    
+    document.getElementById('btn-preview').addEventListener('click', function() {
+        const { html, css } = generateCode();
+        
+        openPreviewModal();
+        
+        const loading = document.getElementById('preview-loading');
+        const frame = document.getElementById('preview-frame');
+        
+        loading.classList.add('active');
+        frame.style.display = 'none';
+        
+        const fd = new FormData();
+        fd.append('html', html);
+        fd.append('css', css);
+        fd.append('csrf_token', CSRF_TOKEN);
+        
+        // Add cache-busting parameter to ensure fresh preview
+        const previewUrl = PREVIEW_URL + '?t=' + Date.now();
+        
+        fetch(previewUrl, { 
+            method: 'POST', 
+            body: fd,
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        })
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.text();
+            })
+            .then(html => {
+                const doc = frame.contentDocument || frame.contentWindow.document;
+                doc.open();
+                doc.write(html);
+                doc.close();
+                loading.classList.remove('active');
+                frame.style.display = 'block';
+            })
+            .catch(err => {
+                loading.classList.remove('active');
+                console.error('Preview error:', err);
+                alert('Preview error: ' + err.message);
+                closePreviewModal();
+            });
+    });
+    
+    // Generate code from canvas
+    function generateCode() {
+        let bodyContent = '';
+        
+        layer.children.forEach((child, index) => {
+            if (child === background || child.className === 'Transformer') return;
+            
+            const attrs = child.attrs;
+            const x = Math.round(attrs.x || 0);
+            const y = Math.round(attrs.y || 0);
+            const opacity = attrs.opacity !== undefined ? attrs.opacity : 1;
+            
+            if (child.className === 'Text') {
+                const fontSize = attrs.fontSize || 14;
+                const fontFamily = attrs.fontFamily || 'Arial';
+                const fontStyle = attrs.fontStyle || 'normal';
+                const fontWeight = fontStyle === 'bold' ? 'bold' : 'normal';
+                const fontStyleCss = fontStyle === 'italic' ? 'italic' : 'normal';
+                const color = attrs.fill || 'black';
+                const text = (attrs.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                // Preserve text alignment (Konva Text uses 'align' attribute: 'left', 'center', 'right')
+                const textAlign = attrs.align || 'left';
+                
+                bodyContent += `  <div class="element text-element" style="position:absolute;left:${x}px;top:${y}px;font-size:${fontSize}px;font-family:'${fontFamily}';font-weight:${fontWeight};font-style:${fontStyleCss};color:${color};opacity:${opacity};width:${attrs.width || 400}px;text-align:${textAlign}">${text}</div>\n`;
+            } else if (child.className === 'Image') {
+                const w = Math.round(attrs.width || 100);
+                const h = Math.round(attrs.height || 50);
+                {% raw %}
+                bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
+                {% endraw %}
+            } else if (child.className === 'Rect') {
+                const w = Math.round(attrs.width || 100);
+                const h = Math.round(attrs.height || 100);
+                const fill = attrs.fill || 'transparent';
+                const stroke = attrs.stroke || 'black';
+                const strokeWidth = attrs.strokeWidth || 1;
+                
+                bodyContent += `  <div class="rectangle-element" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${fill};border:${strokeWidth}px solid ${stroke};opacity:${opacity}"></div>\n`;
+            } else if (child.className === 'Circle') {
+                const radius = Math.round(attrs.radius || 50);
+                const fill = attrs.fill || 'transparent';
+                const stroke = attrs.stroke || 'black';
+                const strokeWidth = attrs.strokeWidth || 1;
+                const adjustedX = x - radius;
+                const adjustedY = y - radius;
+                
+                bodyContent += `  <div class="circle-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${radius*2}px;height:${radius*2}px;background:${fill};border:${strokeWidth}px solid ${stroke};border-radius:50%;opacity:${opacity}"></div>\n`;
+            } else if (child.className === 'Line') {
+                const points = attrs.points || [];
+                const stroke = attrs.stroke || 'black';
+                const strokeWidth = attrs.strokeWidth || 1;
+                
+                if (points.length >= 4) {
+                    const x1 = Math.round(points[0]);
+                    const y1 = Math.round(points[1]);
+                    const x2 = Math.round(points[2]);
+                    const y2 = Math.round(points[3]);
+                    const width = Math.abs(x2 - x1);
+                    const adjustedX = x + Math.min(x1, x2);
+                    const adjustedY = y + Math.min(y1, y2);
+                    
+                    bodyContent += `  <hr class="line-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${width}px;border:none;border-top:${strokeWidth}px solid ${stroke};margin:0;opacity:${opacity}">\n`;
+                }
+            } else if (child.className === 'Group' || child.constructor.name === 'Group' || child.children) {
+                // It's a Group element (check multiple ways since className might be undefined after JSON restore)
+                // Check if this is a table by looking at the group's name
+                let isItemsTable = child.attrs.name === 'items-table';
+                let isExpensesTable = child.attrs.name === 'expenses-table';
+                
+                // Fallback: Check if group has multiple children (header, line, items) - likely a table
+                if (!isItemsTable && !isExpensesTable && child.children && child.children.length >= 3) {
+                    const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
+                    const hasLine = child.children.some(c => c.className === 'Line');
+                    if (hasTextChildren && hasLine) {
+                        console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
+                        isItemsTable = true;
+                    }
+                }
+                
+                if (isItemsTable) {
+                    // Extract actual header text from the table group's first Text child
+                    const children = child.getChildren ? child.getChildren() : (child.children || []);
+                    const textElements = children.filter(c => c.className === 'Text');
+                    const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                    
+                    // Parse header text (format: "Description | Qty | Price | Total" or German equivalent)
+                    // Default to English if header text is empty or doesn't contain |
+                    let headerParts = ['Description', 'Qty', 'Unit Price', 'Total'];
+                    if (headerText && headerText.includes('|')) {
+                        headerParts = headerText.split('|').map(part => part.trim()).filter(part => part.length > 0);
+                        // Ensure we have at least 4 parts, pad with defaults if needed
+                        while (headerParts.length < 4) {
+                            headerParts.push(['Description', 'Qty', 'Unit Price', 'Total'][headerParts.length]);
+                        }
+                    }
+                    
+                    // Generate proper HTML table for invoice items
+                    bodyContent += `  <!-- Items Table Start -->\n`;
+                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
+                    bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;">\n`;
+                    bodyContent += `      <thead>\n`;
+                    bodyContent += `        <tr style="background-color:#f8f9fa;border-bottom:2px solid #333;">\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;">${(headerParts[0] || 'Description').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:70px;">${(headerParts[1] || 'Qty').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">${(headerParts[2] || 'Unit Price').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">${(headerParts[3] || 'Total').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `      </thead>\n`;
+                    bodyContent += `      <tbody>\n`;
+                    {% raw %}
+                    bodyContent += `        {% if quote.items %}\n`;
+                    bodyContent += `        {% for item in quote.items %}\n`;
+                    bodyContent += `        <tr style="border-bottom:1px solid #ddd;">\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;">{{ item.description }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;">{{ item.quantity }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;">{{ format_money(item.unit_price) }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;">{{ format_money(item.total_amount) }}</td>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `        {% endfor %}\n`;
+                    bodyContent += `        {% else %}\n`;
+                    bodyContent += `        <tr>\n`;
+                    bodyContent += `          <td colspan="4" style="padding:10px;text-align:center;color:#999;">No items</td>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `        {% endif %}\n`;
+                    {% endraw %}
+                    bodyContent += `      </tbody>\n`;
+                    bodyContent += `    </table>\n`;
+                    bodyContent += `  </div>\n`;
+                    bodyContent += `  <!-- Items Table End -->\n`;
+                } else if (isExpensesTable) {
+                    // Extract actual header text from the table group's first Text child
+                    const children = child.getChildren ? child.getChildren() : (child.children || []);
+                    const textElements = children.filter(c => c.className === 'Text');
+                    const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                    
+                    // Parse header text (format: "Expense | Date | Category | Amount" or localized)
+                    // Default to English if header text is empty or doesn't contain |
+                    let headerParts = ['Expense', 'Date', 'Category', 'Amount'];
+                    if (headerText && headerText.includes('|')) {
+                        headerParts = headerText.split('|').map(part => part.trim()).filter(part => part.length > 0);
+                        // Ensure we have at least 4 parts, pad with defaults if needed
+                        while (headerParts.length < 4) {
+                            headerParts.push(['Expense', 'Date', 'Category', 'Amount'][headerParts.length]);
+                        }
+                    }
+                    
+                    // Generate proper HTML table for project expenses
+                    bodyContent += `  <!-- Expenses Table Start -->\n`;
+                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
+                    bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fffbf0;">\n`;
+                    bodyContent += `      <thead>\n`;
+                    bodyContent += `        <tr style="background-color:#fff3cd;border-bottom:2px solid #856404;">\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:#856404;">${(headerParts[0] || 'Expense').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:100px;color:#856404;">${(headerParts[1] || 'Date').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">${(headerParts[2] || 'Category').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">${(headerParts[3] || 'Amount').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `      </thead>\n`;
+                    bodyContent += `      <tbody>\n`;
+                    {% raw %}
+                    bodyContent += `        {% if invoice.expenses %}\n`;
+                    bodyContent += `        {% for expense in invoice.expenses %}\n`;
+                    bodyContent += `        <tr style="border-bottom:1px solid #f0e5c1;">\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.title }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;color:#856404;">{{ expense.expense_date }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.category }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;color:#856404;">{{ format_money(expense.total_amount) }}</td>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `        {% endfor %}\n`;
+                    bodyContent += `        {% else %}\n`;
+                    bodyContent += `        <tr>\n`;
+                    bodyContent += `          <td colspan="4" style="padding:10px;text-align:center;color:#999;">No expenses</td>\n`;
+                    bodyContent += `        </tr>\n`;
+                    bodyContent += `        {% endif %}\n`;
+                    {% endraw %}
+                    bodyContent += `      </tbody>\n`;
+                    bodyContent += `    </table>\n`;
+                    bodyContent += `  </div>\n`;
+                    bodyContent += `  <!-- Expenses Table End -->\n`;
+                } else {
+                    // Regular group (not a table)
+                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity}">\n`;
+                child.children.forEach(c => {
+                    if (c.className === 'Text') {
+                            const text = (c.attrs.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            // Preserve text alignment for text in groups
+                            const textAlign = c.attrs.align || 'left';
+                            bodyContent += `    <div style="font-size:${c.attrs.fontSize || 12}px;font-weight:${c.attrs.fontStyle === 'bold' ? 'bold' : 'normal'};text-align:${textAlign}">${text}</div>\n`;
+                        } else if (c.className === 'Line') {
+                            bodyContent += `    <hr style="border-top:${c.attrs.strokeWidth || 1}px solid ${c.attrs.stroke || 'black'};margin:${c.attrs.y || 0}px 0">\n`;
+                        }
+                    });
+                    bodyContent += `  </div>\n`;
+                }
+            }
+        });
+        
+        // Get dimensions for current page size
+        const currentSize = CURRENT_PAGE_SIZE || 'A4';
+        const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+        const widthPx = dimensions.width;
+        const heightPx = dimensions.height;
+        
+        // For preview, return just the body content (template HTML) wrapped in invoice-wrapper
+        // The preview endpoint will wrap it with its own HTML structure
+        const html = `<div class="invoice-wrapper">
+${bodyContent}</div>`;
+        
+        const css = `@page {
+    size: ${currentSize};
+    margin: 0;
+}
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+.invoice-wrapper {
+    position: relative;
+    width: ${widthPx}px;
+    min-height: ${heightPx}px;
+    background: white;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.element, .text-element {
+    white-space: pre-wrap;
+}
+.rectangle-element, .circle-element {
+    box-sizing: border-box;
+}
+.line-element {
+    padding: 0;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    text-align: left;
+    padding: 10px;
+    border-bottom: 2px solid #333;
+}
+table td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+table tr:last-child td {
+    border-bottom: 2px solid #333;
+}`;
+        
+        return { html, css };
+    }
+    
+    // View code
+    document.getElementById('btn-code').addEventListener('click', function() {
+        const { html, css } = generateCode();
+        
+        // Log for debugging
+        console.log('=== GENERATED HTML ===');
+        console.log(html);
+        console.log('=== END HTML ===');
+        
+        // Check if items table is present
+        const hasItemsTable = html.includes('<!-- Items Table Start -->');
+        const hasForLoop = html.includes('{' + '% for item in quote.items');
+        console.log('Has Items Table marker:', hasItemsTable);
+        console.log('Has Jinja2 loop:', hasForLoop);
+        
+        document.getElementById('code-html').value = html;
+        document.getElementById('code-css').value = css;
+        document.getElementById('code-modal').classList.remove('hidden');
+    });
+    
+    document.getElementById('close-modal').addEventListener('click', function() {
+        document.getElementById('code-modal').classList.add('hidden');
+    });
+    
+    // Page size selector handler
+    const pageSizeSelector = document.getElementById('page-size-selector');
+    if (pageSizeSelector) {
+        // Set the current page size in the dropdown
+        if (CURRENT_PAGE_SIZE) {
+            pageSizeSelector.value = CURRENT_PAGE_SIZE;
+        }
+        
+        pageSizeSelector.addEventListener('change', async function() {
+            const newSize = this.value;
+            const confirmed = await showConfirm(
+                'Switching page size will reload the template. Any unsaved changes will be lost. Continue?',
+                {
+                    title: 'Switch Page Size',
+                    confirmText: 'Continue',
+                    cancelText: 'Cancel',
+                    variant: 'warning'
+                }
+            );
+            if (confirmed) {
+                window.location.href = '{{ url_for("admin.pdf_layout") }}?size=' + encodeURIComponent(newSize);
+            } else {
+                // Reset to current size
+                this.value = CURRENT_PAGE_SIZE || 'A4';
+            }
+        });
+    }
+    
+    // Save
+    document.getElementById('btn-save').addEventListener('click', function() {
+        const { html, css } = generateCode();
+        
+        // Log what we're saving for debugging
+        console.log('=== SAVING TO DATABASE ===');
+        console.log('HTML length:', html.length);
+        console.log('Has Items Table:', html.includes('<!-- Items Table Start -->'));
+        console.log('Has Jinja2 loop:', html.includes('{' + '% for item in quote.items'));
+        console.log('Number of elements:', layer.children.length);
+        console.log('Page size:', CURRENT_PAGE_SIZE);
+        
+        // Log all Groups to see if items-table is there
+        layer.children.forEach((child, idx) => {
+            if (child.className === 'Group') {
+                console.log(`Group ${idx}: name="${child.attrs.name || 'unnamed'}"`, child.attrs);
+            }
+        });
+        
+        document.getElementById('save-html').value = html;
+        document.getElementById('save-css').value = css;
+        document.getElementById('save-json').value = JSON.stringify(stage.toJSON());
+        document.getElementById('save-page-size').value = CURRENT_PAGE_SIZE || pageSizeSelector.value;
+        document.getElementById('form-save').submit();
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Check if user is editing text in an input field or textarea
+        const activeElement = document.activeElement;
+        const isEditingText = activeElement && (
+            activeElement.tagName === 'INPUT' ||
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.isContentEditable
+        );
+        
+        // Delete selected element with Delete or Backspace (only if not editing text)
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement && !isEditingText) {
+            e.preventDefault();
+            selectedElement.destroy();
+            layer.find('Transformer').forEach(t => t.destroy());
+            selectedElement = null;
+            layer.draw();
+            document.getElementById('properties-content').innerHTML = '<p class="text-sm text-gray-500 italic">Select an element to edit its properties</p>';
+        }
+        
+        // Copy with Ctrl+C
+        if (e.ctrlKey && e.key === 'c' && selectedElement) {
+            e.preventDefault();
+            window.copiedElement = selectedElement.toJSON();
+        }
+        
+        // Paste with Ctrl+V
+        if (e.ctrlKey && e.key === 'v' && window.copiedElement) {
+            e.preventDefault();
+            const json = window.copiedElement;
+            const node = Konva.Node.create(json);
+            node.x(node.x() + 20);
+            node.y(node.y() + 20);
+            layer.add(node);
+            setupSelection(node);
+            layer.draw();
+        }
+        
+        // Duplicate with Ctrl+D
+        if (e.ctrlKey && e.key === 'd' && selectedElement) {
+            e.preventDefault();
+            const json = selectedElement.toJSON();
+            const node = Konva.Node.create(json);
+            node.x(node.x() + 20);
+            node.y(node.y() + 20);
+            layer.add(node);
+            setupSelection(node);
+            layer.draw();
+        }
+        
+        // Arrow keys to move element (only if not editing text)
+        if (selectedElement && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !isEditingText) {
+            e.preventDefault();
+            const step = e.shiftKey ? 10 : 1;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    selectedElement.y(selectedElement.y() - step);
+                    break;
+                case 'ArrowDown':
+                    selectedElement.y(selectedElement.y() + step);
+                    break;
+                case 'ArrowLeft':
+                    selectedElement.x(selectedElement.x() - step);
+                    break;
+                case 'ArrowRight':
+                    selectedElement.x(selectedElement.x() + step);
+                    break;
+            }
+            
+            layer.draw();
+            
+            // Update properties panel if visible
+            const propX = document.getElementById('prop-x');
+            const propY = document.getElementById('prop-y');
+            if (propX) propX.value = Math.round(selectedElement.x());
+            if (propY) propY.value = Math.round(selectedElement.y());
+        }
+    });
+    
+    // Click on background to deselect
+    background.on('click', function() {
+        layer.find('Transformer').forEach(t => t.destroy());
+        selectedElement = null;
+        layer.draw();
+        document.getElementById('properties-content').innerHTML = '<p class="text-sm text-gray-500 italic">Select an element to edit its properties</p>';
+    });
+    
+    // Alignment tools
+    window.alignElements = function(direction) {
+        if (!selectedElement) return;
+        
+        const stageWidth = stage.width();
+        const stageHeight = stage.height();
+        const box = selectedElement.getClientRect();
+        
+        switch(direction) {
+            case 'left':
+                selectedElement.x(0);
+                break;
+            case 'center-h':
+                selectedElement.x((stageWidth - box.width) / 2);
+                break;
+            case 'right':
+                selectedElement.x(stageWidth - box.width);
+                break;
+            case 'top':
+                selectedElement.y(0);
+                break;
+            case 'center-v':
+                selectedElement.y((stageHeight - box.height) / 2);
+                break;
+            case 'bottom':
+                selectedElement.y(stageHeight - box.height);
+                break;
+        }
+        
+        layer.draw();
+        
+        // Update properties panel
+        const propX = document.getElementById('prop-x');
+        const propY = document.getElementById('prop-y');
+        if (propX) propX.value = Math.round(selectedElement.x());
+        if (propY) propY.value = Math.round(selectedElement.y());
+    };
+    
+    // Save design state
+    window.saveDesignState = function() {
+        return {
+            json: stage.toJSON(),
+            html: generateCode().html,
+            css: generateCode().css
+        };
+    };
+    
+    // Load design state
+    window.loadDesignState = function(designJson) {
+        try {
+            const json = JSON.parse(designJson);
+            stage = Konva.Node.create(json, 'canvas-container');
+            layer = stage.children[0];
+            
+                // Re-setup selections for all elements
+                layer.children.forEach(child => {
+                    if (child !== background && child.className !== 'Transformer') {
+                        setupSelection(child);
+                        // If it's a table Group, also setup selection on children
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                            child.children.forEach(grandChild => {
+                                setupSelection(grandChild);
+                            });
+                        }
+                    }
+                });
+            
+            layer.draw();
+        } catch(e) {
+            console.error('Failed to load design state:', e);
+        }
+    };
+    
+    // Add alignment buttons to canvas toolbar
+    const canvasToolbar = document.querySelector('.canvas-toolbar');
+    if (canvasToolbar) {
+        const alignmentButtons = `
+            <button type="button" onclick="alignElements('left')" title="{{ _('Align Left') }}">
+                <i class="fas fa-align-left"></i>
+            </button>
+            <button type="button" onclick="alignElements('center-h')" title="{{ _('Center Horizontally') }}">
+                <i class="fas fa-align-center"></i>
+            </button>
+            <button type="button" onclick="alignElements('right')" title="{{ _('Align Right') }}">
+                <i class="fas fa-align-right"></i>
+            </button>
+            <button type="button" onclick="alignElements('top')" title="{{ _('Align Top') }}">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            <button type="button" onclick="alignElements('center-v')" title="{{ _('Center Vertically') }}">
+                <i class="fas fa-arrows-alt-v"></i>
+            </button>
+            <button type="button" onclick="alignElements('bottom')" title="{{ _('Align Bottom') }}">
+                <i class="fas fa-arrow-down"></i>
+            </button>
+        `;
+        canvasToolbar.insertAdjacentHTML('beforeend', alignmentButtons);
+    }
+    
+    // Load saved design or default layout
+    setTimeout(() => {
+        if (SAVED_DESIGN_JSON && SAVED_DESIGN_JSON.trim() !== '') {
+            console.log('Loading saved design from database...');
+            try {
+                const savedJson = JSON.parse(SAVED_DESIGN_JSON);
+                
+                // Get current page size dimensions
+                const currentSize = CURRENT_PAGE_SIZE || 'A4';
+                const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+                
+                // Update saved JSON dimensions to match current page size
+                if (savedJson.attrs) {
+                    savedJson.attrs.width = dimensions.width;
+                    savedJson.attrs.height = dimensions.height;
+                }
+                
+                // Clear current layer
+                layer.destroyChildren();
+                
+                // Recreate stage from saved JSON
+                const restoredStage = Konva.Node.create(savedJson, 'canvas-container');
+                
+                // Ensure stage has correct dimensions
+                restoredStage.width(dimensions.width);
+                restoredStage.height(dimensions.height);
+                
+                // Replace current stage
+                stage.destroy();
+                stage = restoredStage;
+                layer = stage.children[0];
+                
+                // Find or create background by name and resize it
+                background = layer.findOne('[name="background"]');
+                if (background) {
+                    if (background.className === 'Rect') {
+                        background.width(dimensions.width);
+                        background.height(dimensions.height);
+                    }
+                } else {
+                    // Create background if it doesn't exist
+                    background = new Konva.Rect({
+                        x: 0,
+                        y: 0,
+                        width: dimensions.width,
+                        height: dimensions.height,
+                        fill: 'white',
+                        name: 'background'
+                    });
+                    layer.add(background);
+                    background.moveToBottom();
+                }
+                
+                // Update width and height variables for fit function
+                width = dimensions.width;
+                height = dimensions.height;
+                
+                // Redraw grid for new size
+                drawGrid();
+                
+                // Re-setup selections for all elements (skip background and grid lines)
+                layer.children.forEach(child => {
+                    if (child !== background && 
+                        child.className !== 'Transformer' && 
+                        !(child.className === 'Line' && child.attrs.name === 'grid-line')) {
+                        setupSelection(child);
+                        // If it's a table Group, also setup selection on children
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                            child.children.forEach(grandChild => {
+                                setupSelection(grandChild);
+                            });
+                        }
+                        elements.push({ type: child.attrs.name || child.className, node: child });
+                    }
+                });
+                
+                layer.draw();
+                
+                // Refit canvas after loading saved design
+                setTimeout(() => {
+                    fitCanvasToContainer();
+                }, 150);
+                
+                console.log('✅ Saved design loaded successfully for size:', currentSize);
+            } catch (error) {
+                console.error('Failed to load saved design:', error);
+                console.log('Loading default layout instead...');
+                loadDefaultLayout();
+            }
+        } else {
+            console.log('No saved design found, loading default layout...');
+            loadDefaultLayout();
+        }
+    }, 100);
+    
+    function loadDefaultLayout() {
+        console.log('Loading comprehensive default layout...');
+        
+        // ========== HEADER SECTION ==========
+        // Logo (top left)
+        if (LOGO_URL) {
+            addElement('logo', 40, 30);
+        }
+        
+        // Company Name and Address (top left)
+        addElement('company-name', 40, 95);
+        addElement('company-address', 40, 125);
+        addElement('company-phone', 40, 155);
+        addElement('company-email', 40, 175);
+        
+        // QUOTE Heading (center-right)
+        addElement('heading', 320, 35);
+        
+        // Quote Details Box (top right)
+        addElement('rectangle', 380, 85, null);  // Background box for invoice details
+        const rect = layer.children[layer.children.length - 1];
+        rect.width(175);
+        rect.height(110);
+        rect.fill('#f8f9fa');
+        rect.stroke('#dee2e6');
+        rect.strokeWidth(1);
+        
+        addElement('invoice-number', 395, 95);
+        addElement('invoice-date', 395, 120);
+        addElement('due-date', 395, 145);
+        addElement('invoice-status', 395, 170);
+        
+        // Separator Line
+        addElement('line', 40, 210);
+        const line1 = layer.children[layer.children.length - 1];
+        line1.points([0, 0, 515, 0]);
+        line1.strokeWidth(2);
+        line1.stroke('#667eea');
+        
+        // ========== CLIENT & PROJECT SECTION ==========
+        // Bill To Section (left)
+        const billToLabel = new Konva.Text({
+            x: 40,
+            y: 230,
+            text: 'BILL TO:',
+            fontSize: 11,
+            fontStyle: 'bold',
+            fill: '#667eea',
+            fontFamily: 'Arial',
+            draggable: true,
+            name: 'section-label'
+        });
+        layer.add(billToLabel);
+        setupSelection(billToLabel);
+        elements.push({ type: 'label', node: billToLabel });
+        
+        addElement('client-name', 40, 250);
+        addElement('client-address', 40, 275);
+        addElement('client-email', 40, 305);
+        
+        // Project Info (right)
+        const projectLabel = new Konva.Text({
+            x: 320,
+            y: 230,
+            text: 'PROJECT:',
+            fontSize: 11,
+            fontStyle: 'bold',
+            fill: '#667eea',
+            fontFamily: 'Arial',
+            draggable: true,
+            name: 'section-label'
+        });
+        layer.add(projectLabel);
+        setupSelection(projectLabel);
+        elements.push({ type: 'label', node: projectLabel });
+        
+        addElement('project-name', 320, 250);
+        addElement('currency', 320, 275);
+        
+        // Separator Line
+        addElement('line', 40, 335);
+        const line2 = layer.children[layer.children.length - 1];
+        line2.points([0, 0, 515, 0]);
+        line2.strokeWidth(1);
+        line2.stroke('#dee2e6');
+        
+        // ========== QUOTE ITEMS TABLE ==========
+        addElement('quote-items-table', 40, 350);
+        
+        // ========== TOTALS SECTION ==========
+        // Totals Box (right side) - moved down to give table more space
+        addElement('rectangle', 380, 500, null);
+        const totalsBox = layer.children[layer.children.length - 1];
+        totalsBox.width(175);
+        totalsBox.height(90);
+        totalsBox.fill('#f8f9fa');
+        totalsBox.stroke('#dee2e6');
+        totalsBox.strokeWidth(1);
+        
+        addElement('subtotal', 395, 512);
+        addElement('tax', 395, 540);
+        
+        // Total with highlight
+        addElement('rectangle', 385, 565, null);
+        const totalHighlight = layer.children[layer.children.length - 1];
+        totalHighlight.width(165);
+        totalHighlight.height(27);
+        totalHighlight.fill('#667eea');
+        totalHighlight.stroke('#667eea');
+        totalHighlight.strokeWidth(1);
+        
+        addElement('totals', 395, 570);
+        const totalText = layer.children[layer.children.length - 1];
+        totalText.fill('white');
+        totalText.fontStyle('bold');
+        
+        // ========== QUOTE INFORMATION SECTION ==========
+        const quoteInfoLabel = new Konva.Text({
+            x: 40,
+            y: 610,
+            text: 'QUOTE INFORMATION:',
+            fontSize: 11,
+            fontStyle: 'bold',
+            fill: '#667eea',
+            fontFamily: 'Arial',
+            draggable: true,
+            name: 'section-label'
+        });
+        layer.add(quoteInfoLabel);
+        setupSelection(quoteInfoLabel);
+        elements.push({ type: 'label', node: quoteInfoLabel });
+        
+        addElement('quote-status', 40, 635);
+        addElement('valid-until', 40, 660);
+        addElement('quote-title', 40, 685);
+        
+        // Bank Info (right side)
+        addElement('bank-info', 320, 635);
+        
+        // Separator Line
+        addElement('line', 40, 720);
+        const line3 = layer.children[layer.children.length - 1];
+        line3.points([0, 0, 515, 0]);
+        line3.strokeWidth(1);
+        line3.stroke('#dee2e6');
+        
+        // ========== NOTES & TERMS ==========
+        addElement('notes', 40, 738);
+        addElement('terms', 40, 768);
+        
+        // ========== FOOTER ==========
+        // Footer separator
+        addElement('line', 40, 810);
+        const line4 = layer.children[layer.children.length - 1];
+        line4.points([0, 0, 515, 0]);
+        line4.strokeWidth(1);
+        line4.stroke('#dee2e6');
+        
+        // Footer text (centered)
+        const footerText = new Konva.Text({
+            x: 40,
+            y: 820,
+            text: 'Thank you for your business!',
+            fontSize: 10,
+            fill: '#6c757d',
+            fontFamily: 'Arial',
+            width: 515,
+            align: 'center',
+            draggable: true,
+            name: 'footer-text'
+        });
+        layer.add(footerText);
+        setupSelection(footerText);
+        elements.push({ type: 'footer', node: footerText });
+        
+        layer.draw();
+        console.log('✅ Default layout loaded with ' + layer.children.length + ' elements');
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePDFEditor);
+} else {
+    initializePDFEditor();
+}
+
+// Confirm reset function
+async function confirmResetPdfLayout() {
+    const confirmed = await showConfirm(
+        '{{ _("Reset to defaults?") }}',
+        {
+            title: '{{ _("Reset PDF Layout") }}',
+            confirmText: '{{ _("Reset") }}',
+            cancelText: '{{ _("Cancel") }}',
+            variant: 'danger'
+        }
+    );
+    if (confirmed) {
+        document.getElementById('form-reset').submit();
+    }
+}
+</script>
+{% endblock %}

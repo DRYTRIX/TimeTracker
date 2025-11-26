@@ -86,7 +86,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>📊 Your Weekly Summary</h1>
+        <h1>📊 {{ _('Your Weekly Summary') }}</h1>
         <p>{{ start_date }} to {{ end_date }}</p>
     </div>
     
@@ -101,7 +101,7 @@
             <p>hours</p>
         </div>
         
-        <h3 style="margin-top: 30px;">Hours by Project</h3>
+        <h3 style="margin-top: 30px;">{{ _('Hours by Project') }}</h3>
         
         <div class="projects-table">
             <table>

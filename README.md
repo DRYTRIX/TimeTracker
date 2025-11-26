@@ -6,7 +6,7 @@
 
 **Track time. Manage projects. Generate invoices. All in one place.**
 
-[🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🐳 Deploy](#-deployment)
+[🆕 What's New](#-whats-new) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🐳 Deploy](#-deployment)
 
 ---
 
@@ -24,9 +24,70 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 ---
 
+## 🆕 What's New
+
+TimeTracker has been continuously enhanced with powerful new features! Here's what's been added recently:
+
+### 🎯 **Major Feature Additions**
+
+#### 🧾 **Complete Invoicing System**
+- **Professional Invoice Generation** — Convert tracked time directly into polished invoices
+- **PDF Export** — Generate beautiful, branded PDF invoices with your company logo
+- **Multi-Currency Support** — Invoice clients in their preferred currency
+- **Tax Calculations** — Automatic tax computation with configurable rates
+- **Invoice Status Tracking** — Monitor draft, sent, paid, and overdue invoices
+- **Recurring Invoices** — Automate regular billing cycles
+- **Email Integration** — Send invoices directly to clients from the platform
+
+#### 📋 **Advanced Task Management**
+- **Full Task System** — Create, assign, and track tasks with priorities and due dates
+- **Kanban Board** — Visual drag-and-drop task management with customizable columns
+- **Task Comments** — Collaborate with threaded comments on tasks
+- **Task Activity Tracking** — See complete history of task changes and updates
+- **Bulk Task Operations** — Manage multiple tasks at once
+
+#### 💼 **Complete CRM Suite** 🆕
+- **Multiple Contacts per Client** — Manage unlimited contacts for each client
+- **Sales Pipeline** — Visual Kanban-style pipeline for tracking deals and opportunities
+- **Deal Management** — Track deal value, probability, stages, and close dates
+- **Lead Management** — Capture, score, and convert leads into clients or deals
+- **Communication History** — Track all emails, calls, meetings, and notes with contacts
+- **Deal & Lead Activities** — Complete activity tracking for sales processes
+
+#### ⏱️ **Enhanced Time Tracking**
+- **Calendar View** — Visual calendar interface for viewing and managing time entries
+- **Bulk Time Entry** — Create multiple time entries for consecutive days with weekend skipping
+- **Time Entry Templates** — Save and reuse common time entries for faster logging
+- **Real-time Updates** — See live timer updates across all devices via WebSocket
+
+#### 💰 **Financial Management**
+- **Expense Tracking** — Track business expenses with receipts, categories, and approval workflows
+- **Payment Tracking** — Monitor invoice payments with multiple payment methods
+- **Billable Expenses** — Mark expenses as billable and automatically include in invoices
+- **Reimbursement Management** — Handle expense approvals and reimbursements
+
+#### 🔐 **Enterprise Security & Access**
+- **Role-Based Access Control (RBAC)** — Granular permissions system with custom roles
+- **OIDC/SSO Authentication** — Enterprise authentication support (Azure AD, Authelia, etc.)
+- **API Tokens** — Generate secure tokens for API access and integrations
+- **Audit Logs** — Track all system activity and user actions
+
+#### ⌨️ **Productivity Power-Ups**
+- **Command Palette** — Keyboard-driven navigation (press `?` to open)
+- **Keyboard Shortcuts** — 50+ shortcuts for lightning-fast navigation
+- **Quick Search** — Fast search across projects, tasks, clients, and more (Ctrl+K)
+- **Saved Filters** — Save frequently used report filters for instant access
+
+#### ✏️ **Content & Formatting**
+- **Markdown Support** — Rich text formatting in project and task descriptions
+- **Enhanced UI Components** — Modern, accessible interface components
+- **Toast Notifications** — Beautiful in-app notifications for actions and updates
+
+---
+
 ## ✨ Features
 
-TimeTracker includes **120+ features** across 12 major categories. See the [Complete Features Documentation](docs/FEATURES_COMPLETE.md) for a comprehensive overview.
+TimeTracker includes **130+ features** across 13 major categories. See the [Complete Features Documentation](docs/FEATURES_COMPLETE.md) for a comprehensive overview.
 
 ### ⏱️ **Smart Time Tracking**
 - **One-Click Timers** — Start tracking with a single click
@@ -52,6 +113,17 @@ TimeTracker includes **120+ features** across 12 major categories. See the [Comp
 - **Task Comments** — Collaborate with threaded comments on tasks
 - **Markdown Support** — Rich text formatting in project and task descriptions
 - **Project Favorites** — Quick access to frequently used projects
+
+### 💼 **CRM & Sales Management** 🆕
+- **Multiple Contacts per Client** — Manage unlimited contacts with roles and designations
+- **Sales Pipeline** — Visual Kanban-style pipeline for tracking deals and opportunities
+- **Deal Management** — Track deal value, probability, stages, and expected close dates
+- **Lead Management** — Capture, score, and convert leads into clients or deals
+- **Communication History** — Track all emails, calls, meetings, and notes with contacts
+- **Deal Activities** — Complete activity tracking for sales processes
+- **Lead Activities** — Track all interactions and activities for leads
+- **Lead Scoring** — Automated lead scoring (0-100) for prioritization
+- **Lead Conversion** — Convert leads to clients or deals with one click
 
 ### 🧾 **Professional Invoicing**
 - **Generate from Time** — Convert tracked hours to invoices automatically
@@ -556,20 +628,43 @@ This starts:
 - 🔌 **API Extensions** — RESTful API for integrations
 - 📊 **Advanced Analytics** — More charts and insights
 
-### Recently Added
-- ✅ **Invoice Generation** — Complete invoicing system with PDF export
-- ✅ **Task Management** — Full task tracking and management with Kanban board
-- ✅ **Command Palette** — Keyboard-driven navigation (press `?`)
-- ✅ **Calendar View** — Visual time entry calendar
-- ✅ **Bulk Time Entry** — Create multiple entries for consecutive days
-- ✅ **Time Entry Templates** — Save and reuse common time entries
-- ✅ **Expense Tracking** — Track business expenses with receipts
-- ✅ **Payment Tracking** — Monitor invoice payments
-- ✅ **Saved Filters** — Save frequently used report filters
-- ✅ **Task Comments** — Collaborate with comments on tasks
-- ✅ **Role-Based Permissions** — Granular access control system
-- ✅ **OIDC/SSO Authentication** — Enterprise authentication support
-- ✅ **Markdown Support** — Rich text in descriptions
+### 🎉 Recently Added Features
+
+#### 💼 Business & CRM Features
+- ✅ **Complete CRM Suite** — Multiple contacts, sales pipeline, deal tracking, and lead management
+- ✅ **Invoice Generation** — Full invoicing system with PDF export, multi-currency, and tax calculations
+- ✅ **Expense Tracking** — Comprehensive expense management with receipts and categories
+- ✅ **Payment Tracking** — Monitor invoice payments with multiple payment methods
+- ✅ **Recurring Invoices** — Automate recurring billing cycles
+
+#### 📋 Project & Task Management
+- ✅ **Task Management System** — Complete task tracking with priorities, assignments, and due dates
+- ✅ **Kanban Board** — Visual drag-and-drop task management with customizable columns
+- ✅ **Task Comments** — Threaded collaboration with comments on tasks
+- ✅ **Task Activity Tracking** — Complete history of all task changes
+
+#### ⏱️ Time Tracking Enhancements
+- ✅ **Calendar View** — Visual calendar interface for viewing and managing time entries
+- ✅ **Bulk Time Entry** — Create multiple entries for consecutive days with weekend skipping
+- ✅ **Time Entry Templates** — Save and reuse common time entries for faster logging
+- ✅ **Real-time Updates** — Live timer synchronization across all devices via WebSocket
+
+#### 🔐 Security & Access Control
+- ✅ **Role-Based Permissions (RBAC)** — Granular access control system with custom roles
+- ✅ **OIDC/SSO Authentication** — Enterprise authentication support (Azure AD, Authelia, etc.)
+- ✅ **API Tokens** — Secure token generation for API access and integrations
+- ✅ **Audit Logs** — Complete system activity and user action tracking
+
+#### ⌨️ Productivity Features
+- ✅ **Command Palette** — Keyboard-driven navigation (press `?` to open)
+- ✅ **Keyboard Shortcuts** — 50+ shortcuts for power users
+- ✅ **Quick Search** — Fast search across all entities (Ctrl+K)
+- ✅ **Saved Filters** — Save frequently used report filters for quick access
+
+#### ✨ User Experience
+- ✅ **Markdown Support** — Rich text formatting in descriptions
+- ✅ **Toast Notifications** — Beautiful in-app notification system
+- ✅ **Enhanced UI Components** — Modern, accessible interface elements
 
 ---
 

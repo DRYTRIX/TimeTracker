@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Custom Report Builder') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Reports', 'url': url_for('reports.reports')},
+    {'text': 'Report Builder'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-chart-bar',
+    title_text='Custom Report Builder',
+    subtitle_text='Create custom reports with drag-and-drop',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Sidebar: Data Sources & Components -->
+    <div class="lg:col-span-1">
+        <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow sticky top-4">
+            <h3 class="font-semibold mb-4">{{ _('Data Sources') }}</h3>
+            <div class="space-y-2" id="dataSources">
+                {% for source in data_sources %}
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700" draggable="true" data-source="{{ source.id }}">
+                    <i class="fas fa-{{ source.icon }} mr-2"></i>{{ source.name }}
+                </div>
+                {% endfor %}
+            </div>
+            
+            <h3 class="font-semibold mb-4 mt-6">{{ _('Components') }}</h3>
+            <div class="space-y-2" id="components">
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700" draggable="true" data-component="table">
+                    <i class="fas fa-table mr-2"></i>{{ _('Table') }}
+                </div>
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700" draggable="true" data-component="chart">
+                    <i class="fas fa-chart-line mr-2"></i>{{ _('Chart') }}
+                </div>
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700" draggable="true" data-component="summary">
+                    <i class="fas fa-calculator mr-2"></i>{{ _('Summary') }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Canvas -->
+    <div class="lg:col-span-3">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">{{ _('Report Canvas') }}</h3>
+                <div class="flex gap-2">
+                    <button onclick="previewReport()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-eye mr-2"></i>{{ _('Preview') }}
+                    </button>
+                    <button onclick="saveReport()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">
+                        <i class="fas fa-save mr-2"></i>{{ _('Save') }}
+                    </button>
+                </div>
+            </div>
+            
+            <div id="reportCanvas" class="min-h-96 border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4">
+                <p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">
+                    {{ _('Drag data sources and components here to build your report') }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Filters Panel -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Filters') }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Start Date') }}</label>
+                    <input type="date" id="filterStartDate" class="form-input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('End Date') }}</label>
+                    <input type="date" id="filterEndDate" class="form-input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Project') }}</label>
+                    <select id="filterProject" class="form-input">
+                        <option value="">{{ _('All Projects') }}</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="previewModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl p-6 max-w-6xl w-full max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">{{ _('Report Preview') }}</h3>
+            <button onclick="closePreviewModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="previewContent" class="flex-1 overflow-auto">
+            <div id="previewLoading" class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-2xl text-primary mb-2"></i>
+                <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Loading preview...') }}</p>
+            </div>
+            <div id="previewError" class="hidden text-center py-8">
+                <i class="fas fa-exclamation-triangle text-2xl text-red-500 mb-2"></i>
+                <p class="text-red-600 dark:text-red-400" id="previewErrorMessage"></p>
+            </div>
+            <div id="previewData" class="hidden">
+                <!-- Preview content will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Modal -->
+<div id="saveModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl p-6 max-w-md w-full">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Save Report') }}</h3>
+        <form id="saveForm">
+            <div class="mb-4">
+                <label for="reportName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Report Name') }} *</label>
+                <input type="text" id="reportName" required class="form-input" placeholder="{{ _('My Custom Report') }}">
+            </div>
+            <div class="mb-4">
+                <label for="reportScope" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Scope') }}</label>
+                <select id="reportScope" class="form-input">
+                    <option value="private">{{ _('Private') }}</option>
+                    <option value="team">{{ _('Team') }}</option>
+                    <option value="public">{{ _('Public') }}</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-4">
+                <button type="button" onclick="closeSaveModal()" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</button>
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">{{ _('Save') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let reportConfig = {
+    data_source: null,
+    components: [],
+    filters: {}
+};
+
+// Drag and drop handlers
+document.querySelectorAll('[draggable="true"]').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+            type: item.dataset.source ? 'source' : 'component',
+            id: item.dataset.source || item.dataset.component
+        }));
+    });
+});
+
+const canvas = document.getElementById('reportCanvas');
+canvas.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    canvas.classList.add('border-primary');
+});
+
+canvas.addEventListener('dragleave', () => {
+    canvas.classList.remove('border-primary');
+});
+
+canvas.addEventListener('drop', (e) => {
+    e.preventDefault();
+    canvas.classList.remove('border-primary');
+    
+    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+    
+    if (data.type === 'source') {
+        reportConfig.data_source = data.id;
+        addDataSourceToCanvas(data.id);
+    } else {
+        addComponentToCanvas(data.id);
+    }
+});
+
+function addDataSourceToCanvas(sourceId) {
+    const sourceNames = {
+        'time_entries': '{{ _("Time Entries") }}',
+        'projects': '{{ _("Projects") }}',
+        'tasks': '{{ _("Tasks") }}',
+        'invoices': '{{ _("Invoices") }}',
+        'expenses': '{{ _("Expenses") }}'
+    };
+    
+    const element = document.createElement('div');
+    element.className = 'p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4';
+    element.innerHTML = `
+        <div class="flex justify-between items-center">
+            <div>
+                <i class="fas fa-database mr-2"></i>
+                <strong>${sourceNames[sourceId] || sourceId}</strong>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-red-600 hover:text-red-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    canvas.querySelector('p')?.remove();
+    canvas.appendChild(element);
+}
+
+function addComponentToCanvas(componentId) {
+    const componentNames = {
+        'table': '{{ _("Table") }}',
+        'chart': '{{ _("Chart") }}',
+        'summary': '{{ _("Summary") }}'
+    };
+    
+    const element = document.createElement('div');
+    element.className = 'p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4';
+    element.innerHTML = `
+        <div class="flex justify-between items-center">
+            <div>
+                <i class="fas fa-${componentId === 'table' ? 'table' : componentId === 'chart' ? 'chart-line' : 'calculator'} mr-2"></i>
+                <strong>${componentNames[componentId] || componentId}</strong>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-red-600 hover:text-red-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    canvas.querySelector('p')?.remove();
+    canvas.appendChild(element);
+    reportConfig.components.push(componentId);
+}
+
+function previewReport() {
+    // Check if data source is selected
+    if (!reportConfig.data_source) {
+        alert('{{ _("Please select a data source first") }}');
+        return;
+    }
+    
+    // Collect current filters
+    reportConfig.filters = {
+        start_date: document.getElementById('filterStartDate').value,
+        end_date: document.getElementById('filterEndDate').value,
+        project_id: document.getElementById('filterProject').value || null
+    };
+    
+    // Show preview modal
+    const modal = document.getElementById('previewModal');
+    const loading = document.getElementById('previewLoading');
+    const error = document.getElementById('previewError');
+    const errorMessage = document.getElementById('previewErrorMessage');
+    const data = document.getElementById('previewData');
+    
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    error.classList.add('hidden');
+    data.classList.add('hidden');
+    
+    // Fetch preview data
+    fetch('{{ url_for("custom_reports.preview_report") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            config: reportConfig
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        loading.classList.add('hidden');
+        
+        if (result.success && result.data) {
+            renderPreview(result.data);
+            data.classList.remove('hidden');
+        } else {
+            errorMessage.textContent = result.message || '{{ _("Failed to generate preview") }}';
+            error.classList.remove('hidden');
+        }
+    })
+    .catch(err => {
+        loading.classList.add('hidden');
+        errorMessage.textContent = '{{ _("Error loading preview") }}: ' + err.message;
+        error.classList.remove('hidden');
+    });
+}
+
+function renderPreview(reportData) {
+    const previewData = document.getElementById('previewData');
+    const data = reportData.data || [];
+    const summary = reportData.summary || {};
+    
+    let html = '';
+    
+    // Render summary
+    if (Object.keys(summary).length > 0) {
+        html += '<div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">';
+        html += '<h4 class="font-semibold mb-2">{{ _("Summary") }}</h4>';
+        html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">';
+        for (const [key, value] of Object.entries(summary)) {
+            html += `<div><span class="text-sm text-text-muted-light dark:text-text-muted-dark">${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> <span class="font-semibold">${value}</span></div>`;
+        }
+        html += '</div></div>';
+    }
+    
+    // Render data table
+    if (data.length > 0) {
+        html += '<div class="overflow-x-auto">';
+        html += '<table class="min-w-full divide-y divide-border-light dark:divide-border-dark">';
+        html += '<thead class="bg-gray-50 dark:bg-gray-800">';
+        html += '<tr>';
+        
+        // Get column headers from first data item
+        const columns = Object.keys(data[0]);
+        columns.forEach(col => {
+            html += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">${col.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</th>`;
+        });
+        
+        html += '</tr></thead><tbody class="bg-white dark:bg-gray-900 divide-y divide-border-light dark:divide-border-dark">';
+        
+        data.forEach(row => {
+            html += '<tr>';
+            columns.forEach(col => {
+                html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">${row[col] || ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+    } else {
+        html += '<div class="text-center py-8 text-text-muted-light dark:text-text-muted-dark">';
+        html += '<i class="fas fa-inbox text-4xl mb-2"></i>';
+        html += '<p>{{ _("No data found for the selected filters") }}</p>';
+        html += '</div>';
+    }
+    
+    previewData.innerHTML = html;
+}
+
+function closePreviewModal() {
+    document.getElementById('previewModal').classList.add('hidden');
+}
+
+// Close preview modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const previewModal = document.getElementById('previewModal');
+        if (!previewModal.classList.contains('hidden')) {
+            closePreviewModal();
+        }
+    }
+});
+
+// Close preview modal when clicking outside (on the overlay)
+document.getElementById('previewModal')?.addEventListener('click', (e) => {
+    // Only close if clicking directly on the modal overlay, not on child elements
+    if (e.target === e.currentTarget) {
+        closePreviewModal();
+    }
+});
+
+function saveReport() {
+    document.getElementById('saveModal').classList.remove('hidden');
+}
+
+function closeSaveModal() {
+    document.getElementById('saveModal').classList.add('hidden');
+}
+
+document.getElementById('saveForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const name = document.getElementById('reportName').value;
+    const scope = document.getElementById('reportScope').value;
+    
+    // Collect filters
+    reportConfig.filters = {
+        start_date: document.getElementById('filterStartDate').value,
+        end_date: document.getElementById('filterEndDate').value,
+        project_id: document.getElementById('filterProject').value || null
+    };
+    
+    try {
+        const response = await fetch('{{ url_for("custom_reports.save_report_view") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                scope: scope,
+                config: reportConfig
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('{{ _("Report saved successfully!") }}');
+            closeSaveModal();
+            window.location.href = '{{ url_for("reports.reports") }}';
+        } else {
+            alert(result.message || '{{ _("Failed to save report") }}');
+        }
+    } catch (error) {
+        alert('{{ _("Error saving report") }}: ' + error.message);
+    }
+});
+</script>
+{% endblock %}
+

@@ -24,7 +24,9 @@ from app.models import (
     DataImport, DataExport, InvoicePDFTemplate, ClientPrepaidConsumption,
     AuditLog, RecurringInvoice, InvoiceEmail, Webhook, WebhookDelivery,
     InvoiceTemplate, Currency, ExchangeRate, TaxRule, Payment,
-    CreditNote, InvoiceReminderSchedule, SavedReportView, ReportEmailSchedule
+    CreditNote, InvoiceReminderSchedule, SavedReportView, ReportEmailSchedule,
+    Warehouse, StockItem, WarehouseStock, StockMovement, StockReservation,
+    ProjectStockAllocation, Quote, QuoteItem
 )
 
 

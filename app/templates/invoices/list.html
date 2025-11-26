@@ -29,7 +29,7 @@
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">Filter Invoices</h2>
+        <h2 class="text-lg font-semibold">{{ _('Filter Invoices') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
             <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
         </button>
@@ -86,7 +86,7 @@
         <div class="flex items-center gap-2">
             <a href="{{ url_for('invoices.export_invoices_excel') }}" 
                class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
-               title="Export to Excel"
+               title="{{ _('Export to Excel') }}"
                onclick="showExportLoading(this); return true;">
                 <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
             </a>
@@ -156,15 +156,15 @@
                 <td class="p-4">
                     {% set ps = invoice.payment_status %}
                     {% if ps == 'unpaid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" title="Unpaid">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" title="{{ _('Unpaid') }}">
                             <i class="fas fa-times-circle mr-1"></i>Unpaid
                         </span>
                     {% elif ps == 'partially_paid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Partially Paid">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="{{ _('Partially Paid') }}">
                             <i class="fas fa-hourglass-half mr-1"></i>Partial
                         </span>
                     {% elif ps == 'fully_paid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Fully Paid">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="{{ _('Fully Paid') }}">
                             <i class="fas fa-check-circle mr-1"></i>Paid
                         </span>
                     {% elif ps == 'overpaid' %}
@@ -259,7 +259,7 @@
                     </div>
                 </div>
                 <div class="ml-4 flex-1">
-                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">Delete Selected Invoices</h3>
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ _('Delete Selected Invoices') }}</h3>
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Are you sure you want to delete the selected invoices? This action cannot be undone.</p>
                 </div>
             </div>
@@ -279,7 +279,7 @@
 <div id="bulkStatusDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
-            <h3 class="text-lg font-semibold mb-4">Change Status for Selected Invoices</h3>
+            <h3 class="text-lg font-semibold mb-4">{{ _('Change Status for Selected Invoices') }}</h3>
             <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
             <select id="bulkStatusSelect" class="form-input w-full mb-4">
                 <option value="">-- Select Status --</option>
@@ -290,7 +290,7 @@
             </select>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closeBulkStatusDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                <button type="button" onclick="submitBulkStatus()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">Update Status</button>
+                <button type="button" onclick="submitBulkStatus()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Update Status') }}</button>
             </div>
         </div>
     </div>

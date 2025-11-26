@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Schedule Report') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Schedule Report') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Set up automated email delivery for reports') }}</p>
+    </div>
+    <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Scheduled Reports') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('scheduled_reports.create_scheduled') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="md:col-span-2">
+                <label for="saved_view_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Report View') }} *</label>
+                <select id="saved_view_id" name="saved_view_id" required class="form-input">
+                    <option value="">{{ _('Select a saved report view...') }}</option>
+                    {% for view in saved_views %}
+                    <option value="{{ view.id }}">{{ view.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a saved report view to schedule') }}</p>
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="recipients" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Recipients') }} *</label>
+                <input type="text" id="recipients" name="recipients" required class="form-input" placeholder="{{ _('email1@example.com, email2@example.com') }}">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Comma-separated email addresses') }}</p>
+            </div>
+            
+            <div>
+                <label for="cadence" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Frequency') }} *</label>
+                <select id="cadence" name="cadence" required class="form-input" onchange="toggleCronField()">
+                    <option value="">{{ _('Select frequency...') }}</option>
+                    <option value="daily">{{ _('Daily') }}</option>
+                    <option value="weekly">{{ _('Weekly') }}</option>
+                    <option value="monthly">{{ _('Monthly') }}</option>
+                    <option value="custom-cron">{{ _('Custom (Cron)') }}</option>
+                </select>
+            </div>
+            
+            <div id="cronField" class="hidden">
+                <label for="cron" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Cron Expression') }}</label>
+                <input type="text" id="cron" name="cron" class="form-input" placeholder="0 8 * * *">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Cron format: minute hour day month weekday') }}</p>
+            </div>
+        </div>
+        
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Schedule') }}</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleCronField() {
+    const cadence = document.getElementById('cadence').value;
+    const cronField = document.getElementById('cronField');
+    if (cadence === 'custom-cron') {
+        cronField.classList.remove('hidden');
+    } else {
+        cronField.classList.add('hidden');
+    }
+}
+</script>
+{% endblock %}
+

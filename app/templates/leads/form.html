@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ 'Edit' if lead else 'Create' }} Lead - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Leads', 'url': url_for('leads.list_leads')},
+    {'text': 'Edit Lead' if lead else 'Create Lead'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-user-plus',
+    title_text='Edit Lead' if lead else 'Create Lead',
+    subtitle_text='Manage lead information',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="first_name" class="block text-sm font-medium mb-2">{{ _('First Name') }} *</label>
+                <input type="text" name="first_name" id="first_name" value="{{ lead.first_name if lead else '' }}" class="form-input" required>
+            </div>
+            
+            <div>
+                <label for="last_name" class="block text-sm font-medium mb-2">{{ _('Last Name') }} *</label>
+                <input type="text" name="last_name" id="last_name" value="{{ lead.last_name if lead else '' }}" class="form-input" required>
+            </div>
+            
+            <div>
+                <label for="company_name" class="block text-sm font-medium mb-2">{{ _('Company Name') }}</label>
+                <input type="text" name="company_name" id="company_name" value="{{ lead.company_name if lead else '' }}" class="form-input">
+            </div>
+            
+            <div>
+                <label for="email" class="block text-sm font-medium mb-2">{{ _('Email') }}</label>
+                <input type="email" name="email" id="email" value="{{ lead.email if lead else '' }}" class="form-input">
+            </div>
+            
+            <div>
+                <label for="phone" class="block text-sm font-medium mb-2">{{ _('Phone') }}</label>
+                <input type="text" name="phone" id="phone" value="{{ lead.phone if lead else '' }}" class="form-input">
+            </div>
+            
+            <div>
+                <label for="title" class="block text-sm font-medium mb-2">{{ _('Title') }}</label>
+                <input type="text" name="title" id="title" value="{{ lead.title if lead else '' }}" class="form-input">
+            </div>
+            
+            <div>
+                <label for="source" class="block text-sm font-medium mb-2">{{ _('Source') }}</label>
+                <input type="text" name="source" id="source" value="{{ lead.source if lead else '' }}" class="form-input" placeholder="{{ _('Website, referral, ad...') }}">
+            </div>
+            
+            <div>
+                <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }} *</label>
+                <select name="status" id="status" class="form-input" required>
+                    {% for status_name in lead_statuses %}
+                    <option value="{{ status_name }}" {% if lead and lead.status == status_name %}selected{% elif not lead and status_name == 'new' %}selected{% endif %}>{{ status_name|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="score" class="block text-sm font-medium mb-2">{{ _('Lead Score') }} (0-100)</label>
+                <input type="number" min="0" max="100" name="score" id="score" value="{{ lead.score if lead else 0 }}" class="form-input">
+            </div>
+            
+            <div>
+                <label for="estimated_value" class="block text-sm font-medium mb-2">{{ _('Estimated Value') }}</label>
+                <input type="number" step="0.01" name="estimated_value" id="estimated_value" value="{{ '%.2f'|format(lead.estimated_value) if lead and lead.estimated_value else '' }}" class="form-input">
+            </div>
+            
+            <div>
+                <label for="currency_code" class="block text-sm font-medium mb-2">{{ _('Currency') }}</label>
+                <select name="currency_code" id="currency_code" class="form-input">
+                    <option value="EUR" {% if lead and lead.currency_code == 'EUR' or not lead %}selected{% endif %}>EUR</option>
+                    <option value="USD" {% if lead and lead.currency_code == 'USD' %}selected{% endif %}>USD</option>
+                    <option value="GBP" {% if lead and lead.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                </select>
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="notes" class="block text-sm font-medium mb-2">{{ _('Notes') }}</label>
+                <textarea name="notes" id="notes" rows="4" class="form-input">{{ lead.notes if lead else '' }}</textarea>
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="tags" class="block text-sm font-medium mb-2">{{ _('Tags') }} <span class="text-xs text-text-muted-light dark:text-text-muted-dark">(comma-separated)</span></label>
+                <input type="text" name="tags" id="tags" value="{{ lead.tags if lead else '' }}" class="form-input" placeholder="tag1, tag2, tag3">
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Save Lead') }}
+            </button>
+            <a href="{% if lead %}{{ url_for('leads.view_lead', lead_id=lead.id) }}{% else %}{{ url_for('leads.list_leads') }}{% endif %}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

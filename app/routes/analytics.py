@@ -71,6 +71,8 @@ def hours_by_day():
             else:
                 # Skip if we can't format the date
                 continue
+            if total_seconds is None:
+                total_seconds = 0
             date_data[formatted_date] = round(total_seconds / 3600, 2)
     
     return jsonify({
@@ -188,6 +190,8 @@ def hours_by_hour():
     # Create 24-hour array
     hours_data = [0] * 24
     for hour, total_seconds in results:
+        if total_seconds is None:
+            total_seconds = 0
         hours_data[int(hour)] = round(total_seconds / 3600, 2)
     
     labels = [f"{hour:02d}:00" for hour in range(24)]
@@ -230,6 +234,8 @@ def billable_vs_nonbillable():
     nonbillable_hours = 0
     
     for billable, total_seconds in results:
+        if total_seconds is None:
+            total_seconds = 0
         hours = round(total_seconds / 3600, 2)
         if billable:
             billable_hours = hours

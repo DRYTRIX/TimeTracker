@@ -7,6 +7,7 @@ Users can save commonly used filters for quick access.
 
 from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
 from flask_login import login_required, current_user
+from flask_babel import _
 from app import db
 from app.models import SavedFilter
 from app.utils.db import safe_commit
@@ -279,7 +280,7 @@ def delete_filter(filter_id):
     
     db.session.delete(saved_filter)
     if not safe_commit('delete_saved_filter', {'filter_id': filter_id}):
-        flash('Could not delete filter due to a database error', 'error')
+        flash(_('Could not delete filter due to a database error'), 'error')
         return redirect(url_for('saved_filters.list_filters'))
     
     # Log activity

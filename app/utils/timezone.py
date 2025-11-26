@@ -121,6 +121,11 @@ def now_in_user_timezone(user=None):
     return utc_now.astimezone(tz)
 
 
+def local_now():
+    """Get current time in the application's timezone (alias for now_in_app_timezone)."""
+    return now_in_app_timezone()
+
+
 def _localize_with_timezone(dt, tz):
     """Localize a naive datetime with the given pytz timezone, handling edge cases."""
     if dt.tzinfo is not None:

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
+    {'text': 'Reports', 'url': url_for('inventory.reports_dashboard')},
+    {'text': 'Movement History'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-history',
+    title_text='Movement History Report',
+    subtitle_text='Detailed inventory movement log',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div>
+            <label for="warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Warehouse') }}</label>
+            <select name="warehouse_id" id="warehouse_id" class="form-input">
+                <option value="">{{ _('All Warehouses') }}</option>
+                {% for warehouse in warehouses %}
+                <option value="{{ warehouse.id }}" {% if selected_warehouse_id == warehouse.id %}selected{% endif %}>{{ warehouse.code }} - {{ warehouse.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="stock_item_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Stock Item') }}</label>
+            <select name="stock_item_id" id="stock_item_id" class="form-input">
+                <option value="">{{ _('All Items') }}</option>
+                {% for item in stock_items %}
+                <option value="{{ item.id }}" {% if selected_stock_item_id == item.id %}selected{% endif %}>{{ item.sku }} - {{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="movement_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Movement Type') }}</label>
+            <select name="movement_type" id="movement_type" class="form-input">
+                <option value="">{{ _('All Types') }}</option>
+                <option value="adjustment" {% if selected_movement_type == 'adjustment' %}selected{% endif %}>{{ _('Adjustment') }}</option>
+                <option value="transfer" {% if selected_movement_type == 'transfer' %}selected{% endif %}>{{ _('Transfer') }}</option>
+                <option value="sale" {% if selected_movement_type == 'sale' %}selected{% endif %}>{{ _('Sale') }}</option>
+                <option value="purchase" {% if selected_movement_type == 'purchase' %}selected{% endif %}>{{ _('Purchase') }}</option>
+                <option value="return" {% if selected_movement_type == 'return' %}selected{% endif %}>{{ _('Return') }}</option>
+            </select>
+        </div>
+        <div>
+            <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date From') }}</label>
+            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
+        </div>
+        <div>
+            <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date To') }}</label>
+            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="table table-zebra w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-4">{{ _('Date') }}</th>
+                <th class="p-4">{{ _('Item') }}</th>
+                <th class="p-4">{{ _('Warehouse') }}</th>
+                <th class="p-4">{{ _('Type') }}</th>
+                <th class="p-4">{{ _('Quantity') }}</th>
+                <th class="p-4">{{ _('Reference') }}</th>
+                <th class="p-4">{{ _('Reason') }}</th>
+                <th class="p-4">{{ _('User') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for movement in movements %}
+            <tr>
+                <td class="p-4">{{ movement.moved_at.strftime('%Y-%m-%d %H:%M') if movement.moved_at else '—' }}</td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_stock_item', item_id=movement.stock_item_id) }}" class="text-primary hover:underline">
+                        {{ movement.stock_item.name }} ({{ movement.stock_item.sku }})
+                    </a>
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('inventory.view_warehouse', warehouse_id=movement.warehouse_id) }}" class="text-primary hover:underline">
+                        {{ movement.warehouse.code }}
+                    </a>
+                </td>
+                <td class="p-4">
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
+                        {{ movement.movement_type }}
+                    </span>
+                </td>
+                <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %} font-semibold">
+                    {{ '+' if movement.quantity > 0 else '' }}{{ movement.quantity }}
+                </td>
+                <td class="p-4">
+                    {% if movement.reference_type and movement.reference_id %}
+                        {% if movement.reference_type == 'invoice' %}
+                            <a href="{{ url_for('invoices.view_invoice', invoice_id=movement.reference_id) }}" class="text-primary hover:underline">
+                                Invoice #{{ movement.reference_id }}
+                            </a>
+                        {% elif movement.reference_type == 'quote' %}
+                            <a href="{{ url_for('quotes.view_quote', quote_id=movement.reference_id) }}" class="text-primary hover:underline">
+                                Quote #{{ movement.reference_id }}
+                            </a>
+                        {% elif movement.reference_type == 'purchase_order' %}
+                            <a href="{{ url_for('inventory.view_purchase_order', po_id=movement.reference_id) }}" class="text-primary hover:underline">
+                                PO #{{ movement.reference_id }}
+                            </a>
+                        {% else %}
+                            {{ movement.reference_type }} #{{ movement.reference_id }}
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="p-4">{{ movement.reason or '—' }}</td>
+                <td class="p-4">{{ movement.moved_by_user.username if movement.moved_by_user else '—' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="p-8 text-center text-gray-500">
+                    {{ _('No movements found.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

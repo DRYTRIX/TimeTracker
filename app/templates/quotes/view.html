@@ -1,0 +1,553 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ quote.title }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Quotes', 'url': url_for('quotes.list_quotes')},
+    {'text': quote.quote_number}
+] %}
+
+{% set actions_html %}
+<div class="flex gap-2 flex-wrap">
+    <a href="{{ url_for('quotes.list_quotes') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors mt-4 md:mt-0">
+        {{ _('Back to Quotes') }}
+    </a>
+    {% if quote.status == 'draft' and (current_user.is_admin or has_permission('edit_quotes')) %}
+    <a href="{{ url_for('quotes.edit_quote', quote_id=quote.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0 transition">
+        {{ _('Edit Quote') }}
+    </a>
+    {% endif %}
+    {% if current_user.is_admin or has_permission('create_quotes') %}
+    <a href="{{ url_for('quotes.duplicate_quote', quote_id=quote.id) }}" class="inline-block px-4 py-2 rounded-lg bg-gray-600 text-white mt-4 md:mt-0 hover:bg-gray-700 transition-colors">
+        <i class="fas fa-copy mr-2"></i>{{ _('Duplicate') }}
+    </a>
+    {% endif %}
+    <a href="{{ url_for('quotes.export_quote_pdf', quote_id=quote.id) }}" class="inline-block px-4 py-2 rounded-lg bg-green-600 text-white mt-4 md:mt-0 hover:bg-green-700 transition-colors">
+        <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
+    </a>
+    <button type="button" onclick="showSendEmailModal()" class="px-4 py-2 rounded-lg bg-blue-500 text-white mt-4 md:mt-0 hover:bg-blue-600 transition-colors">
+        <i class="fas fa-envelope mr-2"></i>{{ _('Send Email') }}
+    </button>
+</div>
+{% endset %}
+
+{{ page_header(
+    icon_class='fas fa-file-contract',
+    title_text=quote.title,
+    subtitle_text=quote.quote_number,
+    breadcrumbs=breadcrumbs,
+    actions_html=actions_html
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Quote Details') }}</h2>
+            
+            {% if quote.description %}
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Description') }}</h3>
+                <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ quote.description }}</p>
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Status') }}</h3>
+                    <p>
+                        {% if quote.status == 'draft' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{{ _('Draft') }}</span>
+                        {% elif quote.status == 'sent' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200">{{ _('Sent') }}</span>
+                        {% elif quote.status == 'accepted' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200">{{ _('Accepted') }}</span>
+                        {% elif quote.status == 'rejected' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200">{{ _('Rejected') }}</span>
+                        {% elif quote.status == 'expired' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200">{{ _('Expired') }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</h3>
+                    <p class="text-gray-600 dark:text-gray-400">{{ quote.client.name }}</p>
+                </div>
+                {% if quote.payment_terms %}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Payment Terms') }}</h3>
+                    <p class="text-gray-600 dark:text-gray-400">{{ quote.payment_terms }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if quote.items %}
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4">{{ _('Quote Items') }}</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="border-b border-border-light dark:border-border-dark">
+                            <tr>
+                                <th class="p-3">{{ _('Description') }}</th>
+                                <th class="p-3">{{ _('Quantity') }}</th>
+                                <th class="p-3">{{ _('Unit Price') }}</th>
+                                <th class="p-3">{{ _('Total') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in quote.items %}
+                            <tr class="border-b border-border-light dark:border-border-dark">
+                                <td class="p-3">{{ item.description }}</td>
+                                <td class="p-3">{{ "%.2f"|format(item.quantity) }} {% if item.unit %}{{ item.unit }}{% endif %}</td>
+                                <td class="p-3">{{ "%.2f"|format(item.unit_price) }} {{ quote.currency_code }}</td>
+                                <td class="p-3 font-medium">{{ "%.2f"|format(item.total_amount) }} {{ quote.currency_code }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="border-t-2 border-border-light dark:border-border-dark">
+                                <td colspan="3" class="p-3 text-right font-medium">{{ _('Subtotal') }}:</td>
+                                <td class="p-3 font-medium">{{ "%.2f"|format(quote.subtotal) }} {{ quote.currency_code }}</td>
+                            </tr>
+                            {% if quote.discount_value > 0 %}
+                            <tr>
+                                <td colspan="3" class="p-3 text-right font-medium text-red-600 dark:text-red-400">
+                                    {{ _('Discount') }}
+                                    {% if quote.discount_type == 'percentage' %}
+                                        ({{ "%.2f"|format(quote.discount_amount) }}%)
+                                    {% endif %}
+                                    {% if quote.coupon_code %}
+                                        - {{ quote.coupon_code }}
+                                    {% endif %}
+                                    {% if quote.discount_reason %}
+                                        <br><span class="text-xs text-gray-500">({{ quote.discount_reason }})</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3 font-medium text-red-600 dark:text-red-400">-{{ "%.2f"|format(quote.discount_value) }} {{ quote.currency_code }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="p-3 text-right font-medium">{{ _('Subtotal After Discount') }}:</td>
+                                <td class="p-3 font-medium">{{ "%.2f"|format(quote.subtotal_after_discount) }} {{ quote.currency_code }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if quote.tax_amount > 0 %}
+                            <tr>
+                                <td colspan="3" class="p-3 text-right font-medium">{{ _('Tax') }} ({{ "%.2f"|format(quote.tax_rate) }}%):</td>
+                                <td class="p-3 font-medium">{{ "%.2f"|format(quote.tax_amount) }} {{ quote.currency_code }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr class="border-t-2 border-border-light dark:border-border-dark">
+                                <td colspan="3" class="p-3 text-right font-bold text-lg">{{ _('Total') }}:</td>
+                                <td class="p-3 font-bold text-lg">{{ "%.2f"|format(quote.total_amount) }} {{ quote.currency_code }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if quote.terms %}
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Terms and Conditions') }}</h3>
+                <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ quote.terms }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if quote.has_project %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Related Project') }}</h2>
+            <p class="mb-2">
+                <a href="{{ url_for('projects.view_project', project_id=quote.project_id) }}" class="text-primary hover:underline">
+                    {{ _('View Project') }}
+                </a>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Actions') }}</h3>
+            <div class="space-y-3">
+                <!-- Approval Workflow Actions -->
+                {% if quote.requires_approval %}
+                <div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <h4 class="font-medium text-yellow-800 dark:text-yellow-200 mb-2">{{ _('Approval Status') }}</h4>
+                    {% if quote.approval_status == 'none' %}
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300 mb-2">{{ _('Approval not yet requested') }}</p>
+                    {% if quote.status == 'draft' and (current_user.is_admin or has_permission('edit_quotes')) %}
+                    <form method="POST" action="{{ url_for('quotes.request_approval', quote_id=quote.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 text-sm">{{ _('Request Approval') }}</button>
+                    </form>
+                    {% endif %}
+                    {% elif quote.approval_status == 'pending' %}
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300 mb-2">{{ _('Pending approval') }}</p>
+                    {% if current_user.is_admin or has_permission('approve_quotes') %}
+                    <div class="space-y-2">
+                        <button onclick="document.getElementById('approve-modal').classList.remove('hidden')" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">{{ _('Approve') }}</button>
+                        <button onclick="document.getElementById('reject-approval-modal').classList.remove('hidden')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm">{{ _('Reject') }}</button>
+                    </div>
+                    {% endif %}
+                    {% elif quote.approval_status == 'approved' %}
+                    <p class="text-sm text-green-700 dark:text-green-300 mb-2">
+                        {{ _('Approved by') }} {{ quote.approver.full_name or quote.approver.username if quote.approver else 'N/A' }}
+                        {% if quote.approved_at %}
+                        {{ _('on') }} {{ quote.approved_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        {% endif %}
+                    </p>
+                    {% elif quote.approval_status == 'rejected' %}
+                    <p class="text-sm text-red-700 dark:text-red-300 mb-2">
+                        {{ _('Rejected by') }} {{ quote.rejecter.full_name or quote.rejecter.username if quote.rejecter else 'N/A' }}
+                        {% if quote.rejected_at %}
+                        {{ _('on') }} {{ quote.rejected_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        {% endif %}
+                    </p>
+                    {% if quote.rejection_reason %}
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ quote.rejection_reason }}</p>
+                    {% endif %}
+                    {% if quote.status == 'draft' and (current_user.is_admin or has_permission('edit_quotes')) %}
+                    <form method="POST" action="{{ url_for('quotes.request_approval', quote_id=quote.id) }}" class="inline mt-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 text-sm">{{ _('Request Approval Again') }}</button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if quote.status == 'draft' and quote.can_be_sent and (current_user.is_admin or has_permission('edit_quotes')) %}
+                <form method="POST" action="{{ url_for('quotes.send_quote', quote_id=quote.id) }}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">{{ _('Send Quote') }}</button>
+                </form>
+                {% endif %}
+
+                {% if quote.can_be_accepted and (current_user.is_admin or has_permission('accept_quotes')) %}
+                <a href="{{ url_for('quotes.accept_quote', quote_id=quote.id) }}" class="block w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-center transition-colors">{{ _('Accept Quote') }}</a>
+                {% endif %}
+
+                {% if quote.status in ['sent', 'draft'] and (current_user.is_admin or has_permission('edit_quotes')) %}
+                <form method="POST" action="{{ url_for('quotes.reject_quote', quote_id=quote.id) }}" class="inline" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to reject this quote?') }}', { title: '{{ _('Reject Quote') }}', confirmText: '{{ _('Reject') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="w-full bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors">{{ _('Reject Quote') }}</button>
+                </form>
+                {% endif %}
+
+                {% if quote.status in ['draft', 'rejected'] and (current_user.is_admin or has_permission('delete_quotes')) %}
+                <button type="button" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                        onclick="document.getElementById('confirmDeleteQuote-{{ quote.id }}').classList.remove('hidden')">
+                    {{ _('Delete Quote') }}
+                </button>
+                <form id="confirmDeleteQuote-{{ quote.id }}-form" method="POST" action="{{ url_for('quotes.delete_quote', quote_id=quote.id) }}" class="hidden">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    
+    <!-- Comments Section -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">
+                <i class="fas fa-comments mr-2"></i>{{ _('Comments') }}
+                {% if comments %}
+                <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ comments|length }})</span>
+                {% endif %}
+            </h3>
+            <button type="button" onclick="document.getElementById('new-comment-form').classList.toggle('hidden')" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark">
+                <i class="fas fa-plus mr-2"></i>{{ _('Add Comment') }}
+            </button>
+        </div>
+        
+        <!-- New Comment Form -->
+        <div id="new-comment-form" class="hidden mb-4">
+            <form method="POST" action="{{ url_for('comments.create_comment') }}" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="quote_id" value="{{ quote.id }}">
+                <div>
+                    <label for="comment-content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Your Comment') }}</label>
+                    <textarea name="content" id="comment-content" rows="4" class="w-full form-input" placeholder="{{ _('Share your thoughts, updates, or questions...') }}" required></textarea>
+                </div>
+                <div class="flex items-center">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="is_internal" value="true" checked class="mr-2">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ _('Internal comment (not visible to client)') }}</span>
+                    </label>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark">
+                        <i class="fas fa-comment mr-2"></i>{{ _('Post Comment') }}
+                    </button>
+                    <button type="button" onclick="document.getElementById('new-comment-form').classList.add('hidden')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                        {{ _('Cancel') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Comments List -->
+        <div class="space-y-4">
+            {% if comments %}
+                {% for comment in comments %}
+                    {% if not comment.parent_id %}
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 {% if comment.is_internal %}bg-gray-50 dark:bg-gray-800{% endif %}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium">{{ comment.author.full_name or comment.author.username }}</span>
+                                {% if comment.is_internal %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Internal') }}</span>
+                                {% else %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Client Visible') }}</span>
+                                {% endif %}
+                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ comment.created_at|user_datetime('%Y-%m-%d %H:%M') }}</span>
+                            </div>
+                            {% if comment.can_edit(current_user) %}
+                            <div class="flex gap-2">
+                                <a href="{{ url_for('comments.edit_comment', comment_id=comment.id) }}" class="text-sm text-primary hover:underline">{{ _('Edit') }}</a>
+                                <form method="POST" action="{{ url_for('comments.delete_comment', comment_id=comment.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this comment?') }}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-sm text-red-600 hover:underline">{{ _('Delete') }}</button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ comment.content }}</div>
+                        
+                        <!-- Replies -->
+                        {% if comment.replies %}
+                        <div class="mt-4 ml-8 space-y-2">
+                            {% for reply in comment.replies %}
+                            <div class="border-l-2 border-gray-300 dark:border-gray-600 pl-4 py-2 {% if reply.is_internal %}bg-gray-50 dark:bg-gray-800{% endif %}">
+                                <div class="flex justify-between items-start mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-medium text-sm">{{ reply.author.full_name or reply.author.username }}</span>
+                                        {% if reply.is_internal %}
+                                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Internal') }}</span>
+                                        {% endif %}
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ reply.created_at|user_datetime('%Y-%m-%d %H:%M') }}</span>
+                                    </div>
+                                    {% if reply.can_edit(current_user) %}
+                                    <div class="flex gap-2">
+                                        <a href="{{ url_for('comments.edit_comment', comment_id=reply.id) }}" class="text-xs text-primary hover:underline">{{ _('Edit') }}</a>
+                                        <form method="POST" action="{{ url_for('comments.delete_comment', comment_id=reply.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this comment?') }}');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="text-xs text-red-600 hover:underline">{{ _('Delete') }}</button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ reply.content }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Reply Form -->
+                        <div class="mt-2">
+                            <button type="button" onclick="document.getElementById('reply-form-{{ comment.id }}').classList.toggle('hidden')" class="text-sm text-primary hover:underline">
+                                <i class="fas fa-reply mr-1"></i>{{ _('Reply') }}
+                            </button>
+                            <form id="reply-form-{{ comment.id }}" method="POST" action="{{ url_for('comments.create_comment') }}" class="hidden mt-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="quote_id" value="{{ quote.id }}">
+                                <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                <textarea name="content" rows="2" class="w-full form-input text-sm" placeholder="{{ _('Write a reply...') }}" required></textarea>
+                                <div class="flex items-center mt-1">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="is_internal" value="true" checked class="mr-2">
+                                        <span class="text-xs text-gray-700 dark:text-gray-300">{{ _('Internal') }}</span>
+                                    </label>
+                                </div>
+                                <div class="flex gap-2 mt-2">
+                                    <button type="submit" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary-dark">{{ _('Reply') }}</button>
+                                    <button type="button" onclick="document.getElementById('reply-form-{{ comment.id }}').classList.add('hidden')" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">{{ _('Cancel') }}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-comments text-4xl mb-2 opacity-50"></i>
+                    <p>{{ _('No comments yet. Start the conversation by adding the first comment.') }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fas fa-info-circle mr-2 text-primary"></i>{{ _('Information') }}
+            </h3>
+            <dl class="space-y-3 text-sm">
+                <div class="pb-3 border-b border-border-light dark:border-border-dark">
+                    <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Created') }}</dt>
+                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '' }}</dd>
+                </div>
+                {% if quote.valid_until %}
+                <div class="pb-3 border-b border-border-light dark:border-border-dark">
+                    <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Valid Until') }}</dt>
+                    <dd class="text-gray-600 dark:text-gray-400">
+                        {{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else '' }}
+                        {% if quote.valid_until and quote.valid_until < now() %}
+                            <span class="ml-2 px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{{ _('Expired') }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                {% endif %}
+                {% if quote.sent_at %}
+                <div class="pb-3 border-b border-border-light dark:border-border-dark">
+                    <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Sent At') }}</dt>
+                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.sent_at.strftime('%Y-%m-%d %H:%M') if quote.sent_at else '' }}</dd>
+                </div>
+                {% endif %}
+                {% if quote.accepted_at %}
+                <div class="pb-3 border-b border-border-light dark:border-border-dark">
+                    <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Accepted At') }}</dt>
+                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.accepted_at.strftime('%Y-%m-%d %H:%M') if quote.accepted_at else '' }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+</div>
+
+<!-- Send Email Modal -->
+<div id="sendEmailModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="emailModalTitle">
+  <div class="absolute inset-0 bg-black/50" onclick="hideSendEmailModal()"></div>
+  <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl ring-1 ring-border-light/60 dark:ring-border-dark/60">
+    <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+      <h5 id="emailModalTitle" class="text-lg font-semibold flex items-center gap-2">
+        <i class="fas fa-envelope text-blue-500"></i> {{ _('Send Quote via Email') }}
+      </h5>
+      <button type="button" class="px-2 py-1 hover:bg-background-light dark:hover:bg-background-dark rounded text-2xl leading-none" aria-label="{{ _('Close') }}" onclick="hideSendEmailModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('quotes.send_quote_email', quote_id=quote.id) }}" id="sendEmailForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="p-4 space-y-4">
+        <div>
+          <label for="email_recipient" class="block text-sm font-medium mb-1">{{ _('Recipient Email') }}</label>
+          <input type="email" id="email_recipient" name="recipient" required 
+                 value="{{ quote.client.email if quote.client and quote.client.email else '' }}"
+                 class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+        </div>
+        <div>
+          <label for="email_subject" class="block text-sm font-medium mb-1">{{ _('Subject') }}</label>
+          <input type="text" id="email_subject" name="subject" required 
+                 value="{{ _('Quote %(quote_number)s', quote_number=quote.quote_number) }}"
+                 class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
+        </div>
+        <div>
+          <label for="email_message" class="block text-sm font-medium mb-1">{{ _('Custom Message (Optional)') }}</label>
+          <textarea id="email_message" name="message" rows="4" 
+                    class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark"
+                    placeholder="{{ _('Add a custom message to the email...') }}"></textarea>
+        </div>
+        <div class="flex items-center">
+          <input type="checkbox" id="attach_pdf" name="attach_pdf" checked class="mr-2">
+          <label for="attach_pdf" class="text-sm">{{ _('Attach PDF') }}</label>
+        </div>
+      </div>
+      <div class="p-4 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+        <button type="button" class="inline-flex items-center gap-2 px-3 py-2 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark" onclick="hideSendEmailModal()">
+          <i class="fas fa-times"></i> {{ _('Cancel') }}
+        </button>
+        <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded bg-blue-500 text-white hover:bg-blue-600">
+          <i class="fas fa-paper-plane"></i> {{ _('Send Email') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function showSendEmailModal() {
+  document.getElementById('sendEmailModal').classList.remove('hidden');
+}
+
+function hideSendEmailModal() {
+  document.getElementById('sendEmailModal').classList.add('hidden');
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    hideSendEmailModal();
+  }
+});
+
+// Approval modals
+function showApproveModal() {
+    document.getElementById('approve-modal').classList.remove('hidden');
+}
+
+function hideApproveModal() {
+    document.getElementById('approve-modal').classList.add('hidden');
+}
+
+function showRejectApprovalModal() {
+    document.getElementById('reject-approval-modal').classList.remove('hidden');
+}
+
+function hideRejectApprovalModal() {
+    document.getElementById('reject-approval-modal').classList.add('hidden');
+}
+</script>
+
+<!-- Approve Modal -->
+<div id="approve-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Approve Quote') }}</h3>
+        <form method="POST" action="{{ url_for('quotes.approve_quote', quote_id=quote.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label for="approval-notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes (Optional)') }}</label>
+                <textarea id="approval-notes" name="notes" rows="3" class="w-full form-input" placeholder="{{ _('Add approval notes...') }}"></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">{{ _('Approve') }}</button>
+                <button type="button" onclick="hideApproveModal()" class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">{{ _('Cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject Approval Modal -->
+<div id="reject-approval-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Reject Quote Approval') }}</h3>
+        <form method="POST" action="{{ url_for('quotes.reject_approval', quote_id=quote.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label for="rejection-reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Rejection Reason') }} <span class="text-red-500">*</span></label>
+                <textarea id="rejection-reason" name="reason" rows="4" class="w-full form-input" placeholder="{{ _('Please provide a reason for rejection...') }}" required></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">{{ _('Reject') }}</button>
+                <button type="button" onclick="hideRejectApprovalModal()" class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">{{ _('Cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="confirmDeleteQuote-{{ quote.id }}" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Delete Quote') }}</h3>
+        <p class="mb-4 text-gray-600 dark:text-gray-400">{{ _('Are you sure you want to delete this quote? This action cannot be undone.') }}</p>
+        <div class="flex gap-2">
+            <button type="button" onclick="document.getElementById('confirmDeleteQuote-{{ quote.id }}').classList.add('hidden')" class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">{{ _('Cancel') }}</button>
+            <form method="POST" action="{{ url_for('quotes.delete_quote', quote_id=quote.id) }}" class="flex-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">{{ _('Delete') }}</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

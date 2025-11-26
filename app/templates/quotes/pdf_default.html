@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ _('Quote') }} {{ quote.quote_number }}</title>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="quote-header">
+            <div class="brand">
+                {% if settings.has_logo() %}
+                    {% set logo_path = settings.get_logo_path() %}
+                    {% if logo_path %}
+                        {# Base64 encode the logo for reliable PDF embedding #}
+                        {% set logo_data = get_logo_base64(logo_path) %}
+                        {% if logo_data %}
+                            <img src="{{ logo_data }}" alt="{{ _('Company Logo') }}" class="company-logo">
+                        {% else %}
+                            {# Fallback to file URI if base64 fails #}
+                            <img src="{{ Path(logo_path).resolve().as_uri() if Path and logo_path else 'file://' ~ logo_path }}" alt="{{ _('Company Logo') }}" class="company-logo">
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+                <div>
+                    <h1 class="company-name">{{ settings.company_name|e }}</h1>
+                    <div class="company-meta small">
+                        <span>{{ settings.company_address|e|replace('\n', '<br>')|safe }}</span>
+                        <span>{{ _('Email') }}: {{ settings.company_email|e }} · {{ _('Phone') }}: {{ settings.company_phone|e }}</span>
+                        <span>{{ _('Website') }}: {{ settings.company_website|e }}</span>
+                        {% if settings.company_tax_id %}
+                            <div class="company-tax">{{ _('Tax ID') }}: {{ settings.company_tax_id|e }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="quote-meta">
+                <div class="quote-title">{{ _('QUOTE') }}</div>
+                <div class="meta-grid">
+                    <div class="label">{{ _('Quote #') }}</div><div class="value">{{ quote.quote_number }}</div>
+                    <div class="label">{{ _('Date') }}</div><div class="value">{{ format_date(quote.created_at) if quote.created_at else 'N/A' }}</div>
+                    {% if quote.valid_until %}
+                    <div class="label">{{ _('Valid Until') }}</div><div class="value">{{ format_date(quote.valid_until) }}</div>
+                    {% endif %}
+                    <div class="label">{{ _('Status') }}</div><div class="value">{{ _(quote.status|title) }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="card">
+                <div class="section-title">{{ _('Quote For') }}</div>
+                <div><strong>{{ quote.client.name|e if quote.client else 'N/A' }}</strong></div>
+                {% if quote.client and quote.client.email %}
+                    <div class="client-email">{{ quote.client.email|e }}</div>
+                {% endif %}
+                {% if quote.client and quote.client.address %}
+                    <div class="client-address">{{ quote.client.address|e }}</div>
+                {% endif %}
+            </div>
+            <div class="card">
+                <div class="section-title">{{ _('Quote Details') }}</div>
+                <div><strong>{{ quote.title|e }}</strong></div>
+                {% if quote.description %}
+                    <div class="quote-description">{{ quote.description|e }}</div>
+                {% endif %}
+                {% if quote.payment_terms %}
+                    <div class="payment-terms" style="margin-top: 8px; color: var(--muted); font-size: 11pt;">
+                        <strong>{{ _('Payment Terms') }}:</strong> {{ quote.payment_terms|e }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="desc">{{ _('Description') }}</th>
+                        <th class="num">{{ _('Quantity') }}</th>
+                        <th class="num">{{ _('Unit Price') }}</th>
+                        <th class="num">{{ _('Total Amount') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in quote.items %}
+                    <tr>
+                        <td>{{ item.description|e }}</td>
+                        <td class="num">{{ '%.2f' % item.quantity }} {% if item.unit %}{{ item.unit }}{% endif %}</td>
+                        <td class="num">{{ format_money(item.unit_price) }}</td>
+                        <td class="num">{{ format_money(item.total_amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="num">{{ _('Subtotal:') }}</td>
+                        <td class="num">{{ format_money(quote.subtotal) }}</td>
+                    </tr>
+                    {% if quote.discount_value > 0 %}
+                    <tr>
+                        <td colspan="3" class="num">
+                            {{ _('Discount') }}
+                            {% if quote.discount_type == 'percentage' %}
+                                ({{ "%.2f"|format(quote.discount_amount) }}%)
+                            {% endif %}
+                            {% if quote.coupon_code %}
+                                - {{ quote.coupon_code }}
+                            {% endif %}
+                        </td>
+                        <td class="num">-{{ format_money(quote.discount_value) }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="num">{{ _('Subtotal After Discount:') }}</td>
+                        <td class="num">{{ format_money(quote.subtotal_after_discount) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if quote.tax_rate > 0 %}
+                    <tr>
+                        <td colspan="3" class="num">{{ _('Tax (%(rate).2f%%):', rate=quote.tax_rate) }}</td>
+                        <td class="num">{{ format_money(quote.tax_amount) }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td colspan="3" class="num">{{ _('Total Amount:') }}</td>
+                        <td class="num">{{ format_money(quote.total_amount) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        {% if quote.description or quote.terms %}
+        <div class="additional-info">
+            {% if quote.description %}
+            <div class="description-section">
+                <h4>{{ _('Description:') }}</h4>
+                <p>{{ quote.description|e }}</p>
+            </div>
+            {% endif %}
+            {% if quote.terms %}
+            <div class="terms-section">
+                <h4>{{ _('Terms & Conditions:') }}</h4>
+                <p>{{ quote.terms|e }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            {% if settings.company_bank_info %}
+                <h4>{{ _('Payment Information:') }}</h4>
+                <div class="bank-info">{{ settings.company_bank_info|e|replace('\n', '<br>')|safe }}</div>
+            {% endif %}
+            {% if settings.invoice_terms %}
+            <div><strong>{{ _('Terms & Conditions:') }}</strong> {{ settings.invoice_terms|e }}</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
+

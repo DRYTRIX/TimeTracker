@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Approval Details') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ _('Approval Details') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Invoice') }} #{{ approval.invoice.invoice_number }}
+        </p>
+    </div>
+    <a href="{{ url_for('invoices.view_invoice', invoice_id=approval.invoice_id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('View Invoice') }}</a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Approval Status') }}</h2>
+            <div class="space-y-3">
+                <div>
+                    <span class="inline-block px-3 py-1 rounded-full text-sm font-medium
+                        {% if approval.status == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif approval.status == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                        {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                        {{ approval.status|title }}
+                    </span>
+                </div>
+                
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Requested By') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.requester.username }}</dd>
+                </div>
+                
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Requested At') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.requested_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                </div>
+                
+                {% if approval.approved_at %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Approved By') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.approver.username if approval.approver else _('Unknown') }}</dd>
+                </div>
+                {% endif %}
+                
+                {% if approval.rejected_at %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Rejected By') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.rejector.username if approval.rejector else _('Unknown') }}</dd>
+                </div>
+                {% if approval.rejection_reason %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Rejection Reason') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.rejection_reason }}</dd>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if approval.stages %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Approval Stages') }}</h2>
+            <div class="space-y-3">
+                {% for stage in approval.stages %}
+                <div class="border border-border-light dark:border-border-dark rounded-lg p-4 {% if loop.index0 == approval.current_stage %}border-primary{% endif %}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-medium">{{ _('Stage') }} {{ stage.get('stage_number', loop.index) }}</h4>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                {% set approver = User.query.get(stage.get('approver_id')) %}
+                                {{ approver.username if approver else _('Unknown') }}
+                            </p>
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded
+                            {% if stage.get('status') == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                            {% elif stage.get('status') == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                            {{ stage.get('status', 'pending')|title }}
+                        </span>
+                    </div>
+                    {% if stage.get('comments') %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ stage.get('comments') }}</p>
+                    {% endif %}
+                    {% if stage.get('approved_at') %}
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
+                        {{ _('Approved at') }}: {{ stage.get('approved_at') }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Quick Actions') }}</h3>
+            {% if approval.status == 'pending' %}
+            {% set current_stage = approval.stages[approval.current_stage] if approval.stages and approval.current_stage < approval.stages|length else None %}
+            {% if current_stage and current_stage.get('approver_id') == current_user.id %}
+            <div class="space-y-2">
+                <form method="POST" action="{{ url_for('invoice_approvals.approve', approval_id=approval.id) }}" class="mb-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-check mr-2"></i>{{ _('Approve') }}
+                    </button>
+                </form>
+                <button onclick="showRejectModal()" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                    <i class="fas fa-times mr-2"></i>{{ _('Reject') }}
+                </button>
+            </div>
+            {% else %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Waiting for approval from another user.') }}</p>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

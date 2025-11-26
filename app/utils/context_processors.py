@@ -27,6 +27,12 @@ def register_context_processors(app):
         except Exception as e:
             # Log the error but continue with defaults
             print(f"Warning: Could not inject settings: {e}")
+            # Rollback the failed transaction
+            try:
+                from app import db
+                db.session.rollback()
+            except Exception:
+                pass
             pass
         
         # Return defaults if settings not available
@@ -50,6 +56,12 @@ def register_context_processors(app):
         except Exception as e:
             # Log the error but continue with defaults
             print(f"Warning: Could not inject globals: {e}")
+            # Rollback the failed transaction
+            try:
+                from app import db
+                db.session.rollback()
+            except Exception:
+                pass
             timezone_name = 'Europe/Rome'
 
         # Resolve user-specific timezone, falling back to application timezone

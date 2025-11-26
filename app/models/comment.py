@@ -10,12 +10,16 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     
-    # Reference to either project or task (one will be null)
+    # Reference to either project, task, or quote (one will be null)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=True, index=True)
     task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True, index=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id', ondelete='CASCADE'), nullable=True, index=True)
     
     # Author of the comment
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Visibility: True = internal team comment, False = client-visible comment
+    is_internal = db.Column(db.Boolean, default=True, nullable=False)
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
@@ -28,11 +32,12 @@ class Comment(db.Model):
     author = db.relationship('User', backref='comments')
     project = db.relationship('Project', backref='comments')
     task = db.relationship('Task', backref='comments')
+    quote = db.relationship('Quote', backref='comments')
     
     # Self-referential relationship for replies
     parent = db.relationship('Comment', remote_side=[id], backref='replies')
     
-    def __init__(self, content, user_id, project_id=None, task_id=None, parent_id=None):
+    def __init__(self, content, user_id, project_id=None, task_id=None, quote_id=None, parent_id=None, is_internal=True):
         """Create a comment.
         
         Args:
@@ -42,20 +47,31 @@ class Comment(db.Model):
             task_id: ID of the task (if this is a task comment)
             parent_id: ID of parent comment (if this is a reply)
         """
-        if not project_id and not task_id:
-            raise ValueError("Comment must be associated with either a project or a task")
+        if not project_id and not task_id and not quote_id:
+            raise ValueError("Comment must be associated with either a project, task, or quote")
         
-        if project_id and task_id:
-            raise ValueError("Comment cannot be associated with both a project and a task")
+        # Ensure only one target is set
+        targets = [x for x in [project_id, task_id, quote_id] if x is not None]
+        if len(targets) > 1:
+            raise ValueError("Comment cannot be associated with multiple targets")
         
         self.content = content.strip()
         self.user_id = user_id
         self.project_id = project_id
         self.task_id = task_id
+        self.quote_id = quote_id
         self.parent_id = parent_id
+        self.is_internal = is_internal
     
     def __repr__(self):
-        target = f"Project {self.project_id}" if self.project_id else f"Task {self.task_id}"
+        if self.project_id:
+            target = f"Project {self.project_id}"
+        elif self.task_id:
+            target = f"Task {self.task_id}"
+        elif self.quote_id:
+            target = f"Quote {self.quote_id}"
+        else:
+            target = "Unknown"
         return f'<Comment by {self.author.username if self.author else "Unknown"} on {target}>'
     
     @property
@@ -70,6 +86,8 @@ class Comment(db.Model):
             return 'project'
         elif self.task_id:
             return 'task'
+        elif self.quote_id:
+            return 'quote'
         return 'unknown'
     
     @property
@@ -79,6 +97,8 @@ class Comment(db.Model):
             return self.project.name
         elif self.task_id and self.task:
             return self.task.name
+        elif self.quote_id and self.quote:
+            return self.quote.title
         return 'Unknown'
     
     @property
@@ -125,6 +145,7 @@ class Comment(db.Model):
             'content': self.content,
             'project_id': self.project_id,
             'task_id': self.task_id,
+            'quote_id': self.quote_id,
             'user_id': self.user_id,
             'author': self.author.username if self.author else None,
             'author_full_name': self.author.full_name if self.author and self.author.full_name else None,
@@ -134,7 +155,8 @@ class Comment(db.Model):
             'is_reply': self.is_reply,
             'reply_count': self.reply_count,
             'target_type': self.target_type,
-            'target_name': self.target_name
+            'target_name': self.target_name,
+            'is_internal': self.is_internal
         }
     
     @classmethod
@@ -168,6 +190,19 @@ class Comment(db.Model):
         return query.all()
     
     @classmethod
+    def get_quote_comments(cls, quote_id, include_replies=True, include_internal=True):
+        """Get all comments for a quote"""
+        query = cls.query.filter_by(quote_id=quote_id)
+        
+        if not include_internal:
+            query = query.filter_by(is_internal=False)
+        
+        if not include_replies:
+            query = query.filter_by(parent_id=None)
+        
+        return query.order_by(cls.created_at.asc()).all()
+    
+    @classmethod
     def get_recent_comments(cls, limit=10):
-        """Get recent comments across all projects and tasks"""
+        """Get recent comments across all projects, tasks, and quotes"""
         return cls.query.order_by(cls.created_at.desc()).limit(limit).all()

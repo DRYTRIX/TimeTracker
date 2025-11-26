@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, empty_state %}
+
+{% block title %}{{ _('Integrations') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Integrations'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-plug',
+    title_text='Integrations',
+    subtitle_text='Connect with third-party services',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    {% for provider in available_providers %}
+    {% set existing_integration = integrations|selectattr('provider', 'equalto', provider.provider)|first if integrations else none %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <i class="fas fa-{{ provider.icon }} text-primary text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold">{{ provider.display_name }}</h3>
+                    {% if provider.description %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ provider.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% if existing_integration %}
+            {% if existing_integration.is_active %}
+            <a href="{{ url_for('integrations.view_integration', integration_id=existing_integration.id) }}" class="block w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-center">
+                <i class="fas fa-eye mr-2"></i>{{ _('View Integration') }}
+            </a>
+            {% else %}
+            <a href="{{ url_for('integrations.connect_integration', provider=provider.provider) }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
+                <i class="fas fa-link mr-2"></i>{{ _('Reconnect') }}
+            </a>
+            {% endif %}
+        {% else %}
+        <a href="{{ url_for('integrations.connect_integration', provider=provider.provider) }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
+            <i class="fas fa-plus mr-2"></i>{{ _('Connect') }}
+        </a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% if integrations %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Your Integrations') }}</h2>
+    <div class="space-y-4">
+        {% for integration in integrations %}
+        <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <h3 class="font-semibold">{{ integration.name }}</h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ integration.provider|title }}
+                        {% if integration.last_sync_at %}
+                        • {{ _('Last synced') }}: {{ integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    {% if integration.is_active %}
+                    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ _('Inactive') }}</span>
+                    {% endif %}
+                    <a href="{{ url_for('integrations.view_integration', integration_id=integration.id) }}" class="text-primary hover:text-primary/80">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

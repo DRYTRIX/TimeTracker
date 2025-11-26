@@ -7,6 +7,7 @@ Templates allow users to quickly create time entries with pre-filled data.
 
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
+from flask_babel import _
 from app import db
 from app.models import TimeEntryTemplate, Project, Task
 from app.utils.db import safe_commit
@@ -48,7 +49,7 @@ def create_template():
         
         # Validation
         if not name:
-            flash('Template name is required', 'error')
+            flash(_('Template name is required'), 'error')
             return render_template(
                 'time_entry_templates/create.html',
                 projects=Project.query.filter_by(status='active').order_by(Project.name).all()
@@ -87,7 +88,7 @@ def create_template():
         
         db.session.add(template)
         if not safe_commit('create_time_entry_template', {'name': name}):
-            flash('Could not create template due to a database error', 'error')
+            flash(_('Could not create template due to a database error'), 'error')
             return render_template(
                 'time_entry_templates/create.html',
                 projects=Project.query.filter_by(status='active').order_by(Project.name).all(),
@@ -164,7 +165,7 @@ def edit_template(template_id):
         
         # Validation
         if not name:
-            flash('Template name is required', 'error')
+            flash(_('Template name is required'), 'error')
             return render_template(
                 'time_entry_templates/edit.html',
                 template=template,
@@ -202,7 +203,7 @@ def edit_template(template_id):
         template.tags = tags if tags else None
         
         if not safe_commit('update_time_entry_template', {'template_id': template_id}):
-            flash('Could not update template due to a database error', 'error')
+            flash(_('Could not update template due to a database error'), 'error')
             return render_template(
                 'time_entry_templates/edit.html',
                 template=template,
@@ -256,7 +257,7 @@ def delete_template(template_id):
     
     db.session.delete(template)
     if not safe_commit('delete_time_entry_template', {'template_id': template_id}):
-        flash('Could not delete template due to a database error', 'error')
+        flash(_('Could not delete template due to a database error'), 'error')
         return redirect(url_for('time_entry_templates.list_templates'))
     
     # Log activity

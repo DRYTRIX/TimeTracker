@@ -1,0 +1,433 @@
+{% extends "kiosk/base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="keyboard-help" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Keyboard Shortcuts</h3>
+                <button onclick="document.getElementById('keyboard-help').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800 rounded-lg p-1 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="{{ _('Close keyboard shortcuts') }}">
+                    <i class="fas fa-times text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-700 dark:text-gray-300 text-sm">Focus barcode input</span>
+                    <kbd class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 font-mono text-xs font-semibold text-gray-800 dark:text-gray-200">Ctrl+K</kbd>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-700 dark:text-gray-300 text-sm">Switch tabs</span>
+                    <kbd class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 font-mono text-xs font-semibold text-gray-800 dark:text-gray-200">1-3</kbd>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-700 dark:text-gray-300 text-sm">Submit form</span>
+                    <kbd class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 font-mono text-xs font-semibold text-gray-800 dark:text-gray-200">Ctrl+Enter</kbd>
+                </div>
+                <div class="flex justify-between items-center py-3">
+                    <span class="text-gray-700 dark:text-gray-300 text-sm">Close/clear</span>
+                    <kbd class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 font-mono text-xs font-semibold text-gray-800 dark:text-gray-200">Esc</kbd>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode Scanner Section -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="barcode-scanner-section">
+        <div class="max-w-3xl mx-auto">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                    <i class="fas fa-barcode text-2xl text-primary"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                    {{ _('Scan Barcode or Enter SKU') }}
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Use a barcode scanner or type the SKU manually') }}</p>
+            </div>
+            
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <input type="text" 
+                       id="barcode-input" 
+                       class="w-full pl-12 pr-14 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-4 sm:py-5 text-xl sm:text-2xl text-center font-mono tracking-wider text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all min-h-[48px]"
+                       placeholder="{{ _('Scan barcode or enter SKU...') }}"
+                       autocomplete="off"
+                       inputmode="search"
+                       aria-label="{{ _('Barcode or SKU input') }}"
+                       aria-describedby="barcode-status"
+                       autofocus>
+                <button type="button" 
+                        id="camera-scan-btn" 
+                        class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 rounded-lg min-w-[48px] min-h-[48px]"
+                        title="{{ _('Use Camera to Scan') }}"
+                        aria-label="{{ _('Open camera scanner') }}"
+                        onclick="toggleCameraScanner()">
+                    <i class="fas fa-camera text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            
+            <div class="mt-4 min-h-[40px]" id="barcode-status" role="status" aria-live="polite"></div>
+            
+            <!-- Loading Skeleton for Item Display -->
+            <div id="item-loading-skeleton" class="hidden mt-6">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 animate-pulse">
+                    <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+                    <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Camera Scanner Container -->
+            <div id="camera-scanner-container" class="hidden mt-6">
+                <div class="bg-gray-900 rounded-xl overflow-hidden">
+                    <video id="camera-preview" class="w-full max-w-md mx-auto block" autoplay playsinline></video>
+                </div>
+                <div class="mt-4 flex justify-center">
+                    <button type="button" onclick="stopCameraScanner()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px]" aria-label="{{ _('Close camera scanner') }}">
+                        <i class="fas fa-times mr-2" aria-hidden="true"></i>
+                        {{ _('Close Camera') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Item Display Section -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="item-section" style="display: none;">
+        <div class="flex items-start justify-between mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex-1">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2" id="item-name"></h2>
+                <div class="flex items-center gap-3 mt-2 flex-wrap">
+                    <div class="text-lg sm:text-xl text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-lg" id="item-sku"></div>
+                    <div id="item-barcode" class="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-lg">—</div>
+                </div>
+            </div>
+            <div class="ml-4 flex items-center gap-2">
+                <div class="bg-primary/10 dark:bg-primary/20 rounded-lg px-3 py-1.5">
+                    <span class="text-xs font-semibold text-primary uppercase tracking-wide" id="item-unit">—</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-900/30 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <i class="fas fa-tag text-primary text-sm"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ _('Category') }}</span>
+                </div>
+                <div class="text-lg font-bold text-gray-900 dark:text-white" id="item-category">—</div>
+            </div>
+            <div class="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-900/30 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <i class="fas fa-cube text-primary text-sm"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ _('Unit') }}</span>
+                </div>
+                <div class="text-lg font-bold text-gray-900 dark:text-white" id="item-unit-display">—</div>
+            </div>
+        </div>
+
+        <!-- Stock Levels -->
+        <div id="stock-levels"></div>
+    </section>
+
+    <!-- Operations Section -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="operations-section" style="display: none;">
+        <!-- Note: Tabs are handled by main navigation, no duplicate tabs here -->
+
+        <!-- Adjust Tab -->
+        <div class="kiosk-tab-content" id="tab-adjust" style="display: none;">
+            <form id="adjust-form" class="max-w-lg mx-auto space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Warehouse') }}</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-warehouse text-gray-400"></i>
+                        </div>
+                        <select id="adjust-warehouse" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer" required>
+                            {% if default_warehouse %}
+                                <option value="{{ default_warehouse.id }}">{{ default_warehouse.name }} ({{ default_warehouse.code }})</option>
+                            {% endif %}
+                            {% for warehouse in warehouses %}
+                                {% if not default_warehouse or warehouse.id != default_warehouse.id %}
+                                    <option value="{{ warehouse.id }}">{{ warehouse.name }} ({{ warehouse.code }})</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Quantity') }}</label>
+                    <div class="flex items-center gap-3">
+                        <button type="button" class="w-14 h-14 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors font-bold text-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-w-[56px] min-h-[56px]" onclick="adjustQuantity(-1)" aria-label="{{ _('Decrease quantity') }}">
+                            <i class="fas fa-minus" aria-hidden="true"></i>
+                        </button>
+                        <input type="number" 
+                               id="adjust-quantity" 
+                               class="flex-1 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-4 text-center text-3xl font-bold text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all min-h-[56px]"
+                               value="0"
+                               step="0.01"
+                               inputmode="decimal"
+                               aria-label="{{ _('Adjustment quantity') }}"
+                               required>
+                        <button type="button" class="w-14 h-14 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors font-bold text-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-w-[56px] min-h-[56px]" onclick="adjustQuantity(1)" aria-label="{{ _('Increase quantity') }}">
+                            <i class="fas fa-plus" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Reason') }}</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-list-alt text-gray-400"></i>
+                        </div>
+                        <select id="adjust-reason" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer">
+                            <option value="Kiosk adjustment">{{ _('Kiosk adjustment') }}</option>
+                            <option value="Physical count">{{ _('Physical count') }}</option>
+                            <option value="Found">{{ _('Found') }}</option>
+                            <option value="Damaged">{{ _('Damaged') }}</option>
+                            <option value="Expired">{{ _('Expired') }}</option>
+                            <option value="Other">{{ _('Other') }}</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed" id="adjust-submit-btn" aria-label="{{ _('Apply stock adjustment') }}">
+                    <i class="fas fa-check" id="adjust-submit-icon" aria-hidden="true"></i>
+                    <span id="adjust-submit-text">{{ _('Apply Adjustment') }}</span>
+                    <i class="fas fa-spinner fa-spin hidden" id="adjust-submit-spinner" aria-hidden="true"></i>
+                </button>
+                
+                <!-- Undo Button (hidden by default) -->
+                <button type="button" id="adjust-undo-btn" class="hidden w-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px]" aria-label="{{ _('Undo last adjustment') }}">
+                    <i class="fas fa-undo" aria-hidden="true"></i>
+                    {{ _('Undo Last Adjustment') }}
+                </button>
+            </form>
+        </div>
+
+        <!-- Transfer Tab -->
+        <div class="kiosk-tab-content" id="tab-transfer" style="display: none;">
+            <form id="transfer-form" class="max-w-lg mx-auto space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('From Warehouse') }}</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-warehouse text-gray-400"></i>
+                        </div>
+                        <select id="transfer-from" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer" required>
+                            {% for warehouse in warehouses %}
+                                <option value="{{ warehouse.id }}">{{ warehouse.name }} ({{ warehouse.code }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('To Warehouse') }}</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-warehouse text-gray-400"></i>
+                        </div>
+                        <select id="transfer-to" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer" required>
+                            {% for warehouse in warehouses %}
+                                <option value="{{ warehouse.id }}">{{ warehouse.name }} ({{ warehouse.code }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Quantity') }}</label>
+                    <input type="number" 
+                           id="transfer-quantity" 
+                           class="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all min-h-[48px]"
+                           value="1"
+                           min="0.01"
+                           step="0.01"
+                           inputmode="decimal"
+                           aria-label="{{ _('Transfer quantity') }}"
+                           required>
+                </div>
+                
+                <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed" id="transfer-submit-btn" aria-label="{{ _('Transfer stock') }}">
+                    <i class="fas fa-exchange-alt" id="transfer-submit-icon" aria-hidden="true"></i>
+                    <span id="transfer-submit-text">{{ _('Transfer Stock') }}</span>
+                    <i class="fas fa-spinner fa-spin hidden" id="transfer-submit-spinner" aria-hidden="true"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Timer Tab -->
+        <div class="kiosk-tab-content" id="tab-timer" style="display: none;">
+            <div id="timer-controls" class="max-w-lg mx-auto">
+                {% if active_timer is defined and active_timer %}
+                    <div class="bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-2xl p-10 mb-6 text-center border-2 border-primary/20 dark:border-primary/30">
+                        <p class="font-semibold text-lg text-gray-700 dark:text-gray-300 mb-4">{{ _('Active Timer') }}</p>
+                        <p class="text-5xl sm:text-6xl font-bold text-primary mb-4 font-mono" id="timer-display">{{ active_timer.duration_formatted }}</p>
+                        <p class="text-xl text-gray-900 dark:text-white mb-2 font-medium">{{ active_timer.project.name if active_timer.project else '' }}</p>
+                        {% if active_timer.task %}
+                            <p class="text-gray-600 dark:text-gray-400">{{ active_timer.task.name }}</p>
+                        {% endif %}
+                    </div>
+                    <button onclick="stopTimer()" class="w-full bg-rose-600 hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed" id="timer-stop-btn" aria-label="{{ _('Stop timer') }}">
+                        <i class="fas fa-stop" id="timer-stop-icon" aria-hidden="true"></i>
+                        <span id="timer-stop-text">{{ _('Stop Timer') }}</span>
+                        <i class="fas fa-spinner fa-spin hidden" id="timer-stop-spinner" aria-hidden="true"></i>
+                    </button>
+                {% else %}
+                    <form id="timer-form" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Project') }} <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-project-diagram text-gray-400"></i>
+                                </div>
+                                <select id="timer-project" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer" required>
+                                    <option value="">{{ _('Select project...') }}</option>
+                                    {% if active_projects and active_projects|length > 0 %}
+                                        {% for project in active_projects %}
+                                            <option value="{{ project.id }}">{{ project.name }}</option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="" disabled>{{ _('No projects available') }}</option>
+                                    {% endif %}
+                                </select>
+                                {% if not active_projects or active_projects|length == 0 %}
+                                <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1.5 flex items-center gap-1">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    {{ _('No active projects found. Please create a project first.') }}
+                                </p>
+                                {% endif %}
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Task') }} <span class="text-gray-500 dark:text-gray-400 font-normal">({{ _('Optional') }})</span></label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-tasks text-gray-400"></i>
+                                </div>
+                                <select id="timer-task" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer" disabled>
+                                    <option value="">{{ _('No task') }}</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">{{ _('Tasks will load after selecting a project') }}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes') }} <span class="text-gray-500 dark:text-gray-400 font-normal">({{ _('Optional') }})</span></label>
+                            <textarea id="timer-notes" class="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all resize-none" rows="4" placeholder="{{ _('What are you working on?') }}"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed" id="timer-submit-btn" aria-label="{{ _('Start timer') }}">
+                            <i class="fas fa-play" id="timer-submit-icon" aria-hidden="true"></i>
+                            <span id="timer-submit-text">{{ _('Start Timer') }}</span>
+                            <i class="fas fa-spinner fa-spin hidden" id="timer-submit-spinner" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Items -->
+    {% if recent_items %}
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <i class="fas fa-history text-primary"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">{{ _('Recent Items') }}</h3>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+            {% for item in recent_items %}
+                <button class="bg-gray-50 dark:bg-gray-900/50 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 text-left hover:border-primary hover:shadow-md transition-all group" onclick="lookupItem({{ item.id }}, '{{ item.barcode or item.sku }}')">
+                    <div class="font-semibold text-gray-900 dark:text-white mb-1.5 truncate group-hover:text-primary transition-colors text-sm">{{ item.name }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{{ item.sku }}</div>
+                </button>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='kiosk-barcode.js') }}"></script>
+<script src="{{ url_for('static', filename='kiosk-timer.js') }}"></script>
+<script src="{{ url_for('static', filename='kiosk-mode.js') }}"></script>
+<script>
+// Load tasks when project is selected (for initial form)
+document.addEventListener('DOMContentLoaded', function() {
+    const projectSelect = document.getElementById('timer-project');
+    const taskSelect = document.getElementById('timer-task');
+    
+    if (projectSelect && taskSelect) {
+        projectSelect.addEventListener('change', function() {
+            const projectId = this.value;
+            
+            // Reset task select
+            taskSelect.innerHTML = '<option value="">{{ _("No task") }}</option>';
+            taskSelect.disabled = true;
+            
+            if (!projectId) {
+                return;
+            }
+            
+            // Fetch tasks for selected project
+            fetch(`/api/tasks?project_id=${projectId}`, {
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.tasks && data.tasks.length > 0) {
+                    taskSelect.disabled = false;
+                    data.tasks.forEach(task => {
+                        const option = document.createElement('option');
+                        option.value = task.id;
+                        option.textContent = task.name;
+                        taskSelect.appendChild(option);
+                    });
+                } else {
+                    taskSelect.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading tasks:', error);
+                taskSelect.disabled = false;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
