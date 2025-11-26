@@ -24,10 +24,10 @@ class ExpenseService:
         amount: Decimal,
         description: str,
         expense_date: date,
+        created_by: int,
         category_id: Optional[int] = None,
         billable: bool = False,
-        receipt_path: Optional[str] = None,
-        created_by: int
+        receipt_path: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create a new expense.

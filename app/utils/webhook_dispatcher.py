@@ -172,3 +172,19 @@ class WebhookDispatcher:
         except Exception as e:
             logger.error(f"Error processing activity for webhook: {e}", exc_info=True)
 
+
+def dispatch_webhook(event: str, data: Dict[str, Any], user_id: Optional[int] = None):
+    """Convenience function to dispatch a webhook event
+    
+    This is a wrapper around WebhookDispatcher.dispatch_event() for simpler usage.
+    
+    Args:
+        event: Event type (e.g., 'time_entry.created')
+        data: Event payload dictionary
+        user_id: Optional user ID who triggered the event
+    """
+    WebhookDispatcher.dispatch_event(
+        event_type=event,
+        payload=data,
+        user_id=user_id
+    )

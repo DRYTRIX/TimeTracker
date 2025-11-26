@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ _('Login') }} - {{ app_name }}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <script>
@@ -20,7 +24,7 @@
         <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-0 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
             <div class="hidden md:flex items-center justify-center p-10 bg-background-light dark:bg-background-dark">
                 <div class="text-center">
-                    <img src="{{ url_for('static', filename='images/drytrix-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
                     <h1 class="text-3xl font-bold mt-4 text-primary">TimeTracker</h1>
                     <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
                 </div>

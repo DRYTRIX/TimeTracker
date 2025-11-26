@@ -3,7 +3,6 @@ Service for project business logic.
 """
 
 from typing import Optional, List, Dict, Any
-from flask_sqlalchemy import Pagination
 from app import db
 from app.repositories import ProjectRepository, ClientRepository
 from app.models import Project, TimeEntry
@@ -48,10 +47,10 @@ class ProjectService:
         self,
         name: str,
         client_id: int,
+        created_by: int,
         description: Optional[str] = None,
         billable: bool = True,
-        hourly_rate: Optional[float] = None,
-        created_by: int
+        hourly_rate: Optional[float] = None
     ) -> Dict[str, Any]:
         """
         Create a new project.
@@ -212,22 +211,13 @@ class ProjectService:
         
         query = self.project_repo.query().filter_by(id=project_id)
         
-        # Eagerly load client
-        query = query.options(joinedload(Project.client))
+        # Eagerly load client (client_obj is not dynamic, so it can be eagerly loaded)
+        query = query.options(joinedload(Project.client_obj))
         
-        # Conditionally load relations
-        if include_time_entries:
-            query = query.options(joinedload(Project.time_entries).joinedload(TimeEntry.user))
-            query = query.options(joinedload(Project.time_entries).joinedload(TimeEntry.task))
-        
-        if include_tasks:
-            query = query.options(joinedload(Project.tasks).joinedload(Task.assignee))
-        
-        if include_comments:
-            query = query.options(joinedload(Project.comments).joinedload(Comment.user))
-        
-        if include_costs:
-            query = query.options(joinedload(Project.costs))
+        # Note: time_entries, tasks, costs, and comments are dynamic relationships
+        # (lazy='dynamic'), so they cannot be eagerly loaded with joinedload().
+        # They return query objects that can be filtered and accessed when needed.
+        # We'll query them separately when needed instead.
         
         return query.first()
     
@@ -254,7 +244,7 @@ class ProjectService:
         query = self.project_repo.query()
         
         # Eagerly load client to prevent N+1
-        query = query.options(joinedload(Project.client))
+        query = query.options(joinedload(Project.client_obj))
         
         # Filter by favorites if requested
         if favorites_only and user_id:
@@ -346,7 +336,7 @@ class ProjectService:
         
         # Get tasks with eager loading (already loaded but need to order)
         tasks = Task.query.filter_by(project_id=project_id).options(
-            joinedload(Task.assignee)
+            joinedload(Task.assigned_user)
         ).order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
         
         # Get comments (already loaded via relationship)

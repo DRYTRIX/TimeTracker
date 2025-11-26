@@ -7,6 +7,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Kiosk Mode - Inventory and Time Tracking">
     <meta name="theme-color" content="#3b82f6">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">

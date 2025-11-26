@@ -1597,31 +1597,18 @@ def reports_dashboard():
 @admin_or_permission_required('view_inventory_reports')
 def reports_valuation():
     """Stock valuation report"""
+    from app.services.inventory_report_service import InventoryReportService
+    
     warehouse_id = request.args.get('warehouse_id', type=int)
     category = request.args.get('category', '')
+    currency_code = request.args.get('currency_code', '')
     
-    query = WarehouseStock.query.join(StockItem).join(Warehouse).filter(
-        StockItem.default_cost.isnot(None),
-        WarehouseStock.quantity_on_hand > 0
+    service = InventoryReportService()
+    valuation_data = service.get_stock_valuation(
+        warehouse_id=warehouse_id,
+        category=category if category else None,
+        currency_code=currency_code if currency_code else None
     )
-    
-    if warehouse_id:
-        query = query.filter_by(warehouse_id=warehouse_id)
-    
-    if category:
-        query = query.filter(StockItem.category == category)
-    
-    stock_levels = query.order_by(Warehouse.code, StockItem.name).all()
-    
-    total_value = 0
-    items_with_value = []
-    for stock in stock_levels:
-        item_value = float(stock.quantity_on_hand) * float(stock.stock_item.default_cost or 0)
-        total_value += item_value
-        items_with_value.append({
-            'stock': stock,
-            'value': item_value
-        })
     
     warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
     categories = db.session.query(StockItem.category).distinct().filter(
@@ -1629,13 +1616,35 @@ def reports_valuation():
     ).order_by(StockItem.category).all()
     categories = [cat[0] for cat in categories]
     
+    currencies = db.session.query(StockItem.currency_code).distinct().filter(
+        StockItem.currency_code.isnot(None)
+    ).order_by(StockItem.currency_code).all()
+    currencies = [curr[0] for curr in currencies]
+    
+    # Extract items_with_value from valuation_data for template compatibility
+    items_with_value = []
+    for item_detail in valuation_data.get('item_details', []):
+        # Get the actual stock and item objects for the template
+        stock = WarehouseStock.query.filter_by(
+            stock_item_id=item_detail['item_id'],
+            warehouse_id=item_detail['warehouse_id']
+        ).first()
+        if stock:
+            items_with_value.append({
+                'stock': stock,
+                'value': item_detail['value']
+            })
+    
     return render_template('inventory/reports/valuation.html',
+                         valuation_data=valuation_data,
                          items_with_value=items_with_value,
-                         total_value=total_value,
+                         total_value=valuation_data.get('total_value', 0),
                          warehouses=warehouses,
                          categories=categories,
+                         currencies=currencies,
                          selected_warehouse_id=warehouse_id,
-                         selected_category=category)
+                         selected_category=category,
+                         selected_currency=currency_code)
 
 
 @inventory_bp.route('/inventory/reports/movement-history')

@@ -19,6 +19,11 @@
         <button type="button" onclick="showSendEmailModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-envelope mr-1"></i>Send Email
         </button>
+        {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
+        <a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+            <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
+        </a>
+        {% endif %}
         <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">{{ _('Record Payment') }}</a>
         <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
             <i class="fas fa-trash mr-1"></i>Delete
@@ -57,8 +62,37 @@
             <p><strong>Issue Date:</strong> {{ invoice.issue_date.strftime('%Y-%m-%d') }}</p>
             <p><strong>Due Date:</strong> {{ invoice.due_date.strftime('%Y-%m-%d') }}</p>
             <p><strong>Status:</strong> {{ invoice.status }}</p>
+            {% if invoice.approvals %}
+            {% set latest_approval = invoice.approvals|sort(attribute='created_at', reverse=true)|first %}
+            {% if latest_approval %}
+            <p><strong>{{ _('Approval Status') }}:</strong> 
+                <span class="px-2 py-1 text-xs rounded
+                    {% if latest_approval.status == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                    {% elif latest_approval.status == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                    {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                    {{ latest_approval.status|title }}
+                </span>
+            </p>
+            {% endif %}
+            {% endif %}
         </div>
     </div>
+    
+    {% if invoice.status == 'draft' and (current_user.is_admin or has_permission('create_invoices')) %}
+    <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div class="flex justify-between items-center">
+            <div>
+                <h3 class="font-semibold text-blue-900 dark:text-blue-100">{{ _('Invoice Approval') }}</h3>
+                <p class="text-sm text-blue-800 dark:text-blue-200">{{ _('Request approval before sending this invoice to the client.') }}</p>
+            </div>
+            {% if not invoice.approvals or (invoice.approvals|selectattr('status', 'equalto', 'pending')|list|length == 0) %}
+            <a href="{{ url_for('invoice_approvals.request_approval', invoice_id=invoice.id) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                <i class="fas fa-check-circle mr-2"></i>{{ _('Request Approval') }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <div class="mt-6">
         <h2 class="text-lg font-semibold mb-4">Items</h2>

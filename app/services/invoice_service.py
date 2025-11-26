@@ -25,9 +25,9 @@ class InvoiceService:
         self,
         project_id: int,
         time_entry_ids: List[int],
+        created_by: int,
         issue_date: Optional[date] = None,
         due_date: Optional[date] = None,
-        created_by: int,
         include_expenses: bool = False
     ) -> Dict[str, Any]:
         """

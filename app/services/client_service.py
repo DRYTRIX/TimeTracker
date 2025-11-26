@@ -19,12 +19,12 @@ class ClientService:
     def create_client(
         self,
         name: str,
+        created_by: int,
         email: Optional[str] = None,
         company: Optional[str] = None,
         phone: Optional[str] = None,
         address: Optional[str] = None,
-        default_hourly_rate: Optional[Decimal] = None,
-        created_by: int
+        default_hourly_rate: Optional[Decimal] = None
     ) -> Dict[str, Any]:
         """
         Create a new client.

@@ -141,6 +141,20 @@ class WebhookEvent(Enum):
     TASK_CREATED = "task.created"
     TASK_UPDATED = "task.updated"
     TASK_DELETED = "task.deleted"
+    PROJECT_TEMPLATE_CREATED = "project_template.created"
+    PROJECT_TEMPLATE_UPDATED = "project_template.updated"
+    PROJECT_TEMPLATE_DELETED = "project_template.deleted"
+    INVOICE_APPROVAL_REQUESTED = "invoice.approval_requested"
+    INVOICE_APPROVED = "invoice.approved"
+    INVOICE_REJECTED = "invoice.rejected"
+    PAYMENT_PROCESSED = "payment.processed"
+    PAYMENT_FAILED = "payment.failed"
+    CALENDAR_SYNCED = "calendar.synced"
+    INTEGRATION_CREATED = "integration.created"
+    INTEGRATION_UPDATED = "integration.updated"
+    INTEGRATION_DELETED = "integration.deleted"
+    INTEGRATION_SYNCED = "integration.synced"
+    INTEGRATION_ERROR = "integration.error"
 
 
 # Notification types

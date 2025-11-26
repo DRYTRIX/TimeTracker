@@ -25,14 +25,14 @@ class PaymentService:
         invoice_id: int,
         amount: Decimal,
         payment_date: date,
+        received_by: int,
         currency: Optional[str] = None,
         method: Optional[str] = None,
         reference: Optional[str] = None,
         notes: Optional[str] = None,
         status: str = 'completed',
         gateway_transaction_id: Optional[str] = None,
-        gateway_fee: Optional[Decimal] = None,
-        received_by: int
+        gateway_fee: Optional[Decimal] = None
     ) -> Dict[str, Any]:
         """
         Create a new payment.

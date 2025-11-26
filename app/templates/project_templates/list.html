@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge, empty_state %}
+
+{% block title %}{{ _('Project Templates') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Project Templates'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-layer-group',
+    title_text='Project Templates',
+    subtitle_text='Create reusable project configurations',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("project_templates.create_template") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Template</a>' if (current_user.is_admin or has_permission('create_projects')) else None
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }}</label>
+            <select name="category" id="category" class="form-input">
+                <option value="">{{ _('All Categories') }}</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if current_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input type="checkbox" name="public" value="true" {% if show_public %}checked{% endif %} class="rounded border-gray-300 text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                {{ _('Show Public Templates') }}
+            </label>
+        </div>
+        <div class="col-span-full flex justify-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if templates %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for template in templates %}
+        <div class="border border-border-light dark:border-border-dark rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-3">
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
+                        <a href="{{ url_for('project_templates.view_template', template_id=template.id) }}" class="hover:text-primary transition-colors">
+                            {{ template.name }}
+                        </a>
+                    </h3>
+                    {% if template.category %}
+                    <span class="inline-block px-2 py-1 text-xs bg-primary/10 text-primary rounded">{{ template.category }}</span>
+                    {% endif %}
+                </div>
+                {% if template.created_by == current_user.id %}
+                <div class="flex gap-2">
+                    <a href="{{ url_for('project_templates.edit_template', template_id=template.id) }}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="{{ _('Edit') }}">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if template.description %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3 line-clamp-2">{{ template.description }}</p>
+            {% endif %}
+            
+            <div class="flex items-center justify-between text-xs text-text-muted-light dark:text-text-muted-dark mb-3">
+                <span>
+                    <i class="fas fa-chart-line mr-1"></i>
+                    {{ template.usage_count }} {{ _('uses') }}
+                </span>
+                {% if template.is_public %}
+                <span class="text-green-600 dark:text-green-400">
+                    <i class="fas fa-globe mr-1"></i>{{ _('Public') }}
+                </span>
+                {% endif %}
+            </div>
+            
+            <div class="flex gap-2">
+                <a href="{{ url_for('project_templates.create_project_from_template', template_id=template.id) }}" class="flex-1 bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center text-sm">
+                    <i class="fas fa-plus mr-1"></i>{{ _('Create Project') }}
+                </a>
+                <a href="{{ url_for('project_templates.view_template', template_id=template.id) }}" class="px-3 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-eye"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div class="mt-6 flex justify-center">
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('project_templates.list_templates', page=pagination.prev_num, category=current_category, public='true' if show_public else '') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                <i class="fas fa-chevron-left mr-1"></i>{{ _('Previous') }}
+            </a>
+            {% endif %}
+            <span class="px-4 py-2 text-text-muted-light dark:text-text-muted-dark">
+                {{ _('Page') }} {{ pagination.page }} {{ _('of') }} {{ pagination.pages }}
+            </span>
+            {% if pagination.has_next %}
+            <a href="{{ url_for('project_templates.list_templates', page=pagination.next_num, category=current_category, public='true' if show_public else '') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                {{ _('Next') }}<i class="fas fa-chevron-right ml-1"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    {% set actions %}
+        {% if current_user.is_admin or has_permission('create_projects') %}
+        <a href="{{ url_for('project_templates.create_template') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create Template') }}
+        </a>
+        {% endif %}
+    {% endset %}
+    {{ empty_state(
+        'fas fa-layer-group',
+        _('No Templates Found'),
+        _('Create your first project template to quickly set up new projects with pre-configured settings and tasks.'),
+        actions,
+        type='no-data'
+    ) }}
+    {% endif %}
+</div>
+{% endblock %}
+

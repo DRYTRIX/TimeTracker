@@ -14,7 +14,7 @@ const PRECACHE_URLS = [
     '/static/enhanced-ui.js',
     '/static/charts.js',
     '/static/interactions.js',
-    '/static/images/drytrix-logo.svg',
+    '/static/images/timetracker-logo.svg',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
@@ -352,8 +352,8 @@ self.addEventListener('push', event => {
     const title = data.title || 'TimeTracker';
     const options = {
         body: data.body || 'You have a new notification',
-        icon: '/static/images/drytrix-logo.svg',
-        badge: '/static/images/drytrix-logo.svg',
+        icon: '/static/images/timetracker-logo.svg',
+        badge: '/static/images/timetracker-logo.svg',
         vibrate: [200, 100, 200],
         data: data,
         actions: data.actions || []

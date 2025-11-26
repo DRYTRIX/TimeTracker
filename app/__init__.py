@@ -187,6 +187,7 @@ def track_page_view(page_name, user_id=None, properties=None):
 def create_app(config=None):
     """Application factory pattern"""
     app = Flask(__name__)
+    logger = logging.getLogger(__name__)
 
     # Validate environment variables on startup (non-blocking warnings in dev, errors in prod)
     try:
@@ -918,8 +919,6 @@ def create_app(config=None):
         app.register_blueprint(audit_logs_bp)
     except Exception as e:
         # Log error but don't fail app startup
-        import logging
-        logger = logging.getLogger(__name__)
         logger.warning(f"Could not register audit_logs blueprint: {e}")
         # Try to continue without audit logs if there's an issue
 
@@ -965,6 +964,63 @@ def create_app(config=None):
     app.register_blueprint(deals_bp)
     app.register_blueprint(leads_bp)
     # audit_logs_bp is registered above with error handling
+    
+    # Register integration connectors
+    try:
+        from app.integrations import registry
+        # Connectors are auto-registered on import
+        logger.info("Integration connectors registered")
+    except Exception as e:
+        logger.warning(f"Could not register integration connectors: {e}")
+    
+    # Register new feature blueprints
+    try:
+        from app.routes.project_templates import project_templates_bp
+        app.register_blueprint(project_templates_bp)
+    except Exception as e:
+        logger.warning(f"Could not register project_templates blueprint: {e}")
+    
+    try:
+        from app.routes.invoice_approvals import invoice_approvals_bp
+        app.register_blueprint(invoice_approvals_bp)
+    except Exception as e:
+        logger.warning(f"Could not register invoice_approvals blueprint: {e}")
+    
+    try:
+        from app.routes.payment_gateways import payment_gateways_bp
+        app.register_blueprint(payment_gateways_bp)
+    except Exception as e:
+        logger.warning(f"Could not register payment_gateways blueprint: {e}")
+    
+    try:
+        from app.routes.scheduled_reports import scheduled_reports_bp
+        app.register_blueprint(scheduled_reports_bp)
+    except Exception as e:
+        logger.warning(f"Could not register scheduled_reports blueprint: {e}")
+    
+    try:
+        from app.routes.integrations import integrations_bp
+        app.register_blueprint(integrations_bp)
+    except Exception as e:
+        logger.warning(f"Could not register integrations blueprint: {e}")
+    
+    try:
+        from app.routes.push_notifications import push_bp
+        app.register_blueprint(push_bp)
+    except Exception as e:
+        logger.warning(f"Could not register push_notifications blueprint: {e}")
+    
+    try:
+        from app.routes.custom_reports import custom_reports_bp
+        app.register_blueprint(custom_reports_bp)
+    except Exception as e:
+        logger.warning(f"Could not register custom_reports blueprint: {e}")
+    
+    try:
+        from app.routes.gantt import gantt_bp
+        app.register_blueprint(gantt_bp)
+    except Exception as e:
+        logger.warning(f"Could not register gantt blueprint: {e}")
 
     # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
     # Only if CSRF is enabled

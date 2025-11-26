@@ -19,11 +19,11 @@ class UserService:
     def create_user(
         self,
         username: str,
+        created_by: int,
         role: str = UserRole.USER.value,
         email: Optional[str] = None,
         full_name: Optional[str] = None,
-        is_active: bool = True,
-        created_by: int
+        is_active: bool = True
     ) -> Dict[str, Any]:
         """
         Create a new user.

@@ -47,12 +47,12 @@ class TaskService:
         self,
         name: str,
         project_id: int,
+        created_by: int,
         description: Optional[str] = None,
         assignee_id: Optional[int] = None,
         priority: str = 'medium',
         due_date: Optional[Any] = None,
-        estimated_hours: Optional[float] = None,
-        created_by: int
+        estimated_hours: Optional[float] = None
     ) -> Dict[str, Any]:
         """
         Create a new task.

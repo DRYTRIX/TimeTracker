@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ _('Kiosk Login') }} - {{ app_name }}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -30,7 +34,7 @@
                     <div class="hidden md:flex items-center justify-center p-12 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/10">
                         <div class="text-center max-w-md">
                             <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/20 mb-6">
-                                <img src="{{ url_for('static', filename='images/drytrix-logo.svg') }}" alt="logo" class="w-16 h-16">
+                                <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="logo" class="w-16 h-16">
                             </div>
                             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-3">Kiosk Mode</h1>
                             <p class="text-gray-600 dark:text-gray-400 mb-8">{{ _('Quick access for warehouse operations') }}</p>

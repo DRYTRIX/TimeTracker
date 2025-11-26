@@ -192,7 +192,12 @@ def view_invoice(invoice_id):
         .order_by(InvoiceEmail.sent_at.desc())\
         .all()
     
-    return render_template('invoices/view.html', invoice=invoice, email_templates=email_templates, email_history=email_history)
+    # Get approval information
+    from app.services.invoice_approval_service import InvoiceApprovalService
+    approval_service = InvoiceApprovalService()
+    approval = approval_service.get_invoice_approval(invoice_id)
+    
+    return render_template('invoices/view.html', invoice=invoice, email_templates=email_templates, email_history=email_history, approval=approval)
 
 @invoices_bp.route('/invoices/<int:invoice_id>/edit', methods=['GET', 'POST'])
 @login_required

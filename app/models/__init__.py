@@ -58,6 +58,11 @@ from .deal import Deal
 from .deal_activity import DealActivity
 from .lead import Lead
 from .lead_activity import LeadActivity
+from .project_template import ProjectTemplate
+from .invoice_approval import InvoiceApproval
+from .payment_gateway import PaymentGateway, PaymentTransaction
+from .calendar_integration import CalendarIntegration, CalendarSyncEvent
+from .integration import Integration, IntegrationCredential, IntegrationEvent
 
 __all__ = [
     "User",
@@ -127,4 +132,13 @@ __all__ = [
     "DealActivity",
     "Lead",
     "LeadActivity",
+    "ProjectTemplate",
+    "InvoiceApproval",
+    "PaymentGateway",
+    "PaymentTransaction",
+    "CalendarIntegration",
+    "CalendarSyncEvent",
+    "Integration",
+    "IntegrationCredential",
+    "IntegrationEvent",
 ]

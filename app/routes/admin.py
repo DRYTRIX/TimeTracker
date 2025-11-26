@@ -396,6 +396,33 @@ def settings():
             # Kiosk columns don't exist yet (migration not run)
             pass
         
+        # Update integration OAuth credentials (if columns exist)
+        try:
+            if 'jira_client_id' in request.form:
+                settings_obj.jira_client_id = request.form.get('jira_client_id', '').strip()
+            if 'jira_client_secret' in request.form:
+                new_secret = request.form.get('jira_client_secret', '').strip()
+                # Only update if a new value is provided (don't clear if empty)
+                if new_secret:
+                    settings_obj.jira_client_secret = new_secret
+            
+            if 'slack_client_id' in request.form:
+                settings_obj.slack_client_id = request.form.get('slack_client_id', '').strip()
+            if 'slack_client_secret' in request.form:
+                new_secret = request.form.get('slack_client_secret', '').strip()
+                if new_secret:
+                    settings_obj.slack_client_secret = new_secret
+            
+            if 'github_client_id' in request.form:
+                settings_obj.github_client_id = request.form.get('github_client_id', '').strip()
+            if 'github_client_secret' in request.form:
+                new_secret = request.form.get('github_client_secret', '').strip()
+                if new_secret:
+                    settings_obj.github_client_secret = new_secret
+        except AttributeError:
+            # Integration credential columns don't exist yet (migration not run)
+            pass
+        
         # Update privacy and analytics settings
         allow_analytics = request.form.get('allow_analytics') == 'on'
         old_analytics_state = settings_obj.allow_analytics

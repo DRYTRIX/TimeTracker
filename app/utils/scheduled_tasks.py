@@ -4,9 +4,10 @@ import logging
 from datetime import datetime, timedelta
 from flask import current_app
 from app import db
-from app.models import Invoice, User, TimeEntry, Project, BudgetAlert, RecurringInvoice, Quote
+from app.models import Invoice, User, TimeEntry, Project, BudgetAlert, RecurringInvoice, Quote, ReportEmailSchedule
 from app.utils.email import send_overdue_invoice_notification, send_weekly_summary, send_quote_expired_notification
 from app.utils.budget_forecasting import check_budget_alerts
+from app.services.scheduled_report_service import ScheduledReportService
 
 
 logger = logging.getLogger(__name__)
@@ -353,9 +354,60 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True
         )
         logger.info("Registered expiring quotes check task")
+        
+        # Process scheduled reports every hour
+        scheduler.add_job(
+            func=process_scheduled_reports,
+            trigger='cron',
+            minute=0,
+            id='process_scheduled_reports',
+            name='Process scheduled reports',
+            replace_existing=True
+        )
+        logger.info("Registered scheduled reports task")
     
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
+
+
+def process_scheduled_reports():
+    """Process scheduled reports that are due
+    
+    This task should be run periodically to check for scheduled reports
+    that are due and send them via email.
+    """
+    with current_app.app_context():
+        try:
+            logger.info("Processing scheduled reports...")
+            
+            now = datetime.utcnow()
+            due_schedules = ReportEmailSchedule.query.filter(
+                ReportEmailSchedule.active == True,
+                ReportEmailSchedule.next_run_at <= now
+            ).all()
+            
+            logger.info(f"Found {len(due_schedules)} scheduled reports due")
+            
+            service = ScheduledReportService()
+            processed = 0
+            
+            for schedule in due_schedules:
+                try:
+                    result = service.generate_and_send_report(schedule.id)
+                    if result['success']:
+                        processed += 1
+                        logger.info(f"Sent scheduled report {schedule.id} to {result['sent_count']} recipients")
+                    else:
+                        logger.error(f"Error sending scheduled report {schedule.id}: {result['message']}")
+                except Exception as e:
+                    logger.error(f"Error processing scheduled report {schedule.id}: {e}")
+            
+            logger.info(f"Processed {processed} scheduled reports")
+            return processed
+            
+        except Exception as e:
+            logger.error(f"Error processing scheduled reports: {e}")
+            return 0
 
 
 def retry_failed_webhooks():

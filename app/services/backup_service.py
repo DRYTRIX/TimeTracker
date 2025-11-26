@@ -2,7 +2,7 @@
 Service for backup operations.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 import os
 import shutil

@@ -7,6 +7,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Professional time tracking and project management">
     <meta name="theme-color" content="#3b82f6">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <!--
     PostHog Session Replay Privacy Protection:
     Add the CSS class 'ph-no-capture' to any element containing sensitive data
@@ -22,6 +26,8 @@
     For more details, see: POSTHOG_SESSION_REPLAY_PRIVACY.md
     -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <meta name="vapid-public-key" content="{{ config.get('VAPID_PUBLIC_KEY', '') }}">
+    <script src="{{ url_for('static', filename='pwa-enhancements.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -203,17 +209,18 @@
         <!-- Sidebar -->
         <aside id="sidebar" class="w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden lg:flex transition-all duration-200 ease-in-out fixed top-0 left-0 h-screen overflow-y-auto z-10">
             <div class="flex items-center mb-8">
-                <img src="{{ url_for('static', filename='images/drytrix-logo.svg') }}" alt="Logo" class="h-10 w-10 mr-2">
+                <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-10 w-10 mr-2">
                 <h1 class="text-2xl font-bold text-primary sidebar-header-title"><a href="{{ url_for('main.dashboard') }}" class="no-underline">TimeTracker</a></h1>
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') %}
+                {% set calendar_open = ep.startswith('calendar.') %}
+                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') %}
-                {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('budget_alerts.') or ep.startswith('mileage.') or (ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates')) %}
                 {% set inventory_open = ep.startswith('inventory.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
-                {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') %}
+                {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') or ep.startswith('integrations.') %}
                 {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') %}
                 {% set pdf_open = ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}
                 <div class="flex items-center justify-between mb-4">
@@ -230,10 +237,25 @@
                         </a>
                     </li>
                     <li class="mt-2">
-                        <a href="{{ url_for('calendar.view_calendar') }}" class="flex items-center p-2 rounded-lg {% if ep.startswith('calendar.') %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('calendarDropdown')" data-dropdown="calendarDropdown" class="w-full flex items-center p-2 rounded-lg {% if calendar_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-calendar-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Calendar') }}</span>
-                        </a>
+                            <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
+                        </button>
+                        <ul id="calendarDropdown" class="{% if not calendar_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                            {% set nav_active_calendar = ep.startswith('calendar.view_calendar') %}
+                            {% set nav_active_calendar_integrations = ep.startswith('calendar.list_integrations') or ep.startswith('calendar.connect') or ep.startswith('calendar.disconnect') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_calendar %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('calendar.view_calendar') }}">
+                                    <i class="fas fa-calendar w-4 mr-2"></i>{{ _('Calendar View') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_calendar_integrations %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('calendar.list_integrations') }}">
+                                    <i class="fas fa-plug w-4 mr-2"></i>{{ _('Integrations') }}
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li class="mt-2">
                         <button onclick="toggleDropdown('workDropdown')" data-dropdown="workDropdown" class="w-full flex items-center p-2 rounded-lg {% if work_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
@@ -250,6 +272,7 @@
                             {% set nav_active_kanban = ep.startswith('kanban.') %}
                             {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
                             {% set nav_active_goals = ep.startswith('weekly_goals.') %}
+                            {% set nav_active_project_templates = ep.startswith('project_templates.') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_timer %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
@@ -258,6 +281,16 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_projects %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('projects.list_projects') }}">
                                     <i class="fas fa-folder w-4 mr-2"></i>{{ _('Projects') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_project_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('project_templates.list_templates') }}">
+                                    <i class="fas fa-layer-group w-4 mr-2"></i>{{ _('Project Templates') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('gantt.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('gantt.gantt_view') }}">
+                                    <i class="fas fa-project-diagram w-4 mr-2"></i>{{ _('Gantt Chart') }}
                                 </a>
                             </li>
                             <li>
@@ -305,8 +338,10 @@
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                         <ul id="financeDropdown" class="{% if not finance_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
-                            {% set nav_active_reports = ep.startswith('reports.') %}
+                            {% set nav_active_reports = ep.startswith('reports.') or ep.startswith('scheduled_reports.') %}
                             {% set nav_active_invoices = ep.startswith('invoices.') %}
+                            {% set nav_active_invoice_approvals = ep.startswith('invoice_approvals.') %}
+                            {% set nav_active_payment_gateways = ep.startswith('payment_gateways.') %}
                             {% set nav_active_recurring_invoices = ep.startswith('recurring_invoices.') %}
                             {% set nav_active_payments = ep.startswith('payments.') %}
                             {% set nav_active_expenses = ep.startswith('expenses.') %}
@@ -319,8 +354,28 @@
                                 </a>
                             </li>
                             <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('custom_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.report_builder') }}">
+                                    <i class="fas fa-magic w-4 mr-2"></i>{{ _('Report Builder') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('scheduled_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('scheduled_reports.list_scheduled') }}">
+                                    <i class="fas fa-clock w-4 mr-2"></i>{{ _('Scheduled Reports') }}
+                                </a>
+                            </li>
+                            <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
                                     <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoices') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_invoice_approvals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoice_approvals.list_approvals') }}">
+                                    <i class="fas fa-check-circle w-4 mr-2"></i>{{ _('Invoice Approvals') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_payment_gateways %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payment_gateways.list_gateways') }}">
+                                    <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payment Gateways') }}
                                 </a>
                             </li>
                             <li>
@@ -445,6 +500,12 @@
                         <ul id="toolsDropdown" class="{% if not tools_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_import_export = ep.startswith('import_export.') %}
                             {% set nav_active_filters = ep.startswith('saved_filters.') %}
+                            {% set nav_active_integrations = ep.startswith('integrations.') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_integrations %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('integrations.list_integrations') }}">
+                                    <i class="fas fa-plug w-4 mr-2"></i>{{ _('Integrations') }}
+                                </a>
+                            </li>
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_import_export %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('import_export.import_export_page') }}">
                                     <i class="fas fa-exchange-alt w-4 mr-2"></i>{{ _('Import / Export') }}

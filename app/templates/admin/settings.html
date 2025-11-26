@@ -209,6 +209,74 @@
                 </div>
             </div>
 
+            <!-- Integration OAuth Credentials -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('Integration OAuth Credentials') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Configure OAuth client credentials for integrations. These settings take precedence over environment variables. Leave client secret empty to keep the current value.') }}
+                </p>
+                
+                <!-- Jira -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-jira text-blue-600 mr-2"></i>Jira
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="jira_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="jira_client_id" id="jira_client_id" value="{{ settings.jira_client_id or '' }}" class="form-input" placeholder="{{ _('Jira OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="jira_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="jira_client_secret" id="jira_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.jira_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slack -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-slack text-purple-600 mr-2"></i>Slack
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="slack_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="slack_client_id" id="slack_client_id" value="{{ settings.slack_client_id or '' }}" class="form-input" placeholder="{{ _('Slack OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="slack_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="slack_client_secret" id="slack_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.slack_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GitHub -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-github text-gray-800 dark:text-gray-200 mr-2"></i>GitHub
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="github_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="github_client_id" id="github_client_id" value="{{ settings.github_client_id or '' }}" class="form-input" placeholder="{{ _('GitHub OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="github_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="github_client_secret" id="github_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.github_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Analytics Settings -->
             <div>
                 <h2 class="text-lg font-semibold mb-4">{{ _('Privacy & Analytics') }}</h2>

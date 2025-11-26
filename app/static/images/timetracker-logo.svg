@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1da1f2"/>
+      <stop offset="100%" stop-color="#27e0dd"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="url(#grad)"/>
+
+  <!-- Clock circle -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="white" stroke-width="28"/>
+
+  <!-- Clock hour marks -->
+  <line x1="256" y1="126" x2="256" y2="150" stroke="white" stroke-width="20"/>
+  <line x1="256" y1="362" x2="256" y2="386" stroke="white" stroke-width="20"/>
+  <line x1="126" y1="256" x2="150" y2="256" stroke="white" stroke-width="20"/>
+  <line x1="362" y1="256" x2="386" y2="256" stroke="white" stroke-width="20"/>
+
+  <!-- Checkmark (clock hands stylized) -->
+  <path d="M 205 265 L 255 315 L 355 205" fill="none" stroke="white" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

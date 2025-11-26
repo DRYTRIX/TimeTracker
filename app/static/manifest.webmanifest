@@ -9,7 +9,7 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/static/images/drytrix-logo.svg",
+      "src": "/static/images/timetracker-logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -25,7 +25,7 @@
       "url": "/timer/manual_entry",
       "icons": [
         {
-          "src": "/static/images/drytrix-logo.svg",
+          "src": "/static/images/timetracker-logo.svg",
           "sizes": "96x96"
         }
       ]
@@ -37,7 +37,7 @@
       "url": "/main/dashboard",
       "icons": [
         {
-          "src": "/static/images/drytrix-logo.svg",
+          "src": "/static/images/timetracker-logo.svg",
           "sizes": "96x96"
         }
       ]
@@ -49,7 +49,7 @@
       "url": "/projects/",
       "icons": [
         {
-          "src": "/static/images/drytrix-logo.svg",
+          "src": "/static/images/timetracker-logo.svg",
           "sizes": "96x96"
         }
       ]
@@ -61,7 +61,7 @@
       "url": "/reports/",
       "icons": [
         {
-          "src": "/static/images/drytrix-logo.svg",
+          "src": "/static/images/timetracker-logo.svg",
           "sizes": "96x96"
         }
       ]
@@ -75,5 +75,12 @@
       "text": "notes"
     }
   },
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "display_override": ["window-controls-overlay", "standalone"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
 }

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Gantt Chart') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Gantt Chart'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-project-diagram',
+    title_text='Gantt Chart',
+    subtitle_text='Project timeline visualization',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label for="projectFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Project') }}</label>
+            <select id="projectFilter" class="form-input" onchange="loadGanttChart()">
+                <option value="">{{ _('All Projects') }}</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="startDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Start Date') }}</label>
+            <input type="date" id="startDate" class="form-input" onchange="loadGanttChart()">
+        </div>
+        <div>
+            <label for="endDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('End Date') }}</label>
+            <input type="date" id="endDate" class="form-input" onchange="loadGanttChart()">
+        </div>
+        <div class="flex items-end">
+            <button onclick="loadGanttChart()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">
+                <i class="fas fa-sync mr-2"></i>{{ _('Refresh') }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div id="gantt-container" class="overflow-x-auto">
+        <div id="gantt-chart" style="min-height: 500px;"></div>
+    </div>
+</div>
+
+<!-- Include Frappe Gantt library -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+<script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+
+<script>
+let ganttChart = null;
+
+// Initialize date inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setMonth(startDate.getMonth() - 3);
+    
+    document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+    document.getElementById('endDate').value = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    loadGanttChart();
+});
+
+async function loadGanttChart() {
+    const projectId = document.getElementById('projectFilter').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', projectId);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    
+    try {
+        const response = await fetch(`{{ url_for('gantt.gantt_data') }}?${params}`);
+        const data = await response.json();
+        
+        // Transform data for Frappe Gantt
+        const tasks = data.data.map(item => ({
+            id: item.id,
+            name: item.name,
+            start: item.start,
+            end: item.end,
+            progress: item.progress || 0,
+            dependencies: item.dependencies.join(',') || '',
+            custom_class: item.type === 'project' ? 'gantt-project' : 'gantt-task'
+        }));
+        
+        // Destroy existing chart
+        if (ganttChart) {
+            ganttChart = null;
+        }
+        
+        // Create new chart
+        const container = document.getElementById('gantt-chart');
+        container.innerHTML = ''; // Clear container
+        
+        ganttChart = new Gantt('#gantt-chart', tasks, {
+            header_height: 50,
+            column_width: 30,
+            step: 24,
+            view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+            bar_height: 20,
+            bar_corner_radius: 3,
+            arrow_curve: 5,
+            padding: 18,
+            date_format: 'YYYY-MM-DD',
+            language: 'en',
+            on_click: function(task) {
+                // Handle task click
+                if (task.type === 'project') {
+                    window.location.href = `/projects/${task.project_id}`;
+                } else if (task.type === 'task') {
+                    window.location.href = `/tasks/${task.task_id}`;
+                }
+            },
+            on_date_change: function(task, start, end) {
+                // Handle date change (if editing enabled)
+                console.log('Task dates changed:', task, start, end);
+            },
+            on_progress_change: function(task, progress) {
+                // Handle progress change
+                console.log('Task progress changed:', task, progress);
+            },
+            on_view_change: function(mode) {
+                // Handle view mode change
+                console.log('View mode changed:', mode);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading Gantt chart:', error);
+        document.getElementById('gantt-chart').innerHTML = 
+            '<div class="text-center text-red-600 py-8">Error loading Gantt chart. Please try again.</div>';
+    }
+}
+</script>
+
+<style>
+.gantt-container {
+    overflow-x: auto;
+}
+
+.gantt-project {
+    fill: #3b82f6;
+}
+
+.gantt-task {
+    fill: #10b981;
+}
+
+.gantt .bar-wrapper .bar {
+    cursor: pointer;
+}
+
+.gantt .bar-wrapper .bar-progress {
+    fill: rgba(0, 0, 0, 0.2);
+}
+</style>
+{% endblock %}
+

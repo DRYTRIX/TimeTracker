@@ -29,10 +29,8 @@ class ProjectRepository(BaseRepository[Project]):
             query = query.filter_by(client_id=client_id)
         
         if include_relations:
-            query = query.options(
-                joinedload(Project.client),
-                joinedload(Project.time_entries)
-            )
+            # Only eagerly load client (time_entries is dynamic, can't be eagerly loaded)
+            query = query.options(joinedload(Project.client_obj))
         
         # If user_id provided, filter projects user has access to
         # (This would need permission logic in a real implementation)
@@ -52,7 +50,7 @@ class ProjectRepository(BaseRepository[Project]):
             query = query.filter_by(status=status)
         
         if include_relations:
-            query = query.options(joinedload(Project.client))
+            query = query.options(joinedload(Project.client_obj))
         
         return query.order_by(Project.name).all()
     
@@ -61,11 +59,11 @@ class ProjectRepository(BaseRepository[Project]):
         project_id: int
     ) -> Optional[Project]:
         """Get project with related statistics (time entries, costs, etc.)"""
+        # Note: time_entries, tasks, and costs are dynamic relationships (lazy='dynamic'),
+        # so they cannot be eagerly loaded with joinedload(). They return query objects
+        # that can be filtered and accessed when needed.
         return self.model.query.options(
-            joinedload(Project.client),
-            joinedload(Project.time_entries),
-            joinedload(Project.tasks),
-            joinedload(Project.costs)
+            joinedload(Project.client_obj)
         ).get(project_id)
     
     def archive(self, project_id: int, archived_by: int, reason: Optional[str] = None) -> Optional[Project]:

@@ -400,104 +400,175 @@ class EnhancedAnalyticsDashboard {
     }
 
     async loadDailyHoursChart() {
-        const response = await fetch(`/api/analytics/hours-by-day?days=${this.timeRange}`);
-        const data = await response.json();
-        const ctx = document.getElementById('dailyHoursChart').getContext('2d');
-        this.charts.dailyHours = new Chart(ctx, {
-            type: 'line', data, options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: {
-                    mode: 'index', intersect: false,
-                    backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12,
-                    callbacks: { label: (c) => `${c.parsed.y.toFixed(1)}h` }
-                }},
-                scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' }, grid: { color: '#f3f4f6' } }, x: { title: { display: true, text: i18n_analytics.date_label || 'Date' }, grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } } },
-                interaction: { intersect: false, mode: 'index' }
+        try {
+            const response = await fetch(`/api/analytics/hours-by-day?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load daily hours chart:', response.statusText);
+                return;
             }
-        });
+            const data = await response.json();
+            const ctx = document.getElementById('dailyHoursChart').getContext('2d');
+            this.charts.dailyHours = new Chart(ctx, {
+                type: 'line', data, options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: {
+                        mode: 'index', intersect: false,
+                        backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12,
+                        callbacks: { label: (c) => `${c.parsed.y.toFixed(1)}h` }
+                    }},
+                    scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' }, grid: { color: '#f3f4f6' } }, x: { title: { display: true, text: i18n_analytics.date_label || 'Date' }, grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } } },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading daily hours chart:', error);
+        }
     }
 
     async loadBillableChart() {
-        const response = await fetch(`/api/analytics/billable-vs-nonbillable?days=${this.timeRange}`);
-        const data = await response.json();
-        const ctx = document.getElementById('billableChart').getContext('2d');
-        this.charts.billable = new Chart(ctx, { type: 'doughnut', data, options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' }, tooltip: {
-                backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12,
-                callbacks: { label: (ctx) => {
-                    const label = ctx.label || ''; const value = ctx.parsed || 0; const total = ctx.dataset.data.reduce((a,b)=>a+b,0); const pct = total>0 ? ((value/total)*100).toFixed(1) : 0; return `${label}: ${value.toFixed(1)}h (${pct}%)`;
-                } }
-            }}
-        }});
+        try {
+            const response = await fetch(`/api/analytics/billable-vs-nonbillable?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load billable chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
+            const ctx = document.getElementById('billableChart').getContext('2d');
+            this.charts.billable = new Chart(ctx, { type: 'doughnut', data, options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' }, tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12,
+                    callbacks: { label: (ctx) => {
+                        const label = ctx.label || ''; const value = ctx.parsed || 0; const total = ctx.dataset.data.reduce((a,b)=>a+b,0); const pct = total>0 ? ((value/total)*100).toFixed(1) : 0; return `${label}: ${value.toFixed(1)}h (${pct}%)`;
+                    } }
+                }}
+            }});
+        } catch (error) {
+            console.error('Error loading billable chart:', error);
+        }
     }
 
     async loadTaskStatusChart() {
-        const response = await fetch(`/api/analytics/task-completion?days=${this.timeRange}`);
-        let data = {};
         try {
-            data = await response.json();
-        } catch (e) {
-            data = {};
+            const response = await fetch(`/api/analytics/task-completion?days=${this.timeRange}`);
+            let data = {};
+            if (response.ok) {
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    console.error('Error parsing task status data:', e);
+                    data = {};
+                }
+            } else {
+                console.error('Failed to load task status chart:', response.statusText);
+                return;
+            }
+            const status = (data && typeof data === 'object' && data.status_breakdown && typeof data.status_breakdown === 'object') ? data.status_breakdown : {};
+            document.getElementById('tasksCompleted').textContent = (status.done || 0);
+            document.getElementById('tasksInProgress').textContent = (status.in_progress || 0);
+            document.getElementById('tasksTodo').textContent = (status.todo || 0);
+            const ctx = document.getElementById('taskStatusChart').getContext('2d');
+            this.charts.taskStatus = new Chart(ctx, { type: 'doughnut', data: {
+                labels: [i18n_analytics.completed_label || 'Completed', i18n_analytics.in_progress_label || 'In Progress', i18n_analytics.todo_label || 'To Do', i18n_analytics.review_label || 'Review'],
+                datasets: [{ data: [status.done||0, status.in_progress||0, status.todo||0, status.review||0], backgroundColor: ['#10b981','#3b82f6','#94a3b8','#f59e0b'], borderWidth: 2, borderColor: '#fff' }]
+            }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } } } });
+        } catch (error) {
+            console.error('Error loading task status chart:', error);
         }
-        const status = (data && typeof data === 'object' && data.status_breakdown && typeof data.status_breakdown === 'object') ? data.status_breakdown : {};
-        document.getElementById('tasksCompleted').textContent = (status.done || 0);
-        document.getElementById('tasksInProgress').textContent = (status.in_progress || 0);
-        document.getElementById('tasksTodo').textContent = (status.todo || 0);
-        const ctx = document.getElementById('taskStatusChart').getContext('2d');
-        this.charts.taskStatus = new Chart(ctx, { type: 'doughnut', data: {
-            labels: [i18n_analytics.completed_label || 'Completed', i18n_analytics.in_progress_label || 'In Progress', i18n_analytics.todo_label || 'To Do', i18n_analytics.review_label || 'Review'],
-            datasets: [{ data: [status.done||0, status.in_progress||0, status.todo||0, status.review||0], backgroundColor: ['#10b981','#3b82f6','#94a3b8','#f59e0b'], borderWidth: 2, borderColor: '#fff' }]
-        }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } } } });
     }
 
     async loadRevenueChart() {
-        const response = await fetch(`/api/analytics/revenue-metrics?days=${this.timeRange}`);
-        const data = await response.json();
+        try {
+            const response = await fetch(`/api/analytics/revenue-metrics?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load revenue chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
         if (!data.project_labels || data.project_labels.length === 0) {
             const ctx = document.getElementById('revenueChart').getContext('2d');
             ctx.font = '14px sans-serif'; ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'; ctx.fillText('No revenue data available', ctx.canvas.width/2, ctx.canvas.height/2); return;
         }
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        this.charts.revenue = new Chart(ctx, { type: 'bar', data: { labels: data.project_labels, datasets: [{ label: `${i18n_analytics.revenue_label || 'Revenue'} (${this.currency})`, data: data.project_revenue, backgroundColor: 'rgba(245, 158, 11, 0.8)', borderColor: '#f59e0b', borderWidth: 2 }] }, options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12, callbacks: { label: (c) => `${this.currency} ${this.formatNumber(c.parsed.y)}` } } },
-            scales: { y: { beginAtZero: true, title: { display: true, text: `${i18n_analytics.revenue_label || 'Revenue'} (${this.currency})` } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } }
-        }});
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            this.charts.revenue = new Chart(ctx, { type: 'bar', data: { labels: data.project_labels, datasets: [{ label: `${i18n_analytics.revenue_label || 'Revenue'} (${this.currency})`, data: data.project_revenue, backgroundColor: 'rgba(245, 158, 11, 0.8)', borderColor: '#f59e0b', borderWidth: 2 }] }, options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12, callbacks: { label: (c) => `${this.currency} ${this.formatNumber(c.parsed.y)}` } } },
+                scales: { y: { beginAtZero: true, title: { display: true, text: `${i18n_analytics.revenue_label || 'Revenue'} (${this.currency})` } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } }
+            }});
+        } catch (error) {
+            console.error('Error loading revenue chart:', error);
+        }
     }
 
     async loadProjectChart() {
-        const response = await fetch(`/api/analytics/hours-by-project?days=${this.timeRange}`);
-        const data = await response.json();
-        const ctx = document.getElementById('projectChart').getContext('2d');
-        this.charts.project = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12 } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } } }});
+        try {
+            const response = await fetch(`/api/analytics/hours-by-project?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load project chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
+            const ctx = document.getElementById('projectChart').getContext('2d');
+            this.charts.project = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#111827', bodyColor: '#6b7280', borderColor: '#e5e7eb', borderWidth: 1, padding: 12 } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } } }});
+        } catch (error) {
+            console.error('Error loading project chart:', error);
+        }
     }
 
     async loadWeeklyTrendsChart() {
-        const response = await fetch(`/api/analytics/weekly-trends?weeks=${Math.min(12, Math.ceil(this.timeRange / 7))}`);
-        const data = await response.json();
-        const ctx = document.getElementById('weeklyTrendsChart').getContext('2d');
-        this.charts.weeklyTrends = new Chart(ctx, { type: 'line', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } } } } });
+        try {
+            const response = await fetch(`/api/analytics/weekly-trends?weeks=${Math.min(12, Math.ceil(this.timeRange / 7))}`);
+            if (!response.ok) {
+                console.error('Failed to load weekly trends chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
+            const ctx = document.getElementById('weeklyTrendsChart').getContext('2d');
+            this.charts.weeklyTrends = new Chart(ctx, { type: 'line', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } } } } });
+        } catch (error) {
+            console.error('Error loading weekly trends chart:', error);
+        }
     }
 
     async loadHourlyChart() {
-        const response = await fetch(`/api/analytics/hours-by-hour?days=${this.timeRange}`);
-        const data = await response.json();
-        const ctx = document.getElementById('hourlyChart').getContext('2d');
-        this.charts.hourly = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } }, x: { title: { display: true, text: i18n_analytics.hour_of_day_label || 'Hour of Day' } } } } });
+        try {
+            const response = await fetch(`/api/analytics/hours-by-hour?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load hourly chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
+            const ctx = document.getElementById('hourlyChart').getContext('2d');
+            this.charts.hourly = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } }, x: { title: { display: true, text: i18n_analytics.hour_of_day_label || 'Hour of Day' } } } } }); 
+        } catch (error) {
+            console.error('Error loading hourly chart:', error);
+        }
     }
 
     async loadCompletionRateChart() {
-        const response = await fetch(`/api/analytics/task-completion?days=${this.timeRange}`);
-        const data = await response.json();
-        if (!data.project_labels || data.project_labels.length === 0) return;
-        const ctx = document.getElementById('completionRateChart').getContext('2d');
-        this.charts.completionRate = new Chart(ctx, { type: 'bar', data: { labels: data.project_labels, datasets: [{ label: i18n_analytics.completion_rate_label || 'Completion Rate (%)', data: data.project_completion_rates, backgroundColor: 'rgba(16, 185, 129, 0.8)', borderColor: '#10b981', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } } } });
+        try {
+            const response = await fetch(`/api/analytics/task-completion?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load completion rate chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
+            if (!data.project_labels || data.project_labels.length === 0) return;
+            const ctx = document.getElementById('completionRateChart').getContext('2d');
+            this.charts.completionRate = new Chart(ctx, { type: 'bar', data: { labels: data.project_labels, datasets: [{ label: i18n_analytics.completion_rate_label || 'Completion Rate (%)', data: data.project_completion_rates, backgroundColor: 'rgba(16, 185, 129, 0.8)', borderColor: '#10b981', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } } } });
+        } catch (error) {
+            console.error('Error loading completion rate chart:', error);
+        }
     }
 
     async loadPaymentsOverTimeChart() {
-        const response = await fetch(`/api/analytics/payments-over-time?days=${this.timeRange}`);
-        const data = await response.json();
+        try {
+            const response = await fetch(`/api/analytics/payments-over-time?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load payments over time chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
         const ctx = document.getElementById('paymentsOverTimeChart').getContext('2d');
         this.charts.paymentsOverTime = new Chart(ctx, {
             type: 'line',
@@ -533,11 +604,19 @@ class EnhancedAnalyticsDashboard {
                 }
             }
         });
+        } catch (error) {
+            console.error('Error loading payments over time chart:', error);
+        }
     }
 
     async loadPaymentStatusChart() {
-        const response = await fetch(`/api/analytics/payments-by-status?days=${this.timeRange}`);
-        const data = await response.json();
+        try {
+            const response = await fetch(`/api/analytics/payments-by-status?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load payment status chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
         const ctx = document.getElementById('paymentStatusChart').getContext('2d');
         this.charts.paymentStatus = new Chart(ctx, {
             type: 'doughnut',
@@ -573,11 +652,19 @@ class EnhancedAnalyticsDashboard {
                 }
             }
         });
+        } catch (error) {
+            console.error('Error loading payment status chart:', error);
+        }
     }
 
     async loadPaymentMethodChart() {
-        const response = await fetch(`/api/analytics/payments-by-method?days=${this.timeRange}`);
-        const data = await response.json();
+        try {
+            const response = await fetch(`/api/analytics/payments-by-method?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load payment method chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
         const ctx = document.getElementById('paymentMethodChart').getContext('2d');
         this.charts.paymentMethod = new Chart(ctx, {
             type: 'bar',
@@ -610,11 +697,19 @@ class EnhancedAnalyticsDashboard {
                 }
             }
         });
+        } catch (error) {
+            console.error('Error loading payment method chart:', error);
+        }
     }
 
     async loadRevenueVsPaymentsChart() {
-        const response = await fetch(`/api/analytics/revenue-vs-payments?days=${this.timeRange}`);
-        const data = await response.json();
+        try {
+            const response = await fetch(`/api/analytics/revenue-vs-payments?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load revenue vs payments chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
         
         // Update summary stats
         document.getElementById('potentialRevenue').textContent = `${this.currency} ${this.formatNumber(data.potential_revenue)}`;
@@ -657,14 +752,25 @@ class EnhancedAnalyticsDashboard {
                 }
             }
         });
+        } catch (error) {
+            console.error('Error loading revenue vs payments chart:', error);
+        }
     }
 
     {% if current_user.is_admin %}
     async loadUserChart() {
-        const response = await fetch(`/api/analytics/hours-by-user?days=${this.timeRange}`);
-        const data = await response.json();
-        const ctx = document.getElementById('userChart').getContext('2d');
-        this.charts.user = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } } } } });
+        try {
+            const response = await fetch(`/api/analytics/hours-by-user?days=${this.timeRange}`);
+            if (!response.ok) {
+                console.error('Failed to load user chart:', response.statusText);
+                return;
+            }
+            const data = await response.json();
+            const ctx = document.getElementById('userChart').getContext('2d');
+            this.charts.user = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } } } } });
+        } catch (error) {
+            console.error('Error loading user chart:', error);
+        }
     }
     {% endif %}
 
