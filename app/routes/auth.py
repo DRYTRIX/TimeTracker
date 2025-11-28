@@ -120,8 +120,15 @@ def login():
                             )
 
                     # Create new user, promote to admin if username is configured as admin
-                    role = "admin" if username in admin_usernames else "user"
-                    user = User(username=username, role=role)
+                    role_name = "admin" if username in admin_usernames else "user"
+                    user = User(username=username, role=role_name)
+                    
+                    # Assign role from the new Role system
+                    from app.models import Role
+                    role_obj = Role.query.filter_by(name=role_name).first()
+                    if role_obj:
+                        user.roles.append(role_obj)
+                    
                     # Set password if password auth is required
                     if requires_password and password:
                         user.set_password(password)
@@ -141,7 +148,7 @@ def login():
 
                     # Track onboarding started for new user
                     track_onboarding_started(
-                        user.id, {"auth_method": auth_method, "self_registered": True, "is_admin": role == "admin"}
+                        user.id, {"auth_method": auth_method, "self_registered": True, "is_admin": role_name == "admin"}
                     )
 
                     flash(_("Welcome! Your account has been created."), "success")
@@ -233,6 +240,11 @@ def login():
 
             # Set super properties (included in all events)
             set_super_properties(user.id, user)
+
+            # Check if password change is required
+            if user.password_change_required:
+                flash(_("You must change your password before continuing."), "warning")
+                return redirect(url_for("auth.change_password"))
 
             # Redirect to intended page or dashboard
             next_page = request.args.get("next")
@@ -421,6 +433,55 @@ def edit_profile():
         return redirect(url_for("auth.profile"))
 
     return render_template("auth/edit_profile.html", requires_password=requires_password)
+
+
+@auth_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    """Change password page - required when password_change_required is True"""
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+
+        # Validate inputs
+        if not new_password:
+            flash(_("New password is required"), "error")
+            return render_template("auth/change_password.html")
+
+        if len(new_password) < 8:
+            flash(_("Password must be at least 8 characters long."), "error")
+            return render_template("auth/change_password.html")
+
+        if new_password != confirm_password:
+            flash(_("Passwords do not match."), "error")
+            return render_template("auth/change_password.html")
+
+        # If user has a password, verify current password
+        if current_user.has_password:
+            if not current_password:
+                flash(_("Current password is required"), "error")
+                return render_template("auth/change_password.html")
+            
+            if not current_user.check_password(current_password):
+                flash(_("Current password is incorrect"), "error")
+                return render_template("auth/change_password.html")
+
+        # Set new password
+        current_user.set_password(new_password)
+        current_user.password_change_required = False
+        
+        try:
+            db.session.commit()
+            current_app.logger.info("User '%s' changed password", current_user.username)
+            flash(_("Password changed successfully. You can now continue."), "success")
+            return redirect(url_for("main.dashboard"))
+        except Exception:
+            db.session.rollback()
+            flash(_("Could not update password due to a database error."), "error")
+            return render_template("auth/change_password.html")
+
+    return render_template("auth/change_password.html")
 
 
 @auth_bp.route("/profile/avatar/remove", methods=["POST"])
@@ -669,12 +730,19 @@ def oidc_callback():
             if not Config.ALLOW_SELF_REGISTER:
                 flash(_("User account does not exist and self-registration is disabled."), "error")
                 return redirect(url_for("auth.login"))
-            role = "user"
+            role_name = "user"
             try:
-                user = User(username=username, role=role, email=email, full_name=full_name)
+                user = User(username=username, role=role_name, email=email, full_name=full_name)
                 user.is_active = True
                 user.oidc_issuer = issuer
                 user.oidc_sub = sub
+                
+                # Assign role from the new Role system
+                from app.models import Role
+                role_obj = Role.query.filter_by(name=role_name).first()
+                if role_obj:
+                    user.roles.append(role_obj)
+                
                 db.session.add(user)
                 if not safe_commit("oidc_create_user", {"username": username, "email": email}):
                     raise RuntimeError("db commit failed on user create")
@@ -685,7 +753,7 @@ def oidc_callback():
                     {
                         "auth_method": "oidc",
                         "self_registered": True,
-                        "is_admin": role == "admin",
+                        "is_admin": role_name == "admin",
                         "has_email": bool(email),
                     },
                 )

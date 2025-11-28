@@ -15,7 +15,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db, limiter
-from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem
+from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem, Role
 from datetime import datetime
 from sqlalchemy import text
 import os
@@ -176,28 +176,55 @@ def create_user():
     """Create a new user"""
     if request.method == "POST":
         username = request.form.get("username", "").strip().lower()
-        role = request.form.get("role", "user")
+        role_name = request.form.get("role", "user")  # This will be a role name from the Role system
+        default_password = request.form.get("default_password", "").strip()
+        force_password_change = request.form.get("force_password_change") == "on"
 
         if not username:
             flash(_("Username is required"), "error")
-            return render_template("admin/user_form.html", user=None)
+            all_roles = Role.query.order_by(Role.name).all()
+            return render_template("admin/user_form.html", user=None, all_roles=all_roles)
 
         # Check if user already exists
         if User.query.filter_by(username=username).first():
             flash(_("User already exists"), "error")
-            return render_template("admin/user_form.html", user=None)
+            all_roles = Role.query.order_by(Role.name).all()
+            return render_template("admin/user_form.html", user=None, all_roles=all_roles)
 
-        # Create user
-        user = User(username=username, role=role)
+        # Get the Role object from the database
+        role_obj = Role.query.filter_by(name=role_name).first()
+        if not role_obj:
+            # Fallback: if role doesn't exist, try to use "user" role
+            role_obj = Role.query.filter_by(name="user").first()
+            if not role_obj:
+                flash(_("Default 'user' role not found. Please run 'flask seed_permissions_cmd' first."), "error")
+                all_roles = Role.query.order_by(Role.name).all()
+                return render_template("admin/user_form.html", user=None, all_roles=all_roles)
+
+        # Create user with legacy role field for backward compatibility
+        user = User(username=username, role=role_name)
+        
+        # Assign the role from the new Role system
+        user.roles.append(role_obj)
+        
+        # Set default password if provided
+        if default_password:
+            user.set_password(default_password)
+            if force_password_change:
+                user.password_change_required = True
+        
         db.session.add(user)
         if not safe_commit("admin_create_user", {"username": username}):
             flash(_("Could not create user due to a database error. Please check server logs."), "error")
-            return render_template("admin/user_form.html", user=None)
+            all_roles = Role.query.order_by(Role.name).all()
+            return render_template("admin/user_form.html", user=None, all_roles=all_roles)
 
         flash(_('User "%(username)s" created successfully', username=username), "success")
         return redirect(url_for("admin.list_users"))
 
-    return render_template("admin/user_form.html", user=None)
+    # GET request - show form with available roles
+    all_roles = Role.query.order_by(Role.name).all()
+    return render_template("admin/user_form.html", user=None, all_roles=all_roles)
 
 
 @admin_bp.route("/admin/users/<int:user_id>/edit", methods=["GET", "POST"])

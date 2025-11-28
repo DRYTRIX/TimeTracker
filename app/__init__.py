@@ -1206,8 +1206,15 @@ def create_app(config=None):
             # Create default admin user if it doesn't exist
             admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
             if not User.query.filter_by(username=admin_username).first():
+                from app.models import Role
                 admin_user = User(username=admin_username, role="admin")
                 admin_user.is_active = True
+                
+                # Assign admin role from the new Role system
+                admin_role = Role.query.filter_by(name="admin").first()
+                if admin_role:
+                    admin_user.roles.append(admin_role)
+                
                 db.session.add(admin_user)
                 db.session.commit()
                 print(f"Created default admin user: {admin_username}")
@@ -1361,8 +1368,15 @@ def init_database(app):
             # Create default admin user if it doesn't exist
             admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
             if not User.query.filter_by(username=admin_username).first():
+                from app.models import Role
                 admin_user = User(username=admin_username, role="admin")
                 admin_user.is_active = True
+                
+                # Assign admin role from the new Role system
+                admin_role = Role.query.filter_by(name="admin").first()
+                if admin_role:
+                    admin_user.roles.append(admin_role)
+                
                 db.session.add(admin_user)
                 db.session.commit()
                 print(f"Created default admin user: {admin_username}")

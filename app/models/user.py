@@ -25,6 +25,7 @@ class User(UserMixin, db.Model):
     oidc_issuer = db.Column(db.String(255), nullable=True)
     avatar_filename = db.Column(db.String(255), nullable=True)
     password_hash = db.Column(db.String(255), nullable=True)
+    password_change_required = db.Column(db.Boolean, default=False, nullable=False)  # Force password change on first login
 
     # User preferences and settings
     email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable email notifications
