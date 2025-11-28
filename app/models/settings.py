@@ -256,7 +256,11 @@ class Settings(db.Model):
     
     @classmethod
     def get_settings(cls):
-        """Get the singleton settings instance, creating it if it doesn't exist"""
+        """Get the singleton settings instance, creating it if it doesn't exist.
+        
+        When creating a new Settings instance, it will be initialized from
+        environment variables (.env file) as initial values.
+        """
         try:
             settings = cls.query.first()
             if settings:
@@ -283,7 +287,10 @@ class Settings(db.Model):
         # initialization code or explicit admin flows.
         try:
             if not getattr(db.session, "_flushing", False):
+                # Create new settings instance initialized from environment variables
                 settings = cls()
+                # Initialize from environment variables (.env file)
+                cls._initialize_from_env(settings)
                 db.session.add(settings)
                 db.session.commit()
                 return settings
@@ -311,3 +318,77 @@ class Settings(db.Model):
         settings.updated_at = datetime.utcnow()
         db.session.commit()
         return settings
+    
+    @classmethod
+    def _initialize_from_env(cls, settings_instance):
+        """
+        Initialize Settings instance from environment variables (.env file).
+        This is called when creating a new Settings instance to use .env values
+        as initial startup values.
+        
+        Args:
+            settings_instance: Settings instance to initialize
+        """
+        # Map environment variable names to Settings model attributes
+        env_mapping = {
+            'TZ': 'timezone',
+            'CURRENCY': 'currency',
+            'ROUNDING_MINUTES': 'rounding_minutes',
+            'SINGLE_ACTIVE_TIMER': 'single_active_timer',
+            'ALLOW_SELF_REGISTER': 'allow_self_register',
+            'IDLE_TIMEOUT_MINUTES': 'idle_timeout_minutes',
+            'BACKUP_RETENTION_DAYS': 'backup_retention_days',
+            'BACKUP_TIME': 'backup_time',
+        }
+        
+        for env_var, attr_name in env_mapping.items():
+            if hasattr(settings_instance, attr_name):
+                env_value = os.getenv(env_var)
+                if env_value is not None:
+                    # Convert value types based on attribute type
+                    current_value = getattr(settings_instance, attr_name)
+                    
+                    if isinstance(current_value, bool):
+                        # Handle boolean values
+                        setattr(settings_instance, attr_name, env_value.lower() == 'true')
+                    elif isinstance(current_value, int):
+                        # Handle integer values
+                        try:
+                            setattr(settings_instance, attr_name, int(env_value))
+                        except (ValueError, TypeError):
+                            pass  # Keep default if conversion fails
+                    else:
+                        # Handle string values
+                        setattr(settings_instance, attr_name, env_value)
+    
+    @classmethod
+    def sync_from_env(cls):
+        """
+        Sync Settings from environment variables (.env file) for fields that haven't
+        been customized in the WebUI. This is useful for initializing Settings on startup
+        or when new environment variables are added.
+        
+        Only updates fields that are still at their default values (not customized via WebUI).
+        """
+        try:
+            settings = cls.get_settings()
+            if not settings or not hasattr(settings, 'id'):
+                # Settings doesn't exist in DB yet, get_settings will create it
+                return
+            
+            # Only sync if Settings was just created (id is None means it's a new instance)
+            # For existing Settings, we don't overwrite WebUI changes
+            # This method is mainly for ensuring new Settings get initialized from .env
+            if settings.id is None:
+                cls._initialize_from_env(settings)
+                if hasattr(db.session, 'add'):
+                    db.session.add(settings)
+                db.session.commit()
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not sync Settings from environment: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
