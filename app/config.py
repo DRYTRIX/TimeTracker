@@ -112,6 +112,12 @@ class Config:
     RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "")  # e.g., "200 per day;50 per hour"
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
 
+    # Redis configuration
+    REDIS_ENABLED = os.getenv("REDIS_ENABLED", "true").lower() == "true"
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
+    REDIS_DEFAULT_TTL = int(os.getenv("REDIS_DEFAULT_TTL", 3600))  # 1 hour default
+
     # Internationalization
     LANGUAGES = {
         "en": "English",

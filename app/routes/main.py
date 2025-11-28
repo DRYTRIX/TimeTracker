@@ -19,38 +19,57 @@ main_bp = Blueprint("main", __name__)
 @main_bp.route("/dashboard")
 @login_required
 def dashboard():
-    """Main dashboard showing active timer and recent entries"""
+    """Main dashboard showing active timer and recent entries - REFACTORED to use services and fix N+1 queries"""
     # Track dashboard page view
     track_page_view("dashboard")
 
     # Update user segments periodically (cached, not every request)
     update_user_segments_if_needed(current_user.id, current_user)
 
+    # Use caching for dashboard data (5 minute TTL)
+    from app.utils.cache import get_cache, cached
+    cache = get_cache()
+    cache_key = f"dashboard:{current_user.id}"
+    
+    # Try to get from cache
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return render_template("main/dashboard.html", **cached_data)
+
     # Get user's active timer
     active_timer = current_user.active_timer
 
-    # Get recent entries for the user
-    recent_entries = current_user.get_recent_entries(limit=10)
+    # Get recent entries for the user (using repository to avoid N+1)
+    from app.repositories import TimeEntryRepository
+    time_entry_repo = TimeEntryRepository()
+    recent_entries = time_entry_repo.get_by_user(user_id=current_user.id, limit=10, include_relations=True)
 
-    # Get active projects for timer dropdown
-    active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    # Get active projects for timer dropdown (using repository)
+    from app.repositories import ProjectRepository
+    project_repo = ProjectRepository()
+    active_projects = project_repo.get_active_projects()
 
-    # Get user statistics
-    today = datetime.utcnow().date()
-    week_start = today - timedelta(days=today.weekday())
-    month_start = today.replace(day=1)
+    # Get user statistics using analytics service
+    from app.services import AnalyticsService
+    analytics_service = AnalyticsService()
+    stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
+    
+    today_hours = stats["time_tracking"]["today_hours"]
+    week_hours = stats["time_tracking"]["week_hours"]
+    month_hours = stats["time_tracking"]["month_hours"]
 
-    today_hours = TimeEntry.get_total_hours_for_period(start_date=today, user_id=current_user.id)
-
-    week_hours = TimeEntry.get_total_hours_for_period(start_date=week_start, user_id=current_user.id)
-
-    month_hours = TimeEntry.get_total_hours_for_period(start_date=month_start, user_id=current_user.id)
-
-    # Build Top Projects (last 30 days) based on user's activity
-    period_start = today - timedelta(days=30)
-    entries_30 = TimeEntry.query.filter(
-        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= period_start, TimeEntry.user_id == current_user.id
-    ).all()
+    # Build Top Projects (last 30 days) - using optimized query with eager loading
+    from sqlalchemy.orm import joinedload
+    period_start = datetime.utcnow().date() - timedelta(days=30)
+    entries_30 = (
+        TimeEntry.query.options(joinedload(TimeEntry.project))  # Eager load projects to avoid N+1
+        .filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= period_start,
+            TimeEntry.user_id == current_user.id
+        )
+        .all()
+    )
     project_hours = {}
     for e in entries_30:
         if not e.project:
@@ -68,9 +87,13 @@ def dashboard():
 
     # Get user's time entry templates (most recently used first)
     from sqlalchemy import desc
-
+    from sqlalchemy.orm import joinedload
     templates = (
-        TimeEntryTemplate.query.filter_by(user_id=current_user.id)
+        TimeEntryTemplate.query.options(
+            joinedload(TimeEntryTemplate.project),
+            joinedload(TimeEntryTemplate.task)
+        )
+        .filter_by(user_id=current_user.id)
         .order_by(desc(TimeEntryTemplate.last_used_at))
         .limit(5)
         .all()
@@ -79,19 +102,24 @@ def dashboard():
     # Get recent activities for activity feed widget
     recent_activities = Activity.get_recent(user_id=None if current_user.is_admin else current_user.id, limit=10)
 
-    return render_template(
-        "main/dashboard.html",
-        active_timer=active_timer,
-        recent_entries=recent_entries,
-        active_projects=active_projects,
-        today_hours=today_hours,
-        week_hours=week_hours,
-        month_hours=month_hours,
-        top_projects=top_projects,
-        current_week_goal=current_week_goal,
-        templates=templates,
-        recent_activities=recent_activities,
-    )
+    # Prepare template data
+    template_data = {
+        "active_timer": active_timer,
+        "recent_entries": recent_entries,
+        "active_projects": active_projects,
+        "today_hours": today_hours,
+        "week_hours": week_hours,
+        "month_hours": month_hours,
+        "top_projects": top_projects,
+        "current_week_goal": current_week_goal,
+        "templates": templates,
+        "recent_activities": recent_activities,
+    }
+    
+    # Cache for 5 minutes
+    cache.set(cache_key, template_data, ttl=300)
+    
+    return render_template("main/dashboard.html", **template_data)
 
 
 @main_bp.route("/_health")

@@ -66,15 +66,33 @@ class TimeEntryTemplate(db.Model):
 
     def to_dict(self):
         """Convert to dictionary for API responses"""
+        # Safely access relationships to avoid DetachedInstanceError
+        # Relationships should be eagerly loaded, but we handle the case where they're not
+        project_name = None
+        if self.project_id:
+            try:
+                project_name = self.project.name if self.project else None
+            except Exception:
+                # If accessing project fails (e.g., detached instance), just use None
+                project_name = None
+        
+        task_name = None
+        if self.task_id:
+            try:
+                task_name = self.task.name if self.task else None
+            except Exception:
+                # If accessing task fails (e.g., detached instance), just use None
+                task_name = None
+        
         return {
             "id": self.id,
             "user_id": self.user_id,
             "name": self.name,
             "description": self.description,
             "project_id": self.project_id,
-            "project_name": self.project.name if self.project else None,
+            "project_name": project_name,
             "task_id": self.task_id,
-            "task_name": self.task.name if self.task else None,
+            "task_name": task_name,
             "default_duration": self.default_duration,  # In hours for API
             "default_duration_minutes": self.default_duration_minutes,  # Keep for compatibility
             "default_notes": self.default_notes,

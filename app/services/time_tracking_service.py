@@ -242,7 +242,75 @@ class TimeTrackingService:
         """Get the active timer for a user"""
         return self.time_entry_repo.get_active_timer(user_id)
 
-    def delete_entry(self, user_id: int, entry_id: int) -> Dict[str, Any]:
+    def update_entry(
+        self,
+        entry_id: int,
+        user_id: int,
+        is_admin: bool = False,
+        project_id: Optional[int] = None,
+        task_id: Optional[int] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        notes: Optional[str] = None,
+        tags: Optional[str] = None,
+        billable: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """
+        Update a time entry.
+
+        Returns:
+            dict with 'success', 'message', and 'entry' keys
+        """
+        entry = self.time_entry_repo.get_by_id(entry_id)
+
+        if not entry:
+            return {"success": False, "message": "Time entry not found", "error": "not_found"}
+
+        # Check permissions
+        if not is_admin and entry.user_id != user_id:
+            return {"success": False, "message": "Access denied", "error": "access_denied"}
+
+        # Don't allow updating active entries to have end_time
+        if entry.is_active and end_time is not None:
+            return {
+                "success": False,
+                "message": "Cannot set end_time on active timer. Stop the timer first.",
+                "error": "timer_active",
+            }
+
+        # Update fields
+        if project_id is not None:
+            # Validate project
+            project = self.project_repo.get_by_id(project_id)
+            if not project:
+                return {"success": False, "message": "Invalid project", "error": "invalid_project"}
+            entry.project_id = project_id
+
+        if task_id is not None:
+            entry.task_id = task_id
+        if start_time is not None:
+            entry.start_time = start_time
+        if end_time is not None:
+            entry.end_time = end_time
+        if notes is not None:
+            entry.notes = notes
+        if tags is not None:
+            entry.tags = tags
+        if billable is not None:
+            entry.billable = billable
+
+        entry.updated_at = local_now()
+
+        if not safe_commit("update_entry", {"user_id": user_id, "entry_id": entry_id}):
+            return {
+                "success": False,
+                "message": "Could not update time entry due to a database error",
+                "error": "database_error",
+            }
+
+        return {"success": True, "message": "Time entry updated successfully", "entry": entry}
+
+    def delete_entry(self, user_id: int, entry_id: int, is_admin: bool = False) -> Dict[str, Any]:
         """
         Delete a time entry.
 
@@ -254,14 +322,16 @@ class TimeTrackingService:
         if not entry:
             return {"success": False, "message": "Time entry not found", "error": "not_found"}
 
-        # Check permissions (user can only delete their own entries unless admin)
-        from flask_login import current_user
+        # Check permissions
+        if not is_admin and entry.user_id != user_id:
+            return {"success": False, "message": "Access denied", "error": "access_denied"}
 
-        if entry.user_id != user_id and not (hasattr(current_user, "is_admin") and current_user.is_admin):
+        # Don't allow deletion of active entries
+        if entry.is_active:
             return {
                 "success": False,
-                "message": "You do not have permission to delete this entry",
-                "error": "unauthorized",
+                "message": "Cannot delete active time entry. Stop the timer first.",
+                "error": "timer_active",
             }
 
         if self.time_entry_repo.delete(entry):

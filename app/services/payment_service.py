@@ -103,3 +103,86 @@ class PaymentService:
     def get_total_paid(self, invoice_id: int) -> Decimal:
         """Get total amount paid for an invoice"""
         return self.payment_repo.get_total_for_invoice(invoice_id)
+
+    def update_payment(self, payment_id: int, user_id: int, **kwargs) -> Dict[str, Any]:
+        """
+        Update a payment.
+
+        Returns:
+            dict with 'success', 'message', and 'payment' keys
+        """
+        payment = self.payment_repo.get_by_id(payment_id)
+        if not payment:
+            return {"success": False, "message": "Payment not found", "error": "not_found"}
+
+        # Update fields
+        for field in ("currency", "method", "reference", "notes", "status"):
+            if field in kwargs:
+                setattr(payment, field, kwargs[field])
+        if "amount" in kwargs:
+            payment.amount = kwargs["amount"]
+        if "payment_date" in kwargs:
+            payment.payment_date = kwargs["payment_date"]
+
+        # Recalculate net amount
+        payment.calculate_net_amount()
+
+        # Update invoice payment status if needed
+        if payment.status == "completed" and payment.invoice:
+            total_payments = self.payment_repo.get_total_for_invoice(payment.invoice_id)
+            payment.invoice.amount_paid = total_payments
+
+            # Update payment status
+            if payment.invoice.amount_paid >= payment.invoice.total_amount:
+                payment.invoice.payment_status = "fully_paid"
+            elif payment.invoice.amount_paid > 0:
+                payment.invoice.payment_status = "partially_paid"
+            else:
+                payment.invoice.payment_status = "unpaid"
+
+        if not safe_commit("update_payment", {"payment_id": payment_id, "user_id": user_id}):
+            return {
+                "success": False,
+                "message": "Could not update payment due to a database error",
+                "error": "database_error",
+            }
+
+        return {"success": True, "message": "Payment updated successfully", "payment": payment}
+
+    def delete_payment(self, payment_id: int, user_id: int) -> Dict[str, Any]:
+        """
+        Delete a payment.
+
+        Returns:
+            dict with 'success' and 'message' keys
+        """
+        payment = self.payment_repo.get_by_id(payment_id)
+        if not payment:
+            return {"success": False, "message": "Payment not found", "error": "not_found"}
+
+        invoice_id = payment.invoice_id
+
+        # Delete payment
+        db.session.delete(payment)
+
+        # Update invoice payment status
+        if payment.invoice:
+            total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
+            payment.invoice.amount_paid = total_payments
+
+            # Update payment status
+            if payment.invoice.amount_paid >= payment.invoice.total_amount:
+                payment.invoice.payment_status = "fully_paid"
+            elif payment.invoice.amount_paid > 0:
+                payment.invoice.payment_status = "partially_paid"
+            else:
+                payment.invoice.payment_status = "unpaid"
+
+        if not safe_commit("delete_payment", {"payment_id": payment_id, "user_id": user_id}):
+            return {
+                "success": False,
+                "message": "Could not delete payment due to a database error",
+                "error": "database_error",
+            }
+
+        return {"success": True, "message": "Payment deleted successfully"}

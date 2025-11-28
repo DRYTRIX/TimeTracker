@@ -19,93 +19,20 @@ def list_quotes():
     search = request.args.get("search", "").strip()
     show_analytics = request.args.get("analytics", "false").lower() == "true"
 
-    query = Quote.query
-
-    # Filter by user unless admin
-    if not current_user.is_admin:
-        query = query.filter_by(created_by=current_user.id)
-
-    if status != "all":
-        query = query.filter_by(status=status)
-
-    if search:
-        like = f"%{search}%"
-        query = query.join(Client).filter(
-            db.or_(
-                Quote.title.ilike(like),
-                Quote.quote_number.ilike(like),
-                Quote.description.ilike(like),
-                Client.name.ilike(like),
-            )
-        )
-
-    quotes = query.order_by(Quote.created_at.desc()).all()
-
-    # Calculate analytics if requested
-    analytics = None
-    if show_analytics:
-        from datetime import timedelta
-        from app.utils.timezone import local_now
-        from sqlalchemy import func
-
-        # Base query for analytics
-        analytics_query = Quote.query
-        if not current_user.is_admin:
-            analytics_query = analytics_query.filter_by(created_by=current_user.id)
-
-        # Total quotes
-        total_quotes = analytics_query.count()
-
-        # Quotes by status
-        quotes_by_status = {}
-        for status_val in ["draft", "sent", "accepted", "rejected", "expired"]:
-            count = analytics_query.filter_by(status=status_val).count()
-            quotes_by_status[status_val] = count
-
-        # Total quote value
-        total_value = analytics_query.with_entities(func.sum(Quote.total_amount)).scalar() or 0
-
-        # Accepted quotes value
-        accepted_value = (
-            analytics_query.filter_by(status="accepted").with_entities(func.sum(Quote.total_amount)).scalar() or 0
-        )
-
-        # Acceptance rate
-        sent_count = quotes_by_status.get("sent", 0)
-        accepted_count = quotes_by_status.get("accepted", 0)
-        acceptance_rate = (accepted_count / sent_count * 100) if sent_count > 0 else 0
-
-        # Average quote value
-        avg_value = (total_value / total_quotes) if total_quotes > 0 else 0
-
-        # Quotes in last 30 days
-        thirty_days_ago = local_now() - timedelta(days=30)
-        recent_quotes = analytics_query.filter(Quote.created_at >= thirty_days_ago).count()
-
-        # Quotes by client (top 10)
-        quotes_by_client = (
-            db.session.query(
-                Client.name, func.count(Quote.id).label("count"), func.sum(Quote.total_amount).label("total")
-            )
-            .join(Quote)
-            .group_by(Client.id, Client.name)
-        )
-        if not current_user.is_admin:
-            quotes_by_client = quotes_by_client.filter(Quote.created_by == current_user.id)
-        quotes_by_client = quotes_by_client.order_by(func.count(Quote.id).desc()).limit(10).all()
-
-        analytics = {
-            "total_quotes": total_quotes,
-            "quotes_by_status": quotes_by_status,
-            "total_value": float(total_value),
-            "accepted_value": float(accepted_value),
-            "acceptance_rate": round(acceptance_rate, 1),
-            "avg_value": float(avg_value),
-            "recent_quotes": recent_quotes,
-            "quotes_by_client": [
-                {"name": name, "count": count, "total": float(total)} for name, count, total in quotes_by_client
-            ],
-        }
+    # Use service layer for quote listing with analytics
+    from app.services import QuoteService
+    
+    quote_service = QuoteService()
+    result = quote_service.list_quotes(
+        user_id=current_user.id if not current_user.is_admin else None,
+        is_admin=current_user.is_admin,
+        status=status,
+        search=search if search else None,
+        include_analytics=show_analytics,
+    )
+    
+    quotes = result["quotes"]
+    analytics = result.get("analytics")
 
     return render_template(
         "quotes/list.html",
@@ -291,11 +218,25 @@ def create_quote():
 @login_required
 def view_quote(quote_id):
     """View quote details"""
-    quote = Quote.query.get_or_404(quote_id)
-    quote.calculate_totals()  # Ensure totals are up to date
-    # Get all comments (both internal and client-facing)
+    from app.services import QuoteService
+    from sqlalchemy.orm import joinedload
     from app.models import Comment
-
+    
+    # Use service layer with eager loading
+    quote_service = QuoteService()
+    quote = quote_service.get_quote_with_details(
+        quote_id=quote_id,
+        user_id=current_user.id if not current_user.is_admin else None,
+        is_admin=current_user.is_admin
+    )
+    
+    if not quote:
+        flash(_("Quote not found"), "error")
+        return redirect(url_for("quotes.list_quotes"))
+    
+    quote.calculate_totals()  # Ensure totals are up to date
+    
+    # Get all comments (both internal and client-facing)
     comments = Comment.get_quote_comments(quote_id, include_replies=True, include_internal=True)
 
     return render_template("quotes/view.html", quote=quote, comments=comments)
@@ -306,7 +247,12 @@ def view_quote(quote_id):
 @admin_or_permission_required("edit_quotes")
 def edit_quote(quote_id):
     """Edit an quote"""
-    quote = Quote.query.get_or_404(quote_id)
+    from sqlalchemy.orm import joinedload
+    
+    quote = Quote.query.options(
+        joinedload(Quote.client),
+        joinedload(Quote.items)
+    ).filter_by(id=quote_id).first_or_404()
 
     # Only allow editing draft quotes
     if quote.status != "draft":

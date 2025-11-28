@@ -13,6 +13,7 @@ from .client_service import ClientService
 from .reporting_service import ReportingService
 from .analytics_service import AnalyticsService
 from .payment_service import PaymentService
+from .quote_service import QuoteService
 from .comment_service import CommentService
 from .user_service import UserService
 from .export_service import ExportService
@@ -33,6 +34,7 @@ __all__ = [
     "ReportingService",
     "AnalyticsService",
     "PaymentService",
+    "QuoteService",
     "CommentService",
     "UserService",
     "ExportService",

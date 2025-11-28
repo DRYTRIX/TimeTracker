@@ -51,6 +51,10 @@ class ProjectService:
         description: Optional[str] = None,
         billable: bool = True,
         hourly_rate: Optional[float] = None,
+        code: Optional[str] = None,
+        budget_amount: Optional[float] = None,
+        budget_threshold_percent: Optional[int] = None,
+        billing_ref: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new project.
@@ -72,16 +76,37 @@ class ProjectService:
                 "error": "duplicate_project",
             }
 
-        # Create project
-        project = self.project_repo.create(
+        # Validate code uniqueness if provided
+        if code:
+            normalized_code = code.upper().strip()
+            existing_code = self.project_repo.find_one_by(code=normalized_code)
+            if existing_code:
+                return {
+                    "success": False,
+                    "message": "Project code already in use",
+                    "error": "duplicate_code",
+                }
+        else:
+            normalized_code = None
+
+        # Create project using model directly (repository doesn't support all fields yet)
+        from app.models import Project
+        from decimal import Decimal
+        
+        project = Project(
             name=name,
             client_id=client_id,
             description=description,
             billable=billable,
             hourly_rate=hourly_rate,
+            code=normalized_code,
+            budget_amount=Decimal(str(budget_amount)) if budget_amount else None,
+            budget_threshold_percent=budget_threshold_percent or 80,
+            billing_ref=billing_ref,
             status=ProjectStatus.ACTIVE.value,
-            created_by=created_by,
         )
+        
+        db.session.add(project)
 
         if not safe_commit("create_project", {"client_id": client_id, "name": name}):
             return {

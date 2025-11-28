@@ -25,8 +25,15 @@ time_entry_templates_bp = Blueprint("time_entry_templates", __name__)
 @login_required
 def list_templates():
     """List all time entry templates for the current user."""
+    from sqlalchemy.orm import joinedload
     templates = (
-        TimeEntryTemplate.query.filter_by(user_id=current_user.id).order_by(desc(TimeEntryTemplate.last_used_at)).all()
+        TimeEntryTemplate.query.options(
+            joinedload(TimeEntryTemplate.project),
+            joinedload(TimeEntryTemplate.task)
+        )
+        .filter_by(user_id=current_user.id)
+        .order_by(desc(TimeEntryTemplate.last_used_at))
+        .all()
     )
 
     return render_template("time_entry_templates/list.html", templates=templates)
@@ -127,7 +134,15 @@ def create_template():
 @login_required
 def view_template(template_id):
     """View a specific template."""
-    template = TimeEntryTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
+    from sqlalchemy.orm import joinedload
+    template = (
+        TimeEntryTemplate.query.options(
+            joinedload(TimeEntryTemplate.project),
+            joinedload(TimeEntryTemplate.task)
+        )
+        .filter_by(id=template_id, user_id=current_user.id)
+        .first_or_404()
+    )
 
     return render_template("time_entry_templates/view.html", template=template)
 
@@ -259,8 +274,15 @@ def delete_template(template_id):
 @login_required
 def get_templates_api():
     """Get templates as JSON (for AJAX requests)."""
+    from sqlalchemy.orm import joinedload
     templates = (
-        TimeEntryTemplate.query.filter_by(user_id=current_user.id).order_by(desc(TimeEntryTemplate.last_used_at)).all()
+        TimeEntryTemplate.query.options(
+            joinedload(TimeEntryTemplate.project),
+            joinedload(TimeEntryTemplate.task)
+        )
+        .filter_by(user_id=current_user.id)
+        .order_by(desc(TimeEntryTemplate.last_used_at))
+        .all()
     )
 
     return jsonify({"templates": [t.to_dict() for t in templates]})
@@ -270,7 +292,15 @@ def get_templates_api():
 @login_required
 def get_template_api(template_id):
     """Get a specific template as JSON."""
-    template = TimeEntryTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
+    from sqlalchemy.orm import joinedload
+    template = (
+        TimeEntryTemplate.query.options(
+            joinedload(TimeEntryTemplate.project),
+            joinedload(TimeEntryTemplate.task)
+        )
+        .filter_by(id=template_id, user_id=current_user.id)
+        .first_or_404()
+    )
 
     return jsonify(template.to_dict())
 

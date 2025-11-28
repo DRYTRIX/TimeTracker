@@ -230,21 +230,13 @@ def create_project():
                 pass
             return render_template("projects/create.html", clients=Client.get_active_clients())
 
-        # Get client and validate
-        client = Client.query.get(client_id)
-        if not client:
-            flash(_("Selected client not found"), "error")
-            try:
-                current_app.logger.warning("Validation failed: client not found (id=%s)", client_id)
-            except Exception:
-                pass
-            return render_template("projects/create.html", clients=Client.get_active_clients())
-
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
             flash(_("Invalid hourly rate format"), "error")
+            return render_template("projects/create.html", clients=Client.get_active_clients())
+        
         # Validate budgets
         budget_amount = None
         budget_threshold_percent = None
@@ -265,42 +257,31 @@ def create_project():
                 flash(_("Invalid budget threshold percent (0-100)"), "error")
                 return render_template("projects/create.html", clients=Client.get_active_clients())
 
-        # Check if project name already exists
-        if Project.query.filter_by(name=name).first():
-            flash(_("A project with this name already exists"), "error")
-            try:
-                current_app.logger.warning("Validation failed: duplicate project name '%s'", name)
-            except Exception:
-                pass
-            return render_template("projects/create.html", clients=Client.get_active_clients())
-
         # Normalize code
         normalized_code = code.upper() if code else None
 
-        # Validate code uniqueness if provided
-        if normalized_code:
-            existing_code = Project.query.filter(Project.code == normalized_code).first()
-            if existing_code:
-                flash(_("Project code already in use"), "error")
-                return render_template("projects/create.html", clients=Client.get_active_clients())
-
-        # Create project
-        project = Project(
+        # Use service layer to create project
+        from app.services import ProjectService
+        project_service = ProjectService()
+        
+        result = project_service.create_project(
             name=name,
-            client_id=client_id,
-            description=description,
+            client_id=int(client_id),
+            created_by=current_user.id,
+            description=description if description else None,
             billable=billable,
-            hourly_rate=hourly_rate,
-            billing_ref=billing_ref,
+            hourly_rate=float(hourly_rate) if hourly_rate else None,
             code=normalized_code,
-            budget_amount=budget_amount,
+            budget_amount=float(budget_amount) if budget_amount else None,
             budget_threshold_percent=budget_threshold_percent or 80,
+            billing_ref=billing_ref if billing_ref else None,
         )
 
-        db.session.add(project)
-        if not safe_commit("create_project", {"name": name, "client_id": client_id}):
-            flash(_("Could not create project due to a database error. Please check server logs."), "error")
+        if not result.get("success"):
+            flash(_(result.get("message", "Could not create project")), "error")
             return render_template("projects/create.html", clients=Client.get_active_clients())
+
+        project = result["project"]
 
         # Track project created event
         log_event(
@@ -623,12 +604,6 @@ def edit_project(project_id):
             flash(_("Project name and client are required"), "error")
             return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
 
-        # Get client and validate
-        client = Client.query.get(client_id)
-        if not client:
-            flash(_("Selected client not found"), "error")
-            return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
-
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
@@ -656,35 +631,32 @@ def edit_project(project_id):
                 flash(_("Invalid budget threshold percent (0-100)"), "error")
                 return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
 
-        # Check if project name already exists (excluding current project)
-        existing = Project.query.filter_by(name=name).first()
-        if existing and existing.id != project.id:
-            flash(_("A project with this name already exists"), "error")
+        # Normalize code
+        normalized_code = code.upper().strip() if code else None
+
+        # Use service layer to update project
+        from app.services import ProjectService
+        project_service = ProjectService()
+        
+        result = project_service.update_project(
+            project_id=project.id,
+            user_id=current_user.id,
+            name=name,
+            client_id=int(client_id),
+            description=description if description else None,
+            billable=billable,
+            hourly_rate=float(hourly_rate) if hourly_rate else None,
+            code=normalized_code,
+            budget_amount=float(budget_amount) if budget_amount else None,
+            budget_threshold_percent=budget_threshold_percent,
+            billing_ref=billing_ref if billing_ref else None,
+        )
+
+        if not result.get("success"):
+            flash(_(result.get("message", "Could not update project")), "error")
             return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
 
-        # Validate code uniqueness if provided
-        normalized_code = code.upper() if code else None
-        if normalized_code:
-            existing_code = Project.query.filter(Project.code == normalized_code).first()
-            if existing_code and existing_code.id != project.id:
-                flash(_("Project code already in use"), "error")
-                return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
-
-        # Update project
-        project.name = name
-        project.client_id = client_id
-        project.description = description
-        project.billable = billable
-        project.hourly_rate = hourly_rate
-        project.billing_ref = billing_ref
-        project.code = normalized_code
-        project.budget_amount = budget_amount if budget_amount_raw != "" else None
-        project.budget_threshold_percent = budget_threshold_percent
-        project.updated_at = datetime.utcnow()
-
-        if not safe_commit("edit_project", {"project_id": project.id}):
-            flash(_("Could not update project due to a database error. Please check server logs."), "error")
-            return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
+        project = result["project"]
 
         # Log activity
         Activity.log(

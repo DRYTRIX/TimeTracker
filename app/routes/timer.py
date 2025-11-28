@@ -1055,9 +1055,14 @@ def timer_page():
     # Get user's time entry templates (most recently used first)
     from app.models import TimeEntryTemplate
     from sqlalchemy import desc
+    from sqlalchemy.orm import joinedload
 
     templates = (
-        TimeEntryTemplate.query.filter_by(user_id=current_user.id)
+        TimeEntryTemplate.query.options(
+            joinedload(TimeEntryTemplate.project),
+            joinedload(TimeEntryTemplate.task)
+        )
+        .filter_by(user_id=current_user.id)
         .order_by(desc(TimeEntryTemplate.last_used_at))
         .limit(5)
         .all()

@@ -4,6 +4,7 @@ from functools import wraps
 from flask import request, jsonify, g, current_app
 from app.models import ApiToken, User
 from app import db
+from datetime import datetime
 
 
 def extract_token_from_request():
@@ -41,10 +42,10 @@ def authenticate_token(token_string):
         token_string: The plain token string
 
     Returns:
-        tuple: (User, ApiToken) if valid, (None, None) otherwise
+        tuple: (User, ApiToken, error_message) if invalid, (User, ApiToken, None) if valid
     """
     if not token_string or not token_string.startswith("tt_"):
-        return None, None
+        return None, None, "Invalid token format"
 
     # Get token hash
     token_hash = ApiToken.hash_token(token_string)
@@ -53,16 +54,50 @@ def authenticate_token(token_string):
     api_token = ApiToken.query.filter_by(token_hash=token_hash).first()
 
     if not api_token:
-        return None, None
+        return None, None, "Token not found"
 
-    # Check if token is valid
-    if not api_token.is_valid():
-        return None, None
+    # Check if token is active
+    if not api_token.is_active:
+        return None, None, "Token has been revoked"
+
+    # Check expiration
+    if api_token.expires_at and api_token.expires_at < datetime.utcnow():
+        return None, None, "Token has expired"
+
+    # Check IP whitelist if configured
+    if api_token.ip_whitelist:
+        client_ip = request.remote_addr
+        allowed_ips = [ip.strip() for ip in api_token.ip_whitelist.split(",") if ip.strip()]
+        
+        # Simple IP matching (can be enhanced with CIDR support)
+        if client_ip not in allowed_ips:
+            # Check CIDR blocks if any
+            from ipaddress import ip_address, ip_network
+            ip_allowed = False
+            for allowed in allowed_ips:
+                try:
+                    if "/" in allowed:
+                        # CIDR block
+                        if ip_address(client_ip) in ip_network(allowed, strict=False):
+                            ip_allowed = True
+                            break
+                    elif client_ip == allowed:
+                        ip_allowed = True
+                        break
+                except ValueError:
+                    # Invalid IP format, skip
+                    continue
+            
+            if not ip_allowed:
+                current_app.logger.warning(
+                    f"API token {api_token.token_prefix}... access denied from IP {client_ip}"
+                )
+                return None, None, "Access denied from this IP address"
 
     # Get associated user
     user = User.query.get(api_token.user_id)
     if not user or not user.is_active:
-        return None, None
+        return None, None, "User account is inactive"
 
     # Record usage
     try:
@@ -70,7 +105,7 @@ def authenticate_token(token_string):
     except Exception as e:
         current_app.logger.warning(f"Failed to record API token usage: {e}")
 
-    return user, api_token
+    return user, api_token, None
 
 
 def require_api_token(required_scope=None):
@@ -105,11 +140,12 @@ def require_api_token(required_scope=None):
                 )
 
             # Authenticate token
-            user, api_token = authenticate_token(token_string)
+            user, api_token, error_msg = authenticate_token(token_string)
 
             if not user or not api_token:
+                message = error_msg or "The provided API token is invalid or expired"
                 return (
-                    jsonify({"error": "Invalid token", "message": "The provided API token is invalid or expired"}),
+                    jsonify({"error": "Invalid token", "message": message}),
                     401,
                 )
 
@@ -158,7 +194,7 @@ def optional_api_token():
             token_string = extract_token_from_request()
 
             if token_string:
-                user, api_token = authenticate_token(token_string)
+                user, api_token, error_msg = authenticate_token(token_string)
                 if user and api_token:
                     g.api_user = user
                     g.api_token = api_token

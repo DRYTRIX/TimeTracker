@@ -33,7 +33,11 @@ def kiosk_dashboard():
     # Get active timer
     active_timer = current_user.active_timer
 
+    # Use services/repositories for data access where available
+    from app.services import ProjectService
+    
     # Get default warehouse (from session or first active)
+    # Note: WarehouseRepository doesn't exist yet, using direct query for now
     default_warehouse = None
     default_warehouse_id = session.get("kiosk_default_warehouse_id")
     if default_warehouse_id:
@@ -45,8 +49,10 @@ def kiosk_dashboard():
     # Get active warehouses
     warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
 
-    # Get active projects for timer
-    active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    # Get active projects for timer (use service for consistency)
+    project_service = ProjectService()
+    active_projects_result = project_service.list_projects(status="active", page=1, per_page=1000)
+    active_projects = active_projects_result.get("projects", [])
 
     # Get recent items (last 10 used by this user - stored in session)
     recent_items = []
@@ -133,8 +139,10 @@ def kiosk_login():
         log_event("auth.kiosk_login", user_id=user.id)
         return redirect(url_for("kiosk.kiosk_dashboard"))
 
-    # Get list of active users for quick selection
-    users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    # Get list of active users for quick selection (use repository if available)
+    from app.repositories import UserRepository
+    user_repo = UserRepository()
+    users = user_repo.query().filter_by(is_active=True).order_by(User.username).all()
     return render_template("kiosk/login.html", users=users, requires_password=requires_password)
 
 

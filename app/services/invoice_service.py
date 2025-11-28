@@ -113,6 +113,73 @@ class InvoiceService:
 
         return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
 
+    def create_invoice(
+        self,
+        project_id: int,
+        client_id: int,
+        client_name: str,
+        due_date: date,
+        created_by: int,
+        invoice_number: Optional[str] = None,
+        client_email: Optional[str] = None,
+        client_address: Optional[str] = None,
+        notes: Optional[str] = None,
+        terms: Optional[str] = None,
+        tax_rate: Optional[float] = None,
+        currency_code: Optional[str] = None,
+        issue_date: Optional[date] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a new invoice.
+
+        Returns:
+            dict with 'success', 'message', and 'invoice' keys
+        """
+        # Validate project
+        project = self.project_repo.get_by_id(project_id)
+        if not project:
+            return {"success": False, "message": "Invalid project", "error": "invalid_project"}
+
+        # Generate invoice number if not provided
+        if not invoice_number:
+            invoice_number = self.invoice_repo.generate_invoice_number()
+
+        # Create invoice
+        invoice = self.invoice_repo.create(
+            invoice_number=invoice_number,
+            project_id=project_id,
+            client_id=client_id,
+            client_name=client_name,
+            due_date=due_date,
+            created_by=created_by,
+            client_email=client_email,
+            client_address=client_address,
+            notes=notes,
+            terms=terms,
+            tax_rate=Decimal(str(tax_rate)) if tax_rate else Decimal("0.00"),
+            currency_code=currency_code or "EUR",
+            issue_date=issue_date or date.today(),
+            status=InvoiceStatus.DRAFT.value,
+            subtotal=Decimal("0.00"),
+            tax_amount=Decimal("0.00"),
+            total_amount=Decimal("0.00"),
+        )
+
+        if not safe_commit("create_invoice", {"project_id": project_id, "created_by": created_by}):
+            return {
+                "success": False,
+                "message": "Could not create invoice due to a database error",
+                "error": "database_error",
+            }
+
+        # Emit domain event
+        emit_event(
+            WebhookEvent.INVOICE_CREATED.value,
+            {"invoice_id": invoice.id, "project_id": project_id, "client_id": client_id},
+        )
+
+        return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
+
     def mark_as_sent(self, invoice_id: int) -> Dict[str, Any]:
         """Mark an invoice as sent"""
         invoice = self.invoice_repo.mark_as_sent(invoice_id)
@@ -156,6 +223,76 @@ class InvoiceService:
 
         return {"success": True, "message": "Invoice marked as paid", "invoice": invoice}
 
+    def update_invoice(self, invoice_id: int, user_id: int, **kwargs) -> Dict[str, Any]:
+        """
+        Update an invoice.
+
+        Returns:
+            dict with 'success', 'message', and 'invoice' keys
+        """
+        invoice = self.invoice_repo.get_by_id(invoice_id)
+        if not invoice:
+            return {"success": False, "message": "Invoice not found", "error": "not_found"}
+
+        # Update fields
+        if "client_name" in kwargs:
+            invoice.client_name = kwargs["client_name"]
+        if "client_email" in kwargs:
+            invoice.client_email = kwargs["client_email"]
+        if "client_address" in kwargs:
+            invoice.client_address = kwargs["client_address"]
+        if "due_date" in kwargs:
+            invoice.due_date = kwargs["due_date"]
+        if "notes" in kwargs:
+            invoice.notes = kwargs["notes"]
+        if "terms" in kwargs:
+            invoice.terms = kwargs["terms"]
+        if "tax_rate" in kwargs:
+            invoice.tax_rate = Decimal(str(kwargs["tax_rate"]))
+        if "currency_code" in kwargs:
+            invoice.currency_code = kwargs["currency_code"]
+        if "status" in kwargs:
+            invoice.status = kwargs["status"]
+
+        if not safe_commit("update_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
+            return {
+                "success": False,
+                "message": "Could not update invoice due to a database error",
+                "error": "database_error",
+            }
+
+        return {"success": True, "message": "Invoice updated successfully", "invoice": invoice}
+
+    def delete_invoice(self, invoice_id: int, user_id: int) -> Dict[str, Any]:
+        """
+        Delete (cancel) an invoice.
+
+        Returns:
+            dict with 'success' and 'message' keys
+        """
+        invoice = self.invoice_repo.get_by_id(invoice_id)
+        if not invoice:
+            return {"success": False, "message": "Invoice not found", "error": "not_found"}
+
+        # Only allow deletion of draft invoices
+        if invoice.status != InvoiceStatus.DRAFT.value:
+            return {
+                "success": False,
+                "message": "Only draft invoices can be deleted",
+                "error": "invalid_status",
+            }
+
+        db.session.delete(invoice)
+
+        if not safe_commit("delete_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
+            return {
+                "success": False,
+                "message": "Could not delete invoice due to a database error",
+                "error": "database_error",
+            }
+
+        return {"success": True, "message": "Invoice deleted successfully"}
+
     def list_invoices(
         self,
         status: Optional[str] = None,
@@ -163,6 +300,8 @@ class InvoiceService:
         search: Optional[str] = None,
         user_id: Optional[int] = None,
         is_admin: bool = False,
+        page: int = 1,
+        per_page: int = 50,
     ) -> Dict[str, Any]:
         """
         List invoices with filtering.
@@ -201,8 +340,11 @@ class InvoiceService:
             like = f"%{search}%"
             query = query.filter(db.or_(Invoice.invoice_number.ilike(like), Invoice.client_name.ilike(like)))
 
-        # Order by creation date
-        invoices = query.order_by(Invoice.created_at.desc()).all()
+        # Order by creation date and paginate
+        pagination = query.order_by(Invoice.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        invoices = pagination.items
 
         # Calculate overdue status
         today = date.today()
@@ -244,7 +386,7 @@ class InvoiceService:
             "outstanding_amount": float(total_amount - actual_paid_amount),
         }
 
-        return {"invoices": invoices, "summary": summary}
+        return {"invoices": invoices, "summary": summary, "pagination": pagination}
 
     def get_invoice_with_details(self, invoice_id: int) -> Optional[Invoice]:
         """
