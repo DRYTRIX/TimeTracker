@@ -49,8 +49,8 @@ python -m pytest -m security -v
 goto end
 
 :all
-echo Running full test suite...
-python -m pytest -v
+echo Running full test suite in parallel...
+python -m pytest -v -n auto
 goto end
 
 :coverage

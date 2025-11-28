@@ -24,7 +24,8 @@ except ImportError:
     # If the file wasn't renamed, we need to import it differently
     # Add parent to path temporarily to import the shadowed config.py
     import importlib.util
-    config_py_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.py')
+
+    config_py_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.py")
     if os.path.exists(config_py_path):
         spec = importlib.util.spec_from_file_location("flask_config_module", config_py_path)
         flask_config = importlib.util.module_from_spec(spec)
@@ -37,16 +38,16 @@ except ImportError:
         # Fallback - create minimal config
         class Config:
             pass
+
         ProductionConfig = Config
         DevelopmentConfig = Config
         TestingConfig = Config
 
 __all__ = [
-    'get_analytics_config',
-    'has_analytics_configured',
-    'Config',
-    'ProductionConfig',
-    'DevelopmentConfig',
-    'TestingConfig'
+    "get_analytics_config",
+    "has_analytics_configured",
+    "Config",
+    "ProductionConfig",
+    "DevelopmentConfig",
+    "TestingConfig",
 ]
-

@@ -1,31 +1,32 @@
 """API Documentation with Swagger UI"""
+
 from flask import Blueprint, jsonify, render_template_string
 from flask_swagger_ui import get_swaggerui_blueprint
 
 # Create blueprint for serving OpenAPI spec
-api_docs_bp = Blueprint('api_docs', __name__)
+api_docs_bp = Blueprint("api_docs", __name__)
 
-SWAGGER_URL = '/api/docs'
-API_URL = '/api/openapi.json'
+SWAGGER_URL = "/api/docs"
+API_URL = "/api/openapi.json"
 
 # Create Swagger UI blueprint
 swaggerui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL,
     API_URL,
     config={
-        'app_name': "TimeTracker REST API",
-        'defaultModelsExpandDepth': -1,
-        'displayRequestDuration': True,
-        'docExpansion': 'list',
-        'filter': True,
-        'showExtensions': True,
-        'showCommonExtensions': True,
-        'syntaxHighlight.theme': 'monokai'
-    }
+        "app_name": "TimeTracker REST API",
+        "defaultModelsExpandDepth": -1,
+        "displayRequestDuration": True,
+        "docExpansion": "list",
+        "filter": True,
+        "showExtensions": True,
+        "showCommonExtensions": True,
+        "syntaxHighlight.theme": "monokai",
+    },
 )
 
 
-@api_docs_bp.route('/api/openapi.json')
+@api_docs_bp.route("/api/openapi.json")
 def openapi_spec():
     """Serve the OpenAPI specification"""
     spec = {
@@ -138,33 +139,24 @@ All timestamps use ISO 8601 format:
 
 Example: `2024-01-15T14:30:00Z`
             """,
-            "contact": {
-                "name": "TimeTracker API Support"
-            },
-            "license": {
-                "name": "MIT"
-            }
+            "contact": {"name": "TimeTracker API Support"},
+            "license": {"name": "MIT"},
         },
-        "servers": [
-            {
-                "url": "/api/v1",
-                "description": "API v1"
-            }
-        ],
+        "servers": [{"url": "/api/v1", "description": "API v1"}],
         "components": {
             "securitySchemes": {
                 "BearerAuth": {
                     "type": "http",
                     "scheme": "bearer",
                     "bearerFormat": "API Token",
-                    "description": "Enter your API token (format: tt_xxxxx...)"
+                    "description": "Enter your API token (format: tt_xxxxx...)",
                 },
                 "ApiKeyAuth": {
                     "type": "apiKey",
                     "in": "header",
                     "name": "X-API-Key",
-                    "description": "API token in X-API-Key header"
-                }
+                    "description": "API token in X-API-Key header",
+                },
             },
             "schemas": {
                 "Project": {
@@ -177,8 +169,8 @@ Example: `2024-01-15T14:30:00Z`
                         "hourly_rate": {"type": "number"},
                         "estimated_hours": {"type": "number", "nullable": True},
                         "status": {"type": "string", "enum": ["active", "archived", "on_hold"]},
-                        "created_at": {"type": "string", "format": "date-time"}
-                    }
+                        "created_at": {"type": "string", "format": "date-time"},
+                    },
                 },
                 "TimeEntry": {
                     "type": "object",
@@ -193,8 +185,8 @@ Example: `2024-01-15T14:30:00Z`
                         "notes": {"type": "string", "nullable": True},
                         "tags": {"type": "string", "nullable": True},
                         "billable": {"type": "boolean"},
-                        "source": {"type": "string"}
-                    }
+                        "source": {"type": "string"},
+                    },
                 },
                 "Task": {
                     "type": "object",
@@ -204,8 +196,8 @@ Example: `2024-01-15T14:30:00Z`
                         "description": {"type": "string", "nullable": True},
                         "project_id": {"type": "integer"},
                         "status": {"type": "string", "enum": ["todo", "in_progress", "review", "done", "cancelled"]},
-                        "priority": {"type": "integer"}
-                    }
+                        "priority": {"type": "integer"},
+                    },
                 },
                 "Client": {
                     "type": "object",
@@ -214,16 +206,10 @@ Example: `2024-01-15T14:30:00Z`
                         "name": {"type": "string"},
                         "email": {"type": "string", "nullable": True},
                         "company": {"type": "string", "nullable": True},
-                        "phone": {"type": "string", "nullable": True}
-                    }
+                        "phone": {"type": "string", "nullable": True},
+                    },
                 },
-                "Error": {
-                    "type": "object",
-                    "properties": {
-                        "error": {"type": "string"},
-                        "message": {"type": "string"}
-                    }
-                },
+                "Error": {"type": "object", "properties": {"error": {"type": "string"}, "message": {"type": "string"}}},
                 "Pagination": {
                     "type": "object",
                     "properties": {
@@ -234,48 +220,21 @@ Example: `2024-01-15T14:30:00Z`
                         "has_next": {"type": "boolean"},
                         "has_prev": {"type": "boolean"},
                         "next_page": {"type": "integer", "nullable": True},
-                        "prev_page": {"type": "integer", "nullable": True}
-                    }
-                }
-            }
+                        "prev_page": {"type": "integer", "nullable": True},
+                    },
+                },
+            },
         },
-        "security": [
-            {"BearerAuth": []},
-            {"ApiKeyAuth": []}
-        ],
+        "security": [{"BearerAuth": []}, {"ApiKeyAuth": []}],
         "tags": [
-            {
-                "name": "System",
-                "description": "System information and health checks"
-            },
-            {
-                "name": "Projects",
-                "description": "Project management operations"
-            },
-            {
-                "name": "Time Entries",
-                "description": "Time tracking operations"
-            },
-            {
-                "name": "Timer",
-                "description": "Timer control operations"
-            },
-            {
-                "name": "Tasks",
-                "description": "Task management operations"
-            },
-            {
-                "name": "Clients",
-                "description": "Client management operations"
-            },
-            {
-                "name": "Reports",
-                "description": "Reporting and analytics"
-            },
-            {
-                "name": "Users",
-                "description": "User management operations"
-            }
+            {"name": "System", "description": "System information and health checks"},
+            {"name": "Projects", "description": "Project management operations"},
+            {"name": "Time Entries", "description": "Time tracking operations"},
+            {"name": "Timer", "description": "Timer control operations"},
+            {"name": "Tasks", "description": "Task management operations"},
+            {"name": "Clients", "description": "Client management operations"},
+            {"name": "Reports", "description": "Reporting and analytics"},
+            {"name": "Users", "description": "User management operations"},
         ],
         "paths": {
             "/info": {
@@ -295,13 +254,13 @@ Example: `2024-01-15T14:30:00Z`
                                             "api_version": {"type": "string"},
                                             "app_version": {"type": "string"},
                                             "documentation_url": {"type": "string"},
-                                            "endpoints": {"type": "object"}
-                                        }
+                                            "endpoints": {"type": "object"},
+                                        },
                                     }
                                 }
-                            }
+                            },
                         }
-                    }
+                    },
                 }
             },
             "/health": {
@@ -310,11 +269,7 @@ Example: `2024-01-15T14:30:00Z`
                     "summary": "Health check",
                     "description": "Check if the API is healthy and operational",
                     "security": [],
-                    "responses": {
-                        "200": {
-                            "description": "API is healthy"
-                        }
-                    }
+                    "responses": {"200": {"description": "API is healthy"}},
                 }
             },
             "/projects": {
@@ -326,32 +281,17 @@ Example: `2024-01-15T14:30:00Z`
                         {
                             "name": "status",
                             "in": "query",
-                            "schema": {"type": "string", "enum": ["active", "archived", "on_hold"]}
+                            "schema": {"type": "string", "enum": ["active", "archived", "on_hold"]},
                         },
-                        {
-                            "name": "client_id",
-                            "in": "query",
-                            "schema": {"type": "integer"}
-                        },
-                        {
-                            "name": "page",
-                            "in": "query",
-                            "schema": {"type": "integer", "default": 1}
-                        },
+                        {"name": "client_id", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
                         {
                             "name": "per_page",
                             "in": "query",
-                            "schema": {"type": "integer", "default": 50, "maximum": 100}
-                        }
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "List of projects"
+                            "schema": {"type": "integer", "default": 50, "maximum": 100},
                         },
-                        "401": {
-                            "description": "Unauthorized"
-                        }
-                    }
+                    ],
+                    "responses": {"200": {"description": "List of projects"}, "401": {"description": "Unauthorized"}},
                 },
                 "post": {
                     "tags": ["Projects"],
@@ -370,21 +310,18 @@ Example: `2024-01-15T14:30:00Z`
                                         "client_id": {"type": "integer"},
                                         "hourly_rate": {"type": "number"},
                                         "estimated_hours": {"type": "number"},
-                                        "status": {"type": "string", "enum": ["active", "archived", "on_hold"], "default": "active"}
-                                    }
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["active", "archived", "on_hold"],
+                                            "default": "active",
+                                        },
+                                    },
                                 }
                             }
-                        }
-                    },
-                    "responses": {
-                        "201": {
-                            "description": "Project created"
                         },
-                        "400": {
-                            "description": "Invalid input"
-                        }
-                    }
-                }
+                    },
+                    "responses": {"201": {"description": "Project created"}, "400": {"description": "Invalid input"}},
+                },
             },
             "/projects/{project_id}": {
                 "get": {
@@ -392,74 +329,41 @@ Example: `2024-01-15T14:30:00Z`
                     "summary": "Get project",
                     "description": "Get details of a specific project",
                     "parameters": [
-                        {
-                            "name": "project_id",
-                            "in": "path",
-                            "required": True,
-                            "schema": {"type": "integer"}
-                        }
+                        {"name": "project_id", "in": "path", "required": True, "schema": {"type": "integer"}}
                     ],
                     "responses": {
-                        "200": {
-                            "description": "Project details"
-                        },
-                        "404": {
-                            "description": "Project not found"
-                        }
-                    }
+                        "200": {"description": "Project details"},
+                        "404": {"description": "Project not found"},
+                    },
                 },
                 "put": {
                     "tags": ["Projects"],
                     "summary": "Update project",
                     "description": "Update an existing project",
                     "parameters": [
-                        {
-                            "name": "project_id",
-                            "in": "path",
-                            "required": True,
-                            "schema": {"type": "integer"}
-                        }
+                        {"name": "project_id", "in": "path", "required": True, "schema": {"type": "integer"}}
                     ],
                     "requestBody": {
                         "required": True,
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Project"
-                                }
-                            }
-                        }
+                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Project"}}},
                     },
                     "responses": {
-                        "200": {
-                            "description": "Project updated"
-                        },
-                        "404": {
-                            "description": "Project not found"
-                        }
-                    }
+                        "200": {"description": "Project updated"},
+                        "404": {"description": "Project not found"},
+                    },
                 },
                 "delete": {
                     "tags": ["Projects"],
                     "summary": "Archive project",
                     "description": "Archive a project (soft delete)",
                     "parameters": [
-                        {
-                            "name": "project_id",
-                            "in": "path",
-                            "required": True,
-                            "schema": {"type": "integer"}
-                        }
+                        {"name": "project_id", "in": "path", "required": True, "schema": {"type": "integer"}}
                     ],
                     "responses": {
-                        "200": {
-                            "description": "Project archived"
-                        },
-                        "404": {
-                            "description": "Project not found"
-                        }
-                    }
-                }
+                        "200": {"description": "Project archived"},
+                        "404": {"description": "Project not found"},
+                    },
+                },
             },
             "/time-entries": {
                 "get": {
@@ -473,11 +377,9 @@ Example: `2024-01-15T14:30:00Z`
                         {"name": "end_date", "in": "query", "schema": {"type": "string", "format": "date"}},
                         {"name": "billable", "in": "query", "schema": {"type": "boolean"}},
                         {"name": "page", "in": "query", "schema": {"type": "integer"}},
-                        {"name": "per_page", "in": "query", "schema": {"type": "integer"}}
+                        {"name": "per_page", "in": "query", "schema": {"type": "integer"}},
                     ],
-                    "responses": {
-                        "200": {"description": "List of time entries"}
-                    }
+                    "responses": {"200": {"description": "List of time entries"}},
                 },
                 "post": {
                     "tags": ["Time Entries"],
@@ -497,25 +399,21 @@ Example: `2024-01-15T14:30:00Z`
                                         "end_time": {"type": "string", "format": "date-time"},
                                         "notes": {"type": "string"},
                                         "tags": {"type": "string"},
-                                        "billable": {"type": "boolean", "default": True}
-                                    }
+                                        "billable": {"type": "boolean", "default": True},
+                                    },
                                 }
                             }
-                        }
+                        },
                     },
-                    "responses": {
-                        "201": {"description": "Time entry created"}
-                    }
-                }
+                    "responses": {"201": {"description": "Time entry created"}},
+                },
             },
             "/timer/status": {
                 "get": {
                     "tags": ["Timer"],
                     "summary": "Get timer status",
                     "description": "Get the current timer status for the authenticated user",
-                    "responses": {
-                        "200": {"description": "Timer status"}
-                    }
+                    "responses": {"200": {"description": "Timer status"}},
                 }
             },
             "/timer/start": {
@@ -530,17 +428,12 @@ Example: `2024-01-15T14:30:00Z`
                                 "schema": {
                                     "type": "object",
                                     "required": ["project_id"],
-                                    "properties": {
-                                        "project_id": {"type": "integer"},
-                                        "task_id": {"type": "integer"}
-                                    }
+                                    "properties": {"project_id": {"type": "integer"}, "task_id": {"type": "integer"}},
                                 }
                             }
-                        }
+                        },
                     },
-                    "responses": {
-                        "201": {"description": "Timer started"}
-                    }
+                    "responses": {"201": {"description": "Timer started"}},
                 }
             },
             "/timer/stop": {
@@ -548,9 +441,7 @@ Example: `2024-01-15T14:30:00Z`
                     "tags": ["Timer"],
                     "summary": "Stop timer",
                     "description": "Stop the active timer for the authenticated user",
-                    "responses": {
-                        "200": {"description": "Timer stopped"}
-                    }
+                    "responses": {"200": {"description": "Timer stopped"}},
                 }
             },
             "/users/me": {
@@ -558,13 +449,10 @@ Example: `2024-01-15T14:30:00Z`
                     "tags": ["Users"],
                     "summary": "Get current user",
                     "description": "Get information about the authenticated user",
-                    "responses": {
-                        "200": {"description": "User information"}
-                    }
+                    "responses": {"200": {"description": "User information"}},
                 }
-            }
-        }
+            },
+        },
     }
-    
-    return jsonify(spec)
 
+    return jsonify(spec)

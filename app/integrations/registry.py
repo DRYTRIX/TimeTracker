@@ -11,11 +11,10 @@ from app.integrations.github import GitHubConnector
 
 def register_connectors():
     """Register all available connectors."""
-    IntegrationService.register_connector('jira', JiraConnector)
-    IntegrationService.register_connector('slack', SlackConnector)
-    IntegrationService.register_connector('github', GitHubConnector)
+    IntegrationService.register_connector("jira", JiraConnector)
+    IntegrationService.register_connector("slack", SlackConnector)
+    IntegrationService.register_connector("github", GitHubConnector)
 
 
 # Auto-register on import
 register_connectors()
-

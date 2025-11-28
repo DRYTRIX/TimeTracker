@@ -15,15 +15,16 @@ def _get_authenticated_user(user=None):
     """Safely resolve an authenticated user either from argument or flask-login context."""
     if user is not None:
         return user
-    
+
     try:
         from flask_login import current_user
-        if current_user and getattr(current_user, 'is_authenticated', False):
+
+        if current_user and getattr(current_user, "is_authenticated", False):
             return current_user
     except Exception:
         # Outside of request context or flask-login not set up yet
         pass
-    
+
     return None
 
 
@@ -32,14 +33,15 @@ def get_app_timezone():
     try:
         # Check if we have an application context before accessing database
         from flask import has_app_context
+
         if not has_app_context():
             # No app context, skip database lookup
-            return os.getenv('TZ', 'Europe/Rome')
-        
+            return os.getenv("TZ", "Europe/Rome")
+
         # Try to get timezone from database settings first
         from app.models import Settings
         from app import db
-        
+
         # Check if we have a database connection
         try:
             if db.session.is_active and not getattr(db.session, "_flushing", False):
@@ -57,9 +59,9 @@ def get_app_timezone():
     except Exception as e:
         # If database is not available or settings don't exist, fall back to environment
         print(f"Warning: Database not available for timezone: {e}")
-    
+
     # Fallback to environment variable
-    return os.getenv('TZ', 'Europe/Rome')
+    return os.getenv("TZ", "Europe/Rome")
 
 
 def get_timezone_obj():
@@ -77,8 +79,8 @@ def get_user_timezone_name(user=None):
     resolved_user = _get_authenticated_user(user)
     if not resolved_user:
         return None
-    
-    timezone_name = getattr(resolved_user, 'timezone', None)
+
+    timezone_name = getattr(resolved_user, "timezone", None)
     if timezone_name:
         try:
             pytz.timezone(timezone_name)
@@ -87,8 +89,8 @@ def get_user_timezone_name(user=None):
             try:
                 current_app.logger.warning(
                     "User %s has invalid timezone '%s'. Falling back to app timezone.",
-                    getattr(resolved_user, 'id', None),
-                    timezone_name
+                    getattr(resolved_user, "id", None),
+                    timezone_name,
                 )
             except RuntimeError:
                 # Current app not available, fallback to stdout
@@ -130,7 +132,7 @@ def _localize_with_timezone(dt, tz):
     """Localize a naive datetime with the given pytz timezone, handling edge cases."""
     if dt.tzinfo is not None:
         return dt.astimezone(tz)
-    
+
     try:
         return tz.localize(dt)
     except pytz.AmbiguousTimeError:
@@ -148,10 +150,10 @@ def convert_app_datetime_to_user(dt, user=None):
     """Convert a datetime stored in application timezone to the user's timezone."""
     if dt is None:
         return None
-    
+
     app_tz = get_timezone_obj()
     target_tz = get_timezone_for_user(user)
-    
+
     localized = _localize_with_timezone(dt, app_tz)
     return localized.astimezone(target_tz)
 
@@ -160,11 +162,11 @@ def utc_to_local(utc_dt):
     """Convert UTC datetime to local application timezone."""
     if utc_dt is None:
         return None
-    
+
     # If datetime is naive (no timezone), assume it's UTC
     if utc_dt.tzinfo is None:
         utc_dt = utc_dt.replace(tzinfo=timezone.utc)
-    
+
     tz = get_timezone_obj()
     return utc_dt.astimezone(tz)
 
@@ -173,10 +175,10 @@ def utc_to_user_local(utc_dt, user=None):
     """Convert UTC datetime to the user's local timezone."""
     if utc_dt is None:
         return None
-    
+
     if utc_dt.tzinfo is None:
         utc_dt = utc_dt.replace(tzinfo=timezone.utc)
-    
+
     tz = get_timezone_for_user(user)
     return utc_dt.astimezone(tz)
 
@@ -185,7 +187,7 @@ def local_to_utc(local_dt):
     """Convert local datetime (in application timezone) to UTC."""
     if local_dt is None:
         return None
-    
+
     tz = get_timezone_obj()
     localized = _localize_with_timezone(local_dt, tz)
     return localized.astimezone(timezone.utc)
@@ -195,7 +197,7 @@ def user_local_to_utc(local_dt, user=None):
     """Convert a user-local datetime to UTC (assumes datetime is in user's timezone)."""
     if local_dt is None:
         return None
-    
+
     tz = get_timezone_for_user(user)
     localized = _localize_with_timezone(local_dt, tz)
     return localized.astimezone(timezone.utc)
@@ -205,41 +207,41 @@ def parse_local_datetime(date_str, time_str):
     """Parse date and time strings in local application timezone."""
     try:
         # Combine date and time
-        datetime_str = f'{date_str} {time_str}'
-        
+        datetime_str = f"{date_str} {time_str}"
+
         # Parse as naive datetime (assumed to be in local timezone)
-        naive_dt = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
-        
+        naive_dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+
         # Localize to application timezone
         tz = get_timezone_obj()
         local_dt = tz.localize(naive_dt)
-        
+
         # Convert to UTC for storage
         return local_dt.astimezone(timezone.utc)
     except ValueError as e:
         raise ValueError(f"Invalid date/time format: {e}")
 
 
-def format_local_datetime(utc_dt, format_str='%Y-%m-%d %H:%M'):
+def format_local_datetime(utc_dt, format_str="%Y-%m-%d %H:%M"):
     """Format UTC datetime in local application timezone."""
     if utc_dt is None:
         return ""
-    
+
     local_dt = utc_to_local(utc_dt)
     return local_dt.strftime(format_str)
 
 
-def format_user_datetime(dt, format_str='%Y-%m-%d %H:%M', user=None, assume_app_timezone=True):
+def format_user_datetime(dt, format_str="%Y-%m-%d %H:%M", user=None, assume_app_timezone=True):
     """Format datetime using the user's timezone preference."""
     if dt is None:
         return ""
-    
+
     resolved_user = _get_authenticated_user(user)
     if assume_app_timezone:
         localized = convert_app_datetime_to_user(dt, user=resolved_user)
     else:
         localized = utc_to_user_local(dt, user=resolved_user)
-    
+
     return localized.strftime(format_str) if localized else ""
 
 

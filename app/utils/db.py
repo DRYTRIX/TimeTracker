@@ -29,9 +29,7 @@ def safe_commit(action: Optional[str] = None, context: Optional[Dict[str, Any]] 
                         e,
                     )
                 else:
-                    current_app.logger.exception(
-                        "Database commit failed during %s | error=%s", action, e
-                    )
+                    current_app.logger.exception("Database commit failed during %s | error=%s", action, e)
             else:
                 current_app.logger.exception("Database commit failed: %s", e)
         except Exception:
@@ -49,5 +47,3 @@ def safe_commit(action: Optional[str] = None, context: Optional[Dict[str, Any]] 
         except Exception:
             pass
         return False
-
-

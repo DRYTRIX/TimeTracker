@@ -11,14 +11,14 @@ from app.constants import WebhookEvent
 
 class EventBus:
     """Simple event bus for domain events"""
-    
+
     def __init__(self):
         self._handlers: Dict[str, List[Callable]] = {}
-    
+
     def subscribe(self, event_type: str, handler: Callable) -> None:
         """
         Subscribe a handler to an event type.
-        
+
         Args:
             event_type: Event type (e.g., 'time_entry.created')
             handler: Function to call when event is emitted
@@ -26,7 +26,7 @@ class EventBus:
         if event_type not in self._handlers:
             self._handlers[event_type] = []
         self._handlers[event_type].append(handler)
-    
+
     def unsubscribe(self, event_type: str, handler: Callable) -> None:
         """Unsubscribe a handler from an event type"""
         if event_type in self._handlers:
@@ -34,11 +34,11 @@ class EventBus:
                 self._handlers[event_type].remove(handler)
             except ValueError:
                 pass
-    
+
     def emit(self, event_type: str, data: Dict[str, Any]) -> None:
         """
         Emit an event to all subscribed handlers.
-        
+
         Args:
             event_type: Event type
             data: Event data
@@ -48,11 +48,8 @@ class EventBus:
             try:
                 handler(event_type, data)
             except Exception as e:
-                current_app.logger.error(
-                    f"Error in event handler for {event_type}: {e}",
-                    exc_info=True
-                )
-    
+                current_app.logger.error(f"Error in event handler for {event_type}: {e}", exc_info=True)
+
     def clear(self) -> None:
         """Clear all event handlers"""
         self._handlers.clear()
@@ -70,7 +67,7 @@ def get_event_bus() -> EventBus:
 def emit_event(event_type: str, data: Dict[str, Any]) -> None:
     """
     Emit an event using the global event bus.
-    
+
     Args:
         event_type: Event type
         data: Event data
@@ -81,15 +78,17 @@ def emit_event(event_type: str, data: Dict[str, Any]) -> None:
 def subscribe_to_event(event_type: str):
     """
     Decorator to subscribe a function to an event type.
-    
+
     Usage:
         @subscribe_to_event('time_entry.created')
         def handle_time_entry_created(event_type, data):
             # Handle event
     """
+
     def decorator(func: Callable) -> Callable:
         _event_bus.subscribe(event_type, func)
         return func
+
     return decorator
 
 
@@ -99,6 +98,7 @@ def handle_time_entry_created(event_type: str, data: Dict[str, Any]) -> None:
     """Handle time entry created event"""
     try:
         from app.utils.webhook_dispatcher import dispatch_webhook
+
         dispatch_webhook(event_type, data)
     except Exception as e:
         current_app.logger.error(f"Failed to dispatch webhook for {event_type}: {e}")
@@ -109,6 +109,7 @@ def handle_project_created(event_type: str, data: Dict[str, Any]) -> None:
     """Handle project created event"""
     try:
         from app.utils.webhook_dispatcher import dispatch_webhook
+
         dispatch_webhook(event_type, data)
     except Exception as e:
         current_app.logger.error(f"Failed to dispatch webhook for {event_type}: {e}")
@@ -119,7 +120,7 @@ def handle_invoice_created(event_type: str, data: Dict[str, Any]) -> None:
     """Handle invoice created event"""
     try:
         from app.utils.webhook_dispatcher import dispatch_webhook
+
         dispatch_webhook(event_type, data)
     except Exception as e:
         current_app.logger.error(f"Failed to dispatch webhook for {event_type}: {e}")
-

@@ -1,4 +1,5 @@
 """Smoke tests to validate that factories create consistent, persisted models."""
+
 import datetime as dt
 from decimal import Decimal
 
@@ -40,7 +41,7 @@ def test_timeentry_factory_and_duration(app):
         # Ensure calculate_duration populates duration_seconds
         te.calculate_duration()
         db.session.commit()
-        assert te.duration_seconds in (2 * 3600, )  # allow for rounding settings
+        assert te.duration_seconds in (2 * 3600,)  # allow for rounding settings
 
 
 @pytest.mark.unit
@@ -84,5 +85,3 @@ def test_expense_category_factory(app):
         assert cat.id is not None
         assert cat.name is not None
         assert cat.is_active is True
-
-

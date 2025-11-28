@@ -18,7 +18,7 @@ from app.routes.api.v1 import api_v1_bp
 
 # Import legacy api_bp from the api.py module file
 # We need to load it directly since Python prioritizes packages over modules
-api_module_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'api.py')
+api_module_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "api.py")
 
 try:
     spec = importlib.util.spec_from_file_location("app.routes.api_legacy", api_module_path)
@@ -31,10 +31,11 @@ try:
 except Exception as e:
     # Last resort: create a dummy blueprint to prevent import errors
     from flask import Blueprint
-    api_bp = Blueprint('api', __name__)
+
+    api_bp = Blueprint("api", __name__)
     import logging
+
     logger = logging.getLogger(__name__)
     logger.warning(f"Could not import api_bp from api.py: {e}. Using dummy blueprint.")
 
-__all__ = ['api_v1_bp', 'api_bp']
-
+__all__ = ["api_v1_bp", "api_bp"]

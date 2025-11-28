@@ -15,14 +15,13 @@ from .payment_repository import PaymentRepository
 from .comment_repository import CommentRepository
 
 __all__ = [
-    'TimeEntryRepository',
-    'ProjectRepository',
-    'InvoiceRepository',
-    'UserRepository',
-    'ClientRepository',
-    'TaskRepository',
-    'ExpenseRepository',
-    'PaymentRepository',
-    'CommentRepository',
+    "TimeEntryRepository",
+    "ProjectRepository",
+    "InvoiceRepository",
+    "UserRepository",
+    "ClientRepository",
+    "TaskRepository",
+    "ExpenseRepository",
+    "PaymentRepository",
+    "CommentRepository",
 ]
-

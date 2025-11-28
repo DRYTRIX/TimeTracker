@@ -1,4 +1,5 @@
 """Tests demonstrating time-control with freezegun and model time calculations."""
+
 import datetime as dt
 
 import pytest
@@ -39,5 +40,3 @@ def test_active_timer_duration_without_real_time(app, time_freezer):
         assert entry.duration_seconds == 5400
         assert entry.end_time.hour == 10
         assert entry.end_time.minute == 30
-
-

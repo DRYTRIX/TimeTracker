@@ -16,52 +16,55 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 # Lazy import to avoid circular dependencies
 def get_audit_log_model():
     """Get AuditLog model with lazy import"""
     from app.models.audit_log import AuditLog
+
     return AuditLog
+
 
 # Cache to track if audit_logs table exists
 _audit_table_exists = None
 
 # Models that should be tracked for audit logging
 TRACKED_MODELS = [
-    'Project',
-    'Task',
-    'TimeEntry',
-    'Invoice',
-    'InvoiceItem',
-    'Client',
-    'User',
-    'Expense',
-    'Payment',
-    'Settings',
-    'Comment',
-    'ProjectCost',
-    'KanbanColumn',
-    'TimeEntryTemplate',
-    'ClientNote',
-    'WeeklyTimeGoal',
-    'CalendarEvent',
-    'BudgetAlert',
-    'ExtraGood',
-    'Mileage',
-    'PerDiem',
-    'RateOverride',
-    'SavedFilter',
-    'InvoiceTemplate',
-    'InvoicePDFTemplate',
-    'ClientPrepaidConsumption',
+    "Project",
+    "Task",
+    "TimeEntry",
+    "Invoice",
+    "InvoiceItem",
+    "Client",
+    "User",
+    "Expense",
+    "Payment",
+    "Settings",
+    "Comment",
+    "ProjectCost",
+    "KanbanColumn",
+    "TimeEntryTemplate",
+    "ClientNote",
+    "WeeklyTimeGoal",
+    "CalendarEvent",
+    "BudgetAlert",
+    "ExtraGood",
+    "Mileage",
+    "PerDiem",
+    "RateOverride",
+    "SavedFilter",
+    "InvoiceTemplate",
+    "InvoicePDFTemplate",
+    "ClientPrepaidConsumption",
 ]
 
 # Fields to exclude from audit logging (internal/system fields)
 EXCLUDED_FIELDS = {
-    'id',
-    'created_at',
-    'updated_at',
-    'password_hash',  # Never log passwords
-    'password',  # Never log passwords
+    "id",
+    "created_at",
+    "updated_at",
+    "password_hash",  # Never log passwords
+    "password",  # Never log passwords
 }
 
 
@@ -79,23 +82,23 @@ def get_request_info():
     """Get request information for audit logging"""
     if not has_request_context():
         return None, None, None
-    
+
     ip_address = request.remote_addr
-    user_agent = request.headers.get('User-Agent')
+    user_agent = request.headers.get("User-Agent")
     request_path = request.path
-    
+
     return ip_address, user_agent, request_path
 
 
 def get_entity_name(instance):
     """Get a human-readable name for an entity instance"""
     # Try common name fields
-    for field in ['name', 'title', 'username', 'email', 'invoice_number']:
+    for field in ["name", "title", "username", "email", "invoice_number"]:
         if hasattr(instance, field):
             value = getattr(instance, field)
             if value:
                 return str(value)
-    
+
     # Fallback to string representation
     return str(instance)
 
@@ -119,83 +122,86 @@ def serialize_value(value):
     """Serialize a value for storage in audit log"""
     if value is None:
         return None
-    
+
     # Handle datetime objects
     from datetime import datetime
+
     if isinstance(value, datetime):
         return value.isoformat()
-    
+
     # Handle Decimal
     from decimal import Decimal
+
     if isinstance(value, Decimal):
         return str(value)
-    
+
     # Handle boolean
     if isinstance(value, bool):
         return value
-    
+
     # Handle lists and dicts
     if isinstance(value, (list, dict)):
         import json
+
         try:
             return json.dumps(value)
         except (TypeError, ValueError):
             return str(value)
-    
+
     # For everything else, convert to string
     return str(value)
 
 
-@event.listens_for(Session, 'after_flush', once=False)
+@event.listens_for(Session, "after_flush", once=False)
 def receive_after_flush(session, flush_context):
     """Track changes after flush but before commit"""
     try:
         # Check if audit_logs table exists before trying to log
         # Force check every 100 calls to allow for table creation after migration
-        if not hasattr(receive_after_flush, '_call_count'):
+        if not hasattr(receive_after_flush, "_call_count"):
             receive_after_flush._call_count = 0
         receive_after_flush._call_count += 1
-        
+
         # Force check every 100 calls or if cache is None
-        force_check = (receive_after_flush._call_count % 100 == 0)
+        force_check = receive_after_flush._call_count % 100 == 0
         if not check_audit_table_exists(force_check=force_check):
             return
-        
+
         user_id = get_current_user_id()
         ip_address, user_agent, request_path = get_request_info()
-        
+
         # Track inserts (creates)
         for instance in session.new:
             if should_track_model(instance):
                 entity_type = get_entity_type(instance)
-                entity_id = instance.id if hasattr(instance, 'id') else None
+                entity_id = instance.id if hasattr(instance, "id") else None
                 entity_name = get_entity_name(instance)
-                
+
                 # Log creation
                 AuditLog = get_audit_log_model()
                 AuditLog.log_change(
                     user_id=user_id,
-                    action='created',
+                    action="created",
                     entity_type=entity_type,
                     entity_id=entity_id,
                     entity_name=entity_name,
                     change_description=f"Created {entity_type.lower()} '{entity_name}'",
                     ip_address=ip_address,
                     user_agent=user_agent,
-                    request_path=request_path
+                    request_path=request_path,
                 )
-        
+
         # Track updates
         for instance in session.dirty:
             if should_track_model(instance):
                 entity_type = get_entity_type(instance)
-                entity_id = instance.id if hasattr(instance, 'id') else None
+                entity_id = instance.id if hasattr(instance, "id") else None
                 entity_name = get_entity_name(instance)
-                
+
                 # Get the instance state using SQLAlchemy inspect
                 try:
                     instance_state = inspect(instance)
-                    
+
                     # Track individual field changes
                     changed_fields = []
                     for attr_name in instance_state.mapper.column_attrs.keys():
@@ -205,44 +211,40 @@ def receive_after_flush(session, flush_context):
                             if history.has_changes():
                                 old_value = history.deleted[0] if history.deleted else None
                                 new_value = history.added[0] if history.added else None
-                                
+
                                 if old_value != new_value:
-                                    changed_fields.append({
-                                        'field': attr_name,
-                                        'old': old_value,
-                                        'new': new_value
-                                    })
-                    
+                                    changed_fields.append({"field": attr_name, "old": old_value, "new": new_value})
+
                     # Log each field change separately for detailed audit trail
                     AuditLog = get_audit_log_model()
                     if changed_fields:
                         for change in changed_fields:
                             AuditLog.log_change(
                                 user_id=user_id,
-                                action='updated',
+                                action="updated",
                                 entity_type=entity_type,
                                 entity_id=entity_id,
-                                field_name=change['field'],
-                                old_value=serialize_value(change['old']),
-                                new_value=serialize_value(change['new']),
+                                field_name=change["field"],
+                                old_value=serialize_value(change["old"]),
+                                new_value=serialize_value(change["new"]),
                                 entity_name=entity_name,
                                 change_description=f"Updated {entity_type.lower()} '{entity_name}': {change['field']}",
                                 ip_address=ip_address,
                                 user_agent=user_agent,
-                                request_path=request_path
+                                request_path=request_path,
                             )
                     else:
                         # Fallback: log update without field details if history is not available
                         AuditLog.log_change(
                             user_id=user_id,
-                            action='updated',
+                            action="updated",
                             entity_type=entity_type,
                             entity_id=entity_id,
                             entity_name=entity_name,
                             change_description=f"Updated {entity_type.lower()} '{entity_name}'",
                             ip_address=ip_address,
                             user_agent=user_agent,
-                            request_path=request_path
+                            request_path=request_path,
                         )
                 except Exception as e:
                     # Fallback: log update without field details if inspection fails
@@ -250,37 +252,37 @@ def receive_after_flush(session, flush_context):
                     AuditLog = get_audit_log_model()
                     AuditLog.log_change(
                         user_id=user_id,
-                        action='updated',
+                        action="updated",
                         entity_type=entity_type,
                         entity_id=entity_id,
                         entity_name=entity_name,
                         change_description=f"Updated {entity_type.lower()} '{entity_name}'",
                         ip_address=ip_address,
                         user_agent=user_agent,
-                        request_path=request_path
+                        request_path=request_path,
                     )
-        
+
         # Track deletes
         for instance in session.deleted:
             if should_track_model(instance):
                 entity_type = get_entity_type(instance)
-                entity_id = instance.id if hasattr(instance, 'id') else None
+                entity_id = instance.id if hasattr(instance, "id") else None
                 entity_name = get_entity_name(instance)
-                
+
                 # Log deletion
                 AuditLog = get_audit_log_model()
                 AuditLog.log_change(
                     user_id=user_id,
-                    action='deleted',
+                    action="deleted",
                     entity_type=entity_type,
                     entity_id=entity_id,
                     entity_name=entity_name,
                     change_description=f"Deleted {entity_type.lower()} '{entity_name}'",
                     ip_address=ip_address,
                     user_agent=user_agent,
-                    request_path=request_path
+                    request_path=request_path,
                 )
-    
+
     except Exception as e:
         # Don't let audit logging break the main flow
         logger.error(f"Error in audit logging: {e}", exc_info=True)
@@ -288,28 +290,28 @@ def receive_after_flush(session, flush_context):
 
 def check_audit_table_exists(force_check=False):
     """Check if the audit_logs table exists
-    
+
     Args:
         force_check: If True, force a fresh check even if cached
     """
     global _audit_table_exists
-    
+
     # Return cached value if available and not forcing a check
     if not force_check and _audit_table_exists is not None:
         return _audit_table_exists
-    
+
     try:
         # Try to check if the table exists
         inspector = sqlalchemy_inspect(db.engine)
         tables = inspector.get_table_names()
-        exists = 'audit_logs' in tables
+        exists = "audit_logs" in tables
         _audit_table_exists = exists
-        
+
         if not exists:
             logger.debug("audit_logs table does not exist - audit logging disabled")
         else:
             logger.debug("audit_logs table exists - audit logging enabled")
-        
+
         return exists
     except Exception as e:
         # If we can't check, log it and assume it doesn't exist to be safe
@@ -333,4 +335,3 @@ def track_model_changes(model_class):
     if model_class.__name__ not in TRACKED_MODELS:
         TRACKED_MODELS.append(model_class.__name__)
     return model_class
-

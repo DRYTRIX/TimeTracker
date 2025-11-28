@@ -42,15 +42,17 @@ oauth = OAuth()
 
 # Initialize Mail (will be configured in create_app)
 from flask_mail import Mail
+
 mail = Mail()
 
 # Initialize APScheduler for background tasks
 from apscheduler.schedulers.background import BackgroundScheduler
+
 scheduler = BackgroundScheduler()
 
 # Initialize Prometheus metrics
-REQUEST_COUNT = Counter('tt_requests_total', 'Total requests', ['method', 'endpoint', 'http_status'])
-REQUEST_LATENCY = Histogram('tt_request_latency_seconds', 'Request latency seconds', ['endpoint'])
+REQUEST_COUNT = Counter("tt_requests_total", "Total requests", ["method", "endpoint", "http_status"])
+REQUEST_LATENCY = Histogram("tt_request_latency_seconds", "Request latency seconds", ["endpoint"])
 
 # Initialize JSON logger for structured logging
 json_logger = logging.getLogger("timetracker")
@@ -70,10 +72,10 @@ def log_event(name: str, **kwargs):
 def identify_user(user_id, properties=None):
     """
     Identify a user in PostHog with person properties.
-    
+
     Sets properties on the user for better segmentation, cohort analysis,
     and personalization in PostHog.
-    
+
     Args:
         user_id: The user ID (internal ID, not PII)
         properties: Dict of properties to set (use $set and $set_once)
@@ -82,11 +84,8 @@ def identify_user(user_id, properties=None):
         posthog_api_key = os.getenv("POSTHOG_API_KEY", "")
         if not posthog_api_key:
             return
-        
-        posthog.identify(
-            distinct_id=str(user_id),
-            properties=properties or {}
-        )
+
+        posthog.identify(distinct_id=str(user_id), properties=properties or {})
     except Exception:
         # Don't let analytics errors break the application
         pass
@@ -95,10 +94,10 @@ def identify_user(user_id, properties=None):
 def track_event(user_id, event_name, properties=None):
     """
     Track a product analytics event via PostHog.
-    
+
     Enhanced to include contextual properties like user agent, referrer,
     and deployment info for better analysis.
-    
+
     Args:
         user_id: The user ID (internal ID, not PII)
         event_name: Name of the event (use resource.action format)
@@ -109,40 +108,41 @@ def track_event(user_id, event_name, properties=None):
         posthog_api_key = os.getenv("POSTHOG_API_KEY", "")
         if not posthog_api_key:
             return
-        
+
         # Enhance properties with context
         enhanced_properties = properties or {}
-        
+
         # Add request context if available
         try:
             if request:
-                enhanced_properties.update({
-                    "$current_url": request.url,
-                    "$host": request.host,
-                    "$pathname": request.path,
-                    "$browser": request.user_agent.browser,
-                    "$device_type": "mobile" if request.user_agent.platform in ["android", "iphone"] else "desktop",
-                    "$os": request.user_agent.platform,
-                })
+                enhanced_properties.update(
+                    {
+                        "$current_url": request.url,
+                        "$host": request.host,
+                        "$pathname": request.path,
+                        "$browser": request.user_agent.browser,
+                        "$device_type": "mobile" if request.user_agent.platform in ["android", "iphone"] else "desktop",
+                        "$os": request.user_agent.platform,
+                    }
+                )
         except Exception:
             pass
-        
+
         # Add deployment context
         # Get app version from analytics config
         from app.config.analytics_defaults import get_analytics_config
+
         analytics_config = get_analytics_config()
-        
-        enhanced_properties.update({
-            "environment": os.getenv("FLASK_ENV", "production"),
-            "app_version": analytics_config.get("app_version"),
-            "deployment_method": "docker" if os.path.exists("/.dockerenv") else "native",
-        })
-        
-        posthog.capture(
-            distinct_id=str(user_id), 
-            event=event_name, 
-            properties=enhanced_properties
+
+        enhanced_properties.update(
+            {
+                "environment": os.getenv("FLASK_ENV", "production"),
+                "app_version": analytics_config.get("app_version"),
+                "deployment_method": "docker" if os.path.exists("/.dockerenv") else "native",
+            }
         )
+
+        posthog.capture(distinct_id=str(user_id), event=event_name, properties=enhanced_properties)
     except Exception:
         # Don't let analytics errors break the application
         pass
@@ -151,7 +151,7 @@ def track_event(user_id, event_name, properties=None):
 def track_page_view(page_name, user_id=None, properties=None):
     """
     Track a page view event.
-    
+
     Args:
         page_name: Name of the page (e.g., 'dashboard', 'projects_list')
         user_id: User ID (optional, will use current_user if not provided)
@@ -161,22 +161,23 @@ def track_page_view(page_name, user_id=None, properties=None):
         # Get user ID if not provided
         if user_id is None:
             from flask_login import current_user
+
             if current_user.is_authenticated:
                 user_id = current_user.id
             else:
                 return  # Don't track anonymous page views
-        
+
         # Build page view properties
         page_properties = {
             "page_name": page_name,
             "$pathname": request.path if request else None,
             "$current_url": request.url if request else None,
         }
-        
+
         # Add custom properties if provided
         if properties:
             page_properties.update(properties)
-        
+
         # Track the page view
         track_event(user_id, "$pageview", page_properties)
     except Exception:
@@ -192,21 +193,22 @@ def create_app(config=None):
     # Validate environment variables on startup (non-blocking warnings in dev, errors in prod)
     try:
         from app.utils.env_validation import validate_all
+
         is_production = os.getenv("FLASK_ENV", "production") == "production"
         is_valid, results = validate_all(raise_on_error=is_production)
-        
+
         if not is_valid:
             if is_production:
                 app.logger.error("Environment validation failed - see details below")
             else:
                 app.logger.warning("Environment validation warnings - see details below")
-            
-            if results.get('warnings'):
-                for warning in results['warnings']:
+
+            if results.get("warnings"):
+                for warning in results["warnings"]:
                     app.logger.warning(f"  - {warning}")
-            
-            if results.get('production', {}).get('issues'):
-                for issue in results['production']['issues']:
+
+            if results.get("production", {}).get("issues"):
+                for issue in results["production"]["issues"]:
                     if is_production:
                         app.logger.error(f"  - {issue}")
                     else:
@@ -245,7 +247,12 @@ def create_app(config=None):
                 except Exception:
                     pass
         db_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI", "") or "")
-        if app.config.get("TESTING") and isinstance(db_uri, str) and db_uri.startswith("sqlite") and ":memory:" in db_uri:
+        if (
+            app.config.get("TESTING")
+            and isinstance(db_uri, str)
+            and db_uri.startswith("sqlite")
+            and ":memory:" in db_uri
+        ):
             # Use a file-based SQLite database during tests to ensure consistent behavior across contexts
             db_file = os.path.join(tempfile.gettempdir(), f"timetracker_pytest_{os.getpid()}.sqlite")
             app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_file}"
@@ -263,12 +270,8 @@ def create_app(config=None):
         pass
 
     # Add top-level templates directory in addition to app/templates
-    extra_templates_path = os.path.abspath(
-        os.path.join(app.root_path, "..", "templates")
-    )
-    app.jinja_loader = ChoiceLoader(
-        [app.jinja_loader, FileSystemLoader(extra_templates_path)]
-    )
+    extra_templates_path = os.path.abspath(os.path.join(app.root_path, "..", "templates"))
+    app.jinja_loader = ChoiceLoader([app.jinja_loader, FileSystemLoader(extra_templates_path)])
 
     # Prefer Postgres if POSTGRES_* envs are present but URL points to SQLite
     current_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
@@ -276,19 +279,13 @@ def create_app(config=None):
         not app.config.get("TESTING")
         and isinstance(current_url, str)
         and current_url.startswith("sqlite")
-        and (
-            os.getenv("POSTGRES_DB")
-            or os.getenv("POSTGRES_USER")
-            or os.getenv("POSTGRES_PASSWORD")
-        )
+        and (os.getenv("POSTGRES_DB") or os.getenv("POSTGRES_USER") or os.getenv("POSTGRES_PASSWORD"))
     ):
         pg_user = os.getenv("POSTGRES_USER", "timetracker")
         pg_pass = os.getenv("POSTGRES_PASSWORD", "timetracker")
         pg_db = os.getenv("POSTGRES_DB", "timetracker")
         pg_host = os.getenv("POSTGRES_HOST", "db")
-        app.config["SQLALCHEMY_DATABASE_URI"] = (
-            f"postgresql+psycopg2://{pg_user}:{pg_pass}@{pg_host}:5432/{pg_db}"
-        )
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql+psycopg2://{pg_user}:{pg_pass}@{pg_host}:5432/{pg_db}"
 
     # Initialize extensions
     db.init_app(app)
@@ -296,12 +293,13 @@ def create_app(config=None):
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
-    
+
     # Initialize Settings from environment variables on startup
     # This ensures .env values are used as initial values, but WebUI changes take priority
     with app.app_context():
         try:
             from app.models import Settings
+
             # This will create Settings if it doesn't exist and initialize from .env
             # The get_settings() method automatically initializes new Settings from .env
             Settings.get_settings()
@@ -309,21 +307,23 @@ def create_app(config=None):
             # Don't fail app startup if Settings initialization fails
             # (e.g., database not ready yet, migration not run)
             app.logger.warning(f"Could not initialize Settings from environment: {e}")
-    
+
     # Initialize Flask-Mail
     from app.utils.email import init_mail
+
     init_mail(app)
-    
+
     # Initialize and start background scheduler (disabled in tests)
     if (not app.config.get("TESTING")) and (not scheduler.running):
         from app.utils.scheduled_tasks import register_scheduled_tasks
+
         scheduler.start()
         # Register tasks after app context is available, passing app instance
         with app.app_context():
             register_scheduled_tasks(scheduler, app=app)
-    
+
     # Only initialize CSRF protection if enabled
-    if app.config.get('WTF_CSRF_ENABLED'):
+    if app.config.get("WTF_CSRF_ENABLED"):
         csrf.init_app(app)
     try:
         # Configure limiter defaults from config if provided
@@ -331,9 +331,7 @@ def create_app(config=None):
         raw = app.config.get("RATELIMIT_DEFAULT")
         if raw:
             # support semicolon or comma separated limits
-            parts = [
-                p.strip() for p in str(raw).replace(",", ";").split(";") if p.strip()
-            ]
+            parts = [p.strip() for p in str(raw).replace(",", ";").split(";") if p.strip()]
             if parts:
                 default_limits = parts
         limiter._default_limits = default_limits  # set after init
@@ -343,18 +341,14 @@ def create_app(config=None):
 
     # Ensure translations exist and configure absolute translation directories before Babel init
     try:
-        translations_dirs = (
-            app.config.get("BABEL_TRANSLATION_DIRECTORIES") or "translations"
-        ).split(",")
+        translations_dirs = (app.config.get("BABEL_TRANSLATION_DIRECTORIES") or "translations").split(",")
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         abs_dirs = []
         for d in translations_dirs:
             d = d.strip()
             if not d:
                 continue
-            abs_dirs.append(
-                d if os.path.isabs(d) else os.path.abspath(os.path.join(base_path, d))
-            )
+            abs_dirs.append(d if os.path.isabs(d) else os.path.abspath(os.path.join(base_path, d)))
         if abs_dirs:
             app.config["BABEL_TRANSLATION_DIRECTORIES"] = os.pathsep.join(abs_dirs)
         # Best-effort compile with Babel CLI if available, else Python fallback
@@ -387,30 +381,28 @@ def create_app(config=None):
                 return _normalize_locale(session.get("preferred_language"))
             # 3) Best match with Accept-Language
             supported = list(app.config.get("LANGUAGES", {}).keys()) or ["en"]
-            matched = request.accept_languages.best_match(supported) or app.config.get(
-                "BABEL_DEFAULT_LOCALE", "en"
-            )
+            matched = request.accept_languages.best_match(supported) or app.config.get("BABEL_DEFAULT_LOCALE", "en")
             return _normalize_locale(matched)
         except Exception:
             return app.config.get("BABEL_DEFAULT_LOCALE", "en")
-    
+
     def _normalize_locale(locale_code):
         """Normalize locale codes for Flask-Babel compatibility.
-        
+
         Some locale codes need to be normalized:
         - 'no' -> 'nb' (Norwegian Bokmål is the standard, but we'll try 'no' first)
         """
         if not locale_code:
-            return 'en'
+            return "en"
         locale_code = locale_code.lower().strip()
         # Try 'no' first - if translations don't exist, Flask-Babel will fall back
         # If 'no' doesn't work, we can map to 'nb' as fallback
         # For now, keep 'no' as-is since we have translations/nb/ directory
         # The directory structure should match what Flask-Babel expects
-        if locale_code == 'no':
+        if locale_code == "no":
             # Use 'nb' for Flask-Babel (standard Norwegian Bokmål locale)
             # But ensure we have translations in both 'no' and 'nb' directories
-            return 'nb'
+            return "nb"
         return locale_code
 
     babel.init_app(
@@ -471,10 +463,12 @@ def create_app(config=None):
         try:
             if app.config.get("TESTING"):
                 from flask_login import current_user, login_user
+
                 if not getattr(current_user, "is_authenticated", False):
                     uid = session.get("_user_id") or session.get("user_id")
                     if uid:
                         from app.models import User
+
                         user = User.query.get(int(uid))
                         if user and getattr(user, "is_active", True):
                             login_user(user, remember=True)
@@ -495,32 +489,40 @@ def create_app(config=None):
     def check_setup_required():
         try:
             # Skip setup check in testing mode
-            if app.config.get('TESTING'):
+            if app.config.get("TESTING"):
                 return
-            
+
             # Skip setup check for these routes
-            skip_routes = ['setup.initial_setup', 'static', 'auth.login', 'auth.logout', 'main.health_check', 'main.readiness_check']
+            skip_routes = [
+                "setup.initial_setup",
+                "static",
+                "auth.login",
+                "auth.logout",
+                "main.health_check",
+                "main.readiness_check",
+            ]
             if request.endpoint in skip_routes:
                 return
-            
+
             # Skip for assets and health checks
-            if request.path.startswith('/static/') or request.path.startswith('/_'):
+            if request.path.startswith("/static/") or request.path.startswith("/_"):
                 return
-            
+
             # Check if setup is complete
             from app.utils.installation import get_installation_config
+
             installation_config = get_installation_config()
-            
+
             if not installation_config.is_setup_complete():
-                return redirect(url_for('setup.initial_setup'))
+                return redirect(url_for("setup.initial_setup"))
         except Exception:
             pass
-    
+
     # Attach request ID for tracing
     @app.before_request
     def attach_request_id():
         try:
-            g.request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+            g.request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         except Exception:
             pass
 
@@ -552,17 +554,13 @@ def create_app(config=None):
     def record_metrics_and_log(response):
         try:
             # Record Prometheus metrics
-            latency = time.time() - getattr(g, '_start_time', time.time())
+            latency = time.time() - getattr(g, "_start_time", time.time())
             endpoint = request.endpoint or "unknown"
             REQUEST_LATENCY.labels(endpoint=endpoint).observe(latency)
-            REQUEST_COUNT.labels(
-                method=request.method, 
-                endpoint=endpoint, 
-                http_status=response.status_code
-            ).inc()
+            REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, http_status=response.status_code).inc()
         except Exception:
             pass
-        
+
         try:
             # Log write operations
             if request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -578,17 +576,16 @@ def create_app(config=None):
         return response
 
     # Configure session
-    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(
-        seconds=int(os.getenv("PERMANENT_SESSION_LIFETIME", 86400))
-    )
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=int(os.getenv("PERMANENT_SESSION_LIFETIME", 86400)))
 
     # Setup logging (including JSON logging)
     setup_logging(app)
-    
+
     # Enable query logging in development mode
-    if app.config.get('FLASK_DEBUG') or app.config.get('TESTING'):
+    if app.config.get("FLASK_DEBUG") or app.config.get("TESTING"):
         try:
             from app.utils.query_logging import enable_query_logging, enable_query_counting
+
             enable_query_logging(app, slow_query_threshold=0.1)
             enable_query_counting(app)
             app.logger.info("Query logging enabled (development mode)")
@@ -597,14 +594,15 @@ def create_app(config=None):
 
     # Load analytics configuration (embedded at build time)
     from app.config.analytics_defaults import get_analytics_config, has_analytics_configured
+
     analytics_config = get_analytics_config()
-    
+
     # Log analytics status (for transparency)
     if has_analytics_configured():
         app.logger.info("TimeTracker with analytics configured (telemetry opt-in via admin dashboard)")
     else:
         app.logger.info("TimeTracker build without analytics configuration")
-    
+
     # Initialize Sentry for error monitoring
     # Priority: Env var > Built-in default > Disabled
     sentry_dsn = analytics_config.get("sentry_dsn", "")
@@ -615,7 +613,7 @@ def create_app(config=None):
                 integrations=[FlaskIntegration()],
                 traces_sample_rate=analytics_config.get("sentry_traces_rate", 0.0),
                 environment=os.getenv("FLASK_ENV", "production"),
-                release=analytics_config.get("app_version")
+                release=analytics_config.get("app_version"),
             )
             app.logger.info("Sentry error monitoring initialized")
         except Exception as e:
@@ -636,7 +634,11 @@ def create_app(config=None):
     # Fail-fast on weak/missing secret in production
     if not app.debug and app.config.get("FLASK_ENV", "production") == "production":
         secret = app.config.get("SECRET_KEY")
-        placeholder_values = {"dev-secret-key-change-in-production", "your-secret-key-change-this", "your-secret-key-here"}
+        placeholder_values = {
+            "dev-secret-key-change-in-production",
+            "your-secret-key-change-this",
+            "your-secret-key-here",
+        }
         if (not secret) or (secret in placeholder_values) or (isinstance(secret, str) and len(secret) < 32):
             app.logger.error("Invalid SECRET_KEY configured in production; refusing to start")
             raise RuntimeError("Invalid SECRET_KEY in production")
@@ -666,16 +668,14 @@ def create_app(config=None):
             if not response.headers.get("Referrer-Policy"):
                 response.headers["Referrer-Policy"] = "no-referrer"
             if not response.headers.get("Permissions-Policy"):
-                response.headers["Permissions-Policy"] = (
-                    "geolocation=(), microphone=(), camera=()"
-                )
+                response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         except Exception:
             pass
 
         # CSRF cookie/token handling
         # If CSRF is enabled, ensure CSRF cookie exists for HTML GET responses
         # If CSRF is disabled, explicitly clear any existing CSRF cookie to avoid confusion
-        if app.config.get('WTF_CSRF_ENABLED'):
+        if app.config.get("WTF_CSRF_ENABLED"):
             try:
                 # Only for safe, HTML page responses
                 if request.method == "GET":
@@ -687,6 +687,7 @@ def create_app(config=None):
                             # Generate a CSRF token and set cookie using same settings as /auth/csrf-token
                             try:
                                 from flask_wtf.csrf import generate_csrf
+
                                 token = generate_csrf()
                             except Exception:
                                 token = ""
@@ -728,7 +729,9 @@ def create_app(config=None):
                         expires=0,
                         path=app.config.get("CSRF_COOKIE_PATH", "/"),
                         domain=app.config.get("CSRF_COOKIE_DOMAIN") or None,
-                        secure=bool(app.config.get("CSRF_COOKIE_SECURE", app.config.get("SESSION_COOKIE_SECURE", False))),
+                        secure=bool(
+                            app.config.get("CSRF_COOKIE_SECURE", app.config.get("SESSION_COOKIE_SECURE", False))
+                        ),
                         httponly=bool(app.config.get("CSRF_COOKIE_HTTPONLY", False)),
                         samesite=app.config.get("CSRF_COOKIE_SAMESITE", "Lax"),
                     )
@@ -750,6 +753,7 @@ def create_app(config=None):
         try:
             try:
                 from flask_login import current_user as _cu
+
                 user_id = getattr(_cu, "id", None) if getattr(_cu, "is_authenticated", False) else None
             except Exception:
                 user_id = None
@@ -761,7 +765,7 @@ def create_app(config=None):
                 request.is_json,
                 request.referrer,
                 user_id,
-                getattr(e, "description", "")
+                getattr(e, "description", ""),
             )
         except Exception:
             pass
@@ -790,8 +794,7 @@ def create_app(config=None):
             wants_json = (
                 request.is_json
                 or request.headers.get("X-Requested-With") == "XMLHttpRequest"
-                or request.accept_mimetypes["application/json"]
-                >= request.accept_mimetypes["text/html"]
+                or request.accept_mimetypes["application/json"] >= request.accept_mimetypes["text/html"]
             )
         except Exception:
             wants_json = False
@@ -822,24 +825,26 @@ def create_app(config=None):
     def inject_csrf_token():
         def get_csrf_token():
             # Return empty string if CSRF is disabled
-            if not app.config.get('WTF_CSRF_ENABLED'):
+            if not app.config.get("WTF_CSRF_ENABLED"):
                 return ""
             try:
                 from flask_wtf.csrf import generate_csrf
+
                 return generate_csrf()
             except Exception:
                 return ""
+
         return dict(csrf_token=get_csrf_token)
 
     # CSRF token refresh endpoint (GET)
     @app.route("/auth/csrf-token", methods=["GET"])
     def get_csrf_token():
         # If CSRF is disabled, return empty token
-        if not app.config.get('WTF_CSRF_ENABLED'):
+        if not app.config.get("WTF_CSRF_ENABLED"):
             resp = jsonify(csrf_token="", csrf_enabled=False)
             resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             return resp
-        
+
         try:
             from flask_wtf.csrf import generate_csrf
 
@@ -885,7 +890,7 @@ def create_app(config=None):
 
     # Initialize audit logging (import to register event listeners)
     from app.utils import audit  # noqa: F401
-    
+
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp
@@ -927,8 +932,10 @@ def create_app(config=None):
     from app.routes.deals import deals_bp
     from app.routes.leads import leads_bp
     from app.routes.kiosk import kiosk_bp
+
     try:
         from app.routes.audit_logs import audit_logs_bp
+
         app.register_blueprint(audit_logs_bp)
     except Exception as e:
         # Log error but don't fail app startup
@@ -977,67 +984,76 @@ def create_app(config=None):
     app.register_blueprint(deals_bp)
     app.register_blueprint(leads_bp)
     # audit_logs_bp is registered above with error handling
-    
+
     # Register integration connectors
     try:
         from app.integrations import registry
+
         # Connectors are auto-registered on import
         logger.info("Integration connectors registered")
     except Exception as e:
         logger.warning(f"Could not register integration connectors: {e}")
-    
+
     # Register new feature blueprints
     try:
         from app.routes.project_templates import project_templates_bp
+
         app.register_blueprint(project_templates_bp)
     except Exception as e:
         logger.warning(f"Could not register project_templates blueprint: {e}")
-    
+
     try:
         from app.routes.invoice_approvals import invoice_approvals_bp
+
         app.register_blueprint(invoice_approvals_bp)
     except Exception as e:
         logger.warning(f"Could not register invoice_approvals blueprint: {e}")
-    
+
     try:
         from app.routes.payment_gateways import payment_gateways_bp
+
         app.register_blueprint(payment_gateways_bp)
     except Exception as e:
         logger.warning(f"Could not register payment_gateways blueprint: {e}")
-    
+
     try:
         from app.routes.scheduled_reports import scheduled_reports_bp
+
         app.register_blueprint(scheduled_reports_bp)
     except Exception as e:
         logger.warning(f"Could not register scheduled_reports blueprint: {e}")
-    
+
     try:
         from app.routes.integrations import integrations_bp
+
         app.register_blueprint(integrations_bp)
     except Exception as e:
         logger.warning(f"Could not register integrations blueprint: {e}")
-    
+
     try:
         from app.routes.push_notifications import push_bp
+
         app.register_blueprint(push_bp)
     except Exception as e:
         logger.warning(f"Could not register push_notifications blueprint: {e}")
-    
+
     try:
         from app.routes.custom_reports import custom_reports_bp
+
         app.register_blueprint(custom_reports_bp)
     except Exception as e:
         logger.warning(f"Could not register custom_reports blueprint: {e}")
-    
+
     try:
         from app.routes.gantt import gantt_bp
+
         app.register_blueprint(gantt_bp)
     except Exception as e:
         logger.warning(f"Could not register gantt blueprint: {e}")
 
     # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
     # Only if CSRF is enabled
-    if app.config.get('WTF_CSRF_ENABLED'):
+    if app.config.get("WTF_CSRF_ENABLED"):
         csrf.exempt(api_bp)
         csrf.exempt(api_v1_bp)
         csrf.exempt(api_docs_bp)
@@ -1075,10 +1091,10 @@ def create_app(config=None):
             )
 
     # Prometheus metrics endpoint
-    @app.route('/metrics')
+    @app.route("/metrics")
     def metrics():
         """Expose Prometheus metrics"""
-        return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+        return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     # Register error handlers
     from app.utils.error_handlers import register_error_handlers
@@ -1087,12 +1103,12 @@ def create_app(config=None):
 
     # Register context processors
     from app.utils.context_processors import register_context_processors
-    
+
     register_context_processors(app)
-    
+
     # Register i18n template filters
     from app.utils.i18n_helpers import register_i18n_filters
-    
+
     register_i18n_filters(app)
 
     # (translations compiled and directories set before Babel init)
@@ -1115,9 +1131,7 @@ def create_app(config=None):
 
             if not current_user or not getattr(current_user, "is_authenticated", False):
                 return
-            admin_usernames = [
-                u.strip().lower() for u in app.config.get("ADMIN_USERNAMES", ["admin"])
-            ]
+            admin_usernames = [u.strip().lower() for u in app.config.get("ADMIN_USERNAMES", ["admin"])]
             if (
                 current_user.username
                 and current_user.username.lower() in admin_usernames
@@ -1177,18 +1191,12 @@ def setup_logging(app):
     log_level = os.getenv("LOG_LEVEL", "INFO")
     # Default to a file in the project logs directory if not provided
     default_log_path = os.path.abspath(
-        os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "logs", "timetracker.log"
-        )
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "timetracker.log")
     )
     log_file = os.getenv("LOG_FILE", default_log_path)
-    
+
     # JSON log file path
-    json_log_path = os.path.abspath(
-        os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "logs", "app.jsonl"
-        )
-    )
+    json_log_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "app.jsonl"))
 
     # Prepare handlers
     handlers = [logging.StreamHandler()]
@@ -1211,11 +1219,7 @@ def setup_logging(app):
     # Configure Flask app logger directly (works well under gunicorn)
     for handler in handlers:
         handler.setLevel(getattr(logging, log_level.upper()))
-        handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
-            )
-        )
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"))
 
     # Clear existing handlers to avoid duplicate logs
     app.logger.handlers.clear()
@@ -1237,19 +1241,17 @@ def setup_logging(app):
         json_log_dir = os.path.dirname(json_log_path)
         if json_log_dir and not os.path.exists(json_log_dir):
             os.makedirs(json_log_dir, exist_ok=True)
-        
+
         json_handler = logging.FileHandler(json_log_path)
-        json_formatter = jsonlogger.JsonFormatter(
-            '%(asctime)s %(levelname)s %(name)s %(message)s'
-        )
+        json_formatter = jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
         json_handler.setFormatter(json_formatter)
         json_handler.setLevel(logging.INFO)
-        
+
         # Add JSON handler to the timetracker logger
         json_logger.handlers.clear()
         json_logger.addHandler(json_handler)
         json_logger.propagate = False
-        
+
         app.logger.info(f"JSON logging initialized: {json_log_path}")
     except (PermissionError, OSError) as e:
         app.logger.warning(f"Could not initialize JSON logging: {e}")
@@ -1278,36 +1280,24 @@ def migrate_task_management_tables():
 
         # Check if task_id column exists in time_entries table
         if "time_entries" in existing_tables:
-            time_entries_columns = [
-                col["name"] for col in inspector.get_columns("time_entries")
-            ]
+            time_entries_columns = [col["name"] for col in inspector.get_columns("time_entries")]
             if "task_id" not in time_entries_columns:
                 print("Task Management: Adding task_id column to time_entries table...")
                 try:
                     # Add task_id column to time_entries table
-                    db.engine.execute(
-                        text(
-                            "ALTER TABLE time_entries ADD COLUMN task_id INTEGER REFERENCES tasks(id)"
-                        )
-                    )
+                    db.engine.execute(text("ALTER TABLE time_entries ADD COLUMN task_id INTEGER REFERENCES tasks(id)"))
                     print("✓ task_id column added to time_entries table")
                 except Exception as e:
                     print(f"⚠ Warning: Could not add task_id column: {e}")
-                    print(
-                        "  You may need to manually add this column or recreate the database"
-                    )
+                    print("  You may need to manually add this column or recreate the database")
             else:
-                print(
-                    "Task Management: task_id column already exists in time_entries table"
-                )
+                print("Task Management: task_id column already exists in time_entries table")
 
         print("Task Management migration check completed")
 
     except Exception as e:
         print(f"⚠ Warning: Task Management migration check failed: {e}")
-        print(
-            "  The application will continue, but Task Management features may not work properly"
-        )
+        print("  The application will continue, but Task Management features may not work properly")
 
 
 def init_database(app):

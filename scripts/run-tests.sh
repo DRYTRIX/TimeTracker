@@ -46,8 +46,8 @@ case "$1" in
         python -m pytest -m database -v
         ;;
     all)
-        echo -e "${GREEN}Running full test suite...${NC}"
-        python -m pytest -v
+        echo -e "${GREEN}Running full test suite in parallel...${NC}"
+        python -m pytest -v -n auto
         ;;
     coverage)
         echo -e "${GREEN}Running tests with coverage...${NC}"

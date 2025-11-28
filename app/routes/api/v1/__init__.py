@@ -14,11 +14,10 @@ API Versioning Policy:
 from flask import Blueprint
 
 # Create v1 blueprint
-api_v1_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
+api_v1_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
 # Import all v1 endpoints
 # Note: The actual endpoints are in api_v1.py for now
 # This structure allows for future reorganization
 
-__all__ = ['api_v1_bp']
-
+__all__ = ["api_v1_bp"]

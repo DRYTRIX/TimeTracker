@@ -1,4 +1,3 @@
 """
 Tests for service layer.
 """
-
