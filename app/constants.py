@@ -8,6 +8,7 @@ from enum import Enum
 
 class TimeEntryStatus(Enum):
     """Status of a time entry"""
+
     RUNNING = "running"
     PAUSED = "paused"
     STOPPED = "stopped"
@@ -16,6 +17,7 @@ class TimeEntryStatus(Enum):
 
 class TimeEntrySource(Enum):
     """Source of a time entry"""
+
     MANUAL = "manual"
     AUTO = "auto"
     API = "api"
@@ -25,6 +27,7 @@ class TimeEntrySource(Enum):
 
 class ProjectStatus(Enum):
     """Project status values"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     ARCHIVED = "archived"
@@ -32,6 +35,7 @@ class ProjectStatus(Enum):
 
 class InvoiceStatus(Enum):
     """Invoice status values"""
+
     DRAFT = "draft"
     SENT = "sent"
     PAID = "paid"
@@ -44,6 +48,7 @@ class InvoiceStatus(Enum):
 
 class PaymentStatus(Enum):
     """Payment status values"""
+
     UNPAID = "unpaid"
     PARTIALLY_PAID = "partially_paid"
     FULLY_PAID = "fully_paid"
@@ -52,6 +57,7 @@ class PaymentStatus(Enum):
 
 class TaskStatus(Enum):
     """Task status values"""
+
     TODO = "todo"
     IN_PROGRESS = "in_progress"
     REVIEW = "review"
@@ -61,6 +67,7 @@ class TaskStatus(Enum):
 
 class UserRole(Enum):
     """User role values"""
+
     ADMIN = "admin"
     MANAGER = "manager"
     USER = "user"
@@ -69,6 +76,7 @@ class UserRole(Enum):
 
 class BillableStatus(Enum):
     """Billable status"""
+
     BILLABLE = True
     NON_BILLABLE = False
 
@@ -88,8 +96,8 @@ MAX_IDLE_TIMEOUT = 480  # 8 hours
 
 # File upload limits
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
-ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-ALLOWED_DOCUMENT_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt'}
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+ALLOWED_DOCUMENT_EXTENSIONS = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt"}
 
 # Session and cookie defaults
 DEFAULT_SESSION_LIFETIME = 86400  # 24 hours in seconds
@@ -101,8 +109,22 @@ STRICT_RATE_LIMIT = "100 per day;20 per hour"
 
 # Currency codes (ISO 4217)
 SUPPORTED_CURRENCIES = [
-    'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY',
-    'SEK', 'NOK', 'DKK', 'PLN', 'BRL', 'INR', 'ZAR', 'MXN'
+    "USD",
+    "EUR",
+    "GBP",
+    "JPY",
+    "AUD",
+    "CAD",
+    "CHF",
+    "CNY",
+    "SEK",
+    "NOK",
+    "DKK",
+    "PLN",
+    "BRL",
+    "INR",
+    "ZAR",
+    "MXN",
 ]
 
 # Date/time formats
@@ -111,9 +133,11 @@ TIME_FORMAT = "%H:%M"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 ISO_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
+
 # Audit log action types
 class AuditAction(Enum):
     """Audit log action types"""
+
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
@@ -129,6 +153,7 @@ class AuditAction(Enum):
 # Webhook event types
 class WebhookEvent(Enum):
     """Webhook event types"""
+
     TIME_ENTRY_CREATED = "time_entry.created"
     TIME_ENTRY_UPDATED = "time_entry.updated"
     TIME_ENTRY_DELETED = "time_entry.deleted"
@@ -160,6 +185,7 @@ class WebhookEvent(Enum):
 # Notification types
 class NotificationType(Enum):
     """Notification types"""
+
     INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
@@ -169,6 +195,7 @@ class NotificationType(Enum):
 # Cache keys (for future Redis implementation)
 class CacheKey:
     """Cache key prefixes"""
+
     USER = "user:"
     PROJECT = "project:"
     TIME_ENTRY = "time_entry:"
@@ -176,4 +203,3 @@ class CacheKey:
     CLIENT = "client:"
     DASHBOARD = "dashboard:"
     REPORT = "report:"
-

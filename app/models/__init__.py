@@ -63,6 +63,15 @@ from .invoice_approval import InvoiceApproval
 from .payment_gateway import PaymentGateway, PaymentTransaction
 from .calendar_integration import CalendarIntegration, CalendarSyncEvent
 from .integration import Integration, IntegrationCredential, IntegrationEvent
+from .workflow import WorkflowRule, WorkflowExecution
+from .time_entry_approval import TimeEntryApproval, ApprovalPolicy, ApprovalStatus
+from .recurring_task import RecurringTask
+from .client_portal_customization import ClientPortalCustomization
+from .team_chat import ChatChannel, ChatMessage, ChatChannelMember, ChatReadReceipt
+from .client_time_approval import ClientTimeApproval, ClientApprovalPolicy, ClientApprovalStatus
+from .custom_report import CustomReportConfig
+from .gamification import Badge, UserBadge, Leaderboard, LeaderboardEntry
+from .expense_gps import MileageTrack
 
 __all__ = [
     "User",
@@ -141,4 +150,24 @@ __all__ = [
     "Integration",
     "IntegrationCredential",
     "IntegrationEvent",
+    "WorkflowRule",
+    "WorkflowExecution",
+    "TimeEntryApproval",
+    "ApprovalPolicy",
+    "ApprovalStatus",
+    "RecurringTask",
+    "ClientPortalCustomization",
+    "ChatChannel",
+    "ChatMessage",
+    "ChatChannelMember",
+    "ChatReadReceipt",
+    "ClientTimeApproval",
+    "ClientApprovalPolicy",
+    "ClientApprovalStatus",
+    "CustomReportConfig",
+    "Badge",
+    "UserBadge",
+    "Leaderboard",
+    "LeaderboardEntry",
+    "MileageTrack",
 ]

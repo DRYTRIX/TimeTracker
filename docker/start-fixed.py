@@ -171,25 +171,33 @@ def main():
     print("✓ Database initialization and migration completed successfully")
     
     # Ensure default settings and admin user exist (idempotent)
+    # Note: Database initialization is already handled by the migration system above
+    # The flask init_db command is optional and may not be available in all environments
     try:
         print("Ensuring default settings and admin user exist (flask init_db)...")
         result = subprocess.run(
             ['flask', 'init_db'],
-            check=True,
+            check=False,  # Don't fail if command doesn't exist
             capture_output=True,
-            text=True
+            text=True,
+            timeout=30
         )
-        if result.stdout:
-            print(result.stdout.strip())
-        if result.stderr:
-            print(result.stderr.strip())
-    except subprocess.CalledProcessError as e:
-        print(f"Warning: flask init_db failed (continuing): exit {e.returncode}")
-        if e.stdout:
-            print(f"stdout: {e.stdout.strip()}")
-        if e.stderr:
-            print(f"stderr: {e.stderr.strip()}")
+        if result.returncode == 0:
+            if result.stdout:
+                print(result.stdout.strip())
+        else:
+            # Command failed or doesn't exist - this is OK, database is already initialized
+            if "No such command" not in result.stderr:
+                print(f"Warning: flask init_db returned exit code {result.returncode} (continuing)")
+                if result.stderr:
+                    print(f"stderr: {result.stderr.strip()}")
+    except FileNotFoundError:
+        # Flask command not found - this is OK
+        pass
+    except subprocess.TimeoutExpired:
+        print("Warning: flask init_db timed out (continuing)")
     except Exception as e:
+        # Any other error - log but continue
         print(f"Warning: could not execute flask init_db: {e}")
 
     print("Starting application...")

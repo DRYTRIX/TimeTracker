@@ -8,7 +8,7 @@ def test_task_view_shows_delete_button(authenticated_client, task, app):
         resp = authenticated_client.get(f"/tasks/{task.id}")
         assert resp.status_code == 200
         html = resp.get_data(as_text=True)
-        assert 'Delete Task' in html
+        assert "Delete Task" in html
 
 
 @pytest.mark.integration
@@ -18,7 +18,7 @@ def test_client_view_shows_delete_button(admin_authenticated_client, test_client
         resp = admin_authenticated_client.get(f"/clients/{test_client.id}")
         assert resp.status_code == 200
         html = resp.get_data(as_text=True)
-        assert 'Delete Client' in html
+        assert "Delete Client" in html
 
 
 @pytest.mark.integration
@@ -28,7 +28,7 @@ def test_project_view_shows_delete_button(admin_authenticated_client, project, a
         resp = admin_authenticated_client.get(f"/projects/{project.id}")
         assert resp.status_code == 200
         html = resp.get_data(as_text=True)
-        assert 'Delete Project' in html
+        assert "Delete Project" in html
 
 
 @pytest.mark.integration
@@ -62,5 +62,3 @@ def test_delete_project_flow(admin_authenticated_client, project, app):
         # Verify gone
         resp2 = admin_authenticated_client.get(f"/projects/{project.id}")
         assert resp2.status_code in [302, 404]
-
-

@@ -10,35 +10,34 @@ from flask_babel import _
 from app.utils.installation import get_installation_config
 from app import log_event, track_event
 
-setup_bp = Blueprint('setup', __name__)
+setup_bp = Blueprint("setup", __name__)
 
 
-@setup_bp.route('/setup', methods=['GET', 'POST'])
+@setup_bp.route("/setup", methods=["GET", "POST"])
 def initial_setup():
     """Initial setup page for first-time users"""
     installation_config = get_installation_config()
-    
+
     # If setup is already complete, redirect to dashboard
     if installation_config.is_setup_complete():
-        return redirect(url_for('main.dashboard'))
-    
-    if request.method == 'POST':
+        return redirect(url_for("main.dashboard"))
+
+    if request.method == "POST":
         # Get telemetry preference
-        telemetry_enabled = request.form.get('telemetry_enabled') == 'on'
-        
+        telemetry_enabled = request.form.get("telemetry_enabled") == "on"
+
         # Save preference
         installation_config.mark_setup_complete(telemetry_enabled=telemetry_enabled)
-        
+
         # Log the setup completion
         log_event("setup.completed", telemetry_enabled=telemetry_enabled)
-        
+
         # Show success message
         if telemetry_enabled:
-            flash(_('Setup complete! Thank you for helping us improve TimeTracker.'), 'success')
+            flash(_("Setup complete! Thank you for helping us improve TimeTracker."), "success")
         else:
-            flash(_('Setup complete! Telemetry is disabled.'), 'success')
-        
-        return redirect(url_for('main.dashboard'))
-    
-    return render_template('setup/initial_setup.html')
+            flash(_("Setup complete! Telemetry is disabled."), "success")
 
+        return redirect(url_for("main.dashboard"))
+
+    return render_template("setup/initial_setup.html")

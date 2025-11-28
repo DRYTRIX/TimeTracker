@@ -7,10 +7,7 @@ import pytest
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 
-from app.models import (
-    User, Project, TimeEntry, Client, Settings,
-    Invoice, InvoiceItem, Task
-)
+from app.models import User, Project, TimeEntry, Client, Settings, Invoice, InvoiceItem, Task
 from factories import InvoiceFactory
 from app import db
 
@@ -19,14 +16,15 @@ from app import db
 # User Model Tests
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.models
 @pytest.mark.smoke
 def test_user_creation(app, user):
     """Test basic user creation."""
     assert user.id is not None
-    assert user.username == 'testuser'
-    assert user.role == 'user'
+    assert user.username == "testuser"
+    assert user.role == "user"
     assert user.is_active is True
 
 
@@ -60,16 +58,17 @@ def test_user_time_entries_relationship(app, user, multiple_time_entries):
 def test_user_to_dict(app, user):
     """Test user serialization to dictionary."""
     user_dict = user.to_dict()
-    assert 'id' in user_dict
-    assert 'username' in user_dict
-    assert 'role' in user_dict
+    assert "id" in user_dict
+    assert "username" in user_dict
+    assert "role" in user_dict
     # Should not include sensitive data
-    assert 'password' not in user_dict
+    assert "password" not in user_dict
 
 
 # ============================================================================
 # Client Model Tests
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.models
@@ -77,9 +76,9 @@ def test_user_to_dict(app, user):
 def test_client_creation(app, test_client):
     """Test basic client creation."""
     assert test_client.id is not None
-    assert test_client.name == 'Test Client Corp'
-    assert test_client.status == 'active'
-    assert test_client.default_hourly_rate == Decimal('85.00')
+    assert test_client.name == "Test Client Corp"
+    assert test_client.status == "active"
+    assert test_client.default_hourly_rate == Decimal("85.00")
 
 
 @pytest.mark.unit
@@ -103,16 +102,16 @@ def test_client_total_projects_property(app, test_client, multiple_projects):
 def test_client_archive_activate(app, test_client):
     """Test client archive and activate methods."""
     db.session.refresh(test_client)
-    
+
     # Archive client
     test_client.archive()
     db.session.commit()
-    assert test_client.status == 'inactive'
-    
+    assert test_client.status == "inactive"
+
     # Activate client
     test_client.activate()
     db.session.commit()
-    assert test_client.status == 'active'
+    assert test_client.status == "active"
 
 
 @pytest.mark.unit
@@ -128,14 +127,15 @@ def test_client_get_active_clients(app, multiple_clients):
 def test_client_to_dict(app, test_client):
     """Test client serialization to dictionary."""
     client_dict = test_client.to_dict()
-    assert 'id' in client_dict
-    assert 'name' in client_dict
-    assert 'status' in client_dict
+    assert "id" in client_dict
+    assert "name" in client_dict
+    assert "status" in client_dict
 
 
 # ============================================================================
 # Project Model Tests
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.models
@@ -143,9 +143,9 @@ def test_client_to_dict(app, test_client):
 def test_project_creation(app, project):
     """Test basic project creation."""
     assert project.id is not None
-    assert project.name == 'Test Project'
+    assert project.name == "Test Project"
     assert project.billable is True
-    assert project.status == 'active'
+    assert project.status == "active"
 
 
 @pytest.mark.unit
@@ -156,7 +156,7 @@ def test_project_client_relationship(app, project, test_client):
     db.session.refresh(test_client)
     assert project.client_id == test_client.id
     # Check backward compatibility
-    if hasattr(project, 'client'):
+    if hasattr(project, "client"):
         assert project.client == test_client.name
 
 
@@ -194,14 +194,15 @@ def test_project_estimated_cost(app, project, multiple_time_entries):
 def test_project_archive(app, project):
     """Test project archiving."""
     db.session.refresh(project)
-    project.status = 'archived'
+    project.status = "archived"
     db.session.commit()
-    assert project.status == 'archived'
+    assert project.status == "archived"
 
 
 # ============================================================================
 # Time Entry Model Tests
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.models
@@ -239,7 +240,7 @@ def test_stop_timer(app, active_timer):
     db.session.refresh(active_timer)
     active_timer.stop_timer()
     db.session.commit()
-    
+
     db.session.refresh(active_timer)
     assert active_timer.is_active is False
     assert active_timer.end_time is not None
@@ -251,33 +252,35 @@ def test_stop_timer(app, active_timer):
 def test_time_entry_tag_list(app, test_client):
     """Test time entry tag_list property."""
     from app.models import User, Project
-    
-    user = User.query.first() or User(username='test', role='user')
-    project = Project.query.first() or Project(name='Test', client_id=test_client.id, billable=True)
-    
+
+    user = User.query.first() or User(username="test", role="user")
+    project = Project.query.first() or Project(name="Test", client_id=test_client.id, billable=True)
+
     if not user.id:
         db.session.add(user)
     if not project.id:
         db.session.add(project)
     db.session.commit()
-    
+
     from factories import TimeEntryFactory
+
     entry = TimeEntryFactory(
         user_id=user.id,
         project_id=project.id,
         start_time=datetime.utcnow(),
         end_time=datetime.utcnow() + timedelta(hours=1),
-        tags='python,testing,development',
-        source='manual'
+        tags="python,testing,development",
+        source="manual",
     )
-    
+
     db.session.refresh(entry)
-    assert entry.tag_list == ['python', 'testing', 'development']
+    assert entry.tag_list == ["python", "testing", "development"]
 
 
 # ============================================================================
 # Task Model Tests
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.models
@@ -285,8 +288,8 @@ def test_task_creation(app, task):
     """Test basic task creation."""
     db.session.refresh(task)
     assert task.id is not None
-    assert task.name == 'Test Task'
-    assert task.status == 'todo'
+    assert task.name == "Test Task"
+    assert task.status == "todo"
 
 
 @pytest.mark.unit
@@ -303,21 +306,22 @@ def test_task_project_relationship(app, task, project):
 def test_task_status_transitions(app, task):
     """Test task status transitions."""
     db.session.refresh(task)
-    
+
     # Mark as in progress
-    task.status = 'in_progress'
+    task.status = "in_progress"
     db.session.commit()
-    assert task.status == 'in_progress'
-    
+    assert task.status == "in_progress"
+
     # Mark as done
-    task.status = 'done'
+    task.status = "done"
     db.session.commit()
-    assert task.status == 'done'
+    assert task.status == "done"
 
 
 # ============================================================================
 # Invoice Model Tests
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.models
@@ -327,7 +331,7 @@ def test_invoice_creation(app, invoice):
     # Invoice is already refreshed in the fixture, no need to refresh again
     assert invoice.id is not None
     assert invoice.invoice_number is not None
-    assert invoice.status == 'draft'
+    assert invoice.status == "draft"
 
 
 @pytest.mark.unit
@@ -336,7 +340,7 @@ def test_invoice_number_generation(app):
     """Test invoice number generation."""
     invoice_number = Invoice.generate_invoice_number()
     assert invoice_number is not None
-    assert 'INV-' in invoice_number
+    assert "INV-" in invoice_number
 
 
 @pytest.mark.unit
@@ -344,16 +348,16 @@ def test_invoice_number_generation(app):
 def test_invoice_calculate_totals(app, invoice_with_items):
     """Test invoice total calculations."""
     invoice, items = invoice_with_items
-    
+
     # Invoice is already committed and refreshed in the fixture
     # 10 * 75 + 5 * 60 = 750 + 300 = 1050
-    assert invoice.subtotal == Decimal('1050.00')
-    
+    assert invoice.subtotal == Decimal("1050.00")
+
     # Tax: 20% of 1050 = 210
-    assert invoice.tax_amount == Decimal('210.00')
-    
+    assert invoice.tax_amount == Decimal("210.00")
+
     # Total: 1050 + 210 = 1260
-    assert invoice.total_amount == Decimal('1260.00')
+    assert invoice.total_amount == Decimal("1260.00")
 
 
 @pytest.mark.unit
@@ -361,36 +365,30 @@ def test_invoice_calculate_totals(app, invoice_with_items):
 def test_invoice_payment_tracking(app, invoice_with_items):
     """Test invoice payment tracking."""
     invoice, items = invoice_with_items
-    
+
     # Record partial payment
     partial_payment = invoice.total_amount / 2
     invoice.record_payment(
-        amount=partial_payment,
-        payment_date=date.today(),
-        payment_method='bank_transfer',
-        payment_reference='TEST-123'
+        amount=partial_payment, payment_date=date.today(), payment_method="bank_transfer", payment_reference="TEST-123"
     )
     db.session.commit()
-    
+
     db.session.expire(invoice)
     db.session.refresh(invoice)
-    assert invoice.payment_status == 'partially_paid'
+    assert invoice.payment_status == "partially_paid"
     assert invoice.amount_paid == partial_payment
     assert invoice.is_partially_paid is True
-    
+
     # Record remaining payment
     remaining = invoice.outstanding_amount
-    invoice.record_payment(
-        amount=remaining,
-        payment_method='bank_transfer'
-    )
+    invoice.record_payment(amount=remaining, payment_method="bank_transfer")
     db.session.commit()
-    
+
     db.session.expire(invoice)
     db.session.refresh(invoice)
-    assert invoice.payment_status == 'fully_paid'
+    assert invoice.payment_status == "fully_paid"
     assert invoice.is_paid is True
-    assert invoice.outstanding_amount == Decimal('0')
+    assert invoice.outstanding_amount == Decimal("0")
 
 
 @pytest.mark.unit
@@ -402,15 +400,15 @@ def test_invoice_overdue_status(app, user, project, test_client):
         invoice_number=Invoice.generate_invoice_number(),
         project_id=project.id,
         client_id=test_client.id,
-        client_name='Test Client',
+        client_name="Test Client",
         due_date=date.today() - timedelta(days=10),
         created_by=user.id,
-        status='sent'
+        status="sent",
     )
     db.session.commit()
-    
+
     # Ensure status is 'sent' for overdue calculation compatibility
-    overdue_invoice.status = 'sent'
+    overdue_invoice.status = "sent"
     db.session.commit()
     db.session.refresh(overdue_invoice)
     assert overdue_invoice.is_overdue is True
@@ -421,13 +419,14 @@ def test_invoice_overdue_status(app, user, project, test_client):
 # Settings Model Tests
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.models
 def test_settings_singleton(app):
     """Test settings singleton pattern."""
     settings1 = Settings.get_settings()
     settings2 = Settings.get_settings()
-    
+
     assert settings1.id == settings2.id
 
 
@@ -436,9 +435,9 @@ def test_settings_singleton(app):
 def test_settings_default_values(app):
     """Test settings default values."""
     settings = Settings.get_settings()
-    
+
     # Check that settings has expected attributes
-    assert hasattr(settings, 'id')
+    assert hasattr(settings, "id")
     # Add more default value checks based on your Settings model
 
 
@@ -446,21 +445,22 @@ def test_settings_default_values(app):
 # Model Relationship Tests
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.models
 @pytest.mark.database
 def test_cascade_delete_user_time_entries(app, user, multiple_time_entries):
     """Test cascade delete of user time entries."""
     user_id = user.id
-    
+
     # Get time entry count
     entry_count = TimeEntry.query.filter_by(user_id=user_id).count()
     assert entry_count == 5
-    
+
     # Delete user
     db.session.delete(user)
     db.session.commit()
-    
+
     # Check time entries are deleted or handled
     remaining_entries = TimeEntry.query.filter_by(user_id=user_id).count()
     # Depending on cascade settings, entries might be deleted or set to null
@@ -475,7 +475,7 @@ def test_project_client_relationship_integrity(app, project, test_client):
     """Test project-client relationship integrity."""
     # Verify the relationship
     assert project.client_id == test_client.id
-    
+
     # Get project through client relationship
     client_projects = Client.query.get(test_client.id).projects.all()
     project_ids = [p.id for p in client_projects]
@@ -485,6 +485,7 @@ def test_project_client_relationship_integrity(app, project, test_client):
 # ============================================================================
 # Model Validation Tests
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.models
@@ -504,13 +505,9 @@ def test_time_entry_requires_start_time(app, user, project):
     # This test verifies the database enforces this requirement
     from sqlalchemy.exc import IntegrityError
     from app import db
-    
+
     with pytest.raises(IntegrityError):
-        entry = TimeEntry(
-            user_id=user.id,
-            project_id=project.id,
-            source='manual'
-        )
+        entry = TimeEntry(user_id=user.id, project_id=project.id, source="manual")
         db.session.add(entry)
         db.session.commit()
 
@@ -519,22 +516,23 @@ def test_time_entry_requires_start_time(app, user, project):
 # User Deletion and Cascading Tests
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.models
 def test_user_deletion_without_relationships(app):
     """Test that a user without relationships can be deleted."""
     with app.app_context():
         # Create a user with no relationships
-        delete_user = User(username='deletable', role='user')
+        delete_user = User(username="deletable", role="user")
         delete_user.is_active = True
         db.session.add(delete_user)
         db.session.commit()
         user_id = delete_user.id
-        
+
         # Delete the user
         db.session.delete(delete_user)
         db.session.commit()
-        
+
         # Verify deletion
         deleted = User.query.get(user_id)
         assert deleted is None
@@ -546,44 +544,40 @@ def test_user_deletion_cascades_project_costs(app, test_client):
     """Test that deleting a user cascades to project costs."""
     from app.models import ProjectCost
     from datetime import date
-    
+
     with app.app_context():
         # Create user and project
-        user = User(username='costuser', role='user')
+        user = User(username="costuser", role="user")
         user.is_active = True
         db.session.add(user)
-        
-        project = Project(
-            name='Cost Test Project',
-            client_id=test_client.id,
-            billable=True
-        )
+
+        project = Project(name="Cost Test Project", client_id=test_client.id, billable=True)
         db.session.add(project)
         db.session.commit()
-        
+
         # Create project cost
         cost = ProjectCost(
             project_id=project.id,
             user_id=user.id,
-            description='Test expense',
-            category='materials',
-            amount=Decimal('100.00'),
-            cost_date=date.today()
+            description="Test expense",
+            category="materials",
+            amount=Decimal("100.00"),
+            cost_date=date.today(),
         )
         db.session.add(cost)
         db.session.commit()
-        
+
         user_id = user.id
         cost_id = cost.id
-        
+
         # Delete user
         db.session.delete(user)
         db.session.commit()
-        
+
         # Verify user is deleted
         deleted_user = User.query.get(user_id)
         assert deleted_user is None
-        
+
         # Verify project cost is cascaded (deleted)
         deleted_cost = ProjectCost.query.get(cost_id)
         assert deleted_cost is None
@@ -595,40 +589,36 @@ def test_user_deletion_cascades_time_entries(app, test_client):
     """Test that deleting a user cascades to time entries."""
     with app.app_context():
         # Create user and project
-        user = User(username='entryuser', role='user')
+        user = User(username="entryuser", role="user")
         user.is_active = True
         db.session.add(user)
-        
-        project = Project(
-            name='Entry Test Project',
-            client_id=test_client.id,
-            billable=True
-        )
+
+        project = Project(name="Entry Test Project", client_id=test_client.id, billable=True)
         db.session.add(project)
         db.session.commit()
-        
+
         # Create time entry
         entry = TimeEntry(
             user_id=user.id,
             project_id=project.id,
             start_time=datetime.utcnow(),
             end_time=datetime.utcnow() + timedelta(hours=1),
-            description='Test entry'
+            description="Test entry",
         )
         db.session.add(entry)
         db.session.commit()
-        
+
         user_id = user.id
         entry_id = entry.id
-        
+
         # Delete user
         db.session.delete(user)
         db.session.commit()
-        
+
         # Verify user is deleted
         deleted_user = User.query.get(user_id)
         assert deleted_user is None
-        
+
         # Verify time entry is cascaded (deleted)
         deleted_entry = TimeEntry.query.get(entry_id)
         assert deleted_entry is None
@@ -640,40 +630,36 @@ def test_user_deletion_removes_from_favorite_projects(app, test_client):
     """Test that deleting a user removes them from favorite projects."""
     with app.app_context():
         # Create user and project
-        user = User(username='favuser', role='user')
+        user = User(username="favuser", role="user")
         user.is_active = True
         db.session.add(user)
-        
-        project = Project(
-            name='Favorite Test Project',
-            client_id=test_client.id,
-            billable=True
-        )
+
+        project = Project(name="Favorite Test Project", client_id=test_client.id, billable=True)
         db.session.add(project)
         db.session.commit()
-        
+
         # Add project to favorites
         user.favorite_projects.append(project)
         db.session.commit()
-        
+
         # Verify favorite was added
         assert project in user.favorite_projects.all()
-        
+
         user_id = user.id
         project_id = project.id
-        
+
         # Delete user
         db.session.delete(user)
         db.session.commit()
-        
+
         # Verify user is deleted
         deleted_user = User.query.get(user_id)
         assert deleted_user is None
-        
+
         # Verify project still exists (favorites are many-to-many)
         remaining_project = Project.query.get(project_id)
         assert remaining_project is not None
-        
+
         # Verify user is not in project's favorited_by
         assert user_id not in [u.id for u in remaining_project.favorited_by.all()]
 
@@ -684,42 +670,38 @@ def test_user_deletion_preserves_tasks_assigned_to_them(app, test_client):
     """Test that deleting a user preserves tasks but nullifies assigned_to."""
     with app.app_context():
         # Create users and project
-        creator = User(username='creator', role='user')
+        creator = User(username="creator", role="user")
         creator.is_active = True
-        assignee = User(username='assignee', role='user')
+        assignee = User(username="assignee", role="user")
         assignee.is_active = True
         db.session.add_all([creator, assignee])
-        
-        project = Project(
-            name='Task Test Project',
-            client_id=test_client.id,
-            billable=True
-        )
+
+        project = Project(name="Task Test Project", client_id=test_client.id, billable=True)
         db.session.add(project)
         db.session.commit()
-        
+
         # Create task
         task = Task(
             project_id=project.id,
-            name='Test Task',
-            description='Test description',
+            name="Test Task",
+            description="Test description",
             created_by=creator.id,
-            assigned_to=assignee.id
+            assigned_to=assignee.id,
         )
         db.session.add(task)
         db.session.commit()
-        
+
         assignee_id = assignee.id
         task_id = task.id
-        
+
         # Delete assignee
         db.session.delete(assignee)
         db.session.commit()
-        
+
         # Verify assignee is deleted
         deleted_user = User.query.get(assignee_id)
         assert deleted_user is None
-        
+
         # Verify task still exists but assigned_to is nullified
         remaining_task = Task.query.get(task_id)
         assert remaining_task is not None
@@ -731,40 +713,31 @@ def test_user_deletion_preserves_tasks_assigned_to_them(app, test_client):
 def test_user_cannot_be_deleted_if_has_created_tasks(app, test_client):
     """Test that deleting a user who created tasks cascades properly."""
     from sqlalchemy.exc import IntegrityError
-    
+
     with app.app_context():
         # Create user and project
-        creator = User(username='taskcreator', role='user')
+        creator = User(username="taskcreator", role="user")
         creator.is_active = True
         db.session.add(creator)
-        
-        project = Project(
-            name='Task Creator Project',
-            client_id=test_client.id,
-            billable=True
-        )
+
+        project = Project(name="Task Creator Project", client_id=test_client.id, billable=True)
         db.session.add(project)
         db.session.commit()
-        
+
         # Create task
-        task = Task(
-            project_id=project.id,
-            name='Created Task',
-            description='Test description',
-            created_by=creator.id
-        )
+        task = Task(project_id=project.id, name="Created Task", description="Test description", created_by=creator.id)
         db.session.add(task)
         db.session.commit()
-        
+
         creator_id = creator.id
-        
+
         # Try to delete creator - should raise IntegrityError because created_by is NOT NULL
         with pytest.raises(IntegrityError):
             db.session.delete(creator)
             db.session.commit()
-        
+
         db.session.rollback()
-        
+
         # Verify creator still exists
         still_exists = User.query.get(creator_id)
         assert still_exists is not None
@@ -777,19 +750,19 @@ def test_user_deletion_count_check(app):
     with app.app_context():
         # Get initial count
         initial_count = User.query.count()
-        
+
         # Create and delete a user
-        temp_user = User(username='tempuser', role='user')
+        temp_user = User(username="tempuser", role="user")
         temp_user.is_active = True
         db.session.add(temp_user)
         db.session.commit()
-        
+
         # Verify count increased
         assert User.query.count() == initial_count + 1
-        
+
         # Delete user
         db.session.delete(temp_user)
         db.session.commit()
-        
+
         # Verify count back to initial
         assert User.query.count() == initial_count

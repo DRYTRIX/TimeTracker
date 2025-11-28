@@ -150,8 +150,8 @@ jobs:
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -v --cov=app --cov-report=xml --cov-report=html --cov-report=term \
-                 --junitxml=junit.xml
+          pytest -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing \
+                 --junitxml=junit.xml --maxfail=5
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

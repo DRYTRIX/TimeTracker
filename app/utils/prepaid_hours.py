@@ -8,8 +8,8 @@ from typing import Iterable, List, Optional, Set
 from app import db
 from app.models import Client, TimeEntry, ClientPrepaidConsumption, Invoice
 
-SECONDS_IN_HOUR = Decimal('3600')
-TWO_DECIMALS = Decimal('0.01')
+SECONDS_IN_HOUR = Decimal("3600")
+TWO_DECIMALS = Decimal("0.01")
 
 
 @dataclass
@@ -38,8 +38,8 @@ class PrepaidHoursAllocator:
     def __init__(self, client: Client, invoice: Optional[Invoice] = None):
         self.client = client
         self.invoice = invoice
-        self.plan_hours = client.prepaid_hours_decimal if client else Decimal('0')
-        self.total_prepaid_hours_assigned = Decimal('0')
+        self.plan_hours = client.prepaid_hours_decimal if client else Decimal("0")
+        self.total_prepaid_hours_assigned = Decimal("0")
         self._consumed_by_period: dict[date, Decimal] = {}
 
     # ----------------------------------------------------------------------
@@ -60,8 +60,8 @@ class PrepaidHoursAllocator:
                 ProcessedTimeEntry(
                     entry=entry,
                     billable_hours=self._hours_from_entry(entry),
-                    prepaid_hours=Decimal('0'),
-                    allocation_month=self._allocation_month(entry)
+                    prepaid_hours=Decimal("0"),
+                    allocation_month=self._allocation_month(entry),
                 )
                 for entry in entries
             ]
@@ -80,15 +80,15 @@ class PrepaidHoursAllocator:
                 processed.append(
                     ProcessedTimeEntry(
                         entry=entry,
-                        billable_hours=Decimal('0'),
-                        prepaid_hours=Decimal('0'),
-                        allocation_month=allocation_month
+                        billable_hours=Decimal("0"),
+                        prepaid_hours=Decimal("0"),
+                        allocation_month=allocation_month,
                     )
                 )
                 continue
 
             remaining = self._remaining_allowance(allocation_month)
-            prepaid_hours = self._quantize_hours(min(hours, remaining) if remaining > 0 else Decimal('0'))
+            prepaid_hours = self._quantize_hours(min(hours, remaining) if remaining > 0 else Decimal("0"))
             billable_hours = self._quantize_hours(hours - prepaid_hours)
 
             if prepaid_hours > 0:
@@ -102,11 +102,11 @@ class PrepaidHoursAllocator:
                     entry=entry,
                     billable_hours=billable_hours,
                     prepaid_hours=prepaid_hours,
-                    allocation_month=allocation_month
+                    allocation_month=allocation_month,
                 )
             )
 
-        self.total_prepaid_hours_assigned = sum((item.prepaid_hours for item in processed), Decimal('0'))
+        self.total_prepaid_hours_assigned = sum((item.prepaid_hours for item in processed), Decimal("0"))
         return processed
 
     def build_summary(self, entries: Iterable[TimeEntry]) -> List[PrepaidMonthSummary]:
@@ -125,16 +125,16 @@ class PrepaidHoursAllocator:
 
         summaries: List[PrepaidMonthSummary] = []
         for month in sorted(months):
-            consumed = self._quantize_hours(self._consumed_by_period.get(month, Decimal('0')))
+            consumed = self._quantize_hours(self._consumed_by_period.get(month, Decimal("0")))
             remaining = self._quantize_hours(self.plan_hours - consumed)
             if remaining < 0:
-                remaining = Decimal('0').quantize(TWO_DECIMALS)
+                remaining = Decimal("0").quantize(TWO_DECIMALS)
             summaries.append(
                 PrepaidMonthSummary(
                     allocation_month=month,
                     plan_hours=self._quantize_hours(self.plan_hours),
                     consumed_hours=consumed,
-                    remaining_hours=remaining
+                    remaining_hours=remaining,
                 )
             )
         return summaries
@@ -173,8 +173,7 @@ class PrepaidHoursAllocator:
             return
 
         query = ClientPrepaidConsumption.query.filter(
-            ClientPrepaidConsumption.client_id == self.client.id,
-            ClientPrepaidConsumption.allocation_month.in_(months)
+            ClientPrepaidConsumption.client_id == self.client.id, ClientPrepaidConsumption.allocation_month.in_(months)
         )
 
         if self.invoice:
@@ -183,7 +182,7 @@ class PrepaidHoursAllocator:
         for row in query:
             hours = Decimal(row.seconds_consumed or 0) / SECONDS_IN_HOUR
             month = row.allocation_month
-            self._consumed_by_period[month] = self._consumed_by_period.get(month, Decimal('0')) + hours
+            self._consumed_by_period[month] = self._consumed_by_period.get(month, Decimal("0")) + hours
 
     def _allocation_month(self, entry: TimeEntry) -> Optional[date]:
         if not entry or not entry.start_time:
@@ -191,26 +190,26 @@ class PrepaidHoursAllocator:
         return self.client.prepaid_month_start(entry.start_time)
 
     def _remaining_allowance(self, month: date) -> Decimal:
-        consumed = self._consumed_by_period.get(month, Decimal('0'))
+        consumed = self._consumed_by_period.get(month, Decimal("0"))
         remaining = self.plan_hours - consumed
-        return remaining if remaining > 0 else Decimal('0')
+        return remaining if remaining > 0 else Decimal("0")
 
     def _record_consumption(self, entry: TimeEntry, month: date, prepaid_hours: Decimal):
         if prepaid_hours <= 0:
             return
 
-        seconds = int((prepaid_hours * SECONDS_IN_HOUR).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+        seconds = int((prepaid_hours * SECONDS_IN_HOUR).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
         consumption = ClientPrepaidConsumption(
             client_id=self.client.id,
             time_entry_id=entry.id,
             invoice_id=self.invoice.id if self.invoice else None,
             allocation_month=month,
-            seconds_consumed=seconds
+            seconds_consumed=seconds,
         )
         db.session.add(consumption)
 
         # Update cache to reflect newly allocated hours
-        self._consumed_by_period[month] = self._consumed_by_period.get(month, Decimal('0')) + prepaid_hours
+        self._consumed_by_period[month] = self._consumed_by_period.get(month, Decimal("0")) + prepaid_hours
 
     @staticmethod
     def _hours_from_entry(entry: TimeEntry) -> Decimal:
@@ -220,6 +219,5 @@ class PrepaidHoursAllocator:
     @staticmethod
     def _quantize_hours(value: Decimal) -> Decimal:
         if value is None:
-            return Decimal('0').quantize(TWO_DECIMALS)
+            return Decimal("0").quantize(TWO_DECIMALS)
         return value.quantize(TWO_DECIMALS)
-

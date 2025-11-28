@@ -2,6 +2,7 @@
 Reusable model factories for tests.
 Requires factory_boy and Faker (declared in requirements-test.txt).
 """
+
 import datetime as _dt
 from decimal import Decimal
 import factory
@@ -54,12 +55,14 @@ class ProjectFactory(_SessionFactory):
         model = Project
 
     name = factory.Sequence(lambda n: f"Project {n}")
+
     @factory.lazy_attribute
     def client_id(self):
         client = ClientFactory()
         # Ensure id is populated
         db.session.flush()
         return client.id
+
     description = factory.Faker("sentence")
     billable = True
     hourly_rate = Decimal("75.00")
@@ -98,7 +101,13 @@ class InvoiceFactory(_SessionFactory):
         model = Invoice
 
     project_fk = factory.SubFactory(ProjectFactory)
-    invoice_number = factory.LazyFunction(lambda: Invoice.generate_invoice_number() if hasattr(Invoice, "generate_invoice_number") else f"INV-{_dt.datetime.utcnow().strftime('%Y%m%d')}-001")
+    invoice_number = factory.LazyFunction(
+        lambda: (
+            Invoice.generate_invoice_number()
+            if hasattr(Invoice, "generate_invoice_number")
+            else f"INV-{_dt.datetime.utcnow().strftime('%Y%m%d')}-001"
+        )
+    )
     project_id = factory.SelfAttribute("project_fk.id")
     client_id = factory.SelfAttribute("project_fk.client_id")
     client_name = factory.LazyAttribute(lambda o: db.session.get(Client, o.client_id).name if o.client_id else "Client")
@@ -165,5 +174,3 @@ class ExpenseCategoryFactory(_SessionFactory):
     requires_receipt = True
     requires_approval = True
     is_active = True
-
-

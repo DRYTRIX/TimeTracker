@@ -1,4 +1,5 @@
 """Additional parameterized tests for time rounding utilities."""
+
 import pytest
 from app.utils.time_rounding import round_time_duration
 
@@ -24,5 +25,3 @@ from app.utils.time_rounding import round_time_duration
 )
 def test_round_time_duration_parametrized(seconds, interval, method, expected):
     assert round_time_duration(seconds, interval, method) == expected
-
-

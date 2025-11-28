@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Approval Details') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Time Entry Approvals'), 'url': url_for('time_approvals.list_approvals')},
+    {'text': _('Approval Details')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-check-circle',
+    title_text=_('Approval Details'),
+    subtitle_text=_('Review time entry approval request'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Time Entry Details -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4">{{ _('Time Entry Details') }}</h2>
+            <dl class="space-y-3">
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Entry ID') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">#{{ approval.time_entry.id }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.time_entry.duration_hours|round(2) }} {{ _('hours') }}</dd>
+                </div>
+                {% if approval.time_entry.project %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">
+                        <a href="{{ url_for('projects.view_project', project_id=approval.time_entry.project.id) }}" class="text-primary hover:underline">
+                            {{ approval.time_entry.project.name }}
+                        </a>
+                    </dd>
+                </div>
+                {% endif %}
+                {% if approval.time_entry.task %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Task') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.time_entry.task.name }}</dd>
+                </div>
+                {% endif %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.time_entry.start_time|local_datetime('%Y-%m-%d') if approval.time_entry.start_time else 'N/A' }}</dd>
+                </div>
+                {% if approval.time_entry.description %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Description') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.time_entry.description }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <!-- Approval Details -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4">{{ _('Approval Information') }}</h2>
+            <dl class="space-y-3">
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</dt>
+                    <dd>
+                        <span class="px-3 py-1 rounded text-sm font-medium
+                            {% if approval.status.value == 'pending' %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200
+                            {% elif approval.status.value == 'approved' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
+                            {% elif approval.status.value == 'rejected' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200
+                            {% endif %}">
+                            {{ approval.status.value|title }}
+                        </span>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Requested by') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.requested_by_user.username if approval.requested_by_user else 'N/A' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Requested at') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.requested_at|local_datetime if approval.requested_at else 'N/A' }}</dd>
+                </div>
+                {% if approval.approved_by_user %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Approved by') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.approved_by_user.username }}</dd>
+                </div>
+                {% endif %}
+                {% if approval.approved_at %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Approved at') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.approved_at|local_datetime }}</dd>
+                </div>
+                {% endif %}
+                {% if approval.comments %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Comments') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.comments }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    {% if approval.status.value == 'pending' and (approval.approved_by == current_user.id or current_user.is_admin) %}
+    <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark flex gap-3">
+        <form method="POST" action="{{ url_for('time_approvals.approve_entry', approval_id=approval.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-check mr-1"></i>{{ _('Approve') }}
+            </button>
+        </form>
+        <button onclick="showRejectModal()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
+            <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" data-overlay></div>
+    <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg">
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <div class="text-lg font-semibold">{{ _('Reject Time Entry') }}</div>
+            <button type="button" onclick="closeRejectModal()" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
+        </div>
+        <form method="POST" action="{{ url_for('time_approvals.reject_entry', approval_id=approval.id) }}" class="p-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label for="rejectReason" class="block text-sm font-medium mb-2">{{ _('Reason for rejection') }}</label>
+                <textarea id="rejectReason" name="comments" rows="4" class="form-input w-full" required></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeRejectModal()" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Cancel') }}</button>
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                    <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showRejectModal() {
+    document.getElementById('rejectModal').classList.remove('hidden');
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').classList.add('hidden');
+    document.getElementById('rejectReason').value = '';
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    if (e.target.hasAttribute('data-overlay')) {
+        closeRejectModal();
+    }
+});
+</script>
+{% endblock %}
+

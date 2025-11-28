@@ -13,6 +13,7 @@ from .client_service import ClientService
 from .reporting_service import ReportingService
 from .analytics_service import AnalyticsService
 from .payment_service import PaymentService
+from .quote_service import QuoteService
 from .comment_service import CommentService
 from .user_service import UserService
 from .export_service import ExportService
@@ -23,23 +24,23 @@ from .backup_service import BackupService
 from .health_service import HealthService
 
 __all__ = [
-    'TimeTrackingService',
-    'ProjectService',
-    'InvoiceService',
-    'NotificationService',
-    'TaskService',
-    'ExpenseService',
-    'ClientService',
-    'ReportingService',
-    'AnalyticsService',
-    'PaymentService',
-    'CommentService',
-    'UserService',
-    'ExportService',
-    'ImportService',
-    'EmailService',
-    'PermissionService',
-    'BackupService',
-    'HealthService',
+    "TimeTrackingService",
+    "ProjectService",
+    "InvoiceService",
+    "NotificationService",
+    "TaskService",
+    "ExpenseService",
+    "ClientService",
+    "ReportingService",
+    "AnalyticsService",
+    "PaymentService",
+    "QuoteService",
+    "CommentService",
+    "UserService",
+    "ExportService",
+    "ImportService",
+    "EmailService",
+    "PermissionService",
+    "BackupService",
+    "HealthService",
 ]
-

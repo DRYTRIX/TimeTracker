@@ -15,49 +15,44 @@ def is_funnel_tracking_enabled() -> bool:
     return bool(os.getenv("POSTHOG_API_KEY", ""))
 
 
-def track_funnel_step(
-    user_id: Any,
-    funnel_name: str,
-    step: str,
-    properties: Optional[Dict[str, Any]] = None
-) -> None:
+def track_funnel_step(user_id: Any, funnel_name: str, step: str, properties: Optional[Dict[str, Any]] = None) -> None:
     """
     Track a step in a conversion funnel.
-    
+
     This creates events that can be visualized as funnels in PostHog,
     showing you where users drop off in multi-step processes.
-    
+
     Args:
         user_id: The user ID (internal ID, not PII)
         funnel_name: Name of the funnel (e.g., 'onboarding', 'invoice_generation')
         step: Current step name (e.g., 'started', 'profile_completed')
         properties: Additional properties to track with this step
-        
+
     Example:
         # User starts project creation
         track_funnel_step(user.id, "project_setup", "started")
-        
+
         # User enters basic info
         track_funnel_step(user.id, "project_setup", "basic_info_entered", {
             "has_description": True
         })
-        
+
         # User completes setup
         track_funnel_step(user.id, "project_setup", "completed")
     """
     if not is_funnel_tracking_enabled():
         return
-    
+
     from app import track_event
-    
+
     event_name = f"funnel.{funnel_name}.{step}"
     funnel_properties = {
         "funnel": funnel_name,
         "step": step,
         "step_timestamp": datetime.utcnow().isoformat(),
-        **(properties or {})
+        **(properties or {}),
     }
-    
+
     track_event(user_id, event_name, funnel_properties)
 
 
@@ -65,28 +60,29 @@ def track_funnel_step(
 # Predefined Funnels for TimeTracker
 # ============================================================================
 
+
 class Funnels:
     """
     Predefined funnel names for consistent tracking.
-    
+
     Define your funnels here to avoid typos and enable autocomplete.
     """
-    
+
     # User onboarding
     ONBOARDING = "onboarding"
-    
+
     # Project management
     PROJECT_SETUP = "project_setup"
-    
+
     # Invoice generation
     INVOICE_GENERATION = "invoice_generation"
-    
+
     # Time tracking
     TIME_TRACKING_FLOW = "time_tracking_flow"
-    
+
     # Export workflow
     EXPORT_WORKFLOW = "export_workflow"
-    
+
     # Report generation
     REPORT_GENERATION = "report_generation"
 
@@ -94,6 +90,7 @@ class Funnels:
 # ============================================================================
 # Onboarding Funnel
 # ============================================================================
+
 
 def track_onboarding_started(user_id: Any, properties: Optional[Dict] = None):
     """Track when user signs up / account is created."""
@@ -129,6 +126,7 @@ def track_onboarding_week_1_completed(user_id: Any, properties: Optional[Dict] =
 # Project Setup Funnel
 # ============================================================================
 
+
 def track_project_setup_started(user_id: Any, properties: Optional[Dict] = None):
     """Track when user starts creating a new project."""
     track_funnel_step(user_id, Funnels.PROJECT_SETUP, "started", properties)
@@ -158,6 +156,7 @@ def track_project_setup_completed(user_id: Any, properties: Optional[Dict] = Non
 # Invoice Generation Funnel
 # ============================================================================
 
+
 def track_invoice_page_viewed(user_id: Any, properties: Optional[Dict] = None):
     """Track when user views invoice page."""
     track_funnel_step(user_id, Funnels.INVOICE_GENERATION, "page_viewed", properties)
@@ -181,6 +180,7 @@ def track_invoice_generated(user_id: Any, properties: Optional[Dict] = None):
 # ============================================================================
 # Time Tracking Flow
 # ============================================================================
+
 
 def track_time_tracking_started(user_id: Any, properties: Optional[Dict] = None):
     """Track when user opens time tracking interface."""
@@ -211,6 +211,7 @@ def track_time_tracking_saved(user_id: Any, properties: Optional[Dict] = None):
 # Export Workflow
 # ============================================================================
 
+
 def track_export_started(user_id: Any, properties: Optional[Dict] = None):
     """Track when user initiates export."""
     track_funnel_step(user_id, Funnels.EXPORT_WORKFLOW, "started", properties)
@@ -234,6 +235,7 @@ def track_export_downloaded(user_id: Any, properties: Optional[Dict] = None):
 # ============================================================================
 # Report Generation
 # ============================================================================
+
 
 def track_report_page_viewed(user_id: Any, properties: Optional[Dict] = None):
     """Track when user views reports page."""
@@ -259,15 +261,13 @@ def track_report_generated(user_id: Any, properties: Optional[Dict] = None):
 # Helper Functions
 # ============================================================================
 
+
 def track_funnel_abandonment(
-    user_id: Any,
-    funnel_name: str,
-    last_step_completed: str,
-    reason: Optional[str] = None
+    user_id: Any, funnel_name: str, last_step_completed: str, reason: Optional[str] = None
 ) -> None:
     """
     Track when a user abandons a funnel.
-    
+
     Args:
         user_id: User ID
         funnel_name: Name of the funnel
@@ -275,46 +275,51 @@ def track_funnel_abandonment(
         reason: Optional reason for abandonment (e.g., 'error', 'timeout')
     """
     from app import track_event
-    
-    track_event(user_id, f"funnel.{funnel_name}.abandoned", {
-        "funnel": funnel_name,
-        "last_step": last_step_completed,
-        "abandonment_reason": reason,
-        "timestamp": datetime.utcnow().isoformat()
-    })
+
+    track_event(
+        user_id,
+        f"funnel.{funnel_name}.abandoned",
+        {
+            "funnel": funnel_name,
+            "last_step": last_step_completed,
+            "abandonment_reason": reason,
+            "timestamp": datetime.utcnow().isoformat(),
+        },
+    )
 
 
 def get_funnel_context(funnel_name: str, additional_context: Optional[Dict] = None) -> Dict:
     """
     Get standardized context for funnel events.
-    
+
     Args:
         funnel_name: Name of the funnel
         additional_context: Additional context to include
-        
+
     Returns:
         Dict of context properties
     """
     from flask import request
-    
+
     context = {
         "funnel": funnel_name,
         "timestamp": datetime.utcnow().isoformat(),
     }
-    
+
     # Add request context if available
     try:
         if request:
-            context.update({
-                "referrer": request.referrer,
-                "user_agent": request.user_agent.string,
-            })
+            context.update(
+                {
+                    "referrer": request.referrer,
+                    "user_agent": request.user_agent.string,
+                }
+            )
     except Exception:
         pass
-    
+
     # Add additional context
     if additional_context:
         context.update(additional_context)
-    
-    return context
 
+    return context
