@@ -16,7 +16,7 @@ from typing import Dict, Optional
 class InstallationConfig:
     """Manages installation-specific configuration"""
 
-    CONFIG_DIR = "data"
+    CONFIG_DIR = "/data"
     CONFIG_FILE = "installation.json"
 
     def __init__(self):

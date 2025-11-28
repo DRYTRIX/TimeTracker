@@ -302,7 +302,7 @@ def send_health_ping() -> bool:
     return send_telemetry_ping(event_type="health")
 
 
-def should_send_telemetry(marker_file: str = "data/telemetry_sent") -> bool:
+def should_send_telemetry(marker_file: str = "/data/telemetry_sent") -> bool:
     """
     Check if telemetry should be sent based on marker file.
 
@@ -318,7 +318,7 @@ def should_send_telemetry(marker_file: str = "data/telemetry_sent") -> bool:
     return not os.path.exists(marker_file)
 
 
-def mark_telemetry_sent(marker_file: str = "data/telemetry_sent") -> None:
+def mark_telemetry_sent(marker_file: str = "/data/telemetry_sent") -> None:
     """
     Create a marker file indicating telemetry has been sent.
 
@@ -360,7 +360,7 @@ def check_and_send_telemetry() -> bool:
     if not is_telemetry_enabled():
         return False
 
-    marker_file = os.getenv("TELEMETRY_MARKER_FILE", "data/telemetry_sent")
+    marker_file = os.getenv("TELEMETRY_MARKER_FILE", "/data/telemetry_sent")
 
     if should_send_telemetry(marker_file):
         success = send_install_ping()
