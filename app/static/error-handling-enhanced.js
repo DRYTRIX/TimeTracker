@@ -681,10 +681,11 @@ class EnhancedErrorHandler {
     }
 
     checkRequiredFeatures() {
+        // Only check for truly critical features required for app functionality
+        // serviceWorker is optional (PWA enhancement) and only works over HTTPS
         const features = {
             'localStorage': typeof Storage !== 'undefined',
-            'fetch': typeof fetch !== 'undefined',
-            'serviceWorker': 'serviceWorker' in navigator
+            'fetch': typeof fetch !== 'undefined'
         };
         
         const missing = Object.entries(features)
@@ -697,6 +698,16 @@ class EnhancedErrorHandler {
                 `Some features may not work properly: ${missing.join(', ')}. Please update your browser.`,
                 'Browser Compatibility'
             );
+        }
+        
+        // Log serviceWorker availability for debugging (but don't show warning)
+        if (!('serviceWorker' in navigator)) {
+            const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (!isSecureContext) {
+                console.debug('ServiceWorker not available: requires HTTPS (or localhost)');
+            } else {
+                console.debug('ServiceWorker not available: browser does not support it');
+            }
         }
     }
 

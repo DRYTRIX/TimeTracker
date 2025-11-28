@@ -193,11 +193,14 @@ def view_task(task_id):
         flash(_('You do not have access to this task'), 'error')
         return redirect(url_for('tasks.list_tasks'))
     
-    # Get time entries (already loaded via eager loading, but need to order)
-    time_entries = sorted(task.time_entries, key=lambda e: e.start_time if e.start_time else datetime.min, reverse=True)
+    # Get time entries (time_entries is a dynamic relationship, so query it)
+    # Eagerly load user relationship to prevent N+1 queries
+    from sqlalchemy.orm import joinedload
+    time_entries = task.time_entries.options(joinedload(TimeEntry.user)).order_by(TimeEntry.start_time.desc(), TimeEntry.id.desc()).all()
     
-    # Recent activity entries (already loaded)
-    activities = sorted(task.activities, key=lambda a: a.created_at if a.created_at else datetime.min, reverse=True)[:20]
+    # Recent activity entries (activities is a dynamic relationship, so query it)
+    # Eagerly load user relationship to prevent N+1 queries
+    activities = task.activities.options(joinedload(TaskActivity.user)).order_by(TaskActivity.created_at.desc(), TaskActivity.id.desc()).limit(20).all()
     
     # Get comments for this task
     from app.models import Comment

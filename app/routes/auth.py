@@ -41,25 +41,29 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
     
-    # If OIDC-only mode, redirect to OIDC login start
+    # Get authentication method
     try:
         auth_method = (getattr(Config, 'AUTH_METHOD', 'local') or 'local').strip().lower()
     except Exception:
         auth_method = 'local'
 
+    # Determine if password authentication is required
+    requires_password = auth_method in ('local', 'both')
+    
+    # If OIDC-only mode, redirect to OIDC login start
     if auth_method == 'oidc':
-        # In OIDC-only mode, do not allow local form login at all
         return redirect(url_for('auth.login_oidc', next=request.args.get('next')))
 
     if request.method == 'POST':
         try:
             username = request.form.get('username', '').strip().lower()
-            current_app.logger.info("POST /login (username=%s) from %s", username or '<empty>', request.headers.get('X-Forwarded-For') or request.remote_addr)
+            password = request.form.get('password', '')
+            current_app.logger.info("POST /login (username=%s, auth_method=%s) from %s", username or '<empty>', auth_method, request.headers.get('X-Forwarded-For') or request.remote_addr)
             
             if not username:
-                log_event("auth.login_failed", reason="empty_username", auth_method="local")
+                log_event("auth.login_failed", reason="empty_username", auth_method=auth_method)
                 flash(_('Username is required'), 'error')
-                return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
+                return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
             
             # Normalize admin usernames from config
             try:
@@ -74,28 +78,40 @@ def login():
             if not user:
                 # Check if self-registration is allowed
                 if Config.ALLOW_SELF_REGISTER:
+                    # If password auth is required, validate password during self-registration
+                    if requires_password:
+                        if not password:
+                            flash(_('Password is required to create an account.'), 'error')
+                            return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
+                        if len(password) < 8:
+                            flash(_('Password must be at least 8 characters long.'), 'error')
+                            return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
+                    
                     # Create new user, promote to admin if username is configured as admin
                     role = 'admin' if username in admin_usernames else 'user'
                     user = User(username=username, role=role)
+                    # Set password if password auth is required
+                    if requires_password and password:
+                        user.set_password(password)
                     db.session.add(user)
                     if not safe_commit('self_register_user', {'username': username}):
                         current_app.logger.error("Self-registration failed for '%s' due to DB error", username)
                         flash(_('Could not create your account due to a database error. Please try again later.'), 'error')
-                        return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
+                        return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
                     current_app.logger.info("Created new user '%s'", username)
                     
                     # Track onboarding started for new user
                     track_onboarding_started(user.id, {
-                        "auth_method": "local",
+                        "auth_method": auth_method,
                         "self_registered": True,
                         "is_admin": role == 'admin'
                     })
                     
                     flash(_('Welcome! Your account has been created.'), 'success')
                 else:
-                    log_event("auth.login_failed", username=username, reason="user_not_found", auth_method="local")
+                    log_event("auth.login_failed", username=username, reason="user_not_found", auth_method=auth_method)
                     flash(_('User not found. Please contact an administrator.'), 'error')
-                    return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
+                    return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
             else:
                 # If existing user matches admin usernames, ensure admin role
                 if username in admin_usernames and user.role != 'admin':
@@ -103,22 +119,45 @@ def login():
                     if not safe_commit('promote_admin_user', {'username': username}):
                         current_app.logger.error("Failed to promote '%s' to admin due to DB error", username)
                         flash(_('Could not update your account role due to a database error.'), 'error')
-                        return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
+                        return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
             
             # Check if user is active
             if not user.is_active:
-                log_event("auth.login_failed", user_id=user.id, reason="account_disabled", auth_method="local")
+                log_event("auth.login_failed", user_id=user.id, reason="account_disabled", auth_method=auth_method)
                 flash(_('Account is disabled. Please contact an administrator.'), 'error')
-                return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
+                return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
             
+            # Handle password authentication based on mode
+            if requires_password:
+                # Password authentication is required
+                if user.has_password:
+                    # User has password set - verify it
+                    if not password:
+                        log_event("auth.login_failed", user_id=user.id, reason="password_required", auth_method=auth_method)
+                        flash(_('Password is required'), 'error')
+                        return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
+                    
+                    if not user.check_password(password):
+                        log_event("auth.login_failed", user_id=user.id, reason="invalid_password", auth_method=auth_method)
+                        flash(_('Invalid username or password'), 'error')
+                        return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
+                else:
+                    # User doesn't have password set - prompt to set one
+                    log_event("auth.login_failed", user_id=user.id, reason="no_password_set", auth_method=auth_method)
+                    flash(_('No password is set for your account. Please set a password in your profile to continue.'), 'error')
+                    # Still log them in so they can set password in profile
+                    login_user(user, remember=True)
+                    return redirect(url_for('auth.edit_profile'))
+            
+            # For 'none' mode, no password check needed - just log in
             # Log in the user
             login_user(user, remember=True)
             user.update_last_login()
             current_app.logger.info("User '%s' logged in successfully", user.username)
             
             # Track successful login
-            log_event("auth.login", user_id=user.id, auth_method="local")
-            track_event(user.id, "auth.login", {"auth_method": "local"})
+            log_event("auth.login", user_id=user.id, auth_method=auth_method)
+            track_event(user.id, "auth.login", {"auth_method": auth_method})
             
             # Identify user with comprehensive segmentation properties
             identify_user_with_segments(user.id, user)
@@ -137,9 +176,9 @@ def login():
         except Exception as e:
             current_app.logger.exception("Login error: %s", e)
             flash(_('Unexpected error during login. Please try again or check server logs.'), 'error')
-            return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
+            return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
     
-    return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method)
+    return render_template('auth/login.html', allow_self_register=Config.ALLOW_SELF_REGISTER, auth_method=auth_method, requires_password=requires_password)
 
 @auth_bp.route('/logout')
 @login_required
@@ -200,6 +239,14 @@ def profile():
 @login_required
 def edit_profile():
     """Edit user profile"""
+    # Get authentication method to determine if password fields should be shown
+    try:
+        auth_method = (getattr(Config, 'AUTH_METHOD', 'local') or 'local').strip().lower()
+    except Exception:
+        auth_method = 'local'
+    
+    requires_password = auth_method in ('local', 'both')
+    
     if request.method == 'POST':
         # Update real name if provided
         full_name = request.form.get('full_name', '').strip()
@@ -211,6 +258,25 @@ def edit_profile():
             current_user.preferred_language = preferred_language
             # Also set session so it applies immediately
             session['preferred_language'] = preferred_language
+        
+        # Handle password update if password auth is required
+        if requires_password:
+            password = request.form.get('password', '').strip()
+            password_confirm = request.form.get('password_confirm', '').strip()
+            
+            if password:
+                # Validate password
+                if len(password) < 8:
+                    flash(_('Password must be at least 8 characters long.'), 'error')
+                    return redirect(url_for('auth.edit_profile'))
+                
+                if password != password_confirm:
+                    flash(_('Passwords do not match.'), 'error')
+                    return redirect(url_for('auth.edit_profile'))
+                
+                # Set the new password
+                current_user.set_password(password)
+                current_app.logger.info("User '%s' updated password", current_user.username)
 
         # Handle avatar upload if provided
         try:
@@ -269,7 +335,7 @@ def edit_profile():
             flash(_('Could not update your profile due to a database error.'), 'error')
         return redirect(url_for('auth.profile'))
     
-    return render_template('auth/edit_profile.html')
+    return render_template('auth/edit_profile.html', requires_password=requires_password)
 
 
 @auth_bp.route('/profile/avatar/remove', methods=['POST'])

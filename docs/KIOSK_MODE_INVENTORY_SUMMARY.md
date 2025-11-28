@@ -156,7 +156,9 @@ Kiosk Mode is a specialized interface for warehouse operations with barcode scan
 
 ## Security
 
-- ✅ Username-only login (acceptable for kiosk)
+- ✅ Authentication follows `AUTH_METHOD` setting:
+  - `none`: Username-only login (acceptable for trusted kiosk environments)
+  - `local` or `both`: Password authentication required (more secure)
 - ✅ Shorter session timeout
 - ✅ Auto-logout on inactivity
 - ✅ Permission checks for operations

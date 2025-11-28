@@ -17,9 +17,10 @@ class ConfigManager:
         Get a setting value.
         
         Checks in order:
-        1. Environment variable
-        2. Settings model
-        3. Default value
+        1. Settings model (WebUI changes have highest priority)
+        2. Environment variable (.env file - used as initial values)
+        3. App config
+        4. Default value
         
         Args:
             key: Setting key
@@ -28,12 +29,7 @@ class ConfigManager:
         Returns:
             Setting value
         """
-        # Check environment variable first
-        env_value = os.getenv(key.upper())
-        if env_value is not None:
-            return env_value
-        
-        # Check Settings model
+        # Check Settings model first (WebUI changes have highest priority)
         try:
             settings = Settings.get_settings()
             if settings and hasattr(settings, key):
@@ -42,6 +38,11 @@ class ConfigManager:
                     return value
         except Exception:
             pass
+        
+        # Check environment variable second (.env file - used as initial values)
+        env_value = os.getenv(key.upper())
+        if env_value is not None:
+            return env_value
         
         # Check app config
         if current_app:
