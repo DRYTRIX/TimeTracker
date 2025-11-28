@@ -96,9 +96,11 @@ python app.py
 
 1. **Open TimeTracker** in your browser: `http://localhost:8080`
 
-2. **Enter a username** (no password required for internal use)
-   - Example: `admin`, `john`, or your name
-   - This creates your account automatically
+2. **Enter your credentials** (depends on authentication method configured)
+   - **Default (`AUTH_METHOD=local`)**: Enter username and password
+   - **No authentication (`AUTH_METHOD=none`)**: Enter username only (no password)
+   - **OIDC (`AUTH_METHOD=oidc`)**: Click "Sign in with SSO" button
+   - **Both (`AUTH_METHOD=both`)**: Choose either SSO or local username/password
 
 3. **Admin users are configured in the environment**
    - Set via `ADMIN_USERNAMES` environment variable (default: `admin`)
@@ -107,7 +109,13 @@ python app.py
 
 4. **You're in!** Welcome to your dashboard
 
-> **Note**: TimeTracker uses username-only authentication for simplicity. It's designed for internal, trusted network use. For additional security, deploy behind a reverse proxy with authentication.
+> **Note**: Authentication method is configured via the `AUTH_METHOD` environment variable:
+> - `none`: Username only (for trusted internal networks)
+> - `local`: Username + password (default, recommended)
+> - `oidc`: Single Sign-On only
+> - `both`: Both OIDC and local password authentication
+> 
+> See [OIDC Setup Guide](OIDC_SETUP.md#5-authentication-methods) for detailed explanations of all authentication modes.
 
 ---
 

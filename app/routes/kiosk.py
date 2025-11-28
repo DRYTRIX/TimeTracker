@@ -88,20 +88,54 @@ def kiosk_login():
     if current_user.is_authenticated:
         return redirect(url_for('kiosk.kiosk_dashboard'))
     
+    # Get authentication method
+    try:
+        from app.config import Config
+        auth_method = (getattr(Config, 'AUTH_METHOD', 'local') or 'local').strip().lower()
+    except Exception:
+        auth_method = 'local'
+    
+    # Determine if password authentication is required (kiosk doesn't support OIDC)
+    requires_password = auth_method in ('local', 'both')
+    
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
-        if username:
-            user = User.query.filter_by(username=username, is_active=True).first()
-            if user:
-                login_user(user, remember=False)  # Don't remember in kiosk mode
-                log_event("auth.kiosk_login", user_id=user.id)
-                return redirect(url_for('kiosk.kiosk_dashboard'))
+        password = request.form.get('password', '')
+        
+        if not username:
+            flash(_('Username is required'), 'error')
+            return redirect(url_for('kiosk.kiosk_login'))
+        
+        user = User.query.filter_by(username=username, is_active=True).first()
+        if not user:
+            flash(_('Invalid username or password'), 'error')
+            return redirect(url_for('kiosk.kiosk_login'))
+        
+        # Handle password authentication based on mode
+        if requires_password:
+            # Password authentication is required
+            if user.has_password:
+                # User has password set - verify it
+                if not password:
+                    flash(_('Password is required'), 'error')
+                    return redirect(url_for('kiosk.kiosk_login'))
+                
+                if not user.check_password(password):
+                    flash(_('Invalid username or password'), 'error')
+                    return redirect(url_for('kiosk.kiosk_login'))
             else:
-                flash(_('User not found'), 'error')
+                # User doesn't have password set - deny access in kiosk mode
+                flash(_('No password is set for this account. Please set a password in your profile first.'), 'error')
+                return redirect(url_for('kiosk.kiosk_login'))
+        
+        # For 'none' mode, no password check needed - just log in
+        login_user(user, remember=False)  # Don't remember in kiosk mode
+        log_event("auth.kiosk_login", user_id=user.id)
+        return redirect(url_for('kiosk.kiosk_dashboard'))
     
     # Get list of active users for quick selection
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
-    return render_template('kiosk/login.html', users=users)
+    return render_template('kiosk/login.html', users=users, requires_password=requires_password)
 
 
 @kiosk_bp.route('/kiosk/logout', methods=['GET', 'POST'])

@@ -60,6 +60,7 @@
                     {% endfor %}
                 </select>
             </div>
+            {% if requires_password %}
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
                 <input type="password" name="password" id="password" class="form-input" placeholder="{{ _('Leave blank to keep current password') }}">
@@ -68,6 +69,7 @@
                 <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
                 <input type="password" name="password_confirm" id="password_confirm" class="form-input">
             </div>
+            {% endif %}
         </div>
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end">
             <a href="{{ url_for('auth.profile') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mr-4">Cancel</a>
