@@ -144,14 +144,14 @@ class TaskService:
         )
         
         # Conditionally load relations
-        if include_time_entries:
-            query = query.options(joinedload(Task.time_entries).joinedload(TimeEntry.user))
+        # Note: time_entries is a dynamic relationship (lazy='dynamic') and cannot be eager loaded
+        # Time entries must be queried separately using task.time_entries.order_by(...).all()
         
         if include_comments:
-            query = query.options(joinedload(Task.comments).joinedload(Comment.user))
+            query = query.options(joinedload(Task.comments).joinedload(Comment.author))
         
-        if include_activities:
-            query = query.options(joinedload(Task.activities))
+        # Note: activities is a dynamic relationship (lazy='dynamic') and cannot be eager loaded
+        # Activities must be queried separately using task.activities.order_by(...).all()
         
         return query.first()
     

@@ -151,7 +151,7 @@ def view_project(project_id):
     
     # Get comments with eager loading
     comments = Comment.query.filter_by(project_id=project_id).options(
-        joinedload(Comment.user)  # Eagerly load user
+        joinedload(Comment.author)  # Eagerly load author
     ).order_by(Comment.created_at.desc()).all()
     
     # Get recent project costs

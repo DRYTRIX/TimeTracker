@@ -25,6 +25,7 @@ class User(UserMixin, db.Model):
     oidc_sub = db.Column(db.String(255), nullable=True)
     oidc_issuer = db.Column(db.String(255), nullable=True)
     avatar_filename = db.Column(db.String(255), nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
     
     # User preferences and settings
     email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable email notifications
@@ -70,12 +71,27 @@ class User(UserMixin, db.Model):
     
     def set_password(self, password):
         """
-        Stub method for test compatibility.
-        This application uses username-only authentication (or OIDC),
-        so passwords are not actually used or stored.
+        Set the user's password hash.
+        For OIDC users, password is optional.
         """
-        # No-op: this application doesn't use password authentication
-        pass
+        if password:
+            self.password_hash = generate_password_hash(password)
+        else:
+            self.password_hash = None
+    
+    def check_password(self, password):
+        """
+        Check if the provided password matches the user's password hash.
+        Returns False if no password is set or if password doesn't match.
+        """
+        if not self.password_hash or not password:
+            return False
+        return check_password_hash(self.password_hash, password)
+    
+    @property
+    def has_password(self):
+        """Check if user has a password set"""
+        return bool(self.password_hash)
     
     @property
     def is_admin(self):

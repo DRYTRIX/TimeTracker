@@ -45,7 +45,11 @@ class Config:
     ALLOW_SELF_REGISTER = os.getenv('ALLOW_SELF_REGISTER', 'true').lower() == 'true'
     ADMIN_USERNAMES = os.getenv('ADMIN_USERNAMES', 'admin').split(',')
 
-    # Authentication method: 'local' | 'oidc' | 'both'
+    # Authentication method: 'none' | 'local' | 'oidc' | 'both'
+    # 'none' = no password authentication (username only)
+    # 'local' = password authentication required
+    # 'oidc' = OIDC/Single Sign-On only
+    # 'both' = OIDC + local password authentication
     AUTH_METHOD = os.getenv('AUTH_METHOD', 'local').strip().lower()
 
     # OIDC settings (used when AUTH_METHOD is 'oidc' or 'both')

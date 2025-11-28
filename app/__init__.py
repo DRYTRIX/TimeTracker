@@ -297,6 +297,19 @@ def create_app(config=None):
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
     
+    # Initialize Settings from environment variables on startup
+    # This ensures .env values are used as initial values, but WebUI changes take priority
+    with app.app_context():
+        try:
+            from app.models import Settings
+            # This will create Settings if it doesn't exist and initialize from .env
+            # The get_settings() method automatically initializes new Settings from .env
+            Settings.get_settings()
+        except Exception as e:
+            # Don't fail app startup if Settings initialization fails
+            # (e.g., database not ready yet, migration not run)
+            app.logger.warning(f"Could not initialize Settings from environment: {e}")
+    
     # Initialize Flask-Mail
     from app.utils.email import init_mail
     init_mail(app)

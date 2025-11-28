@@ -4,7 +4,7 @@ This guide explains how to enable Single Sign-On (SSO) with OpenID Connect for T
 
 ### Quick Summary
 
-- Set `AUTH_METHOD=oidc` (SSO only) or `AUTH_METHOD=both` (SSO + local form).
+- Set `AUTH_METHOD=oidc` (SSO only) or `AUTH_METHOD=both` (SSO + local password authentication).
 - Configure `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and `OIDC_REDIRECT_URI`.
 - Optional: Configure admin mapping via `OIDC_ADMIN_GROUP` or `OIDC_ADMIN_EMAILS`.
 - Restart the app. The login page will show an “Sign in with SSO” button when enabled.
@@ -31,7 +31,7 @@ Make sure your external URL and protocol (HTTP/HTTPS) match how users access the
 Add these to your environment (e.g., `.env`, Docker Compose, or Kubernetes Secrets):
 
 ```
-AUTH_METHOD=oidc            # or both, or local
+AUTH_METHOD=oidc            # Options: none | local | oidc | both (see section 5 for details)
 
 # Core OIDC settings
 OIDC_ISSUER=https://idp.example.com/realms/your-realm
@@ -86,13 +86,50 @@ Also ensure the standard app settings are configured (database, secret key, etc.
   - If `ALLOW_SELF_REGISTER=true` (default), unknown users are created on first login; otherwise they’re blocked.
   - Admin role can be granted if user’s groups contains `OIDC_ADMIN_GROUP` or if user’s email is in `OIDC_ADMIN_EMAILS`.
 
-### 5) Local Login Coexistence
+### 5) Authentication Methods
 
-`AUTH_METHOD` controls the login options:
+The `AUTH_METHOD` environment variable controls how users authenticate with TimeTracker. It supports four options:
 
-- `local`: username-only form (default, no SSO).
-- `oidc`: SSO only, local form is hidden and `/login` redirects to SSO.
-- `both`: show SSO button and keep local form.
+#### Available Options
+
+1. **`none`** - No password authentication (username only)
+   - Users log in with just their username, no password required
+   - No password field shown on login page
+   - Useful for trusted internal networks or development environments
+   - Self-registration works (users can create accounts by entering any username)
+   - **Note:** This is the least secure option and should only be used in trusted environments
+
+2. **`local`** - Password authentication required (default)
+   - Users must set and use a password to log in
+   - Password field is shown on login page
+   - Users without passwords are prompted to set one in their profile
+   - Passwords can be changed in user profile settings
+   - Self-registration works (new users must provide a password during registration)
+   - Works for both regular login and kiosk mode
+   - **Note:** This is the recommended option for most installations
+
+3. **`oidc`** - OIDC/Single Sign-On only
+   - Users authenticate via your OIDC provider (e.g., Azure AD, Okta, Keycloak)
+   - Local login form is hidden
+   - `/login` redirects directly to OIDC login
+   - Requires OIDC configuration (see Required Environment Variables above)
+   - Self-registration still works if `ALLOW_SELF_REGISTER=true` (users created on first OIDC login)
+
+4. **`both`** - OIDC + Local password authentication
+   - Shows both SSO button and local login form
+   - Users can choose to log in with OIDC or use username/password
+   - Local authentication requires passwords (same as `local` mode)
+   - Best for organizations transitioning to SSO or supporting mixed authentication
+   - Requires OIDC configuration to be set up
+
+#### Summary Table
+
+| Mode | Password Field | Password Required | OIDC Available | Self-Register | Use Case |
+|------|---------------|-------------------|----------------|---------------|----------|
+| `none` | ❌ No | ❌ No | ❌ No | ✅ Yes | Trusted internal networks, development |
+| `local` | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | Standard password authentication |
+| `oidc` | ❌ No | ❌ No | ✅ Yes | ✅ Yes | Enterprise SSO only |
+| `both` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Mixed authentication (SSO + local) |
 
 ### 6) Docker Compose Example
 

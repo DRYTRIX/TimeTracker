@@ -81,7 +81,14 @@ All environment variables can be provided via `.env` and are consumed by the `ap
 - ADMIN_USERNAMES: Comma-separated admin usernames. Default: `admin`.
 
 ### Authentication
-- AUTH_METHOD: `local` | `oidc` | `both`. Default: `local`.
+
+- **AUTH_METHOD**: Controls authentication method. Options:
+  - `none`: No password authentication (username only). Use only in trusted environments.
+  - `local`: Password authentication required (default). Users must set and use passwords.
+  - `oidc`: OIDC/Single Sign-On only. Local login form is hidden.
+  - `both`: OIDC + local password authentication. Users can choose either method.
+  
+  Default: `local`. See [OIDC Setup Guide](OIDC_SETUP.md) for detailed explanations.
 - OIDC_ISSUER: OIDC provider issuer URL.
 - OIDC_CLIENT_ID: OIDC client id.
 - OIDC_CLIENT_SECRET: OIDC client secret.

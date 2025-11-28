@@ -130,6 +130,25 @@
                                 </div>
                             </div>
 
+                            {% if requires_password %}
+                            <!-- Password Input -->
+                            <div>
+                                <label for="password" class="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ _('Password') }}</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-lock text-gray-400"></i>
+                                    </div>
+                                    <input type="password" 
+                                           id="password" 
+                                           name="password" 
+                                           autocomplete="current-password"
+                                           class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all"
+                                           placeholder="{{ _('Password') }}"
+                                           autocomplete="off">
+                                </div>
+                            </div>
+                            {% endif %}
+
                             <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
                                 {{ _('Sign in') }}
                             </button>
@@ -246,18 +265,18 @@
 
         function selectUser(username) {
             document.getElementById('username').value = username;
-            document.getElementById('username').focus();
+            document.getElementById('password').focus();
         }
 
-        // Auto-submit on Enter
-        document.getElementById('username').addEventListener('keypress', function(e) {
+        // Auto-submit on Enter in password field
+        document.getElementById('password').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 this.form.submit();
             }
         });
 
-        // Focus on input on load
+        // Focus on username input on load
         window.addEventListener('load', function() {
             document.getElementById('username').focus();
         });
