@@ -1,7 +1,7 @@
 """Add password_hash to users table
 
 Revision ID: 068_add_user_password_hash
-Revises: 067_add_integration_credentials
+Revises: 067_integration_credentials
 Create Date: 2025-01-27
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '068_add_user_password_hash'
-down_revision = '067_add_integration_credentials'
+down_revision = '067_integration_credentials'
 branch_labels = None
 depends_on = None
 

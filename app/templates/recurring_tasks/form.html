@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Recurring Task') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Recurring Tasks'), 'url': url_for('recurring_tasks.list_recurring_tasks')},
+    {'text': _('Create Recurring Task') if not recurring_task else _('Edit Recurring Task')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-redo',
+    title_text=_('Create Recurring Task') if not recurring_task else _('Edit Recurring Task'),
+    subtitle_text=_('Set up automated task creation'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" id="recurringTaskForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="space-y-6">
+            <!-- Basic Information -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4">{{ _('Basic Information') }}</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium mb-2">{{ _('Task Name Template') }} *</label>
+                        <input type="text" id="name" name="name" value="{{ recurring_task.name if recurring_task else '' }}" required class="form-input w-full" placeholder="{{ _('e.g., Weekly Team Meeting') }}">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('This will be used as the base name for created tasks') }}</p>
+                    </div>
+                    
+                    <div>
+                        <label for="project_id" class="block text-sm font-medium mb-2">{{ _('Project') }} *</label>
+                        <select id="project_id" name="project_id" required class="form-input w-full">
+                            <option value="">{{ _('Select a project') }}</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if recurring_task and recurring_task.project_id == project.id %}selected{% endif %}>
+                                {{ project.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="description" class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
+                        <textarea id="description" name="description" rows="4" class="form-input w-full">{{ recurring_task.description if recurring_task else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4">{{ _('Schedule') }}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="frequency" class="block text-sm font-medium mb-2">{{ _('Frequency') }} *</label>
+                        <select id="frequency" name="frequency" required class="form-input w-full">
+                            <option value="daily" {% if recurring_task and recurring_task.frequency == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
+                            <option value="weekly" {% if recurring_task and recurring_task.frequency == 'weekly' %}selected{% endif %}>{{ _('Weekly') }}</option>
+                            <option value="monthly" {% if recurring_task and recurring_task.frequency == 'monthly' %}selected{% endif %}>{{ _('Monthly') }}</option>
+                            <option value="yearly" {% if recurring_task and recurring_task.frequency == 'yearly' %}selected{% endif %}>{{ _('Yearly') }}</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="interval" class="block text-sm font-medium mb-2">{{ _('Interval') }}</label>
+                        <input type="number" id="interval" name="interval" value="{{ recurring_task.interval if recurring_task else 1 }}" min="1" class="form-input w-full">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Repeat every N periods (e.g., every 2 weeks)') }}</p>
+                    </div>
+                    
+                    <div>
+                        <label for="next_run_date" class="block text-sm font-medium mb-2">{{ _('Next Run Date') }} *</label>
+                        <input type="date" id="next_run_date" name="next_run_date" value="{{ recurring_task.next_run_date|local_date('%Y-%m-%d') if recurring_task and recurring_task.next_run_date else '' }}" required class="form-input w-full">
+                    </div>
+                    
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium mb-2">{{ _('End Date') }}</label>
+                        <input type="date" id="end_date" name="end_date" value="{{ recurring_task.end_date|local_date('%Y-%m-%d') if recurring_task and recurring_task.end_date else '' }}" class="form-input w-full">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Stop creating tasks after this date') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Settings -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4">{{ _('Task Settings') }}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="priority" class="block text-sm font-medium mb-2">{{ _('Priority') }}</label>
+                        <select id="priority" name="priority" class="form-input w-full">
+                            <option value="low" {% if recurring_task and recurring_task.priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
+                            <option value="medium" {% if not recurring_task or recurring_task.priority == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
+                            <option value="high" {% if recurring_task and recurring_task.priority == 'high' %}selected{% endif %}>{{ _('High') }}</option>
+                            <option value="urgent" {% if recurring_task and recurring_task.priority == 'urgent' %}selected{% endif %}>{{ _('Urgent') }}</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="estimated_hours" class="block text-sm font-medium mb-2">{{ _('Estimated Hours') }}</label>
+                        <input type="number" id="estimated_hours" name="estimated_hours" step="0.25" value="{{ recurring_task.estimated_hours if recurring_task and recurring_task.estimated_hours else '' }}" class="form-input w-full">
+                    </div>
+                    
+                    <div>
+                        <label for="assigned_to" class="block text-sm font-medium mb-2">{{ _('Assign To') }}</label>
+                        <select id="assigned_to" name="assigned_to" class="form-input w-full">
+                            <option value="">{{ _('Unassigned') }}</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}" {% if recurring_task and recurring_task.assigned_to == user.id %}selected{% endif %}>
+                                {{ user.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center pt-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="auto_assign" {% if recurring_task and recurring_task.auto_assign %}checked{% endif %} class="form-checkbox">
+                            <span class="ml-2 text-sm">{{ _('Auto-assign to creator') }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+            <a href="{{ url_for('recurring_tasks.list_recurring_tasks') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                <i class="fas fa-save mr-1"></i>{{ _('Save') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

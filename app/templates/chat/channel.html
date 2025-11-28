@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ channel.name }} - {{ _('Team Chat') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Team Chat'), 'url': url_for('team_chat.chat_index')},
+    {'text': channel.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-comments',
+    title_text='#' ~ channel.name,
+    subtitle_text=channel.description if channel.description else _('Team chat channel'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Chat Messages Area -->
+    <div class="lg:col-span-3 bg-card-light dark:bg-card-dark rounded-lg shadow flex flex-col" style="height: 600px;">
+        <!-- Messages Container -->
+        <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+            {% for message in messages %}
+            <div class="flex items-start gap-3" data-message-id="{{ message.id }}">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <i class="fas fa-user text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold text-text-light dark:text-text-dark">{{ message.user.username if message.user else 'Unknown' }}</span>
+                        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ message.created_at|local_datetime('%H:%M') if message.created_at else '' }}</span>
+                    </div>
+                    <div class="text-text-light dark:text-text-dark whitespace-pre-wrap">{{ message.content }}</div>
+                    {% if message.attachments %}
+                    <div class="mt-2 space-y-1">
+                        {% for attachment in message.attachments %}
+                        <a href="{{ url_for('team_chat.download_attachment', message_id=message.id, attachment_id=attachment.id) }}" class="text-sm text-primary hover:underline">
+                            <i class="fas fa-paperclip mr-1"></i>{{ attachment.filename }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Message Input -->
+        <div class="border-t border-border-light dark:border-border-dark p-4">
+            <form id="messageForm" method="POST" action="{{ url_for('team_chat.send_message', channel_id=channel.id) }}" class="flex gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex-1 relative">
+                    <textarea id="messageInput" name="content" rows="2" class="form-input w-full resize-none" placeholder="{{ _('Type a message...') }}" required></textarea>
+                    <div class="absolute bottom-2 right-2 flex gap-1">
+                        <button type="button" onclick="showEmojiPicker()" class="text-text-muted-light dark:text-text-muted-dark hover:text-primary">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                        <button type="button" onclick="showAttachmentModal()" class="text-text-muted-light dark:text-text-muted-dark hover:text-primary">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dark transition-colors self-end">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Channel Info Sidebar -->
+    <div class="lg:col-span-1 bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">{{ _('Channel Info') }}</h3>
+        
+        {% if channel.description %}
+        <div class="mb-4">
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ channel.description }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mb-4">
+            <h4 class="text-sm font-semibold mb-2">{{ _('Members') }} ({{ members|length }})</h4>
+            <div class="space-y-2">
+                {% for member in members %}
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <i class="fas fa-user text-primary text-xs"></i>
+                    </div>
+                    <span class="text-sm">{{ member.user.username if member.user else 'Unknown' }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if current_user.is_admin or channel.created_by == current_user.id %}
+        <div class="pt-4 border-t border-border-light dark:border-border-dark">
+            <a href="{{ url_for('team_chat.edit_channel', channel_id=channel.id) }}" class="text-sm text-primary hover:underline">
+                <i class="fas fa-cog mr-1"></i>{{ _('Channel Settings') }}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Auto-scroll to bottom on load
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('messagesContainer');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+});
+
+// WebSocket for real-time messages
+if (typeof io !== 'undefined') {
+    const socket = io();
+    
+    socket.on('connect', function() {
+        socket.emit('join_channel', { channel_id: {{ channel.id }} });
+    });
+    
+    socket.on('new_message', function(data) {
+        if (data.channel_id === {{ channel.id }}) {
+            // Reload messages or append new message
+            location.reload();
+        }
+    });
+}
+
+// Form submission
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            // Reload messages
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to send message');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to send message');
+    });
+});
+
+function showEmojiPicker() {
+    // TODO: Implement emoji picker
+    alert('Emoji picker coming soon');
+}
+
+function showAttachmentModal() {
+    // TODO: Implement attachment modal
+    alert('Attachment upload coming soon');
+}
+</script>
+{% endblock %}
+

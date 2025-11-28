@@ -25,6 +25,14 @@ import time
 from app.utils.excel_export import create_time_entries_excel, create_project_report_excel
 from app.utils.posthog_monitoring import track_error, track_export_performance, track_validation_error
 
+# Optional PowerPoint export - only import if available
+try:
+    from app.utils.powerpoint_export import create_report_powerpoint
+    PPTX_EXPORT_AVAILABLE = True
+except ImportError:
+    PPTX_EXPORT_AVAILABLE = False
+    create_report_powerpoint = None
+
 reports_bp = Blueprint("reports", __name__)
 
 

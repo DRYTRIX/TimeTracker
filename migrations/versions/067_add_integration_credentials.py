@@ -1,7 +1,7 @@
 """Add integration OAuth credentials to Settings model
 
-Revision ID: 067_add_integration_credentials
-Revises: 066_add_integration_framework
+Revision ID: 067_integration_credentials
+Revises: 066_integration_framework
 Create Date: 2025-11-26
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '067_add_integration_credentials'
-down_revision = '066_add_integration_framework'
+revision = '067_integration_credentials'
+down_revision = '066_integration_framework'
 branch_labels = None
 depends_on = None
 

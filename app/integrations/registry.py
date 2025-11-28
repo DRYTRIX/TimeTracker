@@ -7,6 +7,10 @@ from app.services.integration_service import IntegrationService
 from app.integrations.jira import JiraConnector
 from app.integrations.slack import SlackConnector
 from app.integrations.github import GitHubConnector
+from app.integrations.google_calendar import GoogleCalendarConnector
+from app.integrations.asana import AsanaConnector
+from app.integrations.trello import TrelloConnector
+from app.integrations.quickbooks import QuickBooksConnector
 
 
 def register_connectors():
@@ -14,6 +18,10 @@ def register_connectors():
     IntegrationService.register_connector("jira", JiraConnector)
     IntegrationService.register_connector("slack", SlackConnector)
     IntegrationService.register_connector("github", GitHubConnector)
+    IntegrationService.register_connector("google_calendar", GoogleCalendarConnector)
+    IntegrationService.register_connector("asana", AsanaConnector)
+    IntegrationService.register_connector("trello", TrelloConnector)
+    IntegrationService.register_connector("quickbooks", QuickBooksConnector)
 
 
 # Auto-register on import
