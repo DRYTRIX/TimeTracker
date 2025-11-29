@@ -45,9 +45,11 @@ def dashboard():
     recent_entries = time_entry_repo.get_by_user(user_id=current_user.id, limit=10, include_relations=True)
 
     # Get active projects for timer dropdown (using repository)
-    from app.repositories import ProjectRepository
+    from app.repositories import ProjectRepository, ClientRepository
     project_repo = ProjectRepository()
+    client_repo = ClientRepository()
     active_projects = project_repo.get_active_projects()
+    active_clients = client_repo.get_active_clients()
 
     # Get user statistics using analytics service
     from app.services import AnalyticsService
@@ -107,6 +109,7 @@ def dashboard():
         "active_timer": active_timer,
         "recent_entries": recent_entries,
         "active_projects": active_projects,
+        "active_clients": active_clients,
         "today_hours": today_hours,
         "week_hours": week_hours,
         "month_hours": month_hours,

@@ -44,6 +44,40 @@ class Settings(db.Model):
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
 
+    # System-wide UI feature flags - control which features are available for users to customize
+    # Calendar section
+    ui_allow_calendar = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Time Tracking section items
+    ui_allow_project_templates = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_gantt_chart = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_kanban_board = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_weekly_goals = db.Column(db.Boolean, default=True, nullable=False)
+
+    # CRM section
+    ui_allow_quotes = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Finance & Expenses section items
+    ui_allow_reports = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_report_builder = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_scheduled_reports = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_invoice_approvals = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_payment_gateways = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_recurring_invoices = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_payments = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_mileage = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_per_diem = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_budget_alerts = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Inventory section
+    ui_allow_inventory = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Analytics
+    ui_allow_analytics = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Tools & Data section
+    ui_allow_tools = db.Column(db.Boolean, default=True, nullable=False)
+
     # Kiosk mode settings
     kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
     kiosk_auto_logout_minutes = db.Column(db.Integer, default=15, nullable=False)
@@ -71,6 +105,33 @@ class Settings(db.Model):
     # GitHub
     github_client_id = db.Column(db.String(255), default="", nullable=True)
     github_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    # Google Calendar
+    google_calendar_client_id = db.Column(db.String(255), default="", nullable=True)
+    google_calendar_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    # Outlook Calendar
+    outlook_calendar_client_id = db.Column(db.String(255), default="", nullable=True)
+    outlook_calendar_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    outlook_calendar_tenant_id = db.Column(db.String(255), default="", nullable=True)
+    # Microsoft Teams
+    microsoft_teams_client_id = db.Column(db.String(255), default="", nullable=True)
+    microsoft_teams_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    microsoft_teams_tenant_id = db.Column(db.String(255), default="", nullable=True)
+    # Asana
+    asana_client_id = db.Column(db.String(255), default="", nullable=True)
+    asana_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    # Trello
+    trello_api_key = db.Column(db.String(255), default="", nullable=True)
+    trello_api_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    # GitLab
+    gitlab_client_id = db.Column(db.String(255), default="", nullable=True)
+    gitlab_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    gitlab_instance_url = db.Column(db.String(500), default="", nullable=True)
+    # QuickBooks
+    quickbooks_client_id = db.Column(db.String(255), default="", nullable=True)
+    quickbooks_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    # Xero
+    xero_client_id = db.Column(db.String(255), default="", nullable=True)
+    xero_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -132,6 +193,25 @@ class Settings(db.Model):
         self.slack_client_secret = kwargs.get("slack_client_secret", "")
         self.github_client_id = kwargs.get("github_client_id", "")
         self.github_client_secret = kwargs.get("github_client_secret", "")
+        self.google_calendar_client_id = kwargs.get("google_calendar_client_id", "")
+        self.google_calendar_client_secret = kwargs.get("google_calendar_client_secret", "")
+        self.outlook_calendar_client_id = kwargs.get("outlook_calendar_client_id", "")
+        self.outlook_calendar_client_secret = kwargs.get("outlook_calendar_client_secret", "")
+        self.outlook_calendar_tenant_id = kwargs.get("outlook_calendar_tenant_id", "")
+        self.microsoft_teams_client_id = kwargs.get("microsoft_teams_client_id", "")
+        self.microsoft_teams_client_secret = kwargs.get("microsoft_teams_client_secret", "")
+        self.microsoft_teams_tenant_id = kwargs.get("microsoft_teams_tenant_id", "")
+        self.asana_client_id = kwargs.get("asana_client_id", "")
+        self.asana_client_secret = kwargs.get("asana_client_secret", "")
+        self.trello_api_key = kwargs.get("trello_api_key", "")
+        self.trello_api_secret = kwargs.get("trello_api_secret", "")
+        self.gitlab_client_id = kwargs.get("gitlab_client_id", "")
+        self.gitlab_client_secret = kwargs.get("gitlab_client_secret", "")
+        self.gitlab_instance_url = kwargs.get("gitlab_instance_url", "")
+        self.quickbooks_client_id = kwargs.get("quickbooks_client_id", "")
+        self.quickbooks_client_secret = kwargs.get("quickbooks_client_secret", "")
+        self.xero_client_id = kwargs.get("xero_client_id", "")
+        self.xero_client_secret = kwargs.get("xero_client_secret", "")
 
     def __repr__(self):
         return f"<Settings {self.id}>"
@@ -183,26 +263,78 @@ class Settings(db.Model):
         """Get integration OAuth credentials, preferring database settings over environment variables.
 
         Args:
-            provider: One of 'jira', 'slack', or 'github'
+            provider: One of 'jira', 'slack', 'github', 'google_calendar', 'outlook_calendar',
+                     'microsoft_teams', 'asana', 'trello', 'gitlab', 'quickbooks', 'xero'
 
         Returns:
-            dict with 'client_id' and 'client_secret' keys, or empty dict if not configured
+            dict with credentials (varies by provider):
+            - Standard OAuth: 'client_id', 'client_secret'
+            - Microsoft: 'client_id', 'client_secret', 'tenant_id'
+            - Trello: 'api_key', 'api_secret'
+            - GitLab: 'client_id', 'client_secret', 'instance_url'
         """
         import os
 
         if provider == "jira":
             client_id = self.jira_client_id or os.getenv("JIRA_CLIENT_ID", "")
             client_secret = self.jira_client_secret or os.getenv("JIRA_CLIENT_SECRET", "")
+            return {"client_id": client_id, "client_secret": client_secret}
+        
         elif provider == "slack":
             client_id = self.slack_client_id or os.getenv("SLACK_CLIENT_ID", "")
             client_secret = self.slack_client_secret or os.getenv("SLACK_CLIENT_SECRET", "")
+            return {"client_id": client_id, "client_secret": client_secret}
+        
         elif provider == "github":
             client_id = self.github_client_id or os.getenv("GITHUB_CLIENT_ID", "")
             client_secret = self.github_client_secret or os.getenv("GITHUB_CLIENT_SECRET", "")
+            return {"client_id": client_id, "client_secret": client_secret}
+        
+        elif provider == "google_calendar":
+            client_id = getattr(self, "google_calendar_client_id", "") or os.getenv("GOOGLE_CLIENT_ID", "")
+            client_secret = getattr(self, "google_calendar_client_secret", "") or os.getenv("GOOGLE_CLIENT_SECRET", "")
+            return {"client_id": client_id, "client_secret": client_secret}
+        
+        elif provider == "outlook_calendar":
+            client_id = getattr(self, "outlook_calendar_client_id", "") or os.getenv("OUTLOOK_CLIENT_ID", "")
+            client_secret = getattr(self, "outlook_calendar_client_secret", "") or os.getenv("OUTLOOK_CLIENT_SECRET", "")
+            tenant_id = getattr(self, "outlook_calendar_tenant_id", "") or os.getenv("OUTLOOK_TENANT_ID", "")
+            return {"client_id": client_id, "client_secret": client_secret, "tenant_id": tenant_id}
+        
+        elif provider == "microsoft_teams":
+            client_id = getattr(self, "microsoft_teams_client_id", "") or os.getenv("MICROSOFT_TEAMS_CLIENT_ID", "")
+            client_secret = getattr(self, "microsoft_teams_client_secret", "") or os.getenv("MICROSOFT_TEAMS_CLIENT_SECRET", "")
+            tenant_id = getattr(self, "microsoft_teams_tenant_id", "") or os.getenv("MICROSOFT_TEAMS_TENANT_ID", "")
+            return {"client_id": client_id, "client_secret": client_secret, "tenant_id": tenant_id}
+        
+        elif provider == "asana":
+            client_id = getattr(self, "asana_client_id", "") or os.getenv("ASANA_CLIENT_ID", "")
+            client_secret = getattr(self, "asana_client_secret", "") or os.getenv("ASANA_CLIENT_SECRET", "")
+            return {"client_id": client_id, "client_secret": client_secret}
+        
+        elif provider == "trello":
+            api_key = getattr(self, "trello_api_key", "") or os.getenv("TRELLO_API_KEY", "")
+            api_secret = getattr(self, "trello_api_secret", "") or os.getenv("TRELLO_API_SECRET", "")
+            return {"api_key": api_key, "api_secret": api_secret}
+        
+        elif provider == "gitlab":
+            client_id = getattr(self, "gitlab_client_id", "") or os.getenv("GITLAB_CLIENT_ID", "")
+            client_secret = getattr(self, "gitlab_client_secret", "") or os.getenv("GITLAB_CLIENT_SECRET", "")
+            instance_url = getattr(self, "gitlab_instance_url", "") or os.getenv("GITLAB_INSTANCE_URL", "https://gitlab.com")
+            return {"client_id": client_id, "client_secret": client_secret, "instance_url": instance_url}
+        
+        elif provider == "quickbooks":
+            client_id = getattr(self, "quickbooks_client_id", "") or os.getenv("QUICKBOOKS_CLIENT_ID", "")
+            client_secret = getattr(self, "quickbooks_client_secret", "") or os.getenv("QUICKBOOKS_CLIENT_SECRET", "")
+            return {"client_id": client_id, "client_secret": client_secret}
+        
+        elif provider == "xero":
+            client_id = getattr(self, "xero_client_id", "") or os.getenv("XERO_CLIENT_ID", "")
+            client_secret = getattr(self, "xero_client_secret", "") or os.getenv("XERO_CLIENT_SECRET", "")
+            return {"client_id": client_id, "client_secret": client_secret}
+        
         else:
             return {}
-
-        return {"client_id": client_id, "client_secret": client_secret}
 
     def to_dict(self):
         """Convert settings to dictionary for API responses"""
@@ -249,8 +381,47 @@ class Settings(db.Model):
             "slack_client_secret_set": bool(self.slack_client_secret),  # Don't expose actual secret
             "github_client_id": self.github_client_id or "",
             "github_client_secret_set": bool(self.github_client_secret),  # Don't expose actual secret
+            "google_calendar_client_id": getattr(self, "google_calendar_client_id", "") or "",
+            "google_calendar_client_secret_set": bool(getattr(self, "google_calendar_client_secret", "")),
+            "outlook_calendar_client_id": getattr(self, "outlook_calendar_client_id", "") or "",
+            "outlook_calendar_client_secret_set": bool(getattr(self, "outlook_calendar_client_secret", "")),
+            "outlook_calendar_tenant_id": getattr(self, "outlook_calendar_tenant_id", "") or "",
+            "microsoft_teams_client_id": getattr(self, "microsoft_teams_client_id", "") or "",
+            "microsoft_teams_client_secret_set": bool(getattr(self, "microsoft_teams_client_secret", "")),
+            "microsoft_teams_tenant_id": getattr(self, "microsoft_teams_tenant_id", "") or "",
+            "asana_client_id": getattr(self, "asana_client_id", "") or "",
+            "asana_client_secret_set": bool(getattr(self, "asana_client_secret", "")),
+            "trello_api_key": getattr(self, "trello_api_key", "") or "",
+            "trello_api_secret_set": bool(getattr(self, "trello_api_secret", "")),
+            "gitlab_client_id": getattr(self, "gitlab_client_id", "") or "",
+            "gitlab_client_secret_set": bool(getattr(self, "gitlab_client_secret", "")),
+            "gitlab_instance_url": getattr(self, "gitlab_instance_url", "") or "",
+            "quickbooks_client_id": getattr(self, "quickbooks_client_id", "") or "",
+            "quickbooks_client_secret_set": bool(getattr(self, "quickbooks_client_secret", "")),
+            "xero_client_id": getattr(self, "xero_client_id", "") or "",
+            "xero_client_secret_set": bool(getattr(self, "xero_client_secret", "")),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            # UI feature flags (system-wide)
+            "ui_allow_calendar": getattr(self, "ui_allow_calendar", True),
+            "ui_allow_project_templates": getattr(self, "ui_allow_project_templates", True),
+            "ui_allow_gantt_chart": getattr(self, "ui_allow_gantt_chart", True),
+            "ui_allow_kanban_board": getattr(self, "ui_allow_kanban_board", True),
+            "ui_allow_weekly_goals": getattr(self, "ui_allow_weekly_goals", True),
+            "ui_allow_quotes": getattr(self, "ui_allow_quotes", True),
+            "ui_allow_reports": getattr(self, "ui_allow_reports", True),
+            "ui_allow_report_builder": getattr(self, "ui_allow_report_builder", True),
+            "ui_allow_scheduled_reports": getattr(self, "ui_allow_scheduled_reports", True),
+            "ui_allow_invoice_approvals": getattr(self, "ui_allow_invoice_approvals", True),
+            "ui_allow_payment_gateways": getattr(self, "ui_allow_payment_gateways", True),
+            "ui_allow_recurring_invoices": getattr(self, "ui_allow_recurring_invoices", True),
+            "ui_allow_payments": getattr(self, "ui_allow_payments", True),
+            "ui_allow_mileage": getattr(self, "ui_allow_mileage", True),
+            "ui_allow_per_diem": getattr(self, "ui_allow_per_diem", True),
+            "ui_allow_budget_alerts": getattr(self, "ui_allow_budget_alerts", True),
+            "ui_allow_inventory": getattr(self, "ui_allow_inventory", True),
+            "ui_allow_analytics": getattr(self, "ui_allow_analytics", True),
+            "ui_allow_tools": getattr(self, "ui_allow_tools", True),
         }
 
     @classmethod
@@ -266,11 +437,25 @@ class Settings(db.Model):
                 return settings
         except Exception as e:
             # Handle case where columns don't exist yet (migration not run)
-            # Log but don't fail - return fallback instance
+            # Check if it's a column error - if so, it's expected during migrations
+            error_str = str(e)
+            is_column_error = (
+                "UndefinedColumn" in error_str or
+                "does not exist" in error_str.lower() or
+                "no such column" in error_str.lower()
+            )
+            
             import logging
-
             logger = logging.getLogger(__name__)
-            logger.warning(f"Could not query settings (migration may not be run): {e}")
+            
+            if is_column_error:
+                # This is expected during migrations when schema is incomplete
+                # Only log at debug level to avoid cluttering logs
+                logger.debug(f"Settings table schema incomplete (migration may be pending): {error_str.split('LINE')[0] if 'LINE' in error_str else error_str}")
+            else:
+                # Other errors should be logged as warnings
+                logger.warning(f"Could not query settings: {e}")
+            
             # Rollback the failed transaction
             try:
                 db.session.rollback()

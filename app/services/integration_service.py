@@ -53,16 +53,17 @@ class IntegrationService:
         return connector_class(integration, credentials)
 
     def create_integration(
-        self, provider: str, user_id: int, name: Optional[str] = None, config: Optional[Dict] = None
+        self, provider: str, user_id: Optional[int] = None, name: Optional[str] = None, config: Optional[Dict] = None, is_global: bool = False
     ) -> Dict[str, Any]:
         """
         Create a new integration.
 
         Args:
             provider: Provider identifier (e.g., 'jira', 'slack')
-            user_id: User ID who owns the integration
+            user_id: User ID who owns the integration (None for global integrations)
             name: Optional custom name
             config: Optional configuration dict
+            is_global: Whether this is a global (shared) integration
 
         Returns:
             Dict with 'success', 'message', and 'integration'
@@ -70,11 +71,24 @@ class IntegrationService:
         if provider not in self._connector_registry:
             return {"success": False, "message": f"Provider {provider} is not available."}
 
-        # Check if user already has this integration
-        existing = Integration.query.filter_by(provider=provider, user_id=user_id).first()
+        # Google Calendar is always per-user, all others are global
+        if provider == "google_calendar":
+            is_global = False
+            if not user_id:
+                return {"success": False, "message": "Google Calendar integration requires a user_id."}
+        else:
+            is_global = True
+            user_id = None  # Global integrations don't have user_id
 
-        if existing:
-            return {"success": False, "message": f"You already have a {provider} integration."}
+        # Check if integration already exists
+        if is_global:
+            existing = Integration.query.filter_by(provider=provider, is_global=True).first()
+            if existing:
+                return {"success": False, "message": f"A global {provider} integration already exists."}
+        else:
+            existing = Integration.query.filter_by(provider=provider, user_id=user_id, is_global=False).first()
+            if existing:
+                return {"success": False, "message": f"You already have a {provider} integration."}
 
         connector_class = self._connector_registry[provider]
         display_name = connector_class.display_name if hasattr(connector_class, "display_name") else provider.title()
@@ -83,28 +97,55 @@ class IntegrationService:
             name=name or display_name,
             provider=provider,
             user_id=user_id,
+            is_global=is_global,
             config=config or {},
             is_active=False,  # Only active when credentials are set up
         )
 
         db.session.add(integration)
-        if not safe_commit("create_integration", {"provider": provider, "user_id": user_id}):
+        if not safe_commit("create_integration", {"provider": provider, "user_id": user_id, "is_global": is_global}):
             return {"success": False, "message": "Could not create integration due to a database error."}
 
         emit_event(
             WebhookEvent.INTEGRATION_CREATED,
-            {"integration_id": integration.id, "provider": provider, "user_id": user_id},
+            {"integration_id": integration.id, "provider": provider, "user_id": user_id, "is_global": is_global},
         )
 
         return {"success": True, "message": "Integration created successfully.", "integration": integration}
 
-    def get_integration(self, integration_id: int, user_id: int) -> Optional[Integration]:
-        """Get integration by ID (with user check)."""
-        return Integration.query.filter_by(id=integration_id, user_id=user_id).first()
+    def get_integration(self, integration_id: int, user_id: Optional[int] = None) -> Optional[Integration]:
+        """Get integration by ID (with user check for per-user integrations)."""
+        integration = Integration.query.get(integration_id)
+        if not integration:
+            return None
+        
+        # Global integrations are accessible to all users
+        if integration.is_global:
+            return integration
+        
+        # Per-user integrations require user_id match
+        if user_id and integration.user_id == user_id:
+            return integration
+        
+        return None
 
-    def list_integrations(self, user_id: int) -> List[Integration]:
-        """List all integrations for a user."""
-        integrations = Integration.query.filter_by(user_id=user_id).order_by(Integration.created_at.desc()).all()
+    def list_integrations(self, user_id: Optional[int] = None) -> List[Integration]:
+        """List all integrations accessible to a user (global + their per-user)."""
+        from sqlalchemy import or_
+        
+        # Get global integrations + user's per-user integrations
+        if user_id:
+            query = Integration.query.filter(
+                or_(
+                    Integration.is_global == True,
+                    Integration.user_id == user_id
+                )
+            )
+        else:
+            # Admin view: show all
+            query = Integration.query
+        
+        integrations = query.order_by(Integration.is_global.desc(), Integration.created_at.desc()).all()
 
         # Sync is_active status with credentials existence
         for integration in integrations:
@@ -116,12 +157,23 @@ class IntegrationService:
                 safe_commit("sync_integration_active_status", {"integration_id": integration.id})
 
         return integrations
+    
+    def get_global_integration(self, provider: str) -> Optional[Integration]:
+        """Get global integration for a provider."""
+        return Integration.query.filter_by(provider=provider, is_global=True).first()
 
-    def delete_integration(self, integration_id: int, user_id: int) -> Dict[str, Any]:
+    def delete_integration(self, integration_id: int, user_id: Optional[int] = None) -> Dict[str, Any]:
         """Delete an integration."""
         integration = self.get_integration(integration_id, user_id)
         if not integration:
             return {"success": False, "message": "Integration not found."}
+        
+        # Only admins can delete global integrations
+        if integration.is_global:
+            from app.models import User
+            user = User.query.get(user_id) if user_id else None
+            if not user or not user.is_admin:
+                return {"success": False, "message": "Only administrators can delete global integrations."}
 
         db.session.delete(integration)
         if not safe_commit("delete_integration", {"integration_id": integration_id}):
@@ -170,7 +222,7 @@ class IntegrationService:
 
         return {"success": True, "message": "Credentials saved successfully.", "credentials": credentials}
 
-    def test_connection(self, integration_id: int, user_id: int) -> Dict[str, Any]:
+    def test_connection(self, integration_id: int, user_id: Optional[int] = None) -> Dict[str, Any]:
         """Test connection to integrated service."""
         integration = self.get_integration(integration_id, user_id)
         if not integration:

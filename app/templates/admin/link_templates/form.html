@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('Link Templates'), 'url': url_for('link_templates.list_link_templates')},
+    {'text': _('Edit') if template else _('Create')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-link',
+    title_text=_('Edit Link Template') if template else _('Create Link Template'),
+    subtitle_text=_('Configure URL template for client custom fields'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('link_templates.edit_link_template', template_id=template.id) if template else url_for('link_templates.create_link_template') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="space-y-6">
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Template Name') }} *</label>
+                <input type="text" id="name" name="name" required value="{{ request.form.get('name', template.name if template else '') }}" placeholder="{{ _('e.g., ERP System Link') }}" class="form-input w-full">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('A descriptive name for this link template') }}</p>
+            </div>
+
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Description') }}</label>
+                <textarea id="description" name="description" rows="2" placeholder="{{ _('Optional description') }}" class="form-input w-full">{{ request.form.get('description', template.description if template else '') }}</textarea>
+            </div>
+
+            <div>
+                <label for="url_template" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('URL Template') }} *</label>
+                <input type="text" id="url_template" name="url_template" required value="{{ request.form.get('url_template', template.url_template if template else '') }}" placeholder="{{ _('https://example.com/customer/{value}') }}" class="form-input w-full font-mono">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('URL with {value} placeholder. Example: https://erp.example.com/customer/{value}') }}</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="field_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Field Key') }} *</label>
+                    <input type="text" id="field_key" name="field_key" required value="{{ request.form.get('field_key', template.field_key if template else '') }}" placeholder="{{ _('e.g., debtor_number') }}" class="form-input w-full">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The key in the client custom_fields JSON to use') }}</p>
+                </div>
+
+                <div>
+                    <label for="icon" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Icon') }}</label>
+                    <input type="text" id="icon" name="icon" value="{{ request.form.get('icon', template.icon if template else 'fas fa-external-link-alt') }}" placeholder="{{ _('fas fa-link') }}" class="form-input w-full">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Font Awesome icon class (e.g., fas fa-link)') }}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="order" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Display Order') }}</label>
+                    <input type="number" id="order" name="order" value="{{ request.form.get('order', template.order if template else 0) }}" min="0" class="form-input w-full">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Lower numbers appear first') }}</p>
+                </div>
+
+                <div>
+                    <label class="flex items-center mt-6">
+                        <input type="checkbox" name="is_active" id="is_active" {% if template and template.is_active or not template %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <span class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Active') }}</span>
+                    </label>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Only active templates are shown on client pages') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+            <a href="{{ url_for('link_templates.list_link_templates') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save') if template else _('Create') }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

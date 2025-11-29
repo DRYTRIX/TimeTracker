@@ -219,6 +219,51 @@ class AsanaConnector(BaseConnector):
                             project.metadata = {}
                         project.metadata['asana_project_gid'] = asana_project.get("gid")
                         
+                        # Sync tasks from Asana project
+                        tasks_response = requests.get(
+                            f"{self.BASE_URL}/projects/{asana_project.get('gid')}/tasks",
+                            headers=headers,
+                            params={"opt_fields": "name,notes,completed,due_on"}
+                        )
+                        
+                        if tasks_response.status_code == 200:
+                            asana_tasks = tasks_response.json().get("data", [])
+                            
+                            for asana_task in asana_tasks:
+                                try:
+                                    # Get task details
+                                    task_response = requests.get(
+                                        f"{self.BASE_URL}/tasks/{asana_task.get('gid')}",
+                                        headers=headers,
+                                        params={"opt_fields": "name,notes,completed,due_on,assignee"}
+                                    )
+                                    
+                                    if task_response.status_code == 200:
+                                        task_data = task_response.json().get("data", {})
+                                        
+                                        # Find or create task
+                                        task = Task.query.filter_by(
+                                            project_id=project.id,
+                                            name=task_data.get("name", "")
+                                        ).first()
+                                        
+                                        if not task:
+                                            task = Task(
+                                                project_id=project.id,
+                                                name=task_data.get("name", ""),
+                                                description=task_data.get("notes", ""),
+                                                status="completed" if task_data.get("completed") else "todo"
+                                            )
+                                            db.session.add(task)
+                                            db.session.flush()
+                                        
+                                        # Store Asana task GID in metadata
+                                        if not hasattr(task, 'metadata') or not task.metadata:
+                                            task.metadata = {}
+                                        task.metadata['asana_task_gid'] = asana_task.get("gid")
+                                except Exception as e:
+                                    errors.append(f"Error syncing task in project {asana_project.get('name')}: {str(e)}")
+                        
                         synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing project {asana_project.get('name')}: {str(e)}")

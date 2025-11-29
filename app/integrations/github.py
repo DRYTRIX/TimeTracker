@@ -133,15 +133,159 @@ class GitHubConnector(BaseConnector):
             return {"success": False, "message": f"Connection error: {str(e)}"}
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
-        """Sync issues from GitHub repositories."""
+        """Sync issues from GitHub repositories and create tasks."""
+        from app.models import Task, Project
+        from app import db
+        from datetime import datetime, timedelta
+
         token = self.get_access_token()
         if not token:
             return {"success": False, "message": "No access token available"}
 
-        # This would sync GitHub issues and create time entries
-        # Implementation depends on specific requirements
+        # Get repositories from config
+        repos_str = self.integration.config.get("repositories", "")
+        if not repos_str:
+            # Get user's repositories
+            repos_response = requests.get(
+                "https://api.github.com/user/repos",
+                headers={"Authorization": f"token {token}"}
+            )
+            if repos_response.status_code == 200:
+                repos = repos_response.json()
+                repos_list = [f"{r['owner']['login']}/{r['name']}" for r in repos[:10]]  # Limit to 10 repos
+            else:
+                return {"success": False, "message": "Could not fetch repositories"}
+        else:
+            repos_list = [r.strip() for r in repos_str.split(",") if r.strip()]
 
-        return {"success": True, "message": "Sync completed", "synced_items": 0}
+        synced_count = 0
+        errors = []
+
+        try:
+            for repo in repos_list:
+                try:
+                    owner, repo_name = repo.split("/")
+                    
+                    # Find or create project
+                    project = Project.query.filter_by(
+                        user_id=self.integration.user_id,
+                        name=repo
+                    ).first()
+                    
+                    if not project:
+                        project = Project(
+                            name=repo,
+                            description=f"GitHub repository: {repo}",
+                            user_id=self.integration.user_id,
+                            status="active"
+                        )
+                        db.session.add(project)
+                        db.session.flush()
+
+                    # Fetch issues
+                    issues_response = requests.get(
+                        f"https://api.github.com/repos/{repo}/issues",
+                        headers={
+                            "Authorization": f"token {token}",
+                            "Accept": "application/vnd.github.v3+json"
+                        },
+                        params={
+                            "state": "open",
+                            "per_page": 100
+                        }
+                    )
+
+                    if issues_response.status_code != 200:
+                        errors.append(f"Error fetching issues for {repo}: {issues_response.status_code}")
+                        continue
+
+                    issues = issues_response.json()
+
+                    for issue in issues:
+                        try:
+                            issue_number = issue.get("number")
+                            issue_title = issue.get("title", "")
+                            
+                            # Find or create task
+                            task = Task.query.filter_by(
+                                project_id=project.id,
+                                name=f"#{issue_number}: {issue_title}"
+                            ).first()
+
+                            if not task:
+                                task = Task(
+                                    project_id=project.id,
+                                    name=f"#{issue_number}: {issue_title}",
+                                    description=issue.get("body", ""),
+                                    status="todo",
+                                    notes=f"GitHub Issue: {issue.get('html_url', '')}"
+                                )
+                                db.session.add(task)
+                                db.session.flush()
+
+                            # Store GitHub issue info in task metadata
+                            if not hasattr(task, 'metadata') or not task.metadata:
+                                task.metadata = {}
+                            task.metadata['github_repo'] = repo
+                            task.metadata['github_issue_number'] = issue_number
+                            task.metadata['github_issue_id'] = issue.get("id")
+                            task.metadata['github_issue_url'] = issue.get("html_url")
+
+                            synced_count += 1
+                        except Exception as e:
+                            errors.append(f"Error syncing issue #{issue.get('number', 'unknown')} in {repo}: {str(e)}")
+                except ValueError:
+                    errors.append(f"Invalid repository format: {repo}")
+                except Exception as e:
+                    errors.append(f"Error syncing repository {repo}: {str(e)}")
+
+            db.session.commit()
+
+            return {
+                "success": True,
+                "message": f"Sync completed. Synced {synced_count} issues.",
+                "synced_items": synced_count,
+                "errors": errors
+            }
+        except Exception as e:
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
+
+    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+        """Handle incoming webhook from GitHub."""
+        try:
+            # Verify webhook signature if secret is configured
+            signature = headers.get("X-Hub-Signature-256", "")
+            if signature:
+                # Signature verification would go here
+                pass
+
+            action = payload.get("action")
+            event_type = headers.get("X-GitHub-Event", "")
+
+            if event_type == "issues":
+                issue = payload.get("issue", {})
+                issue_number = issue.get("number")
+                repo = payload.get("repository", {}).get("full_name", "")
+
+                return {
+                    "success": True,
+                    "message": f"Webhook received for issue #{issue_number} in {repo}",
+                    "event_type": f"{event_type}.{action}"
+                }
+            elif event_type == "pull_request":
+                pr = payload.get("pull_request", {})
+                pr_number = pr.get("number")
+                repo = payload.get("repository", {}).get("full_name", "")
+
+                return {
+                    "success": True,
+                    "message": f"Webhook received for PR #{pr_number} in {repo}",
+                    "event_type": f"{event_type}.{action}"
+                }
+
+            return {"success": True, "message": f"Webhook processed: {event_type}"}
+        except Exception as e:
+            return {"success": False, "message": f"Error processing webhook: {str(e)}"}
 
     def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema."""
@@ -154,6 +298,13 @@ class GitHubConnector(BaseConnector):
                     "required": False,
                     "placeholder": "owner/repo1, owner/repo2",
                     "help": "Comma-separated list of repositories to sync",
+                },
+                {
+                    "name": "auto_sync",
+                    "type": "boolean",
+                    "label": "Auto Sync",
+                    "default": True,
+                    "description": "Automatically sync when webhooks are received"
                 }
             ],
             "required": [],

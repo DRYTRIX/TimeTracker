@@ -61,8 +61,18 @@
             {% if active_timer %}
                 <div class="flex justify-between items-center">
                     <div>
-                        <p class="font-semibold">{{ active_timer.project.name }}</p>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Started at') }} {{ active_timer.start_time|user_time('%I:%M %p') }}</p>
+                        <p class="font-semibold">
+                            {% if active_timer.project %}
+                                {{ active_timer.project.name }}
+                            {% elif active_timer.client %}
+                                {{ active_timer.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                            {% else %}
+                                {{ _('No project') }}
+                            {% endif %}
+                        </p>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Started at') }} {{ active_timer.start_time|user_time('%I:%M %p') }}
+                        </p>
                     </div>
                     <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -93,7 +103,15 @@
                     <tbody>
                         {% for entry in recent_entries %}
                         <tr class="border-b border-border-light dark:border-border-dark">
-                            <td class="p-4">{{ entry.project.name }}</td>
+                            <td class="p-4">
+                                {% if entry.project %}
+                                    {{ entry.project.name }}
+                                {% elif entry.client %}
+                                    {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                                {% else %}
+                                    {{ _('N/A') }}
+                                {% endif %}
+                            </td>
                             <td class="p-4">{{ entry.task.name if entry.task else '-' }}</td>
                             <td class="p-4">{% if entry.notes %}<span title="{{ entry.notes }}">{{ entry.notes[:60] }}{% if entry.notes|length > 60 %}...{% endif %}</span>{% else %}-{% endif %}</td>
                             <td class="p-4">{{ entry.tags or '-' }}</td>
@@ -288,14 +306,28 @@
             <form method="POST" action="{{ url_for('timer.start_timer') }}" class="p-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="space-y-4">
-                    <div>
-                        <label for="startTimerProject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }}</label>
-                        <select id="startTimerProject" name="project_id" required class="form-input">
-                            <option value="">{{ _('Select a project') }}</option>
-                            {% for project in active_projects %}
-                            <option value="{{ project.id }}">{{ project.name }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="startTimerProject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }}</label>
+                            <select id="startTimerProject" name="project_id" class="form-input">
+                                <option value="">{{ _('Select a project (optional)') }}</option>
+                                {% for project in active_projects %}
+                                <option value="{{ project.id }}">{{ project.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="startTimerClient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</label>
+                            <select id="startTimerClient" name="client_id" class="form-input">
+                                <option value="">{{ _('Select a client (optional)') }}</option>
+                                {% for client in active_clients %}
+                                <option value="{{ client.id }}">{{ client.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ _('Select either a project or a client') }}
+                            </p>
+                        </div>
                     </div>
                     <div>
                         <label for="startTimerTask" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task (optional)') }}</label>
@@ -374,23 +406,52 @@
         if (modal) {
             modal.querySelector('[data-close]')?.addEventListener('click', () => modal.classList.add('hidden'));
             modal.addEventListener('click', (e) => { if (e.target === modal || e.target.hasAttribute('data-overlay')) modal.classList.add('hidden'); });
+
             const projectSelect = document.getElementById('startTimerProject');
+            const clientSelect = document.getElementById('startTimerClient');
             const taskSelect = document.getElementById('startTimerTask');
-            if (projectSelect && taskSelect) {
-                projectSelect.addEventListener('change', async () => {
+
+            async function loadTasksForProject(pid) {
+                if (!taskSelect) return;
+                taskSelect.innerHTML = '<option value="">—</option>';
+                if (!pid) {
+                    taskSelect.disabled = false;
+                    return;
+                }
+                try {
+                    const res = await fetch(`/api/projects/${pid}/tasks`, { credentials: 'same-origin' });
+                    const data = await res.json();
+                    if (data && data.tasks) {
+                        data.tasks.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t.id; opt.textContent = t.name; taskSelect.appendChild(opt);
+                        });
+                    }
+                    taskSelect.disabled = false;
+                } catch (err) {
+                    console.error('Failed to load tasks', err);
+                    taskSelect.disabled = true;
+                }
+            }
+
+            if (projectSelect && clientSelect && taskSelect) {
+                projectSelect.addEventListener('change', () => {
                     const pid = projectSelect.value;
-                    taskSelect.innerHTML = '<option value="">—</option>';
-                    if (!pid) return;
-                    try {
-                        const res = await fetch(`/api/projects/${pid}/tasks`, { credentials: 'same-origin' });
-                        const data = await res.json();
-                        if (data && data.tasks) {
-                            data.tasks.forEach(t => {
-                                const opt = document.createElement('option');
-                                opt.value = t.id; opt.textContent = t.name; taskSelect.appendChild(opt);
-                            });
-                        }
-                    } catch (_) {}
+                    if (pid) {
+                        clientSelect.value = '';
+                    }
+                    loadTasksForProject(pid);
+                });
+
+                clientSelect.addEventListener('change', () => {
+                    const cid = clientSelect.value;
+                    if (cid) {
+                        projectSelect.value = '';
+                        taskSelect.innerHTML = '<option value="">—</option>';
+                        taskSelect.disabled = true;
+                    } else {
+                        taskSelect.disabled = false;
+                    }
                 });
             }
         }

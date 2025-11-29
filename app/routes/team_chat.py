@@ -74,6 +74,90 @@ def chat_channel(channel_id):
     return render_template("chat/channel.html", channel=channel, messages=messages, members=members)
 
 
+@team_chat_bp.route("/chat/channels/<int:channel_id>/send-message", methods=["POST"])
+@login_required
+def send_message(channel_id):
+    """Send a message via form submission (supports attachments)"""
+    import json
+    import os
+    
+    channel = ChatChannel.query.get_or_404(channel_id)
+
+    # Check membership
+    membership = ChatChannelMember.query.filter_by(
+        channel_id=channel_id,
+        user_id=current_user.id
+    ).first()
+
+    if not membership and not current_user.is_admin:
+        flash(_("You don't have access to this channel"), "error")
+        return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
+
+    content = request.form.get("content", "").strip()
+    attachment_data = request.form.get("attachment_data")
+    
+    if not content and not attachment_data:
+        flash(_("Message cannot be empty"), "error")
+        return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
+
+    # Parse attachment data if provided
+    attachment_url = None
+    attachment_filename = None
+    attachment_size = None
+    message_type = "text"
+    
+    if attachment_data:
+        try:
+            attachment_info = json.loads(attachment_data)
+            attachment_url = attachment_info.get("url")
+            attachment_filename = attachment_info.get("filename")
+            attachment_size = attachment_info.get("size")
+            message_type = "file"
+        except:
+            pass
+
+    # Create message
+    message = ChatMessage(
+        channel_id=channel_id,
+        user_id=current_user.id,
+        message=content or attachment_filename or "",
+        message_type=message_type,
+        attachment_url=attachment_url,
+        attachment_filename=attachment_filename,
+        attachment_size=attachment_size
+    )
+
+    # Parse mentions
+    mentions = message.parse_mentions()
+    if mentions:
+        message.mentions = mentions
+
+    db.session.add(message)
+    
+    # Update channel updated_at
+    channel.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+
+    # Notify mentioned users
+    if mentions:
+        from app.utils.notification_service import NotificationService
+        service = NotificationService()
+        for user_id in mentions:
+            service.send_notification(
+                user_id=user_id,
+                title="You were mentioned",
+                message=f"{current_user.display_name} mentioned you in {channel.name}",
+                type="info",
+                priority="high"
+            )
+
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({"success": True, "message": message.to_dict()})
+    
+    return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
+
+
 @team_chat_bp.route("/api/chat/channels", methods=["GET", "POST"])
 @login_required
 def api_channels():
@@ -147,9 +231,12 @@ def api_messages(channel_id):
         message = ChatMessage(
             channel_id=channel_id,
             user_id=current_user.id,
-            message=data.get("message"),
+            message=data.get("message", ""),
             message_type=data.get("message_type", "text"),
-            reply_to_id=data.get("reply_to_id")
+            reply_to_id=data.get("reply_to_id"),
+            attachment_url=data.get("attachment_url"),
+            attachment_filename=data.get("attachment_filename"),
+            attachment_size=data.get("attachment_size")
         )
 
         # Parse mentions
@@ -267,3 +354,113 @@ def api_react(message_id):
 
     return jsonify({"success": True, "reactions": reactions})
 
+
+@team_chat_bp.route("/chat/channels/<int:channel_id>/messages/<int:message_id>/attachments/download")
+@login_required
+def download_attachment(channel_id, message_id):
+    """Download an attachment from a chat message"""
+    from flask import send_file, current_app
+    import os
+
+    message = ChatMessage.query.get_or_404(message_id)
+    
+    # Verify message belongs to channel
+    if message.channel_id != channel_id:
+        flash(_("Invalid message"), "error")
+        return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
+
+    # Check membership
+    membership = ChatChannelMember.query.filter_by(
+        channel_id=channel_id,
+        user_id=current_user.id
+    ).first()
+
+    if not membership and not current_user.is_admin:
+        flash(_("You don't have access to this channel"), "error")
+        return redirect(url_for("team_chat.chat_index"))
+
+    if not message.attachment_url:
+        flash(_("No attachment found"), "error")
+        return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
+
+    # Build file path
+    file_path = os.path.join(current_app.root_path, "..", message.attachment_url)
+
+    if not os.path.exists(file_path):
+        flash(_("File not found"), "error")
+        return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
+
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=message.attachment_filename,
+    )
+
+
+@team_chat_bp.route("/chat/channels/<int:channel_id>/upload-attachment", methods=["POST"])
+@login_required
+def upload_attachment(channel_id):
+    """Upload an attachment for a chat message"""
+    from werkzeug.utils import secure_filename
+    from flask import current_app, jsonify
+    import os
+    from datetime import datetime
+
+    channel = ChatChannel.query.get_or_404(channel_id)
+
+    # Check membership
+    membership = ChatChannelMember.query.filter_by(
+        channel_id=channel_id,
+        user_id=current_user.id
+    ).first()
+
+    if not membership and not current_user.is_admin:
+        return jsonify({"error": _("You don't have access to this channel")}), 403
+
+    # File upload configuration
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar", "csv", "json"}
+    UPLOAD_FOLDER = "uploads/chat_attachments"
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+    def allowed_file(filename):
+        return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+    if "file" not in request.files:
+        return jsonify({"error": _("No file provided")}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": _("No file selected")}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": _("File type not allowed")}), 400
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({"error": _("File size exceeds maximum allowed size (10 MB)")}), 400
+
+    # Save file
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{channel_id}_{timestamp}_{original_filename}"
+
+    # Ensure upload directory exists
+    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, filename)
+    file.save(file_path)
+
+    # Return file info for message creation
+    return jsonify({
+        "success": True,
+        "attachment": {
+            "url": os.path.join(UPLOAD_FOLDER, filename),
+            "filename": original_filename,
+            "size": file_size
+        }
+    })

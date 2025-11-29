@@ -20,7 +20,8 @@ class TimeEntry(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=True, index=True)
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=True, index=True)
     start_time = db.Column(db.DateTime, nullable=False, index=True)
     end_time = db.Column(db.DateTime, nullable=True, index=True)
@@ -34,12 +35,14 @@ class TimeEntry(db.Model):
 
     # Relationships
     # user and project relationships are defined via backref in their respective models
+    # client relationship is defined via backref in Client model
     # task relationship is defined via backref in Task model
 
     def __init__(
         self,
         user_id=None,
         project_id=None,
+        client_id=None,
         start_time=None,
         end_time=None,
         task_id=None,
@@ -54,10 +57,11 @@ class TimeEntry(db.Model):
 
         Args:
             user_id: ID of the user who created this entry
-            project_id: ID of the project this entry is associated with
+            project_id: ID of the project this entry is associated with (optional if client_id is provided)
+            client_id: ID of the client this entry is directly billed to (optional if project_id is provided)
             start_time: When the time entry started
             end_time: When the time entry ended (None for active timers)
-            task_id: Optional task ID
+            task_id: Optional task ID (only valid when project_id is provided)
             notes: Optional notes/description
             tags: Optional comma-separated tags
             source: Source of the entry ('manual' or 'auto')
@@ -69,12 +73,22 @@ class TimeEntry(db.Model):
             self.user_id = user_id
         if project_id is not None:
             self.project_id = project_id
+        if client_id is not None:
+            self.client_id = client_id
         if task_id is not None:
             self.task_id = task_id
         if start_time is not None:
             self.start_time = start_time
         if end_time is not None:
             self.end_time = end_time
+
+        # Validate that either project_id or client_id is provided
+        if not self.project_id and not self.client_id:
+            raise ValueError("Either project_id or client_id must be provided")
+
+        # Validate that task_id is only provided when project_id is set
+        if self.task_id and not self.project_id:
+            raise ValueError("task_id can only be set when project_id is provided")
 
         self.notes = notes.strip() if notes else None
         self.tags = tags.strip() if tags else None
@@ -90,8 +104,13 @@ class TimeEntry(db.Model):
 
     def __repr__(self):
         user_name = self.user.username if self.user else "deleted_user"
-        project_name = self.project.name if self.project else "deleted_project"
-        return f"<TimeEntry {self.id}: {user_name} on {project_name}>"
+        if self.project:
+            target = self.project.name
+        elif self.client:
+            target = self.client.name
+        else:
+            target = "unknown"
+        return f"<TimeEntry {self.id}: {user_name} on {target}>"
 
     @property
     def is_active(self):
@@ -211,6 +230,7 @@ class TimeEntry(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "project_id": self.project_id,
+            "client_id": self.client_id,
             "task_id": self.task_id,
             "start_time": self.start_time.isoformat() if self.start_time else None,
             "end_time": self.end_time.isoformat() if self.end_time else None,
@@ -227,6 +247,7 @@ class TimeEntry(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "user": self.user.username if self.user else None,
             "project": self.project.name if self.project else None,
+            "client": self.client.name if self.client else None,
             "task": self.task.name if self.task else None,
         }
 
@@ -241,7 +262,7 @@ class TimeEntry(db.Model):
         return cls.query.filter_by(user_id=user_id, end_time=None).first()
 
     @classmethod
-    def get_entries_for_period(cls, start_date=None, end_date=None, user_id=None, project_id=None):
+    def get_entries_for_period(cls, start_date=None, end_date=None, user_id=None, project_id=None, client_id=None):
         """Get time entries for a specific period with optional filters"""
         query = cls.query.filter(cls.end_time.isnot(None))
 
@@ -257,11 +278,14 @@ class TimeEntry(db.Model):
         if project_id:
             query = query.filter(cls.project_id == project_id)
 
+        if client_id:
+            query = query.filter(cls.client_id == client_id)
+
         return query.order_by(cls.start_time.desc()).all()
 
     @classmethod
     def get_total_hours_for_period(
-        cls, start_date=None, end_date=None, user_id=None, project_id=None, billable_only=False
+        cls, start_date=None, end_date=None, user_id=None, project_id=None, client_id=None, billable_only=False
     ):
         """Calculate total hours for a period with optional filters"""
         query = db.session.query(db.func.sum(cls.duration_seconds))
@@ -277,6 +301,9 @@ class TimeEntry(db.Model):
 
         if project_id:
             query = query.filter(cls.project_id == project_id)
+
+        if client_id:
+            query = query.filter(cls.client_id == client_id)
 
         if billable_only:
             query = query.filter(cls.billable == True)

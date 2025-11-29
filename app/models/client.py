@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from .client_prepaid_consumption import ClientPrepaidConsumption
 import secrets
+import json
 
 
 class Client(db.Model):
@@ -32,8 +33,12 @@ class Client(db.Model):
     password_setup_token = db.Column(db.String(100), nullable=True, index=True)  # Token for password setup/reset
     password_setup_token_expires = db.Column(db.DateTime, nullable=True)  # Token expiration time
 
+    # Custom fields for flexible data storage (e.g., debtor_number, ERP IDs, etc.)
+    custom_fields = db.Column(db.JSON, nullable=True)
+
     # Relationships
     projects = db.relationship("Project", backref="client_obj", lazy="dynamic", cascade="all, delete-orphan")
+    time_entries = db.relationship("TimeEntry", backref="client", lazy="dynamic", cascade="all, delete-orphan")
 
     def __init__(
         self,
@@ -197,6 +202,50 @@ class Client(db.Model):
         self.status = "active"
         self.updated_at = datetime.utcnow()
 
+    def get_custom_field(self, key, default=None):
+        """Get a custom field value by key"""
+        if not self.custom_fields:
+            return default
+        return self.custom_fields.get(key, default)
+
+    def set_custom_field(self, key, value):
+        """Set a custom field value"""
+        if self.custom_fields is None:
+            self.custom_fields = {}
+        self.custom_fields[key] = value
+        self.updated_at = datetime.utcnow()
+
+    def remove_custom_field(self, key):
+        """Remove a custom field"""
+        if self.custom_fields and key in self.custom_fields:
+            del self.custom_fields[key]
+            self.updated_at = datetime.utcnow()
+
+    def get_rendered_links(self):
+        """Get all rendered links from active link templates that match this client's custom fields"""
+        from .link_template import LinkTemplate
+        
+        if not self.custom_fields:
+            return []
+        
+        links = []
+        templates = LinkTemplate.get_active_templates()
+        
+        for template in templates:
+            field_value = self.get_custom_field(template.field_key)
+            if field_value:
+                url = template.render_url(field_value)
+                if url:
+                    links.append({
+                        "id": template.id,
+                        "name": template.name,
+                        "url": url,
+                        "icon": template.icon,
+                        "description": template.description,
+                    })
+        
+        return links
+
     def to_dict(self):
         """Convert client to dictionary for JSON serialization"""
         return {
@@ -216,6 +265,7 @@ class Client(db.Model):
                 float(self.prepaid_hours_monthly) if self.prepaid_hours_monthly is not None else None
             ),
             "prepaid_reset_day": self.prepaid_reset_day,
+            "custom_fields": self.custom_fields or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

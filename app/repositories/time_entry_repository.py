@@ -29,7 +29,12 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         query = self.model.query.filter_by(user_id=user_id)
 
         if include_relations:
-            query = query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.task), joinedload(TimeEntry.user))
+            query = query.options(
+                joinedload(TimeEntry.project), 
+                joinedload(TimeEntry.client),
+                joinedload(TimeEntry.task), 
+                joinedload(TimeEntry.user)
+            )
 
         query = query.order_by(TimeEntry.start_time.desc())
 
@@ -45,7 +50,12 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         query = self.model.query.filter_by(project_id=project_id)
 
         if include_relations:
-            query = query.options(joinedload(TimeEntry.user), joinedload(TimeEntry.task))
+            query = query.options(
+                joinedload(TimeEntry.user), 
+                joinedload(TimeEntry.project),
+                joinedload(TimeEntry.client),
+                joinedload(TimeEntry.task)
+            )
 
         query = query.order_by(TimeEntry.start_time.desc())
 
@@ -60,6 +70,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         end_date: datetime,
         user_id: Optional[int] = None,
         project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
         include_relations: bool = False,
     ) -> List[TimeEntry]:
         """Get time entries within a date range"""
@@ -71,8 +82,16 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         if project_id:
             query = query.filter_by(project_id=project_id)
 
+        if client_id:
+            query = query.filter_by(client_id=client_id)
+
         if include_relations:
-            query = query.options(joinedload(TimeEntry.user), joinedload(TimeEntry.project), joinedload(TimeEntry.task))
+            query = query.options(
+                joinedload(TimeEntry.user), 
+                joinedload(TimeEntry.project), 
+                joinedload(TimeEntry.client),
+                joinedload(TimeEntry.task)
+            )
 
         return query.order_by(TimeEntry.start_time.desc()).all()
 
@@ -80,6 +99,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         self,
         user_id: Optional[int] = None,
         project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[TimeEntry]:
@@ -91,6 +111,9 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
 
         if project_id:
             query = query.filter_by(project_id=project_id)
+
+        if client_id:
+            query = query.filter_by(client_id=client_id)
 
         if start_date:
             query = query.filter(TimeEntry.start_time >= start_date)
@@ -112,7 +135,8 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
     def create_timer(
         self,
         user_id: int,
-        project_id: int,
+        project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         source: str = TimeEntrySource.AUTO.value,
@@ -121,7 +145,13 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         from app.models.time_entry import local_now
 
         entry = self.model(
-            user_id=user_id, project_id=project_id, task_id=task_id, start_time=local_now(), notes=notes, source=source
+            user_id=user_id, 
+            project_id=project_id, 
+            client_id=client_id,
+            task_id=task_id, 
+            start_time=local_now(), 
+            notes=notes, 
+            source=source
         )
         db.session.add(entry)
         return entry
@@ -129,9 +159,10 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
     def create_manual_entry(
         self,
         user_id: int,
-        project_id: int,
-        start_time: datetime,
-        end_time: datetime,
+        project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
+        start_time: datetime = None,
+        end_time: datetime = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         tags: Optional[str] = None,
@@ -141,6 +172,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         entry = self.model(
             user_id=user_id,
             project_id=project_id,
+            client_id=client_id,
             task_id=task_id,
             start_time=start_time,
             end_time=end_time,
@@ -157,6 +189,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         self,
         user_id: Optional[int] = None,
         project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         billable_only: bool = False,
@@ -171,6 +204,9 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
 
         if project_id:
             query = query.filter_by(project_id=project_id)
+
+        if client_id:
+            query = query.filter_by(client_id=client_id)
 
         if start_date:
             query = query.filter(TimeEntry.start_time >= start_date)

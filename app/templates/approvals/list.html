@@ -41,6 +41,10 @@
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                             <i class="fas fa-folder mr-1"></i>{{ approval.time_entry.project.name }}
                         </p>
+                        {% elif approval.time_entry.client %}
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            <i class="fas fa-user mr-1"></i>{{ approval.time_entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                        </p>
                         {% endif %}
                     </div>
                     <div class="flex gap-2">

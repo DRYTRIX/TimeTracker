@@ -146,16 +146,142 @@ class JiraConnector(BaseConnector):
             return {"success": False, "message": f"Connection error: {str(e)}"}
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
-        """Sync issues from Jira."""
+        """Sync issues from Jira and create tasks."""
+        from app.models import Task, Project
+        from app import db
+        from datetime import datetime, timedelta
+
         token = self.get_access_token()
         if not token:
             return {"success": False, "message": "No access token available"}
 
         base_url = self.integration.config.get("jira_url", "https://your-domain.atlassian.net")
-        # This would sync issues and create time entries
-        # Implementation depends on specific requirements
+        api_url = f"{base_url}/rest/api/3/search"
+        
+        synced_count = 0
+        errors = []
 
-        return {"success": True, "message": "Sync completed", "synced_items": 0}
+        try:
+            # Get JQL query from config or use default
+            jql = self.integration.config.get("jql", "assignee = currentUser() AND status != Done ORDER BY updated DESC")
+            
+            # Determine date range
+            if sync_type == "incremental":
+                # Get issues updated in last 7 days
+                jql = f"{jql} AND updated >= -7d"
+            
+            # Fetch issues from Jira
+            response = requests.get(
+                api_url,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/json"
+                },
+                params={
+                    "jql": jql,
+                    "maxResults": 100,
+                    "fields": "summary,description,status,assignee,project,created,updated"
+                }
+            )
+
+            if response.status_code != 200:
+                return {"success": False, "message": f"Jira API returned status {response.status_code}"}
+
+            issues = response.json().get("issues", [])
+
+            for issue in issues:
+                try:
+                    issue_key = issue.get("key")
+                    issue_fields = issue.get("fields", {})
+                    project_key = issue.get("fields", {}).get("project", {}).get("key", "")
+                    
+                    # Find or create project
+                    project = Project.query.filter_by(
+                        user_id=self.integration.user_id,
+                        name=project_key or "Jira"
+                    ).first()
+                    
+                    if not project:
+                        project = Project(
+                            name=project_key or "Jira",
+                            description=f"Synced from Jira project {project_key}",
+                            user_id=self.integration.user_id,
+                            status="active"
+                        )
+                        db.session.add(project)
+                        db.session.flush()
+
+                    # Find or create task
+                    task = Task.query.filter_by(
+                        project_id=project.id,
+                        name=issue_key
+                    ).first()
+
+                    if not task:
+                        task = Task(
+                            project_id=project.id,
+                            name=issue_key,
+                            description=issue_fields.get("summary", ""),
+                            status=self._map_jira_status(issue_fields.get("status", {}).get("name", "To Do")),
+                            notes=issue_fields.get("description", {}).get("content", [{}])[0].get("content", [{}])[0].get("text", "") if issue_fields.get("description") else None
+                        )
+                        db.session.add(task)
+                        db.session.flush()
+
+                    # Store Jira issue key in task metadata
+                    if not hasattr(task, 'metadata') or not task.metadata:
+                        task.metadata = {}
+                    task.metadata['jira_issue_key'] = issue_key
+                    task.metadata['jira_issue_id'] = issue.get("id")
+
+                    synced_count += 1
+                except Exception as e:
+                    errors.append(f"Error syncing issue {issue.get('key', 'unknown')}: {str(e)}")
+
+            db.session.commit()
+
+            return {
+                "success": True,
+                "message": f"Sync completed. Synced {synced_count} issues.",
+                "synced_items": synced_count,
+                "errors": errors
+            }
+        except Exception as e:
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
+
+    def _map_jira_status(self, jira_status: str) -> str:
+        """Map Jira status to TimeTracker task status."""
+        status_map = {
+            "To Do": "todo",
+            "In Progress": "in_progress",
+            "Done": "completed",
+            "Closed": "completed",
+        }
+        return status_map.get(jira_status, "todo")
+
+    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+        """Handle incoming webhook from Jira."""
+        try:
+            event_type = payload.get("webhookEvent")
+            issue = payload.get("issue", {})
+            issue_key = issue.get("key")
+
+            if not issue_key:
+                return {"success": False, "message": "No issue key in webhook payload"}
+
+            # Handle issue updated events
+            if event_type in ["jira:issue_updated", "jira:issue_created"]:
+                # Trigger a sync for this specific issue
+                # This would be handled by the sync_data method
+                return {
+                    "success": True,
+                    "message": f"Webhook received for issue {issue_key}",
+                    "event_type": event_type
+                }
+
+            return {"success": True, "message": f"Webhook processed: {event_type}"}
+        except Exception as e:
+            return {"success": False, "message": f"Error processing webhook: {str(e)}"}
 
     def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema."""
@@ -167,6 +293,21 @@ class JiraConnector(BaseConnector):
                     "type": "url",
                     "required": True,
                     "placeholder": "https://your-domain.atlassian.net",
+                },
+                {
+                    "name": "jql",
+                    "label": "JQL Query",
+                    "type": "text",
+                    "required": False,
+                    "placeholder": "assignee = currentUser() AND status != Done",
+                    "help": "Jira Query Language query to filter issues to sync"
+                },
+                {
+                    "name": "auto_sync",
+                    "type": "boolean",
+                    "label": "Auto Sync",
+                    "default": True,
+                    "description": "Automatically sync when webhooks are received"
                 }
             ],
             "required": ["jira_url"],

@@ -812,3 +812,268 @@ def export_project_excel():
         as_attachment=True,
         download_name=filename,
     )
+
+
+@reports_bp.route("/reports/user/export/excel")
+@login_required
+def export_user_excel():
+    """Export user report as Excel file"""
+    user_id = request.args.get("user_id", type=int)
+    project_id = request.args.get("project_id", type=int)
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    # Parse dates
+    if not start_date:
+        start_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        flash(_("Invalid date format"), "error")
+        return redirect(url_for("reports.user_report"))
+
+    # Get time entries
+    query = TimeEntry.query.filter(
+        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
+    )
+
+    if user_id:
+        query = query.filter(TimeEntry.user_id == user_id)
+
+    if project_id:
+        query = query.filter(TimeEntry.project_id == project_id)
+
+    entries = query.order_by(TimeEntry.start_time.desc()).all()
+
+    # Group by user
+    user_totals = {}
+    for entry in entries:
+        username = entry.user.display_name if entry.user else "Unknown"
+        if username not in user_totals:
+            user_totals[username] = {
+                "hours": 0,
+                "billable_hours": 0,
+                "user_obj": entry.user,
+            }
+        user_totals[username]["hours"] += entry.duration_hours
+        if entry.billable:
+            user_totals[username]["billable_hours"] += entry.duration_hours
+
+    # Calculate overtime
+    from app.utils.overtime import calculate_period_overtime
+
+    for username, data in user_totals.items():
+        if data["user_obj"]:
+            overtime_data = calculate_period_overtime(data["user_obj"], start_dt.date(), end_dt.date())
+            data["regular_hours"] = overtime_data["regular_hours"]
+            data["overtime_hours"] = overtime_data["overtime_hours"]
+            data["days_with_overtime"] = overtime_data["days_with_overtime"]
+        else:
+            data["regular_hours"] = data["hours"]
+            data["overtime_hours"] = 0
+            data["days_with_overtime"] = 0
+
+    # Create Excel file
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "User Report"
+
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    border = Border(
+        left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+    )
+
+    # Title
+    ws.merge_cells("A1:F1")
+    title_cell = ws["A1"]
+    title_cell.value = f"User Report: {start_date} to {end_date}"
+    title_cell.font = Font(bold=True, size=14)
+    title_cell.alignment = Alignment(horizontal="center")
+
+    # Headers
+    headers = ["User", "Total Hours", "Regular Hours", "Overtime Hours", "Billable Hours", "Days with Overtime"]
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=col_num)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = border
+
+    # Data rows
+    row_num = 4
+    for username, data in sorted(user_totals.items()):
+        ws.cell(row=row_num, column=1).value = username
+        ws.cell(row=row_num, column=2).value = round(data["hours"], 2)
+        ws.cell(row=row_num, column=3).value = round(data.get("regular_hours", data["hours"]), 2)
+        ws.cell(row=row_num, column=4).value = round(data.get("overtime_hours", 0), 2)
+        ws.cell(row=row_num, column=5).value = round(data["billable_hours"], 2)
+        ws.cell(row=row_num, column=6).value = data.get("days_with_overtime", 0)
+
+        for col_num in range(1, len(headers) + 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.border = border
+            if col_num > 1:
+                cell.number_format = "0.00"
+
+        row_num += 1
+
+    # Auto-adjust column widths
+    for col_num, header in enumerate(headers, 1):
+        column_letter = get_column_letter(col_num)
+        ws.column_dimensions[column_letter].width = max(len(header), 15)
+
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"user_report_{start_date}_{end_date}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    log_event("export.excel", user_id=current_user.id, export_type="user_report", num_users=len(user_totals))
+    track_event(current_user.id, "export.excel", {"export_type": "user_report", "num_users": len(user_totals)})
+
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@reports_bp.route("/reports/task/export/excel")
+@login_required
+def export_task_excel():
+    """Export task report as Excel file"""
+    project_id = request.args.get("project_id", type=int)
+    user_id = request.args.get("user_id", type=int)
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    # Parse dates
+    if not start_date:
+        start_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        flash(_("Invalid date format"), "error")
+        return redirect(url_for("reports.task_report"))
+
+    # Get tasks
+    tasks_query = Task.query.filter(Task.status == "done")
+    if project_id:
+        tasks_query = tasks_query.filter(Task.project_id == project_id)
+    tasks_query = tasks_query.filter(Task.completed_at.isnot(None))
+    tasks_query = tasks_query.filter(Task.completed_at >= start_dt, Task.completed_at <= end_dt)
+    if user_id:
+        tasks_query = tasks_query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(TimeEntry.user_id == user_id)
+    tasks = tasks_query.order_by(Task.completed_at.desc()).all()
+
+    # Compute hours per task
+    task_rows = []
+    for task in tasks:
+        te_query = TimeEntry.query.filter(
+            TimeEntry.task_id == task.id,
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= start_dt,
+            TimeEntry.start_time <= end_dt,
+        )
+        if project_id:
+            te_query = te_query.filter(TimeEntry.project_id == project_id)
+        if user_id:
+            te_query = te_query.filter(TimeEntry.user_id == user_id)
+
+        entries = te_query.all()
+        hours = sum(e.duration_hours for e in entries)
+
+        task_rows.append({
+            "task": task,
+            "project": task.project,
+            "completed_at": task.completed_at,
+            "hours": round(hours, 2),
+        })
+
+    # Create Excel file
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Task Report"
+
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    border = Border(
+        left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+    )
+
+    # Title
+    ws.merge_cells("A1:D1")
+    title_cell = ws["A1"]
+    title_cell.value = f"Task Report: {start_date} to {end_date}"
+    title_cell.font = Font(bold=True, size=14)
+    title_cell.alignment = Alignment(horizontal="center")
+
+    # Headers
+    headers = ["Task", "Project", "Completed At", "Hours"]
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=col_num)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = border
+
+    # Data rows
+    row_num = 4
+    for row_data in task_rows:
+        ws.cell(row=row_num, column=1).value = row_data["task"].name
+        ws.cell(row=row_num, column=2).value = row_data["project"].name if row_data["project"] else "N/A"
+        ws.cell(row=row_num, column=3).value = row_data["completed_at"].strftime('%Y-%m-%d') if row_data["completed_at"] else "N/A"
+        ws.cell(row=row_num, column=4).value = row_data["hours"]
+
+        for col_num in range(1, len(headers) + 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.border = border
+            if col_num == 4:
+                cell.number_format = "0.00"
+
+        row_num += 1
+
+    # Auto-adjust column widths
+    for col_num, header in enumerate(headers, 1):
+        column_letter = get_column_letter(col_num)
+        ws.column_dimensions[column_letter].width = max(len(header), 15)
+
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"task_report_{start_date}_{end_date}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    log_event("export.excel", user_id=current_user.id, export_type="task_report", num_tasks=len(task_rows))
+    track_event(current_user.id, "export.excel", {"export_type": "task_report", "num_tasks": len(task_rows)})
+
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )

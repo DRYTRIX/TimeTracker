@@ -4,10 +4,11 @@ import logging
 from datetime import datetime, timedelta
 from flask import current_app
 from app import db
-from app.models import Invoice, User, TimeEntry, Project, BudgetAlert, RecurringInvoice, Quote, ReportEmailSchedule
+from app.models import Invoice, User, TimeEntry, Project, BudgetAlert, RecurringInvoice, Quote, ReportEmailSchedule, Integration
 from app.utils.email import send_overdue_invoice_notification, send_weekly_summary, send_quote_expired_notification
 from app.utils.budget_forecasting import check_budget_alerts
 from app.services.scheduled_report_service import ScheduledReportService
+from app.services.integration_service import IntegrationService
 
 
 logger = logging.getLogger(__name__)
@@ -353,6 +354,30 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered expiring quotes check task")
 
+        # Sync integrations every hour
+        def sync_integrations_with_app():
+            """Wrapper that uses the captured app instance"""
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for integration sync")
+                    return
+
+            with app_instance.app_context():
+                sync_integrations()
+
+        scheduler.add_job(
+            func=sync_integrations_with_app,
+            trigger="cron",
+            minute=0,  # Every hour at minute 0
+            id="sync_integrations",
+            name="Sync all active integrations",
+            replace_existing=True,
+        )
+        logger.info("Registered integration sync task")
+
         # Process scheduled reports every hour
         scheduler.add_job(
             func=process_scheduled_reports,
@@ -363,6 +388,30 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True,
         )
         logger.info("Registered scheduled reports task")
+
+        # Sync integrations every hour
+        def sync_integrations_with_app():
+            """Wrapper that uses the captured app instance"""
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for integration sync")
+                    return
+
+            with app_instance.app_context():
+                sync_integrations()
+
+        scheduler.add_job(
+            func=sync_integrations_with_app,
+            trigger="cron",
+            minute=0,  # Every hour at minute 0
+            id="sync_integrations",
+            name="Sync all active integrations",
+            replace_existing=True,
+        )
+        logger.info("Registered integration sync task")
 
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
@@ -493,3 +542,77 @@ def check_expiring_quotes():
         except Exception as e:
             logger.error(f"Error checking expiring quotes: {e}")
             return 0
+
+
+def sync_integrations():
+    """Sync all active integrations
+
+    This task should be run periodically to sync data from all active integrations.
+    It will only sync integrations that have auto_sync enabled in their config.
+    """
+    try:
+        logger.info("Starting integration sync...")
+
+        # Get all active integrations
+        active_integrations = Integration.query.filter_by(is_active=True).all()
+
+        logger.info(f"Found {len(active_integrations)} active integrations")
+
+        service = IntegrationService()
+        synced_count = 0
+        errors = []
+
+        for integration in active_integrations:
+            try:
+                # Check if auto_sync is enabled (default to True if not set)
+                config = integration.config or {}
+                auto_sync = config.get("auto_sync", True)
+
+                if not auto_sync:
+                    logger.debug(f"Skipping integration {integration.id} ({integration.provider}): auto_sync disabled")
+                    continue
+
+                # Get connector
+                connector = service.get_connector(integration)
+                if not connector:
+                    logger.warning(f"Could not get connector for integration {integration.id} ({integration.provider})")
+                    continue
+
+                # Perform sync
+                logger.info(f"Syncing integration {integration.id} ({integration.provider})...")
+                result = connector.sync_data(sync_type="incremental")
+
+                if result.get("success"):
+                    synced_count += 1
+                    # Update last sync time
+                    integration.last_sync_at = datetime.utcnow()
+                    integration.last_sync_status = "success"
+                    integration.last_error = None
+                    logger.info(
+                        f"Successfully synced integration {integration.id} ({integration.provider}): {result.get('synced_items', 0)} items"
+                    )
+                else:
+                    errors.append(f"{integration.provider}: {result.get('message', 'Unknown error')}")
+                    integration.last_sync_status = "error"
+                    integration.last_error = result.get("message", "Unknown error")
+                    logger.error(f"Failed to sync integration {integration.id} ({integration.provider}): {result.get('message')}")
+
+                db.session.commit()
+
+            except Exception as e:
+                error_msg = f"Error syncing integration {integration.id} ({integration.provider}): {str(e)}"
+                errors.append(error_msg)
+                logger.error(error_msg, exc_info=True)
+                integration.last_sync_status = "error"
+                integration.last_error = str(e)
+                db.session.commit()
+
+        logger.info(f"Integration sync completed. Synced {synced_count}/{len(active_integrations)} integrations")
+        if errors:
+            logger.warning(f"Integration sync errors: {', '.join(errors)}")
+
+        return {"synced": synced_count, "total": len(active_integrations), "errors": errors}
+
+    except Exception as e:
+        logger.error(f"Error in integration sync task: {e}", exc_info=True)
+        return {"synced": 0, "total": 0, "errors": [str(e)]}

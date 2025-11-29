@@ -46,10 +46,60 @@
                 {% if integration.last_sync_at %}
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Last Sync') }}</dt>
-                    <dd class="text-text-light dark:text-text-dark">{{ integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                    <dd class="text-text-light dark:text-text-dark">
+                        {{ integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% if integration.last_sync_status %}
+                            {% if integration.last_sync_status == 'success' %}
+                            <span class="ml-2 px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Success') }}</span>
+                            {% elif integration.last_sync_status == 'error' %}
+                            <span class="ml-2 px-2 py-1 text-xs rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Error') }}</span>
+                            {% else %}
+                            <span class="ml-2 px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">{{ _('Pending') }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </dd>
+                </div>
+                {% endif %}
+                {% if integration.last_error %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Last Error') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark text-sm text-red-600 dark:text-red-400">{{ integration.last_error[:100] }}{% if integration.last_error|length > 100 %}...{% endif %}</dd>
                 </div>
                 {% endif %}
             </dl>
+        </div>
+        
+        <!-- Sync Events Log -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Sync History') }}</h2>
+            {% if recent_events %}
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+                {% for event in recent_events %}
+                <div class="border-b border-border-light dark:border-border-dark pb-2 last:border-0">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-text-light dark:text-text-dark">{{ event.event_type|replace('_', ' ')|title }}</span>
+                                {% if event.status == 'success' %}
+                                <span class="px-2 py-0.5 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Success') }}</span>
+                                {% elif event.status == 'error' %}
+                                <span class="px-2 py-0.5 text-xs rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Error') }}</span>
+                                {% else %}
+                                <span class="px-2 py-0.5 text-xs rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">{{ _('Pending') }}</span>
+                                {% endif %}
+                            </div>
+                            {% if event.message %}
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ event.message }}</p>
+                            {% endif %}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ event.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No sync events yet') }}</p>
+            {% endif %}
         </div>
     </div>
     

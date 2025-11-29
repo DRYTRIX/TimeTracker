@@ -17,6 +17,7 @@ class ClientSchema(Schema):
     address = fields.Str(allow_none=True)
     default_hourly_rate = fields.Decimal(allow_none=True, places=2)
     status = fields.Str(validate=validate.OneOf(["active", "inactive", "archived"]))
+    custom_fields = fields.Dict(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
@@ -33,6 +34,7 @@ class ClientCreateSchema(Schema):
     phone = fields.Str(allow_none=True, validate=validate.Length(max=50))
     address = fields.Str(allow_none=True)
     default_hourly_rate = fields.Decimal(allow_none=True, places=2, validate=validate.Range(min=Decimal("0")))
+    custom_fields = fields.Dict(allow_none=True)
 
 
 class ClientUpdateSchema(Schema):
@@ -45,3 +47,4 @@ class ClientUpdateSchema(Schema):
     address = fields.Str(allow_none=True)
     default_hourly_rate = fields.Decimal(allow_none=True, places=2, validate=validate.Range(min=Decimal("0")))
     status = fields.Str(allow_none=True, validate=validate.OneOf(["active", "inactive", "archived"]))
+    custom_fields = fields.Dict(allow_none=True)

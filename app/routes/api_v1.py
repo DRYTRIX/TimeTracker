@@ -623,8 +623,8 @@ def create_time_entry():
     data = request.get_json() or {}
 
     # Validate required fields
-    if not data.get("project_id"):
-        return jsonify({"error": "project_id is required"}), 400
+    if not data.get("project_id") and not data.get("client_id"):
+        return jsonify({"error": "Either project_id or client_id is required"}), 400
     if not data.get("start_time"):
         return jsonify({"error": "start_time is required"}), 400
 
@@ -643,7 +643,8 @@ def create_time_entry():
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.create_manual_entry(
         user_id=g.api_user.id,
-        project_id=data["project_id"],
+        project_id=data.get("project_id"),
+        client_id=data.get("client_id"),
         start_time=start_time,
         end_time=end_time or start_time,  # Service requires end_time
         task_id=data.get("task_id"),
@@ -1241,6 +1242,7 @@ def create_client():
         phone=data.get("phone"),
         address=data.get("address"),
         default_hourly_rate=Decimal(str(data["default_hourly_rate"])) if data.get("default_hourly_rate") else None,
+        custom_fields=data.get("custom_fields"),
     )
 
     if not result.get("success"):

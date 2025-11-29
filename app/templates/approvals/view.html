@@ -39,6 +39,13 @@
                         </a>
                     </dd>
                 </div>
+                {% elif approval.time_entry.client %}
+                <div>
+                    <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Client') }}</dt>
+                    <dd class="text-text-light dark:text-text-dark">
+                        {{ approval.time_entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                    </dd>
+                </div>
                 {% endif %}
                 {% if approval.time_entry.task %}
                 <div>

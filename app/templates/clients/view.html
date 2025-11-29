@@ -106,6 +106,51 @@
                 </div>
             </div>
         </div>
+        {% if client.custom_fields %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Custom Fields') }}</h2>
+            <div class="space-y-3">
+                {% for key, value in client.custom_fields.items() %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ key }}</h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        {# If the value looks like a URL, render it as a clickable link #}
+                        {% if value is string and (value.startswith('http://') or value.startswith('https://')) %}
+                            <a href="{{ value }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                {{ value }}
+                            </a>
+                        {% elif value is string and value.startswith('www.') %}
+                            <a href="https://{{ value }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                {{ value }}
+                            </a>
+                        {% else %}
+                            {{ value }}
+                        {% endif %}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if rendered_links %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Quick Links') }}</h2>
+            <div class="space-y-2">
+                {% for link in rendered_links %}
+                <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition">
+                    {% if link.icon %}
+                    <i class="{{ link.icon }}"></i>
+                    {% else %}
+                    <i class="fas fa-external-link-alt"></i>
+                    {% endif %}
+                    <span>{{ link.name }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         {% if prepaid_overview %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h2 class="text-lg font-semibold mb-4">{{ _('Prepaid Hours') }}</h2>

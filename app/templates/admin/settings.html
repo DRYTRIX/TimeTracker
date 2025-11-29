@@ -76,6 +76,166 @@
                 </div>
             </div>
 
+            <!-- UI Features (System-wide) -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('UI Features (System-wide)') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('These switches control which navigation items are available to users. Users can only toggle features that are enabled here.') }}
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Calendar -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ _('Calendar') }}</h3>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="ui_allow_calendar" id="ui_allow_calendar" {% if settings.ui_allow_calendar %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <label for="ui_allow_calendar" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                {{ _('Allow Calendar section') }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Time Tracking -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ _('Time Tracking') }}</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_project_templates" id="ui_allow_project_templates" {% if settings.ui_allow_project_templates %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_project_templates" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Project Templates') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_gantt_chart" id="ui_allow_gantt_chart" {% if settings.ui_allow_gantt_chart %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_gantt_chart" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Gantt Chart') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_kanban_board" id="ui_allow_kanban_board" {% if settings.ui_allow_kanban_board %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_kanban_board" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Kanban Board') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_weekly_goals" id="ui_allow_weekly_goals" {% if settings.ui_allow_weekly_goals %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_weekly_goals" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Weekly Goals') }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CRM -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ _('CRM') }}</h3>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="ui_allow_quotes" id="ui_allow_quotes" {% if settings.ui_allow_quotes %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <label for="ui_allow_quotes" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                {{ _('Allow Quotes') }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Finance & Expenses -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ _('Finance & Expenses') }}</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_reports" id="ui_allow_reports" {% if settings.ui_allow_reports %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_reports" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Reports') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_report_builder" id="ui_allow_report_builder" {% if settings.ui_allow_report_builder %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_report_builder" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Report Builder') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_scheduled_reports" id="ui_allow_scheduled_reports" {% if settings.ui_allow_scheduled_reports %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_scheduled_reports" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Scheduled Reports') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_invoice_approvals" id="ui_allow_invoice_approvals" {% if settings.ui_allow_invoice_approvals %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_invoice_approvals" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Invoice Approvals') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_payment_gateways" id="ui_allow_payment_gateways" {% if settings.ui_allow_payment_gateways %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_payment_gateways" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Payment Gateways') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_recurring_invoices" id="ui_allow_recurring_invoices" {% if settings.ui_allow_recurring_invoices %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_recurring_invoices" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Recurring Invoices') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_payments" id="ui_allow_payments" {% if settings.ui_allow_payments %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_payments" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Payments') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_mileage" id="ui_allow_mileage" {% if settings.ui_allow_mileage %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_mileage" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Mileage') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_per_diem" id="ui_allow_per_diem" {% if settings.ui_allow_per_diem %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_per_diem" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Per Diem') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_budget_alerts" id="ui_allow_budget_alerts" {% if settings.ui_allow_budget_alerts %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_budget_alerts" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Budget Alerts') }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inventory -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ _('Inventory') }}</h3>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="ui_allow_inventory" id="ui_allow_inventory" {% if settings.ui_allow_inventory %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <label for="ui_allow_inventory" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                {{ _('Allow Inventory section') }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Analytics & Tools -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ _('Analytics & Tools') }}</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_analytics" id="ui_allow_analytics" {% if settings.ui_allow_analytics %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_analytics" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Analytics section') }}
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_tools" id="ui_allow_tools" {% if settings.ui_allow_tools %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_tools" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Tools & Data section') }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Company Branding -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Company Branding') }}</h2>
@@ -270,6 +430,178 @@
                             <label for="github_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
                             <input type="password" name="github_client_secret" id="github_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
                             {% if settings.github_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Google Calendar -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-google text-red-600 mr-2"></i>Google Calendar
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="google_calendar_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="google_calendar_client_id" id="google_calendar_client_id" value="{{ settings.google_calendar_client_id or '' }}" class="form-input" placeholder="{{ _('Google OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="google_calendar_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="google_calendar_client_secret" id="google_calendar_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.google_calendar_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outlook Calendar -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-microsoft text-blue-600 mr-2"></i>Outlook Calendar
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="outlook_calendar_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="outlook_calendar_client_id" id="outlook_calendar_client_id" value="{{ settings.outlook_calendar_client_id or '' }}" class="form-input" placeholder="{{ _('Microsoft OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="outlook_calendar_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="outlook_calendar_client_secret" id="outlook_calendar_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.outlook_calendar_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="outlook_calendar_tenant_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tenant ID (optional)</label>
+                            <input type="text" name="outlook_calendar_tenant_id" id="outlook_calendar_tenant_id" value="{{ settings.outlook_calendar_tenant_id or '' }}" class="form-input" placeholder="{{ _('Microsoft Tenant ID (common for multi-tenant)') }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Microsoft Teams -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-microsoft-teams text-blue-600 mr-2"></i>Microsoft Teams
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="microsoft_teams_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="microsoft_teams_client_id" id="microsoft_teams_client_id" value="{{ settings.microsoft_teams_client_id or '' }}" class="form-input" placeholder="{{ _('Microsoft OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="microsoft_teams_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="microsoft_teams_client_secret" id="microsoft_teams_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.microsoft_teams_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="microsoft_teams_tenant_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tenant ID (optional)</label>
+                            <input type="text" name="microsoft_teams_tenant_id" id="microsoft_teams_tenant_id" value="{{ settings.microsoft_teams_tenant_id or '' }}" class="form-input" placeholder="{{ _('Microsoft Tenant ID (common for multi-tenant)') }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asana -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-asana text-fuchsia-600 mr-2"></i>Asana
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="asana_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="asana_client_id" id="asana_client_id" value="{{ settings.asana_client_id or '' }}" class="form-input" placeholder="{{ _('Asana OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="asana_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="asana_client_secret" id="asana_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.asana_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trello -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-trello text-blue-500 mr-2"></i>Trello
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="trello_api_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                            <input type="text" name="trello_api_key" id="trello_api_key" value="{{ settings.trello_api_key or '' }}" class="form-input" placeholder="{{ _('Trello API Key') }}">
+                        </div>
+                        <div>
+                            <label for="trello_api_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">API Secret</label>
+                            <input type="password" name="trello_api_secret" id="trello_api_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.trello_api_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ API secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GitLab -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-gitlab text-orange-600 mr-2"></i>GitLab
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="gitlab_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="gitlab_client_id" id="gitlab_client_id" value="{{ settings.gitlab_client_id or '' }}" class="form-input" placeholder="{{ _('GitLab OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="gitlab_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="gitlab_client_secret" id="gitlab_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.gitlab_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="gitlab_instance_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Instance URL</label>
+                            <input type="text" name="gitlab_instance_url" id="gitlab_instance_url" value="{{ settings.gitlab_instance_url or 'https://gitlab.com' }}" class="form-input" placeholder="{{ _('https://gitlab.com or your self-hosted instance') }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QuickBooks -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fas fa-dollar-sign text-green-600 mr-2"></i>QuickBooks Online
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="quickbooks_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="quickbooks_client_id" id="quickbooks_client_id" value="{{ settings.quickbooks_client_id or '' }}" class="form-input" placeholder="{{ _('QuickBooks OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="quickbooks_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="quickbooks_client_secret" id="quickbooks_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.quickbooks_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Xero -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fas fa-chart-line text-blue-600 mr-2"></i>Xero
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="xero_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="xero_client_id" id="xero_client_id" value="{{ settings.xero_client_id or '' }}" class="form-input" placeholder="{{ _('Xero OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="xero_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="xero_client_secret" id="xero_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.xero_client_secret_set %}
                             <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
                             {% endif %}
                         </div>

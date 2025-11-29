@@ -4,6 +4,10 @@
 {% block content %}
 <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">{{ _('Summary Report') }}</h1>
+    <a href="{{ url_for('reports.export_excel') }}" 
+       class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
+        <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
+    </a>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

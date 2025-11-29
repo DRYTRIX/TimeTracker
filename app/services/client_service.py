@@ -25,6 +25,7 @@ class ClientService:
         phone: Optional[str] = None,
         address: Optional[str] = None,
         default_hourly_rate: Optional[Decimal] = None,
+        custom_fields: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Create a new client.
@@ -46,6 +47,7 @@ class ClientService:
             address=address,
             default_hourly_rate=default_hourly_rate,
             status="active",
+            custom_fields=custom_fields,
         )
 
         if not safe_commit("create_client", {"name": name, "created_by": created_by}):
