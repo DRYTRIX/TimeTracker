@@ -353,8 +353,22 @@ def register_scheduled_tasks(scheduler, app=None):
         logger.info("Registered webhook retry task")
 
         # Check for expiring quotes daily at 9:30 AM
+        # Create a closure that captures the app instance
+        def check_expiring_quotes_with_app():
+            """Wrapper that uses the captured app instance"""
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for expiring quotes check")
+                    return
+
+            with app_instance.app_context():
+                check_expiring_quotes()
+
         scheduler.add_job(
-            func=check_expiring_quotes,
+            func=check_expiring_quotes_with_app,
             trigger="cron",
             hour=9,
             minute=30,
@@ -490,68 +504,70 @@ def check_expiring_quotes():
 
     This task should be run daily to check for quotes that are expiring
     within the next 7 days, 3 days, and 1 day, and send reminders.
+
+    Note: This function should be called within an app context.
+    Use check_expiring_quotes_with_app() wrapper for scheduled tasks.
     """
-    with current_app.app_context():
-        try:
-            from app.utils.timezone import local_now
-            from datetime import timedelta
-            from app.utils.email import send_quote_expiring_reminder
+    try:
+        from app.utils.timezone import local_now
+        from datetime import timedelta
+        from app.utils.email import send_quote_expiring_reminder
 
-            logger.info("Checking for expiring quotes...")
+        logger.info("Checking for expiring quotes...")
 
-            today = local_now().date()
-            seven_days = today + timedelta(days=7)
+        today = local_now().date()
+        seven_days = today + timedelta(days=7)
 
-            # Get quotes that are sent and expiring soon
-            expiring_quotes = Quote.query.filter(
-                Quote.status == "sent",
-                Quote.valid_until.isnot(None),
-                Quote.valid_until >= today,
-                Quote.valid_until <= seven_days,
-            ).all()
+        # Get quotes that are sent and expiring soon
+        expiring_quotes = Quote.query.filter(
+            Quote.status == "sent",
+            Quote.valid_until.isnot(None),
+            Quote.valid_until >= today,
+            Quote.valid_until <= seven_days,
+        ).all()
 
-            logger.info(f"Found {len(expiring_quotes)} quotes expiring soon")
+        logger.info(f"Found {len(expiring_quotes)} quotes expiring soon")
 
-            notifications_sent = 0
-            for quote in expiring_quotes:
-                if not quote.valid_until:
-                    continue
+        notifications_sent = 0
+        for quote in expiring_quotes:
+            if not quote.valid_until:
+                continue
 
-                days_until_expiry = (quote.valid_until - today).days
+            days_until_expiry = (quote.valid_until - today).days
 
-                # Send reminders at 7 days, 3 days, and 1 day before expiration
-                if days_until_expiry not in [7, 3, 1]:
-                    continue
+            # Send reminders at 7 days, 3 days, and 1 day before expiration
+            if days_until_expiry not in [7, 3, 1]:
+                continue
 
-                # Get users to notify (creator and admins)
-                users_to_notify = set()
+            # Get users to notify (creator and admins)
+            users_to_notify = set()
 
-                # Add the quote creator
-                if quote.creator:
-                    users_to_notify.add(quote.creator)
+            # Add the quote creator
+            if quote.creator:
+                users_to_notify.add(quote.creator)
 
-                # Add all admins
-                admins = User.query.filter_by(role="admin", is_active=True).all()
-                users_to_notify.update(admins)
+            # Add all admins
+            admins = User.query.filter_by(role="admin", is_active=True).all()
+            users_to_notify.update(admins)
 
-                # Send notifications
-                for user in users_to_notify:
-                    if user.email and user.email_notifications:
-                        try:
-                            send_quote_expiring_reminder(quote, user, days_until_expiry)
-                            notifications_sent += 1
-                            logger.info(
-                                f"Sent expiration reminder for quote {quote.quote_number} to {user.username} ({days_until_expiry} days remaining)"
-                            )
-                        except Exception as e:
-                            logger.error(f"Failed to send reminder to {user.username}: {e}")
+            # Send notifications
+            for user in users_to_notify:
+                if user.email and user.email_notifications:
+                    try:
+                        send_quote_expiring_reminder(quote, user, days_until_expiry)
+                        notifications_sent += 1
+                        logger.info(
+                            f"Sent expiration reminder for quote {quote.quote_number} to {user.username} ({days_until_expiry} days remaining)"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send reminder to {user.username}: {e}")
 
-            logger.info(f"Sent {notifications_sent} quote expiration reminders")
-            return notifications_sent
+        logger.info(f"Sent {notifications_sent} quote expiration reminders")
+        return notifications_sent
 
-        except Exception as e:
-            logger.error(f"Error checking expiring quotes: {e}")
-            return 0
+    except Exception as e:
+        logger.error(f"Error checking expiring quotes: {e}")
+        return 0
 
 
 def sync_integrations():
