@@ -275,9 +275,10 @@ def test_duplicate_button_on_dashboard(authenticated_client, time_entry_with_all
     with app.app_context():
         # Clear any cache that might affect the dashboard
         from app.utils.cache import get_cache
+
         cache = get_cache()
         cache.delete(f"dashboard:{time_entry_with_all_fields.user_id}")
-        
+
         response = authenticated_client.get("/dashboard")
         assert response.status_code == 200
         html = response.get_data(as_text=True)

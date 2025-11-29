@@ -639,7 +639,7 @@ def create_app(config=None):
     flask_env_env = os.getenv("FLASK_ENV", "production")
     flask_env = flask_env_config if flask_env_config else flask_env_env
     is_production_env = flask_env == "production" and not is_testing
-    
+
     if not app.debug and is_production_env:
         secret = app.config.get("SECRET_KEY")
         placeholder_values = {
