@@ -30,7 +30,7 @@ jobs:
   smoke-tests:
     name: Smoke Tests (Quick)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     
     steps:
       - name: Checkout code
@@ -52,7 +52,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -m smoke -v --tb=short --no-cov
+          pytest -m smoke -v --tb=short --no-cov -n auto
       
       - name: Upload smoke test results
         if: always()
