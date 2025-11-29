@@ -1,7 +1,56 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable, TypeVar
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 from app import db
+
+T = TypeVar('T')
+
+
+def safe_query(query_func: Callable[[], T], default: Optional[T] = None) -> Optional[T]:
+    """Execute a database query with automatic transaction rollback on failure.
+    
+    This function handles the case where a transaction has been aborted by PostgreSQL
+    (e.g., due to a previous failed query) by rolling back and retrying the query.
+    
+    Args:
+        query_func: A callable that executes the database query
+        default: Optional default value to return if query fails (default: None)
+    
+    Returns:
+        The result of the query, or the default value if query fails
+    
+    Example:
+        user = safe_query(lambda: User.query.get(user_id))
+    """
+    try:
+        return query_func()
+    except (ValueError, TypeError) as e:
+        # Invalid input - don't retry
+        current_app.logger.debug(f"Query failed with invalid input: {e}")
+        return default
+    except SQLAlchemyError as e:
+        # Database error - try to rollback and retry
+        try:
+            db.session.rollback()
+            return query_func()
+        except Exception as retry_error:
+            # Retry also failed - rollback again and return default
+            try:
+                db.session.rollback()
+                current_app.logger.warning(
+                    f"Query failed after rollback retry: {retry_error} (original: {e})"
+                )
+            except Exception:
+                pass
+            return default
+    except Exception as e:
+        # Unexpected error - rollback and return default
+        try:
+            db.session.rollback()
+            current_app.logger.warning(f"Unexpected error in safe_query: {e}")
+        except Exception:
+            pass
+        return default
 
 
 def safe_commit(action: Optional[str] = None, context: Optional[Dict[str, Any]] = None) -> bool:
