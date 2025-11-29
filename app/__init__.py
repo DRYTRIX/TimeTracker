@@ -463,13 +463,20 @@ def create_app(config=None):
         try:
             if app.config.get("TESTING"):
                 from flask_login import current_user, login_user
+                from app.utils.db import safe_query
 
                 if not getattr(current_user, "is_authenticated", False):
                     uid = session.get("_user_id") or session.get("user_id")
                     if uid:
                         from app.models import User
 
-                        user = User.query.get(int(uid))
+                        try:
+                            user_id_int = int(uid)
+                        except (ValueError, TypeError):
+                            user = None
+                        else:
+                            user = safe_query(lambda: User.query.get(user_id_int), default=None)
+
                         if user and getattr(user, "is_active", True):
                             login_user(user, remember=True)
         except Exception:
@@ -479,10 +486,16 @@ def create_app(config=None):
     # Register user loader
     @login_manager.user_loader
     def load_user(user_id):
-        """Load user for Flask-Login"""
+        """Load user for Flask-Login with proper transaction error handling"""
         from app.models import User
+        from app.utils.db import safe_query
 
-        return User.query.get(int(user_id))
+        try:
+            user_id_int = int(user_id)
+        except (ValueError, TypeError):
+            return None
+
+        return safe_query(lambda: User.query.get(user_id_int), default=None)
 
     # Check if initial setup is required (skip for certain routes)
     @app.before_request
