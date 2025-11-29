@@ -122,6 +122,9 @@ Detailed documentation about features and improvements is available in:
 
 ### Implementation Notes
 Recent improvements and changes:
+- **[Layout & UX Improvements](implementation-notes/IMPLEMENTATION_COMPLETE_SUMMARY.md)** — Complete UI/UX overhaul with 16 major improvements 🆕
+- **[High-Impact Features](implementation-notes/HIGH_IMPACT_SUMMARY.md)** — Enhanced search, keyboard shortcuts, and data tables 🆕
+- **[Advanced Features](implementation-notes/COMPLETE_ADVANCED_FEATURES_SUMMARY.md)** — Keyboard shortcuts system and quick actions menu
 - **[Analytics Improvements](implementation-notes/ANALYTICS_IMPROVEMENTS_SUMMARY.md)**
 - **[Calendar Improvements](implementation-notes/CALENDAR_IMPROVEMENTS_SUMMARY.md)**
 - **[Command Palette Improvements](implementation-notes/COMMAND_PALETTE_IMPROVEMENTS.md)**
@@ -138,6 +141,7 @@ Recent improvements and changes:
 
 ### Feature Specific
 Feature documentation and quick starts:
+- **[Layout Improvements Complete](features/LAYOUT_IMPROVEMENTS_COMPLETE.md)** — Comprehensive UX improvements documentation 🆕
 - **[Alembic Migrations](features/ALEMBIC_MIGRATION_README.md)**
 - **[Project Costs](features/PROJECT_COSTS_FEATURE.md)**
 - **[Project Costs Quick Start](features/QUICK_START_PROJECT_COSTS.md)**
