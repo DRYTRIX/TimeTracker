@@ -72,6 +72,7 @@ from .client_time_approval import ClientTimeApproval, ClientApprovalPolicy, Clie
 from .custom_report import CustomReportConfig
 from .gamification import Badge, UserBadge, Leaderboard, LeaderboardEntry
 from .expense_gps import MileageTrack
+from .link_template import LinkTemplate
 
 __all__ = [
     "User",
@@ -170,4 +171,5 @@ __all__ = [
     "Leaderboard",
     "LeaderboardEntry",
     "MileageTrack",
+    "LinkTemplate",
 ]

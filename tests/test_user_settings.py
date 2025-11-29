@@ -67,6 +67,7 @@ class TestUserSettingsPage:
         assert "Display Preferences" in data
         assert "Time Rounding Preferences" in data
         assert "Overtime Settings" in data
+        assert "UI Customization" in data
         assert "Regional Settings" in data
 
 
@@ -426,6 +427,137 @@ class TestUserSettingsAPIEndpoints:
         assert response.status_code == 400
         data = response.get_json()
         assert "error" in data
+
+    def test_update_ui_feature_flags(self, client, user):
+        """Test updating UI feature flags"""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.post(
+            "/settings",
+            data={
+                "ui_show_inventory": "on",
+                "ui_show_mileage": "on",
+                # ui_show_per_diem and ui_show_kanban_board not checked (should be False)
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"Settings saved successfully" in response.data
+
+        # Verify changes
+        db.session.refresh(user)
+        assert user.ui_show_inventory is True
+        assert user.ui_show_mileage is True
+        assert user.ui_show_per_diem is False
+        assert user.ui_show_kanban_board is False
+
+    def test_ui_feature_flags_default_to_true(self, client, user):
+        """Test that UI feature flags default to True for new users"""
+        # Create a new user
+        new_user = User(username="newuser", email="newuser@example.com")
+        new_user.set_password("password")
+        db.session.add(new_user)
+        db.session.commit()
+
+        # Check defaults
+        assert new_user.ui_show_inventory is True
+        assert new_user.ui_show_mileage is True
+        assert new_user.ui_show_per_diem is True
+        assert new_user.ui_show_kanban_board is True
+
+    def test_settings_page_includes_ui_customization_section(self, client, user):
+        """Test that settings page includes UI customization section"""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.get("/settings")
+        data = response.data.decode("utf-8")
+
+        # Check for UI customization section and key flags
+        assert "UI Customization" in data
+        assert "ui_show_inventory" in data
+        assert "ui_show_mileage" in data
+        assert "ui_show_per_diem" in data
+        assert "ui_show_kanban_board" in data
+        assert "ui_show_calendar" in data
+        assert "ui_show_quotes" in data
+        assert "ui_show_reports" in data
+        assert "ui_show_analytics" in data
+        assert "ui_show_tools" in data
+
+    def test_update_ui_feature_flags(self, client, user):
+        """Test updating UI feature flags"""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.post(
+            "/settings",
+            data={
+                "ui_show_inventory": "on",
+                "ui_show_mileage": "on",
+                "ui_show_calendar": "on",
+                "ui_show_quotes": "on",
+                # Other flags not checked (should be False)
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"Settings saved successfully" in response.data
+
+        # Verify changes
+        db.session.refresh(user)
+        assert user.ui_show_inventory is True
+        assert user.ui_show_mileage is True
+        assert user.ui_show_calendar is True
+        assert user.ui_show_quotes is True
+        assert user.ui_show_per_diem is False
+        assert user.ui_show_kanban_board is False
+        assert user.ui_show_reports is False
+
+    def test_ui_feature_flags_default_to_true(self, client, user):
+        """Test that UI feature flags default to True for new users"""
+        # Create a new user
+        new_user = User(username="newuser", email="newuser@example.com")
+        new_user.set_password("password")
+        db.session.add(new_user)
+        db.session.commit()
+
+        # Check defaults - all should be True
+        assert new_user.ui_show_inventory is True
+        assert new_user.ui_show_mileage is True
+        assert new_user.ui_show_per_diem is True
+        assert new_user.ui_show_kanban_board is True
+        assert new_user.ui_show_calendar is True
+        assert new_user.ui_show_project_templates is True
+        assert new_user.ui_show_gantt_chart is True
+        assert new_user.ui_show_weekly_goals is True
+        assert new_user.ui_show_quotes is True
+        assert new_user.ui_show_reports is True
+        assert new_user.ui_show_analytics is True
+        assert new_user.ui_show_tools is True
+
+    def test_settings_page_includes_ui_customization_section(self, client, user):
+        """Test that settings page includes UI customization section"""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.get("/settings")
+        data = response.data.decode("utf-8")
+
+        # Check for UI customization section and key flags
+        assert "UI Customization" in data
+        assert "ui_show_inventory" in data
+        assert "ui_show_mileage" in data
+        assert "ui_show_per_diem" in data
+        assert "ui_show_kanban_board" in data
+        assert "ui_show_calendar" in data
+        assert "ui_show_quotes" in data
+        assert "ui_show_reports" in data
+        assert "ui_show_analytics" in data
+        assert "ui_show_tools" in data
 
     def test_set_theme_api_endpoint(self, client, user):
         """Test the dedicated theme switcher API endpoint"""

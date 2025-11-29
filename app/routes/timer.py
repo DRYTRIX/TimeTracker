@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, socketio, log_event, track_event
-from app.models import User, Project, TimeEntry, Task, Settings, Activity
+from app.models import User, Project, TimeEntry, Task, Settings, Activity, Client
 from app.utils.timezone import parse_local_datetime, utc_to_local
 from datetime import datetime, timedelta
 import json
@@ -17,6 +17,7 @@ timer_bp = Blueprint("timer", __name__)
 def start_timer():
     """Start a new timer for the current user"""
     project_id = request.form.get("project_id", type=int)
+    client_id = request.form.get("client_id", type=int)
     task_id = request.form.get("task_id", type=int)
     notes = request.form.get("notes", "").strip()
     template_id = request.form.get("template_id", type=int)
@@ -45,39 +46,62 @@ def start_timer():
             template.record_usage()
             db.session.commit()
 
-    if not project_id:
-        flash(_("Project is required"), "error")
-        current_app.logger.warning("Start timer failed: missing project_id")
+    # Require either project or client
+    if not project_id and not client_id:
+        flash(_("Either a project or a client is required"), "error")
+        current_app.logger.warning("Start timer failed: missing project_id and client_id")
         return redirect(url_for("main.dashboard"))
 
-    # Check if project exists
-    project = Project.query.get(project_id)
-    if not project:
-        flash(_("Invalid project selected"), "error")
-        current_app.logger.warning("Start timer failed: invalid project_id=%s", project_id)
-        return redirect(url_for("main.dashboard"))
+    project = None
+    client = None
 
-    # Check if project is active (not archived or inactive)
-    if project.status == "archived":
-        flash(_("Cannot start timer for an archived project. Please unarchive the project first."), "error")
-        current_app.logger.warning("Start timer failed: project_id=%s is archived", project_id)
-        return redirect(url_for("main.dashboard"))
-    elif project.status != "active":
-        flash(_("Cannot start timer for an inactive project"), "error")
-        current_app.logger.warning("Start timer failed: project_id=%s is not active", project_id)
-        return redirect(url_for("main.dashboard"))
-
-    # If a task is provided, validate it belongs to the project
-    if task_id:
-        task = Task.query.filter_by(id=task_id, project_id=project_id).first()
-        if not task:
-            flash(_("Selected task is invalid for the chosen project"), "error")
-            current_app.logger.warning(
-                "Start timer failed: task_id=%s does not belong to project_id=%s", task_id, project_id
-            )
+    # Validate project if provided
+    if project_id:
+        project = Project.query.get(project_id)
+        if not project:
+            flash(_("Invalid project selected"), "error")
+            current_app.logger.warning("Start timer failed: invalid project_id=%s", project_id)
             return redirect(url_for("main.dashboard"))
+
+        # Check if project is active (not archived or inactive)
+        if project.status == "archived":
+            flash(_("Cannot start timer for an archived project. Please unarchive the project first."), "error")
+            current_app.logger.warning("Start timer failed: project_id=%s is archived", project_id)
+            return redirect(url_for("main.dashboard"))
+        elif project.status != "active":
+            flash(_("Cannot start timer for an inactive project"), "error")
+            current_app.logger.warning("Start timer failed: project_id=%s is not active", project_id)
+            return redirect(url_for("main.dashboard"))
+
+        # If a task is provided, validate it belongs to the project
+        if task_id:
+            task = Task.query.filter_by(id=task_id, project_id=project_id).first()
+            if not task:
+                flash(_("Selected task is invalid for the chosen project"), "error")
+                current_app.logger.warning(
+                    "Start timer failed: task_id=%s does not belong to project_id=%s", task_id, project_id
+                )
+                return redirect(url_for("main.dashboard"))
+        else:
+            task = None
     else:
         task = None
+
+    # Validate client if provided (and no project)
+    if client_id and not project_id:
+        client = Client.query.filter_by(id=client_id, status="active").first()
+        if not client:
+            flash(_("Invalid client selected"), "error")
+            current_app.logger.warning("Start timer failed: invalid client_id=%s", client_id)
+            return redirect(url_for("main.dashboard"))
+
+        # Tasks are not allowed for client-only timers
+        if task_id:
+            flash(_("Tasks can only be selected for project-based timers"), "error")
+            current_app.logger.warning(
+                "Start timer failed: task_id=%s provided for client-only timer (client_id=%s)", task_id, client_id
+            )
+            return redirect(url_for("main.dashboard"))
 
     # Check if user already has an active timer
     active_timer = current_user.active_timer
@@ -91,7 +115,8 @@ def start_timer():
 
     new_timer = TimeEntry(
         user_id=current_user.id,
-        project_id=project_id,
+        project_id=project_id if project_id else None,
+        client_id=client_id if client_id and not project_id else None,
         task_id=task.id if task else None,
         start_time=local_now(),
         notes=notes if notes else None,
@@ -99,21 +124,44 @@ def start_timer():
     )
 
     db.session.add(new_timer)
-    if not safe_commit("start_timer", {"user_id": current_user.id, "project_id": project_id, "task_id": task_id}):
+    if not safe_commit(
+        "start_timer",
+        {
+            "user_id": current_user.id,
+            "project_id": project_id,
+            "client_id": client_id,
+            "task_id": task_id,
+        },
+    ):
         flash(_("Could not start timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
     current_app.logger.info(
-        "Started new timer id=%s for user=%s project_id=%s task_id=%s",
+        "Started new timer id=%s for user=%s project_id=%s client_id=%s task_id=%s",
         new_timer.id,
         current_user.username,
         project_id,
+        client_id,
         task_id,
     )
 
     # Track timer started event
-    log_event("timer.started", user_id=current_user.id, project_id=project_id, task_id=task_id, description=notes)
+    log_event(
+        "timer.started",
+        user_id=current_user.id,
+        project_id=project_id,
+        client_id=client_id,
+        task_id=task_id,
+        description=notes,
+    )
     track_event(
-        current_user.id, "timer.started", {"project_id": project_id, "task_id": task_id, "has_description": bool(notes)}
+        current_user.id,
+        "timer.started",
+        {
+            "project_id": project_id,
+            "client_id": client_id,
+            "task_id": task_id,
+            "has_description": bool(notes),
+        },
     )
 
     # Log activity
@@ -122,9 +170,17 @@ def start_timer():
         action="started",
         entity_type="time_entry",
         entity_id=new_timer.id,
-        entity_name=f"{project.name}" + (f" - {task.name}" if task else ""),
-        description=f"Started timer for {project.name}" + (f" - {task.name}" if task else ""),
-        extra_data={"project_id": project_id, "task_id": task_id},
+        entity_name=(
+            f"{project.name}" if project else f"{client.name if client else _('Unknown')}"
+        )
+        + (f" - {task.name}" if task else ""),
+        description=(
+            f"Started timer for {project.name}"
+            if project
+            else f"Started timer for {client.name if client else _('Unknown')}"
+        )
+        + (f" - {task.name}" if task else ""),
+        extra_data={"project_id": project_id, "client_id": client_id, "task_id": task_id},
         ip_address=request.remote_addr,
         user_agent=request.headers.get("User-Agent"),
     )
@@ -134,7 +190,13 @@ def start_timer():
 
     if timer_count == 1:  # First timer ever
         track_onboarding_first_timer(
-            current_user.id, {"project_id": project_id, "has_task": bool(task_id), "has_notes": bool(notes)}
+            current_user.id,
+            {
+                "project_id": project_id,
+                "client_id": client_id,
+                "has_task": bool(task_id),
+                "has_notes": bool(notes),
+            },
         )
 
     # Emit WebSocket event for real-time updates
@@ -142,7 +204,8 @@ def start_timer():
         payload = {
             "user_id": current_user.id,
             "timer_id": new_timer.id,
-            "project_name": project.name,
+            "project_name": project.name if project else None,
+            "client_name": client.name if client else None,
             "start_time": new_timer.start_time.isoformat(),
         }
         if task:
@@ -400,7 +463,8 @@ def timer_status():
             "active": True,
             "timer": {
                 "id": active_timer.id,
-                "project_name": active_timer.project.name,
+                "project_name": active_timer.project.name if active_timer.project else None,
+                "client_name": active_timer.client.name if active_timer.client else None,
                 "start_time": active_timer.start_time.isoformat(),
                 "current_duration": active_timer.current_duration_seconds,
                 "duration_formatted": active_timer.duration_formatted,
@@ -581,11 +645,16 @@ def delete_timer(timer_id):
 @login_required
 def manual_entry():
     """Create a manual time entry"""
-    # Get active projects for dropdown (used for both GET and error re-renders on POST)
-    active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    from app.models import Client
+    from app.services import TimeTrackingService
 
-    # Get project_id and task_id from query parameters for pre-filling
+    # Get active projects and clients for dropdown (used for both GET and error re-renders on POST)
+    active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+
+    # Get project_id, client_id, and task_id from query parameters for pre-filling
     project_id = request.args.get("project_id", type=int)
+    client_id = request.args.get("client_id", type=int)
     task_id = request.args.get("task_id", type=int)
     template_id = request.args.get("template", type=int)
 
@@ -610,8 +679,9 @@ def manual_entry():
                 task_id = template.task_id
 
     if request.method == "POST":
-        project_id = request.form.get("project_id", type=int)
-        task_id = request.form.get("task_id", type=int)
+        project_id = request.form.get("project_id", type=int) or None
+        client_id = request.form.get("client_id", type=int) or None
+        task_id = request.form.get("task_id", type=int) or None
         start_date = request.form.get("start_date")
         start_time = request.form.get("start_time")
         end_date = request.form.get("end_date")
@@ -621,60 +691,30 @@ def manual_entry():
         billable = request.form.get("billable") == "on"
 
         # Validate required fields
-        if not all([project_id, start_date, start_time, end_date, end_time]):
-            flash(_("All fields are required"), "error")
+        if not all([start_date, start_time, end_date, end_time]):
+            flash(_("Date and time fields are required"), "error")
             return render_template(
                 "timer/manual_entry.html",
                 projects=active_projects,
+                clients=active_clients,
                 selected_project_id=project_id,
+                selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
             )
 
-        # Check if project exists
-        project = Project.query.get(project_id)
-        if not project:
-            flash(_("Invalid project selected"), "error")
+        # Validate that either project or client is selected
+        if not project_id and not client_id:
+            flash(_("Either a project or a client must be selected"), "error")
             return render_template(
                 "timer/manual_entry.html",
                 projects=active_projects,
+                clients=active_clients,
                 selected_project_id=project_id,
+                selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
             )
-
-        # Check if project is active (not archived or inactive)
-        if project.status == "archived":
-            flash(_("Cannot create time entries for an archived project. Please unarchive the project first."), "error")
-            return render_template(
-                "timer/manual_entry.html",
-                projects=active_projects,
-                selected_project_id=project_id,
-                selected_task_id=task_id,
-                template_data=template_data,
-            )
-        elif project.status != "active":
-            flash(_("Cannot create time entries for an inactive project"), "error")
-            return render_template(
-                "timer/manual_entry.html",
-                projects=active_projects,
-                selected_project_id=project_id,
-                selected_task_id=task_id,
-                template_data=template_data,
-            )
-
-        # Validate task if provided
-        if task_id:
-            task = Task.query.filter_by(id=task_id, project_id=project_id).first()
-            if not task:
-                flash(_("Invalid task selected"), "error")
-                return render_template(
-                    "timer/manual_entry.html",
-                    projects=active_projects,
-                    selected_project_id=project_id,
-                    selected_task_id=task_id,
-                    template_data=template_data,
-                )
 
         # Parse datetime with timezone awareness
         try:
@@ -685,59 +725,78 @@ def manual_entry():
             return render_template(
                 "timer/manual_entry.html",
                 projects=active_projects,
+                clients=active_clients,
                 selected_project_id=project_id,
+                selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
             )
 
         # Validate time range
         if end_time_parsed <= start_time_parsed:
-            flash("End time must be after start time", "error")
+            flash(_("End time must be after start time"), "error")
             return render_template(
                 "timer/manual_entry.html",
                 projects=active_projects,
+                clients=active_clients,
                 selected_project_id=project_id,
+                selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
             )
 
-        # Create manual entry
-        entry = TimeEntry(
+        # Use service to create entry (handles validation)
+        time_tracking_service = TimeTrackingService()
+        result = time_tracking_service.create_manual_entry(
             user_id=current_user.id,
             project_id=project_id,
-            task_id=task_id,
+            client_id=client_id,
             start_time=start_time_parsed,
             end_time=end_time_parsed,
-            notes=notes,
-            tags=tags,
-            source="manual",
+            task_id=task_id,
+            notes=notes if notes else None,
+            tags=tags if tags else None,
             billable=billable,
         )
 
-        db.session.add(entry)
-        if not safe_commit("manual_entry", {"user_id": current_user.id, "project_id": project_id, "task_id": task_id}):
-            flash(_("Could not create manual entry due to a database error. Please check server logs."), "error")
+        if not result.get("success"):
+            flash(_(result.get("message", "Could not create manual entry")), "error")
             return render_template(
                 "timer/manual_entry.html",
                 projects=active_projects,
+                clients=active_clients,
                 selected_project_id=project_id,
+                selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
             )
 
-        if task_id:
-            task = Task.query.get(task_id)
-            task_name = task.name if task else "Unknown Task"
-            flash(f"Manual entry created for {project.name} - {task_name}", "success")
-        else:
-            flash(f"Manual entry created for {project.name}", "success")
+        entry = result.get("entry")
+
+        # Create success message
+        if entry:
+            if entry.project:
+                target_name = entry.project.name
+            elif entry.client:
+                target_name = entry.client.name
+            else:
+                target_name = "Unknown"
+            
+            if task_id and entry.project:
+                task = Task.query.get(task_id)
+                task_name = task.name if task else "Unknown Task"
+                flash(_("Manual entry created for %(project)s - %(task)s", project=target_name, task=task_name), "success")
+            else:
+                flash(_("Manual entry created for %(target)s", target=target_name), "success")
 
         return redirect(url_for("main.dashboard"))
 
     return render_template(
         "timer/manual_entry.html",
         projects=active_projects,
+        clients=active_clients,
         selected_project_id=project_id,
+        selected_client_id=client_id,
         selected_task_id=task_id,
         template_data=template_data,
     )
@@ -1011,8 +1070,9 @@ def timer_page():
     """Dedicated timer page with visual progress ring and quick project selection"""
     active_timer = current_user.active_timer
 
-    # Get active projects for dropdown
+    # Get active projects and clients for dropdown
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
 
     # Get recent projects (projects used in last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -1072,6 +1132,7 @@ def timer_page():
         "timer/timer_page.html",
         active_timer=active_timer,
         projects=active_projects,
+        clients=active_clients,
         recent_projects=recent_projects,
         tasks=tasks,
         templates=templates,

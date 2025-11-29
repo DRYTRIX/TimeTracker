@@ -932,6 +932,7 @@ def create_app(config=None):
     from app.routes.deals import deals_bp
     from app.routes.leads import leads_bp
     from app.routes.kiosk import kiosk_bp
+    from app.routes.link_templates import link_templates_bp
 
     try:
         from app.routes.audit_logs import audit_logs_bp
@@ -983,6 +984,7 @@ def create_app(config=None):
     app.register_blueprint(contacts_bp)
     app.register_blueprint(deals_bp)
     app.register_blueprint(leads_bp)
+    app.register_blueprint(link_templates_bp)
     # audit_logs_bp is registered above with error handling
 
     # Register integration connectors

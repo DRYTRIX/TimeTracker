@@ -167,9 +167,10 @@ class TimeTrackingService:
     def create_manual_entry(
         self,
         user_id: int,
-        project_id: int,
-        start_time: datetime,
-        end_time: datetime,
+        project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
+        start_time: datetime = None,
+        end_time: datetime = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         tags: Optional[str] = None,
@@ -181,25 +182,52 @@ class TimeTrackingService:
         Returns:
             dict with 'success', 'message', and 'entry' keys
         """
-        # Validate project
-        project = self.project_repo.get_by_id(project_id)
-        if not project:
-            return {"success": False, "message": "Invalid project", "error": "invalid_project"}
+        # Validate that either project_id or client_id is provided
+        if not project_id and not client_id:
+            return {
+                "success": False,
+                "message": "Either project or client must be selected",
+                "error": "missing_project_or_client",
+            }
+
+        # Validate project if provided
+        if project_id:
+            project = self.project_repo.get_by_id(project_id)
+            if not project:
+                return {"success": False, "message": "Invalid project", "error": "invalid_project"}
+
+            # Validate task if provided (only valid when project_id is set)
+            if task_id:
+                task = Task.query.filter_by(id=task_id, project_id=project_id).first()
+                if not task:
+                    return {"success": False, "message": "Invalid task for selected project", "error": "invalid_task"}
+
+        # Validate client if provided
+        if client_id:
+            from app.repositories import ClientRepository
+
+            client_repo = ClientRepository()
+            client = client_repo.get_by_id(client_id)
+            if not client:
+                return {"success": False, "message": "Invalid client", "error": "invalid_client"}
+
+            # Task cannot be set when billing directly to client
+            if task_id:
+                return {
+                    "success": False,
+                    "message": "Tasks can only be assigned to project-based time entries",
+                    "error": "task_not_allowed",
+                }
 
         # Validate time range
         if end_time <= start_time:
             return {"success": False, "message": "End time must be after start time", "error": "invalid_time_range"}
 
-        # Validate task if provided
-        if task_id:
-            task = Task.query.filter_by(id=task_id, project_id=project_id).first()
-            if not task:
-                return {"success": False, "message": "Invalid task for selected project", "error": "invalid_task"}
-
         # Create entry
         entry = self.time_entry_repo.create_manual_entry(
             user_id=user_id,
             project_id=project_id,
+            client_id=client_id,
             start_time=start_time,
             end_time=end_time,
             task_id=task_id,
@@ -208,7 +236,13 @@ class TimeTrackingService:
             billable=billable,
         )
 
-        if not safe_commit("create_manual_entry", {"user_id": user_id, "project_id": project_id}):
+        commit_data = {"user_id": user_id}
+        if project_id:
+            commit_data["project_id"] = project_id
+        if client_id:
+            commit_data["client_id"] = client_id
+
+        if not safe_commit("create_manual_entry", commit_data):
             return {
                 "success": False,
                 "message": "Could not create time entry due to a database error",
@@ -223,13 +257,19 @@ class TimeTrackingService:
         limit: Optional[int] = None,
         offset: int = 0,
         project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[TimeEntry]:
         """Get time entries for a user with optional filters"""
         if start_date and end_date:
             return self.time_entry_repo.get_by_date_range(
-                start_date=start_date, end_date=end_date, user_id=user_id, project_id=project_id, include_relations=True
+                start_date=start_date, 
+                end_date=end_date, 
+                user_id=user_id, 
+                project_id=project_id,
+                client_id=client_id,
+                include_relations=True
             )
         elif project_id:
             return self.time_entry_repo.get_by_project(
@@ -248,6 +288,7 @@ class TimeTrackingService:
         user_id: int,
         is_admin: bool = False,
         project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
         task_id: Optional[int] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
@@ -285,8 +326,30 @@ class TimeTrackingService:
             if not project:
                 return {"success": False, "message": "Invalid project", "error": "invalid_project"}
             entry.project_id = project_id
+            # Clear client_id when setting project_id
+            entry.client_id = None
+
+        # Handle client_id update
+        if client_id is not None:
+            from app.repositories import ClientRepository
+
+            client_repo = ClientRepository()
+            client = client_repo.get_by_id(client_id)
+            if not client:
+                return {"success": False, "message": "Invalid client", "error": "invalid_client"}
+            entry.client_id = client_id
+            # Clear project_id and task_id when setting client_id
+            entry.project_id = None
+            entry.task_id = None
 
         if task_id is not None:
+            # Task can only be set when project_id is set
+            if not entry.project_id:
+                return {
+                    "success": False,
+                    "message": "Task can only be assigned to project-based time entries",
+                    "error": "task_requires_project",
+                }
             entry.task_id = task_id
         if start_time is not None:
             entry.start_time = start_time

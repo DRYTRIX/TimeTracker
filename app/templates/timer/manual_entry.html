@@ -21,7 +21,12 @@
         <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1"></i>
         <div>
             <p class="text-sm text-blue-800 dark:text-blue-200">
-                <strong>{{ _('Duplicating entry:') }}</strong> {{ original_entry.project.name }}{% if original_entry.task %} - {{ original_entry.task.name }}{% endif %}
+                <strong>{{ _('Duplicating entry:') }}</strong> 
+                {% if original_entry.project %}
+                    {{ original_entry.project.name }}{% if original_entry.task %} - {{ original_entry.task.name }}{% endif %}
+                {% elif original_entry.client %}
+                    {{ original_entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                {% endif %}
             </p>
             <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">
                 {{ _('Original:') }} {{ original_entry.start_time|user_datetime('%Y-%m-%d %H:%M') }} {{ _('to') }} {{ original_entry.end_time|user_datetime('%Y-%m-%d %H:%M') if original_entry.end_time else _('N/A') }} ({{ original_entry.duration_formatted }})
@@ -32,19 +37,31 @@
 {% endif %}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-3xl mx-auto">
-    <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off" novalidate data-validate-form>
+    <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off" novalidate data-validate-form id="manualEntryForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }}</label>
-                    <select name="project_id" id="project_id" required class="form-input">
-                        <option value="">{{ _('Select a project') }}</option>
+                    <select name="project_id" id="project_id" class="form-input">
+                        <option value="">{{ _('Select a project (optional)') }}</option>
                         {% for project in projects %}
                         <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
+                <div>
+                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</label>
+                    <select name="client_id" id="client_id" class="form-input">
+                        <option value="">{{ _('Select a client (optional)') }}</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}" {% if selected_client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task (optional)') }}</label>
                     <select name="task_id" id="task_id" class="form-input" data-selected-task-id="{{ selected_task_id or '' }}" {% if not selected_project_id %}disabled{% endif %}>
@@ -118,9 +135,31 @@ document.addEventListener('DOMContentLoaded', async function(){
 
     // Dynamic task loading when a project is chosen
     const projectSelect = document.getElementById('project_id');
+    const clientSelect = document.getElementById('client_id');
     const taskSelect = document.getElementById('task_id');
     const noTaskText = '{{ _('No task') }}';
     const failedToLoadTasksText = '{{ _('Failed to load tasks') }}';
+    
+    // Function to ensure only one of project or client is selected
+    function syncProjectClientSelection() {
+        if (!projectSelect || !clientSelect) return;
+        projectSelect.addEventListener('change', function() {
+            if (this.value) {
+                clientSelect.value = '';
+            }
+            loadTasks(this.value);
+        });
+        clientSelect.addEventListener('change', function() {
+            if (this.value) {
+                projectSelect.value = '';
+                if (taskSelect) {
+                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                    taskSelect.disabled = true;
+                }
+            }
+        });
+    }
+    
     async function loadTasks(projectId){
         if (!taskSelect) return;
         if (!projectId){
@@ -152,9 +191,24 @@ document.addEventListener('DOMContentLoaded', async function(){
             taskSelect.disabled = true;
         }
     }
+    
+    syncProjectClientSelection();
     if (projectSelect){
         if (projectSelect.value){ loadTasks(projectSelect.value); }
-        projectSelect.addEventListener('change', () => loadTasks(projectSelect.value));
+    }
+    
+    // Form validation: ensure either project or client is selected
+    const form = document.getElementById('manualEntryForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const projectVal = projectSelect ? projectSelect.value : '';
+            const clientVal = clientSelect ? clientSelect.value : '';
+            if (!projectVal && !clientVal) {
+                e.preventDefault();
+                alert('{{ _("Please select either a project or a client") }}');
+                return false;
+            }
+        });
     }
 
     // Apply Time Entry Template if provided via sessionStorage or query param
@@ -181,6 +235,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 // Preselect project and task
                 if (tpl.project_id && projectSelect) {
                     projectSelect.value = String(tpl.project_id);
+                    if (clientSelect) clientSelect.value = '';
                     // Preselect task after load
                     if (taskSelect) {
                         taskSelect.setAttribute('data-selected-task-id', tpl.task_id ? String(tpl.task_id) : '');

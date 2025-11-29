@@ -773,8 +773,12 @@ def delete_saved_filter(filter_id):
 @login_required
 def create_entry():
     """Create a finished time entry (used by calendar drag-create)."""
+    from app.models import Client
+    from app.services import TimeTrackingService
+
     data = request.get_json() or {}
     project_id = data.get("project_id")
+    client_id = data.get("client_id")
     task_id = data.get("task_id")
     start_time_str = data.get("start_time")
     end_time_str = data.get("end_time")
@@ -782,18 +786,11 @@ def create_entry():
     tags = (data.get("tags") or "").strip() or None
     billable = bool(data.get("billable", True))
 
-    if not (project_id and start_time_str and end_time_str):
-        return jsonify({"error": "project_id, start_time, end_time are required"}), 400
+    if not (start_time_str and end_time_str):
+        return jsonify({"error": "start_time and end_time are required"}), 400
 
-    # Validate project
-    project = Project.query.filter_by(id=project_id, status="active").first()
-    if not project:
-        return jsonify({"error": "Invalid project"}), 400
-
-    if task_id:
-        task = Task.query.filter_by(id=task_id, project_id=project_id).first()
-        if not task:
-            return jsonify({"error": "Invalid task for selected project"}), 400
+    if not project_id and not client_id:
+        return jsonify({"error": "Either project_id or client_id is required"}), 400
 
     def parse_iso_local(s: str):
         try:
@@ -812,24 +809,28 @@ def create_entry():
     if not (start_dt and end_dt) or end_dt <= start_dt:
         return jsonify({"error": "Invalid start/end time"}), 400
 
-    entry = TimeEntry(
+    # Use service to create entry (handles validation)
+    time_tracking_service = TimeTrackingService()
+    result = time_tracking_service.create_manual_entry(
         user_id=current_user.id if not current_user.is_admin else (data.get("user_id") or current_user.id),
         project_id=project_id,
-        task_id=task_id,
+        client_id=client_id,
         start_time=start_dt,
         end_time=end_dt,
+        task_id=task_id,
         notes=notes,
         tags=tags,
-        source="manual",
         billable=billable,
     )
-    db.session.add(entry)
-    if not safe_commit("api_create_entry", {"project_id": project_id}):
-        return jsonify({"error": "Database error while creating entry"}), 500
 
+    if not result.get("success"):
+        return jsonify({"error": result.get("message", "Could not create time entry")}), 400
+
+    entry = result.get("entry")
     payload = entry.to_dict()
     payload["project_name"] = entry.project.name if entry.project else None
-    return jsonify({"success": True, "entry": payload})
+    payload["client_name"] = entry.client.name if entry.client else None
+    return jsonify({"success": True, "entry": payload}), 201
 
 
 @api_bp.route("/api/entries/bulk", methods=["POST"])

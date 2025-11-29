@@ -158,15 +158,223 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
     });
 });
 
+// Emoji picker
+let selectedEmoji = null;
+const commonEmojis = ['😀', '😃', '😄', '😁', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '😶‍🌫️', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '😵‍💫', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'];
+
 function showEmojiPicker() {
-    // TODO: Implement emoji picker
-    alert('Emoji picker coming soon');
+    // Remove existing emoji picker if any
+    const existingPicker = document.getElementById('emojiPicker');
+    if (existingPicker) {
+        existingPicker.remove();
+        return;
+    }
+
+    // Create emoji picker popup
+    const picker = document.createElement('div');
+    picker.id = 'emojiPicker';
+    picker.className = 'absolute bottom-full right-0 mb-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg p-4 max-w-xs max-h-64 overflow-y-auto z-50';
+    picker.innerHTML = `
+        <div class="grid grid-cols-8 gap-2">
+            ${commonEmojis.map(emoji => `<button type="button" class="text-2xl hover:scale-125 transition-transform p-1" onclick="insertEmoji('${emoji}')" title="${emoji}">${emoji}</button>`).join('')}
+        </div>
+    `;
+
+    // Position it relative to the emoji button
+    const emojiBtn = event.target.closest('button');
+    const relativeContainer = emojiBtn.closest('.relative');
+    relativeContainer.style.position = 'relative';
+    relativeContainer.appendChild(picker);
+
+    // Close picker when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', function closePicker(e) {
+            if (!picker.contains(e.target) && e.target !== emojiBtn && !emojiBtn.contains(e.target)) {
+                picker.remove();
+                document.removeEventListener('click', closePicker);
+            }
+        });
+    }, 100);
 }
 
-function showAttachmentModal() {
-    // TODO: Implement attachment modal
-    alert('Attachment upload coming soon');
+function insertEmoji(emoji) {
+    const messageInput = document.getElementById('messageInput');
+    const cursorPos = messageInput.selectionStart;
+    const textBefore = messageInput.value.substring(0, cursorPos);
+    const textAfter = messageInput.value.substring(cursorPos);
+    
+    messageInput.value = textBefore + emoji + textAfter;
+    messageInput.focus();
+    messageInput.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+    
+    // Remove emoji picker
+    const picker = document.getElementById('emojiPicker');
+    if (picker) picker.remove();
 }
+
+// Attachment modal
+let pendingAttachments = [];
+
+function showAttachmentModal() {
+    const modal = document.createElement('div');
+    modal.id = 'attachmentModal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
+    modal.innerHTML = `
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">{{ _('Upload Attachment') }}</h3>
+                    <button type="button" onclick="closeAttachmentModal()" class="text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="attachmentUploadForm" onsubmit="uploadAttachment(event)" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">{{ _('Select File') }}</label>
+                        <input type="file" id="attachmentFile" name="file" class="form-input w-full" required>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Maximum file size: 10 MB') }}</p>
+                    </div>
+                    <div id="attachmentPreview" class="mb-4 hidden">
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Selected:') }} <span id="fileName"></span></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeAttachmentModal()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                            {{ _('Cancel') }}
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                            {{ _('Upload') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Preview file name
+    document.getElementById('attachmentFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('attachmentPreview').classList.remove('hidden');
+        }
+    });
+}
+
+function closeAttachmentModal() {
+    const modal = document.getElementById('attachmentModal');
+    if (modal) modal.remove();
+}
+
+function uploadAttachment(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const fileInput = document.getElementById('attachmentFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('{{ _("Please select a file") }}');
+        return;
+    }
+
+    // Check file size (10 MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('{{ _("File size exceeds 10 MB limit") }}');
+        return;
+    }
+
+    const uploadBtn = form.querySelector('button[type="submit"]');
+    const originalText = uploadBtn.innerHTML;
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Uploading...") }}';
+
+    fetch('{{ url_for("team_chat.upload_attachment", channel_id=channel.id) }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            pendingAttachments.push(data.attachment);
+            closeAttachmentModal();
+            
+            // Show attachment indicator
+            const messageInput = document.getElementById('messageInput');
+            const attachmentIndicator = document.createElement('div');
+            attachmentIndicator.id = 'attachmentIndicator';
+            attachmentIndicator.className = 'mt-2 p-2 bg-blue-100 dark:bg-blue-900 rounded text-sm';
+            attachmentIndicator.innerHTML = `
+                <i class="fas fa-paperclip mr-2"></i>${data.attachment.filename}
+                <button type="button" onclick="removeAttachment()" class="ml-2 text-red-600 hover:text-red-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            const messageForm = document.getElementById('messageForm');
+            if (!document.getElementById('attachmentIndicator')) {
+                messageForm.parentElement.insertBefore(attachmentIndicator, messageForm);
+            }
+        } else {
+            alert(data.error || '{{ _("Failed to upload attachment") }}');
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{{ _("Failed to upload attachment") }}');
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+    });
+}
+
+function removeAttachment() {
+    pendingAttachments = [];
+    const indicator = document.getElementById('attachmentIndicator');
+    if (indicator) indicator.remove();
+}
+
+// Update message form submission to include attachments
+const originalSubmit = document.getElementById('messageForm').onsubmit;
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const formData = new FormData(form);
+    
+    // Add attachment data if any
+    if (pendingAttachments.length > 0) {
+        formData.append('attachment_data', JSON.stringify(pendingAttachments[0]));
+        formData.append('message_type', 'file');
+    }
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            pendingAttachments = [];
+            const indicator = document.getElementById('attachmentIndicator');
+            if (indicator) indicator.remove();
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to send message');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to send message');
+    });
+});
 </script>
 {% endblock %}
 

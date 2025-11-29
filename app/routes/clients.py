@@ -12,6 +12,7 @@ from app.utils.timezone import convert_app_datetime_to_user
 from app.utils.email import send_client_portal_password_setup_email
 import csv
 import io
+import json
 
 clients_bp = Blueprint("clients", __name__)
 
@@ -156,6 +157,18 @@ def create_client():
             flash(message, "error")
             return render_template("clients/create.html")
 
+        # Parse custom fields from individual key/value inputs
+        # Format: custom_field_key_0 / custom_field_value_0, custom_field_key_1 / ...
+        custom_fields = {}
+        for form_key in request.form.keys():
+            if not form_key.startswith("custom_field_key_"):
+                continue
+            index = form_key.rsplit("_", 1)[-1]
+            field_key = request.form.get(form_key, "").strip()
+            field_value = request.form.get(f"custom_field_value_{index}", "").strip()
+            if field_key and field_value:
+                custom_fields[field_key] = field_value
+
         # Create client
         client = Client(
             name=name,
@@ -168,6 +181,8 @@ def create_client():
             prepaid_hours_monthly=prepaid_hours_monthly,
             prepaid_reset_day=prepaid_reset_day,
         )
+        if custom_fields:
+            client.custom_fields = custom_fields
 
         db.session.add(client)
         if not safe_commit("create_client", {"name": name}):
@@ -244,6 +259,9 @@ def view_client(client_id):
             "remaining_hours": float(remaining_hours),
         }
 
+    # Get rendered links from link templates
+    rendered_links = client.get_rendered_links()
+
     return render_template(
         "clients/view.html",
         client=client,
@@ -251,6 +269,7 @@ def view_client(client_id):
         contacts=contacts,
         primary_contact=primary_contact,
         prepaid_overview=prepaid_overview,
+        rendered_links=rendered_links,
     )
 
 
@@ -330,6 +349,18 @@ def edit_client(client_id):
                 flash(_("This portal username is already in use by another client."), "error")
                 return render_template("clients/edit.html", client=client)
 
+        # Parse custom fields from individual key/value inputs.
+        # This builds a fresh dict on every save so edits/removals/additions all work.
+        custom_fields = {}
+        for form_key in request.form.keys():
+            if not form_key.startswith("custom_field_key_"):
+                continue
+            index = form_key.rsplit("_", 1)[-1]
+            field_key = request.form.get(form_key, "").strip()
+            field_value = request.form.get(f"custom_field_value_{index}", "").strip()
+            if field_key and field_value:
+                custom_fields[field_key] = field_value
+
         # Update client
         client.name = name
         client.description = description
@@ -341,6 +372,7 @@ def edit_client(client_id):
         client.prepaid_hours_monthly = prepaid_hours_monthly
         client.prepaid_reset_day = prepaid_reset_day
         client.portal_enabled = portal_enabled
+        client.custom_fields = custom_fields if custom_fields else None
 
         # Update portal credentials
         if portal_enabled:

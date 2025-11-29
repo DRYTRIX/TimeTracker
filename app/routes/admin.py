@@ -448,6 +448,44 @@ def settings():
             # Kiosk columns don't exist yet (migration not run)
             pass
 
+        # Update system-wide UI feature flags (if columns exist)
+        try:
+            # Calendar
+            settings_obj.ui_allow_calendar = request.form.get("ui_allow_calendar") == "on"
+
+            # Time Tracking
+            settings_obj.ui_allow_project_templates = request.form.get("ui_allow_project_templates") == "on"
+            settings_obj.ui_allow_gantt_chart = request.form.get("ui_allow_gantt_chart") == "on"
+            settings_obj.ui_allow_kanban_board = request.form.get("ui_allow_kanban_board") == "on"
+            settings_obj.ui_allow_weekly_goals = request.form.get("ui_allow_weekly_goals") == "on"
+
+            # CRM
+            settings_obj.ui_allow_quotes = request.form.get("ui_allow_quotes") == "on"
+
+            # Finance & Expenses
+            settings_obj.ui_allow_reports = request.form.get("ui_allow_reports") == "on"
+            settings_obj.ui_allow_report_builder = request.form.get("ui_allow_report_builder") == "on"
+            settings_obj.ui_allow_scheduled_reports = request.form.get("ui_allow_scheduled_reports") == "on"
+            settings_obj.ui_allow_invoice_approvals = request.form.get("ui_allow_invoice_approvals") == "on"
+            settings_obj.ui_allow_payment_gateways = request.form.get("ui_allow_payment_gateways") == "on"
+            settings_obj.ui_allow_recurring_invoices = request.form.get("ui_allow_recurring_invoices") == "on"
+            settings_obj.ui_allow_payments = request.form.get("ui_allow_payments") == "on"
+            settings_obj.ui_allow_mileage = request.form.get("ui_allow_mileage") == "on"
+            settings_obj.ui_allow_per_diem = request.form.get("ui_allow_per_diem") == "on"
+            settings_obj.ui_allow_budget_alerts = request.form.get("ui_allow_budget_alerts") == "on"
+
+            # Inventory
+            settings_obj.ui_allow_inventory = request.form.get("ui_allow_inventory") == "on"
+
+            # Analytics
+            settings_obj.ui_allow_analytics = request.form.get("ui_allow_analytics") == "on"
+
+            # Tools & Data
+            settings_obj.ui_allow_tools = request.form.get("ui_allow_tools") == "on"
+        except AttributeError:
+            # UI allow columns don't exist yet (migration not run)
+            pass
+
         # Update integration OAuth credentials (if columns exist)
         try:
             if "jira_client_id" in request.form:

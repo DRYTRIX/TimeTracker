@@ -44,6 +44,40 @@ class Settings(db.Model):
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
 
+    # System-wide UI feature flags - control which features are available for users to customize
+    # Calendar section
+    ui_allow_calendar = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Time Tracking section items
+    ui_allow_project_templates = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_gantt_chart = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_kanban_board = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_weekly_goals = db.Column(db.Boolean, default=True, nullable=False)
+
+    # CRM section
+    ui_allow_quotes = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Finance & Expenses section items
+    ui_allow_reports = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_report_builder = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_scheduled_reports = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_invoice_approvals = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_payment_gateways = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_recurring_invoices = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_payments = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_mileage = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_per_diem = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_budget_alerts = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Inventory section
+    ui_allow_inventory = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Analytics
+    ui_allow_analytics = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Tools & Data section
+    ui_allow_tools = db.Column(db.Boolean, default=True, nullable=False)
+
     # Kiosk mode settings
     kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
     kiosk_auto_logout_minutes = db.Column(db.Integer, default=15, nullable=False)
@@ -251,6 +285,26 @@ class Settings(db.Model):
             "github_client_secret_set": bool(self.github_client_secret),  # Don't expose actual secret
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            # UI feature flags (system-wide)
+            "ui_allow_calendar": getattr(self, "ui_allow_calendar", True),
+            "ui_allow_project_templates": getattr(self, "ui_allow_project_templates", True),
+            "ui_allow_gantt_chart": getattr(self, "ui_allow_gantt_chart", True),
+            "ui_allow_kanban_board": getattr(self, "ui_allow_kanban_board", True),
+            "ui_allow_weekly_goals": getattr(self, "ui_allow_weekly_goals", True),
+            "ui_allow_quotes": getattr(self, "ui_allow_quotes", True),
+            "ui_allow_reports": getattr(self, "ui_allow_reports", True),
+            "ui_allow_report_builder": getattr(self, "ui_allow_report_builder", True),
+            "ui_allow_scheduled_reports": getattr(self, "ui_allow_scheduled_reports", True),
+            "ui_allow_invoice_approvals": getattr(self, "ui_allow_invoice_approvals", True),
+            "ui_allow_payment_gateways": getattr(self, "ui_allow_payment_gateways", True),
+            "ui_allow_recurring_invoices": getattr(self, "ui_allow_recurring_invoices", True),
+            "ui_allow_payments": getattr(self, "ui_allow_payments", True),
+            "ui_allow_mileage": getattr(self, "ui_allow_mileage", True),
+            "ui_allow_per_diem": getattr(self, "ui_allow_per_diem", True),
+            "ui_allow_budget_alerts": getattr(self, "ui_allow_budget_alerts", True),
+            "ui_allow_inventory": getattr(self, "ui_allow_inventory", True),
+            "ui_allow_analytics": getattr(self, "ui_allow_analytics", True),
+            "ui_allow_tools": getattr(self, "ui_allow_tools", True),
         }
 
     @classmethod
@@ -266,11 +320,25 @@ class Settings(db.Model):
                 return settings
         except Exception as e:
             # Handle case where columns don't exist yet (migration not run)
-            # Log but don't fail - return fallback instance
+            # Check if it's a column error - if so, it's expected during migrations
+            error_str = str(e)
+            is_column_error = (
+                "UndefinedColumn" in error_str or
+                "does not exist" in error_str.lower() or
+                "no such column" in error_str.lower()
+            )
+            
             import logging
-
             logger = logging.getLogger(__name__)
-            logger.warning(f"Could not query settings (migration may not be run): {e}")
+            
+            if is_column_error:
+                # This is expected during migrations when schema is incomplete
+                # Only log at debug level to avoid cluttering logs
+                logger.debug(f"Settings table schema incomplete (migration may be pending): {error_str.split('LINE')[0] if 'LINE' in error_str else error_str}")
+            else:
+                # Other errors should be logged as warnings
+                logger.warning(f"Could not query settings: {e}")
+            
             # Rollback the failed transaction
             try:
                 db.session.rollback()

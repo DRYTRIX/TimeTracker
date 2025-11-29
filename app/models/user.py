@@ -54,6 +54,41 @@ class User(UserMixin, db.Model):
         db.Integer, db.ForeignKey("clients.id", ondelete="SET NULL"), nullable=True, index=True
     )  # Link user to a client for portal access
 
+    # UI feature flags - allow users to customize which features are visible
+    # All default to True (enabled) for backward compatibility
+    # Calendar section
+    ui_show_calendar = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Calendar section
+    
+    # Time Tracking section items
+    ui_show_project_templates = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Project Templates
+    ui_show_gantt_chart = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Gantt Chart
+    ui_show_kanban_board = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Kanban Board
+    ui_show_weekly_goals = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Weekly Goals
+    
+    # CRM section
+    ui_show_quotes = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Quotes
+    
+    # Finance & Expenses section items
+    ui_show_reports = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Reports
+    ui_show_report_builder = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Report Builder
+    ui_show_scheduled_reports = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Scheduled Reports
+    ui_show_invoice_approvals = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Invoice Approvals
+    ui_show_payment_gateways = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Payment Gateways
+    ui_show_recurring_invoices = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Recurring Invoices
+    ui_show_payments = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Payments
+    ui_show_mileage = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Mileage
+    ui_show_per_diem = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Per Diem
+    ui_show_budget_alerts = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Budget Alerts
+    
+    # Inventory section
+    ui_show_inventory = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Inventory section
+    
+    # Analytics
+    ui_show_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Analytics
+    
+    # Tools & Data section
+    ui_show_tools = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Tools & Data section
+
     # Relationships
     time_entries = db.relationship("TimeEntry", backref="user", lazy="dynamic", cascade="all, delete-orphan")
     project_costs = db.relationship("ProjectCost", backref="user", lazy="dynamic", cascade="all, delete-orphan")

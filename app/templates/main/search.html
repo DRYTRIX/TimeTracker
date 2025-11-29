@@ -43,7 +43,13 @@
                                 {% for entry in entries.items %}
                                 <tr>
                                     <td>
-                                        <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}">{{ entry.project.name }}</a>
+                                        {% if entry.project %}
+                                            <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}">{{ entry.project.name }}</a>
+                                        {% elif entry.client %}
+                                            {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                                        {% else %}
+                                            {{ _('N/A') }}
+                                        {% endif %}
                                     </td>
                                                                 <td>{{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') }}</td>
                             <td>{{ entry.end_time|user_datetime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}</td>
