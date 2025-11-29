@@ -23,47 +23,45 @@ def activity_feed():
     user_id = request.args.get("user_id", type=int)
     entity_type = request.args.get("entity_type", "").strip()
     action = request.args.get("action", "").strip()
-    
+
     # Build query
     query = Activity.query
 
     # Apply filters
     if user_id:
         query = query.filter_by(user_id=user_id)
-    
+
     if entity_type:
         query = query.filter_by(entity_type=entity_type)
-    
+
     if action:
         query = query.filter_by(action=action)
 
     # Date filters
     start_date = request.args.get("start_date", "").strip()
     end_date = request.args.get("end_date", "").strip()
-    
+
     if start_date:
         try:
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at >= start_dt)
         except Exception:
             pass
-    
+
     if end_date:
         try:
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at <= end_dt)
         except Exception:
             pass
 
     # Paginate
     per_page = min(limit, 100)  # Max 100 per page
-    paginated = query.order_by(Activity.created_at.desc()).paginate(
-        page=page, per_page=per_page, error_out=False
-    )
+    paginated = query.order_by(Activity.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
     # Get filter options
-    entity_types = db.session.query(Activity.entity_type).distinct().all() if hasattr(db, 'session') else []
-    actions = db.session.query(Activity.action).distinct().all() if hasattr(db, 'session') else []
+    entity_types = db.session.query(Activity.entity_type).distinct().all() if hasattr(db, "session") else []
+    actions = db.session.query(Activity.action).distinct().all() if hasattr(db, "session") else []
 
     return render_template(
         "activity/feed.html",
@@ -77,7 +75,7 @@ def activity_feed():
             "action": action,
             "start_date": start_date,
             "end_date": end_date,
-        }
+        },
     )
 
 
@@ -100,42 +98,41 @@ def api_activity_feed():
     # Apply filters
     if user_id:
         query = query.filter_by(user_id=user_id)
-    
+
     if entity_type:
         query = query.filter_by(entity_type=entity_type)
-    
+
     if action:
         query = query.filter_by(action=action)
-    
+
     if start_date:
         try:
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at >= start_dt)
         except Exception:
             pass
-    
+
     if end_date:
         try:
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at <= end_dt)
         except Exception:
             pass
 
     # Paginate
     per_page = min(limit, 100)
-    paginated = query.order_by(Activity.created_at.desc()).paginate(
-        page=page, per_page=per_page, error_out=False
-    )
+    paginated = query.order_by(Activity.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
-    return jsonify({
-        "activities": [a.to_dict() for a in paginated.items],
-        "pagination": {
-            "page": paginated.page,
-            "per_page": paginated.per_page,
-            "total": paginated.total,
-            "pages": paginated.pages,
-            "has_next": paginated.has_next,
-            "has_prev": paginated.has_prev,
+    return jsonify(
+        {
+            "activities": [a.to_dict() for a in paginated.items],
+            "pagination": {
+                "page": paginated.page,
+                "per_page": paginated.per_page,
+                "total": paginated.total,
+                "pages": paginated.pages,
+                "has_next": paginated.has_next,
+                "has_prev": paginated.has_prev,
+            },
         }
-    })
-
+    )

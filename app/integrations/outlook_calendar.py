@@ -22,11 +22,7 @@ class OutlookCalendarConnector(BaseConnector):
     AUTH_BASE_URL = "https://login.microsoftonline.com"
 
     # OAuth 2.0 scopes required
-    SCOPES = [
-        "Calendars.ReadWrite",
-        "offline_access",
-        "User.Read"
-    ]
+    SCOPES = ["Calendars.ReadWrite", "offline_access", "User.Read"]
 
     @property
     def provider_name(self) -> str:
@@ -35,6 +31,7 @@ class OutlookCalendarConnector(BaseConnector):
     def _get_tenant_id(self) -> str:
         """Get tenant ID from settings or use 'common' for multi-tenant."""
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("outlook_calendar")
         tenant_id = creds.get("tenant_id") or os.getenv("OUTLOOK_TENANT_ID", "common")
@@ -106,8 +103,7 @@ class OutlookCalendarConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.GRAPH_BASE_URL}/me",
-                    headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"}
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json()
@@ -135,6 +131,7 @@ class OutlookCalendarConnector(BaseConnector):
             raise ValueError("No refresh token available")
 
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("outlook_calendar")
         client_id = creds.get("client_id") or os.getenv("OUTLOOK_CLIENT_ID")
@@ -171,6 +168,7 @@ class OutlookCalendarConnector(BaseConnector):
         if expires_at:
             self.credentials.expires_at = expires_at
         from app.utils.db import safe_commit
+
         safe_commit("refresh_outlook_calendar_token", {"integration_id": self.integration.id})
 
         return {
@@ -186,17 +184,11 @@ class OutlookCalendarConnector(BaseConnector):
 
         try:
             # Get user info and calendars
-            response = requests.get(
-                f"{self.GRAPH_BASE_URL}/me/calendars",
-                headers={"Authorization": f"Bearer {token}"}
-            )
+            response = requests.get(f"{self.GRAPH_BASE_URL}/me/calendars", headers={"Authorization": f"Bearer {token}"})
 
             if response.status_code == 200:
                 calendars = response.json().get("value", [])
-                return {
-                    "success": True,
-                    "message": f"Connected to Outlook Calendar. Found {len(calendars)} calendars."
-                }
+                return {"success": True, "message": f"Connected to Outlook Calendar. Found {len(calendars)} calendars."}
             else:
                 return {"success": False, "message": f"API returned status {response.status_code}"}
         except Exception as e:
@@ -226,7 +218,7 @@ class OutlookCalendarConnector(BaseConnector):
             time_entries = TimeEntry.query.filter(
                 TimeEntry.user_id == self.integration.user_id,
                 TimeEntry.start_time >= start_date,
-                TimeEntry.end_time.isnot(None)
+                TimeEntry.end_time.isnot(None),
             ).all()
 
             synced_count = 0
@@ -258,17 +250,10 @@ class OutlookCalendarConnector(BaseConnector):
 
             db.session.commit()
 
-            return {
-                "success": True,
-                "synced_count": synced_count,
-                "errors": errors
-            }
+            return {"success": True, "synced_count": synced_count, "errors": errors}
 
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Sync failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
 
     def _create_calendar_event(self, token: str, calendar_id: str, time_entry) -> str:
         """Create a calendar event from a time entry."""
@@ -298,28 +283,16 @@ class OutlookCalendarConnector(BaseConnector):
 
         event = {
             "subject": title,
-            "body": {
-                "contentType": "text",
-                "content": description or ""
-            },
-            "start": {
-                "dateTime": time_entry.start_time.isoformat(),
-                "timeZone": "UTC"
-            },
-            "end": {
-                "dateTime": time_entry.end_time.isoformat(),
-                "timeZone": "UTC"
-            },
+            "body": {"contentType": "text", "content": description or ""},
+            "start": {"dateTime": time_entry.start_time.isoformat(), "timeZone": "UTC"},
+            "end": {"dateTime": time_entry.end_time.isoformat(), "timeZone": "UTC"},
             "isAllDay": False,
         }
 
         response = requests.post(
             f"{self.GRAPH_BASE_URL}/me/calendars/{calendar_id}/events",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            },
-            json=event
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=event,
         )
 
         response.raise_for_status()
@@ -354,27 +327,15 @@ class OutlookCalendarConnector(BaseConnector):
 
         event = {
             "subject": title,
-            "body": {
-                "contentType": "text",
-                "content": description or ""
-            },
-            "start": {
-                "dateTime": time_entry.start_time.isoformat(),
-                "timeZone": "UTC"
-            },
-            "end": {
-                "dateTime": time_entry.end_time.isoformat(),
-                "timeZone": "UTC"
-            },
+            "body": {"contentType": "text", "content": description or ""},
+            "start": {"dateTime": time_entry.start_time.isoformat(), "timeZone": "UTC"},
+            "end": {"dateTime": time_entry.end_time.isoformat(), "timeZone": "UTC"},
         }
 
         response = requests.patch(
             f"{self.GRAPH_BASE_URL}/me/calendars/{calendar_id}/events/{event_id}",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            },
-            json=event
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=event,
         )
 
         response.raise_for_status()
@@ -388,7 +349,7 @@ class OutlookCalendarConnector(BaseConnector):
                     "type": "string",
                     "label": "Calendar ID",
                     "default": "calendar",
-                    "description": "Outlook Calendar ID to sync with (default: 'calendar' for primary calendar)"
+                    "description": "Outlook Calendar ID to sync with (default: 'calendar' for primary calendar)",
                 },
                 {
                     "name": "sync_direction",
@@ -397,18 +358,17 @@ class OutlookCalendarConnector(BaseConnector):
                     "options": [
                         {"value": "time_tracker_to_calendar", "label": "TimeTracker → Calendar"},
                         {"value": "calendar_to_time_tracker", "label": "Calendar → TimeTracker"},
-                        {"value": "bidirectional", "label": "Bidirectional"}
+                        {"value": "bidirectional", "label": "Bidirectional"},
                     ],
-                    "default": "time_tracker_to_calendar"
+                    "default": "time_tracker_to_calendar",
                 },
                 {
                     "name": "auto_sync",
                     "type": "boolean",
                     "label": "Auto Sync",
                     "default": True,
-                    "description": "Automatically sync when time entries are created/updated"
-                }
+                    "description": "Automatically sync when time entries are created/updated",
+                },
             ],
-            "required": []
+            "required": [],
         }
-

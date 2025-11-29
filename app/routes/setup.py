@@ -30,7 +30,7 @@ def initial_setup():
 
         # Save OAuth credentials if provided
         settings = Settings.get_settings()
-        
+
         # Google Calendar OAuth credentials
         google_client_id = request.form.get("google_calendar_client_id", "").strip()
         google_client_secret = request.form.get("google_calendar_client_secret", "").strip()
@@ -54,7 +54,7 @@ def initial_setup():
             flash(_("Setup complete! Thank you for helping us improve TimeTracker."), "success")
         else:
             flash(_("Setup complete! Telemetry is disabled."), "success")
-        
+
         if google_client_id:
             flash(_("Google Calendar OAuth credentials have been configured."), "success")
 

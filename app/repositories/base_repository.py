@@ -8,7 +8,7 @@ Example:
     class ProjectRepository(BaseRepository[Project]):
         def __init__(self):
             super().__init__(Project)
-        
+
         def get_active_projects(self):
             return self.model.query.filter_by(status='active').all()
 """

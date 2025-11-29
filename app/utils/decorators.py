@@ -12,6 +12,7 @@ def admin_required(f):
     DEPRECATED: Use @admin_or_permission_required() with specific permissions instead.
     This decorator is kept for backward compatibility.
     """
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin:
@@ -20,4 +21,3 @@ def admin_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
-

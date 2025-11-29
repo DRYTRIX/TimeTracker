@@ -53,7 +53,12 @@ class IntegrationService:
         return connector_class(integration, credentials)
 
     def create_integration(
-        self, provider: str, user_id: Optional[int] = None, name: Optional[str] = None, config: Optional[Dict] = None, is_global: bool = False
+        self,
+        provider: str,
+        user_id: Optional[int] = None,
+        name: Optional[str] = None,
+        config: Optional[Dict] = None,
+        is_global: bool = False,
     ) -> Dict[str, Any]:
         """
         Create a new integration.
@@ -118,33 +123,28 @@ class IntegrationService:
         integration = Integration.query.get(integration_id)
         if not integration:
             return None
-        
+
         # Global integrations are accessible to all users
         if integration.is_global:
             return integration
-        
+
         # Per-user integrations require user_id match
         if user_id and integration.user_id == user_id:
             return integration
-        
+
         return None
 
     def list_integrations(self, user_id: Optional[int] = None) -> List[Integration]:
         """List all integrations accessible to a user (global + their per-user)."""
         from sqlalchemy import or_
-        
+
         # Get global integrations + user's per-user integrations
         if user_id:
-            query = Integration.query.filter(
-                or_(
-                    Integration.is_global == True,
-                    Integration.user_id == user_id
-                )
-            )
+            query = Integration.query.filter(or_(Integration.is_global == True, Integration.user_id == user_id))
         else:
             # Admin view: show all
             query = Integration.query
-        
+
         integrations = query.order_by(Integration.is_global.desc(), Integration.created_at.desc()).all()
 
         # Sync is_active status with credentials existence
@@ -157,7 +157,7 @@ class IntegrationService:
                 safe_commit("sync_integration_active_status", {"integration_id": integration.id})
 
         return integrations
-    
+
     def get_global_integration(self, provider: str) -> Optional[Integration]:
         """Get global integration for a provider."""
         return Integration.query.filter_by(provider=provider, is_global=True).first()
@@ -167,10 +167,11 @@ class IntegrationService:
         integration = self.get_integration(integration_id, user_id)
         if not integration:
             return {"success": False, "message": "Integration not found."}
-        
+
         # Only admins can delete global integrations
         if integration.is_global:
             from app.models import User
+
             user = User.query.get(user_id) if user_id else None
             if not user or not user.is_admin:
                 return {"success": False, "message": "Only administrators can delete global integrations."}

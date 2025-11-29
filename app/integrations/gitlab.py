@@ -24,6 +24,7 @@ class GitLabConnector(BaseConnector):
     def _get_base_url(self) -> str:
         """Get GitLab instance URL from settings."""
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("gitlab")
         instance_url = creds.get("instance_url") or os.getenv("GITLAB_INSTANCE_URL", "https://gitlab.com")
@@ -93,8 +94,7 @@ class GitLabConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{base_url}/api/v4/user",
-                    headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{base_url}/api/v4/user", headers={"Authorization": f"Bearer {data['access_token']}"}
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json()
@@ -122,6 +122,7 @@ class GitLabConnector(BaseConnector):
             raise ValueError("No refresh token available")
 
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("gitlab")
         client_id = creds.get("client_id") or os.getenv("GITLAB_CLIENT_ID")
@@ -154,6 +155,7 @@ class GitLabConnector(BaseConnector):
         if expires_at:
             self.credentials.expires_at = expires_at
         from app.utils.db import safe_commit
+
         safe_commit("refresh_gitlab_token", {"integration_id": self.integration.id})
 
         return {
@@ -171,10 +173,7 @@ class GitLabConnector(BaseConnector):
         api_url = f"{base_url}/api/v4/user"
 
         try:
-            response = requests.get(
-                api_url,
-                headers={"Authorization": f"Bearer {token}"}
-            )
+            response = requests.get(api_url, headers={"Authorization": f"Bearer {token}"})
 
             if response.status_code == 200:
                 user_data = response.json()
@@ -197,13 +196,13 @@ class GitLabConnector(BaseConnector):
         try:
             # Get repositories from config or all accessible repos
             repo_ids = self.integration.config.get("repository_ids", [])
-            
+
             if not repo_ids:
                 # Get all accessible projects
                 projects_response = requests.get(
                     f"{base_url}/api/v4/projects",
                     headers={"Authorization": f"Bearer {token}"},
-                    params={"membership": True, "per_page": 100}
+                    params={"membership": True, "per_page": 100},
                 )
                 if projects_response.status_code == 200:
                     projects = projects_response.json()
@@ -215,21 +214,16 @@ class GitLabConnector(BaseConnector):
                     issues_response = requests.get(
                         f"{base_url}/api/v4/projects/{repo_id}/issues",
                         headers={"Authorization": f"Bearer {token}"},
-                        params={"state": "opened", "per_page": 100}
+                        params={"state": "opened", "per_page": 100},
                     )
-                    
+
                     if issues_response.status_code == 200:
                         issues = issues_response.json()
                         synced_count += len(issues)
                 except Exception as e:
                     errors.append(f"Error syncing repository {repo_id}: {str(e)}")
 
-            return {
-                "success": True,
-                "message": "Sync completed",
-                "synced_items": synced_count,
-                "errors": errors
-            }
+            return {"success": True, "message": "Sync completed", "synced_items": synced_count, "errors": errors}
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
 
@@ -241,7 +235,7 @@ class GitLabConnector(BaseConnector):
                     "name": "repository_ids",
                     "type": "array",
                     "label": "Repository IDs",
-                    "description": "GitLab project IDs to sync (leave empty to sync all accessible projects)"
+                    "description": "GitLab project IDs to sync (leave empty to sync all accessible projects)",
                 },
                 {
                     "name": "sync_direction",
@@ -250,11 +244,10 @@ class GitLabConnector(BaseConnector):
                     "options": [
                         {"value": "gitlab_to_timetracker", "label": "GitLab → TimeTracker"},
                         {"value": "timetracker_to_gitlab", "label": "TimeTracker → GitLab"},
-                        {"value": "bidirectional", "label": "Bidirectional"}
+                        {"value": "bidirectional", "label": "Bidirectional"},
                     ],
-                    "default": "gitlab_to_timetracker"
-                }
+                    "default": "gitlab_to_timetracker",
+                },
             ],
-            "required": []
+            "required": [],
         }
-

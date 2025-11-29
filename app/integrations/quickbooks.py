@@ -47,10 +47,7 @@ class QuickBooksConnector(BaseConnector):
 
         auth_url = "https://appcenter.intuit.com/connect/oauth2"
 
-        scopes = [
-            "com.intuit.quickbooks.accounting",
-            "com.intuit.quickbooks.payment"
-        ]
+        scopes = ["com.intuit.quickbooks.accounting", "com.intuit.quickbooks.payment"]
 
         params = {
             "client_id": client_id,
@@ -58,7 +55,7 @@ class QuickBooksConnector(BaseConnector):
             "redirect_uri": redirect_uri,
             "response_type": "code",
             "access_type": "offline",
-            "state": state or ""
+            "state": state or "",
         }
 
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
@@ -80,21 +77,17 @@ class QuickBooksConnector(BaseConnector):
 
         # QuickBooks requires Basic Auth for token exchange
         auth_string = f"{client_id}:{client_secret}"
-        auth_bytes = auth_string.encode('ascii')
-        auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+        auth_bytes = auth_string.encode("ascii")
+        auth_b64 = base64.b64encode(auth_bytes).decode("ascii")
 
         response = requests.post(
             token_url,
             headers={
                 "Authorization": f"Basic {auth_b64}",
                 "Accept": "application/json",
-                "Content-Type": "application/x-www-form-urlencoded"
+                "Content-Type": "application/x-www-form-urlencoded",
             },
-            data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": redirect_uri
-            }
+            data={"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri},
         )
 
         response.raise_for_status()
@@ -110,10 +103,7 @@ class QuickBooksConnector(BaseConnector):
             try:
                 realm_id = data["realmId"]
                 company_response = self._api_request(
-                    "GET",
-                    f"/v3/company/{realm_id}/companyinfo/{realm_id}",
-                    data.get("access_token"),
-                    realm_id
+                    "GET", f"/v3/company/{realm_id}/companyinfo/{realm_id}", data.get("access_token"), realm_id
                 )
                 if company_response:
                     company_info = company_response.get("CompanyInfo", {})
@@ -126,10 +116,7 @@ class QuickBooksConnector(BaseConnector):
             "expires_at": expires_at.isoformat() if expires_at else None,
             "token_type": "Bearer",
             "realm_id": data.get("realmId"),  # QuickBooks company ID
-            "extra_data": {
-                "company_name": company_info.get("CompanyName", ""),
-                "company_id": data.get("realmId")
-            }
+            "extra_data": {"company_name": company_info.get("CompanyName", ""), "company_id": data.get("realmId")},
         }
 
     def refresh_access_token(self) -> Dict[str, Any]:
@@ -138,6 +125,7 @@ class QuickBooksConnector(BaseConnector):
             raise ValueError("No refresh token available")
 
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("quickbooks")
         client_id = creds.get("client_id") or os.getenv("QUICKBOOKS_CLIENT_ID")
@@ -146,20 +134,17 @@ class QuickBooksConnector(BaseConnector):
         token_url = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
 
         auth_string = f"{client_id}:{client_secret}"
-        auth_bytes = auth_string.encode('ascii')
-        auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+        auth_bytes = auth_string.encode("ascii")
+        auth_b64 = base64.b64encode(auth_bytes).decode("ascii")
 
         response = requests.post(
             token_url,
             headers={
                 "Authorization": f"Basic {auth_b64}",
                 "Accept": "application/json",
-                "Content-Type": "application/x-www-form-urlencoded"
+                "Content-Type": "application/x-www-form-urlencoded",
             },
-            data={
-                "grant_type": "refresh_token",
-                "refresh_token": self.credentials.refresh_token
-            }
+            data={"grant_type": "refresh_token", "refresh_token": self.credentials.refresh_token},
         )
 
         response.raise_for_status()
@@ -177,10 +162,7 @@ class QuickBooksConnector(BaseConnector):
             self.credentials.expires_at = expires_at
         self.credentials.save()
 
-        return {
-            "access_token": data.get("access_token"),
-            "expires_at": expires_at.isoformat() if expires_at else None
-        }
+        return {"access_token": data.get("access_token"), "expires_at": expires_at.isoformat() if expires_at else None}
 
     def test_connection(self) -> Dict[str, Any]:
         """Test connection to QuickBooks."""
@@ -190,28 +172,16 @@ class QuickBooksConnector(BaseConnector):
                 return {"success": False, "message": "QuickBooks company not configured"}
 
             company_info = self._api_request(
-                "GET",
-                f"/v3/company/{realm_id}/companyinfo/{realm_id}",
-                self.get_access_token(),
-                realm_id
+                "GET", f"/v3/company/{realm_id}/companyinfo/{realm_id}", self.get_access_token(), realm_id
             )
 
             if company_info:
                 company_name = company_info.get("CompanyInfo", {}).get("CompanyName", "Unknown")
-                return {
-                    "success": True,
-                    "message": f"Connected to QuickBooks company: {company_name}"
-                }
+                return {"success": True, "message": f"Connected to QuickBooks company: {company_name}"}
             else:
-                return {
-                    "success": False,
-                    "message": "Failed to retrieve company information"
-                }
+                return {"success": False, "message": "Failed to retrieve company information"}
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Connection test failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
     def _api_request(self, method: str, endpoint: str, access_token: str, realm_id: str) -> Optional[Dict]:
         """Make API request to QuickBooks"""
@@ -221,7 +191,7 @@ class QuickBooksConnector(BaseConnector):
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         if realm_id:
@@ -258,8 +228,7 @@ class QuickBooksConnector(BaseConnector):
             # Sync invoices (create as invoices in QuickBooks)
             if sync_type == "full" or sync_type == "invoices":
                 invoices = Invoice.query.filter(
-                    Invoice.status.in_(["sent", "paid"]),
-                    Invoice.created_at >= datetime.utcnow() - timedelta(days=90)
+                    Invoice.status.in_(["sent", "paid"]), Invoice.created_at >= datetime.utcnow() - timedelta(days=90)
                 ).all()
 
                 for invoice in invoices:
@@ -267,65 +236,56 @@ class QuickBooksConnector(BaseConnector):
                         qb_invoice = self._create_quickbooks_invoice(invoice, access_token, realm_id)
                         if qb_invoice:
                             # Store QuickBooks ID in invoice metadata
-                            if not hasattr(invoice, 'metadata') or not invoice.metadata:
+                            if not hasattr(invoice, "metadata") or not invoice.metadata:
                                 invoice.metadata = {}
-                            invoice.metadata['quickbooks_id'] = qb_invoice.get("Id")
+                            invoice.metadata["quickbooks_id"] = qb_invoice.get("Id")
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing invoice {invoice.id}: {str(e)}")
 
             # Sync expenses (create as expenses in QuickBooks)
             if sync_type == "full" or sync_type == "expenses":
-                expenses = Expense.query.filter(
-                    Expense.date >= datetime.utcnow().date() - timedelta(days=90)
-                ).all()
+                expenses = Expense.query.filter(Expense.date >= datetime.utcnow().date() - timedelta(days=90)).all()
 
                 for expense in expenses:
                     try:
                         qb_expense = self._create_quickbooks_expense(expense, access_token, realm_id)
                         if qb_expense:
-                            if not hasattr(expense, 'metadata') or not expense.metadata:
+                            if not hasattr(expense, "metadata") or not expense.metadata:
                                 expense.metadata = {}
-                            expense.metadata['quickbooks_id'] = qb_expense.get("Id")
+                            expense.metadata["quickbooks_id"] = qb_expense.get("Id")
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing expense {expense.id}: {str(e)}")
 
             db.session.commit()
 
-            return {
-                "success": True,
-                "synced_count": synced_count,
-                "errors": errors
-            }
+            return {"success": True, "synced_count": synced_count, "errors": errors}
 
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Sync failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
 
     def _create_quickbooks_invoice(self, invoice, access_token: str, realm_id: str) -> Optional[Dict]:
         """Create invoice in QuickBooks"""
         # Build QuickBooks invoice structure
-        qb_invoice = {
-            "Line": []
-        }
+        qb_invoice = {"Line": []}
 
         # Add invoice items
         for item in invoice.items:
-            qb_invoice["Line"].append({
-                "Amount": float(item.quantity * item.unit_price),
-                "DetailType": "SalesItemLineDetail",
-                "SalesItemLineDetail": {
-                    "ItemRef": {
-                        "value": "1",  # Would need to map to actual QuickBooks item
-                        "name": item.description
+            qb_invoice["Line"].append(
+                {
+                    "Amount": float(item.quantity * item.unit_price),
+                    "DetailType": "SalesItemLineDetail",
+                    "SalesItemLineDetail": {
+                        "ItemRef": {
+                            "value": "1",  # Would need to map to actual QuickBooks item
+                            "name": item.description,
+                        },
+                        "Qty": float(item.quantity),
+                        "UnitPrice": float(item.unit_price),
                     },
-                    "Qty": float(item.quantity),
-                    "UnitPrice": float(item.unit_price)
                 }
-            })
+            )
 
         # Add customer reference (would need customer mapping)
         # qb_invoice["CustomerRef"] = {"value": customer_qb_id}
@@ -338,18 +298,14 @@ class QuickBooksConnector(BaseConnector):
         # Build QuickBooks expense structure
         qb_expense = {
             "PaymentType": "Cash",
-            "AccountRef": {
-                "value": "1"  # Would need account mapping
-            },
-            "Line": [{
-                "Amount": float(expense.amount),
-                "DetailType": "AccountBasedExpenseLineDetail",
-                "AccountBasedExpenseLineDetail": {
-                    "AccountRef": {
-                        "value": "1"  # Expense account
-                    }
+            "AccountRef": {"value": "1"},  # Would need account mapping
+            "Line": [
+                {
+                    "Amount": float(expense.amount),
+                    "DetailType": "AccountBasedExpenseLineDetail",
+                    "AccountBasedExpenseLineDetail": {"AccountRef": {"value": "1"}},  # Expense account
                 }
-            }]
+            ],
         }
 
         endpoint = f"/v3/company/{realm_id}/purchase"
@@ -363,28 +319,17 @@ class QuickBooksConnector(BaseConnector):
                     "name": "realm_id",
                     "type": "string",
                     "label": "Company ID (Realm ID)",
-                    "description": "QuickBooks company ID (realm ID)"
+                    "description": "QuickBooks company ID (realm ID)",
                 },
                 {
                     "name": "use_sandbox",
                     "type": "boolean",
                     "label": "Use Sandbox",
                     "default": True,
-                    "description": "Use QuickBooks sandbox environment for testing"
+                    "description": "Use QuickBooks sandbox environment for testing",
                 },
-                {
-                    "name": "sync_invoices",
-                    "type": "boolean",
-                    "label": "Sync Invoices",
-                    "default": True
-                },
-                {
-                    "name": "sync_expenses",
-                    "type": "boolean",
-                    "label": "Sync Expenses",
-                    "default": True
-                }
+                {"name": "sync_invoices", "type": "boolean", "label": "Sync Invoices", "default": True},
+                {"name": "sync_expenses", "type": "boolean", "label": "Sync Expenses", "default": True},
             ],
-            "required": ["realm_id"]
+            "required": ["realm_id"],
         }
-

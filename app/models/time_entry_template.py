@@ -75,7 +75,7 @@ class TimeEntryTemplate(db.Model):
             except Exception:
                 # If accessing project fails (e.g., detached instance), just use None
                 project_name = None
-        
+
         task_name = None
         if self.task_id:
             try:
@@ -83,7 +83,7 @@ class TimeEntryTemplate(db.Model):
             except Exception:
                 # If accessing task fails (e.g., detached instance), just use None
                 task_name = None
-        
+
         return {
             "id": self.id,
             "user_id": self.user_id,

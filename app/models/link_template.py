@@ -59,4 +59,3 @@ class LinkTemplate(db.Model):
         if field_key:
             query = query.filter_by(field_key=field_key)
         return query.order_by(cls.order, cls.name).all()
-

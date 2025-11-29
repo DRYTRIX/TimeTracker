@@ -45,7 +45,7 @@ class TrelloConnector(BaseConnector):
             "response_type": "token",
             "scope": "read,write",
             "expiration": "never",
-            "redirect_uri": redirect_uri
+            "redirect_uri": redirect_uri,
         }
 
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
@@ -70,17 +70,14 @@ class TrelloConnector(BaseConnector):
         # Verify token by getting user info
         user_info = {}
         try:
-            response = requests.get(
-                f"{self.BASE_URL}/members/me",
-                params={"key": api_key, "token": token}
-            )
+            response = requests.get(f"{self.BASE_URL}/members/me", params={"key": api_key, "token": token})
             if response.status_code == 200:
                 user_data = response.json()
                 user_info = {
                     "id": user_data.get("id"),
                     "username": user_data.get("username"),
                     "fullName": user_data.get("fullName"),
-                    "email": user_data.get("email")
+                    "email": user_data.get("email"),
                 }
         except Exception:
             pass
@@ -90,47 +87,35 @@ class TrelloConnector(BaseConnector):
             "refresh_token": None,  # Trello tokens don't expire
             "expires_at": None,
             "token_type": "Bearer",
-            "extra_data": user_info
+            "extra_data": user_info,
         }
 
     def refresh_access_token(self) -> Dict[str, Any]:
         """Refresh access token (Trello tokens don't expire)."""
         # Trello tokens don't expire, so just return current token
-        return {
-            "access_token": self.credentials.access_token if self.credentials else None,
-            "expires_at": None
-        }
+        return {"access_token": self.credentials.access_token if self.credentials else None, "expires_at": None}
 
     def test_connection(self) -> Dict[str, Any]:
         """Test connection to Trello."""
         try:
             from app.models import Settings
+
             settings = Settings.get_settings()
             creds = settings.get_integration_credentials("trello")
             api_key = creds.get("api_key") or os.getenv("TRELLO_API_KEY")
 
             headers = {"Authorization": f"Bearer {self.get_access_token()}"}
             response = requests.get(
-                f"{self.BASE_URL}/members/me",
-                params={"key": api_key, "token": self.get_access_token()}
+                f"{self.BASE_URL}/members/me", params={"key": api_key, "token": self.get_access_token()}
             )
 
             if response.status_code == 200:
                 user_data = response.json()
-                return {
-                    "success": True,
-                    "message": f"Connected to Trello as {user_data.get('fullName', 'Unknown')}"
-                }
+                return {"success": True, "message": f"Connected to Trello as {user_data.get('fullName', 'Unknown')}"}
             else:
-                return {
-                    "success": False,
-                    "message": f"Connection test failed: {response.status_code}"
-                }
+                return {"success": False, "message": f"Connection test failed: {response.status_code}"}
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Connection test failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync boards and cards with Trello."""
@@ -139,6 +124,7 @@ class TrelloConnector(BaseConnector):
 
         try:
             from app.models import Settings
+
             settings = Settings.get_settings()
             creds = settings.get_integration_credentials("trello")
             api_key = creds.get("api_key") or os.getenv("TRELLO_API_KEY")
@@ -152,8 +138,7 @@ class TrelloConnector(BaseConnector):
 
             # Get boards
             boards_response = requests.get(
-                f"{self.BASE_URL}/members/me/boards",
-                params={"key": api_key, "token": token, "filter": "open"}
+                f"{self.BASE_URL}/members/me/boards", params={"key": api_key, "token": token, "filter": "open"}
             )
 
             if boards_response.status_code == 200:
@@ -163,8 +148,7 @@ class TrelloConnector(BaseConnector):
                     try:
                         # Create or update project from board
                         project = Project.query.filter_by(
-                            user_id=self.integration.user_id,
-                            name=board.get("name")
+                            user_id=self.integration.user_id, name=board.get("name")
                         ).first()
 
                         if not project:
@@ -172,20 +156,20 @@ class TrelloConnector(BaseConnector):
                                 name=board.get("name"),
                                 description=board.get("desc", ""),
                                 user_id=self.integration.user_id,
-                                status="active"
+                                status="active",
                             )
                             db.session.add(project)
                             db.session.flush()
 
                         # Store Trello board ID in metadata
-                        if not hasattr(project, 'metadata') or not project.metadata:
+                        if not hasattr(project, "metadata") or not project.metadata:
                             project.metadata = {}
-                        project.metadata['trello_board_id'] = board.get("id")
+                        project.metadata["trello_board_id"] = board.get("id")
 
                         # Sync cards as tasks
                         cards_response = requests.get(
                             f"{self.BASE_URL}/boards/{board.get('id')}/cards",
-                            params={"key": api_key, "token": token, "filter": "open"}
+                            params={"key": api_key, "token": token, "filter": "open"},
                         )
 
                         if cards_response.status_code == 200:
@@ -193,25 +177,22 @@ class TrelloConnector(BaseConnector):
 
                             for card in cards:
                                 # Find or create task
-                                task = Task.query.filter_by(
-                                    project_id=project.id,
-                                    name=card.get("name")
-                                ).first()
+                                task = Task.query.filter_by(project_id=project.id, name=card.get("name")).first()
 
                                 if not task:
                                     task = Task(
                                         project_id=project.id,
                                         name=card.get("name"),
                                         description=card.get("desc", ""),
-                                        status=self._map_trello_list_to_status(card.get("idList"))
+                                        status=self._map_trello_list_to_status(card.get("idList")),
                                     )
                                     db.session.add(task)
                                     db.session.flush()
 
                                 # Store Trello card ID in metadata
-                                if not hasattr(task, 'metadata') or not task.metadata:
+                                if not hasattr(task, "metadata") or not task.metadata:
                                     task.metadata = {}
-                                task.metadata['trello_card_id'] = card.get("id")
+                                task.metadata["trello_card_id"] = card.get("id")
 
                         synced_count += 1
                     except Exception as e:
@@ -219,40 +200,31 @@ class TrelloConnector(BaseConnector):
 
             db.session.commit()
 
-            return {
-                "success": True,
-                "synced_count": synced_count,
-                "errors": errors
-            }
+            return {"success": True, "synced_count": synced_count, "errors": errors}
 
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Sync failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
 
     def _map_trello_list_to_status(self, list_id: str) -> str:
         """Map Trello list to task status."""
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("trello")
         api_key = creds.get("api_key") or os.getenv("TRELLO_API_KEY")
         token = self.get_access_token()
-        
+
         if not token or not api_key:
             return "todo"
-        
+
         try:
             # Fetch list name
-            list_response = requests.get(
-                f"{self.BASE_URL}/lists/{list_id}",
-                params={"key": api_key, "token": token}
-            )
-            
+            list_response = requests.get(f"{self.BASE_URL}/lists/{list_id}", params={"key": api_key, "token": token})
+
             if list_response.status_code == 200:
                 list_data = list_response.json()
                 list_name = list_data.get("name", "").lower()
-                
+
                 # Map common list names to statuses
                 if "done" in list_name or "completed" in list_name or "closed" in list_name:
                     return "completed"
@@ -262,7 +234,7 @@ class TrelloConnector(BaseConnector):
                     return "todo"
         except Exception:
             pass
-        
+
         return "todo"
 
     def get_config_schema(self) -> Dict[str, Any]:
@@ -273,7 +245,7 @@ class TrelloConnector(BaseConnector):
                     "name": "board_ids",
                     "type": "array",
                     "label": "Board IDs",
-                    "description": "Trello board IDs to sync (leave empty to sync all)"
+                    "description": "Trello board IDs to sync (leave empty to sync all)",
                 },
                 {
                     "name": "sync_direction",
@@ -282,11 +254,10 @@ class TrelloConnector(BaseConnector):
                     "options": [
                         {"value": "trello_to_timetracker", "label": "Trello → TimeTracker"},
                         {"value": "timetracker_to_trello", "label": "TimeTracker → Trello"},
-                        {"value": "bidirectional", "label": "Bidirectional"}
+                        {"value": "bidirectional", "label": "Bidirectional"},
                     ],
-                    "default": "trello_to_timetracker"
-                }
+                    "default": "trello_to_timetracker",
+                },
             ],
-            "required": []
+            "required": [],
         }
-

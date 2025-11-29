@@ -28,6 +28,7 @@ from app.utils.posthog_monitoring import track_error, track_export_performance, 
 # Optional PowerPoint export - only import if available
 try:
     from app.utils.powerpoint_export import create_report_powerpoint
+
     PPTX_EXPORT_AVAILABLE = True
 except ImportError:
     PPTX_EXPORT_AVAILABLE = False
@@ -1000,12 +1001,14 @@ def export_task_excel():
         entries = te_query.all()
         hours = sum(e.duration_hours for e in entries)
 
-        task_rows.append({
-            "task": task,
-            "project": task.project,
-            "completed_at": task.completed_at,
-            "hours": round(hours, 2),
-        })
+        task_rows.append(
+            {
+                "task": task,
+                "project": task.project,
+                "completed_at": task.completed_at,
+                "hours": round(hours, 2),
+            }
+        )
 
     # Create Excel file
     from openpyxl import Workbook
@@ -1045,7 +1048,9 @@ def export_task_excel():
     for row_data in task_rows:
         ws.cell(row=row_num, column=1).value = row_data["task"].name
         ws.cell(row=row_num, column=2).value = row_data["project"].name if row_data["project"] else "N/A"
-        ws.cell(row=row_num, column=3).value = row_data["completed_at"].strftime('%Y-%m-%d') if row_data["completed_at"] else "N/A"
+        ws.cell(row=row_num, column=3).value = (
+            row_data["completed_at"].strftime("%Y-%m-%d") if row_data["completed_at"] else "N/A"
+        )
         ws.cell(row=row_num, column=4).value = row_data["hours"]
 
         for col_num in range(1, len(headers) + 1):

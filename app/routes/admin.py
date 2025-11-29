@@ -203,16 +203,16 @@ def create_user():
 
         # Create user with legacy role field for backward compatibility
         user = User(username=username, role=role_name)
-        
+
         # Assign the role from the new Role system
         user.roles.append(role_obj)
-        
+
         # Set default password if provided
         if default_password:
             user.set_password(default_password)
             if force_password_change:
                 user.password_change_required = True
-        
+
         db.session.add(user)
         if not safe_commit("admin_create_user", {"username": username}):
             flash(_("Could not create user due to a database error. Please check server logs."), "error")
@@ -504,6 +504,7 @@ def settings():
         except Exception as e:
             # Log any errors but don't fail silently
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"Error updating UI feature flags: {e}")
             # UI allow columns don't exist yet (migration not run) or other error
@@ -2436,18 +2437,21 @@ def delete_email_template(template_id):
 
 # ==================== Integration Setup Routes ====================
 
+
 @admin_bp.route("/admin/integrations")
 @login_required
 @admin_required
 def list_integrations_admin():
     """List all integrations (admin view)."""
     from app.services.integration_service import IntegrationService
-    
+
     service = IntegrationService()
     integrations = service.list_integrations(None)  # Get all integrations
     available_providers = service.get_available_providers()
-    
-    return render_template("admin/integrations/list.html", integrations=integrations, available_providers=available_providers)
+
+    return render_template(
+        "admin/integrations/list.html", integrations=integrations, available_providers=available_providers
+    )
 
 
 @admin_bp.route("/admin/integrations/<provider>/setup", methods=["GET", "POST"])
@@ -2457,17 +2461,17 @@ def integration_setup(provider):
     """Setup page for configuring integration OAuth credentials."""
     from app.services.integration_service import IntegrationService
     from app.models import Settings
-    
+
     service = IntegrationService()
-    
+
     # Check if provider is available
     if provider not in service._connector_registry:
         flash(_("Integration provider not available."), "error")
         return redirect(url_for("admin.list_integrations_admin"))
-    
+
     connector_class = service._connector_registry[provider]
     settings = Settings.get_settings()
-    
+
     # Get or create global integration (except Google Calendar which is per-user)
     integration = None
     if provider != "google_calendar":
@@ -2480,7 +2484,7 @@ def integration_setup(provider):
             else:
                 flash(result["message"], "error")
                 return redirect(url_for("admin.list_integrations_admin"))
-    
+
     if request.method == "POST":
         # Update OAuth credentials in Settings
         if provider == "trello":
@@ -2493,6 +2497,7 @@ def integration_setup(provider):
                 # Save token directly to integration credentials if integration exists
                 if integration:
                     from app.services.integration_service import IntegrationService
+
                     service = IntegrationService()
                     service.save_credentials(
                         integration_id=integration.id,
@@ -2501,13 +2506,13 @@ def integration_setup(provider):
                         expires_at=None,
                         token_type="Bearer",
                         scope="read,write",
-                        extra_data={"api_key": api_key}
+                        extra_data={"api_key": api_key},
                     )
         else:
             # OAuth-based integrations
             client_id = request.form.get(f"{provider}_client_id", "").strip()
             client_secret = request.form.get(f"{provider}_client_secret", "").strip()
-            
+
             # Map provider names to Settings attributes
             attr_map = {
                 "jira": ("jira_client_id", "jira_client_secret"),
@@ -2521,14 +2526,14 @@ def integration_setup(provider):
                 "quickbooks": ("quickbooks_client_id", "quickbooks_client_secret"),
                 "xero": ("xero_client_id", "xero_client_secret"),
             }
-            
+
             if provider in attr_map:
                 id_attr, secret_attr = attr_map[provider]
                 if client_id:
                     setattr(settings, id_attr, client_id)
                 if client_secret:
                     setattr(settings, secret_attr, client_secret)
-            
+
             # Handle special fields
             if provider == "outlook_calendar":
                 tenant_id = request.form.get("outlook_calendar_tenant_id", "").strip()
@@ -2542,19 +2547,24 @@ def integration_setup(provider):
                 instance_url = request.form.get("gitlab_instance_url", "").strip()
                 if instance_url:
                     settings.gitlab_instance_url = instance_url
-        
+
         if safe_commit("update_integration_credentials", {"provider": provider}):
             flash(_("Integration credentials updated successfully."), "success")
             # For Google Calendar, provide option to test connection
             if provider == "google_calendar":
-                flash(_("Users can now connect their Google Calendar. They will be automatically redirected to Google for authorization."), "info")
+                flash(
+                    _(
+                        "Users can now connect their Google Calendar. They will be automatically redirected to Google for authorization."
+                    ),
+                    "info",
+                )
             return redirect(url_for("admin.integration_setup", provider=provider))
         else:
             flash(_("Failed to update credentials."), "error")
-    
+
     # Get current credentials
     current_creds = settings.get_integration_credentials(provider)
-    
+
     return render_template(
         "admin/integrations/setup.html",
         provider=provider,

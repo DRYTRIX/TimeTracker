@@ -28,9 +28,10 @@ def dashboard():
 
     # Use caching for dashboard data (5 minute TTL)
     from app.utils.cache import get_cache, cached
+
     cache = get_cache()
     cache_key = f"dashboard:{current_user.id}"
-    
+
     # Try to get from cache
     cached_data = cache.get(cache_key)
     if cached_data:
@@ -41,11 +42,13 @@ def dashboard():
 
     # Get recent entries for the user (using repository to avoid N+1)
     from app.repositories import TimeEntryRepository
+
     time_entry_repo = TimeEntryRepository()
     recent_entries = time_entry_repo.get_by_user(user_id=current_user.id, limit=10, include_relations=True)
 
     # Get active projects for timer dropdown (using repository)
     from app.repositories import ProjectRepository, ClientRepository
+
     project_repo = ProjectRepository()
     client_repo = ClientRepository()
     active_projects = project_repo.get_active_projects()
@@ -53,22 +56,22 @@ def dashboard():
 
     # Get user statistics using analytics service
     from app.services import AnalyticsService
+
     analytics_service = AnalyticsService()
     stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
-    
+
     today_hours = stats["time_tracking"]["today_hours"]
     week_hours = stats["time_tracking"]["week_hours"]
     month_hours = stats["time_tracking"]["month_hours"]
 
     # Build Top Projects (last 30 days) - using optimized query with eager loading
     from sqlalchemy.orm import joinedload
+
     period_start = datetime.utcnow().date() - timedelta(days=30)
     entries_30 = (
         TimeEntry.query.options(joinedload(TimeEntry.project))  # Eager load projects to avoid N+1
         .filter(
-            TimeEntry.end_time.isnot(None),
-            TimeEntry.start_time >= period_start,
-            TimeEntry.user_id == current_user.id
+            TimeEntry.end_time.isnot(None), TimeEntry.start_time >= period_start, TimeEntry.user_id == current_user.id
         )
         .all()
     )
@@ -90,11 +93,9 @@ def dashboard():
     # Get user's time entry templates (most recently used first)
     from sqlalchemy import desc
     from sqlalchemy.orm import joinedload
+
     templates = (
-        TimeEntryTemplate.query.options(
-            joinedload(TimeEntryTemplate.project),
-            joinedload(TimeEntryTemplate.task)
-        )
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.project), joinedload(TimeEntryTemplate.task))
         .filter_by(user_id=current_user.id)
         .order_by(desc(TimeEntryTemplate.last_used_at))
         .limit(5)
@@ -118,10 +119,10 @@ def dashboard():
         "templates": templates,
         "recent_activities": recent_activities,
     }
-    
+
     # Cache for 5 minutes
     cache.set(cache_key, template_data, ttl=300)
-    
+
     return render_template("main/dashboard.html", **template_data)
 
 

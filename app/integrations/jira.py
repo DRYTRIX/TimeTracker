@@ -157,31 +157,30 @@ class JiraConnector(BaseConnector):
 
         base_url = self.integration.config.get("jira_url", "https://your-domain.atlassian.net")
         api_url = f"{base_url}/rest/api/3/search"
-        
+
         synced_count = 0
         errors = []
 
         try:
             # Get JQL query from config or use default
-            jql = self.integration.config.get("jql", "assignee = currentUser() AND status != Done ORDER BY updated DESC")
-            
+            jql = self.integration.config.get(
+                "jql", "assignee = currentUser() AND status != Done ORDER BY updated DESC"
+            )
+
             # Determine date range
             if sync_type == "incremental":
                 # Get issues updated in last 7 days
                 jql = f"{jql} AND updated >= -7d"
-            
+
             # Fetch issues from Jira
             response = requests.get(
                 api_url,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Accept": "application/json"
-                },
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
                 params={
                     "jql": jql,
                     "maxResults": 100,
-                    "fields": "summary,description,status,assignee,project,created,updated"
-                }
+                    "fields": "summary,description,status,assignee,project,created,updated",
+                },
             )
 
             if response.status_code != 200:
@@ -194,28 +193,24 @@ class JiraConnector(BaseConnector):
                     issue_key = issue.get("key")
                     issue_fields = issue.get("fields", {})
                     project_key = issue.get("fields", {}).get("project", {}).get("key", "")
-                    
+
                     # Find or create project
                     project = Project.query.filter_by(
-                        user_id=self.integration.user_id,
-                        name=project_key or "Jira"
+                        user_id=self.integration.user_id, name=project_key or "Jira"
                     ).first()
-                    
+
                     if not project:
                         project = Project(
                             name=project_key or "Jira",
                             description=f"Synced from Jira project {project_key}",
                             user_id=self.integration.user_id,
-                            status="active"
+                            status="active",
                         )
                         db.session.add(project)
                         db.session.flush()
 
                     # Find or create task
-                    task = Task.query.filter_by(
-                        project_id=project.id,
-                        name=issue_key
-                    ).first()
+                    task = Task.query.filter_by(project_id=project.id, name=issue_key).first()
 
                     if not task:
                         task = Task(
@@ -223,16 +218,23 @@ class JiraConnector(BaseConnector):
                             name=issue_key,
                             description=issue_fields.get("summary", ""),
                             status=self._map_jira_status(issue_fields.get("status", {}).get("name", "To Do")),
-                            notes=issue_fields.get("description", {}).get("content", [{}])[0].get("content", [{}])[0].get("text", "") if issue_fields.get("description") else None
+                            notes=(
+                                issue_fields.get("description", {})
+                                .get("content", [{}])[0]
+                                .get("content", [{}])[0]
+                                .get("text", "")
+                                if issue_fields.get("description")
+                                else None
+                            ),
                         )
                         db.session.add(task)
                         db.session.flush()
 
                     # Store Jira issue key in task metadata
-                    if not hasattr(task, 'metadata') or not task.metadata:
+                    if not hasattr(task, "metadata") or not task.metadata:
                         task.metadata = {}
-                    task.metadata['jira_issue_key'] = issue_key
-                    task.metadata['jira_issue_id'] = issue.get("id")
+                    task.metadata["jira_issue_key"] = issue_key
+                    task.metadata["jira_issue_id"] = issue.get("id")
 
                     synced_count += 1
                 except Exception as e:
@@ -244,7 +246,7 @@ class JiraConnector(BaseConnector):
                 "success": True,
                 "message": f"Sync completed. Synced {synced_count} issues.",
                 "synced_items": synced_count,
-                "errors": errors
+                "errors": errors,
             }
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
@@ -273,11 +275,7 @@ class JiraConnector(BaseConnector):
             if event_type in ["jira:issue_updated", "jira:issue_created"]:
                 # Trigger a sync for this specific issue
                 # This would be handled by the sync_data method
-                return {
-                    "success": True,
-                    "message": f"Webhook received for issue {issue_key}",
-                    "event_type": event_type
-                }
+                return {"success": True, "message": f"Webhook received for issue {issue_key}", "event_type": event_type}
 
             return {"success": True, "message": f"Webhook processed: {event_type}"}
         except Exception as e:
@@ -300,15 +298,15 @@ class JiraConnector(BaseConnector):
                     "type": "text",
                     "required": False,
                     "placeholder": "assignee = currentUser() AND status != Done",
-                    "help": "Jira Query Language query to filter issues to sync"
+                    "help": "Jira Query Language query to filter issues to sync",
                 },
                 {
                     "name": "auto_sync",
                     "type": "boolean",
                     "label": "Auto Sync",
                     "default": True,
-                    "description": "Automatically sync when webhooks are received"
-                }
+                    "description": "Automatically sync when webhooks are received",
+                },
             ],
             "required": ["jira_url"],
         }

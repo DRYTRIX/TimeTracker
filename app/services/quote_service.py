@@ -126,7 +126,9 @@ class QuoteService:
             ],
         }
 
-    def get_quote_with_details(self, quote_id: int, user_id: Optional[int] = None, is_admin: bool = False) -> Optional[Quote]:
+    def get_quote_with_details(
+        self, quote_id: int, user_id: Optional[int] = None, is_admin: bool = False
+    ) -> Optional[Quote]:
         """
         Get quote with all related data using eager loading.
 
@@ -244,4 +246,3 @@ class QuoteService:
             }
 
         return {"success": True, "message": "Quote updated successfully", "quote": quote}
-

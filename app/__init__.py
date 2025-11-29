@@ -1056,36 +1056,42 @@ def create_app(config=None):
     # Register new feature blueprints (workflows, approvals, chat, etc.)
     try:
         from app.routes.workflows import workflows_bp
+
         app.register_blueprint(workflows_bp)
     except Exception as e:
         logger.warning(f"Could not register workflows blueprint: {e}")
 
     try:
         from app.routes.time_approvals import time_approvals_bp
+
         app.register_blueprint(time_approvals_bp)
     except Exception as e:
         logger.warning(f"Could not register time_approvals blueprint: {e}")
 
     try:
         from app.routes.activity_feed import activity_feed_bp
+
         app.register_blueprint(activity_feed_bp)
     except Exception as e:
         logger.warning(f"Could not register activity_feed blueprint: {e}")
 
     try:
         from app.routes.recurring_tasks import recurring_tasks_bp
+
         app.register_blueprint(recurring_tasks_bp)
     except Exception as e:
         logger.warning(f"Could not register recurring_tasks blueprint: {e}")
 
     try:
         from app.routes.team_chat import team_chat_bp
+
         app.register_blueprint(team_chat_bp)
     except Exception as e:
         logger.warning(f"Could not register team_chat blueprint: {e}")
 
     try:
         from app.routes.client_portal_customization import client_portal_customization_bp
+
         app.register_blueprint(client_portal_customization_bp)
     except Exception as e:
         logger.warning(f"Could not register client_portal_customization blueprint: {e}")
@@ -1209,14 +1215,15 @@ def create_app(config=None):
             admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
             if not User.query.filter_by(username=admin_username).first():
                 from app.models import Role
+
                 admin_user = User(username=admin_username, role="admin")
                 admin_user.is_active = True
-                
+
                 # Assign admin role from the new Role system
                 admin_role = Role.query.filter_by(name="admin").first()
                 if admin_role:
                     admin_user.roles.append(admin_role)
-                
+
                 db.session.add(admin_user)
                 db.session.commit()
                 print(f"Created default admin user: {admin_username}")
@@ -1371,14 +1378,15 @@ def init_database(app):
             admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
             if not User.query.filter_by(username=admin_username).first():
                 from app.models import Role
+
                 admin_user = User(username=admin_username, role="admin")
                 admin_user.is_active = True
-                
+
                 # Assign admin role from the new Role system
                 admin_role = Role.query.filter_by(name="admin").first()
                 if admin_role:
                     admin_user.roles.append(admin_role)
-                
+
                 db.session.add(admin_user)
                 db.session.commit()
                 print(f"Created default admin user: {admin_username}")

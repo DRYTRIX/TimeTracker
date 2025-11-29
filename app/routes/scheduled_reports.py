@@ -18,30 +18,33 @@ def api_list_scheduled():
     from sqlalchemy.orm import joinedload
     from app.models import ReportEmailSchedule
     from app import db
-    
+
     # Query with eager loading
-    query = db.session.query(ReportEmailSchedule).options(
-        joinedload(ReportEmailSchedule.saved_view)
-    )
-    
+    query = db.session.query(ReportEmailSchedule).options(joinedload(ReportEmailSchedule.saved_view))
+
     if not current_user.is_admin:
         query = query.filter_by(created_by=current_user.id)
-    
+
     schedules = query.order_by(ReportEmailSchedule.next_run_at.asc()).all()
-    
-    return jsonify({
-        "schedules": [{
-            "id": s.id,
-            "saved_view_id": s.saved_view_id,
-            "saved_view_name": s.saved_view.name if s.saved_view else "Unknown",
-            "recipients": s.recipients,
-            "cadence": s.cadence,
-            "next_run_at": s.next_run_at.isoformat() if s.next_run_at else None,
-            "last_run_at": s.last_run_at.isoformat() if s.last_run_at else None,
-            "active": s.active,
-            "created_at": s.created_at.isoformat() if s.created_at else None,
-        } for s in schedules]
-    })
+
+    return jsonify(
+        {
+            "schedules": [
+                {
+                    "id": s.id,
+                    "saved_view_id": s.saved_view_id,
+                    "saved_view_name": s.saved_view.name if s.saved_view else "Unknown",
+                    "recipients": s.recipients,
+                    "cadence": s.cadence,
+                    "next_run_at": s.next_run_at.isoformat() if s.next_run_at else None,
+                    "last_run_at": s.last_run_at.isoformat() if s.last_run_at else None,
+                    "active": s.active,
+                    "created_at": s.created_at.isoformat() if s.created_at else None,
+                }
+                for s in schedules
+            ]
+        }
+    )
 
 
 @scheduled_reports_bp.route("/reports/scheduled")
@@ -111,16 +114,16 @@ def api_create_scheduled():
     """Create scheduled report via API"""
     service = ScheduledReportService()
     data = request.get_json()
-    
+
     saved_view_id = data.get("saved_view_id", type=int)
     recipients = data.get("recipients", "").strip()
     cadence = data.get("cadence", "").strip()
     cron = data.get("cron", "").strip() or None
     timezone = data.get("timezone", "").strip() or None
-    
+
     if not saved_view_id or not recipients or not cadence:
         return jsonify({"success": False, "error": _("Please fill in all required fields.")}), 400
-    
+
     result = service.create_schedule(
         saved_view_id=saved_view_id,
         recipients=recipients,
@@ -129,18 +132,24 @@ def api_create_scheduled():
         cron=cron,
         timezone=timezone,
     )
-    
+
     if result["success"]:
-        return jsonify({
-            "success": True,
-            "schedule": {
-                "id": result["schedule"].id,
-                "saved_view_name": result["schedule"].saved_view.name if result["schedule"].saved_view else "Unknown",
-                "recipients": result["schedule"].recipients,
-                "cadence": result["schedule"].cadence,
-                "next_run_at": result["schedule"].next_run_at.isoformat() if result["schedule"].next_run_at else None,
+        return jsonify(
+            {
+                "success": True,
+                "schedule": {
+                    "id": result["schedule"].id,
+                    "saved_view_name": (
+                        result["schedule"].saved_view.name if result["schedule"].saved_view else "Unknown"
+                    ),
+                    "recipients": result["schedule"].recipients,
+                    "cadence": result["schedule"].cadence,
+                    "next_run_at": (
+                        result["schedule"].next_run_at.isoformat() if result["schedule"].next_run_at else None
+                    ),
+                },
             }
-        })
+        )
     else:
         return jsonify({"success": False, "error": result["message"]}), 400
 
@@ -150,14 +159,15 @@ def api_create_scheduled():
 def api_toggle_scheduled(schedule_id):
     """Toggle active status of scheduled report"""
     from app import db
+
     schedule = ReportEmailSchedule.query.get_or_404(schedule_id)
-    
+
     if schedule.created_by != current_user.id and not current_user.is_admin:
         return jsonify({"success": False, "error": _("Permission denied")}), 403
-    
+
     schedule.active = not schedule.active
     db.session.commit()
-    
+
     return jsonify({"success": True, "active": schedule.active})
 
 
@@ -167,7 +177,7 @@ def api_delete_scheduled(schedule_id):
     """Delete scheduled report via API"""
     service = ScheduledReportService()
     result = service.delete_schedule(schedule_id, current_user.id)
-    
+
     if result["success"]:
         return jsonify({"success": True})
     else:
@@ -179,13 +189,18 @@ def api_delete_scheduled(schedule_id):
 def api_saved_views():
     """Get saved report views for current user"""
     saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).all()
-    return jsonify({
-        "saved_views": [{
-            "id": sv.id,
-            "name": sv.name,
-            "scope": sv.scope,
-        } for sv in saved_views]
-    })
+    return jsonify(
+        {
+            "saved_views": [
+                {
+                    "id": sv.id,
+                    "name": sv.name,
+                    "scope": sv.scope,
+                }
+                for sv in saved_views
+            ]
+        }
+    )
 
 
 @scheduled_reports_bp.route("/api/reports/scheduled", methods=["POST"])
@@ -194,16 +209,16 @@ def api_create_scheduled():
     """Create scheduled report via API"""
     service = ScheduledReportService()
     data = request.get_json()
-    
+
     saved_view_id = data.get("saved_view_id", type=int)
     recipients = data.get("recipients", "").strip()
     cadence = data.get("cadence", "").strip()
     cron = data.get("cron", "").strip() or None
     timezone = data.get("timezone", "").strip() or None
-    
+
     if not saved_view_id or not recipients or not cadence:
         return jsonify({"success": False, "error": _("Please fill in all required fields.")}), 400
-    
+
     result = service.create_schedule(
         saved_view_id=saved_view_id,
         recipients=recipients,
@@ -212,18 +227,24 @@ def api_create_scheduled():
         cron=cron,
         timezone=timezone,
     )
-    
+
     if result["success"]:
-        return jsonify({
-            "success": True,
-            "schedule": {
-                "id": result["schedule"].id,
-                "saved_view_name": result["schedule"].saved_view.name if result["schedule"].saved_view else "Unknown",
-                "recipients": result["schedule"].recipients,
-                "cadence": result["schedule"].cadence,
-                "next_run_at": result["schedule"].next_run_at.isoformat() if result["schedule"].next_run_at else None,
+        return jsonify(
+            {
+                "success": True,
+                "schedule": {
+                    "id": result["schedule"].id,
+                    "saved_view_name": (
+                        result["schedule"].saved_view.name if result["schedule"].saved_view else "Unknown"
+                    ),
+                    "recipients": result["schedule"].recipients,
+                    "cadence": result["schedule"].cadence,
+                    "next_run_at": (
+                        result["schedule"].next_run_at.isoformat() if result["schedule"].next_run_at else None
+                    ),
+                },
             }
-        })
+        )
     else:
         return jsonify({"success": False, "error": result["message"]}), 400
 
@@ -233,14 +254,15 @@ def api_create_scheduled():
 def api_toggle_scheduled(schedule_id):
     """Toggle active status of scheduled report"""
     from app import db
+
     schedule = ReportEmailSchedule.query.get_or_404(schedule_id)
-    
+
     if schedule.created_by != current_user.id and not current_user.is_admin:
         return jsonify({"success": False, "error": _("Permission denied")}), 403
-    
+
     schedule.active = not schedule.active
     db.session.commit()
-    
+
     return jsonify({"success": True, "active": schedule.active})
 
 
@@ -250,7 +272,7 @@ def api_delete_scheduled(schedule_id):
     """Delete scheduled report via API"""
     service = ScheduledReportService()
     result = service.delete_schedule(schedule_id, current_user.id)
-    
+
     if result["success"]:
         return jsonify({"success": True})
     else:
@@ -262,10 +284,15 @@ def api_delete_scheduled(schedule_id):
 def api_saved_views():
     """Get saved report views for current user"""
     saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).all()
-    return jsonify({
-        "saved_views": [{
-            "id": sv.id,
-            "name": sv.name,
-            "scope": sv.scope,
-        } for sv in saved_views]
-    })
+    return jsonify(
+        {
+            "saved_views": [
+                {
+                    "id": sv.id,
+                    "name": sv.name,
+                    "scope": sv.scope,
+                }
+                for sv in saved_views
+            ]
+        }
+    )

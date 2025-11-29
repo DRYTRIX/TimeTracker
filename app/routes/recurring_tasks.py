@@ -20,9 +20,9 @@ def list_recurring_tasks():
     if current_user.is_admin:
         recurring_tasks = RecurringTask.query.order_by(RecurringTask.next_run_date.asc()).all()
     else:
-        recurring_tasks = RecurringTask.query.filter_by(created_by=current_user.id).order_by(
-            RecurringTask.next_run_date.asc()
-        ).all()
+        recurring_tasks = (
+            RecurringTask.query.filter_by(created_by=current_user.id).order_by(RecurringTask.next_run_date.asc()).all()
+        )
 
     return render_template("recurring_tasks/list.html", recurring_tasks=recurring_tasks)
 
@@ -47,7 +47,7 @@ def create_recurring_task():
             priority=data.get("priority", "medium"),
             estimated_hours=float(data.get("estimated_hours")) if data.get("estimated_hours") else None,
             assigned_to=int(data.get("assigned_to")) if data.get("assigned_to") else None,
-            auto_assign=bool(data.get("auto_assign", False))
+            auto_assign=bool(data.get("auto_assign", False)),
         )
 
         db.session.add(recurring_task)
@@ -61,7 +61,7 @@ def create_recurring_task():
 
     # GET - Show form
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
-    
+
     return render_template("recurring_tasks/create.html", projects=projects)
 
 
@@ -91,4 +91,3 @@ def toggle_recurring_task(task_id):
     db.session.commit()
 
     return jsonify({"success": True, "is_active": recurring_task.is_active})
-

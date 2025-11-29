@@ -105,18 +105,14 @@ def test_pdf_layout_page_accessible_to_admin(admin_authenticated_client):
 def test_pdf_layout_save_custom_template(admin_authenticated_client, app):
     """Test saving custom PDF layout templates."""
     from app.models import InvoicePDFTemplate
-    
+
     custom_html = '<div class="custom-invoice"><h1>{{ invoice.invoice_number }}</h1></div>'
     custom_css = ".custom-invoice { color: red; }"
 
     # Save custom template (A4 is default)
     response = admin_authenticated_client.post(
         "/admin/pdf-layout",
-        data={
-            "invoice_pdf_template_html": custom_html,
-            "invoice_pdf_template_css": custom_css,
-            "page_size": "A4"
-        },
+        data={"invoice_pdf_template_html": custom_html, "invoice_pdf_template_css": custom_css, "page_size": "A4"},
         follow_redirects=True,
     )
 
@@ -127,7 +123,7 @@ def test_pdf_layout_save_custom_template(admin_authenticated_client, app):
         settings = Settings.get_settings()
         assert settings.invoice_pdf_template_html == custom_html
         assert settings.invoice_pdf_template_css == custom_css
-        
+
         # Also check InvoicePDFTemplate
         template = InvoicePDFTemplate.get_template("A4")
         assert template.template_html == custom_html

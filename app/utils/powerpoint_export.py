@@ -13,6 +13,7 @@ try:
     from pptx.util import Inches, Pt
     from pptx.enum.text import PP_ALIGN
     from pptx.dml.color import RGBColor
+
     PPTX_AVAILABLE = True
 except ImportError:
     PPTX_AVAILABLE = False
@@ -34,14 +35,12 @@ def create_report_powerpoint(entries, title="TimeTracker Report", filename_prefi
 
     Returns:
         tuple: (BytesIO object with PPTX file, filename)
-    
+
     Raises:
         ImportError: If python-pptx is not installed
     """
     if not PPTX_AVAILABLE:
-        raise ImportError(
-            "PowerPoint export requires python-pptx. Install it with: pip install python-pptx"
-        )
+        raise ImportError("PowerPoint export requires python-pptx. Install it with: pip install python-pptx")
     prs = Presentation()
     prs.slide_width = Inches(10)
     prs.slide_height = Inches(7.5)
@@ -64,14 +63,14 @@ def create_report_powerpoint(entries, title="TimeTracker Report", filename_prefi
     # Calculate summary
     total_hours = sum(entry.duration_hours for entry in entries if entry.end_time)
     billable_hours = sum(entry.duration_hours for entry in entries if entry.billable and entry.end_time)
-    
+
     projects_count = len(set(entry.project_id for entry in entries))
     users_count = len(set(entry.user_id for entry in entries))
 
     content = slide.placeholders[1]
     tf = content.text_frame
     tf.text = f"Total Hours: {total_hours:.2f}"
-    
+
     p = tf.add_paragraph()
     p.text = f"Billable Hours: {billable_hours:.2f}"
     p.level = 0
@@ -137,7 +136,7 @@ def create_report_powerpoint(entries, title="TimeTracker Report", filename_prefi
             entry.project.name if entry.project else "N/A",
             entry.start_time.strftime("%Y-%m-%d") if entry.start_time else "",
             f"{entry.duration_hours:.2f}" if entry.end_time else "In Progress",
-            (entry.notes or "")[:50]  # Truncate long notes
+            (entry.notes or "")[:50],  # Truncate long notes
         ]
 
         for col_idx, value in enumerate(data):
@@ -151,7 +150,7 @@ def create_report_powerpoint(entries, title="TimeTracker Report", filename_prefi
     if len(entries) > 20:
         for i in range(20, len(entries), 20):
             slide = prs.slides.add_slide(blank_slide_layout)
-            
+
             # Add title
             txBox = slide.shapes.add_textbox(left, top - Inches(1), width, height)
             tf = txBox.text_frame
@@ -160,9 +159,9 @@ def create_report_powerpoint(entries, title="TimeTracker Report", filename_prefi
             tf.paragraphs[0].font.bold = True
 
             # Create table for this batch
-            batch_entries = entries[i:i+20]
+            batch_entries = entries[i : i + 20]
             rows = len(batch_entries) + 1
-            
+
             table = slide.shapes.add_table(rows, cols, left, top, width, height).table
 
             # Set column widths
@@ -187,7 +186,7 @@ def create_report_powerpoint(entries, title="TimeTracker Report", filename_prefi
                     entry.project.name if entry.project else "N/A",
                     entry.start_time.strftime("%Y-%m-%d") if entry.start_time else "",
                     f"{entry.duration_hours:.2f}" if entry.end_time else "In Progress",
-                    (entry.notes or "")[:50]
+                    (entry.notes or "")[:50],
                 ]
 
                 for col_idx, value in enumerate(data):
@@ -205,4 +204,3 @@ def create_report_powerpoint(entries, title="TimeTracker Report", filename_prefi
     filename = f"{filename_prefix}_{datetime.now().strftime('%Y%m%d')}.pptx"
 
     return output, filename
-

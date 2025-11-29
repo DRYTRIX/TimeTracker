@@ -18,15 +18,15 @@ class Badge(db.Model):
     description = db.Column(db.Text, nullable=True)
     icon = db.Column(db.String(100), nullable=True)  # Icon class or URL
     badge_type = db.Column(db.String(50), nullable=False)  # 'achievement', 'milestone', 'streak', 'special'
-    
+
     # Criteria (JSON) - conditions to earn badge
     criteria = db.Column(db.JSON, nullable=False)
-    
+
     # Metadata
     points = db.Column(db.Integer, default=0, nullable=False)
     rarity = db.Column(db.String(20), default="common", nullable=False)  # 'common', 'rare', 'epic', 'legendary'
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -55,7 +55,7 @@ class UserBadge(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     badge_id = db.Column(db.Integer, db.ForeignKey("badges.id"), nullable=False, index=True)
-    
+
     # Achievement metadata
     earned_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     progress = db.Column(db.Integer, default=100, nullable=False)  # Progress percentage
@@ -95,22 +95,24 @@ class Leaderboard(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    
+
     # Leaderboard type
-    leaderboard_type = db.Column(db.String(50), nullable=False)  # 'time_tracked', 'tasks_completed', 'projects_completed', 'streak', 'points'
-    
+    leaderboard_type = db.Column(
+        db.String(50), nullable=False
+    )  # 'time_tracked', 'tasks_completed', 'projects_completed', 'streak', 'points'
+
     # Time period
     period = db.Column(db.String(20), default="all_time", nullable=False)  # 'daily', 'weekly', 'monthly', 'all_time'
-    
+
     # Scope
     scope = db.Column(db.String(50), nullable=True)  # 'global', 'team', 'project_{id}'
-    
+
     # Configuration
     config = db.Column(db.JSON, nullable=True)  # Additional configuration
-    
+
     # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -138,18 +140,18 @@ class LeaderboardEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     leaderboard_id = db.Column(db.Integer, db.ForeignKey("leaderboards.id"), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    
+
     # Ranking data
     rank = db.Column(db.Integer, nullable=False)
     score = db.Column(db.Numeric(10, 2), nullable=False)
-    
+
     # Period tracking
     period_start = db.Column(db.DateTime, nullable=False, index=True)
     period_end = db.Column(db.DateTime, nullable=False)
-    
+
     # Metadata
     entry_metadata = db.Column(db.JSON, nullable=True)
-    
+
     calculated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
@@ -174,10 +176,9 @@ class LeaderboardEntry(db.Model):
             "score": float(self.score),
             "period_start": self.period_start.isoformat() if self.period_start else None,
             "period_end": self.period_end.isoformat() if self.period_end else None,
-            "user": {
-                "id": self.user.id,
-                "username": self.user.username,
-                "display_name": self.user.display_name
-            } if self.user else None,
+            "user": (
+                {"id": self.user.id, "username": self.user.username, "display_name": self.user.display_name}
+                if self.user
+                else None
+            ),
         }
-

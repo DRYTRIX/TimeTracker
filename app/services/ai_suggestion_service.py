@@ -16,12 +16,7 @@ logger = logging.getLogger(__name__)
 class AISuggestionService:
     """Service for AI-powered time entry suggestions"""
 
-    def get_time_entry_suggestions(
-        self,
-        user_id: int,
-        context: str = None,
-        limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    def get_time_entry_suggestions(self, user_id: int, context: str = None, limit: int = 5) -> List[Dict[str, Any]]:
         """Get AI-powered suggestions for time entries"""
         suggestions = []
 
@@ -53,11 +48,14 @@ class AISuggestionService:
 
         # Get recent entries (last 30 days)
         cutoff = datetime.utcnow() - timedelta(days=30)
-        recent_entries = TimeEntry.query.filter(
-            TimeEntry.user_id == user_id,
-            TimeEntry.start_time >= cutoff,
-            TimeEntry.end_time.isnot(None)
-        ).order_by(TimeEntry.start_time.desc()).limit(100).all()
+        recent_entries = (
+            TimeEntry.query.filter(
+                TimeEntry.user_id == user_id, TimeEntry.start_time >= cutoff, TimeEntry.end_time.isnot(None)
+            )
+            .order_by(TimeEntry.start_time.desc())
+            .limit(100)
+            .all()
+        )
 
         if not recent_entries:
             return suggestions
@@ -70,22 +68,24 @@ class AISuggestionService:
 
         # Suggest top patterns
         sorted_patterns = sorted(project_task_counts.items(), key=lambda x: x[1], reverse=True)
-        
+
         for (project_id, task_id), count in sorted_patterns[:3]:
             project = Project.query.get(project_id)
             task = Task.query.get(task_id) if task_id else None
 
             if project:
-                suggestions.append({
-                    "type": "pattern",
-                    "confidence": min(count / 10.0, 1.0),  # Normalize to 0-1
-                    "project_id": project_id,
-                    "project_name": project.name,
-                    "task_id": task_id,
-                    "task_name": task.name if task else None,
-                    "reason": f"You've logged time here {count} times recently",
-                    "suggested_duration": self._estimate_duration(recent_entries, project_id, task_id)
-                })
+                suggestions.append(
+                    {
+                        "type": "pattern",
+                        "confidence": min(count / 10.0, 1.0),  # Normalize to 0-1
+                        "project_id": project_id,
+                        "project_name": project.name,
+                        "task_id": task_id,
+                        "task_name": task.name if task else None,
+                        "reason": f"You've logged time here {count} times recently",
+                        "suggested_duration": self._estimate_duration(recent_entries, project_id, task_id),
+                    }
+                )
 
         return suggestions
 
@@ -94,32 +94,34 @@ class AISuggestionService:
         suggestions = []
 
         # Get active tasks assigned to user
-        active_tasks = Task.query.filter(
-            Task.assigned_to == user_id,
-            Task.status.in_(["todo", "in_progress"])
-        ).order_by(Task.priority.desc(), Task.created_at.desc()).limit(5).all()
+        active_tasks = (
+            Task.query.filter(Task.assigned_to == user_id, Task.status.in_(["todo", "in_progress"]))
+            .order_by(Task.priority.desc(), Task.created_at.desc())
+            .limit(5)
+            .all()
+        )
 
         for task in active_tasks:
             # Check if already logged today
             today = datetime.utcnow().date()
             today_entry = TimeEntry.query.filter(
-                TimeEntry.user_id == user_id,
-                TimeEntry.task_id == task.id,
-                func.date(TimeEntry.start_time) == today
+                TimeEntry.user_id == user_id, TimeEntry.task_id == task.id, func.date(TimeEntry.start_time) == today
             ).first()
 
             if not today_entry:
-                suggestions.append({
-                    "type": "active_task",
-                    "confidence": 0.8,
-                    "project_id": task.project_id,
-                    "project_name": task.project.name if task.project else None,
-                    "task_id": task.id,
-                    "task_name": task.name,
-                    "reason": f"Active task: {task.name}",
-                    "priority": task.priority,
-                    "suggested_duration": task.estimated_hours or 2.0
-                })
+                suggestions.append(
+                    {
+                        "type": "active_task",
+                        "confidence": 0.8,
+                        "project_id": task.project_id,
+                        "project_name": task.project.name if task.project else None,
+                        "task_id": task.id,
+                        "task_name": task.name,
+                        "reason": f"Active task: {task.name}",
+                        "priority": task.priority,
+                        "suggested_duration": task.estimated_hours or 2.0,
+                    }
+                )
 
         return suggestions
 
@@ -132,7 +134,7 @@ class AISuggestionService:
         recent_entries = TimeEntry.query.filter(
             TimeEntry.user_id == user_id,
             TimeEntry.start_time >= datetime.utcnow() - timedelta(days=30),
-            TimeEntry.end_time.isnot(None)
+            TimeEntry.end_time.isnot(None),
         ).all()
 
         if not recent_entries:
@@ -140,7 +142,7 @@ class AISuggestionService:
 
         # Find most common project for this hour
         hour_entries = [e for e in recent_entries if e.start_time.hour == current_hour]
-        
+
         if hour_entries:
             project_counts = {}
             for entry in hour_entries:
@@ -151,15 +153,17 @@ class AISuggestionService:
                 project = Project.query.get(most_common_project_id)
 
                 if project:
-                    suggestions.append({
-                        "type": "time_pattern",
-                        "confidence": 0.6,
-                        "project_id": project.id,
-                        "project_name": project.name,
-                        "task_id": None,
-                        "reason": f"You usually work on {project.name} around this time",
-                        "suggested_duration": 2.0
-                    })
+                    suggestions.append(
+                        {
+                            "type": "time_pattern",
+                            "confidence": 0.6,
+                            "project_id": project.id,
+                            "project_name": project.name,
+                            "task_id": None,
+                            "reason": f"You usually work on {project.name} around this time",
+                            "suggested_duration": 2.0,
+                        }
+                    )
 
         return suggestions
 
@@ -169,35 +173,41 @@ class AISuggestionService:
 
         # Get tasks with upcoming deadlines
         upcoming_deadline = datetime.utcnow() + timedelta(days=7)
-        urgent_tasks = Task.query.filter(
-            Task.assigned_to == user_id,
-            Task.status.in_(["todo", "in_progress"]),
-            Task.due_date.isnot(None),
-            Task.due_date <= upcoming_deadline
-        ).order_by(Task.due_date.asc()).limit(3).all()
+        urgent_tasks = (
+            Task.query.filter(
+                Task.assigned_to == user_id,
+                Task.status.in_(["todo", "in_progress"]),
+                Task.due_date.isnot(None),
+                Task.due_date <= upcoming_deadline,
+            )
+            .order_by(Task.due_date.asc())
+            .limit(3)
+            .all()
+        )
 
         for task in urgent_tasks:
             days_until_deadline = (task.due_date.date() - datetime.utcnow().date()).days
-            
-            suggestions.append({
-                "type": "deadline",
-                "confidence": 0.9 if days_until_deadline <= 2 else 0.7,
-                "project_id": task.project_id,
-                "project_name": task.project.name if task.project else None,
-                "task_id": task.id,
-                "task_name": task.name,
-                "reason": f"Deadline in {days_until_deadline} days",
-                "urgency": "high" if days_until_deadline <= 2 else "medium",
-                "suggested_duration": task.estimated_hours or 4.0
-            })
+
+            suggestions.append(
+                {
+                    "type": "deadline",
+                    "confidence": 0.9 if days_until_deadline <= 2 else 0.7,
+                    "project_id": task.project_id,
+                    "project_name": task.project.name if task.project else None,
+                    "task_id": task.id,
+                    "task_name": task.name,
+                    "reason": f"Deadline in {days_until_deadline} days",
+                    "urgency": "high" if days_until_deadline <= 2 else "medium",
+                    "suggested_duration": task.estimated_hours or 4.0,
+                }
+            )
 
         return suggestions
 
     def _estimate_duration(self, entries: List[TimeEntry], project_id: int, task_id: int = None) -> float:
         """Estimate duration based on historical data"""
         relevant_entries = [
-            e for e in entries
-            if e.project_id == project_id and (task_id is None or e.task_id == task_id)
+            e for e in entries if e.project_id == project_id and (task_id is None or e.task_id == task_id)
         ]
 
         if not relevant_entries:
@@ -225,18 +235,13 @@ class AISuggestionService:
     def _rank_suggestions(self, suggestions: List[Dict], user_id: int) -> List[Dict]:
         """Rank suggestions by relevance"""
         # Sort by confidence, then by type priority
-        type_priority = {
-            "deadline": 4,
-            "active_task": 3,
-            "pattern": 2,
-            "time_pattern": 1
-        }
+        type_priority = {"deadline": 4, "active_task": 3, "pattern": 2, "time_pattern": 1}
 
         def rank_key(s):
             return (
                 s.get("confidence", 0),
                 type_priority.get(s.get("type", ""), 0),
-                s.get("urgency") == "high" if s.get("urgency") else False
+                s.get("urgency") == "high" if s.get("urgency") else False,
             )
 
         return sorted(suggestions, key=rank_key, reverse=True)
@@ -247,9 +252,7 @@ class AISuggestionService:
         description_lower = description.lower()
 
         # Get user's projects
-        user_projects = Project.query.join(TimeEntry).filter(
-            TimeEntry.user_id == user_id
-        ).distinct().all()
+        user_projects = Project.query.join(TimeEntry).filter(TimeEntry.user_id == user_id).distinct().all()
 
         # Match keywords
         best_match = None
@@ -278,8 +281,7 @@ class AISuggestionService:
                 "project_id": best_match.id,
                 "project_name": best_match.name,
                 "confidence": min(best_score / 5.0, 1.0),
-                "reason": "Keyword match with project name/description"
+                "reason": "Keyword match with project name/description",
             }
 
         return None
-

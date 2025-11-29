@@ -147,8 +147,7 @@ class GitHubConnector(BaseConnector):
         if not repos_str:
             # Get user's repositories
             repos_response = requests.get(
-                "https://api.github.com/user/repos",
-                headers={"Authorization": f"token {token}"}
+                "https://api.github.com/user/repos", headers={"Authorization": f"token {token}"}
             )
             if repos_response.status_code == 200:
                 repos = repos_response.json()
@@ -165,19 +164,16 @@ class GitHubConnector(BaseConnector):
             for repo in repos_list:
                 try:
                     owner, repo_name = repo.split("/")
-                    
+
                     # Find or create project
-                    project = Project.query.filter_by(
-                        user_id=self.integration.user_id,
-                        name=repo
-                    ).first()
-                    
+                    project = Project.query.filter_by(user_id=self.integration.user_id, name=repo).first()
+
                     if not project:
                         project = Project(
                             name=repo,
                             description=f"GitHub repository: {repo}",
                             user_id=self.integration.user_id,
-                            status="active"
+                            status="active",
                         )
                         db.session.add(project)
                         db.session.flush()
@@ -185,14 +181,8 @@ class GitHubConnector(BaseConnector):
                     # Fetch issues
                     issues_response = requests.get(
                         f"https://api.github.com/repos/{repo}/issues",
-                        headers={
-                            "Authorization": f"token {token}",
-                            "Accept": "application/vnd.github.v3+json"
-                        },
-                        params={
-                            "state": "open",
-                            "per_page": 100
-                        }
+                        headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+                        params={"state": "open", "per_page": 100},
                     )
 
                     if issues_response.status_code != 200:
@@ -205,11 +195,10 @@ class GitHubConnector(BaseConnector):
                         try:
                             issue_number = issue.get("number")
                             issue_title = issue.get("title", "")
-                            
+
                             # Find or create task
                             task = Task.query.filter_by(
-                                project_id=project.id,
-                                name=f"#{issue_number}: {issue_title}"
+                                project_id=project.id, name=f"#{issue_number}: {issue_title}"
                             ).first()
 
                             if not task:
@@ -218,18 +207,18 @@ class GitHubConnector(BaseConnector):
                                     name=f"#{issue_number}: {issue_title}",
                                     description=issue.get("body", ""),
                                     status="todo",
-                                    notes=f"GitHub Issue: {issue.get('html_url', '')}"
+                                    notes=f"GitHub Issue: {issue.get('html_url', '')}",
                                 )
                                 db.session.add(task)
                                 db.session.flush()
 
                             # Store GitHub issue info in task metadata
-                            if not hasattr(task, 'metadata') or not task.metadata:
+                            if not hasattr(task, "metadata") or not task.metadata:
                                 task.metadata = {}
-                            task.metadata['github_repo'] = repo
-                            task.metadata['github_issue_number'] = issue_number
-                            task.metadata['github_issue_id'] = issue.get("id")
-                            task.metadata['github_issue_url'] = issue.get("html_url")
+                            task.metadata["github_repo"] = repo
+                            task.metadata["github_issue_number"] = issue_number
+                            task.metadata["github_issue_id"] = issue.get("id")
+                            task.metadata["github_issue_url"] = issue.get("html_url")
 
                             synced_count += 1
                         except Exception as e:
@@ -245,7 +234,7 @@ class GitHubConnector(BaseConnector):
                 "success": True,
                 "message": f"Sync completed. Synced {synced_count} issues.",
                 "synced_items": synced_count,
-                "errors": errors
+                "errors": errors,
             }
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
@@ -270,7 +259,7 @@ class GitHubConnector(BaseConnector):
                 return {
                     "success": True,
                     "message": f"Webhook received for issue #{issue_number} in {repo}",
-                    "event_type": f"{event_type}.{action}"
+                    "event_type": f"{event_type}.{action}",
                 }
             elif event_type == "pull_request":
                 pr = payload.get("pull_request", {})
@@ -280,7 +269,7 @@ class GitHubConnector(BaseConnector):
                 return {
                     "success": True,
                     "message": f"Webhook received for PR #{pr_number} in {repo}",
-                    "event_type": f"{event_type}.{action}"
+                    "event_type": f"{event_type}.{action}",
                 }
 
             return {"success": True, "message": f"Webhook processed: {event_type}"}
@@ -304,8 +293,8 @@ class GitHubConnector(BaseConnector):
                     "type": "boolean",
                     "label": "Auto Sync",
                     "default": True,
-                    "description": "Automatically sync when webhooks are received"
-                }
+                    "description": "Automatically sync when webhooks are received",
+                },
             ],
             "required": [],
         }

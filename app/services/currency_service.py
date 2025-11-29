@@ -43,25 +43,17 @@ class CurrencyService:
             rate_date = date.today()
 
         # Try database first
-        rate = ExchangeRate.query.filter_by(
-            base_code=base_currency,
-            quote_code=quote_currency,
-            date=rate_date
-        ).first()
+        rate = ExchangeRate.query.filter_by(base_code=base_currency, quote_code=quote_currency, date=rate_date).first()
 
         if rate:
             return D(str(rate.rate))
 
         # Try reverse rate
-        rate = ExchangeRate.query.filter_by(
-            base_code=quote_currency,
-            quote_code=base_currency,
-            date=rate_date
-        ).first()
+        rate = ExchangeRate.query.filter_by(base_code=quote_currency, quote_code=base_currency, date=rate_date).first()
 
         if rate:
             # Calculate inverse rate
-            return D('1') / D(str(rate.rate))
+            return D("1") / D(str(rate.rate))
 
         # Fetch from API
         fetched_rate = CurrencyService.fetch_exchange_rate(base_currency, quote_currency, rate_date)
@@ -81,10 +73,7 @@ class CurrencyService:
         try:
             # Try primary API (exchangerate.host)
             url = f"{CurrencyService.EXCHANGE_API_URL}/{rate_date}"
-            params = {
-                "base": base_currency,
-                "symbols": quote_currency
-            }
+            params = {"base": base_currency, "symbols": quote_currency}
 
             response = requests.get(url, params=params, timeout=10)
             if response.status_code == 200:
@@ -118,7 +107,7 @@ class CurrencyService:
                 quote_code=quote_currency,
                 rate=rate,
                 date=rate_date,
-                source="exchangerate.host"
+                source="exchangerate.host",
             )
             db.session.add(exchange_rate)
             db.session.commit()
@@ -153,26 +142,23 @@ class CurrencyService:
     @staticmethod
     def get_historical_rates(base_currency: str, quote_currency: str, start_date: date, end_date: date) -> list:
         """Get historical exchange rates for a date range"""
-        rates = ExchangeRate.query.filter(
-            ExchangeRate.base_code == base_currency,
-            ExchangeRate.quote_code == quote_currency,
-            ExchangeRate.date >= start_date,
-            ExchangeRate.date <= end_date
-        ).order_by(ExchangeRate.date.asc()).all()
+        rates = (
+            ExchangeRate.query.filter(
+                ExchangeRate.base_code == base_currency,
+                ExchangeRate.quote_code == quote_currency,
+                ExchangeRate.date >= start_date,
+                ExchangeRate.date <= end_date,
+            )
+            .order_by(ExchangeRate.date.asc())
+            .all()
+        )
 
-        return [
-            {
-                "date": rate.date.isoformat(),
-                "rate": float(rate.rate),
-                "source": rate.source
-            }
-            for rate in rates
-        ]
+        return [{"date": rate.date.isoformat(), "rate": float(rate.rate), "source": rate.source} for rate in rates]
 
     @staticmethod
     def auto_convert_invoice(invoice) -> Dict[str, Decimal]:
         """Automatically convert invoice amounts to different currencies"""
-        if not hasattr(invoice, 'currency_code') or not invoice.currency_code:
+        if not hasattr(invoice, "currency_code") or not invoice.currency_code:
             return {}
 
         conversions = {}
@@ -188,4 +174,3 @@ class CurrencyService:
                 conversions[currency.code] = converted
 
         return conversions
-

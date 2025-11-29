@@ -19,35 +19,35 @@ class ClientPortalCustomization(db.Model):
     logo_url = db.Column(db.String(500), nullable=True)  # URL to custom logo
     logo_upload_path = db.Column(db.String(500), nullable=True)  # Path to uploaded logo file
     favicon_url = db.Column(db.String(500), nullable=True)
-    
+
     # Colors
     primary_color = db.Column(db.String(7), nullable=True)  # Hex color code
     secondary_color = db.Column(db.String(7), nullable=True)
     accent_color = db.Column(db.String(7), nullable=True)
-    
+
     # Typography
     font_family = db.Column(db.String(100), nullable=True)  # Custom font family
     heading_font = db.Column(db.String(100), nullable=True)
-    
+
     # Custom CSS
     custom_css = db.Column(db.Text, nullable=True)  # Custom CSS rules
     custom_header_html = db.Column(db.Text, nullable=True)  # Custom header HTML
     custom_footer_html = db.Column(db.Text, nullable=True)  # Custom footer HTML
-    
+
     # Portal title and description
     portal_title = db.Column(db.String(200), nullable=True)  # Custom portal title
     portal_description = db.Column(db.Text, nullable=True)
     welcome_message = db.Column(db.Text, nullable=True)
-    
+
     # Features
     show_projects = db.Column(db.Boolean, default=True, nullable=False)
     show_invoices = db.Column(db.Boolean, default=True, nullable=False)
     show_time_entries = db.Column(db.Boolean, default=True, nullable=False)
     show_quotes = db.Column(db.Boolean, default=True, nullable=False)
-    
+
     # Navigation
     custom_navigation_items = db.Column(db.JSON, nullable=True)  # Custom menu items
-    
+
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -97,4 +97,3 @@ class ClientPortalCustomization(db.Model):
         if self.heading_font:
             variables.append(f"--portal-heading-font: {self.heading_font};")
         return "\n".join(variables)
-

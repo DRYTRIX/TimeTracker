@@ -15,11 +15,10 @@ class TestAPIExpensesComplete:
     def api_token(self, app, user):
         """Create an API token for testing"""
         token, plain_token = ApiToken.create_token(
-            user_id=user.id,
-            name="Test API Token",
-            scopes="read:expenses,write:expenses"
+            user_id=user.id, name="Test API Token", scopes="read:expenses,write:expenses"
         )
         from app import db
+
         db.session.add(token)
         db.session.commit()
         return token, plain_token
@@ -29,7 +28,7 @@ class TestAPIExpensesComplete:
         """Create a test client with API token"""
         token, plain_token = api_token
         test_client = app.test_client()
-        test_client.environ_base['HTTP_AUTHORIZATION'] = f'Bearer {plain_token}'
+        test_client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {plain_token}"
         return test_client
 
     def test_list_expenses_with_filters(self, app, client_with_token, user, project, expense):
@@ -67,11 +66,11 @@ class TestAPIExpensesComplete:
                 "payment_date": date.today().isoformat(),
                 "billable": True,
                 "reimbursable": True,
-                "tags": "test,travel"
+                "tags": "test,travel",
             },
-            content_type="application/json"
+            content_type="application/json",
         )
-        
+
         assert response.status_code == 201
         data = response.get_json()
         assert "expense" in data
@@ -82,14 +81,10 @@ class TestAPIExpensesComplete:
         """Test that update_expense uses service layer"""
         response = client_with_token.put(
             f"/api/v1/expenses/{expense.id}",
-            json={
-                "title": "Updated Expense",
-                "amount": 300.00,
-                "status": "approved"
-            },
-            content_type="application/json"
+            json={"title": "Updated Expense", "amount": 300.00, "status": "approved"},
+            content_type="application/json",
         )
-        
+
         assert response.status_code == 200
         data = response.get_json()
         assert "expense" in data
@@ -98,13 +93,14 @@ class TestAPIExpensesComplete:
     def test_delete_expense_uses_service_layer(self, app, client_with_token, expense):
         """Test that delete_expense uses service layer"""
         response = client_with_token.delete(f"/api/v1/expenses/{expense.id}")
-        
+
         assert response.status_code == 200
         data = response.get_json()
         assert "message" in data
-        
+
         # Verify expense was rejected
         from app import db
+
         db.session.refresh(expense)
         assert expense.status == "rejected"
 
@@ -112,7 +108,7 @@ class TestAPIExpensesComplete:
         """Test expense access permissions"""
         from app.models import Expense, ApiToken
         from app import db
-        
+
         # Create expense for another user
         other_user = User.query.filter(User.id != user.id).first()
         if other_user:
@@ -121,24 +117,21 @@ class TestAPIExpensesComplete:
                 title="Other User Expense",
                 category="travel",
                 amount=Decimal("100.00"),
-                expense_date=date.today()
+                expense_date=date.today(),
             )
             db.session.add(expense)
             db.session.commit()
-            
+
             # Create token for first user
             token, plain_token = ApiToken.create_token(
-                user_id=user.id,
-                name="Test Token",
-                scopes="read:expenses,write:expenses"
+                user_id=user.id, name="Test Token", scopes="read:expenses,write:expenses"
             )
             db.session.add(token)
             db.session.commit()
-            
+
             test_client = app.test_client()
-            test_client.environ_base['HTTP_AUTHORIZATION'] = f'Bearer {plain_token}'
-            
+            test_client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {plain_token}"
+
             # Non-admin should not access other user's expense
             response = test_client.get(f"/api/v1/expenses/{expense.id}")
             assert response.status_code == 403
-

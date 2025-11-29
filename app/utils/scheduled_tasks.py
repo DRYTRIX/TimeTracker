@@ -4,7 +4,17 @@ import logging
 from datetime import datetime, timedelta
 from flask import current_app
 from app import db
-from app.models import Invoice, User, TimeEntry, Project, BudgetAlert, RecurringInvoice, Quote, ReportEmailSchedule, Integration
+from app.models import (
+    Invoice,
+    User,
+    TimeEntry,
+    Project,
+    BudgetAlert,
+    RecurringInvoice,
+    Quote,
+    ReportEmailSchedule,
+    Integration,
+)
 from app.utils.email import send_overdue_invoice_notification, send_weekly_summary, send_quote_expired_notification
 from app.utils.budget_forecasting import check_budget_alerts
 from app.services.scheduled_report_service import ScheduledReportService
@@ -595,7 +605,9 @@ def sync_integrations():
                     errors.append(f"{integration.provider}: {result.get('message', 'Unknown error')}")
                     integration.last_sync_status = "error"
                     integration.last_error = result.get("message", "Unknown error")
-                    logger.error(f"Failed to sync integration {integration.id} ({integration.provider}): {result.get('message')}")
+                    logger.error(
+                        f"Failed to sync integration {integration.id} ({integration.provider}): {result.get('message')}"
+                    )
 
                 db.session.commit()
 

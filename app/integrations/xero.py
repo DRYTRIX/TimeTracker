@@ -38,12 +38,7 @@ class XeroConnector(BaseConnector):
         if not client_id:
             raise ValueError("XERO_CLIENT_ID not configured")
 
-        scopes = [
-            "accounting.transactions",
-            "accounting.contacts",
-            "accounting.settings",
-            "offline_access"
-        ]
+        scopes = ["accounting.transactions", "accounting.contacts", "accounting.settings", "offline_access"]
 
         auth_url = "https://login.xero.com/identity/connect/authorize"
         params = {
@@ -73,20 +68,13 @@ class XeroConnector(BaseConnector):
 
         # Xero requires Basic Auth for token exchange
         auth_string = f"{client_id}:{client_secret}"
-        auth_bytes = auth_string.encode('ascii')
-        auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+        auth_bytes = auth_string.encode("ascii")
+        auth_b64 = base64.b64encode(auth_bytes).decode("ascii")
 
         response = requests.post(
             token_url,
-            headers={
-                "Authorization": f"Basic {auth_b64}",
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": redirect_uri
-            }
+            headers={"Authorization": f"Basic {auth_b64}", "Content-Type": "application/x-www-form-urlencoded"},
+            data={"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri},
         )
 
         response.raise_for_status()
@@ -101,8 +89,7 @@ class XeroConnector(BaseConnector):
         if "access_token" in data:
             try:
                 tenants_response = requests.get(
-                    f"{self.BASE_URL}/connections",
-                    headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.BASE_URL}/connections", headers={"Authorization": f"Bearer {data['access_token']}"}
                 )
                 if tenants_response.status_code == 200:
                     tenants = tenants_response.json()
@@ -129,6 +116,7 @@ class XeroConnector(BaseConnector):
             raise ValueError("No refresh token available")
 
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("xero")
         client_id = creds.get("client_id") or os.getenv("XERO_CLIENT_ID")
@@ -137,19 +125,13 @@ class XeroConnector(BaseConnector):
         token_url = "https://identity.xero.com/connect/token"
 
         auth_string = f"{client_id}:{client_secret}"
-        auth_bytes = auth_string.encode('ascii')
-        auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+        auth_bytes = auth_string.encode("ascii")
+        auth_b64 = base64.b64encode(auth_bytes).decode("ascii")
 
         response = requests.post(
             token_url,
-            headers={
-                "Authorization": f"Basic {auth_b64}",
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            data={
-                "grant_type": "refresh_token",
-                "refresh_token": self.credentials.refresh_token
-            }
+            headers={"Authorization": f"Basic {auth_b64}", "Content-Type": "application/x-www-form-urlencoded"},
+            data={"grant_type": "refresh_token", "refresh_token": self.credentials.refresh_token},
         )
 
         response.raise_for_status()
@@ -166,6 +148,7 @@ class XeroConnector(BaseConnector):
         if expires_at:
             self.credentials.expires_at = expires_at
         from app.utils.db import safe_commit
+
         safe_commit("refresh_xero_token", {"integration_id": self.integration.id})
 
         return {
@@ -186,28 +169,16 @@ class XeroConnector(BaseConnector):
                 return {"success": False, "message": "Xero tenant not configured"}
 
             organisation_info = self._api_request(
-                "GET",
-                f"/api.xro/2.0/Organisation",
-                self.get_access_token(),
-                tenant_id
+                "GET", f"/api.xro/2.0/Organisation", self.get_access_token(), tenant_id
             )
 
             if organisation_info:
                 org_name = organisation_info.get("Organisations", [{}])[0].get("Name", "Unknown")
-                return {
-                    "success": True,
-                    "message": f"Connected to Xero organisation: {org_name}"
-                }
+                return {"success": True, "message": f"Connected to Xero organisation: {org_name}"}
             else:
-                return {
-                    "success": False,
-                    "message": "Failed to retrieve organisation information"
-                }
+                return {"success": False, "message": "Failed to retrieve organisation information"}
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Connection test failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
     def _api_request(self, method: str, endpoint: str, access_token: str, tenant_id: str) -> Optional[Dict]:
         """Make API request to Xero"""
@@ -217,7 +188,7 @@ class XeroConnector(BaseConnector):
             "Authorization": f"Bearer {access_token}",
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Xero-tenant-id": tenant_id
+            "Xero-tenant-id": tenant_id,
         }
 
         try:
@@ -244,7 +215,7 @@ class XeroConnector(BaseConnector):
             if not tenant_id:
                 if self.credentials and self.credentials.extra_data:
                     tenant_id = self.credentials.extra_data.get("tenantId")
-            
+
             if not tenant_id:
                 return {"success": False, "message": "Xero tenant not configured"}
 
@@ -255,8 +226,7 @@ class XeroConnector(BaseConnector):
             # Sync invoices (create as invoices in Xero)
             if sync_type == "full" or sync_type == "invoices":
                 invoices = Invoice.query.filter(
-                    Invoice.status.in_(["sent", "paid"]),
-                    Invoice.created_at >= datetime.utcnow() - timedelta(days=90)
+                    Invoice.status.in_(["sent", "paid"]), Invoice.created_at >= datetime.utcnow() - timedelta(days=90)
                 ).all()
 
                 for invoice in invoices:
@@ -264,65 +234,58 @@ class XeroConnector(BaseConnector):
                         xero_invoice = self._create_xero_invoice(invoice, access_token, tenant_id)
                         if xero_invoice:
                             # Store Xero ID in invoice metadata
-                            if not hasattr(invoice, 'metadata') or not invoice.metadata:
+                            if not hasattr(invoice, "metadata") or not invoice.metadata:
                                 invoice.metadata = {}
-                            invoice.metadata['xero_invoice_id'] = xero_invoice.get("Invoices", [{}])[0].get("InvoiceID")
+                            invoice.metadata["xero_invoice_id"] = xero_invoice.get("Invoices", [{}])[0].get("InvoiceID")
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing invoice {invoice.id}: {str(e)}")
 
             # Sync expenses (create as expenses in Xero)
             if sync_type == "full" or sync_type == "expenses":
-                expenses = Expense.query.filter(
-                    Expense.date >= datetime.utcnow().date() - timedelta(days=90)
-                ).all()
+                expenses = Expense.query.filter(Expense.date >= datetime.utcnow().date() - timedelta(days=90)).all()
 
                 for expense in expenses:
                     try:
                         xero_expense = self._create_xero_expense(expense, access_token, tenant_id)
                         if xero_expense:
-                            if not hasattr(expense, 'metadata') or not expense.metadata:
+                            if not hasattr(expense, "metadata") or not expense.metadata:
                                 expense.metadata = {}
-                            expense.metadata['xero_expense_id'] = xero_expense.get("Expenses", [{}])[0].get("ExpenseID")
+                            expense.metadata["xero_expense_id"] = xero_expense.get("Expenses", [{}])[0].get("ExpenseID")
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing expense {expense.id}: {str(e)}")
 
             db.session.commit()
 
-            return {
-                "success": True,
-                "synced_count": synced_count,
-                "errors": errors
-            }
+            return {"success": True, "synced_count": synced_count, "errors": errors}
 
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Sync failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
 
     def _create_xero_invoice(self, invoice, access_token: str, tenant_id: str) -> Optional[Dict]:
         """Create invoice in Xero"""
         # Build Xero invoice structure
         xero_invoice = {
             "Type": "ACCREC",
-            "Contact": {
-                "Name": invoice.client.name if invoice.client else "Unknown"
-            },
+            "Contact": {"Name": invoice.client.name if invoice.client else "Unknown"},
             "Date": invoice.date.strftime("%Y-%m-%d") if invoice.date else datetime.utcnow().strftime("%Y-%m-%d"),
-            "DueDate": invoice.due_date.strftime("%Y-%m-%d") if invoice.due_date else datetime.utcnow().strftime("%Y-%m-%d"),
-            "LineItems": []
+            "DueDate": (
+                invoice.due_date.strftime("%Y-%m-%d") if invoice.due_date else datetime.utcnow().strftime("%Y-%m-%d")
+            ),
+            "LineItems": [],
         }
 
         # Add invoice items
         for item in invoice.items:
-            xero_invoice["LineItems"].append({
-                "Description": item.description,
-                "Quantity": float(item.quantity),
-                "UnitAmount": float(item.unit_price),
-                "LineAmount": float(item.quantity * item.unit_price),
-            })
+            xero_invoice["LineItems"].append(
+                {
+                    "Description": item.description,
+                    "Quantity": float(item.quantity),
+                    "UnitAmount": float(item.unit_price),
+                    "LineAmount": float(item.quantity * item.unit_price),
+                }
+            )
 
         endpoint = "/api.xro/2.0/Invoices"
         return self._api_request("POST", endpoint, access_token, tenant_id)
@@ -332,15 +295,15 @@ class XeroConnector(BaseConnector):
         # Build Xero expense structure
         xero_expense = {
             "Date": expense.date.strftime("%Y-%m-%d") if expense.date else datetime.utcnow().strftime("%Y-%m-%d"),
-            "Contact": {
-                "Name": expense.vendor or "Unknown"
-            },
-            "LineItems": [{
-                "Description": expense.description or "Expense",
-                "Quantity": 1.0,
-                "UnitAmount": float(expense.amount),
-                "LineAmount": float(expense.amount),
-            }]
+            "Contact": {"Name": expense.vendor or "Unknown"},
+            "LineItems": [
+                {
+                    "Description": expense.description or "Expense",
+                    "Quantity": 1.0,
+                    "UnitAmount": float(expense.amount),
+                    "LineAmount": float(expense.amount),
+                }
+            ],
         }
 
         endpoint = "/api.xro/2.0/Expenses"
@@ -354,21 +317,10 @@ class XeroConnector(BaseConnector):
                     "name": "tenant_id",
                     "type": "string",
                     "label": "Tenant ID",
-                    "description": "Xero organisation tenant ID"
+                    "description": "Xero organisation tenant ID",
                 },
-                {
-                    "name": "sync_invoices",
-                    "type": "boolean",
-                    "label": "Sync Invoices",
-                    "default": True
-                },
-                {
-                    "name": "sync_expenses",
-                    "type": "boolean",
-                    "label": "Sync Expenses",
-                    "default": True
-                }
+                {"name": "sync_invoices", "type": "boolean", "label": "Sync Invoices", "default": True},
+                {"name": "sync_expenses", "type": "boolean", "label": "Sync Expenses", "default": True},
             ],
-            "required": ["tenant_id"]
+            "required": ["tenant_id"],
         }
-

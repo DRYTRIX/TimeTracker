@@ -26,11 +26,9 @@ time_entry_templates_bp = Blueprint("time_entry_templates", __name__)
 def list_templates():
     """List all time entry templates for the current user."""
     from sqlalchemy.orm import joinedload
+
     templates = (
-        TimeEntryTemplate.query.options(
-            joinedload(TimeEntryTemplate.project),
-            joinedload(TimeEntryTemplate.task)
-        )
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.project), joinedload(TimeEntryTemplate.task))
         .filter_by(user_id=current_user.id)
         .order_by(desc(TimeEntryTemplate.last_used_at))
         .all()
@@ -135,11 +133,9 @@ def create_template():
 def view_template(template_id):
     """View a specific template."""
     from sqlalchemy.orm import joinedload
+
     template = (
-        TimeEntryTemplate.query.options(
-            joinedload(TimeEntryTemplate.project),
-            joinedload(TimeEntryTemplate.task)
-        )
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.project), joinedload(TimeEntryTemplate.task))
         .filter_by(id=template_id, user_id=current_user.id)
         .first_or_404()
     )
@@ -275,11 +271,9 @@ def delete_template(template_id):
 def get_templates_api():
     """Get templates as JSON (for AJAX requests)."""
     from sqlalchemy.orm import joinedload
+
     templates = (
-        TimeEntryTemplate.query.options(
-            joinedload(TimeEntryTemplate.project),
-            joinedload(TimeEntryTemplate.task)
-        )
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.project), joinedload(TimeEntryTemplate.task))
         .filter_by(user_id=current_user.id)
         .order_by(desc(TimeEntryTemplate.last_used_at))
         .all()
@@ -293,11 +287,9 @@ def get_templates_api():
 def get_template_api(template_id):
     """Get a specific template as JSON."""
     from sqlalchemy.orm import joinedload
+
     template = (
-        TimeEntryTemplate.query.options(
-            joinedload(TimeEntryTemplate.project),
-            joinedload(TimeEntryTemplate.task)
-        )
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.project), joinedload(TimeEntryTemplate.task))
         .filter_by(id=template_id, user_id=current_user.id)
         .first_or_404()
     )

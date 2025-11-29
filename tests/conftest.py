@@ -762,7 +762,7 @@ def authenticated_client(client, user):
 def admin_authenticated_client(client, admin_user):
     """Create an authenticated admin test client."""
     from flask_login import login_user
-    
+
     with client.session_transaction() as sess:
         # Use Flask-Login's login_user directly for tests
         login_user(admin_user)

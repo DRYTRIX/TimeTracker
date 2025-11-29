@@ -92,7 +92,7 @@ class ProjectService:
         # Create project using model directly (repository doesn't support all fields yet)
         from app.models import Project
         from decimal import Decimal
-        
+
         project = Project(
             name=name,
             client_id=client_id,
@@ -105,7 +105,7 @@ class ProjectService:
             billing_ref=billing_ref,
             status=ProjectStatus.ACTIVE.value,
         )
-        
+
         db.session.add(project)
 
         if not safe_commit("create_project", {"client_id": client_id, "name": name}):

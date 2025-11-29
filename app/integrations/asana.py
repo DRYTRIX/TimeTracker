@@ -35,13 +35,8 @@ class AsanaConnector(BaseConnector):
             raise ValueError("ASANA_CLIENT_ID not configured")
 
         auth_url = "https://app.asana.com/-/oauth_authorize"
-        
-        params = {
-            "client_id": client_id,
-            "redirect_uri": redirect_uri,
-            "response_type": "code",
-            "state": state or ""
-        }
+
+        params = {"client_id": client_id, "redirect_uri": redirect_uri, "response_type": "code", "state": state or ""}
 
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         return f"{auth_url}?{query_string}"
@@ -83,15 +78,14 @@ class AsanaConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.BASE_URL}/users/me",
-                    headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.BASE_URL}/users/me", headers={"Authorization": f"Bearer {data['access_token']}"}
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json().get("data", {})
                     user_info = {
                         "gid": user_data.get("gid"),
                         "name": user_data.get("name"),
-                        "email": user_data.get("email")
+                        "email": user_data.get("email"),
                     }
             except Exception:
                 pass
@@ -101,7 +95,7 @@ class AsanaConnector(BaseConnector):
             "refresh_token": data.get("refresh_token"),
             "expires_at": expires_at.isoformat() if expires_at else None,
             "token_type": "Bearer",
-            "extra_data": user_info
+            "extra_data": user_info,
         }
 
     def refresh_access_token(self) -> Dict[str, Any]:
@@ -110,6 +104,7 @@ class AsanaConnector(BaseConnector):
             raise ValueError("No refresh token available")
 
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("asana")
         client_id = creds.get("client_id") or os.getenv("ASANA_CLIENT_ID")
@@ -142,33 +137,21 @@ class AsanaConnector(BaseConnector):
             self.credentials.expires_at = expires_at
         self.credentials.save()
 
-        return {
-            "access_token": data.get("access_token"),
-            "expires_at": expires_at.isoformat() if expires_at else None
-        }
+        return {"access_token": data.get("access_token"), "expires_at": expires_at.isoformat() if expires_at else None}
 
     def test_connection(self) -> Dict[str, Any]:
         """Test connection to Asana."""
         try:
             headers = {"Authorization": f"Bearer {self.get_access_token()}"}
             response = requests.get(f"{self.BASE_URL}/users/me", headers=headers)
-            
+
             if response.status_code == 200:
                 user_data = response.json().get("data", {})
-                return {
-                    "success": True,
-                    "message": f"Connected to Asana as {user_data.get('name', 'Unknown')}"
-                }
+                return {"success": True, "message": f"Connected to Asana as {user_data.get('name', 'Unknown')}"}
             else:
-                return {
-                    "success": False,
-                    "message": f"Connection test failed: {response.status_code}"
-                }
+                return {"success": False, "message": f"Connection test failed: {response.status_code}"}
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Connection test failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync tasks and projects with Asana."""
@@ -177,7 +160,7 @@ class AsanaConnector(BaseConnector):
 
         try:
             headers = {"Authorization": f"Bearer {self.get_access_token()}"}
-            
+
             # Get workspace from config
             workspace_gid = self.integration.config.get("workspace_gid")
             if not workspace_gid:
@@ -190,7 +173,7 @@ class AsanaConnector(BaseConnector):
             projects_response = requests.get(
                 f"{self.BASE_URL}/projects",
                 headers=headers,
-                params={"workspace": workspace_gid, "opt_fields": "name,notes,archived"}
+                params={"workspace": workspace_gid, "opt_fields": "name,notes,archived"},
             )
 
             if projects_response.status_code == 200:
@@ -200,8 +183,7 @@ class AsanaConnector(BaseConnector):
                     try:
                         # Find or create project
                         project = Project.query.filter_by(
-                            user_id=self.integration.user_id,
-                            name=asana_project.get("name")
+                            user_id=self.integration.user_id, name=asana_project.get("name")
                         ).first()
 
                         if not project:
@@ -209,78 +191,72 @@ class AsanaConnector(BaseConnector):
                                 name=asana_project.get("name"),
                                 description=asana_project.get("notes", ""),
                                 user_id=self.integration.user_id,
-                                status="active" if not asana_project.get("archived") else "archived"
+                                status="active" if not asana_project.get("archived") else "archived",
                             )
                             db.session.add(project)
                             db.session.flush()
 
                         # Store Asana project GID in project metadata
-                        if not hasattr(project, 'metadata') or not project.metadata:
+                        if not hasattr(project, "metadata") or not project.metadata:
                             project.metadata = {}
-                        project.metadata['asana_project_gid'] = asana_project.get("gid")
-                        
+                        project.metadata["asana_project_gid"] = asana_project.get("gid")
+
                         # Sync tasks from Asana project
                         tasks_response = requests.get(
                             f"{self.BASE_URL}/projects/{asana_project.get('gid')}/tasks",
                             headers=headers,
-                            params={"opt_fields": "name,notes,completed,due_on"}
+                            params={"opt_fields": "name,notes,completed,due_on"},
                         )
-                        
+
                         if tasks_response.status_code == 200:
                             asana_tasks = tasks_response.json().get("data", [])
-                            
+
                             for asana_task in asana_tasks:
                                 try:
                                     # Get task details
                                     task_response = requests.get(
                                         f"{self.BASE_URL}/tasks/{asana_task.get('gid')}",
                                         headers=headers,
-                                        params={"opt_fields": "name,notes,completed,due_on,assignee"}
+                                        params={"opt_fields": "name,notes,completed,due_on,assignee"},
                                     )
-                                    
+
                                     if task_response.status_code == 200:
                                         task_data = task_response.json().get("data", {})
-                                        
+
                                         # Find or create task
                                         task = Task.query.filter_by(
-                                            project_id=project.id,
-                                            name=task_data.get("name", "")
+                                            project_id=project.id, name=task_data.get("name", "")
                                         ).first()
-                                        
+
                                         if not task:
                                             task = Task(
                                                 project_id=project.id,
                                                 name=task_data.get("name", ""),
                                                 description=task_data.get("notes", ""),
-                                                status="completed" if task_data.get("completed") else "todo"
+                                                status="completed" if task_data.get("completed") else "todo",
                                             )
                                             db.session.add(task)
                                             db.session.flush()
-                                        
+
                                         # Store Asana task GID in metadata
-                                        if not hasattr(task, 'metadata') or not task.metadata:
+                                        if not hasattr(task, "metadata") or not task.metadata:
                                             task.metadata = {}
-                                        task.metadata['asana_task_gid'] = asana_task.get("gid")
+                                        task.metadata["asana_task_gid"] = asana_task.get("gid")
                                 except Exception as e:
-                                    errors.append(f"Error syncing task in project {asana_project.get('name')}: {str(e)}")
-                        
+                                    errors.append(
+                                        f"Error syncing task in project {asana_project.get('name')}: {str(e)}"
+                                    )
+
                         synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing project {asana_project.get('name')}: {str(e)}")
 
             db.session.commit()
 
-            return {
-                "success": True,
-                "synced_count": synced_count,
-                "errors": errors
-            }
+            return {"success": True, "synced_count": synced_count, "errors": errors}
 
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Sync failed: {str(e)}"
-            }
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
 
     def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema."""
@@ -290,7 +266,7 @@ class AsanaConnector(BaseConnector):
                     "name": "workspace_gid",
                     "type": "string",
                     "label": "Workspace GID",
-                    "description": "Asana workspace GID to sync with"
+                    "description": "Asana workspace GID to sync with",
                 },
                 {
                     "name": "sync_direction",
@@ -299,11 +275,10 @@ class AsanaConnector(BaseConnector):
                     "options": [
                         {"value": "asana_to_timetracker", "label": "Asana → TimeTracker"},
                         {"value": "timetracker_to_asana", "label": "TimeTracker → Asana"},
-                        {"value": "bidirectional", "label": "Bidirectional"}
+                        {"value": "bidirectional", "label": "Bidirectional"},
                     ],
-                    "default": "asana_to_timetracker"
-                }
+                    "default": "asana_to_timetracker",
+                },
             ],
-            "required": ["workspace_gid"]
+            "required": ["workspace_gid"],
         }
-

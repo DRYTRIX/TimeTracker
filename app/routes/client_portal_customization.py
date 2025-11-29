@@ -2,7 +2,17 @@
 Client Portal Customization routes
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, send_from_directory, current_app
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    jsonify,
+    redirect,
+    url_for,
+    flash,
+    send_from_directory,
+    current_app,
+)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import db
@@ -15,17 +25,17 @@ from PIL import Image
 
 client_portal_customization_bp = Blueprint("client_portal_customization", __name__)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "svg", "webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def get_upload_folder():
     """Get folder for portal customization uploads"""
-    folder = os.path.join(current_app.root_path, 'static', 'uploads', 'portal_customization')
+    folder = os.path.join(current_app.root_path, "static", "uploads", "portal_customization")
     os.makedirs(folder, exist_ok=True)
     return folder
 
@@ -40,7 +50,7 @@ def edit_customization(client_id):
 
     client = Client.query.get_or_404(client_id)
     customization = ClientPortalCustomization.query.filter_by(client_id=client_id).first()
-    
+
     if not customization:
         customization = ClientPortalCustomization(client_id=client_id)
         db.session.add(customization)
@@ -58,7 +68,7 @@ def update_customization(client_id):
 
     client = Client.query.get_or_404(client_id)
     customization = ClientPortalCustomization.query.filter_by(client_id=client_id).first()
-    
+
     if not customization:
         customization = ClientPortalCustomization(client_id=client_id)
         db.session.add(customization)
@@ -84,15 +94,15 @@ def update_customization(client_id):
     customization.logo_url = data.get("logo_url") or None
 
     # Handle logo upload
-    if 'logo' in request.files:
-        file = request.files['logo']
+    if "logo" in request.files:
+        file = request.files["logo"]
         if file and file.filename and allowed_file(file.filename):
             try:
                 # Validate file size
                 file.seek(0, os.SEEK_END)
                 file_size = file.tell()
                 file.seek(0)
-                
+
                 if file_size > MAX_FILE_SIZE:
                     if request.is_json:
                         return jsonify({"error": "File too large. Maximum 5MB."}), 400
@@ -133,4 +143,3 @@ def serve_portal_upload(filename):
     """Serve uploaded portal customization files"""
     folder = get_upload_folder()
     return send_from_directory(folder, filename)
-

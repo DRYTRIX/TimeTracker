@@ -142,4 +142,3 @@ def delete_link_template(template_id):
         flash(_("Link template deleted successfully"), "success")
 
     return redirect(url_for("link_templates.list_link_templates"))
-

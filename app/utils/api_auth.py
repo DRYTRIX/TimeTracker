@@ -68,11 +68,12 @@ def authenticate_token(token_string):
     if api_token.ip_whitelist:
         client_ip = request.remote_addr
         allowed_ips = [ip.strip() for ip in api_token.ip_whitelist.split(",") if ip.strip()]
-        
+
         # Simple IP matching (can be enhanced with CIDR support)
         if client_ip not in allowed_ips:
             # Check CIDR blocks if any
             from ipaddress import ip_address, ip_network
+
             ip_allowed = False
             for allowed in allowed_ips:
                 try:
@@ -87,11 +88,9 @@ def authenticate_token(token_string):
                 except ValueError:
                     # Invalid IP format, skip
                     continue
-            
+
             if not ip_allowed:
-                current_app.logger.warning(
-                    f"API token {api_token.token_prefix}... access denied from IP {client_ip}"
-                )
+                current_app.logger.warning(f"API token {api_token.token_prefix}... access denied from IP {client_ip}")
                 return None, None, "Access denied from this IP address"
 
     # Get associated user
