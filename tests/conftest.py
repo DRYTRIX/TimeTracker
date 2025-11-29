@@ -338,6 +338,10 @@ def user(app):
             if not existing.is_active:
                 existing.is_active = True
                 db.session.commit()
+            # Ensure password is set for login endpoint
+            if not existing.check_password("password123"):
+                existing.set_password("password123")
+                db.session.commit()
             db.session.refresh(existing)
             return existing
     except Exception:
@@ -347,6 +351,7 @@ def user(app):
     try:
         user = User(username="testuser", role="user", email="testuser@example.com")
         user.is_active = True  # Set after creation
+        user.set_password("password123")  # Set password for login endpoint
         db.session.add(user)
         db.session.commit()
 
@@ -361,6 +366,7 @@ def user(app):
         # Try again after creating tables
         user = User(username="testuser", role="user", email="testuser@example.com")
         user.is_active = True  # Set after creation
+        user.set_password("password123")  # Set password for login endpoint
         db.session.add(user)
         db.session.commit()
 
@@ -379,6 +385,10 @@ def admin_user(app):
                 existing.role = "admin"
                 existing.is_active = True
                 db.session.commit()
+            # Ensure password is set for login endpoint
+            if not existing.check_password("password123"):
+                existing.set_password("password123")
+                db.session.commit()
             db.session.refresh(existing)
             return existing
     except Exception:
@@ -388,6 +398,7 @@ def admin_user(app):
     try:
         admin = User(username="admin", role="admin", email="admin@example.com")
         admin.is_active = True  # Set after creation
+        admin.set_password("password123")  # Set password for login endpoint
         db.session.add(admin)
         db.session.commit()
 
@@ -402,6 +413,7 @@ def admin_user(app):
         # Try again after creating tables
         admin = User(username="admin", role="admin", email="admin@example.com")
         admin.is_active = True  # Set after creation
+        admin.set_password("password123")  # Set password for login endpoint
         db.session.add(admin)
         db.session.commit()
 
@@ -740,7 +752,7 @@ def authenticated_client(client, user):
     except Exception:
         csrf_enabled = False
 
-    login_data = {"username": user.username}
+    login_data = {"username": user.username, "password": "password123"}
     headers = {}
 
     if csrf_enabled:
@@ -770,7 +782,7 @@ def admin_authenticated_client(client, admin_user):
     except Exception:
         csrf_enabled = False
 
-    login_data = {"username": admin_user.username}
+    login_data = {"username": admin_user.username, "password": "password123"}
     headers = {}
 
     if csrf_enabled:
