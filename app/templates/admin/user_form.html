@@ -21,10 +21,35 @@
             <div>
                 <label for="role" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
                 <select name="role" id="role" class="form-input">
-                    <option value="user" {% if user and user.role == 'user' %}selected{% endif %}>User</option>
-                    <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Admin</option>
+                    {% if all_roles %}
+                        {% for role in all_roles %}
+                            <option value="{{ role.name }}" {% if user and user.roles and role in user.roles %}selected{% elif not user and role.name == 'user' %}selected{% elif user and not user.roles and role.name == user.role %}selected{% endif %}>
+                                {{ role.name|capitalize }}{% if role.is_system_role %} (System){% endif %}
+                            </option>
+                        {% endfor %}
+                    {% else %}
+                        {# Fallback to legacy roles if Role system not initialized #}
+                        <option value="user" {% if user and user.role == 'user' %}selected{% endif %}>User</option>
+                        <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Admin</option>
+                    {% endif %}
                 </select>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    Select a role from the new role-based permission system. Users can have multiple roles assigned via "Manage Roles & Permissions" after creation.
+                </p>
             </div>
+            {% if not user %}
+            <div>
+                <label for="default_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Password</label>
+                <input type="password" name="default_password" id="default_password" class="form-input" placeholder="Leave empty for no password">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    Set an initial password for this user. If set, you can require them to change it on first login.
+                </p>
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" name="force_password_change" id="force_password_change" class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <label for="force_password_change" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Require password change on first login</label>
+            </div>
+            {% endif %}
             {% if user %}
             <div class="flex items-center">
                 <input type="checkbox" name="is_active" id="is_active" {% if user.is_active %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">

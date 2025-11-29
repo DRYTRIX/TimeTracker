@@ -47,9 +47,15 @@
                             {{ active_timer.duration_formatted }}
                         </div>
                         <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ active_timer.project.name }}
-                            {% if active_timer.task %}
-                                - {{ active_timer.task.name }}
+                            {% if active_timer.project %}
+                                {{ active_timer.project.name }}
+                                {% if active_timer.task %}
+                                    - {{ active_timer.task.name }}
+                                {% endif %}
+                            {% elif active_timer.client %}
+                                {{ active_timer.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                            {% else %}
+                                {{ _('No project') }}
                             {% endif %}
                         </div>
                         {% if active_timer.notes %}
@@ -107,16 +113,32 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
                 <div class="space-y-4">
-                    <div>
-                        <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Project <span class="text-red-500">*</span>
-                        </label>
-                        <select name="project_id" id="project_id" class="form-input w-full" required>
-                            <option value="">{{ _('Select a project...') }}</option>
-                            {% for project in projects %}
-                            <option value="{{ project.id }}">{{ project.name }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {{ _('Project') }}
+                            </label>
+                            <select name="project_id" id="project_id" class="form-input w-full">
+                                <option value="">{{ _('Select a project (optional)') }}</option>
+                                {% for project in projects %}
+                                <option value="{{ project.id }}">{{ project.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {{ _('Client') }}
+                            </label>
+                            <select name="client_id" id="client_id" class="form-input w-full">
+                                <option value="">{{ _('Select a client (optional)') }}</option>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}">{{ client.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ _('Select either a project or a client') }}
+                            </p>
+                        </div>
                     </div>
                     
                     <div>
@@ -219,32 +241,61 @@
 
 {% block scripts_extra %}
 <script>
-// Load tasks when project is selected
-document.getElementById('project_id')?.addEventListener('change', function() {
-    const projectId = this.value;
-    const taskSelect = document.getElementById('task_id');
-    
+// Load tasks when project is selected and sync with client selection
+const projectSelectEl = document.getElementById('project_id');
+const clientSelectEl = document.getElementById('client_id');
+const taskSelectEl = document.getElementById('task_id');
+
+async function loadTasksForProject(projectId) {
+    if (!taskSelectEl) return;
     if (!projectId) {
-        taskSelect.innerHTML = '<option value="">No task</option>';
+        taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
+        taskSelectEl.disabled = false;
         return;
     }
-    
-    // Fetch tasks for selected project
-    fetch(`/api/tasks?project_id=${projectId}`)
-        .then(response => response.json())
-        .then(data => {
-            taskSelect.innerHTML = '<option value="">No task</option>';
-            data.tasks.forEach(task => {
-                const option = document.createElement('option');
-                option.value = task.id;
-                option.textContent = task.name;
-                taskSelect.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Error loading tasks:', error);
+
+    try {
+        const response = await fetch(`/api/tasks?project_id=${projectId}`);
+        const data = await response.json();
+        taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
+        (data.tasks || []).forEach(task => {
+            const option = document.createElement('option');
+            option.value = task.id;
+            option.textContent = task.name;
+            taskSelectEl.appendChild(option);
         });
-});
+        taskSelectEl.disabled = false;
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+        taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
+        taskSelectEl.disabled = true;
+    }
+}
+
+if (projectSelectEl && clientSelectEl) {
+    projectSelectEl.addEventListener('change', () => {
+        const pid = projectSelectEl.value;
+        if (pid && clientSelectEl) {
+            clientSelectEl.value = '';
+        }
+        loadTasksForProject(pid);
+    });
+
+    clientSelectEl.addEventListener('change', () => {
+        const cid = clientSelectEl.value;
+        if (cid) {
+            if (projectSelectEl) {
+                projectSelectEl.value = '';
+            }
+            if (taskSelectEl) {
+                taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
+                taskSelectEl.disabled = true;
+            }
+        } else if (taskSelectEl) {
+            taskSelectEl.disabled = false;
+        }
+    });
+}
 
 // Select recent project
 function selectRecentProject(projectId, projectName) {

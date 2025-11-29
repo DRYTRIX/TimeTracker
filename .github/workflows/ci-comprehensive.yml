@@ -30,7 +30,7 @@ jobs:
   smoke-tests:
     name: Smoke Tests (Quick)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     
     steps:
       - name: Checkout code
@@ -52,7 +52,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -m smoke -v --tb=short --no-cov
+          pytest -m smoke -v --tb=short --no-cov -n auto
       
       - name: Upload smoke test results
         if: always()
@@ -98,9 +98,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           if [ "${{ matrix.test-group }}" == "api" ]; then
-            pytest -m "api and integration" -v --cov=app --cov-report=xml --cov-report=html
+            pytest -m "api and integration" -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
           else
-            pytest -m "unit and ${{ matrix.test-group }}" -v --cov=app --cov-report=xml --cov-report=html
+            pytest -m "unit and ${{ matrix.test-group }}" -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
           fi
       
       - name: Upload coverage to Codecov
@@ -166,7 +166,7 @@ jobs:
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -m integration -v --cov=app --cov-report=xml --cov-report=html
+          pytest -m integration -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -452,8 +452,8 @@ jobs:
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -v --cov=app --cov-report=xml --cov-report=html --cov-report=term \
-                 --junitxml=junit.xml
+          pytest -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing \
+                 --junitxml=junit.xml --maxfail=5
       
       - name: Upload full coverage
         uses: codecov/codecov-action@v4

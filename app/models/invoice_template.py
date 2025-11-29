@@ -5,7 +5,7 @@ from app import db
 class InvoiceTemplate(db.Model):
     """Reusable invoice templates/themes with customizable HTML and CSS."""
 
-    __tablename__ = 'invoice_templates'
+    __tablename__ = "invoice_templates"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True, index=True)
@@ -19,5 +19,3 @@ class InvoiceTemplate(db.Model):
 
     def __repr__(self):
         return f"<InvoiceTemplate {self.name}>"
-
-

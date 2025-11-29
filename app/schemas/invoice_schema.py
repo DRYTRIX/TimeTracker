@@ -9,6 +9,7 @@ from app.constants import InvoiceStatus, PaymentStatus
 
 class InvoiceItemSchema(Schema):
     """Schema for invoice item serialization"""
+
     id = fields.Int(dump_only=True)
     invoice_id = fields.Int(dump_only=True)
     description = fields.Str(required=True)
@@ -19,6 +20,7 @@ class InvoiceItemSchema(Schema):
 
 class InvoiceSchema(Schema):
     """Schema for invoice serialization"""
+
     id = fields.Int(dump_only=True)
     invoice_number = fields.Str(required=True)
     project_id = fields.Int(required=True)
@@ -45,14 +47,15 @@ class InvoiceSchema(Schema):
     created_by = fields.Int(required=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
-    
+
     # Nested fields
-    project = fields.Nested('ProjectSchema', dump_only=True, allow_none=True)
+    project = fields.Nested("ProjectSchema", dump_only=True, allow_none=True)
     items = fields.Nested(InvoiceItemSchema, many=True, dump_only=True, allow_none=True)
 
 
 class InvoiceCreateSchema(Schema):
     """Schema for creating an invoice"""
+
     project_id = fields.Int(required=True)
     issue_date = fields.Date(allow_none=True)
     due_date = fields.Date(allow_none=True)
@@ -64,9 +67,9 @@ class InvoiceCreateSchema(Schema):
 
 class InvoiceUpdateSchema(Schema):
     """Schema for updating an invoice"""
+
     issue_date = fields.Date(allow_none=True)
     due_date = fields.Date(allow_none=True)
     status = fields.Str(allow_none=True, validate=validate.OneOf([s.value for s in InvoiceStatus]))
     notes = fields.Str(allow_none=True)
     terms = fields.Str(allow_none=True)
-

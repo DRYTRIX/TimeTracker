@@ -168,7 +168,13 @@
                 <div class="flex-1">
                     <div class="flex items-center space-x-2">
                         <span class="font-medium text-gray-900 dark:text-white">
-                            {{ entry.project.name if entry.project else _('No Project') }}
+                            {% if entry.project %}
+                                {{ entry.project.name }}
+                            {% elif entry.client %}
+                                {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                            {% else %}
+                                {{ _('No Project') }}
+                            {% endif %}
                         </span>
                         {% if entry.task %}
                         <span class="text-sm text-gray-600 dark:text-gray-400">

@@ -398,19 +398,8 @@ function submitBulkDelete() {
         form.appendChild(input);
     });
     
-    // Check if form action is set (not just "#" or current page)
-    const formAction = form.getAttribute('action') || form.action;
-    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
-        form.submit();
-    } else {
-        alert('Bulk delete functionality is not yet implemented. Backend routes need to be created.');
-        // Reset button state
-        if (btn) {
-            btn.innerHTML = originalHTML;
-            btn.disabled = false;
-        }
-        return false;
-    }
+    // Submit the form - routes are already implemented
+    form.submit();
 }
 
 function showBulkStatusDialog() {
@@ -471,19 +460,8 @@ function submitBulkStatus() {
         form.appendChild(input);
     });
     
-    // Check if form action is set (not just "#" or current page)
-    const formAction = form.getAttribute('action') || form.action;
-    if (formAction && formAction !== '#' && formAction !== window.location.pathname && !formAction.includes('#')) {
-        form.submit();
-    } else {
-        alert('Bulk status update functionality is not yet implemented. Backend routes need to be created.');
-        // Reset button state
-        if (btn) {
-            btn.innerHTML = originalHTML;
-            btn.disabled = false;
-        }
-        return false;
-    }
+    // Submit the form - routes are already implemented
+    form.submit();
 }
 {% endif %}
 

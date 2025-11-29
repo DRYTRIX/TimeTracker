@@ -336,13 +336,226 @@ function hideScheduledReportsModal() {
 }
 
 function loadScheduledReports() {
-    // This would fetch scheduled reports from the backend
-    // For now, just show empty state
+    const listContainer = document.getElementById('scheduledReportsList');
+    listContainer.innerHTML = '<p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">Loading...</p>';
+    
+    fetch('/api/reports/scheduled')
+        .then(response => response.json())
+        .then(data => {
+            if (data.schedules && data.schedules.length > 0) {
+                listContainer.innerHTML = data.schedules.map(schedule => {
+                    const nextRun = schedule.next_run_at ? new Date(schedule.next_run_at).toLocaleString() : 'Not scheduled';
+                    const lastRun = schedule.last_run_at ? new Date(schedule.last_run_at).toLocaleString() : 'Never';
+                    const statusBadge = schedule.active 
+                        ? '<span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">Active</span>'
+                        : '<span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded text-xs">Inactive</span>';
+                    
+                    return `
+                        <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <h4 class="font-semibold">${escapeHtml(schedule.saved_view_name || 'Unknown Report')}</h4>
+                                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                        <i class="fas fa-clock mr-1"></i>${schedule.cadence}
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-envelope mr-1"></i>${schedule.recipients.split(',').length} recipient(s)
+                                    </p>
+                                </div>
+                                ${statusBadge}
+                            </div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
+                                <div><strong>Next run:</strong> ${nextRun}</div>
+                                <div><strong>Last run:</strong> ${lastRun}</div>
+                            </div>
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="toggleSchedule(${schedule.id}, ${!schedule.active})" class="text-sm px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                                    ${schedule.active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onclick="deleteSchedule(${schedule.id})" class="text-sm px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                listContainer.innerHTML = '<p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">No scheduled reports yet.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading scheduled reports:', error);
+            listContainer.innerHTML = '<p class="text-red-600 dark:text-red-400 text-center py-4">Failed to load scheduled reports.</p>';
+        });
 }
 
 function showAddScheduledReportForm() {
-    // This would show a form to add a new scheduled report
-    alert('Scheduled report creation feature will be implemented in the backend');
+    // Load saved views first
+    fetch('/api/reports/saved-views')
+        .then(response => response.json())
+        .then(data => {
+            const savedViews = data.saved_views || [];
+            if (savedViews.length === 0) {
+                alert('{{ _("You need to create a saved report view first. Please create one from the reports page.") }}');
+                return;
+            }
+            
+            // Create form modal
+            const formModal = document.createElement('div');
+            formModal.id = 'addScheduledReportForm';
+            formModal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
+            formModal.innerHTML = `
+                <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">{{ _('Schedule Report') }}</h3>
+                            <button type="button" onclick="closeAddScheduledReportForm()" class="text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <form id="newScheduledReportForm" onsubmit="createScheduledReport(event)">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2">{{ _('Report View') }}</label>
+                                <select id="savedViewId" name="saved_view_id" class="form-input w-full" required>
+                                    <option value="">{{ _('Select a report view...') }}</option>
+                                    ${savedViews.map(sv => `<option value="${sv.id}">${escapeHtml(sv.name)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2">{{ _('Recipients') }}</label>
+                                <input type="email" id="recipients" name="recipients" class="form-input w-full" 
+                                       placeholder="email1@example.com, email2@example.com" required>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Comma-separated email addresses') }}</p>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2">{{ _('Frequency') }}</label>
+                                <select id="cadence" name="cadence" class="form-input w-full" required>
+                                    <option value="daily">{{ _('Daily') }}</option>
+                                    <option value="weekly">{{ _('Weekly') }}</option>
+                                    <option value="monthly">{{ _('Monthly') }}</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="closeAddScheduledReportForm()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                    {{ _('Cancel') }}
+                                </button>
+                                <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                                    {{ _('Create Schedule') }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(formModal);
+        })
+        .catch(error => {
+            console.error('Error loading saved views:', error);
+            alert('{{ _("Failed to load report views") }}');
+        });
+}
+
+function closeAddScheduledReportForm() {
+    const formModal = document.getElementById('addScheduledReportForm');
+    if (formModal) formModal.remove();
+}
+
+function createScheduledReport(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = {
+        saved_view_id: parseInt(document.getElementById('savedViewId').value),
+        recipients: document.getElementById('recipients').value.trim(),
+        cadence: document.getElementById('cadence').value,
+    };
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Creating...") }}';
+    
+    fetch('/api/reports/scheduled', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAddScheduledReportForm();
+            loadScheduledReports();
+            if (window.showToast) {
+                window.showToast('{{ _("Scheduled report created successfully") }}', 'success');
+            }
+        } else {
+            alert(data.error || '{{ _("Failed to create scheduled report") }}');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{{ _("Failed to create scheduled report") }}');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+function toggleSchedule(scheduleId, newActive) {
+    fetch(`/api/reports/scheduled/${scheduleId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadScheduledReports();
+        } else {
+            alert(data.error || '{{ _("Failed to update schedule") }}');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{{ _("Failed to update schedule") }}');
+    });
+}
+
+function deleteSchedule(scheduleId) {
+    if (!confirm('{{ _("Are you sure you want to delete this scheduled report?") }}')) {
+        return;
+    }
+    
+    fetch(`/api/reports/scheduled/${scheduleId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadScheduledReports();
+            if (window.showToast) {
+                window.showToast('{{ _("Scheduled report deleted successfully") }}', 'success');
+            }
+        } else {
+            alert(data.error || '{{ _("Failed to delete scheduled report") }}');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{{ _("Failed to delete scheduled report") }}');
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Initialize date inputs

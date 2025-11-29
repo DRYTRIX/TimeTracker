@@ -61,7 +61,15 @@
                 {% for entry in time_entries %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
                     <td class="p-3">{{ entry.start_time.strftime('%Y-%m-%d') }}</td>
-                    <td class="p-3">{{ entry.project.name if entry.project else _('N/A') }}</td>
+                    <td class="p-3">
+                        {% if entry.project %}
+                            {{ entry.project.name }}
+                        {% elif entry.client %}
+                            {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                        {% else %}
+                            {{ _('N/A') }}
+                        {% endif %}
+                    </td>
                     <td class="p-3">{{ entry.user.display_name if entry.user else _('N/A') }}</td>
                     <td class="p-3">{{ entry.start_time.strftime('%H:%M') }}</td>
                     <td class="p-3">{{ entry.end_time.strftime('%H:%M') if entry.end_time else '-' }}</td>

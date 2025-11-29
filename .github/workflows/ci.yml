@@ -1,10 +1,12 @@
 name: CI/CD Pipeline
 
+# DISABLED: This workflow is disabled in favor of the Comprehensive CI Pipeline (ci-comprehensive.yml)
+# Only the Comprehensive CI Pipeline should run for all CI/CD operations
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  workflow_dispatch:  # Only allows manual trigger, effectively disabling automatic runs
+  # pull_request:
+  #   branches: [ main ]
+  #   types: [ opened, synchronize, reopened, ready_for_review ]
 
 env:
   PYTHON_VERSION: '3.11'
@@ -14,6 +16,8 @@ jobs:
   lint:
     name: Lint and Code Quality
     runs-on: ubuntu-latest
+    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
+    # if: github.event.pull_request.head.ref == 'rc' || startsWith(github.event.pull_request.head.ref, 'rc/')
     steps:
       - uses: actions/checkout@v4
       
@@ -49,6 +53,8 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
+    # if: github.event.pull_request.head.ref == 'rc' || startsWith(github.event.pull_request.head.ref, 'rc/')
     
     services:
       postgres:
@@ -91,7 +97,7 @@ jobs:
           FLASK_ENV: testing
           SECRET_KEY: test-secret-key-for-ci
         run: |
-          pytest --cov=app --cov-report=xml --cov-report=html --cov-report=term tests/
+          pytest -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing tests/
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -104,6 +110,8 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
+    # if: github.event.pull_request.head.ref == 'rc' || startsWith(github.event.pull_request.head.ref, 'rc/')
     steps:
       - uses: actions/checkout@v4
       
@@ -133,7 +141,8 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: [lint, test]
-    if: github.event_name == 'push'
+    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
+    # if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
       

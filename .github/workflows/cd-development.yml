@@ -53,7 +53,7 @@ jobs:
   quick-tests:
     name: Quick Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     
     services:
       postgres:
@@ -92,7 +92,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -m smoke -v --tb=short --no-cov
+          pytest -m smoke -v --tb=short --no-cov -n auto
       
       - name: Validate database migrations
         env:

@@ -11,15 +11,15 @@ from factories import TimeEntryFactory
 def test_edit_task_changes_project_and_updates_time_entries(authenticated_client, app, user, test_client):
     with app.app_context():
         # Create two active projects under the same client
-        project1 = Project(name='Project One', client_id=test_client.id, description='P1')
-        project1.status = 'active'
-        project2 = Project(name='Project Two', client_id=test_client.id, description='P2')
-        project2.status = 'active'
+        project1 = Project(name="Project One", client_id=test_client.id, description="P1")
+        project1.status = "active"
+        project2 = Project(name="Project Two", client_id=test_client.id, description="P2")
+        project2.status = "active"
         db.session.add_all([project1, project2])
         db.session.commit()
 
         # Create a task on project1
-        task = Task(project_id=project1.id, name='Move Me', created_by=user.id)
+        task = Task(project_id=project1.id, name="Move Me", created_by=user.id)
         db.session.add(task)
         db.session.commit()
 
@@ -32,7 +32,7 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
             task_id=task.id,
             start_time=start_time,
             end_time=end_time,
-            notes='Work on task before moving'
+            notes="Work on task before moving",
         )
         db.session.commit()
 
@@ -40,25 +40,29 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
         task_id = task.id
         entry_id = entry.id
         project2_id = project2.id  # Store project2 ID before leaving app context
-    
+
     # Submit edit form to change the project to project2 (POST happens outside app context)
     resp = authenticated_client.post(
-        f'/tasks/{task_id}/edit',
+        f"/tasks/{task_id}/edit",
         data={
-            'project_id': str(project2_id),  # Use stored ID
-            'name': 'Move Me',  # Use explicit name
-            'description': '',
-            'priority': 'medium',
-            'status': 'todo',  # Include status to match current task status
-            'estimated_hours': '',
-            'due_date': '',
-            'assigned_to': ''
+            "project_id": str(project2_id),  # Use stored ID
+            "name": "Move Me",  # Use explicit name
+            "description": "",
+            "priority": "medium",
+            "status": "todo",  # Include status to match current task status
+            "estimated_hours": "",
+            "due_date": "",
+            "assigned_to": "",
         },
-        follow_redirects=True  # Follow redirects to see final response
+        follow_redirects=True,  # Follow redirects to see final response
     )
 
     # Expect success (200 after redirect or 302 redirect)
-    assert resp.status_code in (200, 302, 303), f"Expected 200/302/303, got {resp.status_code}. Response: {resp.get_data(as_text=True)[:500]}"
+    assert resp.status_code in (
+        200,
+        302,
+        303,
+    ), f"Expected 200/302/303, got {resp.status_code}. Response: {resp.get_data(as_text=True)[:500]}"
 
     # Re-query objects to verify project change persisted (within app context)
     with app.app_context():
@@ -68,5 +72,3 @@ def test_edit_task_changes_project_and_updates_time_entries(authenticated_client
         assert entry is not None, "Entry should still exist"
         assert task.project_id == project2_id, f"Task project_id is {task.project_id}, expected {project2_id}"
         assert entry.project_id == project2_id, f"Entry project_id is {entry.project_id}, expected {project2_id}"
-
-

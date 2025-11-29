@@ -47,6 +47,14 @@
             </button>
         </div>
     </form>
+    
+    <!-- Export Buttons -->
+    <div class="mt-4 flex gap-2">
+        <a href="{{ url_for('reports.export_task_excel', project_id=selected_project or '', user_id=selected_user or '', start_date=start_date, end_date=end_date) }}" 
+           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
+            <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
+        </a>
+    </div>
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">

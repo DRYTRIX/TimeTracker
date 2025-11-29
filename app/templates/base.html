@@ -236,6 +236,7 @@
                             <span class="ml-3 sidebar-label">{{ _('Dashboard') }}</span>
                         </a>
                     </li>
+                    {% if current_user.ui_show_calendar %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('calendarDropdown')" data-dropdown="calendarDropdown" class="w-full flex items-center p-2 rounded-lg {% if calendar_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-calendar-alt w-6 text-center"></i>
@@ -257,6 +258,7 @@
                             </li>
                         </ul>
                     </li>
+                    {% endif %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('workDropdown')" data-dropdown="workDropdown" class="w-full flex items-center p-2 rounded-lg {% if work_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-briefcase w-6 text-center"></i>
@@ -283,31 +285,39 @@
                                     <i class="fas fa-folder w-4 mr-2"></i>{{ _('Projects') }}
                                 </a>
                             </li>
+                            {% if settings.ui_allow_project_templates and current_user.ui_show_project_templates %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_project_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('project_templates.list_templates') }}">
                                     <i class="fas fa-layer-group w-4 mr-2"></i>{{ _('Project Templates') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_gantt_chart and current_user.ui_show_gantt_chart %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep.startswith('gantt.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('gantt.gantt_view') }}">
                                     <i class="fas fa-project-diagram w-4 mr-2"></i>{{ _('Gantt Chart') }}
                                 </a>
                             </li>
+                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_tasks %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('tasks.list_tasks') }}">
                                     <i class="fas fa-tasks w-4 mr-2"></i>{{ _('Tasks') }}
                                 </a>
                             </li>
+                            {% if settings.ui_allow_kanban_board and current_user.ui_show_kanban_board %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_kanban %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('kanban.board') }}">
                                     <i class="fas fa-columns w-4 mr-2"></i>{{ _('Kanban Board') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_weekly_goals and current_user.ui_show_weekly_goals %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_goals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('weekly_goals.index') }}">
                                     <i class="fas fa-bullseye w-4 mr-2"></i>{{ _('Weekly Goals') }}
                                 </a>
                             </li>
+                            {% endif %}
                         </ul>
                     </li>
                     <li class="mt-2">
@@ -324,11 +334,13 @@
                                     <i class="fas fa-users w-4 mr-2"></i>{{ _('Clients') }}
                                 </a>
                             </li>
+                            {% if settings.ui_allow_quotes and current_user.ui_show_quotes %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_quotes %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('quotes.list_quotes') }}">
                                     <i class="fas fa-file-contract w-4 mr-2"></i>{{ _('Quotes') }}
                                 </a>
                             </li>
+                            {% endif %}
                         </ul>
                     </li>
                     <li class="mt-2">
@@ -348,68 +360,89 @@
                             {% set nav_active_mileage = ep.startswith('mileage.') %}
                             {% set nav_active_perdiem = ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates') %}
                             {% set nav_active_budget = ep.startswith('budget_alerts.') %}
+                            {% if settings.ui_allow_reports and current_user.ui_show_reports %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('reports.reports') }}">
                                     <i class="fas fa-chart-bar w-4 mr-2"></i>{{ _('Reports') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_report_builder and current_user.ui_show_report_builder %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep.startswith('custom_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.report_builder') }}">
                                     <i class="fas fa-magic w-4 mr-2"></i>{{ _('Report Builder') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_scheduled_reports and current_user.ui_show_scheduled_reports %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep.startswith('scheduled_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('scheduled_reports.list_scheduled') }}">
                                     <i class="fas fa-clock w-4 mr-2"></i>{{ _('Scheduled Reports') }}
                                 </a>
                             </li>
+                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
                                     <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoices') }}
                                 </a>
                             </li>
+                            {% if settings.ui_allow_invoice_approvals and current_user.ui_show_invoice_approvals %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoice_approvals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoice_approvals.list_approvals') }}">
                                     <i class="fas fa-check-circle w-4 mr-2"></i>{{ _('Invoice Approvals') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_payment_gateways and current_user.ui_show_payment_gateways %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_payment_gateways %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payment_gateways.list_gateways') }}">
                                     <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payment Gateways') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_recurring_invoices and current_user.ui_show_recurring_invoices %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_recurring_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('recurring_invoices.list_recurring_invoices') }}">
                                     <i class="fas fa-sync-alt w-4 mr-2"></i>{{ _('Recurring Invoices') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_payments and current_user.ui_show_payments %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_payments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payments.list_payments') }}">
                                     <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payments') }}
                                 </a>
                             </li>
+                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_expenses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expenses.list_expenses') }}">
                                     <i class="fas fa-receipt w-4 mr-2"></i>{{ _('Expenses') }}
                                 </a>
                             </li>
+                            {% if settings.ui_allow_mileage and current_user.ui_show_mileage %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_mileage %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('mileage.list_mileage') }}">
                                     <i class="fas fa-car w-4 mr-2"></i>{{ _('Mileage') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_per_diem and current_user.ui_show_per_diem %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_perdiem %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_per_diem') }}">
                                     <i class="fas fa-utensils w-4 mr-2"></i>{{ _('Per Diem') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if settings.ui_allow_budget_alerts and current_user.ui_show_budget_alerts %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_budget %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('budget_alerts.budget_dashboard') }}">
                                     <i class="fas fa-exclamation-triangle w-4 mr-2"></i>{{ _('Budget Alerts') }}
                                 </a>
                             </li>
+                            {% endif %}
                         </ul>
                     </li>
+                    {% if settings.ui_allow_inventory and current_user.ui_show_inventory %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" class="w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-boxes w-6 text-center"></i>
@@ -485,12 +518,16 @@
                             </li>
                         </ul>
                     </li>
+                    {% endif %}
+                    {% if settings.ui_allow_analytics and current_user.ui_show_analytics %}
                     <li class="mt-2">
                         <a href="{{ url_for('analytics.analytics_dashboard') }}" class="flex items-center p-2 rounded-lg {% if analytics_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Analytics') }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if settings.ui_allow_tools and current_user.ui_show_tools %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('toolsDropdown')" data-dropdown="toolsDropdown" class="w-full flex items-center p-2 rounded-lg {% if tools_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-tools w-6 text-center"></i>
@@ -518,6 +555,7 @@
                             </li>
                         </ul>
                     </li>
+                    {% endif %}
                     {% if current_user.is_admin or has_any_permission(['view_users', 'manage_settings', 'view_system_info', 'manage_backups']) %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('adminDropdown')" data-dropdown="adminDropdown" class="w-full flex items-center p-2 rounded-lg {% if admin_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
@@ -860,6 +898,8 @@
     <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='enhanced-tables.js') }}"></script>
     <script src="{{ url_for('static', filename='interactions.js') }}"></script>
+    <script src="{{ url_for('static', filename='offline-sync.js') }}"></script>
+    <script src="{{ url_for('static', filename='mentions.js') }}"></script>
     <!-- Old command palette and keyboard navigation (restored) -->
     <script src="{{ url_for('static', filename='commands.js') }}?v=2.0"></script>
     <script>
@@ -1232,6 +1272,7 @@
     <script src="{{ url_for('static', filename='smart-notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='dashboard-widgets.js') }}"></script>
     <script src="{{ url_for('static', filename='dashboard-enhancements.js') }}"></script>
+    <script src="{{ url_for('static', filename='activity-feed.js') }}"></script>
     
     <!-- PWA Registration -->
     <script>

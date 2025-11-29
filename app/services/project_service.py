@@ -15,16 +15,16 @@ from app.constants import WebhookEvent
 class ProjectService:
     """
     Service for project business logic operations.
-    
+
     This service handles all project-related business logic including:
     - Creating and updating projects
     - Listing projects with filtering and pagination
     - Getting project details with related data
     - Archiving projects
-    
+
     All methods use the repository pattern for data access and include
     eager loading to prevent N+1 query problems.
-    
+
     Example:
         service = ProjectService()
         result = service.create_project(
@@ -35,14 +35,14 @@ class ProjectService:
         if result['success']:
             project = result['project']
     """
-    
+
     def __init__(self):
         """
         Initialize ProjectService with required repositories.
         """
         self.project_repo = ProjectRepository()
         self.client_repo = ClientRepository()
-    
+
     def create_project(
         self,
         name: str,
@@ -50,177 +50,161 @@ class ProjectService:
         created_by: int,
         description: Optional[str] = None,
         billable: bool = True,
-        hourly_rate: Optional[float] = None
+        hourly_rate: Optional[float] = None,
+        code: Optional[str] = None,
+        budget_amount: Optional[float] = None,
+        budget_threshold_percent: Optional[int] = None,
+        billing_ref: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new project.
-        
+
         Returns:
             dict with 'success', 'message', and 'project' keys
         """
         # Validate client
         client = self.client_repo.get_by_id(client_id)
         if not client:
-            return {
-                'success': False,
-                'message': 'Invalid client',
-                'error': 'invalid_client'
-            }
-        
+            return {"success": False, "message": "Invalid client", "error": "invalid_client"}
+
         # Check for duplicate name
         existing = self.project_repo.find_one_by(name=name, client_id=client_id)
         if existing:
             return {
-                'success': False,
-                'message': 'A project with this name already exists for this client',
-                'error': 'duplicate_project'
+                "success": False,
+                "message": "A project with this name already exists for this client",
+                "error": "duplicate_project",
             }
-        
-        # Create project
-        project = self.project_repo.create(
+
+        # Validate code uniqueness if provided
+        if code:
+            normalized_code = code.upper().strip()
+            existing_code = self.project_repo.find_one_by(code=normalized_code)
+            if existing_code:
+                return {
+                    "success": False,
+                    "message": "Project code already in use",
+                    "error": "duplicate_code",
+                }
+        else:
+            normalized_code = None
+
+        # Create project using model directly (repository doesn't support all fields yet)
+        from app.models import Project
+        from decimal import Decimal
+
+        project = Project(
             name=name,
             client_id=client_id,
             description=description,
             billable=billable,
             hourly_rate=hourly_rate,
+            code=normalized_code,
+            budget_amount=Decimal(str(budget_amount)) if budget_amount else None,
+            budget_threshold_percent=budget_threshold_percent or 80,
+            billing_ref=billing_ref,
             status=ProjectStatus.ACTIVE.value,
-            created_by=created_by
         )
-        
-        if not safe_commit('create_project', {'client_id': client_id, 'name': name}):
+
+        db.session.add(project)
+
+        if not safe_commit("create_project", {"client_id": client_id, "name": name}):
             return {
-                'success': False,
-                'message': 'Could not create project due to a database error',
-                'error': 'database_error'
+                "success": False,
+                "message": "Could not create project due to a database error",
+                "error": "database_error",
             }
-        
+
         # Emit domain event
-        emit_event(WebhookEvent.PROJECT_CREATED.value, {
-            'project_id': project.id,
-            'client_id': client_id
-        })
-        
-        return {
-            'success': True,
-            'message': 'Project created successfully',
-            'project': project
-        }
-    
-    def update_project(
-        self,
-        project_id: int,
-        user_id: int,
-        **kwargs
-    ) -> Dict[str, Any]:
+        emit_event(WebhookEvent.PROJECT_CREATED.value, {"project_id": project.id, "client_id": client_id})
+
+        return {"success": True, "message": "Project created successfully", "project": project}
+
+    def update_project(self, project_id: int, user_id: int, **kwargs) -> Dict[str, Any]:
         """
         Update a project.
-        
+
         Returns:
             dict with 'success', 'message', and 'project' keys
         """
         project = self.project_repo.get_by_id(project_id)
-        
+
         if not project:
-            return {
-                'success': False,
-                'message': 'Project not found',
-                'error': 'not_found'
-            }
-        
+            return {"success": False, "message": "Project not found", "error": "not_found"}
+
         # Update fields
         self.project_repo.update(project, **kwargs)
-        
-        if not safe_commit('update_project', {'project_id': project_id, 'user_id': user_id}):
+
+        if not safe_commit("update_project", {"project_id": project_id, "user_id": user_id}):
             return {
-                'success': False,
-                'message': 'Could not update project due to a database error',
-                'error': 'database_error'
+                "success": False,
+                "message": "Could not update project due to a database error",
+                "error": "database_error",
             }
-        
-        return {
-            'success': True,
-            'message': 'Project updated successfully',
-            'project': project
-        }
-    
-    def archive_project(
-        self,
-        project_id: int,
-        user_id: int,
-        reason: Optional[str] = None
-    ) -> Dict[str, Any]:
+
+        return {"success": True, "message": "Project updated successfully", "project": project}
+
+    def archive_project(self, project_id: int, user_id: int, reason: Optional[str] = None) -> Dict[str, Any]:
         """
         Archive a project.
-        
+
         Returns:
             dict with 'success', 'message', and 'project' keys
         """
         project = self.project_repo.archive(project_id, user_id, reason)
-        
+
         if not project:
+            return {"success": False, "message": "Project not found", "error": "not_found"}
+
+        if not safe_commit("archive_project", {"project_id": project_id, "user_id": user_id}):
             return {
-                'success': False,
-                'message': 'Project not found',
-                'error': 'not_found'
+                "success": False,
+                "message": "Could not archive project due to a database error",
+                "error": "database_error",
             }
-        
-        if not safe_commit('archive_project', {'project_id': project_id, 'user_id': user_id}):
-            return {
-                'success': False,
-                'message': 'Could not archive project due to a database error',
-                'error': 'database_error'
-            }
-        
-        return {
-            'success': True,
-            'message': 'Project archived successfully',
-            'project': project
-        }
-    
+
+        return {"success": True, "message": "Project archived successfully", "project": project}
+
     def get_active_projects(self, user_id: Optional[int] = None, client_id: Optional[int] = None) -> List[Project]:
         """Get active projects with optional filters"""
-        return self.project_repo.get_active_projects(
-            user_id=user_id,
-            client_id=client_id,
-            include_relations=True
-        )
-    
+        return self.project_repo.get_active_projects(user_id=user_id, client_id=client_id, include_relations=True)
+
     def get_project_with_details(
         self,
         project_id: int,
         include_time_entries: bool = True,
         include_tasks: bool = True,
         include_comments: bool = True,
-        include_costs: bool = True
+        include_costs: bool = True,
     ) -> Optional[Project]:
         """
         Get project with all related data using eager loading to prevent N+1 queries.
-        
+
         Args:
             project_id: The project ID
             include_time_entries: Whether to include time entries
             include_tasks: Whether to include tasks
             include_comments: Whether to include comments
             include_costs: Whether to include costs
-            
+
         Returns:
             Project with eagerly loaded relations, or None if not found
         """
         from sqlalchemy.orm import joinedload
         from app.models import Task, Comment, ProjectCost
-        
+
         query = self.project_repo.query().filter_by(id=project_id)
-        
+
         # Eagerly load client (client_obj is not dynamic, so it can be eagerly loaded)
         query = query.options(joinedload(Project.client_obj))
-        
+
         # Note: time_entries, tasks, costs, and comments are dynamic relationships
         # (lazy='dynamic'), so they cannot be eagerly loaded with joinedload().
         # They return query objects that can be filtered and accessed when needed.
         # We'll query them separately when needed instead.
-        
+
         return query.first()
-    
+
     def list_projects(
         self,
         status: Optional[str] = None,
@@ -229,131 +213,113 @@ class ProjectService:
         favorites_only: bool = False,
         user_id: Optional[int] = None,
         page: int = 1,
-        per_page: int = 20
+        per_page: int = 20,
     ) -> Dict[str, Any]:
         """
         List projects with filtering and pagination.
         Uses eager loading to prevent N+1 queries.
-        
+
         Returns:
             dict with 'projects', 'pagination', and 'total' keys
         """
         from sqlalchemy.orm import joinedload
         from app.models import UserFavoriteProject, Client
-        
+
         query = self.project_repo.query()
-        
+
         # Eagerly load client to prevent N+1
         query = query.options(joinedload(Project.client_obj))
-        
+
         # Filter by favorites if requested
         if favorites_only and user_id:
             query = query.join(
                 UserFavoriteProject,
-                db.and_(
-                    UserFavoriteProject.project_id == Project.id,
-                    UserFavoriteProject.user_id == user_id
-                )
+                db.and_(UserFavoriteProject.project_id == Project.id, UserFavoriteProject.user_id == user_id),
             )
-        
+
         # Filter by status
         if status:
             query = query.filter(Project.status == status)
-        
+
         # Filter by client name
         if client_name:
             query = query.join(Client).filter(Client.name == client_name)
-        
+
         # Search filter
         if search:
             like = f"%{search}%"
-            query = query.filter(
-                db.or_(
-                    Project.name.ilike(like),
-                    Project.description.ilike(like)
-                )
-            )
-        
+            query = query.filter(db.or_(Project.name.ilike(like), Project.description.ilike(like)))
+
         # Order and paginate
         query = query.order_by(Project.name)
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        return {
-            'projects': pagination.items,
-            'pagination': pagination,
-            'total': pagination.total
-        }
-    
+
+        return {"projects": pagination.items, "pagination": pagination, "total": pagination.total}
+
     def get_project_view_data(
-        self,
-        project_id: int,
-        time_entries_page: int = 1,
-        time_entries_per_page: int = 50
+        self, project_id: int, time_entries_page: int = 1, time_entries_per_page: int = 50
     ) -> Dict[str, Any]:
         """
         Get all data needed for project view page.
         Uses eager loading to prevent N+1 queries.
-        
+
         Returns:
-            dict with 'project', 'time_entries_pagination', 'tasks', 'comments', 
+            dict with 'project', 'time_entries_pagination', 'tasks', 'comments',
             'recent_costs', 'total_costs_count', 'user_totals', 'kanban_columns'
         """
         from sqlalchemy.orm import joinedload
         from app.models import Task, Comment, ProjectCost, KanbanColumn
         from app.repositories import TimeEntryRepository
-        
+
         # Get project with eager loading
         project = self.get_project_with_details(
             project_id=project_id,
             include_time_entries=True,
             include_tasks=True,
             include_comments=True,
-            include_costs=True
+            include_costs=True,
         )
-        
+
         if not project:
-            return {
-                'success': False,
-                'message': 'Project not found',
-                'error': 'not_found'
-            }
-        
+            return {"success": False, "message": "Project not found", "error": "not_found"}
+
         # Get time entries with pagination and eager loading
         time_entry_repo = TimeEntryRepository()
-        entries_query = time_entry_repo.query().filter(
-            TimeEntry.project_id == project_id,
-            TimeEntry.end_time.isnot(None)
-        ).options(
-            joinedload(TimeEntry.user),
-            joinedload(TimeEntry.task)
-        ).order_by(TimeEntry.start_time.desc())
-        
-        entries_pagination = entries_query.paginate(
-            page=time_entries_page,
-            per_page=time_entries_per_page,
-            error_out=False
+        entries_query = (
+            time_entry_repo.query()
+            .filter(TimeEntry.project_id == project_id, TimeEntry.end_time.isnot(None))
+            .options(joinedload(TimeEntry.user), joinedload(TimeEntry.task))
+            .order_by(TimeEntry.start_time.desc())
         )
-        
+
+        entries_pagination = entries_query.paginate(
+            page=time_entries_page, per_page=time_entries_per_page, error_out=False
+        )
+
         # Get tasks with eager loading (already loaded but need to order)
-        tasks = Task.query.filter_by(project_id=project_id).options(
-            joinedload(Task.assigned_user)
-        ).order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
-        
+        tasks = (
+            Task.query.filter_by(project_id=project_id)
+            .options(joinedload(Task.assigned_user))
+            .order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc())
+            .all()
+        )
+
         # Get comments (already loaded via relationship)
         from app.models import Comment
+
         comments = Comment.get_project_comments(project_id, include_replies=True)
-        
+
         # Get recent costs (already loaded but need to order)
-        recent_costs = ProjectCost.query.filter_by(project_id=project_id).order_by(
-            ProjectCost.cost_date.desc()
-        ).limit(5).all()
-        
+        recent_costs = (
+            ProjectCost.query.filter_by(project_id=project_id).order_by(ProjectCost.cost_date.desc()).limit(5).all()
+        )
+
         # Get total cost count
         total_costs_count = ProjectCost.query.filter_by(project_id=project_id).count()
-        
+
         # Get user totals
         user_totals = project.get_user_totals()
-        
+
         # Get kanban columns
         kanban_columns = []
         if KanbanColumn:
@@ -363,16 +329,15 @@ class ProjectService:
                 if not kanban_columns:
                     KanbanColumn.initialize_default_columns(project_id=None)
                     kanban_columns = KanbanColumn.get_active_columns(project_id=None)
-        
-        return {
-            'success': True,
-            'project': project,
-            'time_entries_pagination': entries_pagination,
-            'tasks': tasks,
-            'comments': comments,
-            'recent_costs': recent_costs,
-            'total_costs_count': total_costs_count,
-            'user_totals': user_totals,
-            'kanban_columns': kanban_columns
-        }
 
+        return {
+            "success": True,
+            "project": project,
+            "time_entries_pagination": entries_pagination,
+            "tasks": tasks,
+            "comments": comments,
+            "recent_costs": recent_costs,
+            "total_costs_count": total_costs_count,
+            "user_totals": user_totals,
+            "kanban_columns": kanban_columns,
+        }

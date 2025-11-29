@@ -69,6 +69,8 @@ services:
       - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-https}
       - WTF_CSRF_TRUSTED_ORIGINS=${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
       - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-timetracker}@redis:6379/0
+      - REDIS_ENABLED=${REDIS_ENABLED:-true}
       - LOG_FILE=/app/logs/timetracker.log
       # Analytics & Monitoring (optional)
       # See docs/analytics.md for configuration details
@@ -88,6 +90,8 @@ services:
       - app_uploads:/app/app/static/uploads
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -113,6 +117,22 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    restart: unless-stopped
+
+  # Redis - Caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: timetracker-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timetracker}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
   # Analytics & Monitoring Services
@@ -189,4 +209,6 @@ volumes:
   grafana_data:
     driver: local
   loki_data:
+    driver: local
+  redis_data:
     driver: local

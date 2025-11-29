@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, empty_state %}
+
+{% block title %}{{ _('Time Entry Approvals') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Time Entry Approvals')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-check-circle',
+    title_text=_('Time Entry Approvals'),
+    subtitle_text=_('Review and approve time entries'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Pending Approvals -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">
+            <i class="fas fa-clock text-yellow-500 mr-2"></i>
+            {{ _('Pending Approvals') }}
+        </h2>
+        {% if pending_approvals %}
+        <div class="space-y-4">
+            {% for approval in pending_approvals %}
+            <div class="border border-border-light dark:border-border-dark rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-1">
+                            <a href="{{ url_for('time_approvals.view_approval', approval_id=approval.id) }}" class="hover:text-primary transition-colors">
+                                {{ _('Time Entry') }} #{{ approval.time_entry.id }}
+                            </a>
+                        </h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Requested by') }}: {{ approval.requested_by_user.username if approval.requested_by_user else 'N/A' }} • 
+                            {{ approval.time_entry.duration_hours|round(2) }} {{ _('hours') }}
+                        </p>
+                        {% if approval.time_entry.project %}
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            <i class="fas fa-folder mr-1"></i>{{ approval.time_entry.project.name }}
+                        </p>
+                        {% elif approval.time_entry.client %}
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            <i class="fas fa-user mr-1"></i>{{ approval.time_entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="flex gap-2">
+                        <form method="POST" action="{{ url_for('time_approvals.approve_entry', approval_id=approval.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-check mr-1"></i>{{ _('Approve') }}
+                            </button>
+                        </form>
+                        <button onclick="showRejectModal({{ approval.id }})" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
+                        </button>
+                    </div>
+                </div>
+                {% if approval.comments %}
+                <div class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        <i class="fas fa-comment mr-1"></i>{{ approval.comments }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        {{ empty_state(
+            icon='fas fa-check-circle',
+            title=_('No pending approvals'),
+            message=_('All time entries have been reviewed.')
+        ) }}
+        {% endif %}
+    </div>
+
+    <!-- My Requests -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">
+            <i class="fas fa-paper-plane text-blue-500 mr-2"></i>
+            {{ _('My Requests') }}
+        </h2>
+        {% if my_requests %}
+        <div class="space-y-4">
+            {% for request in my_requests %}
+            <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-1">
+                            <a href="{{ url_for('time_approvals.view_approval', approval_id=request.id) }}" class="hover:text-primary transition-colors">
+                                {{ _('Time Entry') }} #{{ request.time_entry.id }}
+                            </a>
+                        </h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Status') }}: 
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if request.status.value == 'pending' %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200
+                                {% elif request.status.value == 'approved' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
+                                {% elif request.status.value == 'rejected' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200
+                                {% endif %}">
+                                {{ request.status.value|title }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        {{ empty_state(
+            icon='fas fa-inbox',
+            title=_('No pending requests'),
+            message=_('You have no time entry approval requests.')
+        ) }}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" data-overlay></div>
+    <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg">
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <div class="text-lg font-semibold">{{ _('Reject Time Entry') }}</div>
+            <button type="button" onclick="closeRejectModal()" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
+        </div>
+        <form id="rejectForm" method="POST" class="p-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label for="rejectReason" class="block text-sm font-medium mb-2">{{ _('Reason for rejection') }}</label>
+                <textarea id="rejectReason" name="comments" rows="4" class="form-input w-full" required></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeRejectModal()" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Cancel') }}</button>
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                    <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let currentApprovalId = null;
+
+function showRejectModal(approvalId) {
+    currentApprovalId = approvalId;
+    const form = document.getElementById('rejectForm');
+    form.action = `/approvals/${approvalId}/reject`;
+    document.getElementById('rejectModal').classList.remove('hidden');
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').classList.add('hidden');
+    document.getElementById('rejectReason').value = '';
+    currentApprovalId = null;
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    if (e.target.hasAttribute('data-overlay')) {
+        closeRejectModal();
+    }
+});
+</script>
+{% endblock %}
+

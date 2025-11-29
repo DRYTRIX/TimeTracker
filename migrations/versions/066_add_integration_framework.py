@@ -1,6 +1,6 @@
 """add integration framework
 
-Revision ID: 066_add_integration_framework
+Revision ID: 066_integration_framework
 Revises: 065_add_new_features
 Create Date: 2024-01-01 12:00:00.000000
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '066_add_integration_framework'
+revision = '066_integration_framework'
 down_revision = '065'
 branch_labels = None
 depends_on = None

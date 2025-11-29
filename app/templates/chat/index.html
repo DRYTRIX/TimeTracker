@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Team Chat') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Team Chat')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-comments',
+    title_text=_('Team Chat'),
+    subtitle_text=_('Communicate with your team'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Channels Sidebar -->
+    <div class="lg:col-span-1 bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">{{ _('Channels') }}</h2>
+            <button onclick="showCreateChannelModal()" class="text-primary hover:text-primary-dark">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="space-y-2">
+            {% for channel in channels %}
+            <a href="{{ url_for('team_chat.chat_channel', channel_id=channel.id) }}" 
+               class="block p-2 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors {% if request.endpoint == 'team_chat.chat_channel' and request.view_args.channel_id == channel.id %}bg-primary/10 border-l-2 border-primary{% endif %}">
+                <div class="flex items-center justify-between">
+                    <span class="font-medium"># {{ channel.name }}</span>
+                    {% if channel.unread_count and channel.unread_count > 0 %}
+                    <span class="bg-primary text-white text-xs px-2 py-1 rounded-full">{{ channel.unread_count }}</span>
+                    {% endif %}
+                </div>
+                {% if channel.last_message %}
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark truncate mt-1">
+                    {{ channel.last_message.content[:50] }}{% if channel.last_message.content|length > 50 %}...{% endif %}
+                </p>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if direct_channels %}
+        <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+            <h3 class="text-sm font-semibold mb-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Direct Messages') }}</h3>
+            <div class="space-y-2">
+                {% for channel in direct_channels %}
+                <a href="{{ url_for('team_chat.chat_channel', channel_id=channel.id) }}" 
+                   class="block p-2 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-user-circle"></i>
+                        <span class="font-medium">
+                            {% for member in channel.members %}
+                                {% if member.user_id != current_user.id %}
+                                    {{ member.user.username }}
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Chat Area -->
+    <div class="lg:col-span-3 bg-card-light dark:bg-card-dark rounded-lg shadow">
+        <div class="flex items-center justify-center h-96 text-text-muted-light dark:text-text-muted-dark">
+            <div class="text-center">
+                <i class="fas fa-comments text-6xl mb-4 opacity-50"></i>
+                <p class="text-lg">{{ _('Select a channel to start chatting') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Channel Modal -->
+<div id="createChannelModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" data-overlay></div>
+    <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg">
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <div class="text-lg font-semibold">{{ _('Create Channel') }}</div>
+            <button type="button" onclick="closeCreateChannelModal()" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
+        </div>
+        <form method="POST" action="{{ url_for('team_chat.create_channel') }}" class="p-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="space-y-4">
+                <div>
+                    <label for="channelName" class="block text-sm font-medium mb-2">{{ _('Channel Name') }}</label>
+                    <input type="text" id="channelName" name="name" required class="form-input w-full" placeholder="# general">
+                </div>
+                <div>
+                    <label for="channelDescription" class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
+                    <textarea id="channelDescription" name="description" rows="3" class="form-input w-full"></textarea>
+                </div>
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="is_private" class="form-checkbox">
+                        <span class="ml-2 text-sm">{{ _('Private channel') }}</span>
+                    </label>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button type="button" onclick="closeCreateChannelModal()" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Cancel') }}</button>
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                    <i class="fas fa-plus mr-1"></i>{{ _('Create') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showCreateChannelModal() {
+    document.getElementById('createChannelModal').classList.remove('hidden');
+}
+
+function closeCreateChannelModal() {
+    document.getElementById('createChannelModal').classList.add('hidden');
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    if (e.target.hasAttribute('data-overlay')) {
+        closeCreateChannelModal();
+    }
+});
+</script>
+{% endblock %}
+

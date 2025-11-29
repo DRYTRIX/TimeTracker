@@ -663,6 +663,46 @@ except Exception as e:
     return 0
 }
 
+# Function to ensure data directory permissions
+ensure_data_directory() {
+    log "Ensuring /data directory exists and has proper permissions..."
+    
+    # Create /data directory if it doesn't exist
+    if [ ! -d "/data" ]; then
+        log "Creating /data directory..."
+        mkdir -p /data
+    fi
+    
+    # Try to set permissions (best effort - may fail if we don't have permission)
+    # This is useful when the volume is mounted with different ownership
+    if [ -w "/data" ]; then
+        log "Setting permissions on /data directory..."
+        chmod 755 /data 2>/dev/null || true
+        
+        # Get current user info
+        CURRENT_UID=$(id -u 2>/dev/null || echo "1000")
+        CURRENT_GID=$(id -g 2>/dev/null || echo "1000")
+        
+        # Try to change ownership if we have permission (requires root or matching ownership)
+        if [ "$CURRENT_UID" = "0" ] || [ -O "/data" ]; then
+            log "Setting ownership of /data to current user (UID: $CURRENT_UID, GID: $CURRENT_GID)..."
+            chown "$CURRENT_UID:$CURRENT_GID" /data 2>/dev/null || true
+        else
+            log "Cannot change ownership of /data (not root and not owner), but directory is writable"
+        fi
+        
+        # Ensure subdirectories exist
+        mkdir -p /data/uploads 2>/dev/null || true
+        chmod 755 /data/uploads 2>/dev/null || true
+        
+        log "✓ /data directory setup complete"
+    else
+        log "⚠ /data directory is not writable - this may cause issues"
+        log "Current user: $(whoami) (UID: $(id -u 2>/dev/null || echo 'unknown'))"
+        log "Directory permissions: $(ls -ld /data 2>/dev/null || echo 'cannot read')"
+    fi
+}
+
 # Function to verify database integrity
 verify_database_integrity() {
     local db_url="$1"
@@ -850,6 +890,9 @@ main() {
     fi
     
     log "Database URL: $db_url"
+    
+    # Ensure data directory has proper permissions
+    ensure_data_directory
     
     # Wait for database to be available
     if ! wait_for_database "$db_url"; then
