@@ -35,11 +35,30 @@ def admin_user(app):
 @pytest.fixture
 def authenticated_admin_client(client, admin_user):
     """Create an authenticated admin client."""
-    from flask_login import login_user
+    # Use the actual login endpoint to properly authenticate (same as admin_authenticated_client in conftest)
+    # If CSRF is enabled, fetch a token and include it in the form submit
+    try:
+        from flask import current_app
 
-    # Use login_user directly like admin_authenticated_client in conftest
-    with client.session_transaction() as sess:
-        login_user(admin_user)
+        csrf_enabled = bool(current_app.config.get("WTF_CSRF_ENABLED"))
+    except Exception:
+        csrf_enabled = False
+
+    login_data = {"username": admin_user.username}
+    headers = {}
+
+    if csrf_enabled:
+        try:
+            resp = client.get("/auth/csrf-token")
+            token = ""
+            if resp.is_json:
+                token = (resp.get_json() or {}).get("csrf_token") or ""
+            login_data["csrf_token"] = token
+            headers["X-CSRFToken"] = token
+        except Exception:
+            pass
+
+    client.post("/login", data=login_data, headers=headers or None, follow_redirects=True)
     return client
 
 
@@ -154,6 +173,8 @@ def test_logo_file_persists_after_upload(authenticated_admin_client, sample_logo
         # Get the filename from database - refresh to get latest data
         db.session.expire_all()
         settings = Settings.get_settings()
+        # Explicitly refresh the settings object to ensure we have the latest data
+        db.session.refresh(settings)
         logo_filename = settings.company_logo_filename
 
         assert logo_filename != "" and logo_filename is not None
@@ -185,6 +206,11 @@ def test_logo_accessible_after_simulated_restart(
         # Get the filename and path - refresh to get latest data
         db.session.expire_all()
         settings = Settings.get_settings()
+        # Explicitly refresh the settings object to ensure we have the latest data
+        try:
+            db.session.refresh(settings)
+        except Exception:
+            pass  # Object might not be in session, that's okay
         logo_filename = settings.company_logo_filename
         assert logo_filename and logo_filename != "", "Logo filename should be set after upload"
         logo_path = settings.get_logo_path()
@@ -228,11 +254,19 @@ def test_multiple_logos_in_directory(authenticated_admin_client, app, cleanup_te
             authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
             db.session.expire_all()
             settings = Settings.get_settings()
+            try:
+                db.session.refresh(settings)
+            except Exception:
+                pass  # Object might not be in session, that's okay
             logos_to_upload.append(settings.company_logo_filename)
 
         # Verify at least the current logo exists
         db.session.expire_all()
         settings = Settings.get_settings()
+        try:
+            db.session.refresh(settings)
+        except Exception:
+            pass  # Object might not be in session, that's okay
         current_logo_path = settings.get_logo_path()
         assert current_logo_path is not None, "Logo path should not be None"
         assert os.path.exists(current_logo_path), "Current logo does not exist"
@@ -251,6 +285,10 @@ def test_logo_path_is_in_uploads_directory(
         authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
         db.session.expire_all()
         settings = Settings.get_settings()
+        try:
+            db.session.refresh(settings)
+        except Exception:
+            pass  # Object might not be in session, that's okay
         logo_path = settings.get_logo_path()
         assert logo_path is not None, "Logo path should not be None"
 
@@ -325,6 +363,10 @@ def test_logo_file_has_correct_extension(authenticated_admin_client, sample_logo
         authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
         db.session.expire_all()
         settings = Settings.get_settings()
+        try:
+            db.session.refresh(settings)
+        except Exception:
+            pass  # Object might not be in session, that's okay
         logo_filename = settings.company_logo_filename
         assert logo_filename and logo_filename != "", "Logo filename should be set"
 
@@ -348,6 +390,10 @@ def test_old_logo_removed_when_new_uploaded(authenticated_admin_client, app, cle
         authenticated_admin_client.post("/admin/upload-logo", data=data1, content_type="multipart/form-data")
         db.session.expire_all()
         settings = Settings.get_settings()
+        try:
+            db.session.refresh(settings)
+        except Exception:
+            pass  # Object might not be in session, that's okay
         old_filename = settings.company_logo_filename
         old_path = settings.get_logo_path()
         assert old_path is not None, "Old logo path should not be None"
@@ -367,6 +413,10 @@ def test_old_logo_removed_when_new_uploaded(authenticated_admin_client, app, cle
         authenticated_admin_client.post("/admin/upload-logo", data=data2, content_type="multipart/form-data")
         db.session.expire_all()
         settings = Settings.get_settings()
+        try:
+            db.session.refresh(settings)
+        except Exception:
+            pass  # Object might not be in session, that's okay
         new_filename = settings.company_logo_filename
         new_path = settings.get_logo_path()
         assert new_path is not None, "New logo path should not be None"
@@ -390,6 +440,10 @@ def test_logo_removed_when_deleted(authenticated_admin_client, sample_logo_image
         authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
         db.session.expire_all()
         settings = Settings.get_settings()
+        try:
+            db.session.refresh(settings)
+        except Exception:
+            pass  # Object might not be in session, that's okay
         logo_path = settings.get_logo_path()
         assert logo_path is not None, "Logo path should not be None"
 
