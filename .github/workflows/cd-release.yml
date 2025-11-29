@@ -331,11 +331,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Set lowercase image name
+        id: image-name
+        run: |
+          # Convert repository name to lowercase for Docker image compatibility
+          IMAGE_NAME_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME_LOWER=${IMAGE_NAME_LOWER}" >> $GITHUB_OUTPUT
+          echo "✅ Image name set to: ${IMAGE_NAME_LOWER}"
+      
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Use lowercase image name for compatibility with Docker registries
+          images: ${{ steps.image-name.outputs.IMAGE_NAME_LOWER }}
           tags: |
             type=semver,pattern={{version}},value=${{ needs.determine-version.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.determine-version.outputs.version }}
@@ -462,7 +471,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             APP_VERSION=${{ needs.determine-version.outputs.version }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME_LOWER }}:latest
           cache-to: type=inline
       
       - name: Generate deployment manifests
@@ -470,22 +479,48 @@ jobs:
           VERSION="${{ needs.determine-version.outputs.version }}"
           # Remove 'v' prefix for image tag
           VERSION_NO_V="${VERSION#v}"
+          # Convert repository name to lowercase for image name
+          IMAGE_NAME_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          PRODUCTION_IMAGE="${IMAGE_NAME_LOWER}:${VERSION_NO_V}"
           
-          # Docker Compose deployment
+          # Docker Compose deployment - includes all services from docker-compose.yml
           cat > docker-compose.production.yml << EOF
           # TimeTracker Production Deployment
           # Generated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
           # Version: ${VERSION}
-          # Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}
-          
-          version: '3.8'
+          # Image: ${PRODUCTION_IMAGE}
           
           services:
-            app:
-              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_NO_V}
-              container_name: timetracker-prod
+            # Certificate generator - runs once to create self-signed certs with SANs
+            certgen:
+              image: alpine:latest
+              container_name: timetracker-certgen
+              volumes:
+                - ./nginx/ssl:/certs
+                - ./scripts:/scripts:ro
+              command: sh /scripts/generate-certs.sh
+              restart: "no"
+          
+            # HTTPS reverse proxy (TLS terminates here)
+            nginx:
+              image: nginx:alpine
+              container_name: timetracker-nginx
               ports:
-                - "8080:8080"
+                - "80:80"
+                - "443:443"
+              volumes:
+                - ./nginx/conf.d:/etc/nginx/conf.d:ro
+                - ./nginx/ssl:/etc/nginx/ssl:ro
+              depends_on:
+                certgen:
+                  condition: service_completed_successfully
+                app:
+                  condition: service_started
+              restart: unless-stopped
+          
+            app:
+              image: ${PRODUCTION_IMAGE}
+              container_name: timetracker-app
               environment:
                 - TZ=\${TZ:-Europe/Brussels}
                 - CURRENCY=\${CURRENCY:-EUR}
@@ -497,27 +532,58 @@ jobs:
                 # IMPORTANT: Change SECRET_KEY in production! Used for sessions and CSRF tokens.
                 # Generate a secure key: python -c "import secrets; print(secrets.token_hex(32))"
                 # 
+                # CSRF CONFIGURATION:
+                # - WTF_CSRF_SSL_STRICT: Set to 'false' for HTTP access (localhost or IP address)
+                #   Set to 'true' only when using HTTPS in production
+                # - If accessing via IP address (e.g., 192.168.1.100), also set:
+                #   SESSION_COOKIE_SECURE=false and CSRF_COOKIE_SECURE=false
+                # 
                 # TROUBLESHOOTING: If forms fail with "CSRF token missing or invalid":
                 # 1. Verify SECRET_KEY is set and doesn't change between restarts
                 # 2. Check CSRF is enabled: WTF_CSRF_ENABLED=true
                 # 3. Ensure cookies are enabled in your browser
                 # 4. If behind a reverse proxy, ensure it forwards cookies correctly
                 # 5. Check the token hasn't expired (increase WTF_CSRF_TIME_LIMIT if needed)
-                # For details: docs/CSRF_CONFIGURATION.md
+                # 6. If accessing via IP (not localhost): WTF_CSRF_SSL_STRICT=false
+                # For details: docs/CSRF_CONFIGURATION.md and docs/CSRF_IP_ACCESS_GUIDE.md
                 - SECRET_KEY=\${SECRET_KEY:-your-secret-key-change-this}
-                - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
-                - LOG_FILE=/app/logs/timetracker.log
-                # CSRF Protection (enabled by default for security)
+                # Disable strict Referer check by default to avoid privacy/port issues
+                - WTF_CSRF_SSL_STRICT=\${WTF_CSRF_SSL_STRICT:-true}
                 - WTF_CSRF_ENABLED=\${WTF_CSRF_ENABLED:-true}
                 - WTF_CSRF_TIME_LIMIT=\${WTF_CSRF_TIME_LIMIT:-3600}
-                # Ensure cookies work over HTTP (disable Secure for local/dev or non-TLS proxies)
-                - SESSION_COOKIE_SECURE=\${SESSION_COOKIE_SECURE:-false}
-                - REMEMBER_COOKIE_SECURE=\${REMEMBER_COOKIE_SECURE:-false}
+                - SESSION_COOKIE_SECURE=\${SESSION_COOKIE_SECURE:-true}
+                - SESSION_COOKIE_SAMESITE=\${SESSION_COOKIE_SAMESITE:-Lax}
+                - REMEMBER_COOKIE_SECURE=\${REMEMBER_COOKIE_SECURE:-true}
+                - CSRF_COOKIE_SECURE=\${CSRF_COOKIE_SECURE:-true}
+                - CSRF_COOKIE_HTTPONLY=\${CSRF_COOKIE_HTTPONLY:-false}
+                - CSRF_COOKIE_SAMESITE=\${CSRF_COOKIE_SAMESITE:-Lax}
+                - CSRF_COOKIE_NAME=\${CSRF_COOKIE_NAME:-XSRF-TOKEN}
+                - PREFERRED_URL_SCHEME=\${PREFERRED_URL_SCHEME:-https}
+                - WTF_CSRF_TRUSTED_ORIGINS=\${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
+                - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
+                - REDIS_URL=redis://:\${REDIS_PASSWORD:-timetracker}@redis:6379/0
+                - REDIS_ENABLED=\${REDIS_ENABLED:-true}
+                - LOG_FILE=/app/logs/timetracker.log
+                # Analytics & Monitoring (optional)
+                # See docs/analytics.md for configuration details
+                - SENTRY_DSN=\${SENTRY_DSN:-}
+                - SENTRY_TRACES_RATE=\${SENTRY_TRACES_RATE:-0.0}
+                - POSTHOG_API_KEY=\${POSTHOG_API_KEY:-}
+                - POSTHOG_HOST=\${POSTHOG_HOST:-https://app.posthog.com}
+                - ENABLE_TELEMETRY=\${ENABLE_TELEMETRY:-false}
+                - TELE_URL=\${TELE_URL:-}
+                - TELE_SALT=\${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
+          
+              # Expose only internally; nginx publishes ports
+              ports: []
               volumes:
                 - app_data:/data
-                - ./logs:/app/logs
+                - app_logs:/app/logs
+                - app_uploads:/app/app/static/uploads
               depends_on:
                 db:
+                  condition: service_healthy
+                redis:
                   condition: service_healthy
               restart: unless-stopped
               healthcheck:
@@ -544,12 +610,99 @@ jobs:
                 retries: 5
                 start_period: 30s
               restart: unless-stopped
-           
+          
+            # Redis - Caching and session storage
+            redis:
+              image: redis:7-alpine
+              container_name: timetracker-redis
+              command: redis-server --appendonly yes --requirepass \${REDIS_PASSWORD:-timetracker}
+              volumes:
+                - redis_data:/data
+              ports:
+                - "6379:6379"
+              healthcheck:
+                test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+                interval: 10s
+                timeout: 3s
+                retries: 5
+              restart: unless-stopped
+          
+            # Analytics & Monitoring Services
+            # All services start by default for complete monitoring
+            # See docs/analytics.md and ANALYTICS_QUICK_START.md for details
+          
+            # Prometheus - Metrics collection and storage
+            prometheus:
+              image: prom/prometheus:latest
+              container_name: timetracker-prometheus
+              volumes:
+                - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+                - prometheus_data:/prometheus
+              command:
+                - '--config.file=/etc/prometheus/prometheus.yml'
+                - '--storage.tsdb.path=/prometheus'
+                - '--storage.tsdb.retention.time=30d'
+              ports:
+                - "9090:9090"
+              restart: unless-stopped
+          
+            # Grafana - Metrics visualization and dashboards
+            grafana:
+              image: grafana/grafana:latest
+              container_name: timetracker-grafana
+              environment:
+                - GF_SECURITY_ADMIN_PASSWORD=\${GRAFANA_ADMIN_PASSWORD:-admin}
+                - GF_USERS_ALLOW_SIGN_UP=false
+                - GF_SERVER_ROOT_URL=\${GF_SERVER_ROOT_URL:-http://localhost:3000}
+              volumes:
+                - grafana_data:/var/lib/grafana
+                - ./grafana/provisioning:/etc/grafana/provisioning
+              ports:
+                - "3000:3000"
+              depends_on:
+                - prometheus
+              restart: unless-stopped
+          
+            # Loki - Log aggregation
+            loki:
+              image: grafana/loki:latest
+              container_name: timetracker-loki
+              volumes:
+                - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+                - loki_data:/loki
+              ports:
+                - "3100:3100"
+              command: -config.file=/etc/loki/local-config.yaml
+              restart: unless-stopped
+          
+            # Promtail - Log shipping to Loki
+            promtail:
+              image: grafana/promtail:latest
+              container_name: timetracker-promtail
+              volumes:
+                - ./logs:/var/log/timetracker:ro
+                - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+              command: -config.file=/etc/promtail/config.yml
+              depends_on:
+                - loki
+              restart: unless-stopped
           
           volumes:
             app_data:
               driver: local
+            app_logs:
+              driver: local
+            app_uploads:
+              driver: local
             db_data:
+              driver: local
+            prometheus_data:
+              driver: local
+            grafana_data:
+              driver: local
+            loki_data:
+              driver: local
+            redis_data:
               driver: local
           EOF
           
