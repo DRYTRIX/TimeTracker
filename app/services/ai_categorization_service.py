@@ -4,7 +4,7 @@ Uses pattern matching and heuristics (can be extended with actual AI APIs)
 """
 
 from typing import Dict, List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from app import db
 from app.models import TimeEntry, Project, Task, Client
 from sqlalchemy import func

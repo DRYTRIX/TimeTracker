@@ -882,7 +882,7 @@ def new_transfer():
             reason = f"Transfer from {from_warehouse.code} to {to_warehouse.code}"
 
             # Create negative movement (from source warehouse)
-            out_movement, _ = StockMovement.record_movement(
+            out_movement, _unused = StockMovement.record_movement(
                 movement_type="transfer",
                 stock_item_id=stock_item_id,
                 warehouse_id=from_warehouse_id,
@@ -896,7 +896,7 @@ def new_transfer():
             )
 
             # Create positive movement (to destination warehouse)
-            in_movement, _ = StockMovement.record_movement(
+            in_movement, _unused = StockMovement.record_movement(
                 movement_type="transfer",
                 stock_item_id=stock_item_id,
                 warehouse_id=to_warehouse_id,

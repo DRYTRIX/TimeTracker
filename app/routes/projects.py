@@ -349,7 +349,7 @@ def create_project():
             entity_type="project",
             entity_id=project.id,
             entity_name=project.name,
-            description=f'Created project "{project.name}" for {client.name}',
+            description=f'Created project "{project.name}" for {project.client.name}',
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
         )

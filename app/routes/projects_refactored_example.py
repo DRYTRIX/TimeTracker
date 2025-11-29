@@ -11,8 +11,8 @@ from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from app import db
 from app.services import ProjectService
-from app.repositories import ProjectRepository, ClientRepository
-from app.models import Project, Client, UserFavoriteProject
+from app.repositories import ProjectRepository, ClientRepository, TimeEntryRepository
+from app.models import Project, Client, UserFavoriteProject, TimeEntry
 from app.utils.permissions import admin_or_permission_required
 
 projects_bp = Blueprint("projects", __name__)

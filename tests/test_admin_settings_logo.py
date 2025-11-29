@@ -23,8 +23,11 @@ def admin_user(app):
 @pytest.fixture
 def authenticated_admin_client(client, admin_user):
     """Create an authenticated admin client."""
-    # Use the actual login endpoint to properly authenticate
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    from flask_login import login_user
+    
+    with client.session_transaction() as sess:
+        # Use Flask-Login's login_user directly for tests
+        login_user(admin_user)
     return client
 
 

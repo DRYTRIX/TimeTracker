@@ -7,6 +7,7 @@ previous time entries with pre-filled data.
 
 import pytest
 from datetime import datetime, timedelta
+from flask import url_for
 from app import db
 from app.models import TimeEntry, User, Project, Task
 
@@ -272,12 +273,19 @@ def test_admin_can_duplicate_any_entry(admin_authenticated_client, user, project
 def test_duplicate_button_on_dashboard(authenticated_client, time_entry_with_all_fields, app):
     """Smoke test: Duplicate button should appear on dashboard."""
     with app.app_context():
+        # Clear any cache that might affect the dashboard
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache.delete(f"dashboard:{time_entry_with_all_fields.user_id}")
+        
         response = authenticated_client.get("/dashboard")
         assert response.status_code == 200
         html = response.get_data(as_text=True)
 
         # Check for duplicate button/link (may use icon or text)
-        assert "fa-copy" in html or "duplicate" in html.lower()
+        # The button uses fa-copy icon and duplicate_timer route
+        duplicate_url = url_for("timer.duplicate_timer", timer_id=time_entry_with_all_fields.id)
+        assert "fa-copy" in html or "duplicate" in html.lower() or "duplicate_timer" in html or duplicate_url in html
 
 
 @pytest.mark.smoke
