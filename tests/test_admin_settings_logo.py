@@ -14,6 +14,7 @@ def admin_user(app):
     """Create an admin user for testing."""
     user = User(username="admintest", role="admin")
     user.is_active = True
+    user.set_password("testpass123")  # Set password for login endpoint
     db.session.add(user)
     db.session.commit()
     db.session.refresh(user)
@@ -24,9 +25,9 @@ def admin_user(app):
 def authenticated_admin_client(client, admin_user):
     """Create an authenticated admin client."""
     from flask_login import login_user
-    
+
+    # Use login_user directly like admin_authenticated_client in conftest
     with client.session_transaction() as sess:
-        # Use Flask-Login's login_user directly for tests
         login_user(admin_user)
     return client
 

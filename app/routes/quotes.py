@@ -7,7 +7,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
-from app.utils.config_manager import get_setting
+from app.utils.config_manager import ConfigManager
 
 quotes_bp = Blueprint("quotes", __name__)
 
@@ -486,7 +486,7 @@ def send_quote(quote_id):
         for item in quote.items:
             if item.is_stock_item and item.stock_item_id and item.warehouse_id:
                 try:
-                    expires_in_days = get_setting("INVENTORY_QUOTE_RESERVATION_EXPIRY_DAYS", 30)
+                    expires_in_days = ConfigManager.get_setting("INVENTORY_QUOTE_RESERVATION_EXPIRY_DAYS", 30)
                     StockReservation.create_reservation(
                         stock_item_id=item.stock_item_id,
                         warehouse_id=item.warehouse_id,
