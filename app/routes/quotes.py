@@ -2,11 +2,12 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Quote, QuoteItem, QuoteAttachment, Client, Project, Invoice
+from app.models import Quote, QuoteItem, QuoteAttachment, Client, Project, Invoice, QuoteTemplate
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
+from app.utils.config_manager import get_setting
 
 quotes_bp = Blueprint("quotes", __name__)
 
@@ -61,6 +62,11 @@ def create_quote():
         valid_until = request.form.get("valid_until", "").strip()
         notes = request.form.get("notes", "").strip()
         terms = request.form.get("terms", "").strip()
+        payment_terms = request.form.get("payment_terms", "").strip()
+        discount_type = request.form.get("discount_type", "").strip()
+        discount_amount = request.form.get("discount_amount", "").strip()
+        discount_reason = request.form.get("discount_reason", "").strip()
+        coupon_code = request.form.get("coupon_code", "").strip()
 
         try:
             current_app.logger.info(
@@ -1084,6 +1090,10 @@ def create_template():
 @admin_or_permission_required("create_quotes")
 def save_template_from_quote(template_id):
     """Save current quote as a template"""
+    quote_id = request.form.get("quote_id", type=int)
+    if not quote_id:
+        flash(_("Quote ID is required"), "error")
+        return redirect(url_for("quotes.list_templates"))
     quote = Quote.query.get_or_404(quote_id)
 
     # Check permissions

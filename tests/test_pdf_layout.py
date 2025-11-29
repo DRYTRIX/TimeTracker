@@ -277,7 +277,7 @@ def test_pdf_generation_with_default_template(app, sample_invoice):
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_navigation_link_exists(admin_authenticated_client):
+def test_pdf_layout_navigation_link_exists(admin_authenticated_client, app):
     """Test that PDF layout link exists in admin navigation."""
     # Access admin dashboard or any admin page
     response = admin_authenticated_client.get("/admin/settings")
@@ -285,6 +285,11 @@ def test_pdf_layout_navigation_link_exists(admin_authenticated_client):
     assert response.status_code == 200
     # Should contain link to PDF layout page
     # The link might be in the navigation or as a menu item
+    html = response.get_data(as_text=True)
+    # Check for PDF layout link - it's in a dropdown menu
+    with app.app_context():
+        pdf_layout_url = url_for("admin.pdf_layout")
+        assert "admin.pdf_layout" in html or "pdf-layout" in html or "PDF Templates" in html or pdf_layout_url in html
 
 
 @pytest.mark.smoke

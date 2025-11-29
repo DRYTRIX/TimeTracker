@@ -34,8 +34,11 @@ def admin_user(app):
 @pytest.fixture
 def authenticated_admin_client(client, admin_user):
     """Create an authenticated admin client."""
+    from flask_login import login_user
+    
     with client.session_transaction() as sess:
-        sess["_user_id"] = str(admin_user.id)
+        # Use Flask-Login's login_user directly for tests
+        login_user(admin_user)
     return client
 
 

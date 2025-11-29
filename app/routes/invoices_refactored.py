@@ -14,6 +14,7 @@ from app import db, log_event, track_event
 from app.services import InvoiceService, ProjectService
 from app.repositories import InvoiceRepository, ProjectRepository
 from app.models import Invoice, Project, Settings
+from app.utils.db import safe_commit
 from app.utils.api_responses import success_response, error_response, paginated_response
 from app.utils.event_bus import emit_event
 from app.constants import WebhookEvent, InvoiceStatus

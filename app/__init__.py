@@ -632,7 +632,15 @@ def create_app(config=None):
             app.logger.warning(f"Failed to initialize PostHog: {e}")
 
     # Fail-fast on weak/missing secret in production
-    if not app.debug and app.config.get("FLASK_ENV", "production") == "production":
+    # Skip validation in testing or debug mode
+    is_testing = app.config.get("TESTING", False)
+    # Check both config and environment variable for FLASK_ENV
+    flask_env_config = app.config.get("FLASK_ENV")
+    flask_env_env = os.getenv("FLASK_ENV", "production")
+    flask_env = flask_env_config if flask_env_config else flask_env_env
+    is_production_env = flask_env == "production" and not is_testing
+    
+    if not app.debug and is_production_env:
         secret = app.config.get("SECRET_KEY")
         placeholder_values = {
             "dev-secret-key-change-in-production",
