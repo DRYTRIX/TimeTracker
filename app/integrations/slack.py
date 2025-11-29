@@ -149,10 +149,101 @@ class SlackConnector(BaseConnector):
         if not token:
             return {"success": False, "message": "No access token available"}
 
-        # This would sync Slack channels, users, etc.
-        # Implementation depends on specific requirements
+        synced_count = 0
+        errors = []
 
-        return {"success": True, "message": "Sync completed", "synced_items": 0}
+        try:
+            # Get channels
+            channels_response = requests.get(
+                "https://slack.com/api/conversations.list",
+                headers={"Authorization": f"Bearer {token}"},
+                params={"types": "public_channel,private_channel", "exclude_archived": True}
+            )
+
+            if channels_response.status_code == 200:
+                channels_data = channels_response.json()
+                if channels_data.get("ok"):
+                    channels = channels_data.get("channels", [])
+                    synced_count += len(channels)
+                    
+                    # Store channels in integration config
+                    if not self.integration.config:
+                        self.integration.config = {}
+                    self.integration.config['channels'] = [
+                        {
+                            "id": ch.get("id"),
+                            "name": ch.get("name"),
+                            "is_private": ch.get("is_private", False)
+                        }
+                        for ch in channels
+                    ]
+                else:
+                    errors.append(f"Slack API error: {channels_data.get('error', 'Unknown error')}")
+
+            # Get users
+            users_response = requests.get(
+                "https://slack.com/api/users.list",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            if users_response.status_code == 200:
+                users_data = users_response.json()
+                if users_data.get("ok"):
+                    users = users_data.get("members", [])
+                    synced_count += len(users)
+                    
+                    # Store users in integration config
+                    if not self.integration.config:
+                        self.integration.config = {}
+                    self.integration.config['users'] = [
+                        {
+                            "id": u.get("id"),
+                            "name": u.get("name"),
+                            "real_name": u.get("real_name", ""),
+                            "email": u.get("profile", {}).get("email", "")
+                        }
+                        for u in users if not u.get("deleted", False)
+                    ]
+                else:
+                    errors.append(f"Slack API error: {users_data.get('error', 'Unknown error')}")
+
+            from app import db
+            from app.utils.db import safe_commit
+            safe_commit("sync_slack_data", {"integration_id": self.integration.id})
+
+            return {
+                "success": True,
+                "message": f"Sync completed. Found {synced_count} items.",
+                "synced_items": synced_count,
+                "errors": errors
+            }
+        except Exception as e:
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
+
+    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+        """Handle incoming webhook from Slack."""
+        try:
+            # Slack webhooks typically use challenge-response for URL verification
+            if payload.get("type") == "url_verification":
+                return {
+                    "success": True,
+                    "challenge": payload.get("challenge")
+                }
+
+            event = payload.get("event", {})
+            event_type = event.get("type", "")
+
+            # Handle various Slack events
+            if event_type == "message":
+                return {
+                    "success": True,
+                    "message": "Message event received",
+                    "event_type": event_type
+                }
+
+            return {"success": True, "message": f"Webhook processed: {event_type}"}
+        except Exception as e:
+            return {"success": False, "message": f"Error processing webhook: {str(e)}"}
 
     def send_message(self, channel: str, text: str) -> Dict[str, Any]:
         """Send a message to a Slack channel."""

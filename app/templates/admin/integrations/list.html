@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Integration Setup') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Admin', 'url': url_for('admin.admin_dashboard')},
+    {'text': 'Integrations'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-plug',
+    title_text='Integration Setup',
+    subtitle_text='Configure OAuth credentials for integrations',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+        {{ _('Configure OAuth credentials for each integration. Global integrations are shared across all users.') }}
+    </p>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for provider_info in available_providers %}
+        {% set provider = provider_info.provider %}
+        {% set is_global = (provider != 'google_calendar') %}
+        <a href="{{ url_for('admin.integration_setup', provider=provider) }}" 
+           class="block p-4 border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="font-semibold">{{ provider_info.display_name }}</h3>
+                {% if is_global %}
+                <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    {{ _('Global') }}
+                </span>
+                {% else %}
+                <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                    {{ _('Per User') }}
+                </span>
+                {% endif %}
+            </div>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ provider_info.description }}</p>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+

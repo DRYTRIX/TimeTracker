@@ -26,12 +26,12 @@
                 <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
                         <h3 class="text-lg font-semibold">
-                            {% if integration.provider == 'google' %}
+                            {% if integration.provider == 'google' or integration.provider == 'google_calendar' %}
                             <i class="fab fa-google text-blue-600 mr-2"></i>Google Calendar
-                            {% elif integration.provider == 'outlook' %}
+                            {% elif integration.provider == 'outlook' or integration.provider == 'outlook_calendar' %}
                             <i class="fab fa-microsoft text-blue-500 mr-2"></i>Outlook Calendar
                             {% else %}
-                            {{ integration.provider|title }} Calendar
+                            {{ integration.provider|title|replace('_', ' ') }} Calendar
                             {% endif %}
                         </h3>
                         {% if integration.is_active %}
@@ -44,6 +44,10 @@
                     {% if integration.calendar_name %}
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
                         <i class="fas fa-calendar mr-1"></i>{{ integration.calendar_name }}
+                    </p>
+                    {% elif integration.config and integration.config.get('calendar_id') %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
+                        <i class="fas fa-calendar mr-1"></i>{{ integration.config.get('calendar_id') }}
                     </p>
                     {% endif %}
                     
@@ -63,10 +67,15 @@
                 </div>
                 
                 <div class="flex gap-2">
+                    {% if integration.provider in ['google_calendar', 'outlook_calendar'] %}
+                    <a href="{{ url_for('integrations.view_integration', integration_id=integration.id) }}" class="text-blue-600 hover:text-blue-800" title="{{ _('Manage Integration') }}">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                    {% endif %}
                     {% if integration.is_active %}
                     <form method="POST" action="{{ url_for('calendar.disconnect_integration', integration_id=integration.id) }}" class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('{{ _('Are you sure you want to disconnect this integration?') }}')">
+                        <button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('{{ _('Are you sure you want to disconnect this integration?') }}')" title="{{ _('Disconnect') }}">
                             <i class="fas fa-unlink"></i>
                         </button>
                     </form>

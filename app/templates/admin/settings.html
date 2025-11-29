@@ -435,6 +435,178 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Google Calendar -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-google text-red-600 mr-2"></i>Google Calendar
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="google_calendar_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="google_calendar_client_id" id="google_calendar_client_id" value="{{ settings.google_calendar_client_id or '' }}" class="form-input" placeholder="{{ _('Google OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="google_calendar_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="google_calendar_client_secret" id="google_calendar_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.google_calendar_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outlook Calendar -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-microsoft text-blue-600 mr-2"></i>Outlook Calendar
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="outlook_calendar_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="outlook_calendar_client_id" id="outlook_calendar_client_id" value="{{ settings.outlook_calendar_client_id or '' }}" class="form-input" placeholder="{{ _('Microsoft OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="outlook_calendar_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="outlook_calendar_client_secret" id="outlook_calendar_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.outlook_calendar_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="outlook_calendar_tenant_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tenant ID (optional)</label>
+                            <input type="text" name="outlook_calendar_tenant_id" id="outlook_calendar_tenant_id" value="{{ settings.outlook_calendar_tenant_id or '' }}" class="form-input" placeholder="{{ _('Microsoft Tenant ID (common for multi-tenant)') }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Microsoft Teams -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-microsoft-teams text-blue-600 mr-2"></i>Microsoft Teams
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="microsoft_teams_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="microsoft_teams_client_id" id="microsoft_teams_client_id" value="{{ settings.microsoft_teams_client_id or '' }}" class="form-input" placeholder="{{ _('Microsoft OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="microsoft_teams_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="microsoft_teams_client_secret" id="microsoft_teams_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.microsoft_teams_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="microsoft_teams_tenant_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tenant ID (optional)</label>
+                            <input type="text" name="microsoft_teams_tenant_id" id="microsoft_teams_tenant_id" value="{{ settings.microsoft_teams_tenant_id or '' }}" class="form-input" placeholder="{{ _('Microsoft Tenant ID (common for multi-tenant)') }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asana -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-asana text-fuchsia-600 mr-2"></i>Asana
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="asana_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="asana_client_id" id="asana_client_id" value="{{ settings.asana_client_id or '' }}" class="form-input" placeholder="{{ _('Asana OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="asana_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="asana_client_secret" id="asana_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.asana_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trello -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-trello text-blue-500 mr-2"></i>Trello
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="trello_api_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                            <input type="text" name="trello_api_key" id="trello_api_key" value="{{ settings.trello_api_key or '' }}" class="form-input" placeholder="{{ _('Trello API Key') }}">
+                        </div>
+                        <div>
+                            <label for="trello_api_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">API Secret</label>
+                            <input type="password" name="trello_api_secret" id="trello_api_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.trello_api_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ API secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GitLab -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fab fa-gitlab text-orange-600 mr-2"></i>GitLab
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="gitlab_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="gitlab_client_id" id="gitlab_client_id" value="{{ settings.gitlab_client_id or '' }}" class="form-input" placeholder="{{ _('GitLab OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="gitlab_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="gitlab_client_secret" id="gitlab_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.gitlab_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="gitlab_instance_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Instance URL</label>
+                            <input type="text" name="gitlab_instance_url" id="gitlab_instance_url" value="{{ settings.gitlab_instance_url or 'https://gitlab.com' }}" class="form-input" placeholder="{{ _('https://gitlab.com or your self-hosted instance') }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QuickBooks -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fas fa-dollar-sign text-green-600 mr-2"></i>QuickBooks Online
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="quickbooks_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="quickbooks_client_id" id="quickbooks_client_id" value="{{ settings.quickbooks_client_id or '' }}" class="form-input" placeholder="{{ _('QuickBooks OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="quickbooks_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="quickbooks_client_secret" id="quickbooks_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.quickbooks_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Xero -->
+                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 class="text-md font-semibold mb-3 flex items-center">
+                        <i class="fas fa-chart-line text-blue-600 mr-2"></i>Xero
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="xero_client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                            <input type="text" name="xero_client_id" id="xero_client_id" value="{{ settings.xero_client_id or '' }}" class="form-input" placeholder="{{ _('Xero OAuth Client ID') }}">
+                        </div>
+                        <div>
+                            <label for="xero_client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                            <input type="password" name="xero_client_secret" id="xero_client_secret" class="form-input" placeholder="{{ _('Leave empty to keep current value') }}">
+                            {% if settings.xero_client_secret_set %}
+                            <p class="mt-1 text-xs text-green-600 dark:text-green-400">{{ _('✓ Client secret is configured') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Analytics Settings -->

@@ -233,8 +233,36 @@ class TrelloConnector(BaseConnector):
 
     def _map_trello_list_to_status(self, list_id: str) -> str:
         """Map Trello list to task status."""
-        # This would need to fetch list name, but for now use default mapping
-        # In production, you'd fetch the list and map by name
+        from app.models import Settings
+        settings = Settings.get_settings()
+        creds = settings.get_integration_credentials("trello")
+        api_key = creds.get("api_key") or os.getenv("TRELLO_API_KEY")
+        token = self.get_access_token()
+        
+        if not token or not api_key:
+            return "todo"
+        
+        try:
+            # Fetch list name
+            list_response = requests.get(
+                f"{self.BASE_URL}/lists/{list_id}",
+                params={"key": api_key, "token": token}
+            )
+            
+            if list_response.status_code == 200:
+                list_data = list_response.json()
+                list_name = list_data.get("name", "").lower()
+                
+                # Map common list names to statuses
+                if "done" in list_name or "completed" in list_name or "closed" in list_name:
+                    return "completed"
+                elif "in progress" in list_name or "doing" in list_name or "active" in list_name:
+                    return "in_progress"
+                elif "todo" in list_name or "to do" in list_name or "backlog" in list_name:
+                    return "todo"
+        except Exception:
+            pass
+        
         return "todo"
 
     def get_config_schema(self) -> Dict[str, Any]:

@@ -451,51 +451,75 @@ def settings():
         # Update system-wide UI feature flags (if columns exist)
         try:
             # Calendar
-            settings_obj.ui_allow_calendar = request.form.get("ui_allow_calendar") == "on"
+            if hasattr(settings_obj, "ui_allow_calendar"):
+                settings_obj.ui_allow_calendar = request.form.get("ui_allow_calendar") == "on"
 
             # Time Tracking
-            settings_obj.ui_allow_project_templates = request.form.get("ui_allow_project_templates") == "on"
-            settings_obj.ui_allow_gantt_chart = request.form.get("ui_allow_gantt_chart") == "on"
-            settings_obj.ui_allow_kanban_board = request.form.get("ui_allow_kanban_board") == "on"
-            settings_obj.ui_allow_weekly_goals = request.form.get("ui_allow_weekly_goals") == "on"
+            if hasattr(settings_obj, "ui_allow_project_templates"):
+                settings_obj.ui_allow_project_templates = request.form.get("ui_allow_project_templates") == "on"
+            if hasattr(settings_obj, "ui_allow_gantt_chart"):
+                settings_obj.ui_allow_gantt_chart = request.form.get("ui_allow_gantt_chart") == "on"
+            if hasattr(settings_obj, "ui_allow_kanban_board"):
+                settings_obj.ui_allow_kanban_board = request.form.get("ui_allow_kanban_board") == "on"
+            if hasattr(settings_obj, "ui_allow_weekly_goals"):
+                settings_obj.ui_allow_weekly_goals = request.form.get("ui_allow_weekly_goals") == "on"
 
             # CRM
-            settings_obj.ui_allow_quotes = request.form.get("ui_allow_quotes") == "on"
+            if hasattr(settings_obj, "ui_allow_quotes"):
+                settings_obj.ui_allow_quotes = request.form.get("ui_allow_quotes") == "on"
 
             # Finance & Expenses
-            settings_obj.ui_allow_reports = request.form.get("ui_allow_reports") == "on"
-            settings_obj.ui_allow_report_builder = request.form.get("ui_allow_report_builder") == "on"
-            settings_obj.ui_allow_scheduled_reports = request.form.get("ui_allow_scheduled_reports") == "on"
-            settings_obj.ui_allow_invoice_approvals = request.form.get("ui_allow_invoice_approvals") == "on"
-            settings_obj.ui_allow_payment_gateways = request.form.get("ui_allow_payment_gateways") == "on"
-            settings_obj.ui_allow_recurring_invoices = request.form.get("ui_allow_recurring_invoices") == "on"
-            settings_obj.ui_allow_payments = request.form.get("ui_allow_payments") == "on"
-            settings_obj.ui_allow_mileage = request.form.get("ui_allow_mileage") == "on"
-            settings_obj.ui_allow_per_diem = request.form.get("ui_allow_per_diem") == "on"
-            settings_obj.ui_allow_budget_alerts = request.form.get("ui_allow_budget_alerts") == "on"
+            if hasattr(settings_obj, "ui_allow_reports"):
+                settings_obj.ui_allow_reports = request.form.get("ui_allow_reports") == "on"
+            if hasattr(settings_obj, "ui_allow_report_builder"):
+                settings_obj.ui_allow_report_builder = request.form.get("ui_allow_report_builder") == "on"
+            if hasattr(settings_obj, "ui_allow_scheduled_reports"):
+                settings_obj.ui_allow_scheduled_reports = request.form.get("ui_allow_scheduled_reports") == "on"
+            if hasattr(settings_obj, "ui_allow_invoice_approvals"):
+                settings_obj.ui_allow_invoice_approvals = request.form.get("ui_allow_invoice_approvals") == "on"
+            if hasattr(settings_obj, "ui_allow_payment_gateways"):
+                settings_obj.ui_allow_payment_gateways = request.form.get("ui_allow_payment_gateways") == "on"
+            if hasattr(settings_obj, "ui_allow_recurring_invoices"):
+                settings_obj.ui_allow_recurring_invoices = request.form.get("ui_allow_recurring_invoices") == "on"
+            if hasattr(settings_obj, "ui_allow_payments"):
+                settings_obj.ui_allow_payments = request.form.get("ui_allow_payments") == "on"
+            if hasattr(settings_obj, "ui_allow_mileage"):
+                settings_obj.ui_allow_mileage = request.form.get("ui_allow_mileage") == "on"
+            if hasattr(settings_obj, "ui_allow_per_diem"):
+                settings_obj.ui_allow_per_diem = request.form.get("ui_allow_per_diem") == "on"
+            if hasattr(settings_obj, "ui_allow_budget_alerts"):
+                settings_obj.ui_allow_budget_alerts = request.form.get("ui_allow_budget_alerts") == "on"
 
             # Inventory
-            settings_obj.ui_allow_inventory = request.form.get("ui_allow_inventory") == "on"
+            if hasattr(settings_obj, "ui_allow_inventory"):
+                settings_obj.ui_allow_inventory = request.form.get("ui_allow_inventory") == "on"
 
             # Analytics
-            settings_obj.ui_allow_analytics = request.form.get("ui_allow_analytics") == "on"
+            if hasattr(settings_obj, "ui_allow_analytics"):
+                settings_obj.ui_allow_analytics = request.form.get("ui_allow_analytics") == "on"
 
             # Tools & Data
-            settings_obj.ui_allow_tools = request.form.get("ui_allow_tools") == "on"
-        except AttributeError:
-            # UI allow columns don't exist yet (migration not run)
+            if hasattr(settings_obj, "ui_allow_tools"):
+                settings_obj.ui_allow_tools = request.form.get("ui_allow_tools") == "on"
+        except Exception as e:
+            # Log any errors but don't fail silently
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error updating UI feature flags: {e}")
+            # UI allow columns don't exist yet (migration not run) or other error
             pass
 
         # Update integration OAuth credentials (if columns exist)
         try:
+            # Jira
             if "jira_client_id" in request.form:
                 settings_obj.jira_client_id = request.form.get("jira_client_id", "").strip()
             if "jira_client_secret" in request.form:
                 new_secret = request.form.get("jira_client_secret", "").strip()
-                # Only update if a new value is provided (don't clear if empty)
                 if new_secret:
                     settings_obj.jira_client_secret = new_secret
 
+            # Slack
             if "slack_client_id" in request.form:
                 settings_obj.slack_client_id = request.form.get("slack_client_id", "").strip()
             if "slack_client_secret" in request.form:
@@ -503,12 +527,91 @@ def settings():
                 if new_secret:
                     settings_obj.slack_client_secret = new_secret
 
+            # GitHub
             if "github_client_id" in request.form:
                 settings_obj.github_client_id = request.form.get("github_client_id", "").strip()
             if "github_client_secret" in request.form:
                 new_secret = request.form.get("github_client_secret", "").strip()
                 if new_secret:
                     settings_obj.github_client_secret = new_secret
+
+            # Google Calendar
+            if hasattr(settings_obj, "google_calendar_client_id"):
+                if "google_calendar_client_id" in request.form:
+                    settings_obj.google_calendar_client_id = request.form.get("google_calendar_client_id", "").strip()
+                if "google_calendar_client_secret" in request.form:
+                    new_secret = request.form.get("google_calendar_client_secret", "").strip()
+                    if new_secret:
+                        settings_obj.google_calendar_client_secret = new_secret
+
+            # Outlook Calendar
+            if hasattr(settings_obj, "outlook_calendar_client_id"):
+                if "outlook_calendar_client_id" in request.form:
+                    settings_obj.outlook_calendar_client_id = request.form.get("outlook_calendar_client_id", "").strip()
+                if "outlook_calendar_client_secret" in request.form:
+                    new_secret = request.form.get("outlook_calendar_client_secret", "").strip()
+                    if new_secret:
+                        settings_obj.outlook_calendar_client_secret = new_secret
+                if "outlook_calendar_tenant_id" in request.form:
+                    settings_obj.outlook_calendar_tenant_id = request.form.get("outlook_calendar_tenant_id", "").strip()
+
+            # Microsoft Teams
+            if hasattr(settings_obj, "microsoft_teams_client_id"):
+                if "microsoft_teams_client_id" in request.form:
+                    settings_obj.microsoft_teams_client_id = request.form.get("microsoft_teams_client_id", "").strip()
+                if "microsoft_teams_client_secret" in request.form:
+                    new_secret = request.form.get("microsoft_teams_client_secret", "").strip()
+                    if new_secret:
+                        settings_obj.microsoft_teams_client_secret = new_secret
+                if "microsoft_teams_tenant_id" in request.form:
+                    settings_obj.microsoft_teams_tenant_id = request.form.get("microsoft_teams_tenant_id", "").strip()
+
+            # Asana
+            if hasattr(settings_obj, "asana_client_id"):
+                if "asana_client_id" in request.form:
+                    settings_obj.asana_client_id = request.form.get("asana_client_id", "").strip()
+                if "asana_client_secret" in request.form:
+                    new_secret = request.form.get("asana_client_secret", "").strip()
+                    if new_secret:
+                        settings_obj.asana_client_secret = new_secret
+
+            # Trello
+            if hasattr(settings_obj, "trello_api_key"):
+                if "trello_api_key" in request.form:
+                    settings_obj.trello_api_key = request.form.get("trello_api_key", "").strip()
+                if "trello_api_secret" in request.form:
+                    new_secret = request.form.get("trello_api_secret", "").strip()
+                    if new_secret:
+                        settings_obj.trello_api_secret = new_secret
+
+            # GitLab
+            if hasattr(settings_obj, "gitlab_client_id"):
+                if "gitlab_client_id" in request.form:
+                    settings_obj.gitlab_client_id = request.form.get("gitlab_client_id", "").strip()
+                if "gitlab_client_secret" in request.form:
+                    new_secret = request.form.get("gitlab_client_secret", "").strip()
+                    if new_secret:
+                        settings_obj.gitlab_client_secret = new_secret
+                if "gitlab_instance_url" in request.form:
+                    settings_obj.gitlab_instance_url = request.form.get("gitlab_instance_url", "").strip()
+
+            # QuickBooks
+            if hasattr(settings_obj, "quickbooks_client_id"):
+                if "quickbooks_client_id" in request.form:
+                    settings_obj.quickbooks_client_id = request.form.get("quickbooks_client_id", "").strip()
+                if "quickbooks_client_secret" in request.form:
+                    new_secret = request.form.get("quickbooks_client_secret", "").strip()
+                    if new_secret:
+                        settings_obj.quickbooks_client_secret = new_secret
+
+            # Xero
+            if hasattr(settings_obj, "xero_client_id"):
+                if "xero_client_id" in request.form:
+                    settings_obj.xero_client_id = request.form.get("xero_client_id", "").strip()
+                if "xero_client_secret" in request.form:
+                    new_secret = request.form.get("xero_client_secret", "").strip()
+                    if new_secret:
+                        settings_obj.xero_client_secret = new_secret
         except AttributeError:
             # Integration credential columns don't exist yet (migration not run)
             pass
@@ -526,6 +629,10 @@ def settings():
         if old_analytics_state != allow_analytics:
             app_module.log_event("admin.analytics_toggled", user_id=current_user.id, new_state=allow_analytics)
             app_module.track_event(current_user.id, "admin.analytics_toggled", {"enabled": allow_analytics})
+
+        # Ensure settings object is in the session (important for new instances)
+        if settings_obj not in db.session:
+            db.session.add(settings_obj)
 
         if not safe_commit("admin_update_settings"):
             flash(_("Could not update settings due to a database error. Please check server logs."), "error")
@@ -2325,3 +2432,135 @@ def delete_email_template(template_id):
         flash(_('Email template "%(name)s" deleted successfully', name=template_name), "success")
 
     return redirect(url_for("admin.list_email_templates"))
+
+
+# ==================== Integration Setup Routes ====================
+
+@admin_bp.route("/admin/integrations")
+@login_required
+@admin_required
+def list_integrations_admin():
+    """List all integrations (admin view)."""
+    from app.services.integration_service import IntegrationService
+    
+    service = IntegrationService()
+    integrations = service.list_integrations(None)  # Get all integrations
+    available_providers = service.get_available_providers()
+    
+    return render_template("admin/integrations/list.html", integrations=integrations, available_providers=available_providers)
+
+
+@admin_bp.route("/admin/integrations/<provider>/setup", methods=["GET", "POST"])
+@login_required
+@admin_required
+def integration_setup(provider):
+    """Setup page for configuring integration OAuth credentials."""
+    from app.services.integration_service import IntegrationService
+    from app.models import Settings
+    
+    service = IntegrationService()
+    
+    # Check if provider is available
+    if provider not in service._connector_registry:
+        flash(_("Integration provider not available."), "error")
+        return redirect(url_for("admin.list_integrations_admin"))
+    
+    connector_class = service._connector_registry[provider]
+    settings = Settings.get_settings()
+    
+    # Get or create global integration (except Google Calendar which is per-user)
+    integration = None
+    if provider != "google_calendar":
+        integration = service.get_global_integration(provider)
+        if not integration:
+            # Create global integration
+            result = service.create_integration(provider, user_id=None, is_global=True)
+            if result["success"]:
+                integration = result["integration"]
+            else:
+                flash(result["message"], "error")
+                return redirect(url_for("admin.list_integrations_admin"))
+    
+    if request.method == "POST":
+        # Update OAuth credentials in Settings
+        if provider == "trello":
+            # Trello uses API key + token, not OAuth
+            api_key = request.form.get("trello_api_key", "").strip()
+            token = request.form.get("trello_token", "").strip()
+            if api_key:
+                settings.trello_api_key = api_key
+            if token:
+                # Save token directly to integration credentials if integration exists
+                if integration:
+                    from app.services.integration_service import IntegrationService
+                    service = IntegrationService()
+                    service.save_credentials(
+                        integration_id=integration.id,
+                        access_token=token,
+                        refresh_token=None,
+                        expires_at=None,
+                        token_type="Bearer",
+                        scope="read,write",
+                        extra_data={"api_key": api_key}
+                    )
+        else:
+            # OAuth-based integrations
+            client_id = request.form.get(f"{provider}_client_id", "").strip()
+            client_secret = request.form.get(f"{provider}_client_secret", "").strip()
+            
+            # Map provider names to Settings attributes
+            attr_map = {
+                "jira": ("jira_client_id", "jira_client_secret"),
+                "slack": ("slack_client_id", "slack_client_secret"),
+                "github": ("github_client_id", "github_client_secret"),
+                "google_calendar": ("google_calendar_client_id", "google_calendar_client_secret"),
+                "outlook_calendar": ("outlook_calendar_client_id", "outlook_calendar_client_secret"),
+                "microsoft_teams": ("microsoft_teams_client_id", "microsoft_teams_client_secret"),
+                "asana": ("asana_client_id", "asana_client_secret"),
+                "gitlab": ("gitlab_client_id", "gitlab_client_secret"),
+                "quickbooks": ("quickbooks_client_id", "quickbooks_client_secret"),
+                "xero": ("xero_client_id", "xero_client_secret"),
+            }
+            
+            if provider in attr_map:
+                id_attr, secret_attr = attr_map[provider]
+                if client_id:
+                    setattr(settings, id_attr, client_id)
+                if client_secret:
+                    setattr(settings, secret_attr, client_secret)
+            
+            # Handle special fields
+            if provider == "outlook_calendar":
+                tenant_id = request.form.get("outlook_calendar_tenant_id", "").strip()
+                if tenant_id:
+                    settings.outlook_calendar_tenant_id = tenant_id
+            elif provider == "microsoft_teams":
+                tenant_id = request.form.get("microsoft_teams_tenant_id", "").strip()
+                if tenant_id:
+                    settings.microsoft_teams_tenant_id = tenant_id
+            elif provider == "gitlab":
+                instance_url = request.form.get("gitlab_instance_url", "").strip()
+                if instance_url:
+                    settings.gitlab_instance_url = instance_url
+        
+        if safe_commit("update_integration_credentials", {"provider": provider}):
+            flash(_("Integration credentials updated successfully."), "success")
+            # For Google Calendar, provide option to test connection
+            if provider == "google_calendar":
+                flash(_("Users can now connect their Google Calendar. They will be automatically redirected to Google for authorization."), "info")
+            return redirect(url_for("admin.integration_setup", provider=provider))
+        else:
+            flash(_("Failed to update credentials."), "error")
+    
+    # Get current credentials
+    current_creds = settings.get_integration_credentials(provider)
+    
+    return render_template(
+        "admin/integrations/setup.html",
+        provider=provider,
+        connector=connector_class,
+        integration=integration,
+        current_creds=current_creds,
+        display_name=getattr(connector_class, "display_name", provider.title()),
+        description=getattr(connector_class, "description", ""),
+    )

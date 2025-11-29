@@ -412,32 +412,20 @@ def edit_event(event_id):
 @calendar_bp.route("/calendar/integrations")
 @login_required
 def list_integrations():
-    """List calendar integrations"""
-    service = CalendarIntegrationService()
-    integrations = service.get_user_integrations(current_user.id)
-    return render_template("calendar/integrations.html", integrations=integrations)
+    """List calendar integrations - redirect to main integrations page"""
+    # Redirect to main integrations page to avoid duplication
+    return redirect(url_for("integrations.list_integrations"))
 
 
 @calendar_bp.route("/calendar/integrations/google/connect")
 @login_required
 def connect_google():
-    """Connect Google Calendar"""
-    # This would initiate OAuth flow
-    # For now, return a placeholder
-    flash(_("Google Calendar integration coming soon."), "info")
-    return redirect(url_for("calendar.list_integrations"))
+    """Connect Google Calendar - redirect to main integrations"""
+    return redirect(url_for("integrations.connect_integration", provider="google_calendar"))
 
 
 @calendar_bp.route("/calendar/integrations/<int:integration_id>/disconnect", methods=["POST"])
 @login_required
 def disconnect_integration(integration_id):
-    """Disconnect a calendar integration"""
-    service = CalendarIntegrationService()
-    result = service.deactivate_integration(integration_id, current_user.id)
-
-    if result["success"]:
-        flash(_("Calendar integration disconnected successfully."), "success")
-    else:
-        flash(result["message"], "error")
-
-    return redirect(url_for("calendar.list_integrations"))
+    """Disconnect a calendar integration - redirect to main integrations"""
+    return redirect(url_for("integrations.delete_integration", integration_id=integration_id))

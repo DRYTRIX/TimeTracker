@@ -20,12 +20,12 @@ integrations_bp = Blueprint("integrations", __name__)
 @integrations_bp.route("/integrations")
 @login_required
 def list_integrations():
-    """List all integrations for the current user."""
+    """List all integrations accessible to the current user (global + per-user)."""
     service = IntegrationService()
     integrations = service.list_integrations(current_user.id)
     available_providers = service.get_available_providers()
 
-    return render_template("integrations/list.html", integrations=integrations, available_providers=available_providers)
+    return render_template("integrations/list.html", integrations=integrations, available_providers=available_providers, current_user=current_user)
 
 
 @integrations_bp.route("/integrations/<provider>/connect", methods=["GET", "POST"])
@@ -39,19 +39,41 @@ def connect_integration(provider):
         flash(_("Integration provider not available."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
-    # Check if integration already exists
-    existing = Integration.query.filter_by(provider=provider, user_id=current_user.id).first()
-
-    if existing:
-        # Use existing integration (allows reconnecting if credentials were removed)
-        integration = existing
-    else:
-        # Create new integration if it doesn't exist
-        result = service.create_integration(provider, current_user.id)
-        if not result["success"]:
-            flash(result["message"], "error")
+    # Trello doesn't use OAuth - redirect to admin setup
+    if provider == "trello":
+        if not current_user.is_admin:
+            flash(_("Trello integration must be configured by an administrator."), "error")
             return redirect(url_for("integrations.list_integrations"))
-        integration = result["integration"]
+        flash(_("Trello uses API key authentication. Please configure it in Admin → Integrations."), "info")
+        return redirect(url_for("admin.integration_setup", provider=provider))
+    
+    # Google Calendar is per-user, all others are global
+    is_global = (provider != "google_calendar")
+    
+    if is_global:
+        # For global integrations, check if one exists
+        integration = service.get_global_integration(provider)
+        if not integration:
+            # Create global integration (admin only)
+            if not current_user.is_admin:
+                flash(_("Only administrators can set up global integrations."), "error")
+                return redirect(url_for("integrations.list_integrations"))
+            result = service.create_integration(provider, user_id=None, is_global=True)
+            if not result["success"]:
+                flash(result["message"], "error")
+                return redirect(url_for("integrations.list_integrations"))
+            integration = result["integration"]
+    else:
+        # Per-user integration (Google Calendar)
+        existing = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
+        if existing:
+            integration = existing
+        else:
+            result = service.create_integration(provider, user_id=current_user.id, is_global=False)
+            if not result["success"]:
+                flash(result["message"], "error")
+                return redirect(url_for("integrations.list_integrations"))
+            integration = result["integration"]
 
     # Get connector
     connector = service.get_connector(integration)
@@ -63,13 +85,25 @@ def connect_integration(provider):
     state = secrets.token_urlsafe(32)
     session[f"integration_oauth_state_{integration.id}"] = state
 
-    # Get authorization URL
+    # Get authorization URL - automatically redirects to OAuth provider (Google, etc.)
     try:
         redirect_uri = url_for("integrations.oauth_callback", provider=provider, _external=True)
         auth_url = connector.get_authorization_url(redirect_uri, state=state)
+        # Automatically redirect to Google OAuth - user will authorize there
         return redirect(auth_url)
     except ValueError as e:
-        flash(_("Integration not configured: {error}").format(error=str(e)), "error")
+        # OAuth credentials not configured yet
+        if provider == "google_calendar":
+            if current_user.is_admin:
+                flash(_("Google Calendar OAuth credentials need to be configured first. Redirecting to setup..."), "info")
+                return redirect(url_for("admin.integration_setup", provider=provider))
+            else:
+                flash(_("Google Calendar integration needs to be configured by an administrator first."), "warning")
+        elif current_user.is_admin:
+            flash(_("OAuth credentials not configured. Please set them up in Admin → Integrations."), "error")
+            return redirect(url_for("admin.integration_setup", provider=provider))
+        else:
+            flash(_("Integration not configured. Please ask an administrator to set up OAuth credentials."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
 
@@ -91,8 +125,12 @@ def oauth_callback(provider):
         flash(_("Authorization code not received."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
-    # Find integration for this user and provider
-    integration = Integration.query.filter_by(provider=provider, user_id=current_user.id).first()
+    # Find integration (global or per-user)
+    is_global = (provider != "google_calendar")
+    if is_global:
+        integration = service.get_global_integration(provider)
+    else:
+        integration = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
 
     if not integration:
         flash(_("Integration not found."), "error")
@@ -129,8 +167,8 @@ def oauth_callback(provider):
             extra_data=tokens.get("extra_data", {}),
         )
 
-        # Test connection
-        test_result = service.test_connection(integration.id, current_user.id)
+        # Test connection (use None for user_id if global)
+        test_result = service.test_connection(integration.id, current_user.id if not integration.is_global else None)
         if test_result.get("success"):
             flash(_("Integration connected successfully!"), "success")
         else:
@@ -142,6 +180,9 @@ def oauth_callback(provider):
                 "warning",
             )
 
+        # Redirect to admin setup page for global integrations, view page for per-user
+        if integration.is_global and current_user.is_admin:
+            return redirect(url_for("admin.integration_setup", provider=provider))
         return redirect(url_for("integrations.view_integration", integration_id=integration.id))
 
     except Exception as e:
@@ -155,7 +196,8 @@ def oauth_callback(provider):
 def view_integration(integration_id):
     """View integration details."""
     service = IntegrationService()
-    integration = service.get_integration(integration_id, current_user.id)
+    # Allow viewing global integrations for all users, per-user only for owner
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
 
     if not integration:
         flash(_("Integration not found."), "error")
@@ -163,9 +205,17 @@ def view_integration(integration_id):
 
     connector = service.get_connector(integration)
     credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).first()
+    
+    # Get recent sync events
+    from app.models import IntegrationEvent
+    recent_events = IntegrationEvent.query.filter_by(integration_id=integration_id).order_by(IntegrationEvent.created_at.desc()).limit(20).all()
 
     return render_template(
-        "integrations/view.html", integration=integration, connector=connector, credentials=credentials
+        "integrations/view.html",
+        integration=integration,
+        connector=connector,
+        credentials=credentials,
+        recent_events=recent_events
     )
 
 
@@ -174,7 +224,13 @@ def view_integration(integration_id):
 def test_integration(integration_id):
     """Test integration connection."""
     service = IntegrationService()
-    result = service.test_connection(integration_id, current_user.id)
+    # Allow testing global integrations for all users
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
+    if not integration:
+        flash(_("Integration not found."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+    
+    result = service.test_connection(integration_id, current_user.id if not integration.is_global else None)
 
     if result.get("success"):
         flash(_("Connection test successful!"), "success")
@@ -189,6 +245,11 @@ def test_integration(integration_id):
 def delete_integration(integration_id):
     """Delete an integration."""
     service = IntegrationService()
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
+    if not integration:
+        flash(_("Integration not found."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+    
     result = service.delete_integration(integration_id, current_user.id)
 
     if result["success"]:
@@ -204,7 +265,7 @@ def delete_integration(integration_id):
 def sync_integration(integration_id):
     """Trigger a sync for an integration."""
     service = IntegrationService()
-    integration = service.get_integration(integration_id, current_user.id)
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
 
     if not integration:
         flash(_("Integration not found."), "error")
@@ -226,3 +287,64 @@ def sync_integration(integration_id):
         flash(_("Error during sync: %(error)s", error=str(e)), "error")
 
     return redirect(url_for("integrations.view_integration", integration_id=integration_id))
+
+
+@integrations_bp.route("/integrations/<provider>/webhook", methods=["POST"])
+def integration_webhook(provider):
+    """Handle incoming webhooks from integration providers."""
+    service = IntegrationService()
+
+    # Check if provider is available
+    if provider not in service._connector_registry:
+        logger.warning(f"Webhook received for unknown provider: {provider}")
+        return jsonify({"error": "Unknown provider"}), 404
+
+    # Get webhook payload
+    payload = request.get_json(silent=True) or request.form.to_dict()
+    headers = dict(request.headers)
+
+    # Find active integrations for this provider
+    # Note: For webhooks, we might need to identify which integration based on payload
+    integrations = Integration.query.filter_by(provider=provider, is_active=True).all()
+
+    if not integrations:
+        logger.warning(f"No active integrations found for provider: {provider}")
+        return jsonify({"error": "No active integration found"}), 404
+
+    results = []
+    for integration in integrations:
+        try:
+            connector = service.get_connector(integration)
+            if not connector:
+                continue
+
+            # Handle webhook
+            result = connector.handle_webhook(payload, headers)
+            results.append({
+                "integration_id": integration.id,
+                "success": result.get("success", False),
+                "message": result.get("message", "")
+            })
+
+            # Log event
+            if result.get("success"):
+                service._log_event(
+                    integration.id,
+                    "webhook_received",
+                    True,
+                    f"Webhook processed successfully",
+                    {"provider": provider, "event_type": payload.get("event_type", "unknown")}
+                )
+        except Exception as e:
+            logger.error(f"Error handling webhook for integration {integration.id}: {e}", exc_info=True)
+            results.append({
+                "integration_id": integration.id,
+                "success": False,
+                "message": str(e)
+            })
+
+    # Return success if at least one integration processed the webhook
+    if any(r["success"] for r in results):
+        return jsonify({"success": True, "results": results}), 200
+    else:
+        return jsonify({"success": False, "results": results}), 500
