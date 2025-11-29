@@ -17,11 +17,7 @@ class TimeApprovalService:
     """Service for managing time entry approvals"""
 
     def request_approval(
-        self,
-        time_entry_id: int,
-        requested_by: int,
-        comment: str = None,
-        approver_ids: List[int] = None
+        self, time_entry_id: int, requested_by: int, comment: str = None, approver_ids: List[int] = None
     ) -> Dict[str, Any]:
         """Request approval for a time entry"""
         time_entry = TimeEntry.query.get(time_entry_id)
@@ -29,10 +25,7 @@ class TimeApprovalService:
             return {"success": False, "message": "Time entry not found", "error": "not_found"}
 
         # Check if already pending
-        existing = TimeEntryApproval.query.filter_by(
-            time_entry_id=time_entry_id,
-            status=ApprovalStatus.PENDING
-        ).first()
+        existing = TimeEntryApproval.query.filter_by(time_entry_id=time_entry_id, status=ApprovalStatus.PENDING).first()
 
         if existing:
             return {"success": False, "message": "Approval already pending", "error": "already_pending"}
@@ -55,7 +48,7 @@ class TimeApprovalService:
                 status=ApprovalStatus.PENDING,
                 request_comment=comment,
                 parent_approval_id=parent_approval.id if parent_approval else None,
-                approval_level=level
+                approval_level=level,
             )
             db.session.add(approval)
             approvals.append(approval)
@@ -66,18 +59,9 @@ class TimeApprovalService:
         # Send notifications to approvers
         self._notify_approvers(approvals[0], approver_ids)
 
-        return {
-            "success": True,
-            "message": "Approval requested",
-            "approval": approvals[0].to_dict()
-        }
+        return {"success": True, "message": "Approval requested", "approval": approvals[0].to_dict()}
 
-    def approve(
-        self,
-        approval_id: int,
-        approver_id: int,
-        comment: str = None
-    ) -> Dict[str, Any]:
+    def approve(self, approval_id: int, approver_id: int, comment: str = None) -> Dict[str, Any]:
         """Approve a time entry"""
         approval = TimeEntryApproval.query.get(approval_id)
         if not approval:
@@ -96,8 +80,7 @@ class TimeApprovalService:
 
         # Check for next level approval
         child_approval = TimeEntryApproval.query.filter_by(
-            parent_approval_id=approval.id,
-            status=ApprovalStatus.PENDING
+            parent_approval_id=approval.id, status=ApprovalStatus.PENDING
         ).first()
 
         if child_approval:
@@ -106,24 +89,15 @@ class TimeApprovalService:
             return {
                 "success": True,
                 "message": "Approved, awaiting next level approval",
-                "approval": approval.to_dict()
+                "approval": approval.to_dict(),
             }
 
         # All levels approved
         self._mark_entry_approved(approval.time_entry)
 
-        return {
-            "success": True,
-            "message": "Time entry approved",
-            "approval": approval.to_dict()
-        }
+        return {"success": True, "message": "Time entry approved", "approval": approval.to_dict()}
 
-    def reject(
-        self,
-        approval_id: int,
-        approver_id: int,
-        reason: str
-    ) -> Dict[str, Any]:
+    def reject(self, approval_id: int, approver_id: int, reason: str) -> Dict[str, Any]:
         """Reject a time entry approval"""
         approval = TimeEntryApproval.query.get(approval_id)
         if not approval:
@@ -136,8 +110,7 @@ class TimeApprovalService:
 
         # Cancel any child approvals
         child_approvals = TimeEntryApproval.query.filter_by(
-            parent_approval_id=approval.id,
-            status=ApprovalStatus.PENDING
+            parent_approval_id=approval.id, status=ApprovalStatus.PENDING
         ).all()
 
         for child in child_approvals:
@@ -146,11 +119,7 @@ class TimeApprovalService:
         # Notify requester
         self._notify_requester(approval, "rejected", reason)
 
-        return {
-            "success": True,
-            "message": "Time entry rejected",
-            "approval": approval.to_dict()
-        }
+        return {"success": True, "message": "Time entry rejected", "approval": approval.to_dict()}
 
     def cancel_approval(self, approval_id: int, user_id: int) -> Dict[str, Any]:
         """Cancel an approval request"""
@@ -168,18 +137,13 @@ class TimeApprovalService:
 
         # Cancel child approvals
         child_approvals = TimeEntryApproval.query.filter_by(
-            parent_approval_id=approval.id,
-            status=ApprovalStatus.PENDING
+            parent_approval_id=approval.id, status=ApprovalStatus.PENDING
         ).all()
 
         for child in child_approvals:
             child.cancel()
 
-        return {
-            "success": True,
-            "message": "Approval cancelled",
-            "approval": approval.to_dict()
-        }
+        return {"success": True, "message": "Approval cancelled", "approval": approval.to_dict()}
 
     def get_pending_approvals(self, approver_id: int = None) -> List[TimeEntryApproval]:
         """Get pending approvals for an approver"""
@@ -205,41 +169,32 @@ class TimeApprovalService:
         return {
             "success": True,
             "message": f"Approved {success_count} of {len(approval_ids)} entries",
-            "results": results
+            "results": results,
         }
 
     def _get_approvers_for_entry(self, time_entry: TimeEntry) -> List[int]:
         """Get list of approver user IDs for a time entry"""
         # Check project-specific policy
-        policy = ApprovalPolicy.query.filter_by(
-            project_id=time_entry.project_id,
-            enabled=True
-        ).first()
+        policy = ApprovalPolicy.query.filter_by(project_id=time_entry.project_id, enabled=True).first()
 
         if policy and policy.applies_to_entry(time_entry):
             return policy.get_approvers()
 
         # Check user-specific policy
-        policy = ApprovalPolicy.query.filter_by(
-            user_id=time_entry.user_id,
-            enabled=True
-        ).first()
+        policy = ApprovalPolicy.query.filter_by(user_id=time_entry.user_id, enabled=True).first()
 
         if policy and policy.applies_to_entry(time_entry):
             return policy.get_approvers()
 
         # Check global policy
-        policy = ApprovalPolicy.query.filter_by(
-            applies_to_all=True,
-            enabled=True
-        ).first()
+        policy = ApprovalPolicy.query.filter_by(applies_to_all=True, enabled=True).first()
 
         if policy and policy.applies_to_entry(time_entry):
             return policy.get_approvers()
 
         # Default: return project manager or admin
         project = time_entry.project
-        if project and hasattr(project, 'manager_id') and project.manager_id:
+        if project and hasattr(project, "manager_id") and project.manager_id:
             return [project.manager_id]
 
         # Fallback to admins
@@ -248,9 +203,7 @@ class TimeApprovalService:
 
     def _get_all_approver_ids(self, user_id: int) -> List[int]:
         """Get all policies where user is an approver"""
-        policies = ApprovalPolicy.query.filter(
-            ApprovalPolicy.enabled == True
-        ).all()
+        policies = ApprovalPolicy.query.filter(ApprovalPolicy.enabled == True).all()
 
         approver_ids = []
         for policy in policies:
@@ -262,10 +215,10 @@ class TimeApprovalService:
     def _mark_entry_approved(self, time_entry: TimeEntry):
         """Mark time entry as approved"""
         # Add metadata to indicate approval
-        if not hasattr(time_entry, 'metadata') or not time_entry.metadata:
+        if not hasattr(time_entry, "metadata") or not time_entry.metadata:
             time_entry.metadata = {}
-        time_entry.metadata['approved'] = True
-        time_entry.metadata['approved_at'] = datetime.utcnow().isoformat()
+        time_entry.metadata["approved"] = True
+        time_entry.metadata["approved_at"] = datetime.utcnow().isoformat()
         db.session.commit()
 
     def _notify_approvers(self, approval: TimeEntryApproval, approver_ids: List[int]):
@@ -279,7 +232,7 @@ class TimeApprovalService:
                 title="Time Entry Approval Requested",
                 message=f"Time entry {approval.time_entry_id} requires your approval",
                 type="info",
-                priority="normal"
+                priority="normal",
             )
 
     def _notify_requester(self, approval: TimeEntryApproval, status: str, reason: str = None):
@@ -296,6 +249,5 @@ class TimeApprovalService:
             title=f"Time Entry {status.title()}",
             message=message,
             type="success" if status == "approved" else "error",
-            priority="normal"
+            priority="normal",
         )
-

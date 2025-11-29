@@ -43,7 +43,9 @@ class RecurringTask(db.Model):
 
     # Relationships
     project = db.relationship("Project", backref=db.backref("recurring_tasks", lazy="dynamic"))
-    creator = db.relationship("User", foreign_keys=[created_by], backref=db.backref("created_recurring_tasks", lazy="dynamic"))
+    creator = db.relationship(
+        "User", foreign_keys=[created_by], backref=db.backref("created_recurring_tasks", lazy="dynamic")
+    )
     assignee = db.relationship("User", foreign_keys=[assigned_to])
 
     def __init__(self, name, project_id, frequency, next_run_date, created_by, **kwargs):
@@ -100,7 +102,7 @@ class RecurringTask(db.Model):
             priority=self.priority,
             estimated_hours=float(self.estimated_hours) if self.estimated_hours else None,
             assigned_to=self.assigned_to if not self.auto_assign else self.created_by,
-            status="todo"
+            status="todo",
         )
         db.session.add(task)
 
@@ -139,4 +141,3 @@ class RecurringTask(db.Model):
             "last_created_at": self.last_created_at.isoformat() if self.last_created_at else None,
             "tasks_created_count": self.tasks_created_count,
         }
-

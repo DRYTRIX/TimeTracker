@@ -116,16 +116,16 @@ def settings():
 
             # UI feature flags - Calendar
             current_user.ui_show_calendar = "ui_show_calendar" in request.form
-            
+
             # UI feature flags - Time Tracking
             current_user.ui_show_project_templates = "ui_show_project_templates" in request.form
             current_user.ui_show_gantt_chart = "ui_show_gantt_chart" in request.form
             current_user.ui_show_kanban_board = "ui_show_kanban_board" in request.form
             current_user.ui_show_weekly_goals = "ui_show_weekly_goals" in request.form
-            
+
             # UI feature flags - CRM
             current_user.ui_show_quotes = "ui_show_quotes" in request.form
-            
+
             # UI feature flags - Finance & Expenses
             current_user.ui_show_reports = "ui_show_reports" in request.form
             current_user.ui_show_report_builder = "ui_show_report_builder" in request.form
@@ -137,13 +137,13 @@ def settings():
             current_user.ui_show_mileage = "ui_show_mileage" in request.form
             current_user.ui_show_per_diem = "ui_show_per_diem" in request.form
             current_user.ui_show_budget_alerts = "ui_show_budget_alerts" in request.form
-            
+
             # UI feature flags - Inventory
             current_user.ui_show_inventory = "ui_show_inventory" in request.form
-            
+
             # UI feature flags - Analytics
             current_user.ui_show_analytics = "ui_show_analytics" in request.form
-            
+
             # UI feature flags - Tools
             current_user.ui_show_tools = "ui_show_tools" in request.form
 

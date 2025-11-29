@@ -350,13 +350,14 @@ class TestAdminClientPortalManagement:
             # Get the edit form page first to get CSRF token
             get_response = admin_authenticated_client.get(f"/admin/users/{user.id}/edit")
             assert get_response.status_code == 200
-            
+
             # Extract CSRF token from the form if available
             html = get_response.get_data(as_text=True)
             import re
+
             csrf_match = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
             csrf_token = csrf_match.group(1) if csrf_match else ""
-            
+
             response = admin_authenticated_client.post(
                 f"/admin/users/{user.id}/edit",
                 data={
@@ -397,13 +398,14 @@ class TestAdminClientPortalManagement:
             # Get the edit form page first to get CSRF token
             get_response = admin_authenticated_client.get(f"/admin/users/{user.id}/edit")
             assert get_response.status_code == 200
-            
+
             # Extract CSRF token from the form if available
             html = get_response.get_data(as_text=True)
             import re
+
             csrf_match = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
             csrf_token = csrf_match.group(1) if csrf_match else ""
-            
+
             response = admin_authenticated_client.post(
                 f"/admin/users/{user.id}/edit",
                 data={

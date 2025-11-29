@@ -122,13 +122,14 @@ def login():
                     # Create new user, promote to admin if username is configured as admin
                     role_name = "admin" if username in admin_usernames else "user"
                     user = User(username=username, role=role_name)
-                    
+
                     # Assign role from the new Role system
                     from app.models import Role
+
                     role_obj = Role.query.filter_by(name=role_name).first()
                     if role_obj:
                         user.roles.append(role_obj)
-                    
+
                     # Set password if password auth is required
                     if requires_password and password:
                         user.set_password(password)
@@ -462,7 +463,7 @@ def change_password():
             if not current_password:
                 flash(_("Current password is required"), "error")
                 return render_template("auth/change_password.html")
-            
+
             if not current_user.check_password(current_password):
                 flash(_("Current password is incorrect"), "error")
                 return render_template("auth/change_password.html")
@@ -470,7 +471,7 @@ def change_password():
         # Set new password
         current_user.set_password(new_password)
         current_user.password_change_required = False
-        
+
         try:
             db.session.commit()
             current_app.logger.info("User '%s' changed password", current_user.username)
@@ -736,13 +737,14 @@ def oidc_callback():
                 user.is_active = True
                 user.oidc_issuer = issuer
                 user.oidc_sub = sub
-                
+
                 # Assign role from the new Role system
                 from app.models import Role
+
                 role_obj = Role.query.filter_by(name=role_name).first()
                 if role_obj:
                     user.roles.append(role_obj)
-                
+
                 db.session.add(user)
                 if not safe_commit("oidc_create_user", {"username": username, "email": email}):
                     raise RuntimeError("db commit failed on user create")

@@ -372,9 +372,7 @@ class WorkflowEngine:
         """Trigger workflow evaluation for an event"""
         # Get all enabled rules for this trigger type, ordered by priority
         rules = (
-            WorkflowRule.query.filter(
-                WorkflowRule.trigger_type == event_type, WorkflowRule.enabled == True
-            )
+            WorkflowRule.query.filter(WorkflowRule.trigger_type == event_type, WorkflowRule.enabled == True)
             .order_by(WorkflowRule.priority.desc())
             .all()
         )
@@ -391,4 +389,3 @@ class WorkflowEngine:
                 results.append({"rule_id": rule.id, "rule_name": rule.name, "success": False, "error": str(e)})
 
         return results
-

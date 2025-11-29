@@ -236,7 +236,7 @@ def create_project():
         except ValueError:
             flash(_("Invalid hourly rate format"), "error")
             return render_template("projects/create.html", clients=Client.get_active_clients())
-        
+
         # Validate budgets
         budget_amount = None
         budget_threshold_percent = None
@@ -262,8 +262,9 @@ def create_project():
 
         # Use service layer to create project
         from app.services import ProjectService
+
         project_service = ProjectService()
-        
+
         result = project_service.create_project(
             name=name,
             client_id=int(client_id),
@@ -636,8 +637,9 @@ def edit_project(project_id):
 
         # Use service layer to update project
         from app.services import ProjectService
+
         project_service = ProjectService()
-        
+
         result = project_service.update_project(
             project_id=project.id,
             user_id=current_user.id,

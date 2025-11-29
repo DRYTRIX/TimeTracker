@@ -26,6 +26,3 @@ class TestSystemUiFlags:
         resp = client.get(url_for("main.dashboard"))
         nav = resp.data.decode("utf-8")
         assert "Calendar" not in nav
-
-
-

@@ -35,7 +35,7 @@ def kiosk_dashboard():
 
     # Use services/repositories for data access where available
     from app.services import ProjectService
-    
+
     # Get default warehouse (from session or first active)
     # Note: WarehouseRepository doesn't exist yet, using direct query for now
     default_warehouse = None
@@ -141,6 +141,7 @@ def kiosk_login():
 
     # Get list of active users for quick selection (use repository if available)
     from app.repositories import UserRepository
+
     user_repo = UserRepository()
     users = user_repo.query().filter_by(is_active=True).order_by(User.username).all()
     return render_template("kiosk/login.html", users=users, requires_password=requires_password)

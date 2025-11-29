@@ -116,12 +116,15 @@ def register_error_handlers(app):
                 message=error.description or "An error occurred", error_code=error.code, status_code=error.code
             )
         from flask import render_template
-        
-        return render_template(
-            "errors/generic.html",
-            error=error,
-            error_info={"title": error.name, "message": error.description or "An error occurred"}
-        ), error.code
+
+        return (
+            render_template(
+                "errors/generic.html",
+                error=error,
+                error_info={"title": error.name, "message": error.description or "An error occurred"},
+            ),
+            error.code,
+        )
 
     @app.errorhandler(Exception)
     def handle_generic_exception(error):
@@ -145,10 +148,16 @@ def register_error_handlers(app):
         from flask import render_template, flash
 
         flash("An error occurred. Please try again.", "error")
-        return render_template(
-            "errors/500.html",
-            error_info={"title": "Server Error", "message": "Something went wrong on our end. Please try again later."}
-        ), 500
+        return (
+            render_template(
+                "errors/500.html",
+                error_info={
+                    "title": "Server Error",
+                    "message": "Something went wrong on our end. Please try again later.",
+                },
+            ),
+            500,
+        )
 
 
 def create_error_response(

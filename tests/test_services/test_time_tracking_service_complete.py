@@ -14,15 +14,11 @@ class TestTimeTrackingServiceComplete:
     def test_update_entry_success(self, app, user, project, time_entry):
         """Test successful time entry update"""
         service = TimeTrackingService()
-        
+
         result = service.update_entry(
-            entry_id=time_entry.id,
-            user_id=user.id,
-            is_admin=False,
-            notes="Updated notes",
-            billable=False
+            entry_id=time_entry.id, user_id=user.id, is_admin=False, notes="Updated notes", billable=False
         )
-        
+
         assert result["success"] is True
         assert result["entry"].notes == "Updated notes"
         assert result["entry"].billable is False
@@ -30,26 +26,18 @@ class TestTimeTrackingServiceComplete:
     def test_update_entry_not_found(self, app, user):
         """Test update with non-existent entry"""
         service = TimeTrackingService()
-        
-        result = service.update_entry(
-            entry_id=99999,
-            user_id=user.id,
-            is_admin=False
-        )
-        
+
+        result = service.update_entry(entry_id=99999, user_id=user.id, is_admin=False)
+
         assert result["success"] is False
         assert result["error"] == "not_found"
 
     def test_update_entry_access_denied(self, app, user, other_user, time_entry):
         """Test update with access denied"""
         service = TimeTrackingService()
-        
-        result = service.update_entry(
-            entry_id=time_entry.id,
-            user_id=other_user.id,
-            is_admin=False
-        )
-        
+
+        result = service.update_entry(entry_id=time_entry.id, user_id=other_user.id, is_admin=False)
+
         assert result["success"] is False
         assert result["error"] == "access_denied"
 
@@ -58,16 +46,13 @@ class TestTimeTrackingServiceComplete:
         # Ensure entry is not active
         time_entry.end_time = datetime.utcnow()
         from app import db
+
         db.session.commit()
-        
+
         service = TimeTrackingService()
-        
-        result = service.delete_entry(
-            entry_id=time_entry.id,
-            user_id=user.id,
-            is_admin=False
-        )
-        
+
+        result = service.delete_entry(entry_id=time_entry.id, user_id=user.id, is_admin=False)
+
         assert result["success"] is True
 
     def test_delete_entry_active_timer(self, app, user, time_entry):
@@ -75,16 +60,12 @@ class TestTimeTrackingServiceComplete:
         # Ensure entry is active
         time_entry.end_time = None
         from app import db
+
         db.session.commit()
-        
+
         service = TimeTrackingService()
-        
-        result = service.delete_entry(
-            entry_id=time_entry.id,
-            user_id=user.id,
-            is_admin=False
-        )
-        
+
+        result = service.delete_entry(entry_id=time_entry.id, user_id=user.id, is_admin=False)
+
         assert result["success"] is False
         assert result["error"] == "timer_active"
-

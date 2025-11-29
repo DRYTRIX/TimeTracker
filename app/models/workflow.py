@@ -98,4 +98,3 @@ class WorkflowExecution(db.Model):
             "trigger_event": self.trigger_event,
             "execution_time_ms": self.execution_time_ms,
         }
-

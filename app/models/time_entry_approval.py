@@ -10,6 +10,7 @@ import enum
 
 class ApprovalStatus(enum.Enum):
     """Time entry approval status"""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -23,35 +24,41 @@ class TimeEntryApproval(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     time_entry_id = db.Column(db.Integer, db.ForeignKey("time_entries.id"), nullable=False, index=True)
-    
+
     # Approval workflow
     status = db.Column(SQLEnum(ApprovalStatus), default=ApprovalStatus.PENDING, nullable=False, index=True)
     requested_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     approved_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
-    
+
     # Timestamps
     requested_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     approved_at = db.Column(db.DateTime, nullable=True)
     rejected_at = db.Column(db.DateTime, nullable=True)
-    
+
     # Comments
     request_comment = db.Column(db.Text, nullable=True)
     approval_comment = db.Column(db.Text, nullable=True)
     rejection_reason = db.Column(db.Text, nullable=True)
-    
+
     # Approval chain (for multi-level approvals)
     parent_approval_id = db.Column(db.Integer, db.ForeignKey("time_entry_approvals.id"), nullable=True)
     approval_level = db.Column(db.Integer, default=1, nullable=False)
-    
+
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
     time_entry = db.relationship("TimeEntry", backref=db.backref("approvals", lazy="dynamic"))
-    requester = db.relationship("User", foreign_keys=[requested_by], backref=db.backref("approval_requests", lazy="dynamic"))
-    approver = db.relationship("User", foreign_keys=[approved_by], backref=db.backref("approvals_given", lazy="dynamic"))
-    parent_approval = db.relationship("TimeEntryApproval", remote_side=[id], backref=db.backref("child_approvals", lazy="dynamic"))
+    requester = db.relationship(
+        "User", foreign_keys=[requested_by], backref=db.backref("approval_requests", lazy="dynamic")
+    )
+    approver = db.relationship(
+        "User", foreign_keys=[approved_by], backref=db.backref("approvals_given", lazy="dynamic")
+    )
+    parent_approval = db.relationship(
+        "TimeEntryApproval", remote_side=[id], backref=db.backref("child_approvals", lazy="dynamic")
+    )
 
     def __repr__(self):
         return f"<TimeEntryApproval {self.id} for entry {self.time_entry_id} - {self.status.value}>"
@@ -101,28 +108,28 @@ class ApprovalPolicy(db.Model):
     __tablename__ = "approval_policies"
 
     id = db.Column(db.Integer, primary_key=True)
-    
+
     # Policy scope
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     applies_to_all = db.Column(db.Boolean, default=False, nullable=False)
-    
+
     # Approval requirements
     requires_approval = db.Column(db.Boolean, default=True, nullable=False)
     approval_levels = db.Column(db.Integer, default=1, nullable=False)  # Multi-level approvals
     approver_user_ids = db.Column(db.String(500), nullable=True)  # Comma-separated user IDs
-    
+
     # Conditions
     min_hours = db.Column(db.Numeric(10, 2), nullable=True)  # Require approval if >= this many hours
     billable_only = db.Column(db.Boolean, default=False, nullable=False)  # Only require approval for billable time
-    
+
     # Auto-approval rules
     auto_approve_after_hours = db.Column(db.Integer, nullable=True)  # Auto-approve after X hours if no response
     auto_approve_for_admins = db.Column(db.Boolean, default=False, nullable=False)
-    
+
     # Status
     enabled = db.Column(db.Boolean, default=True, nullable=False)
-    
+
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -181,4 +188,3 @@ class ApprovalPolicy(db.Model):
                 return False
 
         return True
-

@@ -16,8 +16,12 @@ class Integration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)  # e.g., 'Jira', 'Slack', 'GitHub'
     provider = db.Column(db.String(50), nullable=False, index=True)  # e.g., 'jira', 'slack', 'github'
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)  # Nullable for global integrations
-    is_global = db.Column(db.Boolean, default=False, nullable=False, index=True)  # True for global (shared) integrations
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=True, index=True
+    )  # Nullable for global integrations
+    is_global = db.Column(
+        db.Boolean, default=False, nullable=False, index=True
+    )  # True for global (shared) integrations
     is_active = db.Column(db.Boolean, default=False, nullable=False)  # Only True when credentials are set up
     config = db.Column(JSON, nullable=True)  # Provider-specific configuration
     last_sync_at = db.Column(db.DateTime, nullable=True)
@@ -25,10 +29,10 @@ class Integration(db.Model):
     last_error = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+
     __table_args__ = (
         # Ensure only one global integration per provider
-        db.CheckConstraint('(is_global = 0) OR (is_global = 1 AND user_id IS NULL)', name='check_global_integration'),
+        db.CheckConstraint("(is_global = 0) OR (is_global = 1 AND user_id IS NULL)", name="check_global_integration"),
     )
 
     user = db.relationship("User", backref="integrations")

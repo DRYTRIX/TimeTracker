@@ -107,14 +107,20 @@ class Settings(db.Model):
     github_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
     # Google Calendar
     google_calendar_client_id = db.Column(db.String(255), default="", nullable=True)
-    google_calendar_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    google_calendar_client_secret = db.Column(
+        db.String(255), default="", nullable=True
+    )  # Store encrypted in production
     # Outlook Calendar
     outlook_calendar_client_id = db.Column(db.String(255), default="", nullable=True)
-    outlook_calendar_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    outlook_calendar_client_secret = db.Column(
+        db.String(255), default="", nullable=True
+    )  # Store encrypted in production
     outlook_calendar_tenant_id = db.Column(db.String(255), default="", nullable=True)
     # Microsoft Teams
     microsoft_teams_client_id = db.Column(db.String(255), default="", nullable=True)
-    microsoft_teams_client_secret = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    microsoft_teams_client_secret = db.Column(
+        db.String(255), default="", nullable=True
+    )  # Store encrypted in production
     microsoft_teams_tenant_id = db.Column(db.String(255), default="", nullable=True)
     # Asana
     asana_client_id = db.Column(db.String(255), default="", nullable=True)
@@ -279,60 +285,66 @@ class Settings(db.Model):
             client_id = self.jira_client_id or os.getenv("JIRA_CLIENT_ID", "")
             client_secret = self.jira_client_secret or os.getenv("JIRA_CLIENT_SECRET", "")
             return {"client_id": client_id, "client_secret": client_secret}
-        
+
         elif provider == "slack":
             client_id = self.slack_client_id or os.getenv("SLACK_CLIENT_ID", "")
             client_secret = self.slack_client_secret or os.getenv("SLACK_CLIENT_SECRET", "")
             return {"client_id": client_id, "client_secret": client_secret}
-        
+
         elif provider == "github":
             client_id = self.github_client_id or os.getenv("GITHUB_CLIENT_ID", "")
             client_secret = self.github_client_secret or os.getenv("GITHUB_CLIENT_SECRET", "")
             return {"client_id": client_id, "client_secret": client_secret}
-        
+
         elif provider == "google_calendar":
             client_id = getattr(self, "google_calendar_client_id", "") or os.getenv("GOOGLE_CLIENT_ID", "")
             client_secret = getattr(self, "google_calendar_client_secret", "") or os.getenv("GOOGLE_CLIENT_SECRET", "")
             return {"client_id": client_id, "client_secret": client_secret}
-        
+
         elif provider == "outlook_calendar":
             client_id = getattr(self, "outlook_calendar_client_id", "") or os.getenv("OUTLOOK_CLIENT_ID", "")
-            client_secret = getattr(self, "outlook_calendar_client_secret", "") or os.getenv("OUTLOOK_CLIENT_SECRET", "")
+            client_secret = getattr(self, "outlook_calendar_client_secret", "") or os.getenv(
+                "OUTLOOK_CLIENT_SECRET", ""
+            )
             tenant_id = getattr(self, "outlook_calendar_tenant_id", "") or os.getenv("OUTLOOK_TENANT_ID", "")
             return {"client_id": client_id, "client_secret": client_secret, "tenant_id": tenant_id}
-        
+
         elif provider == "microsoft_teams":
             client_id = getattr(self, "microsoft_teams_client_id", "") or os.getenv("MICROSOFT_TEAMS_CLIENT_ID", "")
-            client_secret = getattr(self, "microsoft_teams_client_secret", "") or os.getenv("MICROSOFT_TEAMS_CLIENT_SECRET", "")
+            client_secret = getattr(self, "microsoft_teams_client_secret", "") or os.getenv(
+                "MICROSOFT_TEAMS_CLIENT_SECRET", ""
+            )
             tenant_id = getattr(self, "microsoft_teams_tenant_id", "") or os.getenv("MICROSOFT_TEAMS_TENANT_ID", "")
             return {"client_id": client_id, "client_secret": client_secret, "tenant_id": tenant_id}
-        
+
         elif provider == "asana":
             client_id = getattr(self, "asana_client_id", "") or os.getenv("ASANA_CLIENT_ID", "")
             client_secret = getattr(self, "asana_client_secret", "") or os.getenv("ASANA_CLIENT_SECRET", "")
             return {"client_id": client_id, "client_secret": client_secret}
-        
+
         elif provider == "trello":
             api_key = getattr(self, "trello_api_key", "") or os.getenv("TRELLO_API_KEY", "")
             api_secret = getattr(self, "trello_api_secret", "") or os.getenv("TRELLO_API_SECRET", "")
             return {"api_key": api_key, "api_secret": api_secret}
-        
+
         elif provider == "gitlab":
             client_id = getattr(self, "gitlab_client_id", "") or os.getenv("GITLAB_CLIENT_ID", "")
             client_secret = getattr(self, "gitlab_client_secret", "") or os.getenv("GITLAB_CLIENT_SECRET", "")
-            instance_url = getattr(self, "gitlab_instance_url", "") or os.getenv("GITLAB_INSTANCE_URL", "https://gitlab.com")
+            instance_url = getattr(self, "gitlab_instance_url", "") or os.getenv(
+                "GITLAB_INSTANCE_URL", "https://gitlab.com"
+            )
             return {"client_id": client_id, "client_secret": client_secret, "instance_url": instance_url}
-        
+
         elif provider == "quickbooks":
             client_id = getattr(self, "quickbooks_client_id", "") or os.getenv("QUICKBOOKS_CLIENT_ID", "")
             client_secret = getattr(self, "quickbooks_client_secret", "") or os.getenv("QUICKBOOKS_CLIENT_SECRET", "")
             return {"client_id": client_id, "client_secret": client_secret}
-        
+
         elif provider == "xero":
             client_id = getattr(self, "xero_client_id", "") or os.getenv("XERO_CLIENT_ID", "")
             client_secret = getattr(self, "xero_client_secret", "") or os.getenv("XERO_CLIENT_SECRET", "")
             return {"client_id": client_id, "client_secret": client_secret}
-        
+
         else:
             return {}
 
@@ -440,22 +452,25 @@ class Settings(db.Model):
             # Check if it's a column error - if so, it's expected during migrations
             error_str = str(e)
             is_column_error = (
-                "UndefinedColumn" in error_str or
-                "does not exist" in error_str.lower() or
-                "no such column" in error_str.lower()
+                "UndefinedColumn" in error_str
+                or "does not exist" in error_str.lower()
+                or "no such column" in error_str.lower()
             )
-            
+
             import logging
+
             logger = logging.getLogger(__name__)
-            
+
             if is_column_error:
                 # This is expected during migrations when schema is incomplete
                 # Only log at debug level to avoid cluttering logs
-                logger.debug(f"Settings table schema incomplete (migration may be pending): {error_str.split('LINE')[0] if 'LINE' in error_str else error_str}")
+                logger.debug(
+                    f"Settings table schema incomplete (migration may be pending): {error_str.split('LINE')[0] if 'LINE' in error_str else error_str}"
+                )
             else:
                 # Other errors should be logged as warnings
                 logger.warning(f"Could not query settings: {e}")
-            
+
             # Rollback the failed transaction
             try:
                 db.session.rollback()

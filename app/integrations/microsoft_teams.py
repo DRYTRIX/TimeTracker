@@ -22,12 +22,7 @@ class MicrosoftTeamsConnector(BaseConnector):
     AUTH_BASE_URL = "https://login.microsoftonline.com"
 
     # OAuth 2.0 scopes required
-    SCOPES = [
-        "ChannelMessage.Send",
-        "Chat.ReadWrite",
-        "offline_access",
-        "User.Read"
-    ]
+    SCOPES = ["ChannelMessage.Send", "Chat.ReadWrite", "offline_access", "User.Read"]
 
     @property
     def provider_name(self) -> str:
@@ -36,6 +31,7 @@ class MicrosoftTeamsConnector(BaseConnector):
     def _get_tenant_id(self) -> str:
         """Get tenant ID from settings or use 'common' for multi-tenant."""
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("microsoft_teams")
         tenant_id = creds.get("tenant_id") or os.getenv("MICROSOFT_TEAMS_TENANT_ID", "common")
@@ -107,8 +103,7 @@ class MicrosoftTeamsConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.GRAPH_BASE_URL}/me",
-                    headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"}
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json()
@@ -135,6 +130,7 @@ class MicrosoftTeamsConnector(BaseConnector):
             raise ValueError("No refresh token available")
 
         from app.models import Settings
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("microsoft_teams")
         client_id = creds.get("client_id") or os.getenv("MICROSOFT_TEAMS_CLIENT_ID")
@@ -171,6 +167,7 @@ class MicrosoftTeamsConnector(BaseConnector):
         if expires_at:
             self.credentials.expires_at = expires_at
         from app.utils.db import safe_commit
+
         safe_commit("refresh_microsoft_teams_token", {"integration_id": self.integration.id})
 
         return {
@@ -186,16 +183,13 @@ class MicrosoftTeamsConnector(BaseConnector):
 
         try:
             # Get user info
-            response = requests.get(
-                f"{self.GRAPH_BASE_URL}/me",
-                headers={"Authorization": f"Bearer {token}"}
-            )
+            response = requests.get(f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {token}"})
 
             if response.status_code == 200:
                 user_data = response.json()
                 return {
                     "success": True,
-                    "message": f"Connected to Microsoft Teams as {user_data.get('displayName', 'Unknown')}"
+                    "message": f"Connected to Microsoft Teams as {user_data.get('displayName', 'Unknown')}",
                 }
             else:
                 return {"success": False, "message": f"API returned status {response.status_code}"}
@@ -212,16 +206,8 @@ class MicrosoftTeamsConnector(BaseConnector):
             # Send message to channel
             response = requests.post(
                 f"{self.GRAPH_BASE_URL}/teams/{channel_id}/channels/{channel_id}/messages",
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "body": {
-                        "contentType": "text",
-                        "content": message
-                    }
-                }
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json={"body": {"contentType": "text", "content": message}},
             )
 
             if response.status_code in [200, 201]:
@@ -240,8 +226,7 @@ class MicrosoftTeamsConnector(BaseConnector):
         try:
             # Get teams
             response = requests.get(
-                f"{self.GRAPH_BASE_URL}/me/joinedTeams",
-                headers={"Authorization": f"Bearer {token}"}
+                f"{self.GRAPH_BASE_URL}/me/joinedTeams", headers={"Authorization": f"Bearer {token}"}
             )
 
             if response.status_code == 200:
@@ -249,7 +234,7 @@ class MicrosoftTeamsConnector(BaseConnector):
                 return {
                     "success": True,
                     "message": f"Sync completed. Found {len(teams)} teams.",
-                    "synced_items": len(teams)
+                    "synced_items": len(teams),
                 }
             else:
                 return {"success": False, "message": f"API returned status {response.status_code}"}
@@ -264,21 +249,20 @@ class MicrosoftTeamsConnector(BaseConnector):
                     "name": "default_channel_id",
                     "type": "string",
                     "label": "Default Channel ID",
-                    "description": "Default Teams channel ID for notifications"
+                    "description": "Default Teams channel ID for notifications",
                 },
                 {
                     "name": "notify_on_time_entry_start",
                     "type": "boolean",
                     "label": "Notify on Time Entry Start",
-                    "default": False
+                    "default": False,
                 },
                 {
                     "name": "notify_on_invoice_sent",
                     "type": "boolean",
                     "label": "Notify on Invoice Sent",
-                    "default": True
-                }
+                    "default": True,
+                },
             ],
-            "required": []
+            "required": [],
         }
-

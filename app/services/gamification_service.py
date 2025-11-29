@@ -19,7 +19,7 @@ class GamificationService:
     def check_and_award_badges(self, user_id: int, event_type: str, event_data: Dict = None) -> List[Dict]:
         """Check if user qualifies for any badges and award them"""
         awarded = []
-        
+
         # Get all active badges
         badges = Badge.query.filter_by(is_active=True).all()
 
@@ -32,11 +32,7 @@ class GamificationService:
             # Check criteria
             if self._check_badge_criteria(user_id, badge, event_type, event_data or {}):
                 # Award badge
-                user_badge = UserBadge(
-                    user_id=user_id,
-                    badge_id=badge.id,
-                    progress=100
-                )
+                user_badge = UserBadge(user_id=user_id, badge_id=badge.id, progress=100)
                 db.session.add(user_badge)
                 awarded.append(badge.to_dict())
 
@@ -85,10 +81,7 @@ class GamificationService:
 
     def _get_total_hours(self, user_id: int, criteria: Dict) -> float:
         """Get total hours tracked for user"""
-        query = TimeEntry.query.filter_by(
-            user_id=user_id,
-            billable=True
-        ).filter(TimeEntry.end_time.isnot(None))
+        query = TimeEntry.query.filter_by(user_id=user_id, billable=True).filter(TimeEntry.end_time.isnot(None))
 
         if criteria.get("date_from"):
             query = query.filter(TimeEntry.start_time >= criteria["date_from"])
@@ -100,10 +93,7 @@ class GamificationService:
 
     def _get_completed_tasks(self, user_id: int, criteria: Dict) -> int:
         """Get completed tasks count"""
-        query = Task.query.join(TimeEntry).filter(
-            Task.status == "completed",
-            TimeEntry.user_id == user_id
-        )
+        query = Task.query.join(TimeEntry).filter(Task.status == "completed", TimeEntry.user_id == user_id)
 
         if criteria.get("date_from"):
             query = query.filter(Task.updated_at >= criteria["date_from"])
@@ -118,8 +108,7 @@ class GamificationService:
         for i in range(365):  # Check up to 1 year
             check_date = today - timedelta(days=i)
             has_entry = TimeEntry.query.filter(
-                TimeEntry.user_id == user_id,
-                func.date(TimeEntry.start_time) == check_date
+                TimeEntry.user_id == user_id, func.date(TimeEntry.start_time) == check_date
             ).first()
 
             if has_entry:
@@ -141,21 +130,19 @@ class GamificationService:
 
     def get_user_badges(self, user_id: int) -> List[Dict]:
         """Get all badges earned by user"""
-        user_badges = UserBadge.query.filter_by(user_id=user_id).order_by(
-            UserBadge.earned_at.desc()
-        ).all()
+        user_badges = UserBadge.query.filter_by(user_id=user_id).order_by(UserBadge.earned_at.desc()).all()
 
         return [ub.to_dict() for ub in user_badges]
 
     def get_user_points(self, user_id: int) -> int:
         """Get total points for user from badges"""
-        user_badges = UserBadge.query.join(Badge).filter(
-            UserBadge.user_id == user_id
-        ).all()
+        user_badges = UserBadge.query.join(Badge).filter(UserBadge.user_id == user_id).all()
 
         return sum(ub.badge.points for ub in user_badges)
 
-    def calculate_leaderboard(self, leaderboard_id: int, period_start: datetime = None, period_end: datetime = None) -> List[Dict]:
+    def calculate_leaderboard(
+        self, leaderboard_id: int, period_start: datetime = None, period_end: datetime = None
+    ) -> List[Dict]:
         """Calculate and update leaderboard rankings"""
         leaderboard = Leaderboard.query.get_or_404(leaderboard_id)
 
@@ -169,9 +156,7 @@ class GamificationService:
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
         # Clear old entries for this period
-        LeaderboardEntry.query.filter_by(
-            leaderboard_id=leaderboard_id
-        ).filter(
+        LeaderboardEntry.query.filter_by(leaderboard_id=leaderboard_id).filter(
             LeaderboardEntry.period_start == period_start
         ).delete()
 
@@ -184,7 +169,7 @@ class GamificationService:
                 rank=rank,
                 score=score,
                 period_start=period_start,
-                period_end=period_end
+                period_end=period_end,
             )
             db.session.add(entry)
             entries.append(entry)
@@ -196,7 +181,7 @@ class GamificationService:
     def _get_period_dates(self, period: str) -> tuple:
         """Get period start and end dates"""
         today = datetime.now().date()
-        
+
         if period == "daily":
             start = datetime.combine(today, datetime.min.time())
             end = datetime.combine(today, datetime.max.time())
@@ -223,28 +208,22 @@ class GamificationService:
 
         if leaderboard_type == "time_tracked":
             # Total hours tracked
-            query = db.session.query(
-                TimeEntry.user_id,
-                func.sum(TimeEntry.duration_seconds).label("total_seconds")
-            ).filter(
-                TimeEntry.start_time >= start,
-                TimeEntry.start_time <= end,
-                TimeEntry.end_time.isnot(None)
-            ).group_by(TimeEntry.user_id)
+            query = (
+                db.session.query(TimeEntry.user_id, func.sum(TimeEntry.duration_seconds).label("total_seconds"))
+                .filter(TimeEntry.start_time >= start, TimeEntry.start_time <= end, TimeEntry.end_time.isnot(None))
+                .group_by(TimeEntry.user_id)
+            )
 
             for user_id, total_seconds in query.all():
                 scores[user_id] = (total_seconds or 0) / 3600  # Convert to hours
 
         elif leaderboard_type == "tasks_completed":
             # Tasks completed
-            query = db.session.query(
-                Task.assigned_to.label("user_id"),
-                func.count(Task.id).label("count")
-            ).filter(
-                Task.status == "completed",
-                Task.updated_at >= start,
-                Task.updated_at <= end
-            ).group_by(Task.assigned_to)
+            query = (
+                db.session.query(Task.assigned_to.label("user_id"), func.count(Task.id).label("count"))
+                .filter(Task.status == "completed", Task.updated_at >= start, Task.updated_at <= end)
+                .group_by(Task.assigned_to)
+            )
 
             for user_id, count in query.all():
                 if user_id:
@@ -252,13 +231,12 @@ class GamificationService:
 
         elif leaderboard_type == "points":
             # Badge points
-            query = db.session.query(
-                UserBadge.user_id,
-                func.sum(Badge.points).label("total_points")
-            ).join(Badge).filter(
-                UserBadge.earned_at >= start,
-                UserBadge.earned_at <= end
-            ).group_by(UserBadge.user_id)
+            query = (
+                db.session.query(UserBadge.user_id, func.sum(Badge.points).label("total_points"))
+                .join(Badge)
+                .filter(UserBadge.earned_at >= start, UserBadge.earned_at <= end)
+                .group_by(UserBadge.user_id)
+            )
 
             for user_id, total_points in query.all():
                 scores[user_id] = total_points or 0
@@ -270,11 +248,12 @@ class GamificationService:
         leaderboard = Leaderboard.query.get_or_404(leaderboard_id)
         period_start, period_end = self._get_period_dates(leaderboard.period)
 
-        entries = LeaderboardEntry.query.filter_by(
-            leaderboard_id=leaderboard_id
-        ).filter(
-            LeaderboardEntry.period_start == period_start
-        ).order_by(LeaderboardEntry.rank.asc()).limit(limit).all()
+        entries = (
+            LeaderboardEntry.query.filter_by(leaderboard_id=leaderboard_id)
+            .filter(LeaderboardEntry.period_start == period_start)
+            .order_by(LeaderboardEntry.rank.asc())
+            .limit(limit)
+            .all()
+        )
 
         return [e.to_dict() for e in entries]
-

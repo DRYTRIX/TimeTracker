@@ -14,6 +14,7 @@ from flask import current_app
 # Try to import Redis
 try:
     import redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -76,16 +77,17 @@ class RedisCache:
         try:
             # Parse Redis URL
             from urllib.parse import urlparse
+
             parsed = urlparse(redis_url)
-            
+
             # Extract password from URL if present
             password = parsed.password or None
-            
+
             self._client = redis.Redis(
-                host=parsed.hostname or 'localhost',
+                host=parsed.hostname or "localhost",
                 port=parsed.port or 6379,
                 password=password,
-                db=int(parsed.path.lstrip('/')) if parsed.path else 0,
+                db=int(parsed.path.lstrip("/")) if parsed.path else 0,
                 decode_responses=False,  # We'll handle serialization ourselves
                 socket_connect_timeout=5,
                 socket_timeout=5,
@@ -105,7 +107,7 @@ class RedisCache:
         """Get a value from cache"""
         if not self._connected:
             return self._fallback.get(key)
-        
+
         try:
             data = self._client.get(key)
             if data is None:
@@ -121,7 +123,7 @@ class RedisCache:
         if not self._connected:
             self._fallback.set(key, value, ttl)
             return
-        
+
         try:
             ttl = ttl or self._default_ttl
             data = pickle.dumps(value)
@@ -135,7 +137,7 @@ class RedisCache:
         if not self._connected:
             self._fallback.delete(key)
             return
-        
+
         try:
             self._client.delete(key)
         except Exception as e:
@@ -147,7 +149,7 @@ class RedisCache:
         if not self._connected:
             self._fallback.clear()
             return
-        
+
         try:
             self._client.flushdb()
         except Exception as e:
@@ -158,7 +160,7 @@ class RedisCache:
         """Check if a key exists in cache"""
         if not self._connected:
             return self._fallback.exists(key)
-        
+
         try:
             return bool(self._client.exists(key))
         except Exception as e:
@@ -174,15 +176,15 @@ _cache: Optional[Any] = None
 def get_cache():
     """Get the global cache instance (Redis if available, otherwise in-memory)"""
     global _cache
-    
+
     if _cache is not None:
         return _cache
-    
+
     # Try to initialize Redis if enabled
     try:
-        if current_app and current_app.config.get('REDIS_ENABLED', True) and REDIS_AVAILABLE:
-            redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
-            default_ttl = current_app.config.get('REDIS_DEFAULT_TTL', 3600)
+        if current_app and current_app.config.get("REDIS_ENABLED", True) and REDIS_AVAILABLE:
+            redis_url = current_app.config.get("REDIS_URL", "redis://localhost:6379/0")
+            default_ttl = current_app.config.get("REDIS_DEFAULT_TTL", 3600)
             _cache = RedisCache(redis_url, default_ttl)
             if _cache._connected:
                 return _cache
@@ -192,11 +194,11 @@ def get_cache():
     except Exception as e:
         if current_app:
             current_app.logger.warning(f"Failed to initialize Redis cache: {e}")
-    
+
     # Fallback to in-memory cache
     default_ttl = 3600
     if current_app:
-        default_ttl = current_app.config.get('REDIS_DEFAULT_TTL', 3600)
+        default_ttl = current_app.config.get("REDIS_DEFAULT_TTL", 3600)
     _cache = InMemoryCache(default_ttl)
     return _cache
 
@@ -252,12 +254,12 @@ def invalidate_cache(pattern: str) -> None:
 def invalidate_pattern(pattern: str) -> None:
     """
     Invalidate cache entries matching a pattern.
-    
+
     Args:
         pattern: Pattern to match (supports * wildcard)
     """
     cache = get_cache()
-    if hasattr(cache, '_client') and cache._connected:
+    if hasattr(cache, "_client") and cache._connected:
         # Redis pattern matching
         try:
             keys = cache._client.keys(pattern)

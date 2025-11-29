@@ -57,7 +57,7 @@ class ExpenseService:
 
         # Use model directly for full field support
         from app.models import Expense
-        
+
         expense = Expense(
             user_id=created_by,
             title=title or description or "Expense",
@@ -77,7 +77,7 @@ class ExpenseService:
             tags=tags,
             receipt_path=receipt_path,
         )
-        
+
         db.session.add(expense)
 
         if not safe_commit("create_expense", {"project_id": project_id, "created_by": created_by}):

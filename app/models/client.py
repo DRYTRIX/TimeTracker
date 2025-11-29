@@ -224,26 +224,28 @@ class Client(db.Model):
     def get_rendered_links(self):
         """Get all rendered links from active link templates that match this client's custom fields"""
         from .link_template import LinkTemplate
-        
+
         if not self.custom_fields:
             return []
-        
+
         links = []
         templates = LinkTemplate.get_active_templates()
-        
+
         for template in templates:
             field_value = self.get_custom_field(template.field_key)
             if field_value:
                 url = template.render_url(field_value)
                 if url:
-                    links.append({
-                        "id": template.id,
-                        "name": template.name,
-                        "url": url,
-                        "icon": template.icon,
-                        "description": template.description,
-                    })
-        
+                    links.append(
+                        {
+                            "id": template.id,
+                            "name": template.name,
+                            "url": url,
+                            "icon": template.icon,
+                            "description": template.description,
+                        }
+                    )
+
         return links
 
     def to_dict(self):

@@ -341,9 +341,7 @@ class InvoiceService:
             query = query.filter(db.or_(Invoice.invoice_number.ilike(like), Invoice.client_name.ilike(like)))
 
         # Order by creation date and paginate
-        pagination = query.order_by(Invoice.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        pagination = query.order_by(Invoice.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
         invoices = pagination.items
 
         # Calculate overdue status

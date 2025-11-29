@@ -17,9 +17,11 @@ workflows_bp = Blueprint("workflows", __name__)
 @login_required
 def list_workflows():
     """List all workflows"""
-    workflows = WorkflowRule.query.filter(WorkflowRule.user_id == current_user.id).order_by(
-        WorkflowRule.priority.desc(), WorkflowRule.created_at.desc()
-    ).all()
+    workflows = (
+        WorkflowRule.query.filter(WorkflowRule.user_id == current_user.id)
+        .order_by(WorkflowRule.priority.desc(), WorkflowRule.created_at.desc())
+        .all()
+    )
 
     return render_template("workflows/list.html", workflows=workflows)
 
@@ -88,9 +90,12 @@ def view_workflow(workflow_id):
         flash(_("Access denied"), "error")
         return redirect(url_for("workflows.list_workflows"))
 
-    executions = WorkflowExecution.query.filter_by(rule_id=workflow_id).order_by(
-        WorkflowExecution.executed_at.desc()
-    ).limit(50).all()
+    executions = (
+        WorkflowExecution.query.filter_by(rule_id=workflow_id)
+        .order_by(WorkflowExecution.executed_at.desc())
+        .limit(50)
+        .all()
+    )
 
     return render_template("workflows/view.html", workflow=workflow, executions=executions)
 
@@ -140,7 +145,9 @@ def edit_workflow(workflow_id):
         {"value": "assign_task", "label": _("Assign Task")},
     ]
 
-    return render_template("workflows/edit.html", workflow=workflow, trigger_types=trigger_types, action_types=action_types)
+    return render_template(
+        "workflows/edit.html", workflow=workflow, trigger_types=trigger_types, action_types=action_types
+    )
 
 
 @workflows_bp.route("/workflows/<int:workflow_id>/delete", methods=["POST"])
@@ -275,4 +282,3 @@ def test_workflow(workflow_id):
     result = WorkflowEngine.execute_rule(workflow, test_event)
 
     return jsonify(result)
-

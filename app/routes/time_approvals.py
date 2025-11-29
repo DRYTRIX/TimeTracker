@@ -21,10 +21,11 @@ def list_approvals():
     pending = service.get_pending_approvals(current_user.id)
 
     # Get user's pending requests
-    my_requests = TimeEntryApproval.query.filter_by(
-        requested_by=current_user.id,
-        status=ApprovalStatus.PENDING
-    ).order_by(TimeEntryApproval.requested_at.desc()).all()
+    my_requests = (
+        TimeEntryApproval.query.filter_by(requested_by=current_user.id, status=ApprovalStatus.PENDING)
+        .order_by(TimeEntryApproval.requested_at.desc())
+        .all()
+    )
 
     return render_template("approvals/list.html", pending_approvals=pending, my_requests=my_requests)
 
@@ -34,7 +35,7 @@ def list_approvals():
 def view_approval(approval_id):
     """View approval details"""
     approval = TimeEntryApproval.query.get_or_404(approval_id)
-    
+
     # Check permissions
     if approval.requested_by != current_user.id and approval.approved_by != current_user.id:
         service = TimeApprovalService()
@@ -53,11 +54,7 @@ def approve_entry(approval_id):
     service = TimeApprovalService()
     data = request.get_json() if request.is_json else request.form
 
-    result = service.approve(
-        approval_id=approval_id,
-        approver_id=current_user.id,
-        comment=data.get("comment")
-    )
+    result = service.approve(approval_id=approval_id, approver_id=current_user.id, comment=data.get("comment"))
 
     if request.is_json:
         return jsonify(result)
@@ -84,11 +81,7 @@ def reject_entry(approval_id):
         flash(_("Rejection reason is required"), "error")
         return redirect(url_for("time_approvals.view_approval", approval_id=approval_id))
 
-    result = service.reject(
-        approval_id=approval_id,
-        approver_id=current_user.id,
-        reason=reason
-    )
+    result = service.reject(approval_id=approval_id, approver_id=current_user.id, reason=reason)
 
     if request.is_json:
         return jsonify(result)
@@ -112,7 +105,7 @@ def request_approval(entry_id):
         time_entry_id=entry_id,
         requested_by=current_user.id,
         comment=data.get("comment"),
-        approver_ids=data.get("approver_ids")
+        approver_ids=data.get("approver_ids"),
     )
 
     if request.is_json:
@@ -132,10 +125,7 @@ def cancel_approval(approval_id):
     """Cancel an approval request"""
     service = TimeApprovalService()
 
-    result = service.cancel_approval(
-        approval_id=approval_id,
-        user_id=current_user.id
-    )
+    result = service.cancel_approval(approval_id=approval_id, user_id=current_user.id)
 
     if request.is_json:
         return jsonify(result)
@@ -159,11 +149,7 @@ def bulk_approve():
     if not approval_ids:
         return jsonify({"success": False, "message": "No approval IDs provided"}), 400
 
-    result = service.bulk_approve(
-        approval_ids=approval_ids,
-        approver_id=current_user.id,
-        comment=data.get("comment")
-    )
+    result = service.bulk_approve(approval_ids=approval_ids, approver_id=current_user.id, comment=data.get("comment"))
 
     return jsonify(result)
 
@@ -175,7 +161,4 @@ def api_pending_approvals():
     service = TimeApprovalService()
     approvals = service.get_pending_approvals(current_user.id)
 
-    return jsonify({
-        "approvals": [a.to_dict() for a in approvals]
-    })
-
+    return jsonify({"approvals": [a.to_dict() for a in approvals]})

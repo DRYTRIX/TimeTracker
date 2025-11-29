@@ -20,33 +20,41 @@ class AICategorizationService:
     # Category patterns (can be extended with ML models)
     CATEGORY_PATTERNS = {
         "development": {
-            "keywords": ["code", "develop", "programming", "debug", "fix", "bug", "feature", "api", "backend", "frontend"],
-            "projects": ["software", "app", "website", "system"]
+            "keywords": [
+                "code",
+                "develop",
+                "programming",
+                "debug",
+                "fix",
+                "bug",
+                "feature",
+                "api",
+                "backend",
+                "frontend",
+            ],
+            "projects": ["software", "app", "website", "system"],
         },
         "design": {
             "keywords": ["design", "ui", "ux", "mockup", "wireframe", "prototype", "figma", "sketch"],
-            "projects": ["design", "ui", "ux", "branding"]
+            "projects": ["design", "ui", "ux", "branding"],
         },
-        "meeting": {
-            "keywords": ["meeting", "call", "discuss", "review", "standup", "sync"],
-            "projects": []
-        },
+        "meeting": {"keywords": ["meeting", "call", "discuss", "review", "standup", "sync"], "projects": []},
         "documentation": {
             "keywords": ["document", "write", "docs", "readme", "spec", "requirements"],
-            "projects": ["documentation", "wiki"]
+            "projects": ["documentation", "wiki"],
         },
         "testing": {
             "keywords": ["test", "qa", "quality", "verify", "validate", "check"],
-            "projects": ["testing", "qa"]
+            "projects": ["testing", "qa"],
         },
         "support": {
             "keywords": ["support", "help", "ticket", "issue", "customer", "client"],
-            "projects": ["support", "helpdesk"]
+            "projects": ["support", "helpdesk"],
         },
         "research": {
             "keywords": ["research", "investigate", "analyze", "study", "explore"],
-            "projects": ["research", "analysis"]
-        }
+            "projects": ["research", "analysis"],
+        },
     }
 
     def categorize_time_entry(self, time_entry: TimeEntry) -> Dict[str, Any]:
@@ -78,24 +86,22 @@ class AICategorizationService:
             return {
                 "category": best_category[0],
                 "confidence": min(best_category[1] / 3.0, 1.0),  # Normalize
-                "all_matches": category_scores
+                "all_matches": category_scores,
             }
 
-        return {
-            "category": "uncategorized",
-            "confidence": 0.0,
-            "all_matches": {}
-        }
+        return {"category": "uncategorized", "confidence": 0.0, "all_matches": {}}
 
     def suggest_project_for_entry(self, description: str, user_id: int) -> Optional[Dict]:
         """Suggest project based on entry description"""
         description_lower = description.lower()
 
         # Get user's recent projects
-        recent_projects = Project.query.join(TimeEntry).filter(
-            TimeEntry.user_id == user_id,
-            TimeEntry.start_time >= datetime.utcnow() - timedelta(days=90)
-        ).distinct().all()
+        recent_projects = (
+            Project.query.join(TimeEntry)
+            .filter(TimeEntry.user_id == user_id, TimeEntry.start_time >= datetime.utcnow() - timedelta(days=90))
+            .distinct()
+            .all()
+        )
 
         best_match = None
         best_score = 0
@@ -111,7 +117,7 @@ class AICategorizationService:
                 "project_id": best_match.id,
                 "project_name": best_match.name,
                 "confidence": min(best_score, 1.0),
-                "reason": "Pattern match with project"
+                "reason": "Pattern match with project",
             }
 
         return None
@@ -137,7 +143,7 @@ class AICategorizationService:
                 "task_id": best_match.id,
                 "task_name": best_match.name,
                 "confidence": min(best_score, 1.0),
-                "reason": "Pattern match with task"
+                "reason": "Pattern match with task",
             }
 
         return None
@@ -184,8 +190,8 @@ class AICategorizationService:
         entity_text = f"{entity.name} {getattr(entity, 'description', '')}".lower()
 
         # Word overlap
-        desc_words = set(re.findall(r'\b\w+\b', description))
-        entity_words = set(re.findall(r'\b\w+\b', entity_text))
+        desc_words = set(re.findall(r"\b\w+\b", description))
+        entity_words = set(re.findall(r"\b\w+\b", entity_text))
 
         common_words = desc_words.intersection(entity_words)
         if desc_words:
@@ -216,14 +222,14 @@ class AICategorizationService:
             if entry.project_id:
                 if entry.project_id not in project_category_map:
                     project_category_map[entry.project_id] = {}
-                project_category_map[entry.project_id][category] = \
+                project_category_map[entry.project_id][category] = (
                     project_category_map[entry.project_id].get(category, 0) + 1
+                )
 
         return {
             "category_distribution": category_distribution,
             "project_categories": {
                 pid: max(cats.items(), key=lambda x: x[1])[0] if cats else "uncategorized"
                 for pid, cats in project_category_map.items()
-            }
+            },
         }
-

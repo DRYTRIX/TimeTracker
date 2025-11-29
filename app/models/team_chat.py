@@ -16,11 +16,13 @@ class ChatChannel(db.Model):
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     channel_type = db.Column(db.String(20), default="public", nullable=False)  # 'public', 'private', 'direct'
-    
+
     # Channel settings
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True)  # Project-specific channel
-    
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True
+    )  # Project-specific channel
+
     # Metadata
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -32,9 +34,7 @@ class ChatChannel(db.Model):
     messages = db.relationship("ChatMessage", backref="channel", lazy="dynamic", cascade="all, delete-orphan")
     members = db.relationship("ChatChannelMember", backref="channel", lazy="dynamic", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        Index("ix_chat_channels_type", "channel_type"),
-    )
+    __table_args__ = (Index("ix_chat_channels_type", "channel_type"),)
 
     def __repr__(self):
         return f"<ChatChannel {self.name} ({self.channel_type})>"
@@ -50,7 +50,7 @@ class ChatChannel(db.Model):
             "is_archived": self.is_archived,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "message_count": self.messages.count(),
-            "member_count": self.members.count()
+            "member_count": self.members.count(),
         }
 
 
@@ -62,14 +62,14 @@ class ChatChannelMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     channel_id = db.Column(db.Integer, db.ForeignKey("chat_channels.id"), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    
+
     # Permissions
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
-    
+
     # Notification settings
     notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
     muted_until = db.Column(db.DateTime, nullable=True)  # Mute until this time
-    
+
     # Metadata
     joined_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_read_at = db.Column(db.DateTime, nullable=True)
@@ -94,30 +94,30 @@ class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     channel_id = db.Column(db.Integer, db.ForeignKey("chat_channels.id"), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    
+
     # Message content
     message = db.Column(db.Text, nullable=False)
     message_type = db.Column(db.String(20), default="text", nullable=False)  # 'text', 'file', 'system'
-    
+
     # File attachment
     attachment_url = db.Column(db.String(500), nullable=True)
     attachment_filename = db.Column(db.String(255), nullable=True)
     attachment_size = db.Column(db.Integer, nullable=True)
-    
+
     # Reply/thread
     reply_to_id = db.Column(db.Integer, db.ForeignKey("chat_messages.id"), nullable=True)
-    
+
     # Mentions
     mentions = db.Column(db.JSON, nullable=True)  # List of mentioned user IDs
-    
+
     # Reactions
     reactions = db.Column(db.JSON, nullable=True)  # {emoji: [user_ids]}
-    
+
     # Status
     is_edited = db.Column(db.Boolean, default=False, nullable=False)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     edited_at = db.Column(db.DateTime, nullable=True)
-    
+
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -126,9 +126,7 @@ class ChatMessage(db.Model):
     user = db.relationship("User", backref=db.backref("chat_messages", lazy="dynamic"))
     reply_to = db.relationship("ChatMessage", remote_side=[id], backref=db.backref("replies", lazy="dynamic"))
 
-    __table_args__ = (
-        Index("ix_chat_messages_channel_created", "channel_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_chat_messages_channel_created", "channel_id", "created_at"),)
 
     def __repr__(self):
         return f"<ChatMessage {self.id} in channel {self.channel_id}>"
@@ -156,16 +154,18 @@ class ChatMessage(db.Model):
     def parse_mentions(self):
         """Parse @mentions from message and extract user IDs"""
         import re
+
         mentions = []
-        pattern = r'@(\w+)'
+        pattern = r"@(\w+)"
         matches = re.findall(pattern, self.message)
-        
+
         from app.models import User
+
         for username in matches:
             user = User.query.filter_by(username=username).first()
             if user:
                 mentions.append(user.id)
-        
+
         self.mentions = mentions if mentions else None
         return mentions
 
@@ -184,10 +184,7 @@ class ChatReadReceipt(db.Model):
     message = db.relationship("ChatMessage", backref=db.backref("read_receipts", lazy="dynamic"))
     user = db.relationship("User", backref=db.backref("chat_read_receipts", lazy="dynamic"))
 
-    __table_args__ = (
-        db.UniqueConstraint("message_id", "user_id", name="uq_read_receipt"),
-    )
+    __table_args__ = (db.UniqueConstraint("message_id", "user_id", name="uq_read_receipt"),)
 
     def __repr__(self):
         return f"<ChatReadReceipt message={self.message_id} user={self.user_id}>"
-

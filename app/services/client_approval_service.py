@@ -16,12 +16,7 @@ logger = logging.getLogger(__name__)
 class ClientApprovalService:
     """Service for managing client-side time entry approvals"""
 
-    def request_approval(
-        self,
-        time_entry_id: int,
-        requested_by: int,
-        comment: str = None
-    ) -> Dict[str, Any]:
+    def request_approval(self, time_entry_id: int, requested_by: int, comment: str = None) -> Dict[str, Any]:
         """Request client approval for a time entry"""
         time_entry = TimeEntry.query.get(time_entry_id)
         if not time_entry:
@@ -37,8 +32,7 @@ class ClientApprovalService:
 
         # Check if already pending
         existing = ClientTimeApproval.query.filter_by(
-            time_entry_id=time_entry_id,
-            status=ClientApprovalStatus.PENDING
+            time_entry_id=time_entry_id, status=ClientApprovalStatus.PENDING
         ).first()
 
         if existing:
@@ -51,7 +45,7 @@ class ClientApprovalService:
             client_id=client.id,
             requested_by=requested_by,
             status=ClientApprovalStatus.PENDING,
-            request_comment=comment
+            request_comment=comment,
         )
         db.session.add(approval)
         db.session.commit()
@@ -59,18 +53,9 @@ class ClientApprovalService:
         # Notify client contacts
         self._notify_client_contacts(client, approval)
 
-        return {
-            "success": True,
-            "message": "Approval requested",
-            "approval": approval.to_dict()
-        }
+        return {"success": True, "message": "Approval requested", "approval": approval.to_dict()}
 
-    def approve(
-        self,
-        approval_id: int,
-        contact_id: int,
-        comment: str = None
-    ) -> Dict[str, Any]:
+    def approve(self, approval_id: int, contact_id: int, comment: str = None) -> Dict[str, Any]:
         """Approve a time entry (client-side)"""
         approval = ClientTimeApproval.query.get(approval_id)
         if not approval:
@@ -82,18 +67,9 @@ class ClientApprovalService:
         approval.approve(contact_id, comment)
         self._notify_requester(approval, "approved", comment)
 
-        return {
-            "success": True,
-            "message": "Time entry approved",
-            "approval": approval.to_dict()
-        }
+        return {"success": True, "message": "Time entry approved", "approval": approval.to_dict()}
 
-    def reject(
-        self,
-        approval_id: int,
-        contact_id: int,
-        reason: str
-    ) -> Dict[str, Any]:
+    def reject(self, approval_id: int, contact_id: int, reason: str) -> Dict[str, Any]:
         """Reject a time entry (client-side)"""
         approval = ClientTimeApproval.query.get(approval_id)
         if not approval:
@@ -105,18 +81,15 @@ class ClientApprovalService:
         approval.reject(contact_id, reason)
         self._notify_requester(approval, "rejected", reason)
 
-        return {
-            "success": True,
-            "message": "Time entry rejected",
-            "approval": approval.to_dict()
-        }
+        return {"success": True, "message": "Time entry rejected", "approval": approval.to_dict()}
 
     def get_pending_approvals_for_client(self, client_id: int) -> List[ClientTimeApproval]:
         """Get pending approvals for a client"""
-        return ClientTimeApproval.query.filter_by(
-            client_id=client_id,
-            status=ClientApprovalStatus.PENDING
-        ).order_by(ClientTimeApproval.requested_at.desc()).all()
+        return (
+            ClientTimeApproval.query.filter_by(client_id=client_id, status=ClientApprovalStatus.PENDING)
+            .order_by(ClientTimeApproval.requested_at.desc())
+            .all()
+        )
 
     def _notify_client_contacts(self, client: Client, approval: ClientTimeApproval):
         """Send notifications to client contacts"""
@@ -124,21 +97,22 @@ class ClientApprovalService:
         from app.utils.notification_service import NotificationService
 
         service = NotificationService()
-        
+
         # Get client contacts
         contacts = Contact.query.filter_by(client_id=client.id, is_active=True).all()
-        
+
         for contact in contacts:
             if contact.email:
                 # Send email notification
                 from app.utils.email import send_email
+
                 try:
                     send_email(
                         to=contact.email,
                         subject=f"Time Entry Approval Requested - {approval.time_entry.project.name}",
                         template="email/client_approval_request.html",
                         approval=approval,
-                        contact=contact
+                        contact=contact,
                     )
                 except Exception as e:
                     logger.error(f"Error sending approval email to {contact.email}: {e}")
@@ -157,6 +131,5 @@ class ClientApprovalService:
             title=f"Time Entry {status.title()}",
             message=message,
             type="success" if status == "approved" else "error",
-            priority="normal"
+            priority="normal",
         )
-

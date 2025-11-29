@@ -170,9 +170,7 @@ def start_timer():
         action="started",
         entity_type="time_entry",
         entity_id=new_timer.id,
-        entity_name=(
-            f"{project.name}" if project else f"{client.name if client else _('Unknown')}"
-        )
+        entity_name=(f"{project.name}" if project else f"{client.name if client else _('Unknown')}")
         + (f" - {task.name}" if task else ""),
         description=(
             f"Started timer for {project.name}"
@@ -781,11 +779,13 @@ def manual_entry():
                 target_name = entry.client.name
             else:
                 target_name = "Unknown"
-            
+
             if task_id and entry.project:
                 task = Task.query.get(task_id)
                 task_name = task.name if task else "Unknown Task"
-                flash(_("Manual entry created for %(project)s - %(task)s", project=target_name, task=task_name), "success")
+                flash(
+                    _("Manual entry created for %(project)s - %(task)s", project=target_name, task=task_name), "success"
+                )
             else:
                 flash(_("Manual entry created for %(target)s", target=target_name), "success")
 
@@ -1118,10 +1118,7 @@ def timer_page():
     from sqlalchemy.orm import joinedload
 
     templates = (
-        TimeEntryTemplate.query.options(
-            joinedload(TimeEntryTemplate.project),
-            joinedload(TimeEntryTemplate.task)
-        )
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.project), joinedload(TimeEntryTemplate.task))
         .filter_by(user_id=current_user.id)
         .order_by(desc(TimeEntryTemplate.last_used_at))
         .limit(5)

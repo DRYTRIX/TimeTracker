@@ -11,6 +11,7 @@ import enum
 
 class ClientApprovalStatus(enum.Enum):
     """Client approval status"""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -161,4 +162,3 @@ class ClientApprovalPolicy(db.Model):
                 return False
 
         return True
-

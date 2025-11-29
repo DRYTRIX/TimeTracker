@@ -220,7 +220,7 @@ def list_projects():
         description: List of projects
     """
     from app.services import ProjectService
-    
+
     # Filter by status
     status = request.args.get("status", "active")
     client_id = request.args.get("client_id", type=int)
@@ -259,13 +259,13 @@ def get_project(project_id):
         description: Project not found
     """
     from app.services import ProjectService
-    
+
     project_service = ProjectService()
     result = project_service.get_project_with_details(project_id=project_id, include_time_entries=False)
-    
+
     if not result:
         return jsonify({"error": "Project not found"}), 404
-    
+
     return jsonify({"project": result.to_dict()})
 
 
@@ -307,7 +307,7 @@ def create_project():
         description: Invalid input
     """
     from app.services import ProjectService
-    
+
     data = request.get_json() or {}
 
     # Validate required fields
@@ -360,12 +360,12 @@ def update_project(project_id):
         description: Project not found
     """
     from app.services import ProjectService
-    
+
     data = request.get_json() or {}
 
     # Use service layer to update project
     project_service = ProjectService()
-    
+
     # Prepare update kwargs
     update_kwargs = {}
     if "name" in data:
@@ -387,11 +387,7 @@ def update_project(project_id):
     if "billing_ref" in data:
         update_kwargs["billing_ref"] = data["billing_ref"]
 
-    result = project_service.update_project(
-        project_id=project_id,
-        user_id=g.api_user.id,
-        **update_kwargs
-    )
+    result = project_service.update_project(project_id=project_id, user_id=g.api_user.id, **update_kwargs)
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not update project")}), 400
@@ -420,13 +416,9 @@ def delete_project(project_id):
         description: Project not found
     """
     from app.services import ProjectService
-    
+
     project_service = ProjectService()
-    result = project_service.archive_project(
-        project_id=project_id,
-        user_id=g.api_user.id,
-        reason="Archived via API"
-    )
+    result = project_service.archive_project(project_id=project_id, user_id=g.api_user.id, reason="Archived via API")
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not archive project")}), 404
@@ -476,10 +468,10 @@ def list_time_entries():
     """
     from app.services import TimeTrackingService
     from sqlalchemy.orm import joinedload
-    
+
     # Filter by project
     project_id = request.args.get("project_id", type=int)
-    
+
     # Filter by user (non-admin can only see their own)
     user_id = request.args.get("user_id", type=int)
     if user_id:
@@ -504,22 +496,22 @@ def list_time_entries():
 
     # Only completed entries by default
     include_active = request.args.get("include_active") == "true"
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
     # Use repository with eager loading to avoid N+1 queries
     from app.repositories import TimeEntryRepository
+
     time_entry_repo = TimeEntryRepository()
-    
+
     # Build query with eager loading (use model.query for base query)
     from app.models import TimeEntry
+
     query = TimeEntry.query.options(
-        joinedload(TimeEntry.project),
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.task)
+        joinedload(TimeEntry.project), joinedload(TimeEntry.user), joinedload(TimeEntry.task)
     )
-    
+
     # Apply filters
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -533,7 +525,7 @@ def list_time_entries():
         query = query.filter(TimeEntry.billable == billable_filter)
     if not include_active:
         query = query.filter(TimeEntry.end_time.isnot(None))
-    
+
     # Order and paginate
     query = query.order_by(TimeEntry.start_time.desc())
     result = paginate_query(query, page, per_page)
@@ -563,12 +555,12 @@ def get_time_entry(entry_id):
     """
     from sqlalchemy.orm import joinedload
     from app.models import TimeEntry
-    
-    entry = TimeEntry.query.options(
-        joinedload(TimeEntry.project),
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.task)
-    ).filter_by(id=entry_id).first_or_404()
+
+    entry = (
+        TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.user), joinedload(TimeEntry.task))
+        .filter_by(id=entry_id)
+        .first_or_404()
+    )
 
     # Check permissions
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
@@ -619,7 +611,7 @@ def create_time_entry():
         description: Invalid input
     """
     from app.services import TimeTrackingService
-    
+
     data = request.get_json() or {}
 
     # Validate required fields
@@ -684,14 +676,14 @@ def update_time_entry(entry_id):
         description: Time entry not found
     """
     from app.services import TimeTrackingService
-    
+
     data = request.get_json() or {}
 
     # Parse times
     start_time = None
     if "start_time" in data:
         start_time = parse_datetime(data["start_time"])
-    
+
     end_time = None
     if "end_time" in data:
         if data["end_time"] is None:
@@ -741,13 +733,9 @@ def delete_time_entry(entry_id):
         description: Time entry not found
     """
     from app.services import TimeTrackingService
-    
+
     time_tracking_service = TimeTrackingService()
-    result = time_tracking_service.delete_entry(
-        entry_id=entry_id,
-        user_id=g.api_user.id,
-        is_admin=g.api_user.is_admin
-    )
+    result = time_tracking_service.delete_entry(entry_id=entry_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not delete time entry")}), 400
@@ -808,7 +796,7 @@ def start_timer():
         description: Invalid input or timer already running
     """
     from app.services import TimeTrackingService
-    
+
     data = request.get_json() or {}
 
     # Validate project_id
@@ -848,7 +836,7 @@ def stop_timer():
         description: No active timer
     """
     from app.services import TimeTrackingService
-    
+
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.stop_timer(user_id=g.api_user.id)
 
@@ -888,7 +876,7 @@ def list_tasks():
         description: List of tasks
     """
     from app.services import TaskService
-    
+
     # Filter by project
     project_id = request.args.get("project_id", type=int)
     status = request.args.get("status")
@@ -916,7 +904,7 @@ def list_tasks():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"tasks": [t.to_dict() for t in result["tasks"]], "pagination": pagination_dict})
 
 
@@ -942,13 +930,13 @@ def get_task(task_id):
     """
     from sqlalchemy.orm import joinedload
     from app.models import Task
-    
-    task = Task.query.options(
-        joinedload(Task.project),
-        joinedload(Task.assignee),
-        joinedload(Task.created_by_user)
-    ).filter_by(id=task_id).first_or_404()
-    
+
+    task = (
+        Task.query.options(joinedload(Task.project), joinedload(Task.assignee), joinedload(Task.created_by_user))
+        .filter_by(id=task_id)
+        .first_or_404()
+    )
+
     return jsonify({"task": task.to_dict()})
 
 
@@ -988,7 +976,7 @@ def create_task():
         description: Invalid input
     """
     from app.services import TaskService
-    
+
     data = request.get_json() or {}
 
     # Validate required fields
@@ -1041,12 +1029,12 @@ def update_task(task_id):
         description: Task not found
     """
     from app.services import TaskService
-    
+
     data = request.get_json() or {}
 
     # Use service layer to update task
     task_service = TaskService()
-    
+
     # Prepare update kwargs
     update_kwargs = {}
     if "name" in data:
@@ -1064,11 +1052,7 @@ def update_task(task_id):
     if "estimated_hours" in data:
         update_kwargs["estimated_hours"] = data["estimated_hours"]
 
-    result = task_service.update_task(
-        task_id=task_id,
-        user_id=g.api_user.id,
-        **update_kwargs
-    )
+    result = task_service.update_task(task_id=task_id, user_id=g.api_user.id, **update_kwargs)
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not update task")}), 400
@@ -1097,13 +1081,14 @@ def delete_task(task_id):
         description: Task not found
     """
     from app.services import TaskService
-    
+
     task_service = TaskService()
     # For now, use repository directly (can add delete_task method to service later)
     from app.repositories import TaskRepository
+
     task_repo = TaskRepository()
     task = task_repo.get_by_id(task_id)
-    
+
     if not task:
         return jsonify({"error": "Task not found"}), 404
 
@@ -1137,15 +1122,16 @@ def list_clients():
         description: List of clients
     """
     from app.services import ClientService
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
     # Use repository with eager loading (clients don't have many relations, but good practice)
     from app.repositories import ClientRepository
+
     client_repo = ClientRepository()
     query = client_repo.query().order_by(Client.name)
-    
+
     # Paginate
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
@@ -1183,11 +1169,9 @@ def get_client(client_id):
         description: Client not found
     """
     from sqlalchemy.orm import joinedload
-    
-    client = Client.query.options(
-        joinedload(Client.projects)
-    ).filter_by(id=client_id).first_or_404()
-    
+
+    client = Client.query.options(joinedload(Client.projects)).filter_by(id=client_id).first_or_404()
+
     return jsonify({"client": client.to_dict()})
 
 
@@ -1284,7 +1268,7 @@ def list_invoices():
         description: List of invoices
     """
     from app.services import InvoiceService
-    
+
     status = request.args.get("status")
     client_id = request.args.get("client_id", type=int)
     project_id = request.args.get("project_id", type=int)
@@ -1313,7 +1297,7 @@ def list_invoices():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"invoices": [inv.to_dict() for inv in result["invoices"]], "pagination": pagination_dict})
 
 
@@ -1334,12 +1318,13 @@ def get_invoice(invoice_id):
     """
     from sqlalchemy.orm import joinedload
     from app.models import Invoice
-    
-    invoice = Invoice.query.options(
-        joinedload(Invoice.project),
-        joinedload(Invoice.client)
-    ).filter_by(id=invoice_id).first_or_404()
-    
+
+    invoice = (
+        Invoice.query.options(joinedload(Invoice.project), joinedload(Invoice.client))
+        .filter_by(id=invoice_id)
+        .first_or_404()
+    )
+
     return jsonify({"invoice": invoice.to_dict()})
 
 
@@ -1383,27 +1368,27 @@ def create_invoice():
     """
     from app.services import InvoiceService
     from datetime import date
-    
+
     data = request.get_json() or {}
-    
+
     # Validate required fields
     required = ["project_id", "client_id", "client_name", "due_date"]
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
-    
+
     # Parse due date
     due_dt = _parse_date(data.get("due_date"))
     if not due_dt:
         return jsonify({"error": "Invalid due_date format, expected YYYY-MM-DD"}), 400
-    
+
     # Parse issue date if provided
     issue_dt = None
     if data.get("issue_date"):
         issue_dt = _parse_date(data.get("issue_date"))
         if not issue_dt:
             return jsonify({"error": "Invalid issue_date format, expected YYYY-MM-DD"}), 400
-    
+
     # Use service layer to create invoice
     invoice_service = InvoiceService()
     result = invoice_service.create_invoice(
@@ -1444,9 +1429,9 @@ def update_invoice(invoice_id):
         description: Not found
     """
     from app.services import InvoiceService
-    
+
     data = request.get_json() or {}
-    
+
     # Prepare update kwargs
     update_kwargs = {}
     for field in ("client_name", "client_email", "client_address", "notes", "terms", "status", "currency_code"):
@@ -1464,17 +1449,14 @@ def update_invoice(invoice_id):
     if "amount_paid" in data:
         try:
             from decimal import Decimal
+
             update_kwargs["amount_paid"] = Decimal(str(data["amount_paid"]))
         except Exception:
             pass
 
     # Use service layer to update invoice
     invoice_service = InvoiceService()
-    result = invoice_service.update_invoice(
-        invoice_id=invoice_id,
-        user_id=g.api_user.id,
-        **update_kwargs
-    )
+    result = invoice_service.update_invoice(invoice_id=invoice_id, user_id=g.api_user.id, **update_kwargs)
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not update invoice")}), 400
@@ -1504,13 +1486,9 @@ def delete_invoice(invoice_id):
         description: Not found
     """
     from app.services import InvoiceService
-    
+
     invoice_service = InvoiceService()
-    result = invoice_service.update_invoice(
-        invoice_id=invoice_id,
-        user_id=g.api_user.id,
-        status="cancelled"
-    )
+    result = invoice_service.update_invoice(invoice_id=invoice_id, user_id=g.api_user.id, status="cancelled")
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not cancel invoice")}), 400
@@ -1566,7 +1544,7 @@ def list_expenses():
     """
     from app.services import ExpenseService
     from datetime import date
-    
+
     # Restrict by user if not admin
     user_id = request.args.get("user_id", type=int)
     if user_id:
@@ -1575,7 +1553,7 @@ def list_expenses():
     else:
         if not g.api_user.is_admin:
             user_id = g.api_user.id
-    
+
     # Other filters
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
@@ -1613,7 +1591,7 @@ def list_expenses():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"expenses": [e.to_dict() for e in result["expenses"]], "pagination": pagination_dict})
 
 
@@ -1634,16 +1612,16 @@ def get_expense(expense_id):
     """
     from sqlalchemy.orm import joinedload
     from app.models import Expense
-    
-    expense = Expense.query.options(
-        joinedload(Expense.project),
-        joinedload(Expense.user),
-        joinedload(Expense.category)
-    ).filter_by(id=expense_id).first_or_404()
-    
+
+    expense = (
+        Expense.query.options(joinedload(Expense.project), joinedload(Expense.user), joinedload(Expense.category))
+        .filter_by(id=expense_id)
+        .first_or_404()
+    )
+
     if not g.api_user.is_admin and expense.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     return jsonify({"expense": expense.to_dict()})
 
 
@@ -1689,17 +1667,17 @@ def create_expense():
     """
     from app.services import ExpenseService
     from decimal import Decimal
-    
+
     data = request.get_json() or {}
     required = ["title", "category", "amount", "expense_date"]
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
-    
+
     exp_date = _parse_date(data.get("expense_date"))
     if not exp_date:
         return jsonify({"error": "Invalid expense_date format, expected YYYY-MM-DD"}), 400
-    
+
     pay_date = _parse_date(data.get("payment_date")) if data.get("payment_date") else None
 
     try:
@@ -1751,9 +1729,9 @@ def update_expense(expense_id):
     """
     from app.services import ExpenseService
     from decimal import Decimal
-    
+
     data = request.get_json() or {}
-    
+
     # Prepare update kwargs
     update_kwargs = {}
     for field in ("title", "description", "category", "currency_code", "payment_method", "status", "tags"):
@@ -1778,10 +1756,7 @@ def update_expense(expense_id):
     # Use service layer to update expense
     expense_service = ExpenseService()
     result = expense_service.update_expense(
-        expense_id=expense_id,
-        user_id=g.api_user.id,
-        is_admin=g.api_user.is_admin,
-        **update_kwargs
+        expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin, **update_kwargs
     )
 
     if not result.get("success"):
@@ -1806,13 +1781,9 @@ def delete_expense(expense_id):
         description: Not found
     """
     from app.services import ExpenseService
-    
+
     expense_service = ExpenseService()
-    result = expense_service.delete_expense(
-        expense_id=expense_id,
-        user_id=g.api_user.id,
-        is_admin=g.api_user.is_admin
-    )
+    result = expense_service.delete_expense(expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not reject expense")}), 400
@@ -1849,21 +1820,19 @@ def list_payments():
     from app.services import PaymentService
     from sqlalchemy.orm import joinedload
     from app.models import Payment
-    
+
     invoice_id = request.args.get("invoice_id", type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
     # Use repository with eager loading to avoid N+1 queries
-    query = Payment.query.options(
-        joinedload(Payment.invoice)
-    )
-    
+    query = Payment.query.options(joinedload(Payment.invoice))
+
     if invoice_id:
         query = query.filter(Payment.invoice_id == invoice_id)
-    
+
     query = query.order_by(Payment.created_at.desc())
-    
+
     # Paginate
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
@@ -1876,7 +1845,7 @@ def list_payments():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"payments": [p.to_dict() for p in pagination.items], "pagination": pagination_dict})
 
 
@@ -1895,11 +1864,9 @@ def get_payment(payment_id):
     """
     from sqlalchemy.orm import joinedload
     from app.models import Payment
-    
-    payment = Payment.query.options(
-        joinedload(Payment.invoice)
-    ).filter_by(id=payment_id).first_or_404()
-    
+
+    payment = Payment.query.options(joinedload(Payment.invoice)).filter_by(id=payment_id).first_or_404()
+
     return jsonify({"payment": payment.to_dict()})
 
 
@@ -1933,7 +1900,7 @@ def create_payment():
     """
     from app.services import PaymentService
     from decimal import Decimal
-    
+
     data = request.get_json() or {}
     required = ["invoice_id", "amount"]
     missing = [f for f in required if not data.get(f)]
@@ -1944,10 +1911,11 @@ def create_payment():
         amount = Decimal(str(data["amount"]))
     except Exception:
         return jsonify({"error": "Invalid amount"}), 400
-    
+
     pay_date = _parse_date(data.get("payment_date")) if data.get("payment_date") else None
     if not pay_date:
         from datetime import date
+
         pay_date = date.today()
 
     # Use service layer to create payment
@@ -1985,9 +1953,9 @@ def update_payment(payment_id):
     """
     from app.services import PaymentService
     from decimal import Decimal
-    
+
     data = request.get_json() or {}
-    
+
     # Prepare update kwargs
     update_kwargs = {}
     for field in ("currency", "method", "reference", "notes", "status"):
@@ -2005,11 +1973,7 @@ def update_payment(payment_id):
 
     # Use service layer to update payment
     payment_service = PaymentService()
-    result = payment_service.update_payment(
-        payment_id=payment_id,
-        user_id=g.api_user.id,
-        **update_kwargs
-    )
+    result = payment_service.update_payment(payment_id=payment_id, user_id=g.api_user.id, **update_kwargs)
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not update payment")}), 400
@@ -2031,12 +1995,9 @@ def delete_payment(payment_id):
         description: Payment deleted
     """
     from app.services import PaymentService
-    
+
     payment_service = PaymentService()
-    result = payment_service.delete_payment(
-        payment_id=payment_id,
-        user_id=g.api_user.id
-    )
+    result = payment_service.delete_payment(payment_id=payment_id, user_id=g.api_user.id)
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not delete payment")}), 400
@@ -2082,7 +2043,7 @@ def list_mileage():
         description: List of mileage entries
     """
     from sqlalchemy.orm import joinedload
-    
+
     # Restrict by user if not admin
     user_id = request.args.get("user_id", type=int)
     if user_id:
@@ -2091,7 +2052,7 @@ def list_mileage():
     else:
         if not g.api_user.is_admin:
             user_id = g.api_user.id
-    
+
     project_id = request.args.get("project_id", type=int)
     start_date = _parse_date(request.args.get("start_date"))
     end_date = _parse_date(request.args.get("end_date"))
@@ -2099,12 +2060,8 @@ def list_mileage():
     per_page = request.args.get("per_page", 50, type=int)
 
     # Use eager loading to avoid N+1 queries
-    query = Mileage.query.options(
-        joinedload(Mileage.user),
-        joinedload(Mileage.project),
-        joinedload(Mileage.client)
-    )
-    
+    query = Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
+
     # Apply filters
     if user_id:
         query = query.filter(Mileage.user_id == user_id)
@@ -2114,9 +2071,9 @@ def list_mileage():
         query = query.filter(Mileage.trip_date >= start_date)
     if end_date:
         query = query.filter(Mileage.trip_date <= end_date)
-    
+
     query = query.order_by(Mileage.trip_date.desc(), Mileage.created_at.desc())
-    
+
     # Paginate
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
@@ -2129,7 +2086,7 @@ def list_mileage():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"mileage": [m.to_dict() for m in pagination.items], "pagination": pagination_dict})
 
 
@@ -2144,16 +2101,16 @@ def get_mileage(entry_id):
       - Bearer: []
     """
     from sqlalchemy.orm import joinedload
-    
-    entry = Mileage.query.options(
-        joinedload(Mileage.user),
-        joinedload(Mileage.project),
-        joinedload(Mileage.client)
-    ).filter_by(id=entry_id).first_or_404()
-    
+
+    entry = (
+        Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
+        .filter_by(id=entry_id)
+        .first_or_404()
+    )
+
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     return jsonify({"mileage": entry.to_dict()})
 
 
@@ -2225,18 +2182,18 @@ def update_mileage(entry_id):
     """
     from sqlalchemy.orm import joinedload
     from decimal import Decimal
-    
-    entry = Mileage.query.options(
-        joinedload(Mileage.user),
-        joinedload(Mileage.project),
-        joinedload(Mileage.client)
-    ).filter_by(id=entry_id).first_or_404()
-    
+
+    entry = (
+        Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
+        .filter_by(id=entry_id)
+        .first_or_404()
+    )
+
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     data = request.get_json() or {}
-    
+
     # Update fields
     for field in (
         "purpose",
@@ -2264,13 +2221,13 @@ def update_mileage(entry_id):
                 pass
     if "is_round_trip" in data:
         entry.is_round_trip = bool(data["is_round_trip"])
-    
+
     # Recalculate amount if distance or rate changed
     if "distance_km" in data or "rate_per_km" in data:
         entry.calculated_amount = entry.distance_km * entry.rate_per_km
         if entry.is_round_trip:
             entry.calculated_amount *= Decimal("2")
-    
+
     db.session.commit()
     return jsonify({"message": "Mileage entry updated successfully", "mileage": entry.to_dict()})
 
@@ -2284,16 +2241,16 @@ def delete_mileage(entry_id):
       - Mileage
     """
     from sqlalchemy.orm import joinedload
-    
-    entry = Mileage.query.options(
-        joinedload(Mileage.user),
-        joinedload(Mileage.project),
-        joinedload(Mileage.client)
-    ).filter_by(id=entry_id).first_or_404()
-    
+
+    entry = (
+        Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
+        .filter_by(id=entry_id)
+        .first_or_404()
+    )
+
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     entry.status = "rejected"
     db.session.commit()
     return jsonify({"message": "Mileage entry rejected successfully"})
@@ -2311,18 +2268,18 @@ def list_per_diems():
       - PerDiem
     """
     from sqlalchemy.orm import joinedload
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
     # Use eager loading to avoid N+1 queries
     query = PerDiem.query.options(joinedload(PerDiem.user))
-    
+
     if not g.api_user.is_admin:
         query = query.filter(PerDiem.user_id == g.api_user.id)
-    
+
     query = query.order_by(PerDiem.start_date.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -2334,7 +2291,7 @@ def list_per_diems():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"per_diems": [p.to_dict() for p in pagination.items], "pagination": pagination_dict})
 
 
@@ -2347,12 +2304,12 @@ def get_per_diem(pd_id):
       - PerDiem
     """
     from sqlalchemy.orm import joinedload
-    
+
     pd = PerDiem.query.options(joinedload(PerDiem.user)).filter_by(id=pd_id).first_or_404()
-    
+
     if not g.api_user.is_admin and pd.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     return jsonify({"per_diem": pd.to_dict()})
 
 
@@ -2412,12 +2369,12 @@ def update_per_diem(pd_id):
       - PerDiem
     """
     from sqlalchemy.orm import joinedload
-    
+
     pd = PerDiem.query.options(joinedload(PerDiem.user)).filter_by(id=pd_id).first_or_404()
-    
+
     if not g.api_user.is_admin and pd.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     data = request.get_json() or {}
     for field in ("trip_purpose", "description", "country", "city", "currency_code", "status", "notes"):
         if field in data:
@@ -2458,12 +2415,12 @@ def delete_per_diem(pd_id):
       - PerDiem
     """
     from sqlalchemy.orm import joinedload
-    
+
     pd = PerDiem.query.options(joinedload(PerDiem.user)).filter_by(id=pd_id).first_or_404()
-    
+
     if not g.api_user.is_admin and pd.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     pd.status = "rejected"
     db.session.commit()
     return jsonify({"message": "Per diem rejected successfully"})
@@ -2482,7 +2439,7 @@ def list_per_diem_rates():
 
     query = PerDiemRate.query.filter(PerDiemRate.is_active == True)
     query = query.order_by(PerDiemRate.country.asc(), PerDiemRate.city.asc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -2494,7 +2451,7 @@ def list_per_diem_rates():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"rates": [r.to_dict() for r in pagination.items], "pagination": pagination_dict})
 
 
@@ -2552,21 +2509,19 @@ def list_budget_alerts():
       - BudgetAlerts
     """
     from sqlalchemy.orm import joinedload
-    
+
     project_id = request.args.get("project_id", type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
     # Use eager loading to avoid N+1 queries
-    query = BudgetAlert.query.options(
-        joinedload(BudgetAlert.project)
-    )
-    
+    query = BudgetAlert.query.options(joinedload(BudgetAlert.project))
+
     if project_id:
         query = query.filter(BudgetAlert.project_id == project_id)
-    
+
     query = query.order_by(BudgetAlert.created_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -2578,7 +2533,7 @@ def list_budget_alerts():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"alerts": [a.to_dict() for a in pagination.items], "pagination": pagination_dict})
 
 
@@ -2618,9 +2573,9 @@ def acknowledge_budget_alert(alert_id):
       - BudgetAlerts
     """
     from sqlalchemy.orm import joinedload
-    
+
     alert = BudgetAlert.query.options(joinedload(BudgetAlert.project)).filter_by(id=alert_id).first_or_404()
-    
+
     alert.acknowledge(g.api_user.id)
     return jsonify({"message": "Alert acknowledged"})
 
@@ -2648,15 +2603,15 @@ def list_calendar_events():
     start_dt = parse_datetime(start) if start else None
     end_dt = parse_datetime(end) if end else None
     from sqlalchemy.orm import joinedload
-    
+
     query = CalendarEvent.query.options(joinedload(CalendarEvent.user))
     query = query.filter(CalendarEvent.user_id == g.api_user.id)
-    
+
     if start_dt:
         query = query.filter(CalendarEvent.start_time >= start_dt)
     if end_dt:
         query = query.filter(CalendarEvent.start_time <= end_dt)
-    
+
     events = query.order_by(CalendarEvent.start_time.asc()).all()
     return jsonify({"events": [e.to_dict() for e in events]})
 
@@ -2670,12 +2625,12 @@ def get_calendar_event(event_id):
       - Calendar
     """
     from sqlalchemy.orm import joinedload
-    
+
     ev = CalendarEvent.query.options(joinedload(CalendarEvent.user)).filter_by(id=event_id).first_or_404()
-    
+
     if not g.api_user.is_admin and ev.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     return jsonify({"event": ev.to_dict()})
 
 
@@ -2726,12 +2681,12 @@ def update_calendar_event(event_id):
       - Calendar
     """
     from sqlalchemy.orm import joinedload
-    
+
     ev = CalendarEvent.query.options(joinedload(CalendarEvent.user)).filter_by(id=event_id).first_or_404()
-    
+
     if not g.api_user.is_admin and ev.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     data = request.get_json() or {}
     for field in ("title", "description", "location", "event_type", "color", "is_private", "reminder_minutes"):
         if field in data:
@@ -2757,12 +2712,12 @@ def delete_calendar_event(event_id):
       - Calendar
     """
     from sqlalchemy.orm import joinedload
-    
+
     ev = CalendarEvent.query.options(joinedload(CalendarEvent.user)).filter_by(id=event_id).first_or_404()
-    
+
     if not g.api_user.is_admin and ev.user_id != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     db.session.delete(ev)
     db.session.commit()
     return jsonify({"message": "Event deleted successfully"})
@@ -2826,9 +2781,9 @@ def update_kanban_column(col_id):
       - Kanban
     """
     from sqlalchemy.orm import joinedload
-    
+
     col = KanbanColumn.query.options(joinedload(KanbanColumn.project)).filter_by(id=col_id).first_or_404()
-    
+
     data = request.get_json() or {}
     for field in ("key", "label", "icon", "color", "position", "is_active", "is_complete_state"):
         if field in data:
@@ -2846,12 +2801,12 @@ def delete_kanban_column(col_id):
       - Kanban
     """
     from sqlalchemy.orm import joinedload
-    
+
     col = KanbanColumn.query.options(joinedload(KanbanColumn.project)).filter_by(id=col_id).first_or_404()
-    
+
     if col.is_system:
         return jsonify({"error": "Cannot delete system column"}), 400
-    
+
     db.session.delete(col)
     db.session.commit()
     return jsonify({"message": "Column deleted successfully"})
@@ -2886,14 +2841,14 @@ def list_saved_filters():
       - SavedFilters
     """
     from sqlalchemy.orm import joinedload
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
     query = SavedFilter.query.options(joinedload(SavedFilter.user))
     query = query.filter(SavedFilter.user_id == g.api_user.id)
     query = query.order_by(SavedFilter.created_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -2905,7 +2860,7 @@ def list_saved_filters():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"filters": [f.to_dict() for f in pagination.items], "pagination": pagination_dict})
 
 
@@ -2918,12 +2873,12 @@ def get_saved_filter(filter_id):
       - SavedFilters
     """
     from sqlalchemy.orm import joinedload
-    
+
     sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
-    
+
     if sf.user_id != g.api_user.id and not (sf.is_shared or g.api_user.is_admin):
         return jsonify({"error": "Access denied"}), 403
-    
+
     return jsonify({"filter": sf.to_dict()})
 
 
@@ -2961,12 +2916,12 @@ def update_saved_filter(filter_id):
       - SavedFilters
     """
     from sqlalchemy.orm import joinedload
-    
+
     sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
-    
+
     if sf.user_id != g.api_user.id and not g.api_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
-    
+
     data = request.get_json() or {}
     for field in ("name", "scope", "payload", "is_shared"):
         if field in data:
@@ -2984,12 +2939,12 @@ def delete_saved_filter(filter_id):
       - SavedFilters
     """
     from sqlalchemy.orm import joinedload
-    
+
     sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
-    
+
     if sf.user_id != g.api_user.id and not g.api_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
-    
+
     db.session.delete(sf)
     db.session.commit()
     return jsonify({"message": "Saved filter deleted successfully"})
@@ -3007,17 +2962,14 @@ def list_time_entry_templates():
       - TimeEntryTemplates
     """
     from sqlalchemy.orm import joinedload
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
-    query = TimeEntryTemplate.query.options(
-        joinedload(TimeEntryTemplate.user),
-        joinedload(TimeEntryTemplate.project)
-    )
+    query = TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.user), joinedload(TimeEntryTemplate.project))
     query = query.filter(TimeEntryTemplate.user_id == g.api_user.id)
     query = query.order_by(TimeEntryTemplate.created_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -3029,7 +2981,7 @@ def list_time_entry_templates():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"templates": [t.to_dict() for t in pagination.items], "pagination": pagination_dict})
 
 
@@ -3042,15 +2994,16 @@ def get_time_entry_template(tpl_id):
       - TimeEntryTemplates
     """
     from sqlalchemy.orm import joinedload
-    
-    tpl = TimeEntryTemplate.query.options(
-        joinedload(TimeEntryTemplate.user),
-        joinedload(TimeEntryTemplate.project)
-    ).filter_by(id=tpl_id).first_or_404()
-    
+
+    tpl = (
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.user), joinedload(TimeEntryTemplate.project))
+        .filter_by(id=tpl_id)
+        .first_or_404()
+    )
+
     if tpl.user_id != g.api_user.id and not g.api_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
-    
+
     return jsonify({"template": tpl.to_dict()})
 
 
@@ -3092,15 +3045,16 @@ def update_time_entry_template(tpl_id):
       - TimeEntryTemplates
     """
     from sqlalchemy.orm import joinedload
-    
-    tpl = TimeEntryTemplate.query.options(
-        joinedload(TimeEntryTemplate.user),
-        joinedload(TimeEntryTemplate.project)
-    ).filter_by(id=tpl_id).first_or_404()
-    
+
+    tpl = (
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.user), joinedload(TimeEntryTemplate.project))
+        .filter_by(id=tpl_id)
+        .first_or_404()
+    )
+
     if tpl.user_id != g.api_user.id and not g.api_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
-    
+
     data = request.get_json() or {}
     for field in (
         "name",
@@ -3127,15 +3081,16 @@ def delete_time_entry_template(tpl_id):
       - TimeEntryTemplates
     """
     from sqlalchemy.orm import joinedload
-    
-    tpl = TimeEntryTemplate.query.options(
-        joinedload(TimeEntryTemplate.user),
-        joinedload(TimeEntryTemplate.project)
-    ).filter_by(id=tpl_id).first_or_404()
-    
+
+    tpl = (
+        TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.user), joinedload(TimeEntryTemplate.project))
+        .filter_by(id=tpl_id)
+        .first_or_404()
+    )
+
     if tpl.user_id != g.api_user.id and not g.api_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
-    
+
     db.session.delete(tpl)
     db.session.commit()
     return jsonify({"message": "Template deleted successfully"})
@@ -3206,7 +3161,7 @@ def list_quotes():
 
     from app.services import QuoteService
     from sqlalchemy.orm import joinedload
-    
+
     status = request.args.get("status")
     client_id = request.args.get("client_id", type=int)
     page = request.args.get("page", 1, type=int)
@@ -3221,18 +3176,18 @@ def list_quotes():
         search=None,
         include_analytics=False,
     )
-    
+
     quotes = result["quotes"]
-    
+
     # Apply client filter if needed
     if client_id:
         quotes = [q for q in quotes if q.client_id == client_id]
-    
+
     # Paginate manually (service doesn't paginate yet)
     start = (page - 1) * per_page
     end = start + per_page
     paginated_quotes = quotes[start:end]
-    
+
     pagination_dict = {
         "page": page,
         "per_page": per_page,
@@ -3243,7 +3198,7 @@ def list_quotes():
         "next_page": page + 1 if end < len(quotes) else None,
         "prev_page": page - 1 if page > 1 else None,
     }
-    
+
     return jsonify({"quotes": [q.to_dict() for q in paginated_quotes], "pagination": pagination_dict}), 200
 
 
@@ -3258,17 +3213,15 @@ def get_quote(quote_id):
     from app.models import Quote
 
     from app.services import QuoteService
-    
+
     quote_service = QuoteService()
     quote = quote_service.get_quote_with_details(
-        quote_id=quote_id,
-        user_id=g.api_user.id if not g.api_user.is_admin else None,
-        is_admin=g.api_user.is_admin
+        quote_id=quote_id, user_id=g.api_user.id if not g.api_user.is_admin else None, is_admin=g.api_user.is_admin
     )
-    
+
     if not quote:
         return jsonify({"error": "Quote not found"}), 404
-    
+
     return jsonify({"quote": quote.to_dict()}), 200
 
 
@@ -3354,7 +3307,7 @@ def update_quote(quote_id):
 
     # Use service layer to update quote
     quote_service = QuoteService()
-    
+
     # Prepare update kwargs
     update_kwargs = {}
     if "title" in data:
@@ -3375,10 +3328,7 @@ def update_quote(quote_id):
             update_kwargs["valid_until"] = valid_until
 
     result = quote_service.update_quote(
-        quote_id=quote_id,
-        user_id=g.api_user.id,
-        is_admin=g.api_user.is_admin,
-        **update_kwargs
+        quote_id=quote_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin, **update_kwargs
     )
 
     if not result.get("success"):
@@ -3421,22 +3371,20 @@ def delete_quote(quote_id):
 
     from app.services import QuoteService
     from sqlalchemy.orm import joinedload
-    
+
     # Use service layer with eager loading
     quote_service = QuoteService()
     quote = quote_service.get_quote_with_details(
-        quote_id=quote_id,
-        user_id=g.api_user.id if not g.api_user.is_admin else None,
-        is_admin=g.api_user.is_admin
+        quote_id=quote_id, user_id=g.api_user.id if not g.api_user.is_admin else None, is_admin=g.api_user.is_admin
     )
-    
+
     if not quote:
         return jsonify({"error": "Quote not found"}), 404
-    
+
     # Check permissions
     if not g.api_user.is_admin and quote.created_by != g.api_user.id:
         return jsonify({"error": "Access denied"}), 403
-    
+
     db.session.delete(quote)
     db.session.commit()
     return jsonify({"message": "Quote deleted successfully"}), 200
@@ -3451,16 +3399,16 @@ def update_comment(comment_id):
       - Comments
     """
     from sqlalchemy.orm import joinedload
-    
-    cmt = Comment.query.options(
-        joinedload(Comment.user),
-        joinedload(Comment.project),
-        joinedload(Comment.task)
-    ).filter_by(id=comment_id).first_or_404()
-    
+
+    cmt = (
+        Comment.query.options(joinedload(Comment.user), joinedload(Comment.project), joinedload(Comment.task))
+        .filter_by(id=comment_id)
+        .first_or_404()
+    )
+
     if cmt.user_id != g.api_user.id and not g.api_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
-    
+
     data = request.get_json() or {}
     new_content = (data.get("content") or "").strip()
     if not new_content:
@@ -3481,13 +3429,13 @@ def delete_comment(comment_id):
       - Comments
     """
     from sqlalchemy.orm import joinedload
-    
-    cmt = Comment.query.options(
-        joinedload(Comment.user),
-        joinedload(Comment.project),
-        joinedload(Comment.task)
-    ).filter_by(id=comment_id).first_or_404()
-    
+
+    cmt = (
+        Comment.query.options(joinedload(Comment.user), joinedload(Comment.project), joinedload(Comment.task))
+        .filter_by(id=comment_id)
+        .first_or_404()
+    )
+
     try:
         cmt.delete_comment(g.api_user)
     except PermissionError:
@@ -3503,17 +3451,14 @@ def delete_comment(comment_id):
 def list_client_notes(client_id):
     """List client notes (paginated, important first)"""
     from sqlalchemy.orm import joinedload
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
-    query = ClientNote.query.options(
-        joinedload(ClientNote.client),
-        joinedload(ClientNote.created_by_user)
-    )
+    query = ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
     query = query.filter(ClientNote.client_id == client_id)
     query = query.order_by(ClientNote.is_important.desc(), ClientNote.created_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -3525,7 +3470,7 @@ def list_client_notes(client_id):
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"notes": [n.to_dict() for n in pagination.items], "pagination": pagination_dict})
 
 
@@ -3549,12 +3494,13 @@ def create_client_note(client_id):
 @require_api_token("read:clients")
 def get_client_note(note_id):
     from sqlalchemy.orm import joinedload
-    
-    note = ClientNote.query.options(
-        joinedload(ClientNote.client),
-        joinedload(ClientNote.created_by_user)
-    ).filter_by(id=note_id).first_or_404()
-    
+
+    note = (
+        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
+        .filter_by(id=note_id)
+        .first_or_404()
+    )
+
     return jsonify({"note": note.to_dict()})
 
 
@@ -3562,12 +3508,13 @@ def get_client_note(note_id):
 @require_api_token("write:clients")
 def update_client_note(note_id):
     from sqlalchemy.orm import joinedload
-    
-    note = ClientNote.query.options(
-        joinedload(ClientNote.client),
-        joinedload(ClientNote.created_by_user)
-    ).filter_by(id=note_id).first_or_404()
-    
+
+    note = (
+        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
+        .filter_by(id=note_id)
+        .first_or_404()
+    )
+
     data = request.get_json() or {}
     new_content = (data.get("content") or "").strip()
     if not new_content:
@@ -3585,15 +3532,16 @@ def update_client_note(note_id):
 @require_api_token("write:clients")
 def delete_client_note(note_id):
     from sqlalchemy.orm import joinedload
-    
-    note = ClientNote.query.options(
-        joinedload(ClientNote.client),
-        joinedload(ClientNote.created_by_user)
-    ).filter_by(id=note_id).first_or_404()
-    
+
+    note = (
+        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
+        .filter_by(id=note_id)
+        .first_or_404()
+    )
+
     if not (g.api_user.is_admin or note.user_id == g.api_user.id):
         return jsonify({"error": "Access denied"}), 403
-    
+
     db.session.delete(note)
     db.session.commit()
     return jsonify({"message": "Client note deleted successfully"})
@@ -3611,16 +3559,13 @@ def list_project_costs(project_id):
     user_id = request.args.get("user_id", type=int)
     billable_only = request.args.get("billable_only", "false").lower() == "true"
     from sqlalchemy.orm import joinedload
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
-    query = ProjectCost.query.options(
-        joinedload(ProjectCost.project),
-        joinedload(ProjectCost.user)
-    )
+    query = ProjectCost.query.options(joinedload(ProjectCost.project), joinedload(ProjectCost.user))
     query = query.filter(ProjectCost.project_id == project_id)
-    
+
     if start_date:
         query = query.filter(ProjectCost.cost_date >= start_date)
     if end_date:
@@ -3629,9 +3574,9 @@ def list_project_costs(project_id):
         query = query.filter(ProjectCost.user_id == user_id)
     if billable_only:
         query = query.filter(ProjectCost.billable == True)
-    
+
     query = query.order_by(ProjectCost.cost_date.desc(), ProjectCost.created_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -3643,7 +3588,7 @@ def list_project_costs(project_id):
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"costs": [c.to_dict() for c in pagination.items], "pagination": pagination_dict})
 
 
@@ -3685,12 +3630,13 @@ def create_project_cost(project_id):
 @require_api_token("read:projects")
 def get_project_cost(cost_id):
     from sqlalchemy.orm import joinedload
-    
-    cost = ProjectCost.query.options(
-        joinedload(ProjectCost.project),
-        joinedload(ProjectCost.user)
-    ).filter_by(id=cost_id).first_or_404()
-    
+
+    cost = (
+        ProjectCost.query.options(joinedload(ProjectCost.project), joinedload(ProjectCost.user))
+        .filter_by(id=cost_id)
+        .first_or_404()
+    )
+
     return jsonify({"cost": cost.to_dict()})
 
 
@@ -3698,11 +3644,12 @@ def get_project_cost(cost_id):
 @require_api_token("write:projects")
 def update_project_cost(cost_id):
     from sqlalchemy.orm import joinedload
-    
-    cost = ProjectCost.query.options(
-        joinedload(ProjectCost.project),
-        joinedload(ProjectCost.user)
-    ).filter_by(id=cost_id).first_or_404()
+
+    cost = (
+        ProjectCost.query.options(joinedload(ProjectCost.project), joinedload(ProjectCost.user))
+        .filter_by(id=cost_id)
+        .first_or_404()
+    )
     data = request.get_json() or {}
     for field in ("description", "category", "currency_code", "notes", "billable"):
         if field in data:
@@ -3726,12 +3673,13 @@ def update_project_cost(cost_id):
 @require_api_token("write:projects")
 def delete_project_cost(cost_id):
     from sqlalchemy.orm import joinedload
-    
-    cost = ProjectCost.query.options(
-        joinedload(ProjectCost.project),
-        joinedload(ProjectCost.user)
-    ).filter_by(id=cost_id).first_or_404()
-    
+
+    cost = (
+        ProjectCost.query.options(joinedload(ProjectCost.project), joinedload(ProjectCost.user))
+        .filter_by(id=cost_id)
+        .first_or_404()
+    )
+
     db.session.delete(cost)
     db.session.commit()
     return jsonify({"message": "Project cost deleted successfully"})
@@ -3807,12 +3755,13 @@ def create_tax_rule():
 @require_api_token("admin:all")
 def update_tax_rule(rule_id):
     from sqlalchemy.orm import joinedload
-    
-    rule = TaxRule.query.options(
-        joinedload(TaxRule.client),
-        joinedload(TaxRule.project)
-    ).filter_by(id=rule_id).first_or_404()
-    
+
+    rule = (
+        TaxRule.query.options(joinedload(TaxRule.client), joinedload(TaxRule.project))
+        .filter_by(id=rule_id)
+        .first_or_404()
+    )
+
     data = request.get_json() or {}
     for field in (
         "name",
@@ -4201,15 +4150,12 @@ def list_recurring_invoices():
       - RecurringInvoices
     """
     from sqlalchemy.orm import joinedload
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
-    query = RecurringInvoice.query.options(
-        joinedload(RecurringInvoice.project),
-        joinedload(RecurringInvoice.client)
-    )
-    
+    query = RecurringInvoice.query.options(joinedload(RecurringInvoice.project), joinedload(RecurringInvoice.client))
+
     is_active = request.args.get("is_active")
     if is_active is not None:
         query = query.filter(RecurringInvoice.is_active == (is_active.lower() == "true"))
@@ -4219,9 +4165,9 @@ def list_recurring_invoices():
     project_id = request.args.get("project_id", type=int)
     if project_id:
         query = query.filter(RecurringInvoice.project_id == project_id)
-    
+
     query = query.order_by(RecurringInvoice.created_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -4233,7 +4179,7 @@ def list_recurring_invoices():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify({"recurring_invoices": [ri.to_dict() for ri in pagination.items], "pagination": pagination_dict})
 
 
@@ -4242,12 +4188,13 @@ def list_recurring_invoices():
 def get_recurring_invoice(ri_id):
     """Get a recurring invoice template"""
     from sqlalchemy.orm import joinedload
-    
-    ri = RecurringInvoice.query.options(
-        joinedload(RecurringInvoice.project),
-        joinedload(RecurringInvoice.client)
-    ).filter_by(id=ri_id).first_or_404()
-    
+
+    ri = (
+        RecurringInvoice.query.options(joinedload(RecurringInvoice.project), joinedload(RecurringInvoice.client))
+        .filter_by(id=ri_id)
+        .first_or_404()
+    )
+
     return jsonify({"recurring_invoice": ri.to_dict()})
 
 
@@ -4302,12 +4249,13 @@ def create_recurring_invoice():
 def update_recurring_invoice(ri_id):
     """Update a recurring invoice template"""
     from sqlalchemy.orm import joinedload
-    
-    ri = RecurringInvoice.query.options(
-        joinedload(RecurringInvoice.project),
-        joinedload(RecurringInvoice.client)
-    ).filter_by(id=ri_id).first_or_404()
-    
+
+    ri = (
+        RecurringInvoice.query.options(joinedload(RecurringInvoice.project), joinedload(RecurringInvoice.client))
+        .filter_by(id=ri_id)
+        .first_or_404()
+    )
+
     data = request.get_json() or {}
     for field in ("name", "client_name", "client_email", "client_address", "notes", "terms", "currency_code"):
         if field in data:
@@ -4378,18 +4326,18 @@ def list_credit_notes():
       - CreditNotes
     """
     from sqlalchemy.orm import joinedload
-    
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
     query = CreditNote.query.options(joinedload(CreditNote.invoice))
-    
+
     invoice_id = request.args.get("invoice_id", type=int)
     if invoice_id:
         query = query.filter(CreditNote.invoice_id == invoice_id)
-    
+
     query = query.order_by(CreditNote.created_at.desc())
-    
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
         "page": pagination.page,
@@ -4401,7 +4349,7 @@ def list_credit_notes():
         "next_page": pagination.page + 1 if pagination.has_next else None,
         "prev_page": pagination.page - 1 if pagination.has_prev else None,
     }
-    
+
     return jsonify(
         {
             "credit_notes": [
@@ -4426,9 +4374,9 @@ def list_credit_notes():
 def get_credit_note(cn_id):
     """Get credit note"""
     from sqlalchemy.orm import joinedload
-    
+
     cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first_or_404()
-    
+
     return jsonify(
         {
             "credit_note": {
@@ -4497,9 +4445,9 @@ def create_credit_note():
 def update_credit_note(cn_id):
     """Update credit note"""
     from sqlalchemy.orm import joinedload
-    
+
     cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first_or_404()
-    
+
     data = request.get_json() or {}
     if "reason" in data:
         cn.reason = data["reason"]
@@ -4519,9 +4467,9 @@ def update_credit_note(cn_id):
 def delete_credit_note(cn_id):
     """Delete credit note"""
     from sqlalchemy.orm import joinedload
-    
+
     cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first_or_404()
-    
+
     db.session.delete(cn)
     db.session.commit()
     return jsonify({"message": "Credit note deleted successfully"})
@@ -4574,14 +4522,10 @@ def report_summary():
 
     # Build query with eager loading
     from sqlalchemy.orm import joinedload
-    
+
     query = TimeEntry.query.options(
-        joinedload(TimeEntry.project),
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.task)
-    ).filter(
-        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
-    )
+        joinedload(TimeEntry.project), joinedload(TimeEntry.user), joinedload(TimeEntry.task)
+    ).filter(TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt)
 
     # Filter by user
     user_id = request.args.get("user_id", type=int)
@@ -4817,7 +4761,7 @@ def get_webhook(webhook_id):
         description: Webhook not found
     """
     from sqlalchemy.orm import joinedload
-    
+
     webhook = Webhook.query.options(joinedload(Webhook.user)).filter_by(id=webhook_id).first_or_404()
 
     # Check permissions
@@ -4848,7 +4792,7 @@ def update_webhook(webhook_id):
         description: Webhook not found
     """
     from sqlalchemy.orm import joinedload
-    
+
     webhook = Webhook.query.options(joinedload(Webhook.user)).filter_by(id=webhook_id).first_or_404()
 
     # Check permissions
@@ -4931,7 +4875,7 @@ def delete_webhook(webhook_id):
         description: Webhook not found
     """
     from sqlalchemy.orm import joinedload
-    
+
     webhook = Webhook.query.options(joinedload(Webhook.user)).filter_by(id=webhook_id).first_or_404()
 
     # Check permissions
@@ -4973,7 +4917,7 @@ def list_webhook_deliveries(webhook_id):
         description: List of deliveries
     """
     from sqlalchemy.orm import joinedload
-    
+
     webhook = Webhook.query.options(joinedload(Webhook.user)).filter_by(id=webhook_id).first_or_404()
 
     # Check permissions

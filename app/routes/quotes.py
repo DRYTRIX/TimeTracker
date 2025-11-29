@@ -21,7 +21,7 @@ def list_quotes():
 
     # Use service layer for quote listing with analytics
     from app.services import QuoteService
-    
+
     quote_service = QuoteService()
     result = quote_service.list_quotes(
         user_id=current_user.id if not current_user.is_admin else None,
@@ -30,7 +30,7 @@ def list_quotes():
         search=search if search else None,
         include_analytics=show_analytics,
     )
-    
+
     quotes = result["quotes"]
     analytics = result.get("analytics")
 
@@ -221,21 +221,21 @@ def view_quote(quote_id):
     from app.services import QuoteService
     from sqlalchemy.orm import joinedload
     from app.models import Comment
-    
+
     # Use service layer with eager loading
     quote_service = QuoteService()
     quote = quote_service.get_quote_with_details(
         quote_id=quote_id,
         user_id=current_user.id if not current_user.is_admin else None,
-        is_admin=current_user.is_admin
+        is_admin=current_user.is_admin,
     )
-    
+
     if not quote:
         flash(_("Quote not found"), "error")
         return redirect(url_for("quotes.list_quotes"))
-    
+
     quote.calculate_totals()  # Ensure totals are up to date
-    
+
     # Get all comments (both internal and client-facing)
     comments = Comment.get_quote_comments(quote_id, include_replies=True, include_internal=True)
 
@@ -248,11 +248,8 @@ def view_quote(quote_id):
 def edit_quote(quote_id):
     """Edit an quote"""
     from sqlalchemy.orm import joinedload
-    
-    quote = Quote.query.options(
-        joinedload(Quote.client),
-        joinedload(Quote.items)
-    ).filter_by(id=quote_id).first_or_404()
+
+    quote = Quote.query.options(joinedload(Quote.client), joinedload(Quote.items)).filter_by(id=quote_id).first_or_404()
 
     # Only allow editing draft quotes
     if quote.status != "draft":

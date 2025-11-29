@@ -264,12 +264,12 @@ class TimeTrackingService:
         """Get time entries for a user with optional filters"""
         if start_date and end_date:
             return self.time_entry_repo.get_by_date_range(
-                start_date=start_date, 
-                end_date=end_date, 
-                user_id=user_id, 
+                start_date=start_date,
+                end_date=end_date,
+                user_id=user_id,
                 project_id=project_id,
                 client_id=client_id,
-                include_relations=True
+                include_relations=True,
             )
         elif project_id:
             return self.time_entry_repo.get_by_project(

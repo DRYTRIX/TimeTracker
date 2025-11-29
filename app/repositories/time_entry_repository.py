@@ -30,10 +30,10 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
 
         if include_relations:
             query = query.options(
-                joinedload(TimeEntry.project), 
+                joinedload(TimeEntry.project),
                 joinedload(TimeEntry.client),
-                joinedload(TimeEntry.task), 
-                joinedload(TimeEntry.user)
+                joinedload(TimeEntry.task),
+                joinedload(TimeEntry.user),
             )
 
         query = query.order_by(TimeEntry.start_time.desc())
@@ -51,10 +51,10 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
 
         if include_relations:
             query = query.options(
-                joinedload(TimeEntry.user), 
+                joinedload(TimeEntry.user),
                 joinedload(TimeEntry.project),
                 joinedload(TimeEntry.client),
-                joinedload(TimeEntry.task)
+                joinedload(TimeEntry.task),
             )
 
         query = query.order_by(TimeEntry.start_time.desc())
@@ -87,10 +87,10 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
 
         if include_relations:
             query = query.options(
-                joinedload(TimeEntry.user), 
-                joinedload(TimeEntry.project), 
+                joinedload(TimeEntry.user),
+                joinedload(TimeEntry.project),
                 joinedload(TimeEntry.client),
-                joinedload(TimeEntry.task)
+                joinedload(TimeEntry.task),
             )
 
         return query.order_by(TimeEntry.start_time.desc()).all()
@@ -145,13 +145,13 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         from app.models.time_entry import local_now
 
         entry = self.model(
-            user_id=user_id, 
-            project_id=project_id, 
+            user_id=user_id,
+            project_id=project_id,
             client_id=client_id,
-            task_id=task_id, 
-            start_time=local_now(), 
-            notes=notes, 
-            source=source
+            task_id=task_id,
+            start_time=local_now(),
+            notes=notes,
+            source=source,
         )
         db.session.add(entry)
         return entry

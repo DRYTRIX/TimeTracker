@@ -25,7 +25,12 @@ def list_integrations():
     integrations = service.list_integrations(current_user.id)
     available_providers = service.get_available_providers()
 
-    return render_template("integrations/list.html", integrations=integrations, available_providers=available_providers, current_user=current_user)
+    return render_template(
+        "integrations/list.html",
+        integrations=integrations,
+        available_providers=available_providers,
+        current_user=current_user,
+    )
 
 
 @integrations_bp.route("/integrations/<provider>/connect", methods=["GET", "POST"])
@@ -46,10 +51,10 @@ def connect_integration(provider):
             return redirect(url_for("integrations.list_integrations"))
         flash(_("Trello uses API key authentication. Please configure it in Admin → Integrations."), "info")
         return redirect(url_for("admin.integration_setup", provider=provider))
-    
+
     # Google Calendar is per-user, all others are global
-    is_global = (provider != "google_calendar")
-    
+    is_global = provider != "google_calendar"
+
     if is_global:
         # For global integrations, check if one exists
         integration = service.get_global_integration(provider)
@@ -95,7 +100,9 @@ def connect_integration(provider):
         # OAuth credentials not configured yet
         if provider == "google_calendar":
             if current_user.is_admin:
-                flash(_("Google Calendar OAuth credentials need to be configured first. Redirecting to setup..."), "info")
+                flash(
+                    _("Google Calendar OAuth credentials need to be configured first. Redirecting to setup..."), "info"
+                )
                 return redirect(url_for("admin.integration_setup", provider=provider))
             else:
                 flash(_("Google Calendar integration needs to be configured by an administrator first."), "warning")
@@ -126,7 +133,7 @@ def oauth_callback(provider):
         return redirect(url_for("integrations.list_integrations"))
 
     # Find integration (global or per-user)
-    is_global = (provider != "google_calendar")
+    is_global = provider != "google_calendar"
     if is_global:
         integration = service.get_global_integration(provider)
     else:
@@ -205,17 +212,23 @@ def view_integration(integration_id):
 
     connector = service.get_connector(integration)
     credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).first()
-    
+
     # Get recent sync events
     from app.models import IntegrationEvent
-    recent_events = IntegrationEvent.query.filter_by(integration_id=integration_id).order_by(IntegrationEvent.created_at.desc()).limit(20).all()
+
+    recent_events = (
+        IntegrationEvent.query.filter_by(integration_id=integration_id)
+        .order_by(IntegrationEvent.created_at.desc())
+        .limit(20)
+        .all()
+    )
 
     return render_template(
         "integrations/view.html",
         integration=integration,
         connector=connector,
         credentials=credentials,
-        recent_events=recent_events
+        recent_events=recent_events,
     )
 
 
@@ -229,7 +242,7 @@ def test_integration(integration_id):
     if not integration:
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
-    
+
     result = service.test_connection(integration_id, current_user.id if not integration.is_global else None)
 
     if result.get("success"):
@@ -249,7 +262,7 @@ def delete_integration(integration_id):
     if not integration:
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
-    
+
     result = service.delete_integration(integration_id, current_user.id)
 
     if result["success"]:
@@ -320,11 +333,13 @@ def integration_webhook(provider):
 
             # Handle webhook
             result = connector.handle_webhook(payload, headers)
-            results.append({
-                "integration_id": integration.id,
-                "success": result.get("success", False),
-                "message": result.get("message", "")
-            })
+            results.append(
+                {
+                    "integration_id": integration.id,
+                    "success": result.get("success", False),
+                    "message": result.get("message", ""),
+                }
+            )
 
             # Log event
             if result.get("success"):
@@ -333,15 +348,11 @@ def integration_webhook(provider):
                     "webhook_received",
                     True,
                     f"Webhook processed successfully",
-                    {"provider": provider, "event_type": payload.get("event_type", "unknown")}
+                    {"provider": provider, "event_type": payload.get("event_type", "unknown")},
                 )
         except Exception as e:
             logger.error(f"Error handling webhook for integration {integration.id}: {e}", exc_info=True)
-            results.append({
-                "integration_id": integration.id,
-                "success": False,
-                "message": str(e)
-            })
+            results.append({"integration_id": integration.id, "success": False, "message": str(e)})
 
     # Return success if at least one integration processed the webhook
     if any(r["success"] for r in results):
