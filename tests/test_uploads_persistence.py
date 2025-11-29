@@ -151,11 +151,12 @@ def test_logo_file_persists_after_upload(authenticated_admin_client, sample_logo
 
         assert response.status_code == 200
 
-        # Get the filename from database
+        # Get the filename from database - refresh to get latest data
+        db.session.expire_all()
         settings = Settings.get_settings()
         logo_filename = settings.company_logo_filename
 
-        assert logo_filename != ""
+        assert logo_filename != "" and logo_filename is not None
 
         # Verify file exists on disk
         logo_path = settings.get_logo_path()
@@ -181,10 +182,13 @@ def test_logo_accessible_after_simulated_restart(
 
         authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
 
-        # Get the filename and path
+        # Get the filename and path - refresh to get latest data
+        db.session.expire_all()
         settings = Settings.get_settings()
         logo_filename = settings.company_logo_filename
+        assert logo_filename and logo_filename != "", "Logo filename should be set after upload"
         logo_path = settings.get_logo_path()
+        assert logo_path is not None, "Logo path should not be None when filename is set"
 
         # Verify file exists
         assert os.path.exists(logo_path)
@@ -222,13 +226,15 @@ def test_multiple_logos_in_directory(authenticated_admin_client, app, cleanup_te
             }
 
             authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
-
+            db.session.expire_all()
             settings = Settings.get_settings()
             logos_to_upload.append(settings.company_logo_filename)
 
         # Verify at least the current logo exists
+        db.session.expire_all()
         settings = Settings.get_settings()
         current_logo_path = settings.get_logo_path()
+        assert current_logo_path is not None, "Logo path should not be None"
         assert os.path.exists(current_logo_path), "Current logo does not exist"
 
 
@@ -243,9 +249,10 @@ def test_logo_path_is_in_uploads_directory(
         }
 
         authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
-
+        db.session.expire_all()
         settings = Settings.get_settings()
         logo_path = settings.get_logo_path()
+        assert logo_path is not None, "Logo path should not be None"
 
         # Verify the logo is in the uploads/logos directory
         assert "uploads" in logo_path, f"Logo not in uploads directory: {logo_path}"
@@ -316,9 +323,10 @@ def test_logo_file_has_correct_extension(authenticated_admin_client, sample_logo
         }
 
         authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
-
+        db.session.expire_all()
         settings = Settings.get_settings()
         logo_filename = settings.company_logo_filename
+        assert logo_filename and logo_filename != "", "Logo filename should be set"
 
         # Should have .png extension
         assert logo_filename.endswith(".png")
@@ -338,10 +346,11 @@ def test_old_logo_removed_when_new_uploaded(authenticated_admin_client, app, cle
             "logo": (img1_io, "test_logo1.png", "image/png"),
         }
         authenticated_admin_client.post("/admin/upload-logo", data=data1, content_type="multipart/form-data")
-
+        db.session.expire_all()
         settings = Settings.get_settings()
         old_filename = settings.company_logo_filename
         old_path = settings.get_logo_path()
+        assert old_path is not None, "Old logo path should not be None"
 
         # Verify first logo exists
         assert os.path.exists(old_path)
@@ -356,10 +365,11 @@ def test_old_logo_removed_when_new_uploaded(authenticated_admin_client, app, cle
             "logo": (img2_io, "test_logo2.png", "image/png"),
         }
         authenticated_admin_client.post("/admin/upload-logo", data=data2, content_type="multipart/form-data")
-
+        db.session.expire_all()
         settings = Settings.get_settings()
         new_filename = settings.company_logo_filename
         new_path = settings.get_logo_path()
+        assert new_path is not None, "New logo path should not be None"
 
         # Verify new logo is different
         assert new_filename != old_filename
@@ -378,9 +388,10 @@ def test_logo_removed_when_deleted(authenticated_admin_client, sample_logo_image
         }
 
         authenticated_admin_client.post("/admin/upload-logo", data=data, content_type="multipart/form-data")
-
+        db.session.expire_all()
         settings = Settings.get_settings()
         logo_path = settings.get_logo_path()
+        assert logo_path is not None, "Logo path should not be None"
 
         # Verify logo exists
         assert os.path.exists(logo_path)
