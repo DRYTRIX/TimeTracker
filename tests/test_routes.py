@@ -214,8 +214,7 @@ def test_edit_project_description(admin_authenticated_client, project, app):
 
         # Verify the description was saved in the database
         db.session.expire_all()  # Clear session cache
-        # Refresh the project object to get latest data
-        db.session.refresh(project)
+        # Query fresh from database instead of refreshing fixture object
         updated_project = Project.query.get(project_id)
         assert updated_project is not None
         assert updated_project.description == new_description
@@ -296,8 +295,7 @@ def test_edit_client_updates_prepaid_fields(admin_authenticated_client, test_cli
         assert response.status_code == 302
 
         db.session.expire_all()
-        # Refresh the client object to get latest data
-        db.session.refresh(test_client)
+        # Query fresh from database instead of refreshing fixture object
         updated = Client.query.get(client_id)
         assert updated is not None
         assert updated.prepaid_hours_monthly == Decimal("12.5")

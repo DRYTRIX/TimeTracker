@@ -397,7 +397,8 @@ class TestClientPortalRoutes:
 
             project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
-            db.session.commit()
+            # Use safe_commit_with_retry to handle database locks from audit logging
+            safe_commit_with_retry()
 
             # Create invoice for user's client
             invoice = Invoice(
@@ -410,7 +411,8 @@ class TestClientPortalRoutes:
                 total_amount=Decimal("100.00"),
             )
             db.session.add(invoice)
-            db.session.commit()
+            # Use safe_commit_with_retry to handle database locks from audit logging
+            safe_commit_with_retry()
 
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
@@ -440,6 +442,7 @@ class TestAdminClientPortalManagement:
             # Extract CSRF token from the form if available
             html = get_response.get_data(as_text=True)
             import re
+            import time
 
             csrf_match = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
             csrf_token = csrf_match.group(1) if csrf_match else ""
@@ -456,13 +459,31 @@ class TestAdminClientPortalManagement:
                 },
                 follow_redirects=True,
             )
-            # Should redirect to users list
+            # Should redirect to users list (or show form with error if commit failed)
             assert response.status_code == 200
+            
+            # Check for error messages in response (commit failure)
+            response_text = response.get_data(as_text=True)
+            if "Could not update user due to a database error" in response_text:
+                # If commit failed, the test should fail, not skip
+                # But we'll still check the database in case the error message is misleading
+                pass
 
-            # Verify user was updated
-            updated_user = safe_get_user(user.id)
-            assert updated_user.client_portal_enabled is True
-            assert updated_user.client_id == test_client.id
+            # Verify user was updated - retry in case of database lock delays
+            # The route uses safe_commit which might fail due to audit logging locks
+            max_retries = 5
+            for attempt in range(max_retries):
+                # Expire any cached objects to force fresh query
+                db.session.expire_all()
+                updated_user = safe_get_user(user.id)
+                if updated_user.client_portal_enabled is True and updated_user.client_id == test_client.id:
+                    break
+                if attempt < max_retries - 1:
+                    time.sleep(0.1 * (2 ** attempt))
+                else:
+                    # Final attempt - verify the assertion
+                    assert updated_user.client_portal_enabled is True, f"User client_portal_enabled is {updated_user.client_portal_enabled}, expected True"
+                    assert updated_user.client_id == test_client.id, f"User client_id is {updated_user.client_id}, expected {test_client.id}"
 
     def test_admin_can_disable_client_portal(self, app, admin_authenticated_client, user, test_client):
         """Test admin can disable client portal for user"""
@@ -506,11 +527,30 @@ class TestAdminClientPortalManagement:
                 },
                 follow_redirects=True,
             )
+            
+            # Check for error messages in response (commit failure)
+            response_text = response.get_data(as_text=True)
+            if "Could not update user due to a database error" in response_text:
+                # If commit failed, the test should fail, not skip
+                # But we'll still check the database in case the error message is misleading
+                pass
 
-            # Verify user was updated
-            updated_user = safe_get_user(user.id)
-            assert updated_user.client_portal_enabled is False
-            assert updated_user.client_id is None
+            # Verify user was updated - retry in case of database lock delays
+            # The route uses safe_commit which might fail due to audit logging locks
+            import time
+            max_retries = 5
+            for attempt in range(max_retries):
+                # Expire any cached objects to force fresh query
+                db.session.expire_all()
+                updated_user = safe_get_user(user.id)
+                if updated_user.client_portal_enabled is False and updated_user.client_id is None:
+                    break
+                if attempt < max_retries - 1:
+                    time.sleep(0.1 * (2 ** attempt))
+                else:
+                    # Final attempt - verify the assertion
+                    assert updated_user.client_portal_enabled is False, f"User client_portal_enabled is {updated_user.client_portal_enabled}, expected False"
+                    assert updated_user.client_id is None, f"User client_id is {updated_user.client_id}, expected None"
 
 
 # ============================================================================

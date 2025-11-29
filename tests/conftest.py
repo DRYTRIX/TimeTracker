@@ -761,11 +761,30 @@ def authenticated_client(client, user):
 @pytest.fixture
 def admin_authenticated_client(client, admin_user):
     """Create an authenticated admin test client."""
-    from flask_login import login_user
+    # Use the actual login endpoint to properly authenticate (same as authenticated_client)
+    # If CSRF is enabled, fetch a token and include it in the form submit
+    try:
+        from flask import current_app
 
-    with client.session_transaction() as sess:
-        # Use Flask-Login's login_user directly for tests
-        login_user(admin_user)
+        csrf_enabled = bool(current_app.config.get("WTF_CSRF_ENABLED"))
+    except Exception:
+        csrf_enabled = False
+
+    login_data = {"username": admin_user.username}
+    headers = {}
+
+    if csrf_enabled:
+        try:
+            resp = client.get("/auth/csrf-token")
+            token = ""
+            if resp.is_json:
+                token = (resp.get_json() or {}).get("csrf_token") or ""
+            login_data["csrf_token"] = token
+            headers["X-CSRFToken"] = token
+        except Exception:
+            pass
+
+    client.post("/login", data=login_data, headers=headers or None, follow_redirects=True)
     return client
 
 
