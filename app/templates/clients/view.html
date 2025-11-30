@@ -114,8 +114,20 @@
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ key }}</h3>
                     <p class="text-text-light dark:text-text-dark">
-                        {# If the value looks like a URL, render it as a clickable link #}
-                        {% if value is string and (value.startswith('http://') or value.startswith('https://')) %}
+                        {% set link_template = link_templates_by_field.get(key) if link_templates_by_field else None %}
+                        {% if link_template and value %}
+                            {# Render as clickable link using link template #}
+                            {% set rendered_url = link_template.render_url(value) %}
+                            {% if rendered_url %}
+                                <a href="{{ rendered_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                    {{ value }}
+                                    <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        {% elif value is string and (value.startswith('http://') or value.startswith('https://')) %}
+                            {# Fallback: If the value looks like a URL, render it as a clickable link #}
                             <a href="{{ value }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
                                 {{ value }}
                             </a>

@@ -3,7 +3,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db
-from app.models import Client, Project, Contact, TimeEntry
+from app.models import Client, Project, Contact, TimeEntry, CustomFieldDefinition
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
@@ -171,17 +171,21 @@ def create_client():
             flash(message, "error")
             return render_template("clients/create.html")
 
-        # Parse custom fields from individual key/value inputs
-        # Format: custom_field_key_0 / custom_field_value_0, custom_field_key_1 / ...
+        # Parse custom fields from global definitions
+        # Format: custom_field_<field_key> = value
         custom_fields = {}
-        for form_key in request.form.keys():
-            if not form_key.startswith("custom_field_key_"):
-                continue
-            index = form_key.rsplit("_", 1)[-1]
-            field_key = request.form.get(form_key, "").strip()
-            field_value = request.form.get(f"custom_field_value_{index}", "").strip()
-            if field_key and field_value:
-                custom_fields[field_key] = field_value
+        active_definitions = CustomFieldDefinition.get_active_definitions()
+        
+        for definition in active_definitions:
+            field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
+            if field_value:
+                custom_fields[definition.field_key] = field_value
+            elif definition.is_mandatory:
+                # Validate mandatory fields
+                if wants_json:
+                    return jsonify({"error": "validation_error", "messages": [_("Custom field '%(field)s' is required", field=definition.label)]}), 400
+                flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
+                return render_template("clients/create.html", custom_field_definitions=active_definitions)
 
         # Create client
         client = Client(
@@ -233,7 +237,9 @@ def create_client():
         flash(f'Client "{name}" created successfully', "success")
         return redirect(url_for("clients.view_client", client_id=client.id))
 
-    return render_template("clients/create.html")
+    # Load active custom field definitions for the form
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+    return render_template("clients/create.html", custom_field_definitions=custom_field_definitions)
 
 
 @clients_bp.route("/clients/<int:client_id>")
@@ -275,6 +281,12 @@ def view_client(client_id):
 
     # Get rendered links from link templates
     rendered_links = client.get_rendered_links()
+    
+    # Get link templates for custom fields (for clickable values)
+    from app.models import LinkTemplate
+    link_templates_by_field = {}
+    for template in LinkTemplate.get_active_templates():
+        link_templates_by_field[template.field_key] = template
 
     # Get recent time entries for this client
     # Include entries directly linked to client and entries through projects
@@ -309,6 +321,7 @@ def view_client(client_id):
         prepaid_overview=prepaid_overview,
         rendered_links=rendered_links,
         recent_time_entries=recent_time_entries,
+        link_templates_by_field=link_templates_by_field,
     )
 
 
@@ -337,20 +350,23 @@ def edit_client(client_id):
         # Validate required fields
         if not name:
             flash(_("Client name is required"), "error")
-            return render_template("clients/edit.html", client=client)
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
         # Check if client name already exists (excluding current client)
         existing = Client.query.filter_by(name=name).first()
         if existing and existing.id != client.id:
             flash(_("A client with this name already exists"), "error")
-            return render_template("clients/edit.html", client=client)
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
         # Validate hourly rate
         try:
             default_hourly_rate = Decimal(default_hourly_rate) if default_hourly_rate else None
         except (InvalidOperation, ValueError):
             flash(_("Invalid hourly rate format"), "error")
-            return render_template("clients/edit.html", client=client)
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
         try:
             prepaid_hours_monthly = Decimal(prepaid_hours_input) if prepaid_hours_input else None
@@ -358,7 +374,8 @@ def edit_client(client_id):
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Prepaid hours must be a positive number."), "error")
-            return render_template("clients/edit.html", client=client)
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
         try:
             prepaid_reset_day = (
@@ -369,7 +386,8 @@ def edit_client(client_id):
 
         if prepaid_reset_day < 1 or prepaid_reset_day > 28:
             flash(_("Prepaid reset day must be between 1 and 28."), "error")
-            return render_template("clients/edit.html", client=client)
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
         # Handle portal settings
         portal_enabled = request.form.get("portal_enabled") == "on"
@@ -380,25 +398,30 @@ def edit_client(client_id):
         if portal_enabled:
             if not portal_username:
                 flash(_("Portal username is required when enabling portal access."), "error")
-                return render_template("clients/edit.html", client=client)
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
             # Check if portal username is already taken by another client
             existing_client = Client.query.filter_by(portal_username=portal_username).first()
             if existing_client and existing_client.id != client.id:
                 flash(_("This portal username is already in use by another client."), "error")
-                return render_template("clients/edit.html", client=client)
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
-        # Parse custom fields from individual key/value inputs.
-        # This builds a fresh dict on every save so edits/removals/additions all work.
+        # Parse custom fields from global definitions
+        # Format: custom_field_<field_key> = value
         custom_fields = {}
-        for form_key in request.form.keys():
-            if not form_key.startswith("custom_field_key_"):
-                continue
-            index = form_key.rsplit("_", 1)[-1]
-            field_key = request.form.get(form_key, "").strip()
-            field_value = request.form.get(f"custom_field_value_{index}", "").strip()
-            if field_key and field_value:
-                custom_fields[field_key] = field_value
+        active_definitions = CustomFieldDefinition.get_active_definitions()
+        
+        for definition in active_definitions:
+            field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
+            if field_value:
+                custom_fields[definition.field_key] = field_value
+            elif definition.is_mandatory:
+                # Validate mandatory fields
+                flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
         # Update client
         client.name = name
@@ -436,7 +459,9 @@ def edit_client(client_id):
         flash(f'Client "{name}" updated successfully', "success")
         return redirect(url_for("clients.view_client", client_id=client.id))
 
-    return render_template("clients/edit.html", client=client)
+    # Load active custom field definitions for the form
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+    return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
 
 
 @clients_bp.route("/clients/<int:client_id>/send-portal-password-email", methods=["POST"])
