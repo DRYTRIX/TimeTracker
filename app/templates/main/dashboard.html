@@ -91,7 +91,7 @@
                 <table class="w-full text-left">
                     <thead class="border-b border-border-light dark:border-border-dark">
                         <tr>
-                            <th class="p-4">{{ _('Project') }}</th>
+                            <th class="p-4">{{ _('Source') }}</th>
                             <th class="p-4">{{ _('Task') }}</th>
                             <th class="p-4">{{ _('Notes') }}</th>
                             <th class="p-4">{{ _('Tags') }}</th>
@@ -105,9 +105,13 @@
                         <tr class="border-b border-border-light dark:border-border-dark">
                             <td class="p-4">
                                 {% if entry.project %}
-                                    {{ entry.project.name }}
+                                    <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:text-primary-dark hover:underline">
+                                        {{ entry.project.name }}
+                                    </a>
                                 {% elif entry.client %}
-                                    {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                                    <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="text-primary hover:text-primary-dark hover:underline">
+                                        {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                                    </a>
                                 {% else %}
                                     {{ _('N/A') }}
                                 {% endif %}
