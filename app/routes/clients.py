@@ -3,13 +3,15 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db
-from app.models import Client, Project, Contact
-from datetime import datetime
+from app.models import Client, Project, Contact, TimeEntry
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
 from app.utils.timezone import convert_app_datetime_to_user
 from app.utils.email import send_client_portal_password_setup_email
+from sqlalchemy.orm import joinedload
+from sqlalchemy import or_
 import csv
 import io
 import json
@@ -274,6 +276,30 @@ def view_client(client_id):
     # Get rendered links from link templates
     rendered_links = client.get_rendered_links()
 
+    # Get recent time entries for this client
+    # Include entries directly linked to client and entries through projects
+    project_ids = [p.id for p in projects]
+    
+    # Query time entries: either directly linked to client or through client's projects
+    conditions = [TimeEntry.client_id == client.id]  # Direct client entries
+    
+    if project_ids:
+        conditions.append(TimeEntry.project_id.in_(project_ids))  # Project entries
+    
+    time_entries_query = TimeEntry.query.filter(
+        TimeEntry.end_time.isnot(None)  # Only completed entries
+    ).filter(
+        or_(*conditions)
+    ).options(
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.task)
+    ).order_by(
+        TimeEntry.start_time.desc()
+    ).limit(20)  # Limit to most recent 20 entries
+    
+    recent_time_entries = time_entries_query.all()
+
     return render_template(
         "clients/view.html",
         client=client,
@@ -282,6 +308,7 @@ def view_client(client_id):
         primary_contact=primary_contact,
         prepaid_overview=prepaid_overview,
         rendered_links=rendered_links,
+        recent_time_entries=recent_time_entries,
     )
 
 
