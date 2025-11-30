@@ -753,11 +753,11 @@ def bulk_status_change():
 @clients_bp.route("/clients/export")
 @login_required
 def export_clients():
-    """Export clients to CSV"""
+    """Export clients to CSV with custom fields and contacts"""
     status = request.args.get("status", "active")
     search = request.args.get("search", "").strip()
 
-    query = Client.query
+    query = Client.query.options(joinedload(Client.contacts))
     if status == "active":
         query = query.filter_by(status="active")
     elif status == "inactive":
@@ -776,56 +776,106 @@ def export_clients():
 
     clients = query.order_by(Client.name).all()
 
+    # Collect all custom field names and determine max contacts
+    all_custom_fields = set()
+    max_contacts = 0
+    for client in clients:
+        if client.custom_fields:
+            all_custom_fields.update(client.custom_fields.keys())
+        contacts_count = len([c for c in client.contacts if c.is_active]) if hasattr(client, 'contacts') else 0
+        max_contacts = max(max_contacts, contacts_count)
+
+    # Sort custom fields for consistent column order
+    sorted_custom_fields = sorted(all_custom_fields)
+
     # Create CSV in memory
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Write header
-    writer.writerow(
-        [
-            "ID",
-            "Name",
-            "Description",
-            "Contact Person",
-            "Email",
-            "Phone",
-            "Address",
-            "Default Hourly Rate",
-            "Status",
-            "Active Projects",
-            "Total Projects",
-            "Created At",
-            "Updated At",
-        ]
-    )
+    # Build header row
+    header = [
+        "name",
+        "description",
+        "contact_person",
+        "email",
+        "phone",
+        "address",
+        "default_hourly_rate",
+        "status",
+        "prepaid_hours_monthly",
+        "prepaid_reset_day",
+    ]
+    
+    # Add custom field columns
+    for field_name in sorted_custom_fields:
+        header.append(f"custom_field_{field_name}")
+    
+    # Add contact columns (up to max_contacts, but at least 3 slots)
+    max_contact_slots = max(max_contacts, 3)
+    for i in range(1, max_contact_slots + 1):
+        header.extend([
+            f"contact_{i}_first_name",
+            f"contact_{i}_last_name",
+            f"contact_{i}_email",
+            f"contact_{i}_phone",
+            f"contact_{i}_mobile",
+            f"contact_{i}_title",
+            f"contact_{i}_department",
+            f"contact_{i}_role",
+            f"contact_{i}_is_primary",
+            f"contact_{i}_address",
+            f"contact_{i}_notes",
+            f"contact_{i}_tags",
+        ])
+
+    writer.writerow(header)
 
     # Write client data
     for client in clients:
-        writer.writerow(
-            [
-                client.id,
-                client.name,
-                client.description or "",
-                client.contact_person or "",
-                client.email or "",
-                client.phone or "",
-                client.address or "",
-                client.default_hourly_rate or "",
-                client.status,
-                client.active_projects,
-                client.total_projects,
-                (
-                    convert_app_datetime_to_user(client.created_at, user=current_user).strftime("%Y-%m-%d %H:%M:%S")
-                    if client.created_at
-                    else ""
-                ),
-                (
-                    convert_app_datetime_to_user(client.updated_at, user=current_user).strftime("%Y-%m-%d %H:%M:%S")
-                    if client.updated_at
-                    else ""
-                ),
-            ]
-        )
+        row = [
+            client.name,
+            client.description or "",
+            client.contact_person or "",
+            client.email or "",
+            client.phone or "",
+            client.address or "",
+            str(client.default_hourly_rate) if client.default_hourly_rate else "",
+            client.status,
+            str(client.prepaid_hours_monthly) if client.prepaid_hours_monthly else "",
+            str(client.prepaid_reset_day) if client.prepaid_reset_day else "",
+        ]
+        
+        # Add custom field values
+        for field_name in sorted_custom_fields:
+            value = ""
+            if client.custom_fields and field_name in client.custom_fields:
+                value = str(client.custom_fields[field_name])
+            row.append(value)
+        
+        # Add contacts
+        active_contacts = [c for c in client.contacts if c.is_active] if hasattr(client, 'contacts') else []
+        for i in range(max_contact_slots):
+            if i < len(active_contacts):
+                contact = active_contacts[i]
+                row.extend([
+                    contact.first_name or "",
+                    contact.last_name or "",
+                    contact.email or "",
+                    contact.phone or "",
+                    contact.mobile or "",
+                    contact.title or "",
+                    contact.department or "",
+                    contact.role or "",
+                    "true" if contact.is_primary else "false",
+                    contact.address or "",
+                    contact.notes or "",
+                    contact.tags or "",
+                ])
+            else:
+                # Empty contact slot
+                row.extend([""] * 12)
+        
+        writer.writerow(row)
 
     # Create response
     output.seek(0)
