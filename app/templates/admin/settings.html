@@ -376,8 +376,27 @@
                     {{ _('Configure OAuth client credentials for integrations. These settings take precedence over environment variables. Leave client secret empty to keep the current value.') }}
                 </p>
                 
+                <!-- Integration Selector -->
+                <div class="mb-4">
+                    <label for="oauth_integration_select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Select Integration') }}</label>
+                    <select name="oauth_integration_select" id="oauth_integration_select" class="form-input" onchange="showOAuthIntegration(this.value)">
+                        <option value="">{{ _('-- Select an integration --') }}</option>
+                        <option value="jira">Jira</option>
+                        <option value="slack">Slack</option>
+                        <option value="github">GitHub</option>
+                        <option value="google_calendar">Google Calendar</option>
+                        <option value="outlook_calendar">Outlook Calendar</option>
+                        <option value="microsoft_teams">Microsoft Teams</option>
+                        <option value="asana">Asana</option>
+                        <option value="trello">Trello</option>
+                        <option value="gitlab">GitLab</option>
+                        <option value="quickbooks">QuickBooks Online</option>
+                        <option value="xero">Xero</option>
+                    </select>
+                </div>
+                
                 <!-- Jira -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_jira" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-jira text-blue-600 mr-2"></i>Jira
                     </h3>
@@ -397,7 +416,7 @@
                 </div>
 
                 <!-- Slack -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_slack" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-slack text-purple-600 mr-2"></i>Slack
                     </h3>
@@ -417,7 +436,7 @@
                 </div>
 
                 <!-- GitHub -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_github" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-github text-gray-800 dark:text-gray-200 mr-2"></i>GitHub
                     </h3>
@@ -437,7 +456,7 @@
                 </div>
 
                 <!-- Google Calendar -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_google_calendar" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-google text-red-600 mr-2"></i>Google Calendar
                     </h3>
@@ -457,7 +476,7 @@
                 </div>
 
                 <!-- Outlook Calendar -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_outlook_calendar" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-microsoft text-blue-600 mr-2"></i>Outlook Calendar
                     </h3>
@@ -481,7 +500,7 @@
                 </div>
 
                 <!-- Microsoft Teams -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_microsoft_teams" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-microsoft-teams text-blue-600 mr-2"></i>Microsoft Teams
                     </h3>
@@ -505,7 +524,7 @@
                 </div>
 
                 <!-- Asana -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_asana" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-asana text-fuchsia-600 mr-2"></i>Asana
                     </h3>
@@ -525,7 +544,7 @@
                 </div>
 
                 <!-- Trello -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_trello" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-trello text-blue-500 mr-2"></i>Trello
                     </h3>
@@ -545,7 +564,7 @@
                 </div>
 
                 <!-- GitLab -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_gitlab" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-gitlab text-orange-600 mr-2"></i>GitLab
                     </h3>
@@ -569,7 +588,7 @@
                 </div>
 
                 <!-- QuickBooks -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_quickbooks" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fas fa-dollar-sign text-green-600 mr-2"></i>QuickBooks Online
                     </h3>
@@ -589,7 +608,7 @@
                 </div>
 
                 <!-- Xero -->
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div id="oauth_xero" class="oauth-integration-section hidden mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fas fa-chart-line text-blue-600 mr-2"></i>Xero
                     </h3>
@@ -748,6 +767,22 @@ async function confirmRemoveLogo() {
     );
     if (confirmed) {
         document.getElementById('removeLogoForm').submit();
+    }
+}
+
+function showOAuthIntegration(value) {
+    // Hide all integration sections
+    const sections = document.querySelectorAll('.oauth-integration-section');
+    sections.forEach(section => {
+        section.classList.add('hidden');
+    });
+    
+    // Show the selected integration section
+    if (value) {
+        const selectedSection = document.getElementById('oauth_' + value);
+        if (selectedSection) {
+            selectedSection.classList.remove('hidden');
+        }
     }
 }
 </script>
