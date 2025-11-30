@@ -1337,6 +1337,16 @@ def update_entry(entry_id):
     if "billable" in data:
         entry.billable = bool(data["billable"])
 
+    if "paid" in data:
+        entry.paid = bool(data["paid"])
+        # Clear invoice number if marking as unpaid
+        if not entry.paid:
+            entry.invoice_number = None
+
+    if "invoice_number" in data:
+        invoice_number = data["invoice_number"]
+        entry.invoice_number = invoice_number.strip() if invoice_number else None
+
     # Prefer local time for updated_at per project preference
     entry.updated_at = local_now()
 

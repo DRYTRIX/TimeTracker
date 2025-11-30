@@ -73,6 +73,7 @@ from .custom_report import CustomReportConfig
 from .gamification import Badge, UserBadge, Leaderboard, LeaderboardEntry
 from .expense_gps import MileageTrack
 from .link_template import LinkTemplate
+from .custom_field_definition import CustomFieldDefinition
 
 __all__ = [
     "User",
@@ -172,4 +173,5 @@ __all__ = [
     "LeaderboardEntry",
     "MileageTrack",
     "LinkTemplate",
+    "CustomFieldDefinition",
 ]

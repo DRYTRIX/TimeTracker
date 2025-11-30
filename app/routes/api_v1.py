@@ -643,6 +643,8 @@ def create_time_entry():
         notes=data.get("notes"),
         tags=data.get("tags"),
         billable=data.get("billable", True),
+        paid=data.get("paid", False),
+        invoice_number=data.get("invoice_number"),
     )
 
     if not result.get("success"):
@@ -704,6 +706,8 @@ def update_time_entry(entry_id):
         notes=data.get("notes"),
         tags=data.get("tags"),
         billable=data.get("billable"),
+        paid=data.get("paid"),
+        invoice_number=data.get("invoice_number"),
     )
 
     if not result.get("success"):

@@ -12,7 +12,7 @@ class LinkTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    url_template = db.Column(db.String(1000), nullable=False)  # URL with {value} placeholder
+    url_template = db.Column(db.String(1000), nullable=False)  # URL with {value} or %value% placeholder
     icon = db.Column(db.String(50), nullable=True)  # Font Awesome icon class (e.g., 'fas fa-link')
     field_key = db.Column(db.String(100), nullable=False)  # Key in custom_fields to use (e.g., 'debtor_number')
     is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
@@ -28,11 +28,22 @@ class LinkTemplate(db.Model):
         return f"<LinkTemplate {self.name}>"
 
     def render_url(self, field_value):
-        """Render the URL template with the given field value"""
+        """Render the URL template with the given field value
+        
+        Supports both {value} and %value% placeholder formats
+        """
         if not field_value:
             return None
         try:
-            return self.url_template.format(value=field_value)
+            # First try Python format string with {value}
+            if "{value}" in self.url_template:
+                return self.url_template.format(value=field_value)
+            # Then try %value% placeholder
+            elif "%value%" in self.url_template:
+                return self.url_template.replace("%value%", str(field_value))
+            else:
+                # If neither placeholder is found, return None
+                return None
         except (KeyError, ValueError):
             return None
 

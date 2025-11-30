@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('Custom Field Definitions')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-tags',
+    title_text=_('Custom Field Definitions'),
+    subtitle_text=_('Manage global custom field definitions for clients'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("custom_field_definitions.create_custom_field_definition") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('Create Custom Field') + '</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if definitions %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-4">{{ _('Field Key') }}</th>
+                    <th class="p-4">{{ _('Label') }}</th>
+                    <th class="p-4">{{ _('Mandatory') }}</th>
+                    <th class="p-4">{{ _('Order') }}</th>
+                    <th class="p-4">{{ _('Status') }}</th>
+                    <th class="p-4">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for definition in definitions %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td class="p-4">
+                        <span class="text-sm font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{{ definition.field_key }}</span>
+                    </td>
+                    <td class="p-4">
+                        <div class="font-semibold">{{ definition.label }}</div>
+                        {% if definition.description %}
+                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ definition.description }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">
+                        {% if definition.is_mandatory %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{{ _('Required') }}</span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ _('Optional') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">{{ definition.order }}</td>
+                    <td class="p-4">
+                        {% if definition.is_active %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">{{ _('Active') }}</span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ _('Inactive') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">
+                        <div class="flex gap-2">
+                            <a href="{{ url_for('custom_field_definitions.edit_custom_field_definition', definition_id=definition.id) }}" class="text-primary hover:underline">
+                                <i class="fas fa-edit"></i> {{ _('Edit') }}
+                            </a>
+                            <form method="POST" action="{{ url_for('custom_field_definitions.delete_custom_field_definition', definition_id=definition.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this custom field definition?') }}');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">
+                                    <i class="fas fa-trash"></i> {{ _('Delete') }}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <i class="fas fa-tags text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+        <p class="text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('No custom field definitions found.') }}</p>
+        <a href="{{ url_for('custom_field_definitions.create_custom_field_definition') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors inline-block">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create Custom Field') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h3 class="text-lg font-semibold mb-4">{{ _('How Custom Field Definitions Work') }}</h3>
+    <div class="space-y-3 text-sm text-text-muted-light dark:text-text-muted-dark">
+        <p>{{ _('Custom field definitions allow you to create global fields that can be used across all clients. This eliminates the need to recreate the same custom fields for each client.') }}</p>
+        <p><strong>{{ _('Features:') }}</strong></p>
+        <ul class="list-disc list-inside space-y-1 ml-4">
+            <li>{{ _('Define custom fields once and use them for all clients') }}</li>
+            <li>{{ _('Mark fields as mandatory to ensure they are always filled') }}</li>
+            <li>{{ _('Control field order and visibility') }}</li>
+            <li>{{ _('Link templates can be assigned to make field values clickable') }}</li>
+        </ul>
+        <p><strong>{{ _('Example:') }}</strong></p>
+        <ul class="list-disc list-inside space-y-1 ml-4">
+            <li>{{ _('Create a field definition with key "debtor_number" and label "Debtor Number"') }}</li>
+            <li>{{ _('Mark it as mandatory if required') }}</li>
+            <li>{{ _('When creating or editing a client, this field will automatically appear') }}</li>
+            <li>{{ _('Create a link template to make the value clickable (e.g., https://erp.example.com/customer/%value%)') }}</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

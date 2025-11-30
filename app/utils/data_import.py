@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from io import StringIO
 from flask import current_app
 from app import db
-from app.models import User, Project, TimeEntry, Task, Client, Expense, ExpenseCategory
+from app.models import User, Project, TimeEntry, Task, Client, Expense, ExpenseCategory, Contact
 from app.utils.db import safe_commit
 
 
@@ -558,3 +558,272 @@ def _parse_datetime(datetime_str):
         pass
 
     return None
+
+
+def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True):
+    """
+    Import clients from CSV file
+
+    Expected CSV format:
+    name,description,contact_person,email,phone,address,default_hourly_rate,status,prepaid_hours_monthly,prepaid_reset_day,custom_field_1,custom_field_2,...,contact_1_first_name,contact_1_last_name,contact_1_email,contact_1_phone,contact_1_title,contact_1_role,contact_1_is_primary,contact_2_first_name,...
+
+    For multiple contacts, use columns like:
+    - contact_1_first_name, contact_1_last_name, contact_1_email, etc.
+    - contact_2_first_name, contact_2_last_name, contact_2_email, etc.
+    - Up to contact_N_* for as many contacts as needed
+
+    Custom fields can be specified as columns with names like:
+    - custom_field_<field_name> (e.g., custom_field_erp_id, custom_field_debtor_number)
+
+    Args:
+        user_id: ID of the user importing data
+        csv_content: String content of CSV file
+        import_record: DataImport model instance to track progress
+        skip_duplicates: If True, skip clients that already exist (by name or custom field match)
+
+    Returns:
+        Dictionary with import statistics
+    """
+    from decimal import Decimal, InvalidOperation
+    
+    user = User.query.get(user_id)
+    if not user:
+        raise ImportError(f"User {user_id} not found")
+
+    import_record.start_processing()
+
+    # Parse CSV
+    try:
+        csv_reader = csv.DictReader(StringIO(csv_content))
+        rows = list(csv_reader)
+    except Exception as e:
+        import_record.fail(f"Failed to parse CSV: {str(e)}")
+        raise ImportError(f"Failed to parse CSV: {str(e)}")
+
+    total = len(rows)
+    successful = 0
+    failed = 0
+    skipped = 0
+    errors = []
+
+    import_record.update_progress(total, 0, 0)
+
+    for idx, row in enumerate(rows):
+        try:
+            # Get client name (required)
+            client_name = row.get("name", "").strip()
+            if not client_name:
+                raise ValueError("Client name is required")
+
+            # Check for duplicates if skip_duplicates is True
+            if skip_duplicates:
+                existing_client = Client.query.filter_by(name=client_name).first()
+                
+                # Also check by custom fields if provided (e.g., ERP ID)
+                if not existing_client:
+                    # Look for common custom field keys that might indicate duplicates
+                    for key in row.keys():
+                        if key.startswith("custom_field_"):
+                            field_name = key.replace("custom_field_", "")
+                            field_value = row.get(key, "").strip()
+                            if field_value:
+                                # Check if any client has this custom field value
+                                all_clients = Client.query.all()
+                                for client in all_clients:
+                                    if client.custom_fields and client.custom_fields.get(field_name) == field_value:
+                                        existing_client = client
+                                        break
+                                if existing_client:
+                                    break
+                
+                if existing_client:
+                    skipped += 1
+                    errors.append(f"Row {idx + 1}: Client '{client_name}' already exists (skipped)")
+                    continue
+
+            # Get or create client
+            client = Client.query.filter_by(name=client_name).first()
+            is_new = False
+            
+            if not client:
+                client = Client(
+                    name=client_name,
+                    description=row.get("description", "").strip() or None,
+                    contact_person=row.get("contact_person", "").strip() or None,
+                    email=row.get("email", "").strip() or None,
+                    phone=row.get("phone", "").strip() or None,
+                    address=row.get("address", "").strip() or None,
+                )
+                is_new = True
+            else:
+                # Update existing client
+                if row.get("description"):
+                    client.description = row.get("description", "").strip() or None
+                if row.get("contact_person"):
+                    client.contact_person = row.get("contact_person", "").strip() or None
+                if row.get("email"):
+                    client.email = row.get("email", "").strip() or None
+                if row.get("phone"):
+                    client.phone = row.get("phone", "").strip() or None
+                if row.get("address"):
+                    client.address = row.get("address", "").strip() or None
+
+            # Set default hourly rate
+            if row.get("default_hourly_rate"):
+                try:
+                    client.default_hourly_rate = Decimal(str(row.get("default_hourly_rate")))
+                except (InvalidOperation, ValueError):
+                    pass
+
+            # Set status
+            status = row.get("status", "active").strip().lower()
+            if status in ["active", "inactive", "archived"]:
+                client.status = status
+
+            # Set prepaid hours
+            if row.get("prepaid_hours_monthly"):
+                try:
+                    client.prepaid_hours_monthly = Decimal(str(row.get("prepaid_hours_monthly")))
+                except (InvalidOperation, ValueError):
+                    pass
+
+            # Set prepaid reset day
+            if row.get("prepaid_reset_day"):
+                try:
+                    reset_day = int(row.get("prepaid_reset_day"))
+                    client.prepaid_reset_day = max(1, min(28, reset_day))
+                except (ValueError, TypeError):
+                    pass
+
+            # Handle custom fields
+            custom_fields = {}
+            for key, value in row.items():
+                if key.startswith("custom_field_"):
+                    field_name = key.replace("custom_field_", "")
+                    field_value = value.strip() if value else None
+                    if field_value:
+                        custom_fields[field_name] = field_value
+            
+            if custom_fields:
+                if client.custom_fields:
+                    client.custom_fields.update(custom_fields)
+                else:
+                    client.custom_fields = custom_fields
+
+            if is_new:
+                db.session.add(client)
+            db.session.flush()
+
+            # Handle contacts
+            # Find all contact columns (contact_N_field_name)
+            contact_numbers = set()
+            for key in row.keys():
+                if key.startswith("contact_") and "_" in key:
+                    parts = key.split("_")
+                    if len(parts) >= 3 and parts[0] == "contact" and parts[1].isdigit():
+                        contact_numbers.add(int(parts[1]))
+
+            # Process each contact
+            for contact_num in sorted(contact_numbers):
+                first_name = row.get(f"contact_{contact_num}_first_name", "").strip()
+                last_name = row.get(f"contact_{contact_num}_last_name", "").strip()
+                
+                if not first_name and not last_name:
+                    continue  # Skip if no name provided
+
+                # Use first_name as fallback if last_name is missing
+                if not last_name:
+                    last_name = first_name
+                    first_name = ""
+                elif not first_name:
+                    first_name = last_name
+                    last_name = ""
+
+                # Check if contact already exists
+                existing_contact = Contact.query.filter_by(
+                    client_id=client.id,
+                    first_name=first_name,
+                    last_name=last_name
+                ).first()
+
+                if existing_contact:
+                    # Update existing contact
+                    contact = existing_contact
+                else:
+                    # Create new contact
+                    contact = Contact(
+                        client_id=client.id,
+                        first_name=first_name,
+                        last_name=last_name,
+                        created_by=user_id
+                    )
+                    db.session.add(contact)
+
+                # Update contact fields
+                if row.get(f"contact_{contact_num}_email"):
+                    contact.email = row.get(f"contact_{contact_num}_email", "").strip() or None
+                if row.get(f"contact_{contact_num}_phone"):
+                    contact.phone = row.get(f"contact_{contact_num}_phone", "").strip() or None
+                if row.get(f"contact_{contact_num}_mobile"):
+                    contact.mobile = row.get(f"contact_{contact_num}_mobile", "").strip() or None
+                if row.get(f"contact_{contact_num}_title"):
+                    contact.title = row.get(f"contact_{contact_num}_title", "").strip() or None
+                if row.get(f"contact_{contact_num}_department"):
+                    contact.department = row.get(f"contact_{contact_num}_department", "").strip() or None
+                if row.get(f"contact_{contact_num}_role"):
+                    contact.role = row.get(f"contact_{contact_num}_role", "").strip() or "contact"
+                if row.get(f"contact_{contact_num}_is_primary"):
+                    is_primary = str(row.get(f"contact_{contact_num}_is_primary", "")).lower() in ("true", "1", "yes")
+                    if is_primary:
+                        # Unset other primary contacts
+                        Contact.query.filter_by(client_id=client.id, is_primary=True).update({"is_primary": False})
+                        contact.is_primary = True
+                if row.get(f"contact_{contact_num}_address"):
+                    contact.address = row.get(f"contact_{contact_num}_address", "").strip() or None
+                if row.get(f"contact_{contact_num}_notes"):
+                    contact.notes = row.get(f"contact_{contact_num}_notes", "").strip() or None
+                if row.get(f"contact_{contact_num}_tags"):
+                    contact.tags = row.get(f"contact_{contact_num}_tags", "").strip() or None
+
+            successful += 1
+
+            # Commit every 50 records
+            if (idx + 1) % 50 == 0:
+                db.session.commit()
+                import_record.update_progress(total, successful, failed)
+
+        except Exception as e:
+            failed += 1
+            error_msg = f"Row {idx + 1}: {str(e)}"
+            errors.append(error_msg)
+            import_record.add_error(error_msg, row)
+            db.session.rollback()
+
+    # Final commit
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        import_record.fail(f"Failed to commit final changes: {str(e)}")
+        raise ImportError(f"Failed to commit changes: {str(e)}")
+
+    # Update import record
+    import_record.update_progress(total, successful, failed)
+
+    if failed == 0:
+        import_record.complete()
+    elif successful > 0:
+        import_record.partial_complete()
+    else:
+        import_record.fail("All records failed to import")
+
+    summary = {
+        "total": total,
+        "successful": successful,
+        "failed": failed,
+        "skipped": skipped,
+        "errors": errors[:10]  # First 10 errors
+    }
+    import_record.set_summary(summary)
+
+    return summary

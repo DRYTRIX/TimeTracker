@@ -241,10 +241,12 @@ function previewReport() {
     }
     
     // Collect current filters
+    const projectSelect = document.getElementById('filterProject');
+    const projectValue = projectSelect ? projectSelect.value : '';
     reportConfig.filters = {
-        start_date: document.getElementById('filterStartDate').value,
-        end_date: document.getElementById('filterEndDate').value,
-        project_id: document.getElementById('filterProject').value || null
+        start_date: document.getElementById('filterStartDate').value || null,
+        end_date: document.getElementById('filterEndDate').value || null,
+        project_id: projectValue || null
     };
     
     // Show preview modal
@@ -259,17 +261,55 @@ function previewReport() {
     error.classList.add('hidden');
     data.classList.add('hidden');
     
+    // Debug: Log what we're sending
+    console.log('Preview report config:', reportConfig);
+    
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    
     // Fetch preview data
     fetch('{{ url_for("custom_reports.preview_report") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
             config: reportConfig
         })
     })
-    .then(response => response.json())
+    .then(async response => {
+        // Check if response is OK first
+        if (!response.ok) {
+            // Clone before reading error response
+            const errorResponseClone = response.clone();
+            // Try to get error message from response
+            let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await errorResponseClone.json();
+                errorMsg = errorData.message || errorData.error || errorMsg;
+                console.error('Preview error response:', errorData);
+            } catch (parseError) {
+                // If JSON parsing fails, try to get text from a new clone
+                try {
+                    const textClone = response.clone();
+                    const errorText = await textClone.text();
+                    console.error('Preview error text:', errorText);
+                    if (errorText) {
+                        errorMsg = errorText;
+                    }
+                } catch (textError) {
+                    console.error('Could not parse error response:', textError);
+                }
+            }
+            throw new Error(errorMsg);
+        }
+        
+        // Response is OK, parse JSON
+        const result = await response.json();
+        return result;
+    })
     .then(result => {
         loading.classList.add('hidden');
         
@@ -277,14 +317,18 @@ function previewReport() {
             renderPreview(result.data);
             data.classList.remove('hidden');
         } else {
-            errorMessage.textContent = result.message || '{{ _("Failed to generate preview") }}';
+            const msg = result.message || '{{ _("Failed to generate preview") }}';
+            errorMessage.textContent = msg;
             error.classList.remove('hidden');
+            console.error('Preview failed:', result);
         }
     })
     .catch(err => {
         loading.classList.add('hidden');
-        errorMessage.textContent = '{{ _("Error loading preview") }}: ' + err.message;
+        const msg = err.message || '{{ _("Unknown error occurred") }}';
+        errorMessage.textContent = '{{ _("Error loading preview") }}: ' + msg;
         error.classList.remove('hidden');
+        console.error('Preview error:', err);
     });
 }
 
@@ -384,11 +428,16 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
     };
     
     try {
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        
         const response = await fetch('{{ url_for("custom_reports.save_report_view") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
             },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 name: name,
                 scope: scope,

@@ -24,9 +24,9 @@
                     <i class="fas fa-file-import mr-2"></i>{{ _('Import Data') }}
                 </h2>
 
-                <!-- CSV Import -->
+                <!-- CSV Import - Time Entries -->
                 <div class="mb-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import') }}</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import - Time Entries') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from a CSV file') }}</p>
                     
                     <div class="flex items-center space-x-3">
@@ -39,6 +39,31 @@
                         </a>
                     </div>
                     <div id="csv-upload-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
+                <!-- CSV Import - Clients -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import - Clients') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import clients with custom fields and multiple contacts from a CSV file') }}</p>
+                    
+                    <div class="flex items-center space-x-3">
+                        <label for="csv-clients-file" class="cursor-pointer bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
+                            <i class="fas fa-upload mr-2"></i>{{ _('Choose CSV File') }}
+                        </label>
+                        <input type="file" id="csv-clients-file" accept=".csv" class="hidden" onchange="handleCsvClientsUpload(this)">
+                        <a href="/api/import/template/csv/clients" class="text-indigo-600 hover:underline text-sm">
+                            <i class="fas fa-download mr-1"></i>{{ _('Download Template') }}
+                        </a>
+                    </div>
+                    <div class="mt-2">
+                        <label class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                            <input type="checkbox" id="skip-duplicates" checked class="rounded">
+                            <span>{{ _('Skip duplicate clients (by name or custom field)') }}</span>
+                        </label>
+                    </div>
+                    <div id="csv-clients-upload-status" class="mt-2 text-sm"></div>
                 </div>
 
                 <hr class="my-6 border-gray-200 dark:border-gray-700">
@@ -126,6 +151,18 @@
                     <button onclick="showFilteredExportForm()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
                         <i class="fas fa-filter mr-2"></i>{{ _('Export with Filters') }}
                     </button>
+                </div>
+
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
+                <!-- Client Export -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Export Clients') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Export all clients with custom fields and contacts to CSV') }}</p>
+                    
+                    <a href="/clients/export" class="inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
+                        <i class="fas fa-download mr-2"></i>{{ _('Export Clients to CSV') }}
+                    </a>
                 </div>
 
                 {% if current_user.is_admin %}
@@ -234,7 +271,7 @@
 </div>
 
 <script>
-// CSV Upload
+// CSV Upload - Time Entries
 async function handleCsvUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -261,6 +298,90 @@ async function handleCsvUpload(input) {
         }
     } catch (error) {
         statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
+    }
+    
+    input.value = '';
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// CSV Upload - Clients
+async function handleCsvClientsUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const statusEl = document.getElementById('csv-clients-upload-status');
+    statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Uploading...</span>';
+    
+    const skipDuplicates = document.getElementById('skip-duplicates').checked;
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Get CSRF token from meta tag and add to form data
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        formData.append('csrf_token', csrfToken);
+    }
+    
+    try {
+        const url = `/api/import/csv/clients?skip_duplicates=${skipDuplicates}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+        
+        // Get response text first (we can only read the body once)
+        const text = await response.text();
+        let data;
+        
+        // Try to parse as JSON
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            // If it's not JSON, show the text response with more details
+            const contentType = response.headers.get('content-type') || 'unknown';
+            statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: Server returned non-JSON response. Status: ${response.status} ${response.statusText}</span>`;
+            statusEl.innerHTML += `<br><span class="text-xs text-gray-600 dark:text-gray-400">Content-Type: ${contentType}</span>`;
+            statusEl.innerHTML += `<br><span class="text-xs text-gray-600 dark:text-gray-400">Response length: ${text.length} characters</span>`;
+            
+            if (text.length > 0) {
+                const preview = text.length < 500 ? text : text.substring(0, 500) + '...';
+                statusEl.innerHTML += `<br><div class="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono overflow-auto max-h-40"><pre>${escapeHtml(preview)}</pre></div>`;
+            } else {
+                statusEl.innerHTML += `<br><span class="text-xs text-gray-600 dark:text-gray-400">Response is empty</span>`;
+            }
+            
+            console.error('Non-JSON response details:', {
+                status: response.status,
+                statusText: response.statusText,
+                contentType: contentType,
+                headers: Object.fromEntries(response.headers.entries()),
+                body: text.substring(0, 1000)
+            });
+            input.value = '';
+            return;
+        }
+        
+        if (response.ok) {
+            const skippedMsg = data.summary && data.summary.skipped > 0 ? `, ${data.summary.skipped} skipped` : '';
+            const successful = data.summary ? data.summary.successful : 0;
+            statusEl.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Import successful: ${successful} clients imported${skippedMsg}</span>`;
+            if (data.summary && data.summary.failed > 0) {
+                statusEl.innerHTML += `<br><span class="text-yellow-600"><i class="fas fa-exclamation-triangle mr-1"></i>${data.summary.failed} failed</span>`;
+            }
+            loadImportHistory();
+        } else {
+            const errorMsg = data.error || data.message || `Server error (${response.status})`;
+            statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${errorMsg}</span>`;
+        }
+    } catch (error) {
+        statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
+        console.error('Client import error:', error);
     }
     
     input.value = '';

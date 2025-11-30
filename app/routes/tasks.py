@@ -51,6 +51,23 @@ def list_tasks():
     db.session.expire_all()
     kanban_columns = KanbanColumn.get_active_columns() if KanbanColumn else []
 
+    # Check if this is an AJAX request
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        # Return only the tasks list HTML for AJAX requests
+        response = make_response(render_template(
+            "tasks/_tasks_list.html",
+            tasks=result["tasks"],
+            pagination=result["pagination"],
+            status=status,
+            priority=priority,
+            project_id=project_id,
+            assigned_to=assigned_to,
+            search=search,
+            overdue=overdue,
+        ))
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        return response
+
     # Prevent browser caching of kanban board
     response = render_template(
         "tasks/list.html",

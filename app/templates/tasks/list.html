@@ -35,7 +35,7 @@
         </button>
     </div>
     <div id="filterBody">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-filter-form>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tasksFilterForm" data-filter-form>
         <div class="lg:col-span-1">
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
@@ -83,117 +83,12 @@
             <input type="checkbox" name="overdue" id="overdue" value="1" {% if overdue %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             <label for="overdue" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Overdue only</label>
         </div>
-        <div class="col-span-full flex justify-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Filter</button>
-        </div>
     </form>
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
-            {{ tasks|length }} task{{ 's' if tasks|length != 1 else '' }} found
-        </h3>
-        <div class="flex items-center gap-2">
-            <a href="{{ url_for('tasks.export_tasks', status=status, priority=priority, project_id=project_id, assigned_to=assigned_to, search=search, overdue=overdue) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="{{ _('Export to CSV') }}">
-                <i class="fas fa-download mr-1"></i> Export
-            </a>
-            <div class="relative">
-                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60 btn-press transition-smooth" onclick="openMenu(this, 'tasksBulkMenu')" disabled>
-                    <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
-                </button>
-                <ul id="tasksBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
-                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusDialog()"><i class="fas fa-tasks mr-2"></i>Change Status</a></li>
-                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkAssignDialog()"><i class="fas fa-user mr-2"></i>Assign To</a></li>
-                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkProjectDialog()"><i class="fas fa-folder mr-2"></i>Move to Project</a></li>
-                    <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
-                    <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-        <thead class="border-b border-border-light dark:border-border-dark">
-            <tr>
-                <th class="p-4 w-12">
-                    <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllTasks()">
-                </th>
-                <th class="p-4" data-sortable>Name</th>
-                <th class="p-4" data-sortable>Project</th>
-                <th class="p-4" data-sortable>Priority</th>
-                <th class="p-4" data-sortable>Status</th>
-                <th class="p-4 table-number" data-sortable>Due</th>
-                <th class="p-4 table-number" data-sortable>Progress</th>
-                <th class="p-4">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for task in tasks %}
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-context-menu='[{"label": "View", "icon": "fas fa-eye", "action": {"type": "view", "url": "{{ url_for('tasks.view_task', task_id=task.id) }}"}}, {"label": "Edit", "icon": "fas fa-edit", "action": {"type": "edit", "url": "{{ url_for('tasks.edit_task', task_id=task.id) }}"}}, {"separator": true}, {"label": "Delete", "icon": "fas fa-trash", "danger": true, "action": {"type": "delete", "url": "{{ url_for('tasks.delete_task', task_id=task.id) }}", "confirm": "Are you sure you want to delete this task?"}}]'>
-                <td class="p-4">
-                    <input type="checkbox" class="task-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-all" value="{{ task.id }}" onchange="updateBulkDeleteButton()">
-                </td>
-                <td class="p-4"><a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">{{ task.name }}</a></td>
-                <td class="p-4"><a href="{{ url_for('projects.view_project', project_id=task.project_id) }}" class="text-primary hover:underline">{{ task.project.name }}</a></td>
-                <td class="p-4">
-                    {% set p = task.priority %}
-                    {% set pcls = {'low':'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-                                   'medium':'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
-                                   'high':'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-                                   'urgent':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}[p] if p in ['low','medium','high','urgent'] else 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %}
-                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ pcls }}">{{ task.priority_display }}</span>
-                </td>
-                <td class="p-4">
-                    {% set s = task.status %}
-                    {% set statusColors = {'todo': 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                                           'in_progress': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-                                           'review': 'status-pending',
-                                           'done': 'status-active',
-                                           'cancelled': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'} %}
-                    {% set scls = statusColors.get(s, 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300') %}
-                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ scls }}">{{ task.status_display }}</span>
-                </td>
-                <td class="p-4 table-number">
-                    {% if task.due_date %}
-                        {% set overdue = task.is_overdue %}
-                        <span class="chip whitespace-nowrap {{ 'status-overdue' if overdue else 'chip-neutral' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</span>
-                    {% else %}
-                        <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
-                    {% endif %}
-                </td>
-                <td class="p-4 table-number">
-                    {% set pct = task.progress_percentage or 0 %}
-                    <div class="w-28 h-2 bg-gray-200 dark:bg-gray-700 rounded">
-                        <div class="h-2 rounded {{ 'bg-emerald-500' if pct>=100 else 'bg-primary' }}" style="width: {{ [pct,100]|min }}%"></div>
-                    </div>
-                </td>
-                <td class="p-4">
-                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">View</a>
-                </td>
-            </tr>
-            {% else %}
-            {% endfor %}
-        </tbody>
-    </table>
-    {% if not tasks %}
-    {% from "components/ui.html" import empty_state %}
-    {% set actions %}
-                    <a href="{{ url_for('tasks.create_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors btn-press shadow-md">
-                        <i class="fas fa-plus mr-2"></i>Create Your First Task
-                    </a>
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            <i class="fas fa-question-circle mr-2"></i>Learn More
-        </a>
-    {% endset %}
-    {% if search or status or priority or project_id or assigned_to %}
-        {{ empty_state('fas fa-search', 'No Tasks Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new task that matches your criteria.', actions, type='no-results') }}
-    {% else %}
-        {{ empty_state('fas fa-tasks', 'No Tasks Yet', 'Tasks help you break down projects into manageable pieces. Create your first task to get started organizing your work!', actions, type='no-data') }}
-    {% endif %}
-    {% endif %}
-        </tbody>
-    </table>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible" id="tasksContainer">
+    {% include 'tasks/_tasks_list.html' %}
 </div>
 
 <!-- Bulk Operations Forms (hidden) -->
@@ -573,5 +468,182 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });
+
+// Tasks Filter Handler - AJAX filtering
+(function() {
+    'use strict';
+    
+    let filterTimeout = null;
+    let searchTimeout = null;
+    
+    function getFilterParams() {
+        const form = document.getElementById('tasksFilterForm');
+        if (!form) return {};
+        
+        const params = {};
+        
+        // Get search input value directly
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            const searchValue = searchInput.value.trim();
+            if (searchValue) {
+                params.search = searchValue;
+            }
+        }
+        
+        // Get other form fields from FormData
+        const formData = new FormData(form);
+        for (const [key, value] of formData.entries()) {
+            if (key === 'search') continue;
+            const trimmed = String(value || '').trim();
+            if (trimmed && trimmed !== '') {
+                params[key] = trimmed;
+            }
+        }
+        
+        return params;
+    }
+    
+    function buildFilterUrl() {
+        const params = getFilterParams();
+        const queryString = new URLSearchParams(params).toString();
+        return `/tasks?${queryString}`;
+    }
+    
+    function applyFilters() {
+        const url = buildFilterUrl();
+        const container = document.getElementById('tasksListContainer');
+        
+        if (!container) {
+            console.error('tasksListContainer not found');
+            return;
+        }
+        
+        // Show loading state
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+        
+        // Update URL
+        if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', url);
+        }
+        
+        // Fetch filtered results
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html.trim();
+            
+            const newContainer = tempDiv.querySelector('#tasksListContainer');
+            
+            if (newContainer) {
+                container.innerHTML = newContainer.innerHTML;
+            } else {
+                const match = html.trim().match(/<div[^>]*id=["']tasksListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
+                if (match && match[1]) {
+                    container.innerHTML = match[1];
+                } else {
+                    container.innerHTML = html;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Filter error:', error);
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+            if (window.toastManager) {
+                window.toastManager.show('Failed to filter tasks. Please refresh the page.', 'error');
+            } else if (window.showToast) {
+                window.showToast('Failed to filter tasks. Please refresh the page.', 'error');
+            }
+        })
+        .finally(() => {
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+        });
+    }
+    
+    function debouncedApplyFilters(delay = 100) {
+        if (filterTimeout) {
+            clearTimeout(filterTimeout);
+        }
+        filterTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    function debouncedSearch(delay = 500) {
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        searchTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('tasksFilterForm');
+        if (!form) {
+            console.error('Tasks filter form not found');
+            return;
+        }
+        
+        // Auto-submit on dropdown changes
+        form.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on checkbox changes
+        form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on search input (debounced)
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                debouncedSearch(500);
+            });
+            
+            // Submit on Enter
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    applyFilters();
+                }
+            });
+        }
+        
+        // Prevent form submission (use AJAX instead)
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            if (filterTimeout) {
+                clearTimeout(filterTimeout);
+            }
+            applyFilters();
+        });
+    });
+})();
 </script>
 {% endblock %}

@@ -114,8 +114,20 @@
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ key }}</h3>
                     <p class="text-text-light dark:text-text-dark">
-                        {# If the value looks like a URL, render it as a clickable link #}
-                        {% if value is string and (value.startswith('http://') or value.startswith('https://')) %}
+                        {% set link_template = link_templates_by_field.get(key) if link_templates_by_field else None %}
+                        {% if link_template and value %}
+                            {# Render as clickable link using link template #}
+                            {% set rendered_url = link_template.render_url(value) %}
+                            {% if rendered_url %}
+                                <a href="{{ rendered_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                    {{ value }}
+                                    <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        {% elif value is string and (value.startswith('http://') or value.startswith('https://')) %}
+                            {# Fallback: If the value looks like a URL, render it as a clickable link #}
                             <a href="{{ value }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
                                 {{ value }}
                             </a>
@@ -220,6 +232,83 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+        
+        <!-- Recent Hours History -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Recent Hours History') }}</h2>
+            {% if recent_time_entries %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="border-b border-border-light dark:border-border-dark">
+                        <tr>
+                            <th class="p-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
+                            <th class="p-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
+                            <th class="p-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Task') }}</th>
+                            <th class="p-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('User') }}</th>
+                            <th class="p-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
+                            <th class="p-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Notes') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in recent_time_entries %}
+                        <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                            <td class="p-3">
+                                <div class="text-sm">
+                                    {{ entry.start_time|user_datetime('%Y-%m-%d') }}
+                                </div>
+                                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                                    {{ entry.start_time|user_datetime('%H:%M') }}
+                                    {% if entry.end_time %}
+                                        - {{ entry.end_time|user_datetime('%H:%M') }}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="p-3">
+                                {% if entry.project %}
+                                    <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:underline text-sm">
+                                        {{ entry.project.name }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Direct') }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3">
+                                {% if entry.task %}
+                                    <span class="text-sm">{{ entry.task.name }}</span>
+                                {% else %}
+                                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3">
+                                <span class="text-sm">{{ entry.user.display_name if entry.user else _('N/A') }}</span>
+                            </td>
+                            <td class="p-3">
+                                <span class="font-medium text-sm">{{ "%.2f"|format(entry.duration_hours) }}h</span>
+                            </td>
+                            <td class="p-3">
+                                {% if entry.notes %}
+                                    <span class="text-sm" title="{{ entry.notes }}">
+                                        {{ entry.notes[:50] }}{% if entry.notes|length > 50 %}...{% endif %}
+                                    </span>
+                                {% else %}
+                                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Showing last %(count)s entries', count=recent_time_entries|length) }} | 
+                        {{ _('Total hours') }}: {{ "%.2f"|format(recent_time_entries|sum(attribute='duration_hours')) }}h
+                    </p>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No recent time entries found.') }}</p>
+            {% endif %}
         </div>
     </div>
 </div>

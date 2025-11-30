@@ -313,6 +313,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Separate tags with commas') }}</p>
                 </div>
 
+                <!-- Paid Status and Invoice Number -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="flex items-center">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="paid" name="paid" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if timer.paid %}checked{% endif %}>
+                            <label for="paid" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <i class="fas fa-check-circle mr-1"></i>{{ _('Paid') }}
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="invoice_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-file-invoice mr-1"></i>{{ _('Invoice Number') }}
+                        </label>
+                        <input type="text" class="form-input" id="invoice_number" name="invoice_number" placeholder="{{ _('Internal invoice reference') }}" value="{{ timer.invoice_number or '' }}" maxlength="100">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Reference to internal invoice number') }}</p>
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-border-light dark:border-border-dark">
                     <div class="flex gap-2">
@@ -400,6 +419,25 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fas fa-dollar-sign mr-1"></i>{{ _('Billable') }}
                             </label>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Paid Status and Invoice Number -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="flex items-center">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="paid" name="paid" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if timer.paid %}checked{% endif %}>
+                            <label for="paid" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <i class="fas fa-check-circle mr-1"></i>{{ _('Paid') }}
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="invoice_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-file-invoice mr-1"></i>{{ _('Invoice Number') }}
+                        </label>
+                        <input type="text" class="form-input" id="invoice_number" name="invoice_number" placeholder="{{ _('Internal invoice reference') }}" value="{{ timer.invoice_number or '' }}" maxlength="100">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Reference to internal invoice number') }}</p>
                     </div>
                 </div>
 

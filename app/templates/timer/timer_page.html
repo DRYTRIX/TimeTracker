@@ -297,6 +297,44 @@ if (projectSelectEl && clientSelectEl) {
     });
 }
 
+// Form validation: ensure either project or client is selected
+const timerStartForm = document.getElementById('timer-start-form');
+if (timerStartForm) {
+    // Store original button state to restore if needed
+    const submitBtn = timerStartForm.querySelector('button[type="submit"]');
+    let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
+    
+    timerStartForm.addEventListener('submit', function(e) {
+        // Validate project or client selection
+        const projectVal = projectSelectEl ? projectSelectEl.value : '';
+        const clientVal = clientSelectEl ? clientSelectEl.value : '';
+        if (!projectVal && !clientVal) {
+            e.preventDefault();
+            e.stopImmediatePropagation(); // Stop other handlers from running
+            
+            // Ensure button state is preserved
+            if (submitBtn && originalButtonHTML) {
+                submitBtn.innerHTML = originalButtonHTML;
+                submitBtn.disabled = false;
+            }
+            
+            // Show error message using toast notification
+            const errorMsg = '{{ _("Please select either a project or a client") }}';
+            if (window.toastManager && typeof window.toastManager.error === 'function') {
+                window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+            } else {
+                alert(errorMsg);
+            }
+            // After showing error, ensure button is still in correct state
+            if (submitBtn && originalButtonHTML) {
+                submitBtn.innerHTML = originalButtonHTML;
+                submitBtn.disabled = false;
+            }
+            return false;
+        }
+    }, true); // Use capture phase to run before other handlers
+}
+
 // Select recent project
 function selectRecentProject(projectId, projectName) {
     const projectSelect = document.getElementById('project_id');

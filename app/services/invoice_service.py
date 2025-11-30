@@ -83,20 +83,47 @@ class InvoiceService:
         )
 
         # Create invoice items from time entries
+        # Group entries by task for better organization
+        grouped_entries = {}
         for entry in entries:
             if entry.duration_seconds:
                 hours = Decimal(str(entry.duration_seconds / 3600))
-                rate = project.hourly_rate or Decimal("0.00")
-                amount = hours * rate
-
-                item = InvoiceItem(
-                    invoice_id=invoice.id,
-                    description=f"Time entry: {entry.notes or 'No description'}",
-                    quantity=hours,
-                    unit_price=rate,
-                    amount=amount,
-                )
-                db.session.add(item)
+                if hours <= 0:
+                    continue
+                    
+                # Group by task if available, otherwise by project
+                if entry.task_id:
+                    key = f"task_{entry.task_id}"
+                    description = f"Task: {entry.task.name if entry.task else 'Unknown Task'}"
+                else:
+                    key = f"project_{entry.project_id}"
+                    description = f"Project: {project.name}"
+                
+                if key not in grouped_entries:
+                    grouped_entries[key] = {
+                        "description": description,
+                        "entries": [],
+                        "total_hours": Decimal("0"),
+                    }
+                
+                grouped_entries[key]["entries"].append(entry)
+                grouped_entries[key]["total_hours"] += hours
+        
+        # Create invoice items from grouped entries
+        for group in grouped_entries.values():
+            rate = project.hourly_rate or Decimal("0.00")
+            
+            # Store all time entry IDs as comma-separated string
+            time_entry_ids = ",".join(str(entry.id) for entry in group["entries"])
+            
+            item = InvoiceItem(
+                invoice_id=invoice.id,
+                description=group["description"],
+                quantity=group["total_hours"],
+                unit_price=rate,
+                time_entry_ids=time_entry_ids,
+            )
+            db.session.add(item)
 
         if not safe_commit("create_invoice", {"project_id": project_id, "created_by": created_by}):
             return {
@@ -181,11 +208,14 @@ class InvoiceService:
         return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
 
     def mark_as_sent(self, invoice_id: int) -> Dict[str, Any]:
-        """Mark an invoice as sent"""
+        """Mark an invoice as sent and mark associated time entries as paid"""
         invoice = self.invoice_repo.mark_as_sent(invoice_id)
 
         if not invoice:
             return {"success": False, "message": "Invoice not found", "error": "not_found"}
+
+        # Mark associated time entries as paid
+        marked_count = self.mark_time_entries_as_paid(invoice)
 
         if not safe_commit("mark_invoice_sent", {"invoice_id": invoice_id}):
             return {
@@ -194,7 +224,11 @@ class InvoiceService:
                 "error": "database_error",
             }
 
-        return {"success": True, "message": "Invoice marked as sent", "invoice": invoice}
+        message = "Invoice marked as sent"
+        if marked_count > 0:
+            message += f" ({marked_count} time entr{'y' if marked_count == 1 else 'ies'} marked as paid)"
+
+        return {"success": True, "message": message, "invoice": invoice}
 
     def mark_as_paid(
         self,
@@ -222,6 +256,40 @@ class InvoiceService:
             }
 
         return {"success": True, "message": "Invoice marked as paid", "invoice": invoice}
+
+    def mark_time_entries_as_paid(self, invoice: Invoice) -> int:
+        """
+        Mark all time entries associated with an invoice as paid.
+        
+        Args:
+            invoice: The Invoice object
+            
+        Returns:
+            Number of time entries marked as paid
+        """
+        time_entry_ids = set()
+        
+        # Collect all time entry IDs from invoice items
+        for item in invoice.items:
+            if item.time_entry_ids:
+                # Parse comma-separated IDs
+                ids = [int(id_str.strip()) for id_str in item.time_entry_ids.split(",") if id_str.strip().isdigit()]
+                time_entry_ids.update(ids)
+        
+        if not time_entry_ids:
+            return 0
+        
+        # Mark all time entries as paid
+        entries = TimeEntry.query.filter(TimeEntry.id.in_(time_entry_ids)).all()
+        marked_count = 0
+        
+        for entry in entries:
+            if not entry.paid:
+                entry.paid = True
+                entry.invoice_number = invoice.invoice_number
+                marked_count += 1
+        
+        return marked_count
 
     def update_invoice(self, invoice_id: int, user_id: int, **kwargs) -> Dict[str, Any]:
         """
