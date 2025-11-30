@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
@@ -461,6 +461,16 @@ def update_invoice_status(invoice_id):
         if not invoice.payment_date:
             invoice.payment_date = datetime.utcnow().date()
 
+    # Mark time entries as paid when invoice is sent (non-external invoices)
+    if new_status == "sent":
+        from app.services import InvoiceService
+        invoice_service = InvoiceService()
+        marked_count = invoice_service.mark_time_entries_as_paid(invoice)
+        if marked_count > 0:
+            current_app.logger.info(
+                f"Marked {marked_count} time entr{'y' if marked_count == 1 else 'ies'} as paid for invoice {invoice.invoice_number}"
+            )
+
     # Reduce stock when invoice is sent or paid (if configured)
     from app.models import StockMovement, StockReservation
     import os
@@ -774,6 +784,14 @@ def generate_from_time(invoice_id):
         if not safe_commit("generate_from_time", {"invoice_id": invoice.id}):
             flash(_("Could not generate items due to a database error. Please check server logs."), "error")
             return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
+
+        # If invoice is already sent (not draft), mark time entries as paid
+        if invoice.status != "draft":
+            from app.services import InvoiceService
+            invoice_service = InvoiceService()
+            marked_count = invoice_service.mark_time_entries_as_paid(invoice)
+            if marked_count > 0:
+                safe_commit("mark_time_entries_paid_from_invoice", {"invoice_id": invoice.id})
 
         flash(_("Invoice items generated successfully from time entries and costs"), "success")
         if total_prepaid_allocated and total_prepaid_allocated > 0:

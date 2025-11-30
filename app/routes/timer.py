@@ -531,6 +531,14 @@ def edit_timer(timer_id):
         timer.notes = request.form.get("notes", "").strip()
         timer.tags = request.form.get("tags", "").strip()
         timer.billable = request.form.get("billable") == "on"
+        timer.paid = request.form.get("paid") == "on"
+        
+        # Update invoice number
+        invoice_number = request.form.get("invoice_number", "").strip()
+        timer.invoice_number = invoice_number if invoice_number else None
+        # Clear invoice number if marking as unpaid
+        if not timer.paid:
+            timer.invoice_number = None
 
         # Admin users can edit additional fields
         if current_user.is_admin:
