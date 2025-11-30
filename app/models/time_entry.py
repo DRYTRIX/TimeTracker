@@ -30,6 +30,8 @@ class TimeEntry(db.Model):
     tags = db.Column(db.String(500), nullable=True)  # Comma-separated tags
     source = db.Column(db.String(20), default="manual", nullable=False)  # 'manual' or 'auto'
     billable = db.Column(db.Boolean, default=True, nullable=False)
+    paid = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    invoice_number = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
 
@@ -50,6 +52,8 @@ class TimeEntry(db.Model):
         tags=None,
         source="manual",
         billable=True,
+        paid=False,
+        invoice_number=None,
         duration_seconds=None,
         **kwargs,
     ):
@@ -66,6 +70,8 @@ class TimeEntry(db.Model):
             tags: Optional comma-separated tags
             source: Source of the entry ('manual' or 'auto')
             billable: Whether this entry is billable
+            paid: Whether this entry has been paid
+            invoice_number: Optional internal invoice number reference
             duration_seconds: Optional duration override (usually calculated automatically)
             **kwargs: Additional keyword arguments (for SQLAlchemy compatibility)
         """
@@ -94,6 +100,8 @@ class TimeEntry(db.Model):
         self.tags = tags.strip() if tags else None
         self.source = source
         self.billable = billable
+        self.paid = paid
+        self.invoice_number = invoice_number.strip() if invoice_number else None
 
         # Allow manual duration override
         if duration_seconds is not None:
@@ -224,6 +232,17 @@ class TimeEntry(db.Model):
         self.updated_at = local_now()
         db.session.commit()
 
+    def set_paid(self, paid, invoice_number=None):
+        """Set paid status and optional invoice number"""
+        self.paid = paid
+        if invoice_number:
+            self.invoice_number = invoice_number.strip() if invoice_number else None
+        elif not paid:
+            # Clear invoice number when marking as unpaid
+            self.invoice_number = None
+        self.updated_at = local_now()
+        db.session.commit()
+
     def to_dict(self):
         """Convert time entry to dictionary for API responses"""
         return {
@@ -242,6 +261,8 @@ class TimeEntry(db.Model):
             "tag_list": self.tag_list,
             "source": self.source,
             "billable": self.billable,
+            "paid": self.paid,
+            "invoice_number": self.invoice_number,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

@@ -22,6 +22,8 @@ class TimeEntrySchema(Schema):
     tags = fields.Str(allow_none=True)
     source = fields.Str(validate=validate.OneOf([s.value for s in TimeEntrySource]))
     billable = fields.Bool(missing=True)
+    paid = fields.Bool(missing=False)
+    invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
@@ -43,6 +45,8 @@ class TimeEntryCreateSchema(Schema):
     notes = fields.Str(allow_none=True, validate=validate.Length(max=5000))
     tags = fields.Str(allow_none=True, validate=validate.Length(max=500))
     billable = fields.Bool(missing=True)
+    paid = fields.Bool(missing=False)
+    invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
 
     @validates("end_time")
     def validate_end_time(self, value, **kwargs):
@@ -88,6 +92,8 @@ class TimeEntryUpdateSchema(Schema):
     notes = fields.Str(allow_none=True, validate=validate.Length(max=5000))
     tags = fields.Str(allow_none=True, validate=validate.Length(max=500))
     billable = fields.Bool(allow_none=True)
+    paid = fields.Bool(allow_none=True)
+    invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
 
 
 class TimerStartSchema(Schema):

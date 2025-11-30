@@ -14,6 +14,7 @@ from app import db, log_event, track_event
 from app.models import User
 from app.config import Config
 from app.utils.db import safe_commit
+from app.utils.config_manager import ConfigManager
 from flask_babel import gettext as _
 from app import oauth, limiter
 from app.utils.posthog_segmentation import identify_user_with_segments, set_super_properties
@@ -80,9 +81,10 @@ def login():
             if not username:
                 log_event("auth.login_failed", reason="empty_username", auth_method=auth_method)
                 flash(_("Username is required"), "error")
+                allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                 return render_template(
                     "auth/login.html",
-                    allow_self_register=Config.ALLOW_SELF_REGISTER,
+                    allow_self_register=allow_self_register,
                     auth_method=auth_method,
                     requires_password=requires_password,
                 )
@@ -98,15 +100,16 @@ def login():
             current_app.logger.info("User lookup for '%s': %s", username, "found" if user else "not found")
 
             if not user:
-                # Check if self-registration is allowed
-                if Config.ALLOW_SELF_REGISTER:
+                # Check if self-registration is allowed (use ConfigManager to respect database settings)
+                allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+                if allow_self_register:
                     # If password auth is required, validate password during self-registration
                     if requires_password:
                         if not password:
                             flash(_("Password is required to create an account."), "error")
                             return render_template(
                                 "auth/login.html",
-                                allow_self_register=Config.ALLOW_SELF_REGISTER,
+                                allow_self_register=allow_self_register,
                                 auth_method=auth_method,
                                 requires_password=requires_password,
                             )
@@ -114,7 +117,7 @@ def login():
                             flash(_("Password must be at least 8 characters long."), "error")
                             return render_template(
                                 "auth/login.html",
-                                allow_self_register=Config.ALLOW_SELF_REGISTER,
+                                allow_self_register=allow_self_register,
                                 auth_method=auth_method,
                                 requires_password=requires_password,
                             )
@@ -141,7 +144,7 @@ def login():
                         )
                         return render_template(
                             "auth/login.html",
-                            allow_self_register=Config.ALLOW_SELF_REGISTER,
+                            allow_self_register=allow_self_register,
                             auth_method=auth_method,
                             requires_password=requires_password,
                         )
@@ -158,7 +161,7 @@ def login():
                     flash(_("User not found. Please contact an administrator."), "error")
                     return render_template(
                         "auth/login.html",
-                        allow_self_register=Config.ALLOW_SELF_REGISTER,
+                        allow_self_register=allow_self_register,
                         auth_method=auth_method,
                         requires_password=requires_password,
                     )
@@ -169,9 +172,10 @@ def login():
                     if not safe_commit("promote_admin_user", {"username": username}):
                         current_app.logger.error("Failed to promote '%s' to admin due to DB error", username)
                         flash(_("Could not update your account role due to a database error."), "error")
+                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                         return render_template(
                             "auth/login.html",
-                            allow_self_register=Config.ALLOW_SELF_REGISTER,
+                            allow_self_register=allow_self_register,
                             auth_method=auth_method,
                             requires_password=requires_password,
                         )
@@ -180,9 +184,10 @@ def login():
             if not user.is_active:
                 log_event("auth.login_failed", user_id=user.id, reason="account_disabled", auth_method=auth_method)
                 flash(_("Account is disabled. Please contact an administrator."), "error")
+                allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                 return render_template(
                     "auth/login.html",
-                    allow_self_register=Config.ALLOW_SELF_REGISTER,
+                    allow_self_register=allow_self_register,
                     auth_method=auth_method,
                     requires_password=requires_password,
                 )
@@ -197,9 +202,10 @@ def login():
                             "auth.login_failed", user_id=user.id, reason="password_required", auth_method=auth_method
                         )
                         flash(_("Password is required"), "error")
+                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                         return render_template(
                             "auth/login.html",
-                            allow_self_register=Config.ALLOW_SELF_REGISTER,
+                            allow_self_register=allow_self_register,
                             auth_method=auth_method,
                             requires_password=requires_password,
                         )
@@ -209,9 +215,10 @@ def login():
                             "auth.login_failed", user_id=user.id, reason="invalid_password", auth_method=auth_method
                         )
                         flash(_("Invalid username or password"), "error")
+                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                         return render_template(
                             "auth/login.html",
-                            allow_self_register=Config.ALLOW_SELF_REGISTER,
+                            allow_self_register=allow_self_register,
                             auth_method=auth_method,
                             requires_password=requires_password,
                         )
@@ -258,16 +265,18 @@ def login():
         except Exception as e:
             current_app.logger.exception("Login error: %s", e)
             flash(_("Unexpected error during login. Please try again or check server logs."), "error")
+            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
             return render_template(
                 "auth/login.html",
-                allow_self_register=Config.ALLOW_SELF_REGISTER,
+                allow_self_register=allow_self_register,
                 auth_method=auth_method,
                 requires_password=requires_password,
             )
 
+    allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
     return render_template(
         "auth/login.html",
-        allow_self_register=Config.ALLOW_SELF_REGISTER,
+        allow_self_register=allow_self_register,
         auth_method=auth_method,
         requires_password=requires_password,
     )
@@ -727,8 +736,9 @@ def oidc_callback():
             user = User.query.filter_by(username=username).first()
 
         if not user:
-            # Create if allowed
-            if not Config.ALLOW_SELF_REGISTER:
+            # Create if allowed (use ConfigManager to respect database settings)
+            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+            if not allow_self_register:
                 flash(_("User account does not exist and self-registration is disabled."), "error")
                 return redirect(url_for("auth.login"))
             role_name = "user"

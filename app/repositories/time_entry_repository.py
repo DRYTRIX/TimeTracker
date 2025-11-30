@@ -167,6 +167,8 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         notes: Optional[str] = None,
         tags: Optional[str] = None,
         billable: bool = True,
+        paid: bool = False,
+        invoice_number: Optional[str] = None,
     ) -> TimeEntry:
         """Create a manual time entry"""
         entry = self.model(
@@ -179,6 +181,8 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             notes=notes,
             tags=tags,
             billable=billable,
+            paid=paid,
+            invoice_number=invoice_number,
             source=TimeEntrySource.MANUAL.value,
         )
         entry.calculate_duration()

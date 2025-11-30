@@ -371,12 +371,16 @@
 
             <!-- Integration OAuth Credentials -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
-                <h2 class="text-lg font-semibold mb-4">{{ _('Integration OAuth Credentials') }}</h2>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-                    {{ _('Configure OAuth client credentials for integrations. These settings take precedence over environment variables. Leave client secret empty to keep the current value.') }}
-                </p>
-                
-                <!-- Jira -->
+                <button type="button" onclick="toggleIntegrationCredentials()" class="w-full flex items-center justify-between text-left mb-4 hover:text-primary transition-colors">
+                    <h2 class="text-lg font-semibold">{{ _('Integration OAuth Credentials') }}</h2>
+                    <i class="fas fa-chevron-down" id="integrationCredentialsToggleIcon"></i>
+                </button>
+                <div id="integrationCredentialsContent" class="integration-credentials-collapsed">
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                        {{ _('Configure OAuth client credentials for integrations. These settings take precedence over environment variables. Leave client secret empty to keep the current value.') }}
+                    </p>
+                    
+                    <!-- Jira -->
                 <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h3 class="text-md font-semibold mb-3 flex items-center">
                         <i class="fab fa-jira text-blue-600 mr-2"></i>Jira
@@ -607,6 +611,7 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
 
             <!-- Analytics Settings -->
@@ -717,6 +722,10 @@
     </div>
 </div>
 
+<style>
+.integration-credentials-collapsed { display: none !important; }
+.integration-credentials-toggle-transition { transition: all 0.3s ease-in-out; }
+</style>
 <script>
 function previewLogoBeforeUpload(input) {
     const preview = document.getElementById('logoPreview');
@@ -750,5 +759,42 @@ async function confirmRemoveLogo() {
         document.getElementById('removeLogoForm').submit();
     }
 }
+
+function toggleIntegrationCredentials() {
+    const content = document.getElementById('integrationCredentialsContent');
+    const toggleIcon = document.getElementById('integrationCredentialsToggleIcon');
+    if (!content || !toggleIcon) return;
+    
+    const isCollapsed = content.classList.contains('integration-credentials-collapsed');
+    
+    if (isCollapsed) {
+        // Show content
+        content.classList.remove('integration-credentials-collapsed');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+    } else {
+        // Hide content
+        content.classList.add('integration-credentials-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+    }
+    
+    // Add transition class after a brief delay for smooth animation
+    setTimeout(() => {
+        content.classList.add('integration-credentials-toggle-transition');
+    }, 10);
+}
+
+// Initialize: keep collapsed by default
+document.addEventListener('DOMContentLoaded', function() {
+    const content = document.getElementById('integrationCredentialsContent');
+    const toggleIcon = document.getElementById('integrationCredentialsToggleIcon');
+    if (content && toggleIcon) {
+        // Ensure it starts collapsed
+        content.classList.add('integration-credentials-collapsed');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+    }
+});
 </script>
 {% endblock %}

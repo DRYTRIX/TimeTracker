@@ -54,16 +54,23 @@ def list_projects():
     from app.services import ProjectService
 
     page = request.args.get("page", 1, type=int)
-    status = request.args.get("status", "active")
+    # Default to "all" if no status is provided (to show all projects)
+    # This allows search to work across all projects by default
+    status = request.args.get("status", "all")
+    # Handle "all" status - pass None to service to show all statuses
+    status_param = None if (status == "all" or not status) else status
     client_name = request.args.get("client", "").strip()
     search = request.args.get("search", "").strip()
     favorites_only = request.args.get("favorites", "").lower() == "true"
+    
+    # Debug logging
+    current_app.logger.debug(f"Projects list filters - search: '{search}', status: '{status}', client: '{client_name}', favorites: {favorites_only}")
 
     project_service = ProjectService()
 
     # Use service layer to get projects (prevents N+1 queries)
     result = project_service.list_projects(
-        status=status,
+        status=status_param,
         client_name=client_name if client_name else None,
         search=search if search else None,
         favorites_only=favorites_only,
@@ -79,11 +86,27 @@ def list_projects():
     clients = Client.get_active_clients()
     client_list = [c.name for c in clients]
 
+    # Check if this is an AJAX request
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        # Return only the projects list HTML for AJAX requests
+        from flask import make_response
+        response = make_response(render_template(
+            "projects/_projects_list.html",
+            projects=result["projects"],
+            pagination=result["pagination"],
+            favorite_project_ids=favorite_project_ids,
+            search=search,
+            status=status,
+        ))
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        return response
+
     return render_template(
         "projects/list.html",
         projects=result["projects"],
         pagination=result["pagination"],
-        status=status,
+        status=status or "all",  # Ensure status is always set
+        search=search,
         clients=client_list,
         favorite_project_ids=favorite_project_ids,
         favorites_only=favorites_only,
@@ -108,13 +131,14 @@ def export_projects():
             db.and_(UserFavoriteProject.project_id == Project.id, UserFavoriteProject.user_id == current_user.id),
         )
 
-    # Filter by status
-    if status == "active":
-        query = query.filter(Project.status == "active")
-    elif status == "archived":
-        query = query.filter(Project.status == "archived")
-    elif status == "inactive":
-        query = query.filter(Project.status == "inactive")
+    # Filter by status (skip if "all" is selected)
+    if status and status != "all":
+        if status == "active":
+            query = query.filter(Project.status == "active")
+        elif status == "archived":
+            query = query.filter(Project.status == "archived")
+        elif status == "inactive":
+            query = query.filter(Project.status == "inactive")
 
     if client_name:
         query = query.join(Client).filter(Client.name == client_name)

@@ -1,0 +1,106 @@
+<div id="clientsListContainer">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+            {{ clients|length }} client{{ 's' if clients|length != 1 else '' }} found
+        </h3>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('clients.export_clients', status=status, search=search) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="{{ _('Export to CSV') }}">
+                <i class="fas fa-download mr-1"></i> Export
+            </a>
+            {% if current_user.is_admin %}
+            <div class="relative">
+                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'clientsBulkMenu')" disabled>
+                    <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
+                </button>
+                <ul id="clientsBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('active')"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Active</a></li>
+                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusChange('inactive')"><i class="fas fa-pause-circle mr-2 text-amber-500"></i>Mark as Inactive</a></li>
+                    <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
+                    <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+        <thead class="border-b border-border-light dark:border-border-dark">
+            <tr>
+                {% if current_user.is_admin %}
+                <th class="p-4 w-12">
+                    <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllClients()">
+                </th>
+                {% endif %}
+                <th class="p-4" data-sortable>Name</th>
+                <th class="p-4" data-sortable>Contact Person</th>
+                <th class="p-4" data-sortable>Email</th>
+                <th class="p-4" data-sortable>Status</th>
+                <th class="p-4" data-sortable>Projects</th>
+                <th class="p-4">Portal</th>
+                <th class="p-4">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+                {% if current_user.is_admin %}
+                <td class="p-4">
+                    <input type="checkbox" class="client-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ client.id }}" onchange="updateClientsBulkState()">
+                </td>
+                {% endif %}
+                <td class="p-4 font-medium"><a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="text-primary hover:underline">{{ client.name }}</a></td>
+                <td class="p-4">{{ client.contact_person or '—' }}</td>
+                <td class="p-4">
+                    {% if client.email %}
+                        <a href="mailto:{{ client.email }}" class="text-primary hover:underline">{{ client.email }}</a>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    {% if client.status == 'active' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
+                    {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Inactive</span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    <span class="px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">{{ client.active_projects }}/{{ client.total_projects }}</span>
+                </td>
+                <td class="p-4">
+                    {% if client.portal_enabled %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" title="Portal: {{ client.portal_username }}">
+                        <i class="fas fa-building mr-1"></i>Enabled
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                        Disabled
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="p-4">
+                    <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="text-primary hover:underline">View</a>
+                </td>
+            </tr>
+            {% else %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if not clients %}
+    {% from "components/ui.html" import empty_state %}
+    {% set actions %}
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('clients.create_client') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>Create Your First Client
+        </a>
+        {% endif %}
+        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-question-circle mr-2"></i>Learn More
+        </a>
+    {% endset %}
+    {% if search or status != 'active' %}
+        {{ empty_state('fas fa-search', 'No Clients Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new client that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-users', 'No Clients Yet', 'Clients help you organize your projects and manage relationships. Create your first client to get started!', actions, type='no-data') }}
+    {% endif %}
+    {% endif %}
+</div>

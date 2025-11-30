@@ -44,8 +44,8 @@ def create_link_template():
             flash(_("URL template is required"), "error")
             return render_template("admin/link_templates/form.html", template=None)
 
-        if "{value}" not in url_template:
-            flash(_("URL template must contain {value} placeholder"), "error")
+        if "{value}" not in url_template and "%value%" not in url_template:
+            flash(_("URL template must contain {value} or %value% placeholder"), "error")
             return render_template("admin/link_templates/form.html", template=None)
 
         if not field_key:
@@ -100,8 +100,8 @@ def edit_link_template(template_id):
             flash(_("URL template is required"), "error")
             return render_template("admin/link_templates/form.html", template=template)
 
-        if "{value}" not in url_template:
-            flash(_("URL template must contain {value} placeholder"), "error")
+        if "{value}" not in url_template and "%value%" not in url_template:
+            flash(_("URL template must contain {value} or %value% placeholder"), "error")
             return render_template("admin/link_templates/form.html", template=template)
 
         if not field_key:

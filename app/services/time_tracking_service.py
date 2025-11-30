@@ -175,6 +175,8 @@ class TimeTrackingService:
         notes: Optional[str] = None,
         tags: Optional[str] = None,
         billable: bool = True,
+        paid: bool = False,
+        invoice_number: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a manual time entry.
@@ -234,6 +236,8 @@ class TimeTrackingService:
             notes=notes,
             tags=tags,
             billable=billable,
+            paid=paid,
+            invoice_number=invoice_number,
         )
 
         commit_data = {"user_id": user_id}
@@ -295,6 +299,8 @@ class TimeTrackingService:
         notes: Optional[str] = None,
         tags: Optional[str] = None,
         billable: Optional[bool] = None,
+        paid: Optional[bool] = None,
+        invoice_number: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Update a time entry.
@@ -361,6 +367,13 @@ class TimeTrackingService:
             entry.tags = tags
         if billable is not None:
             entry.billable = billable
+        if paid is not None:
+            entry.paid = paid
+            # Clear invoice number if marking as unpaid
+            if not entry.paid:
+                entry.invoice_number = None
+        if invoice_number is not None:
+            entry.invoice_number = invoice_number.strip() if invoice_number else None
 
         entry.updated_at = local_now()
 

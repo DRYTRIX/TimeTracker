@@ -9,6 +9,7 @@ from app import db
 from app.models import DataImport, DataExport, User
 from app.utils.data_import import (
     import_csv_time_entries,
+    import_csv_clients,
     import_from_toggl,
     import_from_harvest,
     restore_from_backup,
@@ -583,10 +584,95 @@ def execute_migration(wizard_id):
 # ============================================================================
 
 
+@import_export_bp.route("/api/import/csv/clients", methods=["POST"])
+@login_required
+def import_csv_clients_route():
+    """
+    Import clients from CSV file
+
+    Expected multipart/form-data with 'file' field
+    Optional query parameter: skip_duplicates (default: true)
+    """
+    try:
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files["file"]
+
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
+
+        if not file.filename.endswith(".csv"):
+            return jsonify({"error": "File must be a CSV"}), 400
+
+        skip_duplicates = request.args.get("skip_duplicates", "true").lower() == "true"
+
+        # Read file content
+        file_bytes = file.read()
+        try:
+            csv_content = file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            # Try with different encodings
+            try:
+                csv_content = file_bytes.decode("latin-1")
+            except Exception:
+                return jsonify({"error": "Could not decode file. Please ensure it's a valid UTF-8 or Latin-1 CSV file."}), 400
+
+        if not csv_content or not csv_content.strip():
+            return jsonify({"error": "File is empty"}), 400
+
+        # Create import record
+        import_record = None
+        try:
+            import_record = DataImport(
+                user_id=current_user.id, import_type="csv_clients", source_file=secure_filename(file.filename)
+            )
+            db.session.add(import_record)
+            db.session.commit()
+        except Exception as e:
+            current_app.logger.error(f"Failed to create import record: {str(e)}")
+            db.session.rollback()
+            return jsonify({"error": f"Failed to initialize import: {str(e)}"}), 500
+
+        # Perform import
+        try:
+            summary = import_csv_clients(
+                user_id=current_user.id, csv_content=csv_content, import_record=import_record, skip_duplicates=skip_duplicates
+            )
+            response = jsonify({"success": True, "import_id": import_record.id, "summary": summary})
+            response.headers["Content-Type"] = "application/json"
+            return response, 200
+        except DataImportError as e:
+            current_app.logger.error(f"DataImportError in client import: {str(e)}")
+            if import_record:
+                try:
+                    import_record.fail(str(e))
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            current_app.logger.exception(f"Unexpected error in client import: {str(e)}")
+            if import_record:
+                try:
+                    import_record.fail(f"Unexpected error: {str(e)}")
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+            # Return detailed error in debug mode, generic in production
+            error_msg = str(e) if current_app.config.get("FLASK_DEBUG") else "Import failed. Please check the file format and try again."
+            return jsonify({"error": error_msg}), 500
+
+    except Exception as e:
+        current_app.logger.exception(f"Top-level error in client import route: {str(e)}")
+        error_msg = str(e) if current_app.config.get("FLASK_DEBUG") else "An unexpected error occurred. Please try again."
+        return jsonify({"error": error_msg}), 500
+
+
 @import_export_bp.route("/api/import/template/csv")
 @login_required
 def download_csv_template():
-    """Download CSV import template"""
+    """Download CSV import template for time entries"""
     template_content = """project_name,client_name,task_name,start_time,end_time,duration_hours,notes,tags,billable
 Example Project,Example Client,Example Task,2024-01-01 09:00:00,2024-01-01 10:30:00,1.5,Meeting with client,meeting;client,true
 Another Project,Another Client,,2024-01-01 14:00:00,2024-01-01 16:00:00,2.0,Development work,dev;coding,true
@@ -599,3 +685,21 @@ Another Project,Another Client,,2024-01-01 14:00:00,2024-01-01 16:00:00,2.0,Deve
     buffer.seek(0)
 
     return send_file(buffer, mimetype="text/csv", as_attachment=True, download_name="timetracker_import_template.csv")
+
+
+@import_export_bp.route("/api/import/template/csv/clients")
+@login_required
+def download_csv_template_clients():
+    """Download CSV import template for clients"""
+    template_content = """name,description,contact_person,email,phone,address,default_hourly_rate,status,prepaid_hours_monthly,prepaid_reset_day,custom_field_erp_id,custom_field_debtor_number,contact_1_first_name,contact_1_last_name,contact_1_email,contact_1_phone,contact_1_title,contact_1_role,contact_1_is_primary,contact_2_first_name,contact_2_last_name,contact_2_email,contact_2_phone,contact_2_title,contact_2_role,contact_2_is_primary
+Example Client,Client description,John Doe,john@example.com,+1234567890,123 Main St,100.00,active,40.00,1,ERP123,DEBT456,John,Doe,john.doe@example.com,+1234567890,Manager,primary,true,Jane,Smith,jane.smith@example.com,+1234567891,Assistant,contact,false
+Another Client,Another description,,info@another.com,+0987654321,456 Oak Ave,150.00,active,,1,ERP789,DEBT789,Alice,Johnson,alice@another.com,+0987654322,Director,primary,true,,,,
+"""
+
+    from io import BytesIO
+
+    buffer = BytesIO()
+    buffer.write(template_content.encode("utf-8"))
+    buffer.seek(0)
+
+    return send_file(buffer, mimetype="text/csv", as_attachment=True, download_name="timetracker_clients_import_template.csv")
