@@ -42,6 +42,13 @@ class ConfigManager:
         # Check environment variable second (.env file - used as initial values)
         env_value = os.getenv(key.upper())
         if env_value is not None:
+            # Convert string booleans to actual booleans for consistency
+            if isinstance(env_value, str):
+                lower_val = env_value.lower().strip()
+                if lower_val in ("true", "1", "yes", "on"):
+                    return True
+                elif lower_val in ("false", "0", "no", "off", ""):
+                    return False
             return env_value
 
         # Check app config

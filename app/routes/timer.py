@@ -213,10 +213,24 @@ def start_timer():
     except Exception as e:
         current_app.logger.warning("Socket emit failed for timer_started: %s", e)
 
+    # Invalidate dashboard cache so timer appears immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{current_user.id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+
     if task:
         flash(f"Timer started for {project.name} - {task.name}", "success")
-    else:
+    elif project:
         flash(f"Timer started for {project.name}", "success")
+    elif client:
+        flash(f"Timer started for {client.name}", "success")
+    else:
+        flash(_("Timer started"), "success")
     return redirect(url_for("main.dashboard"))
 
 
@@ -283,6 +297,16 @@ def start_timer_from_template(template_id):
             "has_task": bool(template.task_id),
         },
     )
+
+    # Invalidate dashboard cache so timer appears immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{current_user.id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
     flash(f'Timer started from template "{template.name}"', "success")
     return redirect(url_for("main.dashboard"))
@@ -354,6 +378,16 @@ def start_timer_for_project(project_id):
         )
     except Exception as e:
         current_app.logger.warning("Socket emit failed for timer_started (GET): %s", e)
+
+    # Invalidate dashboard cache so timer appears immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{current_user.id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
     if task_id:
         task = Task.query.get(task_id)
@@ -442,6 +476,16 @@ def stop_timer():
         )
     except Exception as e:
         current_app.logger.warning("Socket emit failed for timer_stopped: %s", e)
+
+    # Invalidate dashboard cache so timer disappears immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{current_user.id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
     flash(f"Timer stopped. Duration: {active_timer.duration_formatted}", "success")
     return redirect(url_for("main.dashboard"))
@@ -629,14 +673,37 @@ def delete_timer(timer_id):
         flash(_("Cannot delete an active timer"), "error")
         return redirect(url_for("main.dashboard"))
 
-    project_name = timer.project.name
+    # Get the name for the success message (project or client)
+    if timer.project:
+        target_name = timer.project.name
+    elif timer.client:
+        target_name = timer.client.name
+    else:
+        target_name = _("Unknown")
+
     db.session.delete(timer)
     if not safe_commit("delete_timer", {"timer_id": timer.id}):
         flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
 
-    flash(f"Timer for {project_name} deleted successfully", "success")
-    return redirect(url_for("main.dashboard"))
+    # Invalidate dashboard cache so deleted entry disappears immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{current_user.id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s after deleting timer", current_user.id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+
+    flash(f"Timer for {target_name} deleted successfully", "success")
+    
+    # Add cache-busting parameter to ensure fresh page load
+    import time
+    dashboard_url = url_for("main.dashboard")
+    separator = "&" if "?" in dashboard_url else "?"
+    redirect_url = f"{dashboard_url}{separator}_refresh={int(time.time())}"
+    return redirect(redirect_url)
 
 
 @timer_bp.route("/timer/manual", methods=["GET", "POST"])
@@ -699,6 +766,13 @@ def manual_entry():
                 selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
+                prefill_notes=notes,
+                prefill_tags=tags,
+                prefill_billable=billable,
+                prefill_start_date=start_date,
+                prefill_start_time=start_time,
+                prefill_end_date=end_date,
+                prefill_end_time=end_time,
             )
 
         # Validate that either project or client is selected
@@ -712,6 +786,13 @@ def manual_entry():
                 selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
+                prefill_notes=notes,
+                prefill_tags=tags,
+                prefill_billable=billable,
+                prefill_start_date=start_date,
+                prefill_start_time=start_time,
+                prefill_end_date=end_date,
+                prefill_end_time=end_time,
             )
 
         # Parse datetime with timezone awareness
@@ -728,6 +809,13 @@ def manual_entry():
                 selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
+                prefill_notes=notes,
+                prefill_tags=tags,
+                prefill_billable=billable,
+                prefill_start_date=start_date,
+                prefill_start_time=start_time,
+                prefill_end_date=end_date,
+                prefill_end_time=end_time,
             )
 
         # Validate time range
@@ -741,6 +829,13 @@ def manual_entry():
                 selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
+                prefill_notes=notes,
+                prefill_tags=tags,
+                prefill_billable=billable,
+                prefill_start_date=start_date,
+                prefill_start_time=start_time,
+                prefill_end_date=end_date,
+                prefill_end_time=end_time,
             )
 
         # Use service to create entry (handles validation)
@@ -767,6 +862,13 @@ def manual_entry():
                 selected_client_id=client_id,
                 selected_task_id=task_id,
                 template_data=template_data,
+                prefill_notes=notes,
+                prefill_tags=tags,
+                prefill_billable=billable,
+                prefill_start_date=start_date,
+                prefill_start_time=start_time,
+                prefill_end_date=end_date,
+                prefill_end_time=end_time,
             )
 
         entry = result.get("entry")
@@ -1231,36 +1333,58 @@ def resume_timer(timer_id):
         current_app.logger.info("Resume timer blocked: user already has an active timer")
         return redirect(url_for("main.dashboard"))
 
-    # Check if project is still active
-    project = Project.query.get(timer.project_id)
-    if not project:
-        flash(_("Project no longer exists"), "error")
-        return redirect(url_for("main.dashboard"))
+    project = None
+    client = None
+    project_id = None
+    client_id = None
 
-    if project.status == "archived":
-        flash(_("Cannot start timer for an archived project. Please unarchive the project first."), "error")
-        return redirect(url_for("main.dashboard"))
-    elif project.status != "active":
-        flash(_("Cannot start timer for an inactive project"), "error")
-        return redirect(url_for("main.dashboard"))
+    # Check if timer is linked to a project or client
+    if timer.project_id:
+        # Timer is linked to a project
+        project = Project.query.get(timer.project_id)
+        if not project:
+            flash(_("Project no longer exists"), "error")
+            return redirect(url_for("main.dashboard"))
 
-    # Validate task if it exists
-    if timer.task_id:
-        task = Task.query.filter_by(id=timer.task_id, project_id=timer.project_id).first()
-        if not task:
-            # Task was deleted, continue without it
-            task_id = None
+        if project.status == "archived":
+            flash(_("Cannot start timer for an archived project. Please unarchive the project first."), "error")
+            return redirect(url_for("main.dashboard"))
+        elif project.status != "active":
+            flash(_("Cannot start timer for an inactive project"), "error")
+            return redirect(url_for("main.dashboard"))
+
+        project_id = timer.project_id
+
+        # Validate task if it exists
+        if timer.task_id:
+            task = Task.query.filter_by(id=timer.task_id, project_id=timer.project_id).first()
+            if not task:
+                # Task was deleted, continue without it
+                task_id = None
+            else:
+                task_id = timer.task_id
         else:
-            task_id = timer.task_id
+            task_id = None
+    elif timer.client_id:
+        # Timer is linked to a client
+        client = Client.query.filter_by(id=timer.client_id, status="active").first()
+        if not client:
+            flash(_("Client no longer exists or is inactive"), "error")
+            return redirect(url_for("main.dashboard"))
+
+        client_id = timer.client_id
+        task_id = None  # Tasks are not allowed for client-only timers
     else:
-        task_id = None
+        flash(_("Timer is not linked to a project or client"), "error")
+        return redirect(url_for("main.dashboard"))
 
     # Create new timer with copied properties
     from app.models.time_entry import local_now
 
     new_timer = TimeEntry(
         user_id=current_user.id,
-        project_id=timer.project_id,
+        project_id=project_id,
+        client_id=client_id,
         task_id=task_id,
         start_time=local_now(),
         notes=timer.notes,
@@ -1271,17 +1395,24 @@ def resume_timer(timer_id):
 
     db.session.add(new_timer)
     if not safe_commit(
-        "resume_timer", {"user_id": current_user.id, "original_timer_id": timer_id, "project_id": timer.project_id}
+        "resume_timer",
+        {
+            "user_id": current_user.id,
+            "original_timer_id": timer_id,
+            "project_id": project_id,
+            "client_id": client_id,
+        },
     ):
         flash(_("Could not resume timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
 
     current_app.logger.info(
-        "Resumed timer id=%s from original timer=%s for user=%s project_id=%s",
+        "Resumed timer id=%s from original timer=%s for user=%s project_id=%s client_id=%s",
         new_timer.id,
         timer_id,
         current_user.username,
-        timer.project_id,
+        project_id,
+        client_id,
     )
 
     # Track timer resumed event
@@ -1290,7 +1421,8 @@ def resume_timer(timer_id):
         user_id=current_user.id,
         time_entry_id=new_timer.id,
         original_timer_id=timer_id,
-        project_id=timer.project_id,
+        project_id=project_id,
+        client_id=client_id,
         task_id=task_id,
         description=timer.notes,
     )
@@ -1300,7 +1432,8 @@ def resume_timer(timer_id):
         {
             "time_entry_id": new_timer.id,
             "original_timer_id": timer_id,
-            "project_id": timer.project_id,
+            "project_id": project_id,
+            "client_id": client_id,
             "task_id": task_id,
             "has_notes": bool(timer.notes),
             "has_tags": bool(timer.tags),
@@ -1308,17 +1441,30 @@ def resume_timer(timer_id):
     )
 
     # Log activity
-    project_name = project.name
-    task = Task.query.get(task_id) if task_id else None
-    task_name = task.name if task else None
+    if project:
+        project_name = project.name
+        task = Task.query.get(task_id) if task_id else None
+        task_name = task.name if task else None
+        entity_name = f"{project_name}" + (f" - {task_name}" if task_name else "")
+        description = f"Resumed timer for {project_name}" + (f" - {task_name}" if task_name else "")
+    elif client:
+        client_name = client.name
+        entity_name = client_name
+        description = f"Resumed timer for {client_name}"
+        task_name = None
+    else:
+        entity_name = _("Unknown")
+        description = _("Resumed timer")
+        task_name = None
+
     Activity.log(
         user_id=current_user.id,
         action="started",
         entity_type="time_entry",
         entity_id=new_timer.id,
-        entity_name=f"{project_name}" + (f" - {task_name}" if task_name else ""),
-        description=f"Resumed timer for {project_name}" + (f" - {task_name}" if task_name else ""),
-        extra_data={"project_id": timer.project_id, "task_id": task_id, "resumed_from": timer_id},
+        entity_name=entity_name,
+        description=description,
+        extra_data={"project_id": project_id, "client_id": client_id, "task_id": task_id, "resumed_from": timer_id},
         ip_address=request.remote_addr,
         user_agent=request.headers.get("User-Agent"),
     )
@@ -1328,19 +1474,40 @@ def resume_timer(timer_id):
         payload = {
             "user_id": current_user.id,
             "timer_id": new_timer.id,
-            "project_name": project_name,
             "start_time": new_timer.start_time.isoformat(),
         }
+        if project:
+            payload["project_name"] = project.name
+        if client:
+            payload["client_name"] = client.name
         if task_id:
-            payload["task_id"] = task_id
-            payload["task_name"] = task_name
+            task = Task.query.get(task_id)
+            if task:
+                payload["task_id"] = task_id
+                payload["task_name"] = task.name
         socketio.emit("timer_started", payload)
     except Exception as e:
         current_app.logger.warning("Socket emit failed for timer_resumed: %s", e)
 
-    if task_name:
-        flash(f"Timer resumed for {project_name} - {task_name}", "success")
+    # Invalidate dashboard cache so timer appears immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{current_user.id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+
+    # Create success message
+    if project:
+        if task_name:
+            flash(f"Timer resumed for {project_name} - {task_name}", "success")
+        else:
+            flash(f"Timer resumed for {project_name}", "success")
+    elif client:
+        flash(f"Timer resumed for {client_name}", "success")
     else:
-        flash(f"Timer resumed for {project_name}", "success")
+        flash(_("Timer resumed"), "success")
 
     return redirect(url_for("main.dashboard"))

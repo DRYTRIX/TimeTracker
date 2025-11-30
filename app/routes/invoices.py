@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
@@ -57,6 +57,16 @@ def list_invoices():
         user_id=current_user.id,
         is_admin=current_user.is_admin,
     )
+
+    # Check if this is an AJAX request
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        # Return only the invoices list HTML for AJAX requests
+        response = make_response(render_template(
+            "invoices/_invoices_list.html",
+            invoices=result["invoices"],
+        ))
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        return response
 
     return render_template("invoices/list.html", invoices=result["invoices"], summary=result["summary"])
 

@@ -356,6 +356,8 @@ class FilterManager {
     constructor(formElement) {
         this.form = formElement;
         this.activeFilters = new Map();
+        this.submitTimeout = null;
+        this.inputTimeouts = new Map();
         this.init();
     }
 
@@ -365,8 +367,60 @@ class FilterManager {
         this.chipsContainer.className = 'filter-chips-container';
         this.form.parentNode.insertBefore(this.chipsContainer, this.form.nextSibling);
         
-        // Monitor form changes
-        this.form.addEventListener('change', () => this.updateFilters());
+        // Monitor form changes - auto-submit on dropdown changes
+        this.form.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                this.updateFilters();
+                // Auto-submit on dropdown changes
+                this.submitForm();
+            });
+        });
+        
+        // Monitor text input fields (search fields) - auto-submit with debouncing
+        this.inputTimeouts = new Map();
+        this.form.querySelectorAll('input[type="text"], input[type="search"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                // Update filter chips immediately for visual feedback
+                this.updateFilters();
+                
+                // Debounce the actual form submission
+                const timeoutKey = input.name || input.id;
+                if (this.inputTimeouts.has(timeoutKey)) {
+                    clearTimeout(this.inputTimeouts.get(timeoutKey));
+                }
+                
+                // Submit after user stops typing (500ms delay)
+                const timeout = setTimeout(() => {
+                    this.submitForm();
+                    this.inputTimeouts.delete(timeoutKey);
+                }, 500);
+                
+                this.inputTimeouts.set(timeoutKey, timeout);
+            });
+            
+            // Also submit on Enter key
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // Clear any pending timeout
+                    const timeoutKey = input.name || input.id;
+                    if (this.inputTimeouts.has(timeoutKey)) {
+                        clearTimeout(this.inputTimeouts.get(timeoutKey));
+                        this.inputTimeouts.delete(timeoutKey);
+                    }
+                    // Submit immediately
+                    this.submitForm();
+                }
+            });
+        });
+        
+        // Listen to form submit - prevent default and use AJAX instead
+        this.form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.updateFilters();
+            this.submitForm();
+        });
         
         // Add quick filters
         this.addQuickFilters();
@@ -471,16 +525,234 @@ class FilterManager {
         if (input) {
             if (input.type === 'checkbox') {
                 input.checked = false;
+            } else if (input.tagName === 'SELECT') {
+                // For select elements, set to first option (usually "All" or empty)
+                if (input.options.length > 0) {
+                    input.value = input.options[0].value;
+                } else {
+                    input.value = '';
+                }
             } else {
                 input.value = '';
             }
-            this.form.dispatchEvent(new Event('submit', { bubbles: true }));
+            // Update filters and submit
+            this.updateFilters();
+            this.submitForm();
         }
     }
 
     clearAll() {
+        // Reset all form fields
         this.form.reset();
-        this.form.dispatchEvent(new Event('submit', { bubbles: true }));
+        
+        // For select elements, ensure they're set to their default (first option)
+        this.form.querySelectorAll('select').forEach(select => {
+            if (select.options.length > 0) {
+                select.value = select.options[0].value;
+            }
+        });
+        
+        // Explicitly set status to "all" to show all projects
+        const statusSelect = this.form.querySelector('[name="status"]');
+        if (statusSelect) {
+            statusSelect.value = 'all';
+        }
+        
+        // Clear all text inputs
+        this.form.querySelectorAll('input[type="text"], input[type="search"]').forEach(input => {
+            input.value = '';
+        });
+        
+        // Update filters and submit
+        this.updateFilters();
+        this.submitForm();
+    }
+    
+    submitForm() {
+        // Ensure the form can be submitted (remove any disabled state from submit button)
+        const submitButton = this.form.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.style.display = '';
+            submitButton.style.visibility = '';
+            submitButton.style.opacity = '';
+        }
+        
+        // For GET forms (filter forms), use AJAX to avoid page reload
+        if (this.form.method.toUpperCase() === 'GET') {
+            // Use a small delay to prevent rapid-fire submissions
+            if (this.submitTimeout) {
+                clearTimeout(this.submitTimeout);
+            }
+            this.submitTimeout = setTimeout(() => {
+                this.submitViaAjax();
+            }, 100);
+        } else {
+            // For POST forms, dispatch submit event (validation will handle it)
+            this.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+    }
+    
+    submitViaAjax() {
+        // Build query string from form data
+        const formData = new FormData(this.form);
+        const params = new URLSearchParams();
+        
+        // Always include status - default to "all" if not set or empty
+        const statusSelect = this.form.querySelector('[name="status"]');
+        let statusValue = statusSelect ? statusSelect.value : 'all';
+        // If status is empty or null, default to "all" to show all projects
+        if (!statusValue || statusValue === '') {
+            statusValue = 'all';
+        }
+        params.append('status', statusValue);
+        
+        // Process other form fields
+        for (const [key, value] of formData.entries()) {
+            // Skip status as we already handled it
+            if (key === 'status') {
+                continue;
+            }
+            // Include search if it has a value (trimmed)
+            else if (key === 'search') {
+                const trimmedValue = String(value || '').trim();
+                if (trimmedValue) {
+                    params.append(key, trimmedValue);
+                }
+            }
+            // Include other fields if they have values
+            else if (value && String(value).trim() !== '') {
+                params.append(key, String(value).trim());
+            }
+        }
+        
+        // Get the form action or current URL
+        const url = this.form.action || window.location.pathname;
+        const queryString = params.toString();
+        // Always include status parameter, even if it's the only one
+        const fullUrl = queryString ? `${url}?${queryString}` : `${url}?status=all`;
+        
+        // Debug: log what we're sending
+        console.log('Filter URL:', fullUrl);
+        console.log('Search value:', params.get('search'));
+        console.log('Status value:', params.get('status'));
+        
+        // Update URL without page reload
+        if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', fullUrl);
+        }
+        
+        // Show loading indicator
+        const container = document.getElementById('projectsListContainer') || document.getElementById('projectsContainer');
+        if (container) {
+            container.style.opacity = '0.5';
+            container.style.pointerEvents = 'none';
+        }
+        
+        // Fetch filtered results via AJAX
+        fetch(fullUrl, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Debug: log response length
+            console.log('Response HTML length:', html.length);
+            console.log('Response preview:', html.substring(0, 200));
+            // Update the projects list container
+            const projectsContainer = document.getElementById('projectsListContainer');
+            const projectsWrapper = document.getElementById('projectsContainer');
+            
+            if (!projectsContainer && projectsWrapper) {
+                // If we don't have the inner container, try to find or create it
+                let innerContainer = projectsWrapper.querySelector('#projectsListContainer');
+                if (!innerContainer) {
+                    innerContainer = document.createElement('div');
+                    innerContainer.id = 'projectsListContainer';
+                    projectsWrapper.insertBefore(innerContainer, projectsWrapper.firstChild);
+                }
+                if (innerContainer) {
+                    projectsContainer = innerContainer;
+                }
+            }
+            
+            if (projectsContainer) {
+                const trimmedHtml = html.trim();
+                
+                // The partial template returns: <div id="projectsListContainer">...</div>
+                // Extract the innerHTML from this div using a simple approach
+                
+                // Create a temporary container and parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = trimmedHtml;
+                
+                // Find the projectsListContainer in the parsed HTML
+                const responseContainer = tempDiv.querySelector('#projectsListContainer');
+                
+                if (responseContainer) {
+                    // Use the innerHTML directly
+                    projectsContainer.innerHTML = responseContainer.innerHTML;
+                } else {
+                    // If the response IS the container (no wrapper), extract content
+                    // Try regex to get content between opening and closing div tags
+                    const match = trimmedHtml.match(/<div[^>]*id=["']projectsListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
+                    if (match && match[1] !== undefined) {
+                        projectsContainer.innerHTML = match[1];
+                    } else {
+                        // If all else fails, try to find the first child element
+                        const firstChild = tempDiv.firstElementChild;
+                        if (firstChild && firstChild.id === 'projectsListContainer') {
+                            projectsContainer.innerHTML = firstChild.innerHTML;
+                        } else {
+                            // Last resort: replace entire container
+                            projectsContainer.outerHTML = trimmedHtml;
+                            // Re-find the container after replacement
+                            const newContainer = document.getElementById('projectsListContainer');
+                            if (newContainer) projectsContainer = newContainer;
+                        }
+                    }
+                }
+                
+                // Re-initialize any scripts that need to run after content update
+                if (window.setViewMode) {
+                    const savedMode = localStorage.getItem('projectsViewMode') || 'list';
+                    setViewMode(savedMode);
+                }
+                
+                // Update filter chips after content update
+                this.updateFilters();
+            } else {
+                console.error('Could not find projectsListContainer or projectsContainer element');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching filtered projects:', error);
+            // Fallback to regular form submission on error
+            if (container) {
+                container.style.opacity = '';
+                container.style.pointerEvents = '';
+            }
+            // Optionally show an error message
+            if (window.toastManager) {
+                window.toastManager.show('Failed to filter projects. Please try again.', 'error');
+            }
+        })
+        .finally(() => {
+            // Remove loading indicator
+            if (container) {
+                container.style.opacity = '';
+                container.style.pointerEvents = '';
+            }
+        });
     }
 }
 
@@ -903,8 +1175,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Initialize filter managers
+    // Initialize filter managers (skip forms that have custom handlers)
     document.querySelectorAll('form[data-filter-form]').forEach(form => {
+        // Skip forms that have custom AJAX handlers
+        if (form.id === 'projectsFilterForm' || 
+            form.id === 'tasksFilterForm' || 
+            form.id === 'clientsFilterForm' || 
+            form.id === 'invoicesFilterForm' ||
+            form.id === 'quotesFilterForm') {
+            return;
+        }
         new FilterManager(form);
     });
     

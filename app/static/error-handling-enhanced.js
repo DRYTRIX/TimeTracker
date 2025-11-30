@@ -261,7 +261,9 @@ class EnhancedErrorHandler {
     }
 
     async handleFetchError(response, url, options) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        // Clone the response before reading it, so the caller can still read it
+        const clonedResponse = response.clone();
+        const errorData = await clonedResponse.json().catch(() => ({ error: 'Unknown error' }));
         const userFriendlyMessage = this.getUserFriendlyMessage(response.status, errorData);
         
         // Show error notification with retry option
@@ -274,7 +276,7 @@ class EnhancedErrorHandler {
             this.queueForOffline(url, options, errorId);
         }
         
-        // Return response (caller can handle it)
+        // Return original response so caller can handle it
         return response;
     }
 

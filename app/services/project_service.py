@@ -237,18 +237,26 @@ class ProjectService:
                 db.and_(UserFavoriteProject.project_id == Project.id, UserFavoriteProject.user_id == user_id),
             )
 
-        # Filter by status
-        if status:
+        # Filter by status (skip if "all" is selected)
+        if status and status != "all":
             query = query.filter(Project.status == status)
 
         # Filter by client name
         if client_name:
-            query = query.join(Client).filter(Client.name == client_name)
+            query = query.join(Client, Project.client_id == Client.id).filter(Client.name == client_name)
 
-        # Search filter
+        # Search filter - must be applied after any joins
         if search:
-            like = f"%{search}%"
-            query = query.filter(db.or_(Project.name.ilike(like), Project.description.ilike(like)))
+            search = search.strip()
+            if search:
+                like = f"%{search}%"
+                # Use ilike for case-insensitive search on name and description
+                # Handle NULL descriptions properly
+                search_filter = db.or_(
+                    Project.name.ilike(like),
+                    db.and_(Project.description.isnot(None), Project.description.ilike(like))
+                )
+                query = query.filter(search_filter)
 
         # Order and paginate
         query = query.order_by(Project.name)

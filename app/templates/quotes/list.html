@@ -69,7 +69,7 @@
         </button>
     </div>
     <div id="filterBody">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4" data-filter-form>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4" id="quotesFilterForm" data-filter-form>
         <div>
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Search') }}</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input" placeholder="{{ _('Search quotes...') }}">
@@ -85,112 +85,12 @@
                 <option value="expired" {% if status == 'expired' %}selected{% endif %}>{{ _('Expired') }}</option>
             </select>
         </div>
-        <div class="col-span-full flex justify-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Filter') }}</button>
-        </div>
     </form>
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
-            {{ quotes|length }} quote{{ 's' if quotes|length != 1 else '' }} found
-        </h3>
-        {% if current_user.is_admin or has_permission('create_quotes') %}
-        <div class="relative">
-            <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'quotesBulkMenu')" disabled>
-                <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
-            </button>
-            <ul id="quotesBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
-                <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkAction('duplicate')"><i class="fas fa-copy mr-2 text-blue-600"></i>{{ _('Duplicate') }}</a></li>
-                <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkAction('mark_sent')"><i class="fas fa-paper-plane mr-2 text-green-600"></i>{{ _('Mark as Sent') }}</a></li>
-                <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
-                <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkAction('delete')"><i class="fas fa-trash mr-2"></i>{{ _('Delete') }}</a></li>
-            </ul>
-        </div>
-        {% endif %}
-    </div>
-    {% if quotes %}
-    <form method="POST" action="{{ url_for('quotes.bulk_action') }}" id="bulk-action-form" class="hidden">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" id="bulkActionValue" value="">
-    </form>
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-        <thead class="border-b border-border-light dark:border-border-dark">
-            <tr>
-                {% if current_user.is_admin or has_permission('create_quotes') %}
-                <th class="p-4 w-12">
-                    <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllQuotes()">
-                </th>
-                {% endif %}
-                <th class="p-4" data-sortable>{{ _('Quote Number') }}</th>
-                <th class="p-4" data-sortable>{{ _('Title') }}</th>
-                <th class="p-4" data-sortable>{{ _('Client') }}</th>
-                <th class="p-4" data-sortable>{{ _('Amount') }}</th>
-                <th class="p-4" data-sortable>{{ _('Status') }}</th>
-                <th class="p-4" data-sortable>{{ _('Created') }}</th>
-                <th class="p-4">{{ _('Actions') }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for quote in quotes %}
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
-                {% if current_user.is_admin or has_permission('create_quotes') %}
-                <td class="p-4">
-                    <input type="checkbox" class="quote-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ quote.id }}" onchange="updateQuotesBulkState()">
-                </td>
-                {% endif %}
-                <td class="p-4 font-medium"><a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ quote.quote_number }}</a></td>
-                <td class="p-4"><a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ quote.title }}</a></td>
-                <td class="p-4">{{ quote.client.name }}</td>
-                <td class="p-4">
-                    {% if quote.total_amount %}
-                        <span class="px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">{{ "%.2f"|format(quote.total_amount) }} {{ quote.currency_code }}</span>
-                    {% else %}
-                        <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
-                    {% endif %}
-                </td>
-                <td class="p-4">
-                    {% if quote.status == 'draft' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ _('Draft') }}</span>
-                    {% elif quote.status == 'sent' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{{ _('Sent') }}</span>
-                    {% elif quote.status == 'accepted' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">{{ _('Accepted') }}</span>
-                    {% elif quote.status == 'rejected' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{{ _('Rejected') }}</span>
-                    {% elif quote.status == 'expired' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">{{ _('Expired') }}</span>
-                    {% endif %}
-                </td>
-                <td class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">
-                    {{ quote.created_at.strftime('%Y-%m-%d') if quote.created_at else '' }}
-                </td>
-                <td class="p-4">
-                    <a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ _('View') }}</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    {% set actions %}
-        {% if current_user.is_admin or has_permission('create_quotes') %}
-        <a href="{{ url_for('quotes.create_quote') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            <i class="fas fa-plus mr-2"></i>{{ _('Create Your First Quote') }}
-        </a>
-        {% endif %}
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            <i class="fas fa-question-circle mr-2"></i>{{ _('Learn More') }}
-        </a>
-    {% endset %}
-    {% if search or status != 'all' %}
-        {{ empty_state('fas fa-search', 'No Quotes Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new quote that matches your criteria.', actions, type='no-results') }}
-    {% else %}
-        {{ empty_state('fas fa-file-contract', 'No Quotes Yet', 'Quotes help you manage client proposals and track acceptance rates. Create your first quote to get started!', actions, type='no-data') }}
-    {% endif %}
-    {% endif %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible" id="quotesContainer">
+    {% include 'quotes/_quotes_list.html' %}
 </div>
 
 {% endblock %}
@@ -244,6 +144,179 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });
+
+// Quotes Filter Handler - AJAX filtering
+(function() {
+    'use strict';
+    
+    let filterTimeout = null;
+    let searchTimeout = null;
+    
+    function getFilterParams() {
+        const form = document.getElementById('quotesFilterForm');
+        if (!form) return {};
+        
+        const params = {};
+        
+        // Get search input value directly
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            const searchValue = searchInput.value.trim();
+            if (searchValue) {
+                params.search = searchValue;
+            }
+        }
+        
+        // Get status
+        const statusSelect = form.querySelector('[name="status"]');
+        if (statusSelect) {
+            const statusValue = statusSelect.value;
+            if (statusValue && statusValue !== 'all') {
+                params.status = statusValue;
+            } else {
+                params.status = 'all';
+            }
+        } else {
+            params.status = 'all';
+        }
+        
+        return params;
+    }
+    
+    function buildFilterUrl() {
+        const params = getFilterParams();
+        const queryString = new URLSearchParams(params).toString();
+        return `/quotes?${queryString}`;
+    }
+    
+    function applyFilters() {
+        const url = buildFilterUrl();
+        const container = document.getElementById('quotesListContainer');
+        
+        if (!container) {
+            console.error('quotesListContainer not found');
+            return;
+        }
+        
+        // Show loading state
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+        
+        // Update URL
+        if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', url);
+        }
+        
+        // Fetch filtered results
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html.trim();
+            
+            const newContainer = tempDiv.querySelector('#quotesListContainer');
+            
+            if (newContainer) {
+                container.innerHTML = newContainer.innerHTML;
+            } else {
+                const match = html.trim().match(/<div[^>]*id=["']quotesListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
+                if (match && match[1]) {
+                    container.innerHTML = match[1];
+                } else {
+                    container.innerHTML = html;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Filter error:', error);
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+            if (window.toastManager) {
+                window.toastManager.show('Failed to filter quotes. Please refresh the page.', 'error');
+            } else if (window.showToast) {
+                window.showToast('Failed to filter quotes. Please refresh the page.', 'error');
+            }
+        })
+        .finally(() => {
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+        });
+    }
+    
+    function debouncedApplyFilters(delay = 100) {
+        if (filterTimeout) {
+            clearTimeout(filterTimeout);
+        }
+        filterTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    function debouncedSearch(delay = 500) {
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        searchTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('quotesFilterForm');
+        if (!form) {
+            console.error('Quotes filter form not found');
+            return;
+        }
+        
+        // Auto-submit on dropdown changes
+        form.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on search input (debounced)
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                debouncedSearch(500);
+            });
+            
+            // Submit on Enter
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    applyFilters();
+                }
+            });
+        }
+        
+        // Prevent form submission (use AJAX instead)
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            if (filterTimeout) {
+                clearTimeout(filterTimeout);
+            }
+            applyFilters();
+        });
+    });
+})();
 
 {% if current_user.is_admin or has_permission('create_quotes') %}
 function toggleAllQuotes(){

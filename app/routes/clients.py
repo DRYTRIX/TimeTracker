@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response, make_response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
@@ -42,6 +42,18 @@ def list_clients():
         )
 
     clients = query.order_by(Client.name).all()
+
+    # Check if this is an AJAX request
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        # Return only the clients list HTML for AJAX requests
+        response = make_response(render_template(
+            "clients/_clients_list.html",
+            clients=clients,
+            status=status,
+            search=search,
+        ))
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        return response
 
     return render_template("clients/list.html", clients=clients, status=status, search=search)
 

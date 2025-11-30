@@ -22,7 +22,7 @@
         </button>
     </div>
     <div id="filterBody">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-filter-form>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="projectsFilterForm" data-filter-form>
         <div>
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
@@ -30,7 +30,7 @@
         <div>
             <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
             <select name="status" id="status" class="form-input">
-                <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+                <option value="all" {% if not status or status == 'all' %}selected{% endif %}>All</option>
                 <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
                 <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
                 <option value="archived" {% if status == 'archived' %}selected{% endif %}>Archived</option>
@@ -52,14 +52,12 @@
                 <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
             </select>
         </div>
-        <div class="col-span-full flex justify-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
-        </div>
     </form>
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible" id="projectsContainer">
+    <div id="projectsListContainer">
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
@@ -354,6 +352,7 @@
         {{ empty_state('fas fa-folder-open', 'No Projects Yet', 'Projects help you organize your work and track time efficiently. Create your first project to get started!', actions, type='no-data') }}
     {% endif %}
     {% endif %}
+    </div>
 </div>
 {% endblock %}
 
@@ -735,5 +734,313 @@ function toggleFavorite(projectId, button) {
         button.disabled = false;
     });
 }
+
+// Projects Filter Handler - Simple AJAX filtering
+(function() {
+    'use strict';
+    
+    let filterTimeout = null;
+    let searchTimeout = null;
+    
+    function getFilterParams() {
+        const form = document.getElementById('projectsFilterForm');
+        if (!form) return {};
+        
+        const params = {};
+        
+        // Get search input value directly (more reliable than FormData for text inputs)
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            const searchValue = searchInput.value.trim();
+            if (searchValue) {
+                params.search = searchValue;
+            }
+        }
+        
+        // Get other form fields from FormData
+        const formData = new FormData(form);
+        for (const [key, value] of formData.entries()) {
+            // Skip search as we already handled it above
+            if (key === 'search') {
+                continue;
+            }
+            const trimmed = String(value || '').trim();
+            if (trimmed && trimmed !== '') {
+                params[key] = trimmed;
+            }
+        }
+        
+        // Always include status, default to "all" if not set
+        if (!params.status) {
+            params.status = 'all';
+        }
+        
+        return params;
+    }
+    
+    function buildFilterUrl() {
+        const params = getFilterParams();
+        const queryString = new URLSearchParams(params).toString();
+        return `/projects?${queryString}`;
+    }
+    
+    function applyFilters() {
+        const url = buildFilterUrl();
+        const container = document.getElementById('projectsListContainer');
+        
+        if (!container) {
+            console.error('projectsListContainer not found');
+            return;
+        }
+        
+        // Show loading state
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+        
+        // Update URL
+        if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', url);
+        }
+        
+        // Fetch filtered results
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            // The response should be the projectsListContainer div
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html.trim();
+            
+            const newContainer = tempDiv.querySelector('#projectsListContainer');
+            
+            if (newContainer) {
+                container.innerHTML = newContainer.innerHTML;
+            } else {
+                // Fallback: try to extract content using regex
+                const match = html.trim().match(/<div[^>]*id=["']projectsListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
+                if (match && match[1]) {
+                    container.innerHTML = match[1];
+                } else {
+                    // Last resort: use the HTML as-is
+                    container.innerHTML = html;
+                }
+            }
+            
+            // Re-initialize view mode
+            if (window.setViewMode) {
+                const savedMode = localStorage.getItem('projectsViewMode') || 'list';
+                setViewMode(savedMode);
+            }
+            
+            // Update filter chips after successful filter
+            updateFilterChips();
+        })
+        .catch(error => {
+            console.error('Filter error:', error);
+            // Restore container state
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+            
+            // Show error message
+            if (window.toastManager) {
+                window.toastManager.show('Failed to filter projects. Please refresh the page.', 'error');
+            } else if (window.showToast) {
+                window.showToast('Failed to filter projects. Please refresh the page.', 'error');
+            }
+        })
+        .finally(() => {
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+        });
+    }
+    
+    function debouncedApplyFilters(delay = 100) {
+        if (filterTimeout) {
+            clearTimeout(filterTimeout);
+        }
+        filterTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    function debouncedSearch(delay = 500) {
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        searchTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    function updateFilterChips() {
+        const form = document.getElementById('projectsFilterForm');
+        if (!form) return;
+        
+        const params = getFilterParams();
+        const chipsContainer = document.getElementById('filterChipsContainer');
+        
+        // Remove old chips container if it exists
+        if (chipsContainer) {
+            chipsContainer.remove();
+        }
+        
+        // Get active filters (exclude empty values and "all" status)
+        const activeFilters = {};
+        Object.entries(params).forEach(([key, value]) => {
+            if (value && value !== 'all' && value !== '' && value !== 'false') {
+                activeFilters[key] = value;
+            }
+        });
+        
+        // If no active filters, don't show chips
+        if (Object.keys(activeFilters).length === 0) {
+            return;
+        }
+        
+        // Create chips container
+        const container = document.createElement('div');
+        container.id = 'filterChipsContainer';
+        container.className = 'flex flex-wrap items-center gap-2 mb-4';
+        
+        // Add filter chips
+        Object.entries(activeFilters).forEach(([key, value]) => {
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 dark:bg-primary/20 text-primary border border-primary/20 dark:border-primary/30';
+            
+            const input = form.querySelector(`[name="${key}"]`);
+            const label = input?.labels?.[0]?.textContent || key;
+            
+            chip.innerHTML = `
+                <span class="font-medium">${label}:</span>
+                <span class="ml-1">${value}</span>
+                <button type="button" class="ml-2 hover:text-red-600 transition-colors" data-filter-key="${key}">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // Add remove listener
+            chip.querySelector('button').addEventListener('click', () => {
+                removeFilter(key);
+            });
+            
+            container.appendChild(chip);
+        });
+        
+        // Add "Clear All" button
+        const clearAllBtn = document.createElement('button');
+        clearAllBtn.type = 'button';
+        clearAllBtn.className = 'text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors';
+        clearAllBtn.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Clear all';
+        clearAllBtn.addEventListener('click', clearAllFilters);
+        container.appendChild(clearAllBtn);
+        
+        // Insert after filter form
+        const filterBody = document.getElementById('filterBody');
+        if (filterBody) {
+            filterBody.appendChild(container);
+        }
+    }
+    
+    function removeFilter(key) {
+        const form = document.getElementById('projectsFilterForm');
+        if (!form) return;
+        
+        const input = form.querySelector(`[name="${key}"]`);
+        if (input) {
+            if (input.tagName === 'SELECT') {
+                input.value = input.options[0].value; // First option (usually "All" or empty)
+            } else {
+                input.value = '';
+            }
+        }
+        
+        applyFilters();
+    }
+    
+    function clearAllFilters() {
+        const form = document.getElementById('projectsFilterForm');
+        if (!form) return;
+        
+        // Reset all form fields
+        form.reset();
+        
+        // Set status to "all"
+        const statusSelect = form.querySelector('[name="status"]');
+        if (statusSelect) {
+            statusSelect.value = 'all';
+        }
+        
+        // Clear text inputs
+        form.querySelectorAll('input[type="text"]').forEach(input => {
+            input.value = '';
+        });
+        
+        // Apply filters immediately
+        applyFilters();
+    }
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('projectsFilterForm');
+        if (!form) {
+            console.error('Projects filter form not found');
+            return;
+        }
+        
+        // Auto-submit on dropdown changes
+        form.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on search input (debounced)
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                debouncedSearch(500);
+            });
+            
+            // Submit on Enter
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    applyFilters();
+                }
+            });
+        } else {
+            console.error('Search input not found in form');
+        }
+        
+        // Prevent form submission (use AJAX instead)
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            if (filterTimeout) {
+                clearTimeout(filterTimeout);
+            }
+            applyFilters();
+        });
+        
+        // Initial filter chips update
+        setTimeout(updateFilterChips, 100);
+        
+        // Export clear function
+        window.clearProjectsFilters = clearAllFilters;
+    });
+})();
 </script>
 {% endblock %}

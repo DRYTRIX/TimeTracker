@@ -74,22 +74,22 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Date') }}</label>
-                    <input type="date" name="start_date" id="start_date" required class="form-input">
+                    <input type="date" name="start_date" id="start_date" required class="form-input" value="{{ prefill_start_date or '' }}">
                 </div>
                 <div>
                     <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Time') }}</label>
-                    <input type="time" name="start_time" id="start_time" required class="form-input">
+                    <input type="time" name="start_time" id="start_time" required class="form-input" value="{{ prefill_start_time or '' }}">
                 </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Date') }}</label>
-                    <input type="date" name="end_date" id="end_date" required class="form-input">
+                    <input type="date" name="end_date" id="end_date" required class="form-input" value="{{ prefill_end_date or '' }}">
                 </div>
                 <div>
                     <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Time') }}</label>
-                    <input type="time" name="end_time" id="end_time" required class="form-input">
+                    <input type="time" name="end_time" id="end_time" required class="form-input" value="{{ prefill_end_time or '' }}">
                 </div>
             </div>
 
@@ -197,18 +197,82 @@ document.addEventListener('DOMContentLoaded', async function(){
         if (projectSelect.value){ loadTasks(projectSelect.value); }
     }
     
-    // Form validation: ensure either project or client is selected
+    // Form validation: ensure either project or client is selected and validate time range
+    // Use capture phase to run before other handlers
     const form = document.getElementById('manualEntryForm');
     if (form) {
+        // Store original button state to restore if needed
+        const submitBtn = form.querySelector('button[type="submit"]');
+        let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
+        
         form.addEventListener('submit', function(e) {
+            // Validate project or client selection
             const projectVal = projectSelect ? projectSelect.value : '';
             const clientVal = clientSelect ? clientSelect.value : '';
             if (!projectVal && !clientVal) {
                 e.preventDefault();
-                alert('{{ _("Please select either a project or a client") }}');
+                e.stopImmediatePropagation(); // Stop other handlers from running
+                
+                // Ensure button state is preserved
+                if (submitBtn && originalButtonHTML) {
+                    submitBtn.innerHTML = originalButtonHTML;
+                    submitBtn.disabled = false;
+                }
+                
+                        // Show error message using toast notification
+                        const errorMsg = '{{ _("Please select either a project or a client") }}';
+                        if (window.toastManager && typeof window.toastManager.error === 'function') {
+                            window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+                        } else {
+                            alert(errorMsg);
+                        }
+                        // After showing error, ensure button is still in correct state
+                        if (submitBtn && originalButtonHTML) {
+                            submitBtn.innerHTML = originalButtonHTML;
+                            submitBtn.disabled = false;
+                        }
                 return false;
             }
-        });
+            
+            // Validate time range before submission
+            const startDate = document.getElementById('start_date');
+            const startTime = document.getElementById('start_time');
+            const endDate = document.getElementById('end_date');
+            const endTime = document.getElementById('end_time');
+            
+            if (startDate && startTime && endDate && endTime && 
+                startDate.value && startTime.value && endDate.value && endTime.value) {
+                const start = new Date(`${startDate.value}T${startTime.value}:00`);
+                const end = new Date(`${endDate.value}T${endTime.value}:00`);
+                
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                    if (end <= start) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation(); // Stop other handlers from running
+                        
+                        // Ensure button state is preserved
+                        if (submitBtn && originalButtonHTML) {
+                            submitBtn.innerHTML = originalButtonHTML;
+                            submitBtn.disabled = false;
+                        }
+                        
+                        // Show error message using toast notification
+                        const errorMsg = '{{ _("End time must be after start time") }}';
+                        if (window.toastManager && typeof window.toastManager.error === 'function') {
+                            window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+                        } else {
+                            alert(errorMsg);
+                        }
+                        // After showing error, ensure button is still in correct state
+                        if (submitBtn && originalButtonHTML) {
+                            submitBtn.innerHTML = originalButtonHTML;
+                            submitBtn.disabled = false;
+                        }
+                        return false;
+                    }
+                }
+            }
+        }, true); // Use capture phase to run before other handlers
     }
 
     // Apply Time Entry Template if provided via sessionStorage or query param

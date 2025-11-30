@@ -35,6 +35,19 @@ def list_quotes():
     quotes = result["quotes"]
     analytics = result.get("analytics")
 
+    # Check if this is an AJAX request
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        # Return only the quotes list HTML for AJAX requests
+        from flask import make_response
+        response = make_response(render_template(
+            "quotes/_quotes_list.html",
+            quotes=quotes,
+            status=status,
+            search=search,
+        ))
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        return response
+
     return render_template(
         "quotes/list.html",
         quotes=quotes,

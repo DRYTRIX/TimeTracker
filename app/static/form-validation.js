@@ -482,6 +482,13 @@ class FormValidator {
     showSuccessMessage(field) {
         if (!field.successContainer) return;
         
+        // Don't show success messages for checkboxes or radio buttons
+        // They don't need validation feedback like text inputs do
+        const input = field.element;
+        if (input.type === 'checkbox' || input.type === 'radio') {
+            return;
+        }
+        
         const successMessage = field.element.getAttribute('data-success-message') || 
                               'Looks good!';
         field.successContainer.textContent = successMessage;

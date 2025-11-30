@@ -35,7 +35,7 @@
         </button>
     </div>
     <div id="filterBody">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" data-filter-form>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="invoicesFilterForm" data-filter-form>
         <div>
             <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
             <div class="flex flex-wrap gap-2">
@@ -71,169 +71,12 @@
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input type="text" name="search" id="search" value="{{ request.args.get('search', '') }}" class="form-input" placeholder="{{ _('Invoice number or client') }}">
         </div>
-        <div class="col-span-full flex justify-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">Filter</button>
-        </div>
     </form>
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
-            {{ invoices|length }} invoice{{ 's' if invoices|length != 1 else '' }} found
-        </h3>
-        <div class="flex items-center gap-2">
-            <a href="{{ url_for('invoices.export_invoices_excel') }}" 
-               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
-               title="{{ _('Export to Excel') }}"
-               onclick="showExportLoading(this); return true;">
-                <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
-            </a>
-            {% if current_user.is_admin %}
-            <div class="relative">
-                <button type="button" id="bulkActionsBtn" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 disabled:opacity-60" onclick="openMenu(this, 'invoicesBulkMenu')" disabled>
-                    <i class="fas fa-tasks mr-1"></i> Bulk Actions (<span id="selectedCount">0</span>)
-                </button>
-                <ul id="invoicesBulkMenu" class="bulk-menu hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
-                    <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkStatusDialog()"><i class="fas fa-tasks mr-2"></i>Change Status</a></li>
-                    <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
-                    <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>Delete</a></li>
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-        <thead class="border-b border-border-light dark:border-border-dark">
-            <tr>
-                {% if current_user.is_admin %}
-                <th class="p-4 w-12">
-                    <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllInvoices()">
-                </th>
-                {% endif %}
-                <th class="p-4" data-sortable>Number</th>
-                <th class="p-4" data-sortable>Client</th>
-                <th class="p-4" data-sortable>Status</th>
-                <th class="p-4" data-sortable>Payment</th>
-                <th class="p-4 table-number" data-sortable>Total</th>
-                <th class="p-4 table-number" data-sortable>Due Date</th>
-                <th class="p-4">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for invoice in invoices %}
-            <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
-                {% if current_user.is_admin %}
-                <td class="p-4">
-                    <input type="checkbox" class="invoice-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ invoice.id }}" onchange="updateBulkDeleteButton()">
-                </td>
-                {% endif %}
-                <td class="p-4 font-medium">{{ invoice.invoice_number }}</td>
-                <td class="p-4">{{ invoice.client_name }}</td>
-                <td class="p-4">
-                    {% set s = invoice.status %}
-                    {% if s == 'draft' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            <i class="fas fa-file-alt mr-1"></i>Draft
-                        </span>
-                    {% elif s == 'sent' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                            <i class="fas fa-paper-plane mr-1"></i>Sent
-                        </span>
-                    {% elif s == 'paid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                            <i class="fas fa-check-circle mr-1"></i>Paid
-                        </span>
-                    {% elif s == 'overdue' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>Overdue
-                        </span>
-                    {% else %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ s }}</span>
-                    {% endif %}
-                </td>
-                <td class="p-4">
-                    {% set ps = invoice.payment_status %}
-                    {% if ps == 'unpaid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" title="{{ _('Unpaid') }}">
-                            <i class="fas fa-times-circle mr-1"></i>Unpaid
-                        </span>
-                    {% elif ps == 'partially_paid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="{{ _('Partially Paid') }}">
-                            <i class="fas fa-hourglass-half mr-1"></i>Partial
-                        </span>
-                    {% elif ps == 'fully_paid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="{{ _('Fully Paid') }}">
-                            <i class="fas fa-check-circle mr-1"></i>Paid
-                        </span>
-                    {% elif ps == 'overpaid' %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" title="Overpaid">
-                            <i class="fas fa-plus-circle mr-1"></i>Overpaid
-                        </span>
-                    {% else %}
-                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ ps }}</span>
-                    {% endif %}
-                </td>
-                <td class="p-4 table-number">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</td>
-                <td class="p-4 table-number">
-                    {% if invoice.due_date %}
-                        {% set is_overdue = invoice._is_overdue %}
-                        <span class="chip whitespace-nowrap {% if is_overdue %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-2 border-red-500{% else %}chip-neutral{% endif %}">
-                            {% if is_overdue %}<i class="fas fa-exclamation-circle mr-1"></i>{% endif %}
-                            {{ invoice.due_date.strftime('%Y-%m-%d') }}
-                        </span>
-                    {% else %}
-                        <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
-                    {% endif %}
-                </td>
-                <td class="p-4 relative overflow-visible">
-                    <div class="relative inline-block">
-                        <button type="button" onclick="toggleInvoiceActions(event, {{ invoice.id }})" class="text-primary hover:text-primary/80 font-medium">
-                            Actions <i class="fas fa-chevron-down ml-1 text-xs"></i>
-                        </button>
-                        <div id="invoiceActions{{ invoice.id }}" class="invoice-actions-dropdown hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg" style="z-index: 1200;">
-                            <div class="py-1">
-                                <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <i class="fas fa-eye mr-2"></i>View
-                                </a>
-                                <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <i class="fas fa-edit mr-2"></i>Edit
-                                </a>
-                                <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <i class="fas fa-download mr-2"></i>Download PDF
-                                </a>
-                                {% if current_user.is_admin %}
-                                <hr class="my-1 border-border-light dark:border-border-dark">
-                                <button type="button" onclick="showDeleteModal({{ invoice.id }}, '{{ invoice.invoice_number }}')" class="w-full text-left block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <i class="fas fa-trash mr-2"></i>Delete
-                                </button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-            {% else %}
-            {% endfor %}
-        </tbody>
-    </table>
-    {% if not invoices %}
-    {% from "components/ui.html" import empty_state %}
-    {% set actions %}
-        <a href="{{ url_for('invoices.create_invoice') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            <i class="fas fa-plus mr-2"></i>Create Your First Invoice
-        </a>
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            <i class="fas fa-question-circle mr-2"></i>Learn More
-        </a>
-    {% endset %}
-    {% if request.args.get('search') or request.args.get('status') or request.args.get('client') %}
-        {{ empty_state('fas fa-search', 'No Invoices Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new invoice that matches your criteria.', actions, type='no-results') }}
-    {% else %}
-        {{ empty_state('fas fa-file-invoice', 'No Invoices Yet', 'Create professional invoices to bill your clients for completed work. Create your first invoice to get started!', actions, type='no-data') }}
-    {% endif %}
-    {% endif %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible" id="invoicesContainer">
+    {% include 'invoices/_invoices_list.html' %}
 </div>
 
 <!-- Bulk Operations Forms (hidden) -->
@@ -356,10 +199,9 @@ function filterByStatus(status) {
             btn.classList.add('active');
         }
     });
-    // Submit form
-    const form = document.querySelector('[data-filter-form]');
-    if (form) {
-        form.submit();
+    // Trigger AJAX filter
+    if (window.applyInvoiceFilters) {
+        window.applyInvoiceFilters();
     }
 }
 
@@ -488,6 +330,181 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });
+
+// Invoices Filter Handler - AJAX filtering
+(function() {
+    'use strict';
+    
+    let filterTimeout = null;
+    let searchTimeout = null;
+    
+    function getFilterParams() {
+        const form = document.getElementById('invoicesFilterForm');
+        if (!form) return {};
+        
+        const params = {};
+        
+        // Get search input value directly
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            const searchValue = searchInput.value.trim();
+            if (searchValue) {
+                params.search = searchValue;
+            }
+        }
+        
+        // Get status from hidden input
+        const statusInput = form.querySelector('#statusFilter');
+        if (statusInput && statusInput.value) {
+            params.status = statusInput.value;
+        }
+        
+        // Get payment status
+        const paymentStatusSelect = form.querySelector('[name="payment_status"]');
+        if (paymentStatusSelect && paymentStatusSelect.value) {
+            params.payment_status = paymentStatusSelect.value;
+        }
+        
+        return params;
+    }
+    
+    function buildFilterUrl() {
+        const params = getFilterParams();
+        const queryString = new URLSearchParams(params).toString();
+        return `/invoices?${queryString}`;
+    }
+    
+    function applyFilters() {
+        const url = buildFilterUrl();
+        const container = document.getElementById('invoicesListContainer');
+        
+        if (!container) {
+            console.error('invoicesListContainer not found');
+            return;
+        }
+        
+        // Show loading state
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+        
+        // Update URL
+        if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', url);
+        }
+        
+        // Fetch filtered results
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html.trim();
+            
+            const newContainer = tempDiv.querySelector('#invoicesListContainer');
+            
+            if (newContainer) {
+                container.innerHTML = newContainer.innerHTML;
+            } else {
+                const match = html.trim().match(/<div[^>]*id=["']invoicesListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
+                if (match && match[1]) {
+                    container.innerHTML = match[1];
+                } else {
+                    container.innerHTML = html;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Filter error:', error);
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+            if (window.toastManager) {
+                window.toastManager.show('Failed to filter invoices. Please refresh the page.', 'error');
+            } else if (window.showToast) {
+                window.showToast('Failed to filter invoices. Please refresh the page.', 'error');
+            }
+        })
+        .finally(() => {
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+        });
+    }
+    
+    // Export function for status filter buttons
+    window.applyInvoiceFilters = applyFilters;
+    
+    function debouncedApplyFilters(delay = 100) {
+        if (filterTimeout) {
+            clearTimeout(filterTimeout);
+        }
+        filterTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    function debouncedSearch(delay = 500) {
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        searchTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('invoicesFilterForm');
+        if (!form) {
+            console.error('Invoices filter form not found');
+            return;
+        }
+        
+        // Auto-submit on dropdown changes
+        form.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on search input (debounced)
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                debouncedSearch(500);
+            });
+            
+            // Submit on Enter
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    applyFilters();
+                }
+            });
+        }
+        
+        // Prevent form submission (use AJAX instead)
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            if (filterTimeout) {
+                clearTimeout(filterTimeout);
+            }
+            applyFilters();
+        });
+    });
+})();
 
 {% if current_user.is_admin %}
 // Bulk actions for invoices

@@ -97,14 +97,28 @@ def view_custom_report(view_id):
 def preview_report():
     """Preview report data based on configuration."""
     try:
-        data = request.json
+        # Validate JSON request
+        if not request.is_json:
+            return jsonify({"success": False, "message": "Request must be JSON"}), 400
+        
+        data = request.get_json(silent=False)
+        if data is None:
+            return jsonify({"success": False, "message": "Invalid JSON in request body"}), 400
+        
         config = data.get("config", {})
+        
+        # Validate that config is a dictionary
+        if not isinstance(config, dict):
+            return jsonify({"success": False, "message": "Config must be a dictionary"}), 400
 
         # Generate report data
         report_data = generate_report_data(config, current_user.id)
 
         return jsonify({"success": True, "data": report_data})
     except Exception as e:
+        # Log the error for debugging
+        from flask import current_app
+        current_app.logger.error(f"Error in preview_report: {str(e)}", exc_info=True)
         return jsonify({"success": False, "message": str(e)}), 500
 
 
@@ -141,14 +155,24 @@ def generate_report_data(config, user_id=None):
     start_date = filters.get("start_date")
     end_date = filters.get("end_date")
 
-    if start_date:
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    else:
+    try:
+        if start_date and isinstance(start_date, str) and start_date.strip():
+            start_dt = datetime.strptime(start_date.strip(), "%Y-%m-%d")
+        else:
+            start_dt = datetime.utcnow() - timedelta(days=30)
+    except (ValueError, AttributeError) as e:
+        from flask import current_app
+        current_app.logger.warning(f"Invalid start_date format: {start_date}, using default")
         start_dt = datetime.utcnow() - timedelta(days=30)
 
-    if end_date:
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
-    else:
+    try:
+        if end_date and isinstance(end_date, str) and end_date.strip():
+            end_dt = datetime.strptime(end_date.strip(), "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+        else:
+            end_dt = datetime.utcnow()
+    except (ValueError, AttributeError) as e:
+        from flask import current_app
+        current_app.logger.warning(f"Invalid end_date format: {end_date}, using default")
         end_dt = datetime.utcnow()
 
     # Generate data based on source
@@ -163,8 +187,15 @@ def generate_report_data(config, user_id=None):
             if not user or not user.is_admin:
                 query = query.filter(TimeEntry.user_id == user_id)
 
-        if filters.get("project_id"):
-            query = query.filter(TimeEntry.project_id == filters["project_id"])
+        project_id = filters.get("project_id")
+        if project_id:
+            # Convert to int if it's a string
+            try:
+                project_id = int(project_id) if isinstance(project_id, str) else project_id
+                query = query.filter(TimeEntry.project_id == project_id)
+            except (ValueError, TypeError):
+                from flask import current_app
+                current_app.logger.warning(f"Invalid project_id: {project_id}, ignoring filter")
         if filters.get("user_id"):
             query = query.filter(TimeEntry.user_id == filters["user_id"])
 
@@ -178,7 +209,7 @@ def generate_report_data(config, user_id=None):
                     "project": e.project.name if e.project else "",
                     "user": e.user.username if e.user else "",
                     "duration": e.duration_hours,
-                    "description": e.description or "",
+                    "notes": e.notes or "",
                 }
                 for e in entries
             ],
