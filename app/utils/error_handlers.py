@@ -103,10 +103,19 @@ def register_error_handlers(app):
         if request.is_json or request.path.startswith("/api/"):
             return error_response(message="Database error occurred", error_code="database_error", status_code=500)
 
-        from flask import flash
+        from flask import flash, render_template
 
         flash("Database error occurred", "error")
-        return error, 500
+        return (
+            render_template(
+                "errors/500.html",
+                error_info={
+                    "title": "Database Error",
+                    "message": "A database error occurred. Please contact support if this persists.",
+                },
+            ),
+            500,
+        )
 
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):

@@ -284,9 +284,20 @@ def view_client(client_id):
     
     # Get link templates for custom fields (for clickable values)
     from app.models import LinkTemplate
+    from sqlalchemy.exc import ProgrammingError
     link_templates_by_field = {}
-    for template in LinkTemplate.get_active_templates():
-        link_templates_by_field[template.field_key] = template
+    try:
+        for template in LinkTemplate.get_active_templates():
+            link_templates_by_field[template.field_key] = template
+    except ProgrammingError as e:
+        # Handle case where link_templates table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "link_templates table does not exist. Run migration: flask db upgrade"
+            )
+            link_templates_by_field = {}
+        else:
+            raise
 
     # Get recent time entries for this client
     # Include entries directly linked to client and entries through projects

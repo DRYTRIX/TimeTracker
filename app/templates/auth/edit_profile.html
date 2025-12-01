@@ -63,17 +63,19 @@
             {% if requires_password %}
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
-                <input type="password" name="password" id="password" class="form-input" placeholder="{{ _('Leave blank to keep current password') }}">
+                <input type="password" name="password" id="password" class="form-input" placeholder="{{ _('Leave blank to keep current password') }}" minlength="8">
+                <div id="password-error" class="mt-1 text-sm text-red-600 dark:text-red-400 hidden"></div>
             </div>
             <div>
                 <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
                 <input type="password" name="password_confirm" id="password_confirm" class="form-input">
+                <div id="password_confirm-error" class="mt-1 text-sm text-red-600 dark:text-red-400 hidden"></div>
             </div>
             {% endif %}
         </div>
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end">
             <a href="{{ url_for('auth.profile') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mr-4">Cancel</a>
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
+            <button type="submit" id="save-button" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">{{ _('Save Changes') }}</button>
         </div>
     </form>
 </div>
@@ -124,6 +126,100 @@ function handleRemoveAvatar(event) {
         if (fallback) fallback.style.display = 'flex';
     }, 100);
 }
+
+// Password validation
+{% if requires_password %}
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('password');
+    const passwordConfirmInput = document.getElementById('password_confirm');
+    const passwordError = document.getElementById('password-error');
+    const passwordConfirmError = document.getElementById('password_confirm-error');
+    const saveButton = document.getElementById('save-button');
+    const form = document.querySelector('form');
+    
+    if (!passwordInput || !passwordConfirmInput) {
+        return; // Password fields not present
+    }
+    
+    function validatePasswords() {
+        const password = passwordInput.value.trim();
+        const passwordConfirm = passwordConfirmInput.value.trim();
+        let isValid = true;
+        
+        // Clear previous errors
+        if (passwordError) {
+            passwordError.classList.add('hidden');
+            passwordError.textContent = '';
+        }
+        if (passwordConfirmError) {
+            passwordConfirmError.classList.add('hidden');
+            passwordConfirmError.textContent = '';
+        }
+        
+        // If both fields are empty, that's valid (user wants to keep current password)
+        if (!password && !passwordConfirm) {
+            if (saveButton) {
+                saveButton.disabled = false;
+            }
+            return true;
+        }
+        
+        // If one field is filled but not the other, show error
+        if ((password && !passwordConfirm) || (!password && passwordConfirm)) {
+            if (passwordConfirmError) {
+                passwordConfirmError.textContent = '{{ _("Please fill both password fields or leave both empty") }}';
+                passwordConfirmError.classList.remove('hidden');
+            }
+            isValid = false;
+        }
+        
+        // Validate password length if password is provided
+        if (password) {
+            if (password.length < 8) {
+                if (passwordError) {
+                    passwordError.textContent = '{{ _("Password must be at least 8 characters long") }}';
+                    passwordError.classList.remove('hidden');
+                }
+                isValid = false;
+            }
+            
+            // Check if passwords match
+            if (passwordConfirm && password !== passwordConfirm) {
+                if (passwordConfirmError) {
+                    passwordConfirmError.textContent = '{{ _("Passwords do not match") }}';
+                    passwordConfirmError.classList.remove('hidden');
+                }
+                isValid = false;
+            }
+        }
+        
+        // Enable/disable save button based on validation
+        if (saveButton) {
+            saveButton.disabled = !isValid;
+        }
+        
+        return isValid;
+    }
+    
+    // Add event listeners for real-time validation
+    passwordInput.addEventListener('input', validatePasswords);
+    passwordInput.addEventListener('blur', validatePasswords);
+    passwordConfirmInput.addEventListener('input', validatePasswords);
+    passwordConfirmInput.addEventListener('blur', validatePasswords);
+    
+    // Validate on form submit
+    form.addEventListener('submit', function(e) {
+        if (!validatePasswords()) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
+    
+    // Initial validation
+    validatePasswords();
+});
+{% endif %}
 </script>
 {% endblock %}
 

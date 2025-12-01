@@ -43,7 +43,7 @@ services:
     # Use custom entrypoint for local testing
     entrypoint: ["/app/docker/entrypoint-local-test.sh"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/_health"]
+      test: ["CMD", "curl", "-f", "-s", "-o", "/dev/null", "http://localhost:8080/_health"]
       interval: 30s
       timeout: 10s
       retries: 3
