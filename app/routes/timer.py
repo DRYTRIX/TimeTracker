@@ -689,10 +689,30 @@ def delete_timer(timer_id):
     else:
         target_name = _("Unknown")
 
+    # Capture entry info for logging before deletion
+    entry_id = timer.id
+    duration_formatted = timer.duration_formatted
+    project_name = timer.project.name if timer.project else None
+    client_name = timer.client.name if timer.client else None
+    entity_name = project_name or client_name or _("Unknown")
+
     db.session.delete(timer)
-    if not safe_commit("delete_timer", {"timer_id": timer.id}):
+    if not safe_commit("delete_timer", {"timer_id": entry_id}):
         flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
+
+    # Log activity
+    Activity.log(
+        user_id=current_user.id,
+        action="deleted",
+        entity_type="time_entry",
+        entity_id=entry_id,
+        entity_name=entity_name,
+        description=f'Deleted time entry for {entity_name} - {duration_formatted}',
+        extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get("User-Agent"),
+    )
 
     # Invalidate dashboard cache so deleted entry disappears immediately
     try:

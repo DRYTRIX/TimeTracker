@@ -236,44 +236,99 @@ def edit_user(user_id):
 
     user = User.query.get_or_404(user_id)
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    all_roles = Role.query.order_by(Role.name).all()
 
     if request.method == "POST":
         username = request.form.get("username", "").strip().lower()
-        role = request.form.get("role", "user")
+        role_name = request.form.get("role", "user")  # This will be a role name from the Role system
         is_active = request.form.get("is_active") == "on"
         client_portal_enabled = request.form.get("client_portal_enabled") == "on"
         client_id = request.form.get("client_id", "").strip()
 
         if not username:
             flash(_("Username is required"), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
 
         # Check if username is already taken by another user
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and existing_user.id != user.id:
             flash(_("Username already exists"), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
 
         # Validate client portal settings
         if client_portal_enabled and not client_id:
             flash(_("Please select a client when enabling client portal access."), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+
+        # Get the Role object from the database
+        role_obj = Role.query.filter_by(name=role_name).first()
+        if not role_obj:
+            # Fallback: if role doesn't exist, try to use "user" role
+            role_obj = Role.query.filter_by(name="user").first()
+            if not role_obj:
+                flash(_("Default 'user' role not found. Please run 'flask seed_permissions_cmd' first."), "error")
+                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+
+        # Handle password reset if provided
+        new_password = request.form.get("new_password", "").strip()
+        password_confirm = request.form.get("password_confirm", "").strip()
+        force_password_change = request.form.get("force_password_change") == "on"
+
+        if new_password:
+            # Validate password
+            if len(new_password) < 8:
+                flash(_("Password must be at least 8 characters long."), "error")
+                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+
+            if new_password != password_confirm:
+                flash(_("Passwords do not match."), "error")
+                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+
+            # Set the new password
+            user.set_password(new_password)
+            if force_password_change:
+                user.password_change_required = True
+            else:
+                user.password_change_required = False
+            current_app.logger.info("Admin '%s' reset password for user '%s'", current_user.username, user.username)
 
         # Update user
         user.username = username
-        user.role = role
+        # Update legacy role field for backward compatibility
+        user.role = role_name
+        
+        # Update roles in the new system
+        # If user doesn't have the selected role, assign it as the primary role
+        # Keep other roles if they exist (multi-role support)
+        if role_obj not in user.roles:
+            # If user has no roles, assign the selected one
+            if not user.roles:
+                user.roles.append(role_obj)
+            else:
+                # If user has roles, replace the first one (primary role) with the selected one
+                # This maintains backward compatibility while supporting multi-role
+                user.roles[0] = role_obj
+        else:
+            # If the selected role is already assigned but not first, move it to first position
+            if user.roles[0] != role_obj:
+                user.roles.remove(role_obj)
+                user.roles.insert(0, role_obj)
+        
         user.is_active = is_active
         user.client_portal_enabled = client_portal_enabled
         user.client_id = int(client_id) if client_id else None
 
         if not safe_commit("admin_edit_user", {"user_id": user.id}):
             flash(_("Could not update user due to a database error. Please check server logs."), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
 
-        flash(_('User "%(username)s" updated successfully', username=username), "success")
+        if new_password:
+            flash(_('Password reset successfully for user "%(username)s"', username=username), "success")
+        else:
+            flash(_('User "%(username)s" updated successfully', username=username), "success")
         return redirect(url_for("admin.list_users"))
 
-    return render_template("admin/user_form.html", user=user, clients=clients)
+    return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
 
 
 @admin_bp.route("/admin/users/<int:user_id>/delete", methods=["POST"])

@@ -131,7 +131,7 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="">{{ _('System Default') }}</option>
                         {% for code, name in languages.items() %}
-                        <option value="{{ code }}" {% if user.preferred_language == code %}selected{% endif %}>{{ name }}</option>
+                        <option value="{{ code }}" {% if current_language_code == code %}selected{% endif %}>{{ name }}</option>
                         {% endfor %}
                     </select>
                 </div>

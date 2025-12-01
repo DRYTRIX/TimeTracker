@@ -465,21 +465,23 @@ def get_entries():
     # Apply saved filter if provided
     if saved_filter_id:
         filt = SavedFilter.query.get(saved_filter_id)
-        if filt and (filt.user_id == current_user.id or (filt.is_shared and current_user.is_admin)):
+        can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+        if filt and (filt.user_id == current_user.id or (filt.is_shared and can_view_all)):
             payload = filt.payload or {}
             if "project_id" in payload:
                 query = query.filter(TimeEntry.project_id == int(payload["project_id"]))
-            if "user_id" in payload and current_user.is_admin:
+            if "user_id" in payload and can_view_all:
                 query = query.filter(TimeEntry.user_id == int(payload["user_id"]))
             if "billable" in payload:
                 query = query.filter(TimeEntry.billable == bool(payload["billable"]))
             if "tag" in payload and payload["tag"]:
                 query = query.filter(TimeEntry.tags.ilike(f"%{payload['tag']}%"))
 
-    # Filter by user (if admin or own entries)
-    if user_id and current_user.is_admin:
+    # Filter by user (if has view_all_time_entries permission or own entries)
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    if user_id and can_view_all:
         query = query.filter(TimeEntry.user_id == user_id)
-    elif not current_user.is_admin:
+    elif not can_view_all:
         query = query.filter(TimeEntry.user_id == current_user.id)
 
     # Filter by project
@@ -1372,8 +1374,28 @@ def delete_entry(entry_id):
     if entry.is_active:
         return jsonify({"error": "Cannot delete active timer"}), 400
 
+    # Capture entry info for logging before deletion
+    project_name = entry.project.name if entry.project else None
+    client_name = entry.client.name if entry.client else None
+    entity_name = project_name or client_name or "Unknown"
+    duration_formatted = entry.duration_formatted
+
     db.session.delete(entry)
     db.session.commit()
+
+    # Log activity
+    from app.models import Activity
+    Activity.log(
+        user_id=current_user.id,
+        action="deleted",
+        entity_type="time_entry",
+        entity_id=entry_id,
+        entity_name=entity_name,
+        description=f'Deleted time entry for {entity_name} - {duration_formatted}',
+        extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get("User-Agent"),
+    )
 
     return jsonify({"success": True})
 

@@ -308,6 +308,16 @@ class User(UserMixin, db.Model):
         """Get list of role names for this user"""
         return [r.name for r in self.roles]
 
+    @property
+    def primary_role_name(self):
+        """Get the primary role name for display purposes.
+        Returns the first role name from roles, or falls back to the legacy role field."""
+        if self.roles:
+            # Return the first role name (roles are typically ordered by importance)
+            return self.roles[0].name
+        # Fallback to legacy role field for backward compatibility
+        return self.role
+
     # Client portal helpers
     @property
     def is_client_portal_user(self):

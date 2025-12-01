@@ -160,6 +160,163 @@ class TestAdminUserEditing:
                 assert not updated_user.is_active
 
 
+class TestAdminUserPasswordReset:
+    """Tests for password reset functionality via admin panel."""
+
+    def test_reset_password_success(self, client, admin_user, user, app):
+        """Test successful password reset by admin."""
+        with app.app_context():
+            # Set an initial password for the user
+            user.set_password("oldpassword123")
+            from app import db
+            db.session.commit()
+            user_id = user.id
+
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            # Reset password
+            response = client.post(
+                url_for("admin.edit_user", user_id=user_id),
+                data={
+                    "username": user.username,
+                    "role": user.role,
+                    "is_active": "on",
+                    "new_password": "newpassword123",
+                    "password_confirm": "newpassword123",
+                },
+                follow_redirects=True,
+            )
+
+            assert response.status_code == 200
+            assert b"Password reset successfully" in response.data or b"reset successfully" in response.data
+
+            # Verify password was changed
+            with app.app_context():
+                updated_user = User.query.get(user_id)
+                assert updated_user.check_password("newpassword123")
+                assert not updated_user.check_password("oldpassword123")
+
+    def test_reset_password_with_force_change(self, client, admin_user, user, app):
+        """Test password reset with force password change flag."""
+        with app.app_context():
+            from app import db
+            user_id = user.id
+
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            # Reset password with force change
+            response = client.post(
+                url_for("admin.edit_user", user_id=user_id),
+                data={
+                    "username": user.username,
+                    "role": user.role,
+                    "is_active": "on",
+                    "new_password": "newpassword123",
+                    "password_confirm": "newpassword123",
+                    "force_password_change": "on",
+                },
+                follow_redirects=True,
+            )
+
+            assert response.status_code == 200
+
+            # Verify password change is required
+            with app.app_context():
+                updated_user = User.query.get(user_id)
+                assert updated_user.password_change_required is True
+                assert updated_user.check_password("newpassword123")
+
+    def test_reset_password_password_too_short(self, client, admin_user, user):
+        """Test that password reset fails with password too short."""
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            # Try to reset with short password
+            response = client.post(
+                url_for("admin.edit_user", user_id=user.id),
+                data={
+                    "username": user.username,
+                    "role": user.role,
+                    "is_active": "on",
+                    "new_password": "short",
+                    "password_confirm": "short",
+                },
+                follow_redirects=True,
+            )
+
+            assert response.status_code == 200
+            assert b"at least 8 characters" in response.data or b"Password must be" in response.data
+
+    def test_reset_password_passwords_dont_match(self, client, admin_user, user):
+        """Test that password reset fails when passwords don't match."""
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            # Try to reset with mismatched passwords
+            response = client.post(
+                url_for("admin.edit_user", user_id=user.id),
+                data={
+                    "username": user.username,
+                    "role": user.role,
+                    "is_active": "on",
+                    "new_password": "newpassword123",
+                    "password_confirm": "differentpassword123",
+                },
+                follow_redirects=True,
+            )
+
+            assert response.status_code == 200
+            assert b"do not match" in response.data or b"Passwords" in response.data
+
+    def test_reset_password_optional(self, client, admin_user, user, app):
+        """Test that password reset is optional - can edit user without changing password."""
+        with app.app_context():
+            original_password_hash = user.password_hash
+            user_id = user.id
+
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            # Edit user without providing password
+            response = client.post(
+                url_for("admin.edit_user", user_id=user_id),
+                data={
+                    "username": user.username,
+                    "role": user.role,
+                    "is_active": "on",
+                },
+                follow_redirects=True,
+            )
+
+            assert response.status_code == 200
+            assert b"updated successfully" in response.data
+
+            # Verify password was not changed
+            with app.app_context():
+                updated_user = User.query.get(user_id)
+                assert updated_user.password_hash == original_password_hash
+
+    def test_reset_password_form_fields_present(self, client, admin_user, user):
+        """Test that password reset fields are present in edit form."""
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            response = client.get(url_for("admin.edit_user", user_id=user.id))
+            assert response.status_code == 200
+            # Check for password reset fields
+            assert b"new_password" in response.data or b"New Password" in response.data
+            assert b"password_confirm" in response.data or b"Confirm" in response.data
+            assert b"force_password_change" in response.data or b"Require password change" in response.data
+
+
 class TestAdminUserDeletion:
     """Tests for deleting users via admin panel."""
 
@@ -572,3 +729,52 @@ class TestUserDeletionSmokeTests:
         # Step 5: Verify user is actually deleted
         with app.app_context():
             assert User.query.get(user_id) is None
+
+    @pytest.mark.smoke
+    def test_admin_can_reset_user_password(self, client, admin_user, user, app):
+        """SMOKE: Admin can successfully reset a user's password."""
+        with app.app_context():
+            # Set initial password
+            user.set_password("initialpass123")
+            from app import db
+            db.session.commit()
+            user_id = user.id
+
+        # Login as admin using the login endpoint
+        client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+
+        # Reset password
+        response = client.post(
+            url_for("admin.edit_user", user_id=user_id),
+            data={
+                "username": user.username,
+                "role": user.role,
+                "is_active": "on",
+                "new_password": "newsecurepass123",
+                "password_confirm": "newsecurepass123",
+            },
+            follow_redirects=True,
+        )
+
+        # Should succeed
+        assert response.status_code == 200
+        assert b"reset successfully" in response.data or b"updated successfully" in response.data
+
+        # Verify password was changed
+        with app.app_context():
+            updated_user = User.query.get(user_id)
+            assert updated_user.check_password("newsecurepass123")
+            assert not updated_user.check_password("initialpass123")
+
+    @pytest.mark.smoke
+    def test_password_reset_form_accessible(self, client, admin_user, user):
+        """SMOKE: Password reset form is accessible to admin."""
+        # Login as admin using the login endpoint
+        client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+
+        # Access edit form
+        response = client.get(url_for("admin.edit_user", user_id=user.id))
+
+        # Should succeed and show password reset fields
+        assert response.status_code == 200
+        assert b"Password" in response.data or b"password" in response.data

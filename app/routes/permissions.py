@@ -222,10 +222,19 @@ def manage_user_roles(user_id):
         user.roles = []
 
         # Assign selected roles
+        primary_role_name = None
         for role_id in role_ids:
             role = Role.query.get(int(role_id))
             if role:
                 user.add_role(role)
+                # Use the first role as the primary role for backward compatibility
+                if primary_role_name is None:
+                    primary_role_name = role.name
+
+        # Update legacy role field for backward compatibility
+        # This ensures the old role field stays in sync with the new role system
+        if primary_role_name:
+            user.role = primary_role_name
 
         if not safe_commit("manage_user_roles", {"user_id": user.id}):
             flash(_("Could not update user roles due to a database error"), "error")

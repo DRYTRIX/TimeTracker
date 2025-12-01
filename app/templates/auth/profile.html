@@ -29,7 +29,7 @@
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ current_user.email or '' }}</p>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary mt-1">
                     <i class="fas fa-user-shield mr-1"></i>
-                    {{ current_user.role | capitalize }}
+                    {{ current_user.primary_role_name | capitalize }}
                 </span>
             </div>
         </div>
@@ -40,7 +40,7 @@
         <div class="border-t border-border-light dark:border-border-dark"></div>
         <div>
             <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Role</h2>
-            <p class="mt-1 text-lg">{{ current_user.role | capitalize }}</p>
+            <p class="mt-1 text-lg">{{ current_user.primary_role_name | capitalize }}</p>
         </div>
         <div class="border-t border-border-light dark:border-border-dark"></div>
         <div>

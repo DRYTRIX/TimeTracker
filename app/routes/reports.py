@@ -78,10 +78,11 @@ def comparison_view():
         last_period_end = datetime(now.year, 1, 1) - timedelta(seconds=1)
 
     # Get hours for current period
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     current_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= this_period_start, TimeEntry.start_time <= now
     )
-    if not current_user.is_admin:
+    if not can_view_all:
         current_query = current_query.filter(TimeEntry.user_id == current_user.id)
     current_seconds = current_query.scalar() or 0
 
@@ -91,7 +92,7 @@ def comparison_view():
         TimeEntry.start_time >= last_period_start,
         TimeEntry.start_time <= last_period_end,
     )
-    if not current_user.is_admin:
+    if not can_view_all:
         previous_query = previous_query.filter(TimeEntry.user_id == current_user.id)
     previous_seconds = previous_query.scalar() or 0
 
@@ -131,15 +132,26 @@ def project_report():
         return render_template("reports/project_report.html", projects=projects, users=users)
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
+
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            # User doesn't have permission to view other users' entries
+            flash(_("You do not have permission to view other users' time entries"), "error")
+            return render_template("reports/project_report.html", projects=projects, users=users)
 
     entries = query.order_by(TimeEntry.start_time.desc()).all()
 
@@ -276,12 +288,23 @@ def user_report():
         return render_template("reports/user_report.html", users=users, projects=projects)
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            # User doesn't have permission to view other users' entries
+            flash(_("You do not have permission to view other users' time entries"), "error")
+            return render_template("reports/user_report.html", users=users, projects=projects)
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -411,12 +434,22 @@ def export_csv():
         return redirect(url_for("reports.reports"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.reports"))
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -701,12 +734,22 @@ def export_excel():
         return redirect(url_for("reports.reports"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.reports"))
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -761,15 +804,25 @@ def export_project_excel():
         return redirect(url_for("reports.project_report"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
+
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.project_report"))
 
     entries = query.all()
 
@@ -838,12 +891,22 @@ def export_user_excel():
         return redirect(url_for("reports.user_report"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.reports"))
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
