@@ -223,7 +223,13 @@
                 {% set inventory_open = ep.startswith('inventory.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') or ep.startswith('integrations.') %}
-                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') %}
+                {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') or ep.startswith('webhooks.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
+                {% set admin_user_mgmt_open = ep == 'admin.list_users' or ep.startswith('permissions.') %}
+                {% set admin_settings_open = ep == 'admin.settings' or ep == 'admin.email_support' or ep.startswith('admin.') and ('email_template' in ep or 'email-templates' in request.path) or ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' or ep == 'admin.oidc_debug' %}
+                {% set admin_security_open = ep == 'admin.api_tokens' or ep.startswith('webhooks.') or ep.startswith('audit_logs.') %}
+                {% set admin_integrations_open = ep == 'admin.list_integrations_admin' %}
+                {% set admin_data_open = ep == 'expense_categories.list_categories' or ep == 'per_diem.list_rates' or ep.startswith('time_entry_templates.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
+                {% set admin_maintenance_open = ep == 'admin.system_info' or ep == 'admin.backups_management' or ep == 'admin.telemetry_dashboard' %}
                 {% set pdf_open = ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
@@ -238,7 +244,7 @@
                             <span class="ml-3 sidebar-label">{{ _('Dashboard') }}</span>
                         </a>
                     </li>
-                    {% if current_user.ui_show_calendar %}
+                    {% if (not settings or settings.ui_allow_calendar) and current_user.ui_show_calendar %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('calendarDropdown')" data-dropdown="calendarDropdown" class="w-full flex items-center p-2 rounded-lg {% if calendar_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-calendar-alt w-6 text-center"></i>
@@ -269,6 +275,7 @@
                         </button>
                 <ul id="workDropdown" class="{% if not work_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_timer = ep.startswith('timer.') %}
+                            {% set nav_active_time_entries = ep == 'timer.time_entries_overview' %}
                             {% set nav_active_projects = ep.startswith('projects.') %}
                             {% set nav_active_clients = ep.startswith('clients.') %}
                             {% set nav_active_quotes = ep.startswith('quotes.') %}
@@ -280,6 +287,11 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_timer %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_time_entries %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.time_entries_overview') }}">
+                                    <i class="fas fa-list-alt w-4 mr-2"></i>{{ _('Time Entries') }}
                                 </a>
                             </li>
                             <li>
@@ -573,118 +585,214 @@
                                 </a>
                             </li>
                             
-                            <!-- User Management -->
+                            <!-- User Management Submenu -->
                             {% if current_user.is_admin or has_permission('view_users') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.list_users' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_users') }}">
-                                    <i class="fas fa-users-cog w-4 mr-2"></i>{{ _('Users') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if current_user.is_admin %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('permissions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('permissions.list_roles') }}">
-                                    <i class="fas fa-shield-alt w-4 mr-2"></i>{{ _('Roles & Permissions') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            
-                            <!-- Security & Monitoring -->
-                            {% if current_user.is_admin or has_permission('view_audit_logs') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('audit_logs.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('audit_logs.list_audit_logs') }}">
-                                    <i class="fas fa-history w-4 mr-2"></i>{{ _('Audit Logs') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if current_user.is_admin %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">
-                                    <i class="fas fa-key w-4 mr-2"></i>{{ _('API Tokens') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            
-                            <!-- System Configuration -->
-                            {% if current_user.is_admin or has_permission('manage_settings') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">
-                                    <i class="fas fa-sliders-h w-4 mr-2"></i>{{ _('System Settings') }}
-                                </a>
-                            </li>
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.email_support' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.email_support') }}">
-                                    <i class="fas fa-envelope w-4 mr-2"></i>{{ _('Email Configuration') }}
-                                </a>
-                            </li>
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('admin.') and ('email_template' in ep or 'email-templates' in request.path) %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_email_templates') }}">
-                                    <i class="fas fa-envelope-open-text w-4 mr-2"></i>{{ _('Email Templates') }}
-                                </a>
-                            </li>
-                            <!-- PDF Templates Submenu -->
-                            <li>
-                                <button onclick="toggleDropdown('pdfDropdown', event)" data-dropdown="pdfDropdown" class="w-full flex items-center px-2 py-1 rounded {% if pdf_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
-                                    <i class="fas fa-file-pdf w-4 mr-2"></i>
-                                    <span class="flex-1 text-left">{{ _('PDF Templates') }}</span>
+                                <button onclick="toggleDropdown('adminUserMgmtDropdown', event)" data-dropdown="adminUserMgmtDropdown" class="w-full flex items-center px-2 py-1 rounded {% if admin_user_mgmt_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-users w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('User Management') }}</span>
                                     <i class="fas fa-chevron-down text-xs"></i>
                                 </button>
-                                <ul id="pdfDropdown" class="{% if pdf_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                <ul id="adminUserMgmtDropdown" class="{% if admin_user_mgmt_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    {% if current_user.is_admin or has_permission('view_users') %}
                                     <li>
-                                        <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
-                                            <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice PDF') }}
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.list_users' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_users') }}">
+                                            <i class="fas fa-users-cog w-4 mr-2"></i>{{ _('Manage Users') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if current_user.is_admin %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('permissions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('permissions.list_roles') }}">
+                                            <i class="fas fa-shield-alt w-4 mr-2"></i>{{ _('Roles & Permissions') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                            {% endif %}
+                            
+                            <!-- System Settings Submenu -->
+                            {% if current_user.is_admin or has_permission('manage_settings') or has_permission('manage_oidc') %}
+                            <li>
+                                <button onclick="toggleDropdown('adminSettingsDropdown', event)" data-dropdown="adminSettingsDropdown" class="w-full flex items-center px-2 py-1 rounded {% if admin_settings_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-cog w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('System Settings') }}</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <ul id="adminSettingsDropdown" class="{% if admin_settings_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    {% if current_user.is_admin or has_permission('manage_settings') %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.settings' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.settings') }}">
+                                            <i class="fas fa-sliders-h w-4 mr-2"></i>{{ _('Settings') }}
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="block px-2 py-1 rounded {% if ep == 'admin.quote_pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.quote_pdf_layout') }}">
-                                            <i class="fas fa-file-contract w-4 mr-2"></i>{{ _('Quote PDF') }}
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.email_support' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.email_support') }}">
+                                            <i class="fas fa-envelope w-4 mr-2"></i>{{ _('Email Configuration') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('admin.') and ('email_template' in ep or 'email-templates' in request.path) %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_email_templates') }}">
+                                            <i class="fas fa-envelope-open-text w-4 mr-2"></i>{{ _('Email Templates') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <button onclick="toggleDropdown('pdfDropdown', event)" data-dropdown="pdfDropdown" class="w-full flex items-center px-2 py-1 rounded {% if pdf_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                            <i class="fas fa-file-pdf w-4 mr-2"></i>
+                                            <span class="flex-1 text-left">{{ _('PDF Templates') }}</span>
+                                            <i class="fas fa-chevron-down text-xs"></i>
+                                        </button>
+                                        <ul id="pdfDropdown" class="{% if pdf_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                            <li>
+                                                <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
+                                                    <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice PDF') }}
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.quote_pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.quote_pdf_layout') }}">
+                                                    <i class="fas fa-file-contract w-4 mr-2"></i>{{ _('Quote PDF') }}
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    {% endif %}
+                                    {% if current_user.is_admin or has_permission('manage_oidc') %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.oidc_debug' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.oidc_debug') }}">
+                                            <i class="fas fa-lock w-4 mr-2"></i>{{ _('OIDC Settings') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                            {% endif %}
+                            
+                            <!-- Security & Access Submenu -->
+                            {% if current_user.is_admin or has_permission('view_audit_logs') %}
+                            <li>
+                                <button onclick="toggleDropdown('adminSecurityDropdown', event)" data-dropdown="adminSecurityDropdown" class="w-full flex items-center px-2 py-1 rounded {% if admin_security_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-shield-alt w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('Security & Access') }}</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <ul id="adminSecurityDropdown" class="{% if admin_security_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    {% if current_user.is_admin %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.api_tokens' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.api_tokens') }}">
+                                            <i class="fas fa-key w-4 mr-2"></i>{{ _('API Tokens') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if current_user.is_admin %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('webhooks.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('webhooks.list_webhooks') }}">
+                                            <i class="fas fa-plug w-4 mr-2"></i>{{ _('Webhooks') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if current_user.is_admin or has_permission('view_audit_logs') %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('audit_logs.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('audit_logs.list_audit_logs') }}">
+                                            <i class="fas fa-history w-4 mr-2"></i>{{ _('Audit Logs') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                            {% endif %}
+                            
+                            <!-- Integrations Submenu -->
+                            {% if current_user.is_admin %}
+                            <li>
+                                <button onclick="toggleDropdown('adminIntegrationsDropdown', event)" data-dropdown="adminIntegrationsDropdown" class="w-full flex items-center px-2 py-1 rounded {% if admin_integrations_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-plug w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('Integrations') }}</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <ul id="adminIntegrationsDropdown" class="{% if admin_integrations_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.list_integrations_admin' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_integrations_admin') }}">
+                                            <i class="fas fa-plug w-4 mr-2"></i>{{ _('Integrations') }}
                                         </a>
                                     </li>
                                 </ul>
                             </li>
                             {% endif %}
                             
-                            <!-- Data Management -->
-                            {% if current_user.is_admin %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'expense_categories.list_categories' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expense_categories.list_categories') }}">
-                                    <i class="fas fa-tags w-4 mr-2"></i>{{ _('Expense Categories') }}
-                                </a>
-                            </li>
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'per_diem.list_rates' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_rates') }}">
-                                    <i class="fas fa-list-ul w-4 mr-2"></i>{{ _('Per Diem Rates') }}
-                                </a>
-                            </li>
-                            {% endif %}
+                            <!-- Data Management Submenu -->
                             {% if current_user.is_admin or has_permission('manage_settings') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
-                                    <i class="fas fa-file-lines w-4 mr-2"></i>{{ _('Time Entry Templates') }}
-                                </a>
+                                <button onclick="toggleDropdown('adminDataDropdown', event)" data-dropdown="adminDataDropdown" class="w-full flex items-center px-2 py-1 rounded {% if admin_data_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-database w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('Data Management') }}</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <ul id="adminDataDropdown" class="{% if admin_data_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    {% if current_user.is_admin %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'expense_categories.list_categories' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expense_categories.list_categories') }}">
+                                            <i class="fas fa-tags w-4 mr-2"></i>{{ _('Expense Categories') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'per_diem.list_rates' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_rates') }}">
+                                            <i class="fas fa-list-ul w-4 mr-2"></i>{{ _('Per Diem Rates') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if current_user.is_admin or has_permission('manage_settings') %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
+                                            <i class="fas fa-file-lines w-4 mr-2"></i>{{ _('Time Entry Templates') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('custom_field_definitions.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_field_definitions.list_custom_field_definitions') }}">
+                                            <i class="fas fa-tags w-4 mr-2"></i>{{ _('Custom Fields') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('link_templates.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('link_templates.list_link_templates') }}">
+                                            <i class="fas fa-link w-4 mr-2"></i>{{ _('Link Templates') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
                             </li>
                             {% endif %}
                             
-                            <!-- System Info & Maintenance -->
-                            {% if current_user.is_admin or has_permission('view_system_info') %}
+                            <!-- System Maintenance Submenu -->
+                            {% if current_user.is_admin or has_permission('view_system_info') or has_permission('manage_backups') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.system_info' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.system_info') }}">
-                                    <i class="fas fa-info-circle w-4 mr-2"></i>{{ _('System Info') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if current_user.is_admin or has_permission('manage_backups') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.backups_management' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.backups_management') }}">
-                                    <i class="fas fa-database w-4 mr-2"></i>{{ _('Backups') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if current_user.is_admin or has_permission('manage_oidc') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.oidc_debug' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.oidc_debug') }}">
-                                    <i class="fas fa-lock w-4 mr-2"></i>{{ _('OIDC Settings') }}
-                                </a>
+                                <button onclick="toggleDropdown('adminMaintenanceDropdown', event)" data-dropdown="adminMaintenanceDropdown" class="w-full flex items-center px-2 py-1 rounded {% if admin_maintenance_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-tools w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('System Maintenance') }}</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <ul id="adminMaintenanceDropdown" class="{% if admin_maintenance_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    {% if current_user.is_admin or has_permission('view_system_info') %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.system_info' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.system_info') }}">
+                                            <i class="fas fa-info-circle w-4 mr-2"></i>{{ _('System Info') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if current_user.is_admin or has_permission('manage_backups') %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.backups_management' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.backups_management') }}">
+                                            <i class="fas fa-database w-4 mr-2"></i>{{ _('Backups') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if current_user.is_admin %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.telemetry_dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.telemetry_dashboard') }}">
+                                            <i class="fas fa-chart-line w-4 mr-2"></i>{{ _('Telemetry') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
                             </li>
                             {% endif %}
                         </ul>
@@ -1208,8 +1316,15 @@
             const isCurrentlyHidden = dropdown.classList.contains('hidden');
             
             // Define nested dropdowns and their parent dropdowns
+            // All admin submenus should keep the parent adminDropdown open
             const nestedDropdowns = {
-                'pdfDropdown': 'adminDropdown'
+                'pdfDropdown': 'adminSettingsDropdown',
+                'adminUserMgmtDropdown': 'adminDropdown',
+                'adminSettingsDropdown': 'adminDropdown',
+                'adminSecurityDropdown': 'adminDropdown',
+                'adminIntegrationsDropdown': 'adminDropdown',
+                'adminDataDropdown': 'adminDropdown',
+                'adminMaintenanceDropdown': 'adminDropdown'
             };
             
             // If this is a nested dropdown, don't close its parent
@@ -1221,6 +1336,10 @@
             allSidebarDropdowns.forEach(dropdownId => {
                 // Don't close the parent if this is a nested dropdown
                 if (dropdownId === parentDropdown) {
+                    return;
+                }
+                // Don't close adminDropdown if clicking on any of its submenus
+                if (dropdownId === 'adminDropdown' && parentDropdown === 'adminDropdown') {
                     return;
                 }
                 if (dropdownId !== id) {
@@ -1242,6 +1361,13 @@
             // Toggle the clicked dropdown
             if (isCurrentlyHidden) {
                 dropdown.classList.remove('hidden');
+                // If opening a submenu of adminDropdown, ensure adminDropdown is also open
+                if (parentDropdown === 'adminDropdown') {
+                    const adminDropdown = document.getElementById('adminDropdown');
+                    if (adminDropdown) {
+                        adminDropdown.classList.remove('hidden');
+                    }
+                }
             } else {
                 dropdown.classList.add('hidden');
             }

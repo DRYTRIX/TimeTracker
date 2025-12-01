@@ -293,6 +293,40 @@ def create_app(config=None):
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
+    
+    # Initialize audit logging - register event listeners AFTER db.init_app()
+    # Flask-SQLAlchemy uses its own session class, so we need to register with it
+    from app.utils import audit
+    from sqlalchemy import event
+    from sqlalchemy.orm import Session
+    
+    # Register with generic SQLAlchemy Session (catches all Session instances)
+    event.listen(Session, "after_flush", audit.receive_after_flush)
+    
+    # Also register with Flask-SQLAlchemy's sessionmaker if available
+    # Flask-SQLAlchemy creates sessions from a sessionmaker, so we register with that
+    try:
+        # Get the sessionmaker from Flask-SQLAlchemy
+        if hasattr(db, 'session') and hasattr(db.session, 'registry'):
+            sessionmaker = db.session.registry()
+            if sessionmaker:
+                # Register with the session class that the sessionmaker creates
+                session_class = sessionmaker.class_
+                if session_class:
+                    event.listen(session_class, "after_flush", audit.receive_after_flush)
+                    logger.info(f"Registered audit logging with Flask-SQLAlchemy session class: {session_class.__name__}")
+    except Exception as e:
+        logger.debug(f"Could not register with Flask-SQLAlchemy sessionmaker: {e}")
+    
+    # Register with SignallingSession (Flask-SQLAlchemy 2.x)
+    try:
+        from flask_sqlalchemy import SignallingSession
+        event.listen(SignallingSession, "after_flush", audit.receive_after_flush)
+        logger.info("Registered audit logging with Flask-SQLAlchemy SignallingSession")
+    except (ImportError, AttributeError):
+        pass
+    
+    logger.info("Audit logging event listeners registered")
 
     # Initialize Settings from environment variables on startup
     # This ensures .env values are used as initial values, but WebUI changes take priority
@@ -909,8 +943,6 @@ def create_app(config=None):
             pass
         return resp
 
-    # Initialize audit logging (import to register event listeners)
-    from app.utils import audit  # noqa: F401
 
     # Register blueprints
     from app.routes.auth import auth_bp

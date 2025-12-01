@@ -133,12 +133,16 @@ class AuditLog(db.Model):
             except Exception:
                 pass
             # Don't let audit logging break the main flow
-            # Use debug level to avoid cluttering logs with expected errors
-            # (e.g., when audit_logs table doesn't exist yet)
+            # Log at warning level so it's visible if there's a real issue
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.debug(f"Failed to log audit change (non-critical): {e}")
+            # Check if it's a table doesn't exist error
+            error_str = str(e).lower()
+            if "does not exist" in error_str or "no such table" in error_str or "relation" in error_str and "does not exist" in error_str:
+                logger.warning(f"audit_logs table does not exist - run migration 044_add_audit_logs_table.py. Error: {e}")
+            else:
+                logger.warning(f"Failed to log audit change (non-critical): {e}")
 
     @staticmethod
     def _encode_value(value):
