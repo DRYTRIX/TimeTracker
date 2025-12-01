@@ -78,10 +78,11 @@ def comparison_view():
         last_period_end = datetime(now.year, 1, 1) - timedelta(seconds=1)
 
     # Get hours for current period
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     current_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= this_period_start, TimeEntry.start_time <= now
     )
-    if not current_user.is_admin:
+    if not can_view_all:
         current_query = current_query.filter(TimeEntry.user_id == current_user.id)
     current_seconds = current_query.scalar() or 0
 
@@ -91,7 +92,7 @@ def comparison_view():
         TimeEntry.start_time >= last_period_start,
         TimeEntry.start_time <= last_period_end,
     )
-    if not current_user.is_admin:
+    if not can_view_all:
         previous_query = previous_query.filter(TimeEntry.user_id == current_user.id)
     previous_seconds = previous_query.scalar() or 0
 
@@ -131,15 +132,26 @@ def project_report():
         return render_template("reports/project_report.html", projects=projects, users=users)
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
+
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            # User doesn't have permission to view other users' entries
+            flash(_("You do not have permission to view other users' time entries"), "error")
+            return render_template("reports/project_report.html", projects=projects, users=users)
 
     entries = query.order_by(TimeEntry.start_time.desc()).all()
 
@@ -276,12 +288,23 @@ def user_report():
         return render_template("reports/user_report.html", users=users, projects=projects)
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            # User doesn't have permission to view other users' entries
+            flash(_("You do not have permission to view other users' time entries"), "error")
+            return render_template("reports/user_report.html", users=users, projects=projects)
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -411,12 +434,22 @@ def export_csv():
         return redirect(url_for("reports.reports"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.reports"))
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -701,12 +734,22 @@ def export_excel():
         return redirect(url_for("reports.reports"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.reports"))
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -761,15 +804,25 @@ def export_project_excel():
         return redirect(url_for("reports.project_report"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
+
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.project_report"))
 
     entries = query.all()
 
@@ -838,12 +891,22 @@ def export_user_excel():
         return redirect(url_for("reports.user_report"))
 
     # Get time entries
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     query = TimeEntry.query.filter(
         TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
     if user_id:
-        query = query.filter(TimeEntry.user_id == user_id)
+        # Only allow filtering by other users if they have permission
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            flash(_("You do not have permission to export other users' time entries"), "error")
+            return redirect(url_for("reports.reports"))
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -1075,6 +1138,474 @@ def export_task_excel():
 
     log_event("export.excel", user_id=current_user.id, export_type="task_report", num_tasks=len(task_rows))
     track_event(current_user.id, "export.excel", {"export_type": "task_report", "num_tasks": len(task_rows)})
+
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@reports_bp.route("/reports/unpaid-hours")
+@login_required
+def unpaid_hours_report():
+    """Report showing unpaid hours per client"""
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    client_id = request.args.get("client_id", type=int)
+
+    # Get clients for filter
+    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+
+    # Parse dates
+    if not start_date:
+        start_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        flash(_("Invalid date format"), "error")
+        return render_template("reports/unpaid_hours_report.html", clients=clients)
+
+    # Get all billable time entries in the date range
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    from sqlalchemy.orm import joinedload
+    
+    query = TimeEntry.query.options(
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.task),
+        joinedload(TimeEntry.client),
+    ).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.billable == True,
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt,
+    )
+
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
+    if client_id:
+        query = query.filter(TimeEntry.client_id == client_id)
+
+    all_entries = query.all()
+
+    # Get all invoice items to check which time entries are already invoiced
+    from app.models.invoice import InvoiceItem
+
+    all_invoice_items = InvoiceItem.query.join(Invoice).filter(
+        InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != ""
+    ).all()
+
+    # Build a set of time entry IDs that are in fully paid invoices
+    billed_entry_ids = set()
+    unpaid_entry_ids = set()  # Entries in unpaid/partially paid invoices
+
+    for item in all_invoice_items:
+        if not item.time_entry_ids:
+            continue
+        entry_ids = [int(eid.strip()) for eid in item.time_entry_ids.split(",") if eid.strip().isdigit()]
+        invoice = item.invoice
+        if invoice and invoice.payment_status == "fully_paid":
+            billed_entry_ids.update(entry_ids)
+        elif invoice and invoice.payment_status in ("unpaid", "partially_paid"):
+            unpaid_entry_ids.update(entry_ids)
+
+    # Filter entries: only include those that are NOT in fully paid invoices
+    unpaid_entries = [e for e in all_entries if e.id not in billed_entry_ids]
+
+    # Group by client
+    client_totals = {}
+    for entry in unpaid_entries:
+        # Get client from entry or from project
+        client = None
+        if entry.client_id:
+            client = entry.client
+        elif entry.project and entry.project.client_id:
+            client = entry.project.client_obj
+
+        if not client:
+            continue
+
+        if client.id not in client_totals:
+            client_totals[client.id] = {
+                "client": client,
+                "total_hours": 0.0,
+                "billable_hours": 0.0,
+                "estimated_amount": 0.0,
+                "entries": [],
+                "projects": {},
+            }
+
+        hours = entry.duration_hours
+        client_totals[client.id]["total_hours"] += hours
+        client_totals[client.id]["billable_hours"] += hours
+        client_totals[client.id]["entries"].append(entry)
+
+        # Track by project
+        if entry.project:
+            project_id = entry.project.id
+            if project_id not in client_totals[client.id]["projects"]:
+                client_totals[client.id]["projects"][project_id] = {
+                    "project": entry.project,
+                    "hours": 0.0,
+                    "rate": float(entry.project.hourly_rate) if entry.project.hourly_rate else 0.0,
+                }
+            client_totals[client.id]["projects"][project_id]["hours"] += hours
+
+        # Calculate estimated amount
+        rate = 0.0
+        if entry.project and entry.project.hourly_rate:
+            rate = float(entry.project.hourly_rate)
+        elif client.default_hourly_rate:
+            rate = float(client.default_hourly_rate)
+        client_totals[client.id]["estimated_amount"] += hours * rate
+
+    # Convert to list and round values
+    client_data = []
+    total_unpaid_hours = 0.0
+    total_estimated_amount = 0.0
+
+    for client_id, data in client_totals.items():
+        data["total_hours"] = round(data["total_hours"], 2)
+        data["billable_hours"] = round(data["billable_hours"], 2)
+        data["estimated_amount"] = round(data["estimated_amount"], 2)
+        data["projects"] = list(data["projects"].values())
+        for proj in data["projects"]:
+            proj["hours"] = round(proj["hours"], 2)
+        client_data.append(data)
+        total_unpaid_hours += data["total_hours"]
+        total_estimated_amount += data["estimated_amount"]
+
+    # Sort by total hours descending
+    client_data.sort(key=lambda x: x["total_hours"], reverse=True)
+
+    summary = {
+        "total_unpaid_hours": round(total_unpaid_hours, 2),
+        "total_estimated_amount": round(total_estimated_amount, 2),
+        "clients_count": len(client_data),
+    }
+
+    # Check if this is an Ajax request
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("format") == "json":
+        return jsonify({
+            "summary": summary,
+            "client_data": [
+                {
+                    "client_id": data["client"].id,
+                    "client_name": data["client"].name,
+                    "client_email": data["client"].email,
+                    "total_hours": data["total_hours"],
+                    "billable_hours": data["billable_hours"],
+                    "estimated_amount": data["estimated_amount"],
+                    "projects": [
+                        {
+                            "project_id": proj["project"].id,
+                            "project_name": proj["project"].name,
+                            "hours": proj["hours"],
+                            "rate": proj["rate"],
+                        }
+                        for proj in data["projects"]
+                    ],
+                    "entries": [
+                        {
+                            "id": entry.id,
+                            "user": entry.user.display_name if entry.user else "Unknown",
+                            "project": entry.project.name if entry.project else "No Project",
+                            "task": entry.task.name if entry.task else None,
+                            "start_time": entry.start_time.isoformat() if entry.start_time else None,
+                            "end_time": entry.end_time.isoformat() if entry.end_time else None,
+                            "duration_hours": round(entry.duration_hours, 2),
+                            "notes": entry.notes or "",
+                        }
+                        for entry in data["entries"]
+                    ],
+                }
+                for data in client_data
+            ],
+        })
+
+    return render_template(
+        "reports/unpaid_hours_report.html",
+        clients=clients,
+        client_data=client_data,
+        summary=summary,
+        start_date=start_date,
+        end_date=end_date,
+        selected_client=client_id,
+    )
+
+
+@reports_bp.route("/reports/unpaid-hours/export/excel")
+@login_required
+def export_unpaid_hours_excel():
+    """Export unpaid hours report as Excel file, organized by project"""
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    client_id = request.args.get("client_id", type=int)
+
+    # Parse dates
+    if not start_date:
+        start_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        flash(_("Invalid date format"), "error")
+        return redirect(url_for("reports.unpaid_hours_report"))
+
+    # Get all billable time entries in the date range
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    from sqlalchemy.orm import joinedload
+
+    query = TimeEntry.query.options(
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.task),
+        joinedload(TimeEntry.client),
+    ).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.billable == True,
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt,
+    )
+
+    # Filter by user if no permission to view all
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
+    all_entries = query.all()
+    
+    # Filter by client if specified (check both entry.client_id and project.client_id)
+    if client_id:
+        all_entries = [
+            e for e in all_entries
+            if (e.client_id == client_id) or (e.project and e.project.client_id == client_id)
+        ]
+
+    # Get all invoice items to check which time entries are already invoiced
+    from app.models.invoice import InvoiceItem
+
+    all_invoice_items = InvoiceItem.query.join(Invoice).filter(
+        InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != ""
+    ).all()
+
+    # Build a set of time entry IDs that are in fully paid invoices
+    billed_entry_ids = set()
+
+    for item in all_invoice_items:
+        if not item.time_entry_ids:
+            continue
+        entry_ids = [int(eid.strip()) for eid in item.time_entry_ids.split(",") if eid.strip().isdigit()]
+        invoice = item.invoice
+        if invoice and invoice.payment_status == "fully_paid":
+            billed_entry_ids.update(entry_ids)
+
+    # Filter entries: only include those that are NOT in fully paid invoices
+    unpaid_entries = [e for e in all_entries if e.id not in billed_entry_ids]
+    
+    # Debug: Check if we have any entries
+    if not unpaid_entries:
+        # Still create a file with empty data to show the issue
+        pass
+
+    # Group by project
+    project_data = {}
+    for entry in unpaid_entries:
+        # Get project
+        project = entry.project
+        if not project:
+            continue
+
+        project_id = project.id
+        if project_id not in project_data:
+            # Get client from entry or from project
+            client = None
+            if entry.client_id:
+                client = entry.client
+            elif project.client_id:
+                client = project.client_obj
+
+            project_data[project_id] = {
+                "project": project,
+                "client": client,
+                "entries": [],
+                "total_hours": 0.0,
+                "estimated_amount": 0.0,
+            }
+
+        hours = entry.duration_hours
+        project_data[project_id]["total_hours"] += hours
+        project_data[project_id]["entries"].append(entry)
+
+        # Calculate estimated amount
+        rate = 0.0
+        if project.hourly_rate:
+            rate = float(project.hourly_rate)
+        elif client and client.default_hourly_rate:
+            rate = float(client.default_hourly_rate)
+        project_data[project_id]["estimated_amount"] += hours * rate
+
+    # Create Excel file
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    wb.remove(wb.active)  # Remove default sheet
+
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    title_font = Font(bold=True, size=14)
+    border = Border(
+        left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+    )
+
+    # Summary sheet
+    summary_ws = wb.create_sheet("Summary", 0)
+    summary_ws.merge_cells("A1:D1")
+    title_cell = summary_ws["A1"]
+    title_cell.value = f"Unpaid Hours Report: {start_date} to {end_date}"
+    title_cell.font = title_font
+    title_cell.alignment = Alignment(horizontal="center")
+
+    # Summary headers
+    summary_headers = ["Client", "Project", "Total Hours", "Estimated Amount"]
+    for col_num, header in enumerate(summary_headers, 1):
+        cell = summary_ws.cell(row=3, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = border
+
+    # Summary data
+    row_num = 4
+    total_hours = 0.0
+    total_amount = 0.0
+    
+    if not project_data:
+        # No data message
+        summary_ws.cell(row=4, column=1, value="No unpaid hours found for the selected period.")
+        summary_ws.merge_cells("A4:D4")
+    else:
+        for project_id, data in sorted(project_data.items(), key=lambda x: (x[1]["client"].name if x[1]["client"] and x[1]["client"].name else "", x[1]["project"].name)):
+            summary_ws.cell(row=row_num, column=1, value=data["client"].name if data["client"] else "N/A").border = border
+            summary_ws.cell(row=row_num, column=2, value=data["project"].name).border = border
+            summary_ws.cell(row=row_num, column=3, value=round(data["total_hours"], 2)).border = border
+            summary_ws.cell(row=row_num, column=3).number_format = "0.00"
+            summary_ws.cell(row=row_num, column=4, value=round(data["estimated_amount"], 2)).border = border
+            summary_ws.cell(row=row_num, column=4).number_format = "0.00"
+            total_hours += data["total_hours"]
+            total_amount += data["estimated_amount"]
+            row_num += 1
+
+        # Summary totals
+        row_num += 1
+        summary_ws.cell(row=row_num, column=1, value="TOTAL").font = Font(bold=True)
+        summary_ws.cell(row=row_num, column=2, value="").font = Font(bold=True)
+        summary_ws.cell(row=row_num, column=3, value=round(total_hours, 2)).font = Font(bold=True)
+        summary_ws.cell(row=row_num, column=3).number_format = "0.00"
+        summary_ws.cell(row=row_num, column=4, value=round(total_amount, 2)).font = Font(bold=True)
+        summary_ws.cell(row=row_num, column=4).number_format = "0.00"
+
+    # Auto-adjust column widths for summary
+    for col_idx in range(1, len(summary_headers) + 1):
+        column = get_column_letter(col_idx)
+        summary_ws.column_dimensions[column].width = 20
+
+    # Create a sheet for each project
+    if project_data:
+        for project_id, data in sorted(project_data.items(), key=lambda x: (x[1]["client"].name if x[1]["client"] and x[1]["client"].name else "", x[1]["project"].name)):
+            project = data["project"]
+            client = data["client"]
+            
+            # Create sheet name (Excel has 31 char limit for sheet names)
+            sheet_name = f"{client.name[:15]}-{project.name[:15]}" if client else project.name[:31]
+            sheet_name = sheet_name.replace("/", "-").replace("\\", "-").replace("?", "-").replace("*", "-").replace("[", "-").replace("]", "-").replace(":", "-")
+            
+            ws = wb.create_sheet(sheet_name)
+
+            # Title
+            ws.merge_cells("A1:G1")
+            title_cell = ws["A1"]
+            title_cell.value = f"{client.name if client else 'N/A'} - {project.name}"
+            title_cell.font = title_font
+            title_cell.alignment = Alignment(horizontal="center")
+
+            # Project info
+            ws.cell(row=2, column=1, value="Client:").font = Font(bold=True)
+            ws.cell(row=2, column=2, value=client.name if client else "N/A")
+            ws.cell(row=3, column=1, value="Project:").font = Font(bold=True)
+            ws.cell(row=3, column=2, value=project.name)
+            ws.cell(row=4, column=1, value="Total Hours:").font = Font(bold=True)
+            ws.cell(row=4, column=2, value=round(data["total_hours"], 2))
+            ws.cell(row=4, column=2).number_format = "0.00"
+            ws.cell(row=5, column=1, value="Estimated Amount:").font = Font(bold=True)
+            ws.cell(row=5, column=2, value=round(data["estimated_amount"], 2))
+            ws.cell(row=5, column=2).number_format = "0.00"
+
+            # Headers
+            headers = ["User", "Task", "Date", "Start Time", "End Time", "Duration (hours)", "Notes"]
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=7, column=col_num, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+                cell.border = border
+
+            # Data rows
+            row_num = 8
+            for entry in sorted(data["entries"], key=lambda x: x.start_time if x.start_time else datetime.min):
+                ws.cell(row=row_num, column=1, value=entry.user.display_name if entry.user else "Unknown").border = border
+                ws.cell(row=row_num, column=2, value=entry.task.name if entry.task else "-").border = border
+                ws.cell(row=row_num, column=3, value=entry.start_time.strftime("%Y-%m-%d") if entry.start_time else "-").border = border
+                ws.cell(row=row_num, column=4, value=entry.start_time.strftime("%H:%M:%S") if entry.start_time else "-").border = border
+                ws.cell(row=row_num, column=5, value=entry.end_time.strftime("%H:%M:%S") if entry.end_time else "-").border = border
+                ws.cell(row=row_num, column=6, value=round(entry.duration_hours, 2)).border = border
+                ws.cell(row=row_num, column=6).number_format = "0.00"
+                ws.cell(row=row_num, column=7, value=entry.notes or "-").border = border
+                row_num += 1
+
+            # Totals row
+            row_num += 1
+            ws.cell(row=row_num, column=5, value="TOTAL:").font = Font(bold=True)
+            ws.cell(row=row_num, column=6, value=round(data["total_hours"], 2)).font = Font(bold=True)
+            ws.cell(row=row_num, column=6).number_format = "0.00"
+
+            # Auto-adjust column widths
+            for col_idx in range(1, len(headers) + 1):
+                column = get_column_letter(col_idx)
+                max_length = 15
+                for row in ws.iter_rows(min_row=7, max_row=row_num, min_col=col_idx, max_col=col_idx):
+                    for cell in row:
+                        try:
+                            if cell.value and len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                ws.column_dimensions[column].width = min(max_length + 2, 50)
+
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"unpaid_hours_report_{start_date}_{end_date}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    # Track event
+    log_event("export.excel", user_id=current_user.id, export_type="unpaid_hours_report", num_projects=len(project_data))
+    track_event(current_user.id, "export.excel", {"export_type": "unpaid_hours_report", "num_projects": len(project_data)})
 
     return send_file(
         output,

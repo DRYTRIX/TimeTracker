@@ -57,11 +57,23 @@
                             <i class="fas fa-download mr-1"></i>{{ _('Download Template') }}
                         </a>
                     </div>
-                    <div class="mt-2">
+                    <div class="mt-2 space-y-2">
                         <label class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                             <input type="checkbox" id="skip-duplicates" checked class="rounded">
-                            <span>{{ _('Skip duplicate clients (by name or custom field)') }}</span>
+                            <span>{{ _('Skip duplicate clients') }}</span>
                         </label>
+                        <div id="duplicate-detection-fields" class="ml-6 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div class="font-medium">{{ _('Use these fields for duplicate detection:') }}</div>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" id="dup-field-name" class="rounded dup-field-checkbox">
+                                <span>{{ _('Client Name') }}</span>
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <label for="dup-custom-fields" class="text-sm">{{ _('Custom fields (comma-separated):') }}</label>
+                                <input type="text" id="dup-custom-fields" placeholder="{{ _('e.g., debtor_number, erp_id') }}" class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-500">{{ _('Example: Enter "debtor_number" to detect duplicates by debtor number only (not by name)') }}</div>
+                        </div>
                     </div>
                     <div id="csv-clients-upload-status" class="mt-2 text-sm"></div>
                 </div>
@@ -328,8 +340,23 @@ async function handleCsvClientsUpload(input) {
         formData.append('csrf_token', csrfToken);
     }
     
+    // Collect duplicate detection fields
+    const duplicateFields = [];
+    if (document.getElementById('dup-field-name').checked) {
+        duplicateFields.push('name');
+    }
+    const customFieldsInput = document.getElementById('dup-custom-fields').value.trim();
+    if (customFieldsInput) {
+        // Split by comma and add each field
+        const customFields = customFieldsInput.split(',').map(f => f.trim()).filter(f => f);
+        duplicateFields.push(...customFields);
+    }
+    
     try {
-        const url = `/api/import/csv/clients?skip_duplicates=${skipDuplicates}`;
+        let url = `/api/import/csv/clients?skip_duplicates=${skipDuplicates}`;
+        if (duplicateFields.length > 0) {
+            url += `&duplicate_detection_fields=${encodeURIComponent(duplicateFields.join(','))}`;
+        }
         const response = await fetch(url, {
             method: 'POST',
             body: formData
@@ -647,6 +674,25 @@ function showFilteredExportForm() {
 document.addEventListener('DOMContentLoaded', function() {
     loadImportHistory();
     loadExportHistory();
+    
+    // Toggle duplicate detection fields visibility based on skip-duplicates checkbox
+    const skipDuplicatesCheckbox = document.getElementById('skip-duplicates');
+    const duplicateDetectionFields = document.getElementById('duplicate-detection-fields');
+    
+    function toggleDuplicateFields() {
+        if (skipDuplicatesCheckbox && duplicateDetectionFields) {
+            if (skipDuplicatesCheckbox.checked) {
+                duplicateDetectionFields.style.display = 'block';
+            } else {
+                duplicateDetectionFields.style.display = 'none';
+            }
+        }
+    }
+    
+    if (skipDuplicatesCheckbox && duplicateDetectionFields) {
+        skipDuplicatesCheckbox.addEventListener('change', toggleDuplicateFields);
+        toggleDuplicateFields(); // Initialize on page load
+    }
 });
 </script>
 {% endblock %}

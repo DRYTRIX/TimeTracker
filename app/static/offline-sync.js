@@ -132,14 +132,65 @@ class OfflineSyncManager {
         });
     }
 
+    // Helper function to format dates to ISO 8601
+    formatDateToISO(dateValue) {
+        if (!dateValue) return null;
+        
+        // If it's already a string in ISO format, return as is
+        if (typeof dateValue === 'string') {
+            // Check if it's already in ISO format
+            if (dateValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+                return dateValue;
+            }
+            // Try to parse and reformat
+            try {
+                const date = new Date(dateValue);
+                if (!isNaN(date.getTime())) {
+                    return date.toISOString();
+                }
+            } catch (e) {
+                console.error('[OfflineSync] Error parsing date string:', dateValue, e);
+            }
+            return dateValue;
+        }
+        
+        // If it's a Date object, convert to ISO string
+        if (dateValue instanceof Date) {
+            if (isNaN(dateValue.getTime())) {
+                console.error('[OfflineSync] Invalid Date object:', dateValue);
+                return null;
+            }
+            return dateValue.toISOString();
+        }
+        
+        // Fallback: try to create a Date object
+        try {
+            const date = new Date(dateValue);
+            if (!isNaN(date.getTime())) {
+                return date.toISOString();
+            }
+        } catch (e) {
+            console.error('[OfflineSync] Error formatting date:', dateValue, e);
+        }
+        
+        return null;
+    }
+
     // Time Entry Operations
     async saveTimeEntryOffline(entryData) {
         if (!this.db) {
             throw new Error('Database not initialized');
         }
 
-        const entry = {
+        // Normalize dates to ISO format for consistent storage
+        const normalizedData = {
             ...entryData,
+            start_time: this.formatDateToISO(entryData.start_time),
+            end_time: entryData.end_time ? this.formatDateToISO(entryData.end_time) : null
+        };
+
+        const entry = {
+            ...normalizedData,
             localId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             serverId: null,
             synced: false,
@@ -160,7 +211,7 @@ class OfflineSyncManager {
                     type: 'time_entry',
                     action: 'create',
                     localId: entry.localId,
-                    data: entryData,
+                    data: normalizedData,
                     timestamp: new Date().toISOString(),
                     processed: false,
                     retries: 0
@@ -222,6 +273,15 @@ class OfflineSyncManager {
 
         for (const entry of unsyncedEntries) {
             try {
+                // Format dates to ISO 8601
+                const startTimeISO = this.formatDateToISO(entry.start_time);
+                const endTimeISO = this.formatDateToISO(entry.end_time);
+                
+                if (!startTimeISO) {
+                    console.error('[OfflineSync] Invalid start_time format:', entry.start_time);
+                    continue;
+                }
+
                 const response = await fetch('/api/v1/time-entries', {
                     method: 'POST',
                     headers: {
@@ -230,8 +290,8 @@ class OfflineSyncManager {
                     body: JSON.stringify({
                         project_id: entry.project_id,
                         task_id: entry.task_id,
-                        start_time: entry.start_time,
-                        end_time: entry.end_time,
+                        start_time: startTimeISO,
+                        end_time: endTimeISO,
                         notes: entry.notes,
                         tags: entry.tags,
                         billable: entry.billable
@@ -243,7 +303,8 @@ class OfflineSyncManager {
                     await this.markAsSynced('timeEntries', entry.localId, result.id);
                     this.pendingSyncCount--;
                 } else {
-                    console.error('[OfflineSync] Failed to sync entry:', response.statusText);
+                    const errorText = await response.text();
+                    console.error('[OfflineSync] Failed to sync entry:', response.status, response.statusText, errorText);
                 }
             } catch (error) {
                 console.error('[OfflineSync] Error syncing entry:', error);
@@ -373,17 +434,27 @@ class OfflineSyncManager {
 
     // Public API
     async createTimeEntryOffline(data) {
+        // Normalize dates to ISO format
+        const normalizedData = {
+            ...data,
+            start_time: this.formatDateToISO(data.start_time),
+            end_time: data.end_time ? this.formatDateToISO(data.end_time) : null
+        };
+
         if (navigator.onLine) {
             // Try online first
             try {
                 const response = await fetch('/api/v1/time-entries', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(normalizedData)
                 });
 
                 if (response.ok) {
                     return await response.json();
+                } else {
+                    const errorText = await response.text();
+                    console.error('[OfflineSync] Online create failed:', response.status, response.statusText, errorText);
                 }
             } catch (error) {
                 console.log('[OfflineSync] Online create failed, saving offline:', error);
@@ -391,7 +462,7 @@ class OfflineSyncManager {
         }
 
         // Save offline
-        return await this.saveTimeEntryOffline(data);
+        return await this.saveTimeEntryOffline(normalizedData);
     }
 
     async getPendingCount() {

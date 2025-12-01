@@ -689,10 +689,30 @@ def delete_timer(timer_id):
     else:
         target_name = _("Unknown")
 
+    # Capture entry info for logging before deletion
+    entry_id = timer.id
+    duration_formatted = timer.duration_formatted
+    project_name = timer.project.name if timer.project else None
+    client_name = timer.client.name if timer.client else None
+    entity_name = project_name or client_name or _("Unknown")
+
     db.session.delete(timer)
-    if not safe_commit("delete_timer", {"timer_id": timer.id}):
+    if not safe_commit("delete_timer", {"timer_id": entry_id}):
         flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
+
+    # Log activity
+    Activity.log(
+        user_id=current_user.id,
+        action="deleted",
+        entity_type="time_entry",
+        entity_id=entry_id,
+        entity_name=entity_name,
+        description=f'Deleted time entry for {entity_name} - {duration_formatted}',
+        extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get("User-Agent"),
+    )
 
     # Invalidate dashboard cache so deleted entry disappears immediately
     try:
@@ -1519,3 +1539,292 @@ def resume_timer(timer_id):
         flash(_("Timer resumed"), "success")
 
     return redirect(url_for("main.dashboard"))
+
+
+@timer_bp.route("/time-entries")
+@login_required
+def time_entries_overview():
+    """Overview page showing all time entries with filters and bulk actions"""
+    from sqlalchemy import or_, func, desc
+    from sqlalchemy.orm import joinedload
+    from app.repositories import TimeEntryRepository, ProjectRepository, UserRepository
+    
+    # Get filter parameters
+    user_id = request.args.get("user_id", type=int)
+    project_id = request.args.get("project_id", type=int)
+    client_id = request.args.get("client_id", type=int)
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+    paid_filter = request.args.get("paid", "")  # "true", "false", or ""
+    billable_filter = request.args.get("billable", "")  # "true", "false", or ""
+    search = request.args.get("search", "").strip()
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    
+    # Permission check: can user view all entries?
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    
+    # Build query with eager loading to avoid N+1 queries
+    query = TimeEntry.query.options(
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.client),
+        joinedload(TimeEntry.task)
+    ).filter(TimeEntry.end_time.isnot(None))  # Only completed entries
+    
+    # Filter by user
+    if user_id:
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id == current_user.id:
+            query = query.filter(TimeEntry.user_id == current_user.id)
+        else:
+            flash(_("You do not have permission to view other users' time entries"), "error")
+            return redirect(url_for("timer.time_entries_overview"))
+    elif not can_view_all:
+        # Non-admin users can only see their own entries
+        query = query.filter(TimeEntry.user_id == current_user.id)
+    
+    # Filter by project
+    if project_id:
+        query = query.filter(TimeEntry.project_id == project_id)
+    
+    # Filter by client
+    if client_id:
+        query = query.filter(TimeEntry.client_id == client_id)
+    
+    # Filter by date range
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(TimeEntry.start_time >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            # Include the entire end date
+            end_dt = end_dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(TimeEntry.start_time <= end_dt)
+        except ValueError:
+            pass
+    
+    # Filter by paid status
+    if paid_filter == "true":
+        query = query.filter(TimeEntry.paid == True)
+    elif paid_filter == "false":
+        query = query.filter(TimeEntry.paid == False)
+    
+    # Filter by billable status
+    if billable_filter == "true":
+        query = query.filter(TimeEntry.billable == True)
+    elif billable_filter == "false":
+        query = query.filter(TimeEntry.billable == False)
+    
+    # Search in notes and tags
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                TimeEntry.notes.ilike(search_pattern),
+                TimeEntry.tags.ilike(search_pattern)
+            )
+        )
+    
+    # Order by start time (most recent first)
+    query = query.order_by(desc(TimeEntry.start_time))
+    
+    # Pagination
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    time_entries = pagination.items
+    
+    # Get filter options
+    projects = []
+    clients = []
+    users = []
+    
+    if can_view_all:
+        project_repo = ProjectRepository()
+        projects = project_repo.get_active_projects()
+        clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+        user_repo = UserRepository()
+        users = user_repo.get_active_users()
+    else:
+        # For non-admin users, only show their projects
+        # Get projects from user's time entries
+        user_project_ids = (
+            db.session.query(TimeEntry.project_id)
+            .filter(TimeEntry.user_id == current_user.id, TimeEntry.project_id.isnot(None))
+            .distinct()
+            .all()
+        )
+        user_project_ids = [pid[0] for pid in user_project_ids]
+        if user_project_ids:
+            projects = Project.query.filter(Project.id.in_(user_project_ids), Project.status == "active").order_by(Project.name).all()
+            # Get clients from user's projects
+            client_ids = set(p.client_id for p in projects if p.client_id)
+            if client_ids:
+                clients = Client.query.filter(Client.id.in_(client_ids), Client.status == "active").order_by(Client.name).all()
+        users = [current_user]
+    
+    # Calculate totals
+    total_hours = sum(entry.duration_hours for entry in time_entries)
+    total_billable_hours = sum(entry.duration_hours for entry in time_entries if entry.billable)
+    total_paid_hours = sum(entry.duration_hours for entry in time_entries if entry.paid)
+    
+    # Track page view
+    track_event(
+        current_user.id,
+        "time_entries_overview.viewed",
+        {
+            "has_filters": bool(user_id or project_id or client_id or start_date or end_date or paid_filter or billable_filter or search),
+            "page": page,
+            "per_page": per_page
+        }
+    )
+    
+    filters_dict = {
+        "user_id": user_id,
+        "project_id": project_id,
+        "client_id": client_id,
+        "start_date": start_date,
+        "end_date": end_date,
+        "paid": paid_filter,
+        "billable": billable_filter,
+        "search": search,
+        "page": page,
+        "per_page": per_page
+    }
+    
+    # Check if this is an AJAX request
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        # Return only the time entries list HTML for AJAX requests
+        from flask import make_response
+        response = make_response(render_template(
+            "timer/_time_entries_list.html",
+            time_entries=time_entries,
+            pagination=pagination,
+            can_view_all=can_view_all,
+            filters=filters_dict
+        ))
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+    
+    return render_template(
+        "timer/time_entries_overview.html",
+        time_entries=time_entries,
+        pagination=pagination,
+        projects=projects,
+        clients=clients,
+        users=users,
+        can_view_all=can_view_all,
+        filters=filters_dict,
+        totals={
+            "total_hours": round(total_hours, 2),
+            "total_billable_hours": round(total_billable_hours, 2),
+            "total_paid_hours": round(total_paid_hours, 2),
+            "total_entries": len(time_entries)
+        }
+    )
+
+
+@timer_bp.route("/time-entries/bulk-paid", methods=["POST"])
+@login_required
+def bulk_mark_paid():
+    """Bulk mark time entries as paid or unpaid"""
+    from app.utils.db import safe_commit
+    
+    entry_ids = request.form.getlist("entry_ids[]")
+    paid_status = request.form.get("paid", "").strip().lower()
+    
+    if not entry_ids:
+        flash(_("No time entries selected"), "warning")
+        return redirect(url_for("timer.time_entries_overview"))
+    
+    if paid_status not in ("true", "false"):
+        flash(_("Invalid paid status"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+    
+    is_paid = paid_status == "true"
+    
+    # Load entries
+    entry_ids_int = [int(eid) for eid in entry_ids if eid.isdigit()]
+    if not entry_ids_int:
+        flash(_("Invalid entry IDs"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+    
+    entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids_int)).all()
+    
+    if not entries:
+        flash(_("No time entries found"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+    
+    # Permission check
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    updated_count = 0
+    skipped_count = 0
+    
+    for entry in entries:
+        # Check permissions
+        if not can_view_all and entry.user_id != current_user.id:
+            skipped_count += 1
+            continue
+        
+        # Skip active timers
+        if entry.is_active:
+            skipped_count += 1
+            continue
+        
+        # Update paid status
+        entry.set_paid(is_paid)
+        updated_count += 1
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action="updated",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"Time entry #{entry.id}",
+            description=f"Marked time entry as {'paid' if is_paid else 'unpaid'}",
+            extra_data={"paid": is_paid, "project_id": entry.project_id, "client_id": entry.client_id},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+    
+    if updated_count > 0:
+        if not safe_commit("bulk_mark_paid", {"count": updated_count, "paid": is_paid}):
+            flash(_("Could not update time entries due to a database error. Please check server logs."), "error")
+            return redirect(url_for("timer.time_entries_overview"))
+        
+        flash(
+            _("Successfully marked %(count)d time entry/entries as %(status)s", count=updated_count, status=_("paid") if is_paid else _("unpaid")),
+            "success"
+        )
+    
+    if skipped_count > 0:
+        flash(
+            _("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count),
+            "warning"
+        )
+    
+    # Track event
+    track_event(
+        current_user.id,
+        "time_entries.bulk_mark_paid",
+        {"count": updated_count, "paid": is_paid}
+    )
+    
+    # Preserve filters in redirect
+    redirect_url = url_for("timer.time_entries_overview")
+    filters = {}
+    for key in ["user_id", "project_id", "client_id", "start_date", "end_date", "paid", "billable", "search", "page"]:
+        value = request.form.get(key) or request.args.get(key)
+        if value:
+            filters[key] = value
+    
+    if filters:
+        redirect_url += "?" + "&".join(f"{k}={v}" for k, v in filters.items())
+    
+    return redirect(redirect_url)

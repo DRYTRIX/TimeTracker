@@ -410,8 +410,28 @@ class TimeTrackingService:
                 "error": "timer_active",
             }
 
+        # Capture entry info for logging before deletion
+        project_name = entry.project.name if entry.project else None
+        client_name = entry.client.name if entry.client else None
+        entity_name = project_name or client_name or "Unknown"
+        duration_formatted = entry.duration_formatted
+
         if self.time_entry_repo.delete(entry):
             if safe_commit("delete_entry", {"user_id": user_id, "entry_id": entry_id}):
+                # Log activity
+                from app.models import Activity
+                from flask import request, has_request_context
+                Activity.log(
+                    user_id=user_id,
+                    action="deleted",
+                    entity_type="time_entry",
+                    entity_id=entry_id,
+                    entity_name=entity_name,
+                    description=f'Deleted time entry for {entity_name} - {duration_formatted}',
+                    extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted},
+                    ip_address=request.remote_addr if has_request_context() else None,
+                    user_agent=request.headers.get("User-Agent") if has_request_context() else None,
+                )
                 return {"success": True, "message": "Time entry deleted successfully"}
 
         return {"success": False, "message": "Could not delete time entry", "error": "database_error"}

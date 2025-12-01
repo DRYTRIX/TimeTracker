@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, stat_card, badge %}
+
+{% block title %}{{ _('Time Entries Overview') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Time Entries')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-clock',
+    title_text=_('Time Entries Overview'),
+    subtitle_text=_('View and manage all time entries'),
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {{ stat_card(_('Total Hours'), totals.total_hours, 'fas fa-hourglass-half', 'blue-500') }}
+    {{ stat_card(_('Billable Hours'), totals.total_billable_hours, 'fas fa-dollar-sign', 'green-500') }}
+    {{ stat_card(_('Paid Hours'), totals.total_paid_hours, 'fas fa-check-circle', 'emerald-500') }}
+    {{ stat_card(_('Entries'), totals.total_entries, 'fas fa-list', 'purple-500') }}
+</div>
+
+<!-- Filters -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">{{ _('Filters') }}</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()">
+            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+        </button>
+    </div>
+    <div id="filterBody">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="timeEntriesFilterForm" data-filter-form>
+            {% if can_view_all %}
+            <div>
+                <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('User') }}</label>
+                <select name="user_id" id="user_id" class="form-input">
+                    <option value="">{{ _('All Users') }}</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if filters.user_id == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div>
+                <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Project') }}</label>
+                <select name="project_id" id="project_id" class="form-input">
+                    <option value="">{{ _('All Projects') }}</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}" {% if filters.project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Client') }}</label>
+                <select name="client_id" id="client_id" class="form-input">
+                    <option value="">{{ _('All Clients') }}</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if filters.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}" class="form-input">
+            </div>
+            <div>
+                <label for="paid" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Paid Status') }}</label>
+                <select name="paid" id="paid" class="form-input">
+                    <option value="">{{ _('All') }}</option>
+                    <option value="true" {% if filters.paid == 'true' %}selected{% endif %}>{{ _('Paid') }}</option>
+                    <option value="false" {% if filters.paid == 'false' %}selected{% endif %}>{{ _('Unpaid') }}</option>
+                </select>
+            </div>
+            <div>
+                <label for="billable" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Billable Status') }}</label>
+                <select name="billable" id="billable" class="form-input">
+                    <option value="">{{ _('All') }}</option>
+                    <option value="true" {% if filters.billable == 'true' %}selected{% endif %}>{{ _('Billable') }}</option>
+                    <option value="false" {% if filters.billable == 'false' %}selected{% endif %}>{{ _('Non-billable') }}</option>
+                </select>
+            </div>
+            <div>
+                <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Search') }}</label>
+                <input type="text" name="search" id="search" value="{{ filters.search or '' }}" placeholder="{{ _('Search in notes and tags...') }}" class="form-input">
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Actions Form -->
+<form id="bulkPaidForm" method="POST" action="{{ url_for('timer.bulk_mark_paid') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="paid" id="bulkPaidValue">
+    {% for key, value in filters.items() %}
+        {% if value %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endif %}
+    {% endfor %}
+</form>
+
+<!-- Time Entries Table -->
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    {% include 'timer/_time_entries_list.html' %}
+</div>
+
+<!-- Bulk Mark Paid Dialog -->
+<div id="bulkPaidDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Mark Selected Entries as Paid/Unpaid') }}</h3>
+            <label for="bulkPaidSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Status') }}</label>
+            <select id="bulkPaidSelect" class="form-input w-full mb-4">
+                <option value="true">{{ _('Paid') }}</option>
+                <option value="false">{{ _('Unpaid') }}</option>
+            </select>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkPaidDialog()">
+                    {{ _('Cancel') }}
+                </button>
+                <button type="button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" onclick="submitBulkPaid()">
+                    {{ _('Update') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFilterVisibility() {
+    const filterBody = document.getElementById('filterBody');
+    const icon = document.getElementById('filterToggleIcon');
+    filterBody.classList.toggle('hidden');
+    icon.classList.toggle('fa-chevron-up');
+    icon.classList.toggle('fa-chevron-down');
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const selectAllHeader = document.getElementById('selectAllHeader');
+    const checkboxes = document.querySelectorAll('.entry-checkbox');
+    const checked = selectAll.checked || selectAllHeader.checked;
+    
+    checkboxes.forEach(cb => cb.checked = checked);
+    selectAll.checked = checked;
+    selectAllHeader.checked = checked;
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    const count = checkboxes.length;
+    const countValue = document.getElementById('countValue');
+    const selectedCount = document.getElementById('selectedCount');
+    const bulkActionsBtn = document.getElementById('bulkActionsBtn');
+    
+    if (count > 0) {
+        countValue.textContent = count;
+        selectedCount.classList.remove('hidden');
+        bulkActionsBtn.disabled = false;
+    } else {
+        selectedCount.classList.add('hidden');
+        bulkActionsBtn.disabled = true;
+    }
+}
+
+function showBulkPaidDialog() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    if (checkboxes.length === 0) {
+        return;
+    }
+    document.getElementById('bulkPaidDialog').classList.remove('hidden');
+}
+
+function closeBulkPaidDialog() {
+    document.getElementById('bulkPaidDialog').classList.add('hidden');
+}
+
+function submitBulkPaid() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    const form = document.getElementById('bulkPaidForm');
+    const paidValue = document.getElementById('bulkPaidSelect').value;
+    
+    // Add selected entry IDs to form
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'entry_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    document.getElementById('bulkPaidValue').value = paidValue;
+    form.submit();
+}
+
+// Time Entries Filter Handler - AJAX filtering
+(function() {
+    'use strict';
+    
+    let filterTimeout = null;
+    let searchTimeout = null;
+    
+    function getFilterParams() {
+        const form = document.getElementById('timeEntriesFilterForm');
+        if (!form) return {};
+        
+        const params = {};
+        
+        // Get search input value directly (more reliable than FormData for text inputs)
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            const searchValue = searchInput.value.trim();
+            if (searchValue) {
+                params.search = searchValue;
+            }
+        }
+        
+        // Get other form fields from FormData
+        const formData = new FormData(form);
+        for (const [key, value] of formData.entries()) {
+            // Skip search as we already handled it above
+            if (key === 'search') {
+                continue;
+            }
+            const trimmed = String(value || '').trim();
+            if (trimmed && trimmed !== '') {
+                params[key] = trimmed;
+            }
+        }
+        
+        return params;
+    }
+    
+    function buildFilterUrl() {
+        const params = getFilterParams();
+        const queryString = new URLSearchParams(params).toString();
+        return `/time-entries?${queryString}`;
+    }
+    
+    function applyFilters() {
+        const url = buildFilterUrl();
+        const container = document.getElementById('timeEntriesListContainer');
+        
+        if (!container) {
+            console.error('timeEntriesListContainer not found');
+            return;
+        }
+        
+        // Show loading state
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+        
+        // Update URL
+        if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', url);
+        }
+        
+        // Fetch filtered results
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html.trim();
+            
+            const newContainer = tempDiv.querySelector('#timeEntriesListContainer');
+            
+            if (newContainer) {
+                container.innerHTML = newContainer.innerHTML;
+            } else {
+                // Fallback: try to extract content using regex
+                const match = html.trim().match(/<div[^>]*id=["']timeEntriesListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
+                if (match && match[1]) {
+                    container.innerHTML = match[1];
+                } else {
+                    container.innerHTML = html;
+                }
+            }
+            
+            // Re-initialize bulk actions after content update
+            updateBulkActions();
+        })
+        .catch(error => {
+            console.error('Filter error:', error);
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+            if (window.toastManager) {
+                window.toastManager.show('Failed to filter time entries. Please refresh the page.', 'error');
+            } else if (window.showToast) {
+                window.showToast('Failed to filter time entries. Please refresh the page.', 'error');
+            }
+        })
+        .finally(() => {
+            container.style.opacity = '';
+            container.style.pointerEvents = '';
+        });
+    }
+    
+    function debouncedApplyFilters(delay = 100) {
+        if (filterTimeout) {
+            clearTimeout(filterTimeout);
+        }
+        filterTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    function debouncedSearch(delay = 500) {
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        searchTimeout = setTimeout(applyFilters, delay);
+    }
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('timeEntriesFilterForm');
+        if (!form) {
+            console.error('Time entries filter form not found');
+            return;
+        }
+        
+        // Auto-submit on dropdown changes
+        form.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on date input changes
+        form.querySelectorAll('input[type="date"]').forEach(input => {
+            input.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on search input (debounced)
+        const searchInput = form.querySelector('input[name="search"], input#search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                debouncedSearch(500);
+            });
+            
+            // Submit on Enter
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    applyFilters();
+                }
+            });
+        }
+        
+        // Prevent form submission (use AJAX instead)
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            if (filterTimeout) {
+                clearTimeout(filterTimeout);
+            }
+            applyFilters();
+        });
+    });
+})();
+</script>
+{% endblock %}
+

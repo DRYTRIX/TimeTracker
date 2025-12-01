@@ -90,8 +90,17 @@ def settings():
 
             # Language preference
             preferred_language = request.form.get("preferred_language")
-            if preferred_language:
-                current_user.preferred_language = preferred_language
+            if preferred_language is not None:  # Allow empty string to clear preference
+                current_user.preferred_language = preferred_language if preferred_language else None
+                # Also update session for immediate effect
+                from flask import session
+                if preferred_language:
+                    session["preferred_language"] = preferred_language
+                    session.permanent = True
+                    session.modified = True
+                else:
+                    session.pop("preferred_language", None)
+                    session.modified = True
 
             # Time rounding preferences
             current_user.time_rounding_enabled = "time_rounding_enabled" in request.form

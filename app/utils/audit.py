@@ -152,7 +152,6 @@ def serialize_value(value):
     return str(value)
 
 
-@event.listens_for(Session, "after_flush", once=False)
 def receive_after_flush(session, flush_context):
     """Track changes after flush but before commit"""
     try:
@@ -164,8 +163,16 @@ def receive_after_flush(session, flush_context):
 
         # Force check every 100 calls or if cache is None
         force_check = receive_after_flush._call_count % 100 == 0
-        if not check_audit_table_exists(force_check=force_check):
+        table_exists = check_audit_table_exists(force_check=force_check)
+        if not table_exists:
+            # Log at info level (not debug) so it's visible if table doesn't exist
+            if receive_after_flush._call_count == 1 or force_check:
+                logger.warning("audit_logs table does not exist - audit logging disabled. Run migration: flask db upgrade")
             return
+        
+        # Log that the event listener is being triggered (only first few times for debugging)
+        if receive_after_flush._call_count <= 3:
+            logger.debug(f"Audit logging event listener triggered (call #{receive_after_flush._call_count})")
 
         user_id = get_current_user_id()
         ip_address, user_agent, request_path = get_request_info()
@@ -270,18 +277,23 @@ def receive_after_flush(session, flush_context):
                 entity_name = get_entity_name(instance)
 
                 # Log deletion
-                AuditLog = get_audit_log_model()
-                AuditLog.log_change(
-                    user_id=user_id,
-                    action="deleted",
-                    entity_type=entity_type,
-                    entity_id=entity_id,
-                    entity_name=entity_name,
-                    change_description=f"Deleted {entity_type.lower()} '{entity_name}'",
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    request_path=request_path,
-                )
+                try:
+                    AuditLog = get_audit_log_model()
+                    AuditLog.log_change(
+                        user_id=user_id,
+                        action="deleted",
+                        entity_type=entity_type,
+                        entity_id=entity_id,
+                        entity_name=entity_name,
+                        change_description=f"Deleted {entity_type.lower()} '{entity_name}'",
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        request_path=request_path,
+                    )
+                    logger.debug(f"Audit log: Deleted {entity_type}#{entity_id} by user#{user_id}")
+                except Exception as log_error:
+                    # Log the error but don't break the main flow
+                    logger.error(f"Failed to log audit entry for deletion of {entity_type}#{entity_id}: {log_error}", exc_info=True)
 
     except Exception as e:
         # Don't let audit logging break the main flow

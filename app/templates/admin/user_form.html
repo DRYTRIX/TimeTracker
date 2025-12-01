@@ -23,7 +23,7 @@
                 <select name="role" id="role" class="form-input">
                     {% if all_roles %}
                         {% for role in all_roles %}
-                            <option value="{{ role.name }}" {% if user and user.roles and role in user.roles %}selected{% elif not user and role.name == 'user' %}selected{% elif user and not user.roles and role.name == user.role %}selected{% endif %}>
+                            <option value="{{ role.name }}" {% if user and user.roles and user.roles|length > 0 and role == user.roles[0] %}selected{% elif user and not user.roles and role.name == user.role %}selected{% elif not user and role.name == 'user' %}selected{% endif %}>
                                 {{ role.name|capitalize }}{% if role.is_system_role %} (System){% endif %}
                             </option>
                         {% endfor %}
@@ -34,7 +34,7 @@
                     {% endif %}
                 </select>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                    Select a role from the new role-based permission system. Users can have multiple roles assigned via "Manage Roles & Permissions" after creation.
+                    Select the primary role for this user. Additional roles can be assigned via "Manage Roles & Permissions" below.
                 </p>
             </div>
             {% if not user %}
@@ -57,7 +57,31 @@
             </div>
             
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
-                <h3 class="font-semibold mb-2">{{ _('Advanced Permissions') }}</h3>
+                <h3 class="font-semibold mb-2">{{ _('Password Reset') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                    Reset the password for this user. Leave blank to keep the current password.
+                </p>
+                <div class="space-y-3">
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                        <input type="password" name="new_password" id="new_password" class="form-input" placeholder="{{ _('Leave blank to keep current password') }}">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            Password must be at least 8 characters long.
+                        </p>
+                    </div>
+                    <div>
+                        <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                        <input type="password" name="password_confirm" id="password_confirm" class="form-input">
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="force_password_change" id="force_password_change" {% if user.password_change_required %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="force_password_change" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Require password change on next login</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
+                <h3 class="font-semibold mb-2">{{ _('Client Portal Access') }}</h3>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
                     Enable client portal access for this user. When enabled, the user will only see data for their assigned client.
                 </p>
@@ -80,9 +104,9 @@
             </div>
             
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
-                <h3 class="font-semibold mb-2">{{ _('Advanced Permissions') }}</h3>
+                <h3 class="font-semibold mb-2">{{ _('Roles & Permissions') }}</h3>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
-                    Manage fine-grained role-based permissions for this user.
+                    Manage fine-grained role-based permissions for this user. You can assign multiple roles and customize permissions.
                 </p>
                 <a href="{{ url_for('permissions.manage_user_roles', user_id=user.id) }}" class="inline-block bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-90">
                     Manage Roles & Permissions
@@ -91,7 +115,7 @@
                     {% if user.roles %}
                     <strong>Current roles:</strong> {{ user.get_role_names()|join(', ') }}
                     {% else %}
-                    No roles assigned yet. Using legacy role: {{ user.role }}
+                    <strong>Current role:</strong> {{ user.role|capitalize }} (legacy)
                     {% endif %}
                 </div>
             </div>

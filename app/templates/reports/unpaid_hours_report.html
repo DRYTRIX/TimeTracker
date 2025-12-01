@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">{{ _('Unpaid Hours Report') }}</h1>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form id="filterForm" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-building mr-1"></i>Client
+            </label>
+            <select name="client_id" id="client_id" class="form-input">
+                <option value="">All Clients</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if selected_client == client.id %}selected{% endif %}>{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-calendar mr-1"></i>Start Date
+            </label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input">
+        </div>
+        <div>
+            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-calendar mr-1"></i>End Date
+            </label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input">
+        </div>
+        <div class="self-end flex gap-2">
+            <button type="submit" id="filterBtn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
+            <a href="#" id="exportBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition inline-flex items-center">
+                <i class="fas fa-file-excel mr-2"></i>Export to Excel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Summary -->
+<div id="summarySection" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Summary') }}</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <div class="text-sm text-gray-600 dark:text-gray-400">{{ _('Total Unpaid Hours') }}</div>
+            <div id="summaryTotalHours" class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ "%.2f"|format(summary.total_unpaid_hours) }}</div>
+        </div>
+        <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+            <div class="text-sm text-gray-600 dark:text-gray-400">{{ _('Estimated Amount') }}</div>
+            <div id="summaryEstimatedAmount" class="text-2xl font-bold text-green-600 dark:text-green-400">{{ "%.2f"|format(summary.total_estimated_amount) }}</div>
+        </div>
+        <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+            <div class="text-sm text-gray-600 dark:text-gray-400">{{ _('Clients with Unpaid Hours') }}</div>
+            <div id="summaryClientsCount" class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ summary.clients_count }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Client Data Table -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Unpaid Hours by Client') }}</h2>
+    <div id="loadingIndicator" class="hidden text-center py-8">
+        <i class="fas fa-spinner fa-spin text-4xl mb-4 text-primary"></i>
+        <p class="text-gray-500 dark:text-gray-400">{{ _('Loading...') }}</p>
+    </div>
+    <div id="clientDataContainer">
+        {% if client_data %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-border-light dark:border-border-dark">
+                        <th class="p-3 font-semibold w-8"></th>
+                        <th class="p-3 font-semibold">{{ _('Client') }}</th>
+                        <th class="p-3 font-semibold">{{ _('Total Hours') }}</th>
+                        <th class="p-3 font-semibold">{{ _('Estimated Amount') }}</th>
+                        <th class="p-3 font-semibold">{{ _('Projects') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="clientTableBody">
+                    {% for data in client_data %}
+                    <tr class="client-row border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" data-client-id="{{ data.client.id }}">
+                        <td class="p-3">
+                            <i class="fas fa-chevron-right expand-icon text-gray-400"></i>
+                        </td>
+                        <td class="p-3">
+                            <div class="font-medium">{{ data.client.name }}</div>
+                            {% if data.client.email %}
+                            <div class="text-sm text-gray-600 dark:text-gray-400">{{ data.client.email }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="p-3">
+                            <span class="font-semibold">{{ "%.2f"|format(data.total_hours) }}</span> {{ _('hours') }}
+                        </td>
+                        <td class="p-3">
+                            <span class="font-semibold text-green-600 dark:text-green-400">{{ "%.2f"|format(data.estimated_amount) }}</span>
+                        </td>
+                        <td class="p-3">
+                            <div class="space-y-1">
+                                {% for project in data.projects %}
+                                <div class="text-sm">
+                                    <span class="font-medium">{{ project.project.name }}</span>
+                                    <span class="text-gray-600 dark:text-gray-400">: {{ "%.2f"|format(project.hours) }}h</span>
+                                    {% if project.rate > 0 %}
+                                    <span class="text-gray-500 dark:text-gray-500">@ {{ "%.2f"|format(project.rate) }}/h</span>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="client-details-row hidden" data-client-id="{{ data.client.id }}">
+                        <td colspan="5" class="p-4 bg-gray-50 dark:bg-gray-800/50">
+                            <div class="ml-8">
+                                <h4 class="font-semibold mb-3">{{ _('Time Entry Details') }}</h4>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm">
+                                        <thead>
+                                            <tr class="border-b border-gray-300 dark:border-gray-600">
+                                                <th class="p-2 text-left">{{ _('User') }}</th>
+                                                <th class="p-2 text-left">{{ _('Project') }}</th>
+                                                <th class="p-2 text-left">{{ _('Task') }}</th>
+                                                <th class="p-2 text-left">{{ _('Date') }}</th>
+                                                <th class="p-2 text-left">{{ _('Duration') }}</th>
+                                                <th class="p-2 text-left">{{ _('Notes') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for entry in data.entries %}
+                                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                                <td class="p-2">{{ entry.user.display_name if entry.user else 'Unknown' }}</td>
+                                                <td class="p-2">{{ entry.project.name if entry.project else 'No Project' }}</td>
+                                                <td class="p-2">{{ entry.task.name if entry.task else '-' }}</td>
+                                                <td class="p-2">{{ entry.start_time.strftime('%Y-%m-%d') if entry.start_time else '-' }}</td>
+                                                <td class="p-2">{{ "%.2f"|format(entry.duration_hours) }}h</td>
+                                                <td class="p-2">{{ entry.notes or '-' }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+            <i class="fas fa-inbox text-4xl mb-4"></i>
+            <p>{{ _('No unpaid hours found for the selected period.') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const filterBtn = document.getElementById('filterBtn');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const clientDataContainer = document.getElementById('clientDataContainer');
+    const summarySection = document.getElementById('summarySection');
+    
+    // Handle form submission with Ajax
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadReportData();
+    });
+    
+    // Auto-filter on date change
+    document.getElementById('start_date').addEventListener('change', function() {
+        loadReportData();
+    });
+    document.getElementById('end_date').addEventListener('change', function() {
+        loadReportData();
+    });
+    document.getElementById('client_id').addEventListener('change', function() {
+        loadReportData();
+    });
+    
+    function loadReportData() {
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams(formData);
+        params.append('format', 'json');
+        
+        // Show loading indicator
+        loadingIndicator.classList.remove('hidden');
+        clientDataContainer.style.opacity = '0.5';
+        
+        fetch('{{ url_for("reports.unpaid_hours_report") }}?' + params.toString(), {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateSummary(data.summary);
+            updateClientTable(data.client_data);
+            loadingIndicator.classList.add('hidden');
+            clientDataContainer.style.opacity = '1';
+        })
+        .catch(error => {
+            console.error('Error loading report:', error);
+            loadingIndicator.classList.add('hidden');
+            clientDataContainer.style.opacity = '1';
+            alert('Error loading report data. Please try again.');
+        });
+    }
+    
+    function updateSummary(summary) {
+        document.getElementById('summaryTotalHours').textContent = summary.total_unpaid_hours.toFixed(2);
+        document.getElementById('summaryEstimatedAmount').textContent = summary.total_estimated_amount.toFixed(2);
+        document.getElementById('summaryClientsCount').textContent = summary.clients_count;
+    }
+    
+    function updateClientTable(clientData) {
+        const tbody = document.getElementById('clientTableBody');
+        if (!tbody) return;
+        
+        if (clientData.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-inbox text-4xl mb-4"></i>
+                        <p>No unpaid hours found for the selected period.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        clientData.forEach(data => {
+            const projectsHtml = data.projects.map(proj => 
+                `<div class="text-sm">
+                    <span class="font-medium">${escapeHtml(proj.project_name)}</span>
+                    <span class="text-gray-600 dark:text-gray-400">: ${proj.hours.toFixed(2)}h</span>
+                    ${proj.rate > 0 ? `<span class="text-gray-500 dark:text-gray-500">@ ${proj.rate.toFixed(2)}/h</span>` : ''}
+                </div>`
+            ).join('');
+            
+            html += `
+                <tr class="client-row border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" data-client-id="${data.client_id}">
+                    <td class="p-3">
+                        <i class="fas fa-chevron-right expand-icon text-gray-400"></i>
+                    </td>
+                    <td class="p-3">
+                        <div class="font-medium">${escapeHtml(data.client_name)}</div>
+                        ${data.client_email ? `<div class="text-sm text-gray-600 dark:text-gray-400">${escapeHtml(data.client_email)}</div>` : ''}
+                    </td>
+                    <td class="p-3">
+                        <span class="font-semibold">${data.total_hours.toFixed(2)}</span> hours
+                    </td>
+                    <td class="p-3">
+                        <span class="font-semibold text-green-600 dark:text-green-400">${data.estimated_amount.toFixed(2)}</span>
+                    </td>
+                    <td class="p-3">
+                        <div class="space-y-1">${projectsHtml}</div>
+                    </td>
+                </tr>
+                <tr class="client-details-row hidden" data-client-id="${data.client_id}">
+                    <td colspan="5" class="p-4 bg-gray-50 dark:bg-gray-800/50">
+                        <div class="ml-8">
+                            <h4 class="font-semibold mb-3">Time Entry Details</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-gray-300 dark:border-gray-600">
+                                            <th class="p-2 text-left">User</th>
+                                            <th class="p-2 text-left">Project</th>
+                                            <th class="p-2 text-left">Task</th>
+                                            <th class="p-2 text-left">Date</th>
+                                            <th class="p-2 text-left">Duration</th>
+                                            <th class="p-2 text-left">Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.entries.map(entry => `
+                                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                                <td class="p-2">${escapeHtml(entry.user)}</td>
+                                                <td class="p-2">${escapeHtml(entry.project)}</td>
+                                                <td class="p-2">${entry.task ? escapeHtml(entry.task) : '-'}</td>
+                                                <td class="p-2">${entry.start_time ? new Date(entry.start_time).toLocaleDateString() : '-'}</td>
+                                                <td class="p-2">${entry.duration_hours.toFixed(2)}h</td>
+                                                <td class="p-2">${entry.notes ? escapeHtml(entry.notes) : '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        
+        // Re-attach click handlers
+        attachExpandHandlers();
+    }
+    
+    function attachExpandHandlers() {
+        document.querySelectorAll('.client-row').forEach(row => {
+            row.addEventListener('click', function() {
+                const clientId = this.getAttribute('data-client-id');
+                const detailsRow = document.querySelector(`.client-details-row[data-client-id="${clientId}"]`);
+                const icon = this.querySelector('.expand-icon');
+                
+                if (detailsRow) {
+                    const isHidden = detailsRow.classList.contains('hidden');
+                    
+                    // Close all other rows
+                    document.querySelectorAll('.client-details-row').forEach(r => {
+                        r.classList.add('hidden');
+                    });
+                    document.querySelectorAll('.expand-icon').forEach(i => {
+                        i.classList.remove('fa-chevron-down');
+                        i.classList.add('fa-chevron-right');
+                    });
+                    
+                    // Toggle current row
+                    if (isHidden) {
+                        detailsRow.classList.remove('hidden');
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-chevron-down');
+                    } else {
+                        detailsRow.classList.add('hidden');
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-right');
+                    }
+                }
+            });
+        });
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Initial attachment of handlers
+    attachExpandHandlers();
+    
+    // Export button handler
+    document.getElementById('exportBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams(formData);
+        const exportUrl = '{{ url_for("reports.export_unpaid_hours_excel") }}?' + params.toString();
+        window.location.href = exportUrl;
+    });
+});
+</script>
+{% endblock %}
+

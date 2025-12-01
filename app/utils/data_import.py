@@ -560,7 +560,7 @@ def _parse_datetime(datetime_str):
     return None
 
 
-def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True):
+def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True, duplicate_detection_fields=None):
     """
     Import clients from CSV file
 
@@ -579,7 +579,11 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
         user_id: ID of the user importing data
         csv_content: String content of CSV file
         import_record: DataImport model instance to track progress
-        skip_duplicates: If True, skip clients that already exist (by name or custom field match)
+        skip_duplicates: If True, skip clients that already exist
+        duplicate_detection_fields: List of field names to use for duplicate detection.
+            Can include 'name' for client name, or custom field names (e.g., 'debtor_number').
+            If None, defaults to ['name'] plus all custom fields found in the CSV.
+            Examples: ['debtor_number'], ['name', 'debtor_number'], ['erp_id']
 
     Returns:
         Dictionary with import statistics
@@ -617,24 +621,42 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
 
             # Check for duplicates if skip_duplicates is True
             if skip_duplicates:
-                existing_client = Client.query.filter_by(name=client_name).first()
+                existing_client = None
                 
-                # Also check by custom fields if provided (e.g., ERP ID)
-                if not existing_client:
-                    # Look for common custom field keys that might indicate duplicates
+                # Determine which fields to use for duplicate detection
+                if duplicate_detection_fields is not None:
+                    # Use explicitly specified fields
+                    detection_fields = duplicate_detection_fields
+                else:
+                    # Default: check by name + all custom fields found in CSV
+                    detection_fields = ['name']
+                    # Add all custom fields found in CSV
                     for key in row.keys():
                         if key.startswith("custom_field_"):
                             field_name = key.replace("custom_field_", "")
-                            field_value = row.get(key, "").strip()
-                            if field_value:
-                                # Check if any client has this custom field value
-                                all_clients = Client.query.all()
-                                for client in all_clients:
-                                    if client.custom_fields and client.custom_fields.get(field_name) == field_value:
-                                        existing_client = client
-                                        break
-                                if existing_client:
+                            if field_name not in detection_fields:
+                                detection_fields.append(field_name)
+                
+                # Check each specified field for duplicates
+                for field in detection_fields:
+                    if field == 'name':
+                        # Check by client name
+                        existing_client = Client.query.filter_by(name=client_name).first()
+                        if existing_client:
+                            break
+                    else:
+                        # Check by custom field
+                        csv_key = f"custom_field_{field}"
+                        field_value = row.get(csv_key, "").strip()
+                        if field_value:
+                            # Check if any client has this custom field value
+                            all_clients = Client.query.all()
+                            for client in all_clients:
+                                if client.custom_fields and client.custom_fields.get(field) == field_value:
+                                    existing_client = client
                                     break
+                            if existing_client:
+                                break
                 
                 if existing_client:
                     skipped += 1
