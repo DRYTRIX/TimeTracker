@@ -279,9 +279,6 @@ def view_client(client_id):
             "remaining_hours": float(remaining_hours),
         }
 
-    # Get rendered links from link templates
-    rendered_links = client.get_rendered_links()
-    
     # Get link templates for custom fields (for clickable values)
     from app.models import LinkTemplate
     from sqlalchemy.exc import ProgrammingError
@@ -296,6 +293,21 @@ def view_client(client_id):
                 "link_templates table does not exist. Run migration: flask db upgrade"
             )
             link_templates_by_field = {}
+        else:
+            raise
+
+    # Get custom field definitions for friendly names
+    custom_field_definitions_by_key = {}
+    try:
+        for definition in CustomFieldDefinition.get_active_definitions():
+            custom_field_definitions_by_key[definition.field_key] = definition
+    except ProgrammingError as e:
+        # Handle case where custom_field_definitions table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "custom_field_definitions table does not exist. Run migration: flask db upgrade"
+            )
+            custom_field_definitions_by_key = {}
         else:
             raise
 
@@ -330,9 +342,9 @@ def view_client(client_id):
         contacts=contacts,
         primary_contact=primary_contact,
         prepaid_overview=prepaid_overview,
-        rendered_links=rendered_links,
         recent_time_entries=recent_time_entries,
         link_templates_by_field=link_templates_by_field,
+        custom_field_definitions_by_key=custom_field_definitions_by_key,
     )
 
 

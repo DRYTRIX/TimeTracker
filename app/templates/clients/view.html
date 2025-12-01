@@ -112,7 +112,11 @@
             <div class="space-y-3">
                 {% for key, value in client.custom_fields.items() %}
                 <div>
-                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ key }}</h3>
+                    {% set field_defs = custom_field_definitions_by_key|default({}) %}
+                    {% set field_definition = field_defs[key] if key in field_defs else None %}
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+                        {% if field_definition %}{{ field_definition.label }}{% else %}{{ key }}{% endif %}
+                    </h3>
                     <p class="text-text-light dark:text-text-dark">
                         {% set link_template = link_templates_by_field.get(key) if link_templates_by_field else None %}
                         {% if link_template and value %}
@@ -140,24 +144,6 @@
                         {% endif %}
                     </p>
                 </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if rendered_links %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <h2 class="text-lg font-semibold mb-4">{{ _('Quick Links') }}</h2>
-            <div class="space-y-2">
-                {% for link in rendered_links %}
-                <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition">
-                    {% if link.icon %}
-                    <i class="{{ link.icon }}"></i>
-                    {% else %}
-                    <i class="fas fa-external-link-alt"></i>
-                    {% endif %}
-                    <span>{{ link.name }}</span>
-                </a>
                 {% endfor %}
             </div>
         </div>

@@ -61,7 +61,7 @@
                             <a href="{{ url_for('custom_field_definitions.edit_custom_field_definition', definition_id=definition.id) }}" class="text-primary hover:underline">
                                 <i class="fas fa-edit"></i> {{ _('Edit') }}
                             </a>
-                            <form method="POST" action="{{ url_for('custom_field_definitions.delete_custom_field_definition', definition_id=definition.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this custom field definition?') }}');">
+                            <form method="POST" action="{{ url_for('custom_field_definitions.delete_custom_field_definition', definition_id=definition.id) }}" class="inline delete-field-form" data-client-count="{{ definition.client_count }}" data-field-label="{{ definition.label|e }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">
                                     <i class="fas fa-trash"></i> {{ _('Delete') }}
@@ -105,4 +105,30 @@
         </ul>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForms = document.querySelectorAll('.delete-field-form');
+    deleteForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const clientCount = parseInt(form.dataset.clientCount) || 0;
+            const fieldLabel = form.dataset.fieldLabel || '';
+            
+            let message;
+            if (clientCount > 0) {
+                message = '{{ _("Warning: %(count)d client(s) have a value for this custom field. Deleting this field definition will remove the field value from all %(count)d client(s). Are you sure you want to delete the custom field definition \"%(label)s\"?") }}'
+                    .replace(/%(count)d/g, clientCount)
+                    .replace('%(label)s', fieldLabel);
+            } else {
+                message = '{{ _("Are you sure you want to delete this custom field definition?") }}';
+            }
+            
+            if (!confirm(message)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

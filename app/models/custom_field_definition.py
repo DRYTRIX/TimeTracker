@@ -55,3 +55,19 @@ class CustomFieldDefinition(db.Model):
     def get_by_key(cls, field_key):
         """Get a custom field definition by its key"""
         return cls.query.filter_by(field_key=field_key, is_active=True).first()
+
+    def count_clients_with_value(self):
+        """Count how many clients have a value for this custom field"""
+        from app.models import Client
+        from sqlalchemy import func
+        
+        # Query clients that have this field key in their custom_fields JSON
+        # This works for both SQLite and PostgreSQL
+        count = 0
+        for client in Client.query.all():
+            if client.custom_fields and self.field_key in client.custom_fields:
+                value = client.custom_fields.get(self.field_key)
+                # Count only if value is not empty
+                if value and str(value).strip():
+                    count += 1
+        return count
