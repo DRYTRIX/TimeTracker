@@ -18,6 +18,9 @@ custom_field_definitions_bp = Blueprint("custom_field_definitions", __name__)
 def list_custom_field_definitions():
     """List all custom field definitions"""
     definitions = CustomFieldDefinition.query.order_by(CustomFieldDefinition.order, CustomFieldDefinition.label).all()
+    # Add client count for each definition
+    for definition in definitions:
+        definition.client_count = definition.count_clients_with_value()
     return render_template("admin/custom_field_definitions/list.html", definitions=definitions)
 
 
@@ -138,12 +141,42 @@ def edit_custom_field_definition(definition_id):
 @admin_or_permission_required("manage_settings")
 def delete_custom_field_definition(definition_id):
     """Delete a custom field definition"""
+    from app.models import Client
+    
     definition = CustomFieldDefinition.query.get_or_404(definition_id)
-
+    field_key = definition.field_key
+    
+    # Count clients that have a value for this custom field
+    clients_with_value = []
+    for client in Client.query.all():
+        if client.custom_fields and field_key in client.custom_fields:
+            value = client.custom_fields.get(field_key)
+            if value and str(value).strip():
+                clients_with_value.append(client)
+    
+    client_count = len(clients_with_value)
+    
+    # Remove the custom field from all clients that have it
+    if client_count > 0:
+        for client in clients_with_value:
+            client.remove_custom_field(field_key)
+        
+        # Commit the client updates before deleting the definition
+        if not safe_commit("remove_custom_field_from_clients", {"field_key": field_key, "client_count": client_count}):
+            flash(_("Could not remove custom field from clients due to a database error."), "error")
+            return redirect(url_for("custom_field_definitions.list_custom_field_definitions"))
+    
+    # Now delete the definition
     db.session.delete(definition)
     if not safe_commit("delete_custom_field_definition", {"definition_id": definition.id}):
         flash(_("Could not delete custom field definition due to a database error."), "error")
     else:
-        flash(_("Custom field definition deleted successfully"), "success")
+        if client_count > 0:
+            flash(
+                _("Custom field definition deleted successfully. The field was removed from %(count)d client(s).", count=client_count),
+                "success"
+            )
+        else:
+            flash(_("Custom field definition deleted successfully"), "success")
 
     return redirect(url_for("custom_field_definitions.list_custom_field_definitions"))

@@ -91,6 +91,17 @@
                 <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Search') }}</label>
                 <input type="text" name="search" id="search" value="{{ filters.search or '' }}" placeholder="{{ _('Search in notes and tags...') }}" class="form-input">
             </div>
+            {% if custom_field_definitions %}
+            {% for definition in custom_field_definitions %}
+            <div>
+                <label for="custom_field_{{ definition.field_key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ definition.label }} (Client)</label>
+                <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}" 
+                       value="{{ filters.client_custom_field.get(definition.field_key, '') if filters.client_custom_field else '' }}" 
+                       class="form-input" 
+                       placeholder="{{ definition.description or '' }}">
+            </div>
+            {% endfor %}
+            {% endif %}
         </form>
     </div>
 </div>
