@@ -591,7 +591,12 @@ def import_csv_clients_route():
     Import clients from CSV file
 
     Expected multipart/form-data with 'file' field
-    Optional query parameter: skip_duplicates (default: true)
+    Optional query parameters:
+        - skip_duplicates (default: true): Whether to skip duplicate clients
+        - duplicate_detection_fields: Comma-separated list of fields to use for duplicate detection.
+          Can include 'name' for client name, or custom field names (e.g., 'debtor_number').
+          Examples: "debtor_number", "name,debtor_number", "erp_id"
+          If not provided, defaults to checking by name and all custom fields found in CSV.
     """
     try:
         if "file" not in request.files:
@@ -606,6 +611,13 @@ def import_csv_clients_route():
             return jsonify({"error": "File must be a CSV"}), 400
 
         skip_duplicates = request.args.get("skip_duplicates", "true").lower() == "true"
+        
+        # Parse duplicate detection fields
+        duplicate_detection_fields = None
+        duplicate_fields_param = request.args.get("duplicate_detection_fields", "").strip()
+        if duplicate_fields_param:
+            # Support comma-separated list: "debtor_number,erp_id" or "name,debtor_number"
+            duplicate_detection_fields = [field.strip() for field in duplicate_fields_param.split(",") if field.strip()]
 
         # Read file content
         file_bytes = file.read()
@@ -637,7 +649,11 @@ def import_csv_clients_route():
         # Perform import
         try:
             summary = import_csv_clients(
-                user_id=current_user.id, csv_content=csv_content, import_record=import_record, skip_duplicates=skip_duplicates
+                user_id=current_user.id, 
+                csv_content=csv_content, 
+                import_record=import_record, 
+                skip_duplicates=skip_duplicates,
+                duplicate_detection_fields=duplicate_detection_fields
             )
             response = jsonify({"success": True, "import_id": import_record.id, "summary": summary})
             response.headers["Content-Type"] = "application/json"
