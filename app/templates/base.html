@@ -275,6 +275,7 @@
                         </button>
                 <ul id="workDropdown" class="{% if not work_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_timer = ep.startswith('timer.') %}
+                            {% set nav_active_time_entries = ep == 'timer.time_entries_overview' %}
                             {% set nav_active_projects = ep.startswith('projects.') %}
                             {% set nav_active_clients = ep.startswith('clients.') %}
                             {% set nav_active_quotes = ep.startswith('quotes.') %}
@@ -286,6 +287,11 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_timer %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_time_entries %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.time_entries_overview') }}">
+                                    <i class="fas fa-list-alt w-4 mr-2"></i>{{ _('Time Entries') }}
                                 </a>
                             </li>
                             <li>

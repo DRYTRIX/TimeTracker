@@ -1,0 +1,159 @@
+<div id="timeEntriesListContainer">
+    <div class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleSelectAll()">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Select All') }}</span>
+            </label>
+            <span id="selectedCount" class="text-sm text-gray-600 dark:text-gray-400 hidden">
+                <span id="countValue">0</span> {{ _('selected') }}
+            </span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button" id="bulkActionsBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onclick="showBulkPaidDialog()" disabled>
+                <i class="fas fa-tasks mr-2"></i>{{ _('Bulk Actions') }}
+            </button>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-border-light dark:divide-border-dark">
+            <thead class="bg-background-light dark:bg-background-dark">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                        <input type="checkbox" id="selectAllHeader" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleSelectAll()">
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Date') }}</th>
+                    {% if can_view_all %}
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('User') }}</th>
+                    {% endif %}
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Project/Client') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Task') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Duration') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Notes') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Tags') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Status') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody class="bg-card-light dark:bg-card-dark divide-y divide-border-light dark:divide-border-dark">
+                {% if time_entries %}
+                    {% for entry in time_entries %}
+                    <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <input type="checkbox" name="entry_ids[]" value="{{ entry.id }}" class="entry-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="updateBulkActions()">
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {{ entry.start_time.strftime('%Y-%m-%d %H:%M') if entry.start_time else '-' }}
+                        </td>
+                        {% if can_view_all %}
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {{ entry.user.display_name if entry.user else '-' }}
+                        </td>
+                        {% endif %}
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {% if entry.project %}
+                                <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:underline">
+                                    {{ entry.project.name }}
+                                </a>
+                            {% elif entry.client %}
+                                <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="text-primary hover:underline">
+                                    {{ entry.client.name }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {% if entry.task %}
+                                <a href="{{ url_for('tasks.view_task', task_id=entry.task.id) }}" class="text-primary hover:underline">
+                                    {{ entry.task.name }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {{ entry.duration_formatted }}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
+                            {{ entry.notes or '-' }}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {% if entry.tags %}
+                                {% for tag in entry.tag_list %}
+                                    <span class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded text-xs mr-1 mb-1">{{ tag }}</span>
+                                {% endfor %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            {% if entry.paid %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                    <i class="fas fa-check-circle mr-1"></i>{{ _('Paid') }}
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                                    <i class="fas fa-clock mr-1"></i>{{ _('Unpaid') }}
+                                </span>
+                            {% endif %}
+                            {% if entry.billable %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 ml-1">
+                                    <i class="fas fa-dollar-sign mr-1"></i>{{ _('Billable') }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary/80 mr-2" title="{{ _('Edit') }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="{% if can_view_all %}10{% else %}9{% endif %}" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            {{ _('No time entries found') }}
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="px-4 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+        <div class="text-sm text-gray-700 dark:text-gray-300">
+            {{ _('Showing %(start)s to %(end)s of %(total)s entries', start=pagination.page * pagination.per_page - pagination.per_page + 1, end=pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total, total=pagination.total) }}
+        </div>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+                <a href="{{ url_for('timer.time_entries_overview', page=pagination.prev_num, **filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    {{ _('Previous') }}
+                </a>
+            {% endif %}
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                        <span class="px-3 py-1 bg-primary text-white rounded-lg">{{ page_num }}</span>
+                    {% else %}
+                        <a href="{{ url_for('timer.time_entries_overview', page=page_num, **filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                            {{ page_num }}
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <span class="px-3 py-1">...</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+                <a href="{{ url_for('timer.time_entries_overview', page=pagination.next_num, **filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    {{ _('Next') }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+

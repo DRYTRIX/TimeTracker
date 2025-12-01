@@ -838,7 +838,7 @@ def create_entry():
 @api_bp.route("/api/entries/bulk", methods=["POST"])
 @login_required
 def bulk_entries_action():
-    """Perform bulk actions on time entries: delete, set billable, add/remove tag."""
+    """Perform bulk actions on time entries: delete, set billable, set paid, add/remove tag."""
     data = request.get_json() or {}
     entry_ids = data.get("entry_ids") or []
     action = (data.get("action") or "").strip()
@@ -846,7 +846,7 @@ def bulk_entries_action():
 
     if not entry_ids or not isinstance(entry_ids, list):
         return jsonify({"error": "entry_ids must be a non-empty list"}), 400
-    if action not in {"delete", "set_billable", "add_tag", "remove_tag"}:
+    if action not in {"delete", "set_billable", "set_paid", "add_tag", "remove_tag"}:
         return jsonify({"error": "Unsupported action"}), 400
 
     # Load entries with permission checks
@@ -875,6 +875,13 @@ def bulk_entries_action():
                 continue
             e.billable = flag
             e.updated_at = local_now()
+            affected += 1
+    elif action == "set_paid":
+        flag = bool(value)
+        for e in entries:
+            if e.is_active:
+                continue
+            e.set_paid(flag)
             affected += 1
     elif action in {"add_tag", "remove_tag"}:
         tag = (value or "").strip()
