@@ -54,13 +54,14 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
 
-    # Get authentication method
+    # Get authentication method from Flask app config (reads from environment)
     try:
-        auth_method = (getattr(Config, "AUTH_METHOD", "local") or "local").strip().lower()
+        auth_method = (current_app.config.get("AUTH_METHOD", "local") or "local").strip().lower()
     except Exception:
         auth_method = "local"
 
     # Determine if password authentication is required
+    # 'none' = no password, 'local' = password required, 'oidc' = OIDC only, 'both' = OIDC + password
     requires_password = auth_method in ("local", "both")
 
     # If OIDC-only mode, redirect to OIDC login start
@@ -295,7 +296,7 @@ def logout():
 
     # Try OIDC end-session if enabled and configured
     try:
-        auth_method = (getattr(Config, "AUTH_METHOD", "local") or "local").strip().lower()
+        auth_method = (current_app.config.get("AUTH_METHOD", "local") or "local").strip().lower()
     except Exception:
         auth_method = "local"
 
@@ -344,9 +345,9 @@ def profile():
 @login_required
 def edit_profile():
     """Edit user profile"""
-    # Get authentication method to determine if password fields should be shown
+    # Get authentication method from Flask app config (reads from environment)
     try:
-        auth_method = (getattr(Config, "AUTH_METHOD", "local") or "local").strip().lower()
+        auth_method = (current_app.config.get("AUTH_METHOD", "local") or "local").strip().lower()
     except Exception:
         auth_method = "local"
 
@@ -553,7 +554,7 @@ def update_theme_preference():
 def login_oidc():
     """Start OIDC login using Authlib."""
     try:
-        auth_method = (getattr(Config, "AUTH_METHOD", "local") or "local").strip().lower()
+        auth_method = (current_app.config.get("AUTH_METHOD", "local") or "local").strip().lower()
     except Exception:
         auth_method = "local"
 

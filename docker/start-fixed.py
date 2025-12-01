@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 def wait_for_database():
     """Wait for database to be ready with proper connection testing"""
-    print("Waiting for database to be ready...")
+    # Logging is handled by main()
     
     # Get database URL from environment
     db_url = os.getenv('DATABASE_URL', 'postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker')
@@ -80,7 +80,6 @@ def wait_for_database():
     
     while attempt < max_attempts:
         try:
-            print(f"Attempting database connection to {host}:{port}/{database} as {user}...")
             conn = psycopg2.connect(
                 host=host,
                 port=port,
@@ -90,42 +89,29 @@ def wait_for_database():
                 connect_timeout=5
             )
             conn.close()
-            print("✓ Database connection successful!")
             return True
         except Exception as e:
             attempt += 1
-            print(f"✗ Database connection attempt {attempt}/{max_attempts} failed: {e}")
             if attempt < max_attempts:
-                print("Waiting 2 seconds before retry...")
                 time.sleep(2)
     
-    print("✗ Failed to connect to database after all attempts")
     return False
 
 def run_script(script_path, description):
     """Run a Python script with proper error handling"""
-    print(f"Running {description}...")
     try:
         result = subprocess.run(
             [sys.executable, script_path], 
             check=True,
-            capture_output=True,
+            capture_output=False,  # Let the script output directly
             text=True
         )
-        print(f"✓ {description} completed successfully")
-        if result.stdout:
-            print(f"Output: {result.stdout}")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"✗ {description} failed with exit code {e.returncode}")
-        if e.stdout:
-            print(f"stdout: {e.stdout}")
-        if e.stderr:
-            print(f"stderr: {e.stderr}")
+        log(f"{description} failed with exit code {e.returncode}", "ERROR")
         return False
     except Exception as e:
-        print(f"✗ Unexpected error running {description}: {e}")
-        traceback.print_exc()
+        log(f"Unexpected error running {description}: {e}", "ERROR")
         return False
 
 def display_network_info():
@@ -148,33 +134,45 @@ def display_network_info():
     print(f"Working Directory: {os.getcwd()}")
     print("==========================")
 
+def log(message, level="INFO"):
+    """Log message with timestamp and level"""
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    prefix = {
+        "INFO": "ℹ",
+        "SUCCESS": "✓",
+        "WARNING": "⚠",
+        "ERROR": "✗"
+    }.get(level, "•")
+    print(f"[{timestamp}] {prefix} {message}")
+
 def main():
-    print("=== Starting TimeTracker (Improved Python Mode) ===")
-    
-    # Display network information for debugging
-    display_network_info()
+    log("=" * 60, "INFO")
+    log("Starting TimeTracker Application", "INFO")
+    log("=" * 60, "INFO")
     
     # Set environment
     os.environ['FLASK_APP'] = 'app'
     os.chdir('/app')
     
     # Wait for database
+    log("Waiting for database connection...", "INFO")
     if not wait_for_database():
-        print("Database is not available, exiting...")
+        log("Database is not available, exiting...", "ERROR")
         sys.exit(1)
     
-    # Run enhanced database initialization and migration (strict schema verification and auto-fix)
-    if not run_script('/app/docker/init-database-enhanced.py', 'Enhanced database initialization and migration'):
-        print("Enhanced database initialization failed, exiting...")
+    # Run enhanced database initialization and migration
+    log("Running database initialization...", "INFO")
+    if not run_script('/app/docker/init-database-enhanced.py', 'Database initialization'):
+        log("Database initialization failed, exiting...", "ERROR")
         sys.exit(1)
     
-    print("✓ Database initialization and migration completed successfully")
+    log("Database initialization completed", "SUCCESS")
     
     # Ensure default settings and admin user exist (idempotent)
     # Note: Database initialization is already handled by the migration system above
     # The flask init_db command is optional and may not be available in all environments
     try:
-        print("Ensuring default settings and admin user exist (flask init_db)...")
         result = subprocess.run(
             ['flask', 'init_db'],
             check=False,  # Don't fail if command doesn't exist
@@ -182,25 +180,15 @@ def main():
             text=True,
             timeout=30
         )
-        if result.returncode == 0:
-            if result.stdout:
-                print(result.stdout.strip())
-        else:
-            # Command failed or doesn't exist - this is OK, database is already initialized
-            if "No such command" not in result.stderr:
-                print(f"Warning: flask init_db returned exit code {result.returncode} (continuing)")
-                if result.stderr:
-                    print(f"stderr: {result.stderr.strip()}")
-    except FileNotFoundError:
-        # Flask command not found - this is OK
+        if result.returncode != 0 and "No such command" not in (result.stderr or ""):
+            log("flask init_db returned non-zero exit code (continuing)", "WARNING")
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+        # All errors are non-fatal - database is already initialized
         pass
-    except subprocess.TimeoutExpired:
-        print("Warning: flask init_db timed out (continuing)")
-    except Exception as e:
-        # Any other error - log but continue
-        print(f"Warning: could not execute flask init_db: {e}")
 
-    print("Starting application...")
+    log("=" * 60, "INFO")
+    log("Starting application server", "INFO")
+    log("=" * 60, "INFO")
     # Start gunicorn with access logs
     os.execv('/usr/local/bin/gunicorn', [
         'gunicorn',

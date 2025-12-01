@@ -98,12 +98,66 @@ def run_migrations():
             
             # Try to apply any pending migrations
             result = subprocess.run(['flask', 'db', 'upgrade'], 
-                                  capture_output=True, text=True, timeout=60)
+                                  capture_output=True, text=True, timeout=120)
             if result.returncode == 0:
                 log("✓ Migrations applied successfully")
+                
+                # Verify all columns from models exist and fix if missing
+                log("Verifying complete database schema against models...")
+                fix_result = subprocess.run(
+                    ['python', '/app/scripts/verify_and_fix_schema.py'],
+                    capture_output=True,
+                    text=True,
+                    timeout=180
+                )
+                if fix_result.returncode == 0:
+                    # Print output to show what was fixed
+                    if fix_result.stdout:
+                        for line in fix_result.stdout.strip().split('\n'):
+                            if line.strip() and not line.startswith('='):
+                                log(line)
+                    log("✓ Database schema verified and fixed")
+                else:
+                    log(f"⚠ Schema verification had issues: {fix_result.stderr}")
+                    # Fallback to the simpler fix script
+                    log("Attempting fallback column fix...")
+                    fallback_result = subprocess.run(
+                        ['python', '/app/scripts/fix_missing_columns.py'],
+                        capture_output=True,
+                        text=True,
+                        timeout=60
+                    )
+                    if fallback_result.returncode == 0:
+                        log("✓ Fallback fix completed")
+                
                 return True
             else:
                 log(f"⚠ Migration application failed: {result.stderr}")
+                # Try to fix missing columns even if migration failed
+                log("Attempting to fix missing columns...")
+                fix_result = subprocess.run(
+                    ['python', '/app/scripts/verify_and_fix_schema.py'],
+                    capture_output=True,
+                    text=True,
+                    timeout=180
+                )
+                if fix_result.returncode == 0:
+                    if fix_result.stdout:
+                        for line in fix_result.stdout.strip().split('\n'):
+                            if line.strip() and not line.startswith('='):
+                                log(line)
+                    log("✓ Missing columns fixed")
+                else:
+                    # Fallback to simpler script
+                    log("Trying fallback fix...")
+                    fallback_result = subprocess.run(
+                        ['python', '/app/scripts/fix_missing_columns.py'],
+                        capture_output=True,
+                        text=True,
+                        timeout=60
+                    )
+                    if fallback_result.returncode == 0:
+                        log("✓ Fallback fix completed")
                 return False
         else:
             log("No migrations directory found, initializing...")
