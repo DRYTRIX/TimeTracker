@@ -598,19 +598,24 @@ class FilterManager {
         const formData = new FormData(this.form);
         const params = new URLSearchParams();
         
-        // Always include status - default to "all" if not set or empty
+        // Check if this is the time entries form - handle it differently
+        const isTimeEntriesForm = this.form.id === 'timeEntriesFilterForm';
+        
+        // Always include status - default to "all" if not set or empty (for projects page)
         const statusSelect = this.form.querySelector('[name="status"]');
-        let statusValue = statusSelect ? statusSelect.value : 'all';
-        // If status is empty or null, default to "all" to show all projects
-        if (!statusValue || statusValue === '') {
+        let statusValue = statusSelect ? statusSelect.value : null;
+        // If status is empty or null and we're not on time entries, default to "all"
+        if (!isTimeEntriesForm && (!statusValue || statusValue === '')) {
             statusValue = 'all';
         }
-        params.append('status', statusValue);
+        if (statusValue && statusValue !== '') {
+            params.append('status', statusValue);
+        }
         
         // Process other form fields
         for (const [key, value] of formData.entries()) {
             // Skip status as we already handled it
-            if (key === 'status') {
+            if (key === 'status' && statusValue) {
                 continue;
             }
             // Include search if it has a value (trimmed)
@@ -629,8 +634,15 @@ class FilterManager {
         // Get the form action or current URL
         const url = this.form.action || window.location.pathname;
         const queryString = params.toString();
-        // Always include status parameter, even if it's the only one
-        const fullUrl = queryString ? `${url}?${queryString}` : `${url}?status=all`;
+        // Build full URL - for projects page, always include status parameter if query is empty
+        let fullUrl;
+        if (!isTimeEntriesForm && !queryString) {
+            fullUrl = `${url}?status=all`;
+        } else if (queryString) {
+            fullUrl = `${url}?${queryString}`;
+        } else {
+            fullUrl = url;
+        }
         
         // Debug: log what we're sending
         console.log('Filter URL:', fullUrl);
@@ -642,8 +654,12 @@ class FilterManager {
             window.history.pushState({}, '', fullUrl);
         }
         
-        // Show loading indicator
-        const container = document.getElementById('projectsListContainer') || document.getElementById('projectsContainer');
+        // Detect container type - check for time entries first, then projects
+        const timeEntriesContainer = document.getElementById('timeEntriesListContainer');
+        const projectsContainer = document.getElementById('projectsListContainer');
+        const projectsWrapper = document.getElementById('projectsContainer');
+        const container = timeEntriesContainer || projectsContainer || projectsWrapper;
+        
         if (container) {
             container.style.opacity = '0.5';
             container.style.pointerEvents = 'none';
@@ -665,14 +681,44 @@ class FilterManager {
             return response.text();
         })
         .then(html => {
+            // Handle time entries container
+            if (timeEntriesContainer) {
+                const trimmedHtml = html.trim();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = trimmedHtml;
+                
+                const newContainer = tempDiv.querySelector('#timeEntriesListContainer');
+                
+                if (newContainer) {
+                    timeEntriesContainer.innerHTML = newContainer.innerHTML;
+                } else {
+                    // Fallback: try to extract content using regex
+                    const match = trimmedHtml.match(/<div[^>]*id=["']timeEntriesListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
+                    if (match && match[1]) {
+                        timeEntriesContainer.innerHTML = match[1];
+                    } else {
+                        timeEntriesContainer.innerHTML = html;
+                    }
+                }
+                
+                // Re-initialize bulk actions after content update
+                if (typeof updateBulkActions === 'function') {
+                    updateBulkActions();
+                }
+                
+                // Update filter chips after content update
+                this.updateFilters();
+                return;
+            }
+            
+            // Handle projects container (original logic)
             // Debug: log response length
             console.log('Response HTML length:', html.length);
             console.log('Response preview:', html.substring(0, 200));
             // Update the projects list container
-            const projectsContainer = document.getElementById('projectsListContainer');
-            const projectsWrapper = document.getElementById('projectsContainer');
+            let targetContainer = projectsContainer;
             
-            if (!projectsContainer && projectsWrapper) {
+            if (!targetContainer && projectsWrapper) {
                 // If we don't have the inner container, try to find or create it
                 let innerContainer = projectsWrapper.querySelector('#projectsListContainer');
                 if (!innerContainer) {
@@ -681,11 +727,11 @@ class FilterManager {
                     projectsWrapper.insertBefore(innerContainer, projectsWrapper.firstChild);
                 }
                 if (innerContainer) {
-                    projectsContainer = innerContainer;
+                    targetContainer = innerContainer;
                 }
             }
             
-            if (projectsContainer) {
+            if (targetContainer) {
                 const trimmedHtml = html.trim();
                 
                 // The partial template returns: <div id="projectsListContainer">...</div>
@@ -700,24 +746,24 @@ class FilterManager {
                 
                 if (responseContainer) {
                     // Use the innerHTML directly
-                    projectsContainer.innerHTML = responseContainer.innerHTML;
+                    targetContainer.innerHTML = responseContainer.innerHTML;
                 } else {
                     // If the response IS the container (no wrapper), extract content
                     // Try regex to get content between opening and closing div tags
                     const match = trimmedHtml.match(/<div[^>]*id=["']projectsListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
                     if (match && match[1] !== undefined) {
-                        projectsContainer.innerHTML = match[1];
+                        targetContainer.innerHTML = match[1];
                     } else {
                         // If all else fails, try to find the first child element
                         const firstChild = tempDiv.firstElementChild;
                         if (firstChild && firstChild.id === 'projectsListContainer') {
-                            projectsContainer.innerHTML = firstChild.innerHTML;
+                            targetContainer.innerHTML = firstChild.innerHTML;
                         } else {
                             // Last resort: replace entire container
-                            projectsContainer.outerHTML = trimmedHtml;
+                            targetContainer.outerHTML = trimmedHtml;
                             // Re-find the container after replacement
                             const newContainer = document.getElementById('projectsListContainer');
-                            if (newContainer) projectsContainer = newContainer;
+                            if (newContainer) targetContainer = newContainer;
                         }
                     }
                 }
@@ -735,7 +781,7 @@ class FilterManager {
             }
         })
         .catch(error => {
-            console.error('Error fetching filtered projects:', error);
+            console.error('Error fetching filtered results:', error);
             // Fallback to regular form submission on error
             if (container) {
                 container.style.opacity = '';
@@ -743,7 +789,7 @@ class FilterManager {
             }
             // Optionally show an error message
             if (window.toastManager) {
-                window.toastManager.show('Failed to filter projects. Please try again.', 'error');
+                window.toastManager.show('Failed to filter results. Please try again.', 'error');
             }
         })
         .finally(() => {

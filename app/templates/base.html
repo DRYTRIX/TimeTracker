@@ -274,7 +274,7 @@
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                 <ul id="workDropdown" class="{% if not work_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
-                            {% set nav_active_timer = ep.startswith('timer.') %}
+                            {% set nav_active_timer = ep.startswith('timer.manual') %}
                             {% set nav_active_time_entries = ep == 'timer.time_entries_overview' %}
                             {% set nav_active_projects = ep.startswith('projects.') %}
                             {% set nav_active_clients = ep.startswith('clients.') %}

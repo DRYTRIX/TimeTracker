@@ -1561,6 +1561,16 @@ def time_entries_overview():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
     
+    # Get custom field filters for clients
+    # Format: custom_field_<field_key>=value
+    client_custom_field = {}
+    from app.models import CustomFieldDefinition
+    active_definitions = CustomFieldDefinition.get_active_definitions()
+    for definition in active_definitions:
+        field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
+        if field_value:
+            client_custom_field[definition.field_key] = field_value
+    
     # Permission check: can user view all entries?
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     
@@ -1592,6 +1602,41 @@ def time_entries_overview():
     # Filter by client
     if client_id:
         query = query.filter(TimeEntry.client_id == client_id)
+    
+    # Filter by client custom fields
+    if client_custom_field:
+        # Join Client table to filter by custom fields
+        query = query.join(Client, TimeEntry.client_id == Client.id)
+        
+        # Determine database type for custom field filtering
+        is_postgres = False
+        try:
+            from sqlalchemy import inspect
+            engine = db.engine
+            is_postgres = 'postgresql' in str(engine.url).lower()
+        except Exception:
+            pass
+        
+        # Build custom field filter conditions
+        custom_field_conditions = []
+        for field_key, field_value in client_custom_field.items():
+            if not field_key or not field_value:
+                continue
+            
+            if is_postgres:
+                # PostgreSQL: Use JSONB operators
+                try:
+                    from sqlalchemy import cast, String
+                    # Match exact value in custom_fields JSONB
+                    custom_field_conditions.append(
+                        db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
+                    )
+                except Exception:
+                    # Fallback to Python filtering if JSONB fails
+                    pass
+        
+        if custom_field_conditions:
+            query = query.filter(db.or_(*custom_field_conditions))
     
     # Filter by date range
     if start_date:
@@ -1638,6 +1683,55 @@ def time_entries_overview():
     # Pagination
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     time_entries = pagination.items
+    
+    # For SQLite or if JSONB filtering didn't work, filter by custom fields in Python
+    if client_custom_field:
+        try:
+            from sqlalchemy import inspect
+            engine = db.engine
+            is_postgres = 'postgresql' in str(engine.url).lower()
+            
+            if not is_postgres:
+                # SQLite: Filter in Python
+                filtered_entries = []
+                for entry in time_entries:
+                    if not entry.client:
+                        continue
+                    
+                    # Check if client matches all custom field filters
+                    matches = True
+                    for field_key, field_value in client_custom_field.items():
+                        if not field_key or not field_value:
+                            continue
+                        
+                        client_value = entry.client.custom_fields.get(field_key) if entry.client.custom_fields else None
+                        if str(client_value) != str(field_value):
+                            matches = False
+                            break
+                    
+                    if matches:
+                        filtered_entries.append(entry)
+                
+                # Update pagination with filtered results
+                time_entries = filtered_entries
+                # Recalculate pagination manually
+                total = len(filtered_entries)
+                start = (page - 1) * per_page
+                end = start + per_page
+                time_entries = filtered_entries[start:end]
+                
+                # Create a pagination-like object
+                from flask_sqlalchemy import Pagination
+                pagination = Pagination(
+                    query=None,
+                    page=page,
+                    per_page=per_page,
+                    total=total,
+                    items=time_entries
+                )
+        except Exception:
+            # If filtering fails, use original results
+            pass
     
     # Get filter options
     projects = []
@@ -1693,9 +1787,14 @@ def time_entries_overview():
         "paid": paid_filter,
         "billable": billable_filter,
         "search": search,
+        "client_custom_field": client_custom_field,
         "page": page,
         "per_page": per_page
     }
+    
+    # Get custom field definitions for filter UI
+    from app.models import CustomFieldDefinition
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
     
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -1706,7 +1805,8 @@ def time_entries_overview():
             time_entries=time_entries,
             pagination=pagination,
             can_view_all=can_view_all,
-            filters=filters_dict
+            filters=filters_dict,
+            custom_field_definitions=custom_field_definitions,
         ))
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response
@@ -1720,6 +1820,7 @@ def time_entries_overview():
         users=users,
         can_view_all=can_view_all,
         filters=filters_dict,
+        custom_field_definitions=custom_field_definitions,
         totals={
             "total_hours": round(total_hours, 2),
             "total_billable_hours": round(total_billable_hours, 2),

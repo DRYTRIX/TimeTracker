@@ -60,11 +60,22 @@ def list_projects():
     # Handle "all" status - pass None to service to show all statuses
     status_param = None if (status == "all" or not status) else status
     client_name = request.args.get("client", "").strip()
+    client_id = request.args.get("client_id", type=int)
     search = request.args.get("search", "").strip()
     favorites_only = request.args.get("favorites", "").lower() == "true"
     
+    # Get custom field filters
+    # Format: custom_field_<field_key>=value
+    client_custom_field = {}
+    from app.models import CustomFieldDefinition
+    active_definitions = CustomFieldDefinition.get_active_definitions()
+    for definition in active_definitions:
+        field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
+        if field_value:
+            client_custom_field[definition.field_key] = field_value
+    
     # Debug logging
-    current_app.logger.debug(f"Projects list filters - search: '{search}', status: '{status}', client: '{client_name}', favorites: {favorites_only}")
+    current_app.logger.debug(f"Projects list filters - search: '{search}', status: '{status}', client: '{client_name}', client_id: {client_id}, custom_fields: {client_custom_field}, favorites: {favorites_only}")
 
     project_service = ProjectService()
 
@@ -72,6 +83,8 @@ def list_projects():
     result = project_service.list_projects(
         status=status_param,
         client_name=client_name if client_name else None,
+        client_id=client_id,
+        client_custom_field=client_custom_field if client_custom_field else None,
         search=search if search else None,
         favorites_only=favorites_only,
         user_id=current_user.id if favorites_only else None,
@@ -85,6 +98,10 @@ def list_projects():
     # Get clients for filter dropdown
     clients = Client.get_active_clients()
     client_list = [c.name for c in clients]
+    
+    # Get custom field definitions for filter UI
+    from app.models import CustomFieldDefinition
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
 
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -110,6 +127,7 @@ def list_projects():
         clients=client_list,
         favorite_project_ids=favorite_project_ids,
         favorites_only=favorites_only,
+        custom_field_definitions=custom_field_definitions,
     )
 
 
