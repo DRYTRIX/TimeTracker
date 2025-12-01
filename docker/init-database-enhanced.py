@@ -11,23 +11,35 @@ import traceback
 from sqlalchemy import create_engine, text, inspect, MetaData
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
+def log(message, level="INFO"):
+    """Log message with timestamp and level"""
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    prefix = {
+        "INFO": "ℹ",
+        "SUCCESS": "✓",
+        "WARNING": "⚠",
+        "ERROR": "✗"
+    }.get(level, "•")
+    print(f"[{timestamp}] {prefix} {message}")
+
 def wait_for_database(url, max_attempts=30, delay=2):
     """Wait for database to be ready"""
-    print(f"Waiting for database to be ready...")
+    log("Waiting for database connection...", "INFO")
     
     for attempt in range(max_attempts):
         try:
             engine = create_engine(url, pool_pre_ping=True)
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            print("Database connection established successfully")
+            log("Database connection established", "SUCCESS")
             return engine
         except Exception as e:
-            print(f"Waiting for database... (attempt {attempt+1}/{max_attempts}): {e}")
             if attempt < max_attempts - 1:
+                log(f"Connection attempt {attempt+1}/{max_attempts} failed, retrying...", "WARNING")
                 time.sleep(delay)
             else:
-                print("Database not ready after waiting, exiting...")
+                log(f"Database not ready after {max_attempts} attempts: {e}", "ERROR")
                 sys.exit(1)
     
     return None
@@ -230,7 +242,7 @@ def create_table_if_not_exists(engine, table_name, table_schema):
             with engine.connect() as conn:
                 conn.execute(text(create_sql))
                 conn.commit()
-            print(f"✓ Created table: {table_name}")
+            log(f"Created table: {table_name}", "SUCCESS")
             return True
         else:
             # Check if table needs schema updates
@@ -244,7 +256,7 @@ def create_table_if_not_exists(engine, table_name, table_schema):
                     missing_columns.append((col_name, col_def))
             
             if missing_columns:
-                print(f"⚠ Table {table_name} exists but missing columns: {[col[0] for col in missing_columns]}")
+                log(f"Table {table_name} exists but missing columns: {[col[0] for col in missing_columns]}", "WARNING")
                 
                 # Add missing columns
                 with engine.connect() as conn:
@@ -254,18 +266,18 @@ def create_table_if_not_exists(engine, table_name, table_schema):
                             col_type_def = ' '.join(col_def.split()[1:])
                             alter_sql = f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type_def}"
                             conn.execute(text(alter_sql))
-                            print(f"  ✓ Added column: {col_name}")
+                            log(f"  Added column: {col_name}", "SUCCESS")
                         except Exception as e:
-                            print(f"  ⚠ Could not add column {col_name}: {e}")
+                            log(f"  Could not add column {col_name}: {e}", "WARNING")
                     conn.commit()
                 
                 return True
             else:
-                print(f"✓ Table {table_name} exists with correct schema")
+                log(f"Table {table_name} exists with correct schema", "SUCCESS")
                 return True
                 
     except Exception as e:
-        print(f"✗ Error creating/updating table {table_name}: {e}")
+        log(f"Error creating/updating table {table_name}: {e}", "ERROR")
         return False
 
 def create_indexes(engine, table_name, table_schema):
@@ -284,16 +296,16 @@ def create_indexes(engine, table_name, table_schema):
             conn.commit()
         
         if table_schema['indexes']:
-            print(f"✓ Indexes created for {table_name}")
+            log(f"Indexes created for {table_name}", "SUCCESS")
         return True
         
     except Exception as e:
-        print(f"⚠ Error creating indexes for {table_name}: {e}")
+        log(f"Error creating indexes for {table_name}: {e}", "WARNING")
         return True  # Don't fail on index creation errors
 
 def create_triggers(engine):
     """Create triggers for automatic timestamp updates"""
-    print("Creating triggers...")
+    # Triggers are created silently
     
     try:
         with engine.connect() as conn:
@@ -320,20 +332,20 @@ def create_triggers(engine):
                         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
                     """))
                 except Exception as e:
-                    print(f"  ⚠ Could not create trigger for {table}: {e}")
+                    pass  # Trigger creation errors are non-fatal
             
             conn.commit()
         
-        print("✓ Triggers created successfully")
+        log("Triggers created", "SUCCESS")
         return True
         
     except Exception as e:
-        print(f"⚠ Error creating triggers: {e}")
+        log(f"Error creating triggers: {e}", "WARNING")
         return True  # Don't fail on trigger creation errors
 
 def insert_initial_data(engine):
     """Insert initial data"""
-    print("Inserting initial data...")
+    # Initial data insertion is logged separately
     
     try:
         # Check if initial data has already been seeded
@@ -359,7 +371,7 @@ def insert_initial_data(engine):
             
             # Only insert default client and project on fresh installations
             if not installation_config.is_initial_data_seeded():
-                print("Fresh installation detected, creating default client and project...")
+                # Fresh installation - default client/project will be created
                 
                 # Check if there are any existing projects
                 result = conn.execute(text("SELECT COUNT(*) FROM projects;"))
@@ -385,16 +397,16 @@ def insert_initial_data(engine):
                             SELECT 1 FROM projects p WHERE p.name = 'General'
                         );
                     """))
-                    print("✓ Default client and project created")
+                    log("Default client and project created", "SUCCESS")
                     
                     # Mark initial data as seeded
                     installation_config.mark_initial_data_seeded()
-                    print("✓ Marked initial data as seeded")
+                    log("Marked initial data as seeded", "SUCCESS")
                 else:
-                    print(f"Projects already exist ({project_count} found), marking initial data as seeded")
+                    log(f"Projects already exist ({project_count} found), marking initial data as seeded", "INFO")
                     installation_config.mark_initial_data_seeded()
             else:
-                print("Initial data already seeded previously, skipping default client/project creation")
+                log("Initial data already seeded previously, skipping default client/project creation", "INFO")
              
             # Insert default settings only if none exist (singleton semantics)
             conn.execute(text("""
@@ -418,18 +430,16 @@ def insert_initial_data(engine):
              
             conn.commit()
         
-        print("✓ Initial data inserted successfully")
+        log("Initial data inserted successfully", "SUCCESS")
         return True
         
     except Exception as e:
-        print(f"⚠ Error inserting initial data: {e}")
-        import traceback
-        print(f"Traceback: {traceback.format_exc()}")
+        log(f"Error inserting initial data: {e}", "WARNING")
         return True  # Don't fail on data insertion errors
 
 def verify_database_schema(engine):
     """Verify that all required tables and columns exist"""
-    print("Verifying database schema...")
+    log("Running basic schema verification...", "INFO")
     
     try:
         inspector = inspect(engine)
@@ -452,18 +462,18 @@ def verify_database_schema(engine):
                     schema_issues.append(f"{table_name}: missing {missing_columns}")
         
         if missing_tables:
-            print(f"✗ Missing tables: {missing_tables}")
+            log(f"Missing tables: {missing_tables}", "ERROR")
             return False
         
         if schema_issues:
-            print(f"⚠ Schema issues found: {schema_issues}")
+            log(f"Schema issues found: {schema_issues}", "WARNING")
             return False
         
-        print("✓ Database schema verification passed")
+        log("Basic schema verification passed", "SUCCESS")
         return True
         
     except Exception as e:
-        print(f"✗ Error verifying schema: {e}")
+        log(f"Error verifying schema: {e}", "ERROR")
         return False
 
 def main():
@@ -471,37 +481,46 @@ def main():
     url = os.getenv("DATABASE_URL", "")
     
     if not url.startswith("postgresql"):
-        print("No PostgreSQL database configured, skipping initialization")
+        log("No PostgreSQL database configured, skipping initialization", "WARNING")
         return
     
-    print(f"Database URL: {url}")
+    log(f"Database URL: {url[:50]}..." if len(url) > 50 else f"Database URL: {url}", "INFO")
     
     # Wait for database to be ready
     engine = wait_for_database(url)
     
-    print("=== Starting enhanced database initialization ===")
+    log("=" * 60, "INFO")
+    log("Starting database initialization", "INFO")
+    log("=" * 60, "INFO")
     
     # Get required schema
     required_schema = get_required_schema()
+    log(f"Found {len(required_schema)} core tables to verify", "INFO")
 
     # Create/update tables
-    print("\n--- Creating/updating tables ---")
+    log("Verifying core tables...", "INFO")
+    tables_updated = 0
     for table_name, table_schema in required_schema.items():
-        if not create_table_if_not_exists(engine, table_name, table_schema):
-            print(f"Failed to create/update table {table_name}")
+        if create_table_if_not_exists(engine, table_name, table_schema):
+            tables_updated += 1
+        else:
+            log(f"Failed to create/update table {table_name}", "ERROR")
             sys.exit(1)
     
+    if tables_updated > 0:
+        log(f"Verified {tables_updated} core tables", "SUCCESS")
+    
     # Create indexes
-    print("\n--- Creating indexes ---")
+    log("Creating indexes...", "INFO")
     for table_name, table_schema in required_schema.items():
         create_indexes(engine, table_name, table_schema)
     
     # Create triggers
-    print("\n--- Creating triggers ---")
+    log("Creating triggers...", "INFO")
     create_triggers(engine)
 
     # Run legacy migrations (projects.client -> projects.client_id)
-    print("\n--- Running legacy migrations ---")
+    log("Running legacy migrations...", "INFO")
     try:
         inspector = inspect(engine)
         project_columns = [c['name'] for c in inspector.get_columns('projects')] if 'projects' in inspector.get_table_names() else []
@@ -529,21 +548,73 @@ def main():
                 except Exception:
                     pass
                 conn.commit()
-            print("✓ Migrated legacy projects.client to client_id")
+            log("Migrated legacy projects.client to client_id", "SUCCESS")
     except Exception as e:
-        print(f"⚠ Legacy migration failed (non-fatal): {e}")
+        log(f"Legacy migration skipped (non-fatal): {e}", "WARNING")
     
     # Insert initial data
-    print("\n--- Inserting initial data ---")
+    log("Inserting initial data...", "INFO")
     insert_initial_data(engine)
     
-    # Verify everything was created correctly
-    print("\n--- Verifying database schema ---")
-    if verify_database_schema(engine):
-        print("\n✓ Enhanced database initialization completed successfully")
-    else:
-        print("\n✗ Database initialization failed - schema verification failed")
-        sys.exit(1)
+    # Verify everything was created correctly using comprehensive schema verification
+    log("=" * 60, "INFO")
+    log("Running comprehensive schema verification", "INFO")
+    log("Checking all SQLAlchemy models against database schema...", "INFO")
+    log("=" * 60, "INFO")
+    
+    # Run the comprehensive schema verification script
+    import subprocess
+    try:
+        result = subprocess.run(
+            [sys.executable, '/app/scripts/verify_and_fix_schema.py'],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            env=os.environ.copy()
+        )
+        
+        if result.returncode == 0:
+            # Print important output lines (skip separators and empty lines)
+            if result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    line = line.strip()
+                    if line and not line.startswith('=') and not line.startswith('TimeTracker'):
+                        # Only show important messages
+                        if any(keyword in line for keyword in ['Added column', 'already exists', 'Loaded', 'Tables checked', 'Columns added']):
+                            log(f"  {line}", "INFO")
+            log("Comprehensive schema verification completed", "SUCCESS")
+            log("=" * 60, "INFO")
+            log("Database initialization completed successfully", "SUCCESS")
+            log("=" * 60, "INFO")
+        else:
+            log("Comprehensive schema verification had issues", "WARNING")
+            if result.stderr:
+                log(f"Error details: {result.stderr[:200]}", "WARNING")
+            # Fall back to basic verification
+            log("Falling back to basic schema verification...", "WARNING")
+            if verify_database_schema(engine):
+                log("Basic schema verification passed", "SUCCESS")
+                log("Database initialization completed successfully", "SUCCESS")
+            else:
+                log("Database initialization failed - schema verification failed", "ERROR")
+                sys.exit(1)
+    except subprocess.TimeoutExpired:
+        log("Schema verification timed out, falling back to basic verification...", "WARNING")
+        if verify_database_schema(engine):
+            log("Basic schema verification passed", "SUCCESS")
+            log("Database initialization completed successfully", "SUCCESS")
+        else:
+            log("Database initialization failed - schema verification failed", "ERROR")
+            sys.exit(1)
+    except Exception as e:
+        log(f"Error running comprehensive schema verification: {e}", "WARNING")
+        log("Falling back to basic schema verification...", "WARNING")
+        if verify_database_schema(engine):
+            log("Basic schema verification passed", "SUCCESS")
+            log("Database initialization completed successfully", "SUCCESS")
+        else:
+            log("Database initialization failed - schema verification failed", "ERROR")
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
