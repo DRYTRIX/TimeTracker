@@ -52,6 +52,17 @@
                 <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
             </select>
         </div>
+        {% if custom_field_definitions %}
+        {% for definition in custom_field_definitions %}
+        <div>
+            <label for="custom_field_{{ definition.field_key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ definition.label }}</label>
+            <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}" 
+                   value="{{ request.args.get('custom_field_' + definition.field_key, '') }}" 
+                   class="form-input" 
+                   placeholder="{{ definition.description or '' }}">
+        </div>
+        {% endfor %}
+        {% endif %}
     </form>
     </div>
 </div>

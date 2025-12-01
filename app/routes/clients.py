@@ -32,18 +32,95 @@ def list_clients():
     elif status == "inactive":
         query = query.filter_by(status="inactive")
 
+    # Determine database type for search strategy
+    is_postgres = False
+    try:
+        from sqlalchemy import inspect
+        engine = db.engine
+        is_postgres = 'postgresql' in str(engine.url).lower()
+    except Exception:
+        pass
+
     if search:
         like = f"%{search}%"
-        query = query.filter(
-            db.or_(
-                Client.name.ilike(like),
-                Client.description.ilike(like),
-                Client.contact_person.ilike(like),
-                Client.email.ilike(like),
-            )
-        )
+        search_conditions = [
+            Client.name.ilike(like),
+            Client.description.ilike(like),
+            Client.contact_person.ilike(like),
+            Client.email.ilike(like),
+        ]
+        
+        # Add custom fields to search based on database type
+        if is_postgres:
+            # PostgreSQL: Use JSONB operators for efficient search
+            try:
+                from sqlalchemy import cast, String
+                active_definitions = CustomFieldDefinition.get_active_definitions()
+                for definition in active_definitions:
+                    # PostgreSQL JSONB path query: custom_fields->>'field_key' ILIKE pattern
+                    search_conditions.append(
+                        db.cast(Client.custom_fields[definition.field_key].astext, String).ilike(like)
+                    )
+            except Exception as e:
+                # If JSONB search fails, log and continue without custom field search in DB
+                current_app.logger.warning(f"Could not add JSONB search conditions: {e}")
+        
+        query = query.filter(db.or_(*search_conditions))
 
     clients = query.order_by(Client.name).all()
+    
+    # For SQLite and other non-PostgreSQL databases, filter by custom fields in Python
+    # (PostgreSQL already handles this in the query above)
+    if search and not is_postgres:
+        try:
+            search_lower = search.lower()
+            filtered_clients = []
+            active_definitions = CustomFieldDefinition.get_active_definitions()
+            
+            for client in clients:
+                # Check if matches standard fields (already in results) or custom fields
+                matched_standard = any([
+                    (client.name and search_lower in client.name.lower()),
+                    (client.description and search_lower in (client.description or "").lower()),
+                    (client.contact_person and search_lower in (client.contact_person or "").lower()),
+                    (client.email and search_lower in (client.email or "").lower()),
+                ])
+                
+                matched_custom = False
+                if client.custom_fields:
+                    for definition in active_definitions:
+                        field_value = client.custom_fields.get(definition.field_key)
+                        if field_value and search_lower in str(field_value).lower():
+                            matched_custom = True
+                            break
+                
+                if matched_standard or matched_custom:
+                    filtered_clients.append(client)
+            
+            clients = filtered_clients
+        except Exception:
+            # If filtering fails, just use the original results
+            pass
+
+    # Get custom field definitions for the template
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+    
+    # Get link templates for custom fields (for clickable values)
+    from app.models import LinkTemplate
+    from sqlalchemy.exc import ProgrammingError
+    link_templates_by_field = {}
+    try:
+        for template in LinkTemplate.get_active_templates():
+            link_templates_by_field[template.field_key] = template
+    except ProgrammingError as e:
+        # Handle case where link_templates table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "link_templates table does not exist. Run migration: flask db upgrade"
+            )
+            link_templates_by_field = {}
+        else:
+            raise
 
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -53,11 +130,13 @@ def list_clients():
             clients=clients,
             status=status,
             search=search,
+            custom_field_definitions=custom_field_definitions,
+            link_templates_by_field=link_templates_by_field,
         ))
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
 
-    return render_template("clients/list.html", clients=clients, status=status, search=search)
+    return render_template("clients/list.html", clients=clients, status=status, search=search, custom_field_definitions=custom_field_definitions, link_templates_by_field=link_templates_by_field)
 
 
 @clients_bp.route("/clients/create", methods=["GET", "POST"])

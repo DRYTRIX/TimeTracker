@@ -36,6 +36,11 @@
                 <th class="p-4" data-sortable>Status</th>
                 <th class="p-4" data-sortable>Projects</th>
                 <th class="p-4">Portal</th>
+                {% if custom_field_definitions %}
+                {% for definition in custom_field_definitions %}
+                <th class="p-4" data-sortable data-column-key="custom_field_{{ definition.field_key }}">{{ definition.label }}</th>
+                {% endfor %}
+                {% endif %}
                 <th class="p-4">Actions</th>
             </tr>
         </thead>
@@ -77,6 +82,28 @@
                     </span>
                     {% endif %}
                 </td>
+                {% if custom_field_definitions %}
+                {% for definition in custom_field_definitions %}
+                <td class="p-4" data-column-key="custom_field_{{ definition.field_key }}">
+                    {% if client.custom_fields and client.custom_fields.get(definition.field_key) %}
+                        {% set field_value = client.custom_fields.get(definition.field_key) %}
+                        {% set link_template = link_templates_by_field.get(definition.field_key) if (link_templates_by_field is defined and link_templates_by_field) else None %}
+                        {% if link_template %}
+                            <a href="{{ link_template.render_url(field_value) }}" target="_blank" class="text-primary hover:underline" title="{{ link_template.name }}">
+                                {{ field_value }}
+                                {% if link_template.icon %}
+                                    <i class="{{ link_template.icon }} ml-1"></i>
+                                {% endif %}
+                            </a>
+                        {% else %}
+                            {{ field_value }}
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                {% endfor %}
+                {% endif %}
                 <td class="p-4">
                     <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="text-primary hover:underline">View</a>
                 </td>
