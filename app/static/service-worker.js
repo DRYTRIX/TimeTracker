@@ -7,6 +7,8 @@ const CACHE_VERSION = 'v1.0.1';
 const CACHE_NAME = `timetracker-${CACHE_VERSION}`;
 
 // Resources to cache immediately
+// Note: External CDN resources are excluded due to CSP restrictions
+// They will be cached on-demand when fetched by the browser
 const PRECACHE_URLS = [
     '/',
     '/static/dist/output.css',
@@ -14,8 +16,7 @@ const PRECACHE_URLS = [
     '/static/enhanced-ui.js',
     '/static/charts.js',
     '/static/interactions.js',
-    '/static/images/timetracker-logo.svg',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+    '/static/images/timetracker-logo.svg'
 ];
 
 // Resources to cache on first use
@@ -34,7 +35,20 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('[ServiceWorker] Precaching app shell');
-                return cache.addAll(PRECACHE_URLS);
+                // Only cache same-origin resources to avoid CSP violations
+                const sameOriginUrls = PRECACHE_URLS.filter(url => {
+                    try {
+                        const urlObj = new URL(url, self.location.origin);
+                        return urlObj.origin === self.location.origin;
+                    } catch {
+                        // Relative URLs are same-origin
+                        return !url.startsWith('http://') && !url.startsWith('https://');
+                    }
+                });
+                return cache.addAll(sameOriginUrls).catch(error => {
+                    console.warn('[ServiceWorker] Some resources failed to cache:', error);
+                    // Continue even if some resources fail
+                });
             })
             .then(() => self.skipWaiting())
     );

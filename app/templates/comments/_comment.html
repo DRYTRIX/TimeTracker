@@ -1,3 +1,9 @@
+{# Set default depth if not provided #}
+{% set depth = depth | default(0) %}
+{% set max_depth = 10 %}
+
+{# Prevent infinite recursion by limiting depth #}
+{% if depth < max_depth %}
 <!-- Single comment template -->
 <div class="comment" id="comment-{{ comment.id }}" data-comment-id="{{ comment.id }}">
     <div class="comment-header d-flex align-items-center mb-2">
@@ -89,15 +95,29 @@
     </div>
     
     <!-- Replies -->
-    {% if comment.replies %}
+    {% if comment.replies and depth < max_depth %}
     <div class="comment-replies mt-3">
         {% for reply in comment.replies %}
         <div class="comment-reply ms-4">
-            {% with comment=reply %}
+            {% with comment=reply, depth=depth+1 %}
             {% include 'comments/_comment.html' %}
             {% endwith %}
         </div>
         {% endfor %}
     </div>
+    {% elif comment.replies and depth >= max_depth %}
+    <div class="comment-replies mt-3">
+        <div class="text-muted small">
+            <i class="fas fa-info-circle"></i> {{ _('Replies are too deeply nested to display.') }}
+        </div>
+    </div>
     {% endif %}
 </div>
+{% else %}
+{# Depth limit reached - show placeholder #}
+<div class="comment" id="comment-{{ comment.id }}" data-comment-id="{{ comment.id }}">
+    <div class="text-muted small">
+        <i class="fas fa-info-circle"></i> {{ _('Comment nesting too deep to display.') }}
+    </div>
+</div>
+{% endif %}
