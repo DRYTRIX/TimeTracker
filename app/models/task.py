@@ -74,26 +74,16 @@ class Task(db.Model):
     @property
     def total_hours(self):
         """Calculate total hours spent on this task"""
+        # Use cached value if available (set by TaskService.list_tasks for performance)
+        if hasattr(self, '_cached_total_hours'):
+            return self._cached_total_hours
+            
         try:
+            from .time_entry import TimeEntry
+
             total_seconds = (
-                db.session.query(
-                    db.func.sum(
-                        db.func.coalesce(
-                            db.func.extract(
-                                "epoch",
-                                db.func.greatest(
-                                    db.func.least(
-                                        db.func.coalesce(self.time_entries.end_time, now_in_app_timezone()),
-                                        now_in_app_timezone(),
-                                    )
-                                    - self.time_entries.start_time
-                                ),
-                            ),
-                            0,
-                        )
-                    )
-                )
-                .filter(self.time_entries.project_id == self.project_id)
+                db.session.query(db.func.sum(TimeEntry.duration_seconds))
+                .filter(TimeEntry.task_id == self.id, TimeEntry.end_time.isnot(None))
                 .scalar()
                 or 0
             )

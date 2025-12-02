@@ -278,8 +278,7 @@ class SmartNotificationManager {
         // Check every hour
         setInterval(sendSummary, 60 * 60 * 1000);
         
-        // Check immediately
-        sendSummary();
+        // Don't check immediately on page load - only show at scheduled time (6 PM)
     }
 
     async sendDailySummary() {

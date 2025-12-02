@@ -47,10 +47,12 @@ class EnhancedErrorHandler {
             this.handleOffline();
         });
 
-        // Periodic online check
+        // Periodic online check - every 30 seconds
+        // This helps detect cases where browser thinks it's online but server is unreachable
+        // The browser's online/offline events handle most cases, this is a fallback
         setInterval(() => {
             this.checkOnlineStatus();
-        }, 5000);
+        }, 30000); // Check every 30 seconds instead of 5
     }
 
     checkOnlineStatus() {
