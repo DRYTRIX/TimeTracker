@@ -715,7 +715,7 @@ def create_app(config=None):
                     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.datatables.net https://uicdn.toast.com; "
                     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
                     "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.datatables.net https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://uicdn.toast.com; "
-                    "connect-src 'self' ws: wss:; "
+                    "connect-src 'self' ws: wss: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                     "frame-ancestors 'none'"
                 )
                 response.headers["Content-Security-Policy"] = csp

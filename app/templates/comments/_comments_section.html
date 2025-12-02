@@ -57,7 +57,9 @@
                     <div class="comment-item mb-4">
                         <div class="card">
                             <div class="card-body">
-                                {% include 'comments/_comment.html' with context %}
+                                {% with depth=0 %}
+                                {% include 'comments/_comment.html' %}
+                                {% endwith %}
                             </div>
                         </div>
                     </div>

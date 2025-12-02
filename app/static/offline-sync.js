@@ -122,13 +122,68 @@ class OfflineSyncManager {
 
     async getPendingSyncCount() {
         return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['syncQueue'], 'readonly');
-            const store = transaction.objectStore('syncQueue');
-            const index = store.index('processed');
-            const request = index.count(IDBKeyRange.only(false));
-
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => resolve(request.result || 0);
+            try {
+                const transaction = this.db.transaction(['syncQueue'], 'readonly');
+                const store = transaction.objectStore('syncQueue');
+                
+                // Check if the index exists
+                if (!store.indexNames.contains('processed')) {
+                    // If index doesn't exist, count manually
+                    const request = store.openCursor();
+                    let count = 0;
+                    request.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            if (cursor.value.processed === false || !cursor.value.processed) {
+                                count++;
+                            }
+                            cursor.continue();
+                        } else {
+                            resolve(count);
+                        }
+                    };
+                    request.onerror = () => reject(request.error);
+                    return;
+                }
+                
+                const index = store.index('processed');
+                // Use getAll with a key range for boolean values
+                // IndexedDB can be finicky with boolean values, so we'll use a cursor approach
+                const request = index.openCursor(IDBKeyRange.only(false));
+                let count = 0;
+                
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        count++;
+                        cursor.continue();
+                    } else {
+                        resolve(count);
+                    }
+                };
+                
+                request.onerror = () => {
+                    // Fallback: count manually if index query fails
+                    const fallbackRequest = store.openCursor();
+                    let fallbackCount = 0;
+                    fallbackRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            if (cursor.value.processed === false || !cursor.value.processed) {
+                                fallbackCount++;
+                            }
+                            cursor.continue();
+                        } else {
+                            resolve(fallbackCount);
+                        }
+                    };
+                    fallbackRequest.onerror = () => reject(fallbackRequest.error);
+                };
+            } catch (error) {
+                // If there's any error, return 0 instead of rejecting
+                console.warn('[OfflineSync] Error counting pending sync, returning 0:', error);
+                resolve(0);
+            }
         });
     }
 
@@ -326,13 +381,52 @@ class OfflineSyncManager {
 
     async getUnsyncedEntries(storeName) {
         return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction([storeName], 'readonly');
-            const store = transaction.objectStore(storeName);
-            const index = store.index('synced');
-            const request = index.getAll(IDBKeyRange.only(false));
-
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => resolve(request.result || []);
+            try {
+                const transaction = this.db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                
+                // Check if the index exists
+                if (!store.indexNames.contains('synced')) {
+                    // If index doesn't exist, filter manually
+                    const request = store.getAll();
+                    request.onsuccess = () => {
+                        const all = request.result || [];
+                        const unsynced = all.filter(entry => entry.synced === false || !entry.synced);
+                        resolve(unsynced);
+                    };
+                    request.onerror = () => reject(request.error);
+                    return;
+                }
+                
+                const index = store.index('synced');
+                // Use openCursor for boolean values to avoid IDBKeyRange issues
+                const request = index.openCursor(IDBKeyRange.only(false));
+                const results = [];
+                
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        results.push(cursor.value);
+                        cursor.continue();
+                    } else {
+                        resolve(results);
+                    }
+                };
+                
+                request.onerror = () => {
+                    // Fallback: filter manually if index query fails
+                    const fallbackRequest = store.getAll();
+                    fallbackRequest.onsuccess = () => {
+                        const all = fallbackRequest.result || [];
+                        const unsynced = all.filter(entry => entry.synced === false || !entry.synced);
+                        resolve(unsynced);
+                    };
+                    fallbackRequest.onerror = () => reject(fallbackRequest.error);
+                };
+            } catch (error) {
+                console.warn('[OfflineSync] Error getting unsynced entries, returning empty array:', error);
+                resolve([]);
+            }
         });
     }
 
@@ -380,23 +474,69 @@ class OfflineSyncManager {
         if (!this.db) return;
 
         return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['syncQueue'], 'readwrite');
-            const store = transaction.objectStore('syncQueue');
-            const index = store.index('processed');
-            const request = index.openCursor(IDBKeyRange.only(false));
-
-            request.onerror = () => reject(request.error);
-            request.onsuccess = async (event) => {
-                const cursor = event.target.result;
-                if (cursor) {
-                    const item = cursor.value;
-                    // Process queue item based on type
-                    // This will be handled by specific sync methods
-                    cursor.continue();
-                } else {
-                    resolve();
+            try {
+                const transaction = this.db.transaction(['syncQueue'], 'readwrite');
+                const store = transaction.objectStore('syncQueue');
+                
+                // Check if the index exists
+                if (!store.indexNames.contains('processed')) {
+                    // If index doesn't exist, iterate manually
+                    const request = store.openCursor();
+                    request.onsuccess = async (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const item = cursor.value;
+                            // Process queue item based on type
+                            // This will be handled by specific sync methods
+                            if (item.processed === false || !item.processed) {
+                                // Process unprocessed items
+                            }
+                            cursor.continue();
+                        } else {
+                            resolve();
+                        }
+                    };
+                    request.onerror = () => reject(request.error);
+                    return;
                 }
-            };
+                
+                const index = store.index('processed');
+                const request = index.openCursor(IDBKeyRange.only(false));
+
+                request.onerror = () => {
+                    // Fallback: iterate manually if index query fails
+                    const fallbackRequest = store.openCursor();
+                    fallbackRequest.onsuccess = async (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const item = cursor.value;
+                            if (item.processed === false || !item.processed) {
+                                // Process queue item based on type
+                                // This will be handled by specific sync methods
+                            }
+                            cursor.continue();
+                        } else {
+                            resolve();
+                        }
+                    };
+                    fallbackRequest.onerror = () => reject(fallbackRequest.error);
+                };
+                
+                request.onsuccess = async (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        const item = cursor.value;
+                        // Process queue item based on type
+                        // This will be handled by specific sync methods
+                        cursor.continue();
+                    } else {
+                        resolve();
+                    }
+                };
+            } catch (error) {
+                console.warn('[OfflineSync] Error processing sync queue:', error);
+                resolve(); // Resolve instead of reject to prevent blocking
+            }
         });
     }
 

@@ -234,4 +234,31 @@ class TaskService:
         # Paginate
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
-        return {"tasks": pagination.items, "pagination": pagination, "total": pagination.total}
+        # Pre-calculate total_hours for all tasks in a single query to avoid N+1
+        # This prevents the template from triggering individual queries for each task
+        tasks = pagination.items
+        if tasks:
+            from app.models import TimeEntry
+            task_ids = [task.id for task in tasks]
+            
+            # Calculate total hours for all tasks in one query
+            results = (
+                db.session.query(
+                    TimeEntry.task_id,
+                    db.func.sum(TimeEntry.duration_seconds).label('total_seconds')
+                )
+                .filter(
+                    TimeEntry.task_id.in_(task_ids),
+                    TimeEntry.end_time.isnot(None)
+                )
+                .group_by(TimeEntry.task_id)
+                .all()
+            )
+            total_hours_map = {task_id: total_seconds for task_id, total_seconds in results}
+            
+            # Cache the calculated values on task objects to avoid property queries
+            for task in tasks:
+                total_seconds = total_hours_map.get(task.id, 0) or 0
+                task._cached_total_hours = round(total_seconds / 3600, 2) if total_seconds else 0.0
+
+        return {"tasks": tasks, "pagination": pagination, "total": pagination.total}

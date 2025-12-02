@@ -190,12 +190,14 @@ def create_task():
 def view_task(task_id):
     """View task details - REFACTORED to use service layer with eager loading"""
     from app.services import TaskService
+    from sqlalchemy.orm import joinedload
+    from app.models import Comment
 
     task_service = TaskService()
 
     # Get task with all relations using eager loading (prevents N+1 queries)
     task = task_service.get_task_with_details(
-        task_id=task_id, include_time_entries=True, include_comments=True, include_activities=True
+        task_id=task_id, include_time_entries=False, include_comments=False, include_activities=False
     )
 
     if not task:
@@ -207,13 +209,12 @@ def view_task(task_id):
         flash(_("You do not have access to this task"), "error")
         return redirect(url_for("tasks.list_tasks"))
 
-    # Get time entries (time_entries is a dynamic relationship, so query it)
+    # Get time entries with pagination (limit to 100 most recent to avoid loading too many)
     # Eagerly load user relationship to prevent N+1 queries
-    from sqlalchemy.orm import joinedload
-
     time_entries = (
         task.time_entries.options(joinedload(TimeEntry.user))
         .order_by(TimeEntry.start_time.desc(), TimeEntry.id.desc())
+        .limit(100)
         .all()
     )
 
@@ -226,10 +227,28 @@ def view_task(task_id):
         .all()
     )
 
-    # Get comments for this task
-    from app.models import Comment
-
-    comments = Comment.get_task_comments(task_id, include_replies=True)
+    # Get comments for this task with eager loading of authors and replies to prevent N+1 queries
+    # Load all comments (including replies) with their authors to avoid lazy loading issues
+    # Use selectinload for replies to load them in a separate query, preventing circular loading
+    from sqlalchemy.orm import selectinload
+    
+    # Load all comments for this task with eager loading
+    all_comments = (
+        Comment.query.filter_by(task_id=task_id)
+        .options(
+            joinedload(Comment.author),  # Eagerly load author for all comments
+            # Load replies with their authors - selectinload loads all direct replies in one query
+            # This prevents N+1 queries when accessing comment.replies in the template
+            selectinload(Comment.replies).joinedload(Comment.author)
+        )
+        .order_by(Comment.created_at.asc())
+        .all()
+    )
+    
+    # Filter to only top-level comments (no parent_id) for the template
+    # The replies relationship is now eagerly loaded for direct replies
+    # Nested replies beyond the first level will be loaded lazily, but the template depth limit prevents issues
+    comments = [c for c in all_comments if c.parent_id is None]
 
     return render_template(
         "tasks/view.html", task=task, time_entries=time_entries, activities=activities, comments=comments
