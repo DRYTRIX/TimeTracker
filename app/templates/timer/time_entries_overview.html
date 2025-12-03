@@ -106,10 +106,19 @@
     </div>
 </div>
 
-<!-- Bulk Actions Form -->
+<!-- Bulk Actions Forms -->
 <form id="bulkPaidForm" method="POST" action="{{ url_for('timer.bulk_mark_paid') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="paid" id="bulkPaidValue">
+    {% for key, value in filters.items() %}
+        {% if value %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endif %}
+    {% endfor %}
+</form>
+
+<form id="bulkDeleteForm" method="POST" action="{{ url_for('timer.bulk_delete_time_entries') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for key, value in filters.items() %}
         {% if value %}
         <input type="hidden" name="{{ key }}" value="{{ value }}">
@@ -128,10 +137,14 @@
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Mark Selected Entries as Paid/Unpaid') }}</h3>
             <label for="bulkPaidSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Status') }}</label>
-            <select id="bulkPaidSelect" class="form-input w-full mb-4">
+            <select id="bulkPaidSelect" class="form-input w-full mb-4" onchange="toggleInvoiceReferenceField()">
                 <option value="true">{{ _('Paid') }}</option>
                 <option value="false">{{ _('Unpaid') }}</option>
             </select>
+            <div id="invoiceReferenceField" class="hidden mb-4">
+                <label for="bulkInvoiceReference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Invoice Reference') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional') }})</span></label>
+                <input type="text" id="bulkInvoiceReference" class="form-input w-full" placeholder="{{ _('e.g., Invoice number or payment reference') }}">
+            </div>
             <div class="flex justify-end gap-3 mt-6">
                 <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkPaidDialog()">
                     {{ _('Cancel') }}
@@ -182,22 +195,74 @@ function updateBulkActions() {
     }
 }
 
+function openBulkActionsMenu() {
+    const menu = document.getElementById('bulkActionsMenu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('bulkActionsMenu');
+    const btn = document.getElementById('bulkActionsBtn');
+    if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+function toggleInvoiceReferenceField() {
+    const statusSelect = document.getElementById('bulkPaidSelect');
+    const referenceField = document.getElementById('invoiceReferenceField');
+    if (!statusSelect || !referenceField) return;
+    
+    if (statusSelect.value === 'true') {
+        referenceField.classList.remove('hidden');
+    } else {
+        referenceField.classList.add('hidden');
+        const referenceInput = document.getElementById('bulkInvoiceReference');
+        if (referenceInput) referenceInput.value = '';
+    }
+}
+
 function showBulkPaidDialog() {
     const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
     if (checkboxes.length === 0) {
-        return;
+        alert('{{ _("Please select at least one time entry") }}');
+        return false;
     }
     document.getElementById('bulkPaidDialog').classList.remove('hidden');
+    // Reset form fields
+    const statusSelect = document.getElementById('bulkPaidSelect');
+    const referenceField = document.getElementById('invoiceReferenceField');
+    const referenceInput = document.getElementById('bulkInvoiceReference');
+    if (statusSelect) statusSelect.value = 'true';
+    if (referenceField) referenceField.classList.remove('hidden');
+    if (referenceInput) referenceInput.value = '';
+    // Close the menu
+    document.getElementById('bulkActionsMenu').classList.add('hidden');
+    return false;
 }
 
 function closeBulkPaidDialog() {
     document.getElementById('bulkPaidDialog').classList.add('hidden');
+    // Reset form fields
+    const statusSelect = document.getElementById('bulkPaidSelect');
+    const referenceField = document.getElementById('invoiceReferenceField');
+    const referenceInput = document.getElementById('bulkInvoiceReference');
+    if (statusSelect) statusSelect.value = 'true';
+    if (referenceField) referenceField.classList.add('hidden');
+    if (referenceInput) referenceInput.value = '';
 }
 
 function submitBulkPaid() {
     const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
     const form = document.getElementById('bulkPaidForm');
     const paidValue = document.getElementById('bulkPaidSelect').value;
+    
+    // Clear existing entry IDs and invoice reference
+    form.querySelectorAll('input[name="entry_ids[]"]').forEach(input => input.remove());
+    form.querySelectorAll('input[name="invoice_reference"]').forEach(input => input.remove());
     
     // Add selected entry IDs to form
     checkboxes.forEach(cb => {
@@ -208,7 +273,56 @@ function submitBulkPaid() {
         form.appendChild(input);
     });
     
+    // Add invoice reference if provided and status is paid
+    const referenceInput = document.getElementById('bulkInvoiceReference');
+    if (paidValue === 'true' && referenceInput && referenceInput.value.trim()) {
+        const refInput = document.createElement('input');
+        refInput.type = 'hidden';
+        refInput.name = 'invoice_reference';
+        refInput.value = referenceInput.value.trim();
+        form.appendChild(refInput);
+    }
+    
     document.getElementById('bulkPaidValue').value = paidValue;
+    form.submit();
+}
+
+function showBulkDeleteConfirm() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('{{ _("Please select at least one time entry") }}');
+        return false;
+    }
+    const count = checkboxes.length;
+    const msg = `{{ _("Are you sure you want to delete") }} ${count} {{ _("time entry/entries") }}? {{ _("This action cannot be undone.") }}`;
+    if (window.showConfirm) {
+        window.showConfirm(msg, { title: '{{ _("Delete Time Entries") }}', confirmText: '{{ _("Delete") }}', variant: 'danger' }).then(function(ok) {
+            if (ok) submitBulkDelete();
+        });
+    } else if (confirm(msg)) {
+        submitBulkDelete();
+    }
+    // Close the menu
+    document.getElementById('bulkActionsMenu').classList.add('hidden');
+    return false;
+}
+
+function submitBulkDelete() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    const form = document.getElementById('bulkDeleteForm');
+    
+    // Clear existing entry IDs
+    form.querySelectorAll('input[name="entry_ids[]"]').forEach(input => input.remove());
+    
+    // Add selected entry IDs to form
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'entry_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
     form.submit();
 }
 

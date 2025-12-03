@@ -41,6 +41,8 @@ from .invoice_email import InvoiceEmail
 from .webhook import Webhook, WebhookDelivery
 from .quote import Quote, QuoteItem, QuotePDFTemplate
 from .quote_attachment import QuoteAttachment
+from .project_attachment import ProjectAttachment
+from .client_attachment import ClientAttachment
 from .quote_template import QuoteTemplate
 from .quote_version import QuoteVersion
 from .warehouse import Warehouse
@@ -125,6 +127,8 @@ __all__ = [
     "QuoteItem",
     "QuotePDFTemplate",
     "QuoteAttachment",
+    "ProjectAttachment",
+    "ClientAttachment",
     "QuoteTemplate",
     "QuoteVersion",
     "Warehouse",

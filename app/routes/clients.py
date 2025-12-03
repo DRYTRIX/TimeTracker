@@ -2,8 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
-from app import db
-from app.models import Client, Project, Contact, TimeEntry, CustomFieldDefinition
+from app import db, log_event, track_event
+from app.models import Client, Project, Contact, TimeEntry, CustomFieldDefinition, ClientAttachment
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
@@ -414,6 +414,24 @@ def view_client(client_id):
     
     recent_time_entries = time_entries_query.all()
 
+    # Get attachments for this client (if attachments table exists)
+    attachments = []
+    try:
+        attachments = ClientAttachment.get_client_attachments(client_id)
+    except ProgrammingError as e:
+        # Handle case where client_attachments table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "client_attachments table does not exist. Run migration: flask db upgrade"
+            )
+            attachments = []
+        else:
+            raise
+    except Exception as e:
+        # Handle any other errors gracefully
+        current_app.logger.warning(f"Could not load attachments for client {client_id}: {e}")
+        attachments = []
+
     return render_template(
         "clients/view.html",
         client=client,
@@ -421,6 +439,7 @@ def view_client(client_id):
         contacts=contacts,
         primary_contact=primary_contact,
         prepaid_overview=prepaid_overview,
+        attachments=attachments,
         recent_time_entries=recent_time_entries,
         link_templates_by_field=link_templates_by_field,
         custom_field_definitions_by_key=custom_field_definitions_by_key,
@@ -1005,3 +1024,181 @@ def api_clients():
             for c in clients
         ]
     }
+
+
+# Client attachment routes
+@clients_bp.route("/clients/<int:client_id>/attachments/upload", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_clients")
+def upload_client_attachment(client_id):
+    """Upload an attachment to a client"""
+    from werkzeug.utils import secure_filename
+    from flask import send_file
+    import os
+    from datetime import datetime
+
+    client = Client.query.get_or_404(client_id)
+
+    # File upload configuration
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
+    UPLOAD_FOLDER = "uploads/client_attachments"
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+    def allowed_file(filename):
+        return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+    if "file" not in request.files:
+        flash(_("No file provided"), "error")
+        return redirect(url_for("clients.view_client", client_id=client_id))
+
+    file = request.files["file"]
+    if file.filename == "":
+        flash(_("No file selected"), "error")
+        return redirect(url_for("clients.view_client", client_id=client_id))
+
+    if not allowed_file(file.filename):
+        flash(_("File type not allowed"), "error")
+        return redirect(url_for("clients.view_client", client_id=client_id))
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    if file_size > MAX_FILE_SIZE:
+        flash(_("File size exceeds maximum allowed size (10 MB)"), "error")
+        return redirect(url_for("clients.view_client", client_id=client_id))
+
+    # Save file
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{client_id}_{timestamp}_{original_filename}"
+
+    # Ensure upload directory exists
+    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, filename)
+    file.save(file_path)
+
+    # Get file info
+    mime_type = file.content_type or "application/octet-stream"
+    description = request.form.get("description", "").strip() or None
+    is_visible_to_client = request.form.get("is_visible_to_client", "false").lower() == "true"
+
+    # Create attachment record
+    attachment = ClientAttachment(
+        client_id=client_id,
+        filename=filename,
+        original_filename=original_filename,
+        file_path=os.path.join(UPLOAD_FOLDER, filename),
+        file_size=file_size,
+        uploaded_by=current_user.id,
+        mime_type=mime_type,
+        description=description,
+        is_visible_to_client=is_visible_to_client,
+    )
+
+    db.session.add(attachment)
+
+    try:
+        if not safe_commit("upload_client_attachment", {"client_id": client_id, "attachment_id": attachment.id}):
+            flash(_("Could not upload attachment due to a database error. Please check server logs."), "error")
+            # Clean up uploaded file
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            return redirect(url_for("clients.view_client", client_id=client_id))
+    except Exception as e:
+        # Check if it's a table doesn't exist error
+        from sqlalchemy.exc import ProgrammingError
+        error_str = str(e)
+        if "does not exist" in error_str or "relation" in error_str.lower() or isinstance(e, ProgrammingError):
+            flash(_("The attachments feature requires a database migration. Please run: flask db upgrade"), "error")
+            current_app.logger.error(f"client_attachments table does not exist. Migration required: {e}")
+        else:
+            flash(_("Could not upload attachment due to a database error. Please check server logs."), "error")
+            current_app.logger.error(f"Error uploading client attachment: {e}")
+        # Clean up uploaded file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+        return redirect(url_for("clients.view_client", client_id=client_id))
+
+    log_event(
+        "client.attachment.uploaded",
+        user_id=current_user.id,
+        client_id=client_id,
+        attachment_id=attachment.id,
+        filename=original_filename,
+    )
+    track_event(
+        current_user.id,
+        "client.attachment.uploaded",
+        {"client_id": client_id, "attachment_id": attachment.id, "filename": original_filename},
+    )
+
+    flash(_("Attachment uploaded successfully"), "success")
+    return redirect(url_for("clients.view_client", client_id=client_id))
+
+
+@clients_bp.route("/clients/attachments/<int:attachment_id>/download")
+@login_required
+def download_client_attachment(attachment_id):
+    """Download a client attachment"""
+    from flask import send_file
+    import os
+
+    attachment = ClientAttachment.query.get_or_404(attachment_id)
+    client = attachment.client
+
+    # Build file path
+    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+
+    if not os.path.exists(file_path):
+        flash(_("File not found"), "error")
+        return redirect(url_for("clients.view_client", client_id=client.id))
+
+    return send_file(
+        file_path, as_attachment=True, download_name=attachment.original_filename, mimetype=attachment.mime_type
+    )
+
+
+@clients_bp.route("/clients/attachments/<int:attachment_id>/delete", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_clients")
+def delete_client_attachment(attachment_id):
+    """Delete a client attachment"""
+    import os
+
+    attachment = ClientAttachment.query.get_or_404(attachment_id)
+    client = attachment.client
+
+    # Delete file
+    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            current_app.logger.error(f"Failed to delete attachment file: {e}")
+
+    # Delete database record
+    attachment_id_for_log = attachment.id
+    client_id = client.id
+    db.session.delete(attachment)
+
+    if not safe_commit("delete_client_attachment", {"attachment_id": attachment_id_for_log}):
+        flash(_("Could not delete attachment due to a database error. Please check server logs."), "error")
+        return redirect(url_for("clients.view_client", client_id=client_id))
+
+    log_event(
+        "client.attachment.deleted", user_id=current_user.id, client_id=client_id, attachment_id=attachment_id_for_log
+    )
+    track_event(
+        current_user.id, "client.attachment.deleted", {"client_id": client_id, "attachment_id": attachment_id_for_log}
+    )
+
+    flash(_("Attachment deleted successfully"), "success")
+    return redirect(url_for("clients.view_client", client_id=client_id))

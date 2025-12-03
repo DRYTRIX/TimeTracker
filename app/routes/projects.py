@@ -23,6 +23,7 @@ from app.models import (
     ExtraGood,
     Activity,
     UserFavoriteProject,
+    ProjectAttachment,
 )
 from datetime import datetime
 from decimal import Decimal
@@ -326,6 +327,30 @@ def create_project():
 
         project = result["project"]
 
+        # Parse custom fields from global definitions
+        # Format: custom_field_<field_key> = value
+        from app.models import CustomFieldDefinition
+        custom_fields = {}
+        active_definitions = CustomFieldDefinition.get_active_definitions()
+        
+        for definition in active_definitions:
+            field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
+            if field_value:
+                custom_fields[definition.field_key] = field_value
+            elif definition.is_mandatory:
+                # Validate mandatory fields
+                flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+        
+        # Set custom fields if any
+        if custom_fields:
+            project.custom_fields = custom_fields
+            if not safe_commit("create_project_custom_fields", {"project_id": project.id}):
+                flash(_("Could not save project custom fields due to a database error"), "error")
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+
         # Track project created event
         log_event(
             "project.created",
@@ -399,7 +424,9 @@ def create_project():
         flash(f'Project "{name}" created successfully', "success")
         return redirect(url_for("projects.view_project", project_id=project.id))
 
-    return render_template("projects/create.html", clients=Client.get_active_clients())
+    from app.models import CustomFieldDefinition
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+    return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
 
 
 @projects_bp.route("/projects/<int:project_id>")
@@ -420,6 +447,54 @@ def view_project(project_id):
         flash(_("Project not found"), "error")
         return redirect(url_for("projects.list_projects"))
 
+    # Get custom field definitions and link templates
+    from app.models import CustomFieldDefinition, LinkTemplate
+    from sqlalchemy.exc import ProgrammingError
+    
+    custom_field_definitions_by_key = {}
+    try:
+        for definition in CustomFieldDefinition.get_active_definitions():
+            custom_field_definitions_by_key[definition.field_key] = definition
+    except ProgrammingError as e:
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "custom_field_definitions table does not exist. Run migration: flask db upgrade"
+            )
+            custom_field_definitions_by_key = {}
+        else:
+            raise
+    
+    link_templates_by_field = {}
+    try:
+        for template in LinkTemplate.get_active_templates():
+            link_templates_by_field[template.field_key] = template
+    except ProgrammingError as e:
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "link_templates table does not exist. Run migration: flask db upgrade"
+            )
+            link_templates_by_field = {}
+        else:
+            raise
+
+    # Get attachments for this project (if attachments table exists)
+    attachments = []
+    try:
+        attachments = ProjectAttachment.get_project_attachments(project_id)
+    except ProgrammingError as e:
+        # Handle case where project_attachments table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "project_attachments table does not exist. Run migration: flask db upgrade"
+            )
+            attachments = []
+        else:
+            raise
+    except Exception as e:
+        # Handle any other errors gracefully
+        current_app.logger.warning(f"Could not load attachments for project {project_id}: {e}")
+        attachments = []
+
     # Prevent browser caching of kanban board
     response = render_template(
         "projects/view.html",
@@ -432,6 +507,9 @@ def view_project(project_id):
         recent_costs=result["recent_costs"],
         total_costs_count=result["total_costs_count"],
         kanban_columns=result["kanban_columns"],
+        custom_field_definitions_by_key=custom_field_definitions_by_key,
+        link_templates_by_field=link_templates_by_field,
+        attachments=attachments,
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
@@ -702,6 +780,35 @@ def edit_project(project_id):
 
         project = result["project"]
 
+        # Parse custom fields from global definitions
+        # Format: custom_field_<field_key> = value
+        from app.models import CustomFieldDefinition
+        custom_fields = {}
+        active_definitions = CustomFieldDefinition.get_active_definitions()
+        
+        for definition in active_definitions:
+            field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
+            if field_value:
+                custom_fields[definition.field_key] = field_value
+            elif definition.is_mandatory:
+                # Validate mandatory fields
+                flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template("projects/edit.html", project=project, clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+        
+        # Update custom fields
+        if custom_fields:
+            project.custom_fields = custom_fields
+        else:
+            # Clear custom fields if all are empty
+            project.custom_fields = {}
+        
+        # Commit custom fields changes
+        if not safe_commit("update_project_custom_fields", {"project_id": project.id}):
+            flash(_("Could not update project custom fields due to a database error"), "error")
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            return render_template("projects/edit.html", project=project, clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+
         # Log activity
         Activity.log(
             user_id=current_user.id,
@@ -717,7 +824,9 @@ def edit_project(project_id):
         flash(f'Project "{name}" updated successfully', "success")
         return redirect(url_for("projects.view_project", project_id=project.id))
 
-    return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
+    from app.models import CustomFieldDefinition
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+    return render_template("projects/edit.html", project=project, clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
 
 
 @projects_bp.route("/projects/<int:project_id>/archive", methods=["GET", "POST"])
@@ -1613,3 +1722,182 @@ def api_project_goods(project_id):
             "count": len(goods),
         }
     )
+
+
+# Project attachment routes
+@projects_bp.route("/projects/<int:project_id>/attachments/upload", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_projects")
+def upload_project_attachment(project_id):
+    """Upload an attachment to a project"""
+    from werkzeug.utils import secure_filename
+    from flask import current_app, send_file
+    import os
+    from datetime import datetime
+
+    project = Project.query.get_or_404(project_id)
+
+    # File upload configuration
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
+    UPLOAD_FOLDER = "uploads/project_attachments"
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+    def allowed_file(filename):
+        return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+    if "file" not in request.files:
+        flash(_("No file provided"), "error")
+        return redirect(url_for("projects.view_project", project_id=project_id))
+
+    file = request.files["file"]
+    if file.filename == "":
+        flash(_("No file selected"), "error")
+        return redirect(url_for("projects.view_project", project_id=project_id))
+
+    if not allowed_file(file.filename):
+        flash(_("File type not allowed"), "error")
+        return redirect(url_for("projects.view_project", project_id=project_id))
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    if file_size > MAX_FILE_SIZE:
+        flash(_("File size exceeds maximum allowed size (10 MB)"), "error")
+        return redirect(url_for("projects.view_project", project_id=project_id))
+
+    # Save file
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{project_id}_{timestamp}_{original_filename}"
+
+    # Ensure upload directory exists
+    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, filename)
+    file.save(file_path)
+
+    # Get file info
+    mime_type = file.content_type or "application/octet-stream"
+    description = request.form.get("description", "").strip() or None
+    is_visible_to_client = request.form.get("is_visible_to_client", "false").lower() == "true"
+
+    # Create attachment record
+    attachment = ProjectAttachment(
+        project_id=project_id,
+        filename=filename,
+        original_filename=original_filename,
+        file_path=os.path.join(UPLOAD_FOLDER, filename),
+        file_size=file_size,
+        uploaded_by=current_user.id,
+        mime_type=mime_type,
+        description=description,
+        is_visible_to_client=is_visible_to_client,
+    )
+
+    db.session.add(attachment)
+
+    try:
+        if not safe_commit("upload_project_attachment", {"project_id": project_id, "attachment_id": attachment.id}):
+            flash(_("Could not upload attachment due to a database error. Please check server logs."), "error")
+            # Clean up uploaded file
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            return redirect(url_for("projects.view_project", project_id=project_id))
+    except Exception as e:
+        # Check if it's a table doesn't exist error
+        from sqlalchemy.exc import ProgrammingError
+        error_str = str(e)
+        if "does not exist" in error_str or "relation" in error_str.lower() or isinstance(e, ProgrammingError):
+            flash(_("The attachments feature requires a database migration. Please run: flask db upgrade"), "error")
+            current_app.logger.error(f"project_attachments table does not exist. Migration required: {e}")
+        else:
+            flash(_("Could not upload attachment due to a database error. Please check server logs."), "error")
+            current_app.logger.error(f"Error uploading project attachment: {e}")
+        # Clean up uploaded file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+        return redirect(url_for("projects.view_project", project_id=project_id))
+
+    log_event(
+        "project.attachment.uploaded",
+        user_id=current_user.id,
+        project_id=project_id,
+        attachment_id=attachment.id,
+        filename=original_filename,
+    )
+    track_event(
+        current_user.id,
+        "project.attachment.uploaded",
+        {"project_id": project_id, "attachment_id": attachment.id, "filename": original_filename},
+    )
+
+    flash(_("Attachment uploaded successfully"), "success")
+    return redirect(url_for("projects.view_project", project_id=project_id))
+
+
+@projects_bp.route("/projects/attachments/<int:attachment_id>/download")
+@login_required
+def download_project_attachment(attachment_id):
+    """Download a project attachment"""
+    from flask import current_app, send_file
+    import os
+
+    attachment = ProjectAttachment.query.get_or_404(attachment_id)
+    project = attachment.project
+
+    # Build file path
+    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+
+    if not os.path.exists(file_path):
+        flash(_("File not found"), "error")
+        return redirect(url_for("projects.view_project", project_id=project.id))
+
+    return send_file(
+        file_path, as_attachment=True, download_name=attachment.original_filename, mimetype=attachment.mime_type
+    )
+
+
+@projects_bp.route("/projects/attachments/<int:attachment_id>/delete", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_projects")
+def delete_project_attachment(attachment_id):
+    """Delete a project attachment"""
+    from flask import current_app
+    import os
+
+    attachment = ProjectAttachment.query.get_or_404(attachment_id)
+    project = attachment.project
+
+    # Delete file
+    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            current_app.logger.error(f"Failed to delete attachment file: {e}")
+
+    # Delete database record
+    attachment_id_for_log = attachment.id
+    project_id = project.id
+    db.session.delete(attachment)
+
+    if not safe_commit("delete_project_attachment", {"attachment_id": attachment_id_for_log}):
+        flash(_("Could not delete attachment due to a database error. Please check server logs."), "error")
+        return redirect(url_for("projects.view_project", project_id=project_id))
+
+    log_event(
+        "project.attachment.deleted", user_id=current_user.id, project_id=project_id, attachment_id=attachment_id_for_log
+    )
+    track_event(
+        current_user.id, "project.attachment.deleted", {"project_id": project_id, "attachment_id": attachment_id_for_log}
+    )
+
+    flash(_("Attachment deleted successfully"), "success")
+    return redirect(url_for("projects.view_project", project_id=project_id))

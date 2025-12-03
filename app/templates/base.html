@@ -364,7 +364,7 @@
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                         <ul id="financeDropdown" class="{% if not finance_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
-                            {% set nav_active_reports = ep.startswith('reports.') or ep.startswith('scheduled_reports.') %}
+                            {% set nav_active_reports = ep.startswith('reports.') and not ep.startswith('scheduled_reports.') %}
                             {% set nav_active_invoices = ep.startswith('invoices.') %}
                             {% set nav_active_invoice_approvals = ep.startswith('invoice_approvals.') %}
                             {% set nav_active_payment_gateways = ep.startswith('payment_gateways.') %}

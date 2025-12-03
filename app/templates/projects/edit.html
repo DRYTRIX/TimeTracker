@@ -79,6 +79,37 @@
                     </div>
                 </div>
 
+                {% if custom_field_definitions %}
+                <div class="mt-6 border-t border-border-light dark:border-border-dark pt-6">
+                    <h3 class="text-lg font-semibold mb-4">{{ _('Custom Fields') }}</h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                        {{ _('These custom fields are defined globally and available for all projects.') }}
+                    </p>
+                    <div class="space-y-4">
+                        {% for definition in custom_field_definitions %}
+                        <div>
+                            <label for="custom_field_{{ definition.field_key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {{ definition.label }}
+                                {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
+                            </label>
+                            <input 
+                                type="text" 
+                                id="custom_field_{{ definition.field_key }}" 
+                                name="custom_field_{{ definition.field_key }}" 
+                                value="{{ request.form.get('custom_field_' + definition.field_key, project.get_custom_field(definition.field_key, '') if project.custom_fields else '') }}" 
+                                placeholder="{{ definition.description or _('Enter value') }}" 
+                                class="form-input w-full"
+                                {% if definition.is_mandatory %}required{% endif %}
+                            >
+                            {% if definition.description %}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ definition.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
                     <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
                     <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
