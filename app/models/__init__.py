@@ -41,6 +41,8 @@ from .invoice_email import InvoiceEmail
 from .webhook import Webhook, WebhookDelivery
 from .quote import Quote, QuoteItem, QuotePDFTemplate
 from .quote_attachment import QuoteAttachment
+from .project_attachment import ProjectAttachment
+from .client_attachment import ClientAttachment
 from .quote_template import QuoteTemplate
 from .quote_version import QuoteVersion
 from .warehouse import Warehouse
@@ -74,6 +76,7 @@ from .gamification import Badge, UserBadge, Leaderboard, LeaderboardEntry
 from .expense_gps import MileageTrack
 from .link_template import LinkTemplate
 from .custom_field_definition import CustomFieldDefinition
+from .salesman_email_mapping import SalesmanEmailMapping
 
 __all__ = [
     "User",
@@ -125,6 +128,8 @@ __all__ = [
     "QuoteItem",
     "QuotePDFTemplate",
     "QuoteAttachment",
+    "ProjectAttachment",
+    "ClientAttachment",
     "QuoteTemplate",
     "QuoteVersion",
     "Warehouse",
@@ -174,4 +179,5 @@ __all__ = [
     "MileageTrack",
     "LinkTemplate",
     "CustomFieldDefinition",
+    "SalesmanEmailMapping",
 ]

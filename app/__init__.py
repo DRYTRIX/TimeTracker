@@ -987,6 +987,8 @@ def create_app(config=None):
     from app.routes.kiosk import kiosk_bp
     from app.routes.link_templates import link_templates_bp
     from app.routes.custom_field_definitions import custom_field_definitions_bp
+    from app.routes.custom_reports import custom_reports_bp
+    from app.routes.salesman_reports import salesman_reports_bp
 
     try:
         from app.routes.audit_logs import audit_logs_bp
@@ -1040,6 +1042,8 @@ def create_app(config=None):
     app.register_blueprint(leads_bp)
     app.register_blueprint(link_templates_bp)
     app.register_blueprint(custom_field_definitions_bp)
+    app.register_blueprint(custom_reports_bp)
+    app.register_blueprint(salesman_reports_bp)
     # audit_logs_bp is registered above with error handling
 
     # Register integration connectors
@@ -1094,12 +1098,7 @@ def create_app(config=None):
     except Exception as e:
         logger.warning(f"Could not register push_notifications blueprint: {e}")
 
-    try:
-        from app.routes.custom_reports import custom_reports_bp
-
-        app.register_blueprint(custom_reports_bp)
-    except Exception as e:
-        logger.warning(f"Could not register custom_reports blueprint: {e}")
+    # custom_reports_bp is already registered above (line 1045)
 
     try:
         from app.routes.gantt import gantt_bp

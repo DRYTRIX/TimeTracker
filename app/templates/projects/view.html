@@ -121,6 +121,73 @@
             </div>
         </div>
 
+        <!-- Custom Fields Section -->
+        {% if project.custom_fields %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Custom Fields') }}</h2>
+            <div class="space-y-3">
+                {% for key, value in project.custom_fields.items() %}
+                <div>
+                    {% set field_defs = custom_field_definitions_by_key|default({}) %}
+                    {% set field_definition = field_defs[key] if key in field_defs else None %}
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
+                        {% if field_definition %}{{ field_definition.label }}{% else %}{{ key }}{% endif %}
+                    </h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        {% set link_template = link_templates_by_field.get(key) if link_templates_by_field else None %}
+                        {% if link_template and value %}
+                            {# Render as clickable link using link template #}
+                            {% set rendered_url = link_template.render_url(value) %}
+                            {% if rendered_url %}
+                                <a href="{{ rendered_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                    {{ value }}
+                                    <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        {% elif value is string and (value.startswith('http://') or value.startswith('https://')) %}
+                            {# Fallback: If the value looks like a URL, render it as a clickable link #}
+                            <a href="{{ value }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                {{ value }}
+                                <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                            </a>
+                        {% elif value is string and value.startswith('www.') %}
+                            {# Handle www. URLs #}
+                            <a href="https://{{ value }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                {{ value }}
+                                <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                            </a>
+                        {% else %}
+                            {{ value }}
+                        {% endif %}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Rendered Links from Link Templates -->
+        {% set rendered_links = project.get_rendered_links() %}
+        {% if rendered_links %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Quick Links') }}</h2>
+            <div class="space-y-2">
+                {% for link in rendered_links %}
+                <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-primary hover:text-primary-dark hover:underline">
+                    {% if link.icon %}
+                    <i class="{{ link.icon }}"></i>
+                    {% else %}
+                    <i class="fas fa-external-link-alt"></i>
+                    {% endif %}
+                    <span>{{ link.name }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Budget Overview Card -->
         {% if project.budget_amount %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
@@ -217,6 +284,102 @@
                 <li>No hours logged yet.</li>
                 {% endfor %}
             </ul>
+        </div>
+
+        <!-- Attachments Section -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">
+                    <i class="fas fa-paperclip mr-2"></i>{{ _('Attachments') }}
+                    {% if attachments %}
+                    <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ attachments|length }})</span>
+                    {% endif %}
+                </h2>
+                {% if current_user.is_admin or has_permission('edit_projects') %}
+                <button type="button" onclick="document.getElementById('upload-attachment-form').classList.toggle('hidden')" class="bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary-dark text-sm">
+                    <i class="fas fa-plus mr-1"></i>{{ _('Upload') }}
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Upload Form -->
+            {% if current_user.is_admin or has_permission('edit_projects') %}
+            <div id="upload-attachment-form" class="hidden mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <form method="POST" action="{{ url_for('projects.upload_project_attachment', project_id=project.id) }}" enctype="multipart/form-data" class="space-y-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div>
+                        <label for="attachment-file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('File') }}</label>
+                        <input type="file" name="file" id="attachment-file" class="w-full form-input" required>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Max size: 10 MB. Allowed: images, PDFs, documents, spreadsheets, archives') }}</p>
+                    </div>
+                    <div>
+                        <label for="attachment-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Description (optional)') }}</label>
+                        <input type="text" name="description" id="attachment-description" class="w-full form-input" placeholder="{{ _('e.g., Contract, Specification, etc.') }}">
+                    </div>
+                    <div class="flex items-center">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="is_visible_to_client" value="true" class="mr-2">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ _('Visible to client in portal') }}</span>
+                        </label>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark text-sm">
+                            <i class="fas fa-upload mr-1"></i>{{ _('Upload') }}
+                        </button>
+                        <button type="button" onclick="document.getElementById('upload-attachment-form').classList.add('hidden')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">
+                            {{ _('Cancel') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Attachments List -->
+            <div class="space-y-2">
+                {% if attachments %}
+                    {% for attachment in attachments %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="flex-shrink-0">
+                                {% if attachment.is_pdf %}
+                                <i class="fas fa-file-pdf text-red-500 text-xl"></i>
+                                {% elif attachment.is_image %}
+                                <i class="fas fa-file-image text-blue-500 text-xl"></i>
+                                {% elif attachment.is_document %}
+                                <i class="fas fa-file-word text-blue-600 text-xl"></i>
+                                {% else %}
+                                <i class="fas fa-file text-gray-500 text-xl"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <a href="{{ url_for('projects.download_project_attachment', attachment_id=attachment.id) }}" class="text-primary hover:underline font-medium block truncate" title="{{ attachment.original_filename }}">
+                                    {{ attachment.original_filename }}
+                                </a>
+                                {% if attachment.description %}
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ attachment.description }}</p>
+                                {% endif %}
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ attachment.file_size_display }} • {{ attachment.uploaded_at|user_datetime('%Y-%m-%d %H:%M') if attachment.uploaded_at else '' }}
+                                    {% if attachment.is_visible_to_client %}
+                                    <span class="ml-2 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">{{ _('Client Visible') }}</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% if current_user.is_admin or has_permission('edit_projects') %}
+                        <form method="POST" action="{{ url_for('projects.delete_project_attachment', attachment_id=attachment.id) }}" class="ml-2" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this attachment?') }}', { title: '{{ _('Delete Attachment') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-500 hover:text-red-700 p-1" title="{{ _('Delete') }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">{{ _('No attachments yet') }}</p>
+                {% endif %}
+            </div>
         </div>
     </div>
 

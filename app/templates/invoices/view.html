@@ -62,6 +62,34 @@
             <p><strong>Issue Date:</strong> {{ invoice.issue_date.strftime('%Y-%m-%d') }}</p>
             <p><strong>Due Date:</strong> {{ invoice.due_date.strftime('%Y-%m-%d') }}</p>
             <p><strong>Status:</strong> {{ invoice.status }}</p>
+            {% if invoice.payment_reference %}
+            <p><strong>{{ _('Payment Reference') }}:</strong> 
+                {% set link_template = link_templates_by_field.get('payment_reference') if link_templates_by_field else None %}
+                {% if link_template %}
+                    {% set rendered_url = link_template.render_url(invoice.payment_reference) %}
+                    {% if rendered_url %}
+                        <a href="{{ rendered_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                            {{ invoice.payment_reference }}
+                            <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                        </a>
+                    {% else %}
+                        {{ invoice.payment_reference }}
+                    {% endif %}
+                {% elif invoice.payment_reference is string and (invoice.payment_reference.startswith('http://') or invoice.payment_reference.startswith('https://')) %}
+                    <a href="{{ invoice.payment_reference }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                        {{ invoice.payment_reference }}
+                        <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                    </a>
+                {% elif invoice.payment_reference is string and invoice.payment_reference.startswith('www.') %}
+                    <a href="https://{{ invoice.payment_reference }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                        {{ invoice.payment_reference }}
+                        <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                    </a>
+                {% else %}
+                    {{ invoice.payment_reference }}
+                {% endif %}
+            </p>
+            {% endif %}
             {% if invoice.approvals %}
             {% set latest_approval = invoice.approvals|sort(attribute='created_at', reverse=true)|first %}
             {% if latest_approval %}
@@ -234,7 +262,36 @@
                         {% endif %}
                     </td>
                     <td class="p-2">{{ payment.method or 'N/A' }}</td>
-                    <td class="p-2 text-sm">{{ payment.reference or '-' }}</td>
+                    <td class="p-2 text-sm">
+                        {% if payment.reference %}
+                            {% set link_template = link_templates_by_field.get('payment_reference') if link_templates_by_field else None %}
+                            {% if link_template %}
+                                {% set rendered_url = link_template.render_url(payment.reference) %}
+                                {% if rendered_url %}
+                                    <a href="{{ rendered_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                        {{ payment.reference }}
+                                        <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                    </a>
+                                {% else %}
+                                    {{ payment.reference }}
+                                {% endif %}
+                            {% elif payment.reference is string and (payment.reference.startswith('http://') or payment.reference.startswith('https://')) %}
+                                <a href="{{ payment.reference }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                    {{ payment.reference }}
+                                    <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            {% elif payment.reference is string and payment.reference.startswith('www.') %}
+                                <a href="https://{{ payment.reference }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                    {{ payment.reference }}
+                                    <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            {% else %}
+                                {{ payment.reference }}
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td class="p-2">
                         {% if payment.status == 'completed' %}
                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">

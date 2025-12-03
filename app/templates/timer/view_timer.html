@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Time Entry') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Time Entries'), 'url': url_for('timer.time_entries_overview')},
+    {'text': _('View Entry')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-clock',
+    title_text=_('Time Entry'),
+    subtitle_text=_('View time entry details'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("timer.edit_timer", timer_id=timer.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>' + _('Edit') + '</a>'
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Entry Details') }}</h2>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Start Time') }}</h3>
+                        <p class="text-text-light dark:text-text-dark">
+                            {{ timer.start_time|user_datetime('%Y-%m-%d %H:%M:%S') if timer.start_time else '-' }}
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('End Time') }}</h3>
+                        <p class="text-text-light dark:text-text-dark">
+                            {{ timer.end_time|user_datetime('%Y-%m-%d %H:%M:%S') if timer.end_time else '-' }}
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Duration') }}</h3>
+                    <p class="text-text-light dark:text-text-dark font-semibold text-lg">{{ timer.duration_formatted }}</p>
+                </div>
+                {% if timer.notes %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Notes') }}</h3>
+                    <p class="text-text-light dark:text-text-dark whitespace-pre-wrap">{{ timer.notes }}</p>
+                </div>
+                {% endif %}
+                {% if timer.tags %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Tags') }}</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for tag in timer.tag_list %}
+                        <span class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded text-sm">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="lg:col-span-1 space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Project & Client') }}</h2>
+            <div class="space-y-4">
+                {% if timer.project %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Project') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        <a href="{{ url_for('projects.view_project', project_id=timer.project.id) }}" class="text-primary hover:underline">
+                            {{ timer.project.name }}
+                        </a>
+                    </p>
+                </div>
+                {% endif %}
+                {% if timer.client %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Client') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        <a href="{{ url_for('clients.view_client', client_id=timer.client.id) }}" class="text-primary hover:underline">
+                            {{ timer.client.name }}
+                        </a>
+                    </p>
+                </div>
+                {% endif %}
+                {% if timer.task %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Task') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        <a href="{{ url_for('tasks.view_task', task_id=timer.task.id) }}" class="text-primary hover:underline">
+                            {{ timer.task.name }}
+                        </a>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Status & Billing') }}</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('User') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">{{ timer.user.display_name if timer.user else '-' }}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Billable') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        {% if timer.billable %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            <i class="fas fa-dollar-sign mr-1"></i>{{ _('Billable') }}
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                            {{ _('Non-billable') }}
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Paid') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        {% if timer.paid %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            <i class="fas fa-check-circle mr-1"></i>{{ _('Paid') }}
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                            <i class="fas fa-clock mr-1"></i>{{ _('Unpaid') }}
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% if timer.invoice_number %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Invoice Reference') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">
+                        {% set link_template = link_templates_by_field.get('invoice_number') if link_templates_by_field else None %}
+                        {% if link_template %}
+                            {% set rendered_url = link_template.render_url(timer.invoice_number) %}
+                            {% if rendered_url %}
+                                <a href="{{ rendered_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                    {{ timer.invoice_number }}
+                                    <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            {% else %}
+                                {{ timer.invoice_number }}
+                            {% endif %}
+                        {% elif timer.invoice_number is string and (timer.invoice_number.startswith('http://') or timer.invoice_number.startswith('https://')) %}
+                            <a href="{{ timer.invoice_number }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                {{ timer.invoice_number }}
+                                <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                            </a>
+                        {% elif timer.invoice_number is string and timer.invoice_number.startswith('www.') %}
+                            <a href="https://{{ timer.invoice_number }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">
+                                {{ timer.invoice_number }}
+                                <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                            </a>
+                        {% else %}
+                            {{ timer.invoice_number }}
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Source') }}</h3>
+                    <p class="text-text-light dark:text-text-dark">{{ timer.source|title if timer.source else '-' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

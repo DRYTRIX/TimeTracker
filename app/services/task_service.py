@@ -226,19 +226,14 @@ class TaskService:
         # Order by priority, due date, created date
         query = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc())
 
-        # Determine pagination
-        has_filters = bool(status or priority or project_id or assigned_to or search or overdue)
-        if not has_filters:
-            per_page = 10000  # Show all if no filters
-
-        # Paginate
+        # Paginate (always use pagination for performance)
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
         # Pre-calculate total_hours for all tasks in a single query to avoid N+1
         # This prevents the template from triggering individual queries for each task
         tasks = pagination.items
         if tasks:
-            from app.models import TimeEntry
+            from app.models import TimeEntry, KanbanColumn
             task_ids = [task.id for task in tasks]
             
             # Calculate total hours for all tasks in one query
@@ -256,9 +251,31 @@ class TaskService:
             )
             total_hours_map = {task_id: total_seconds for task_id, total_seconds in results}
             
+            # Pre-load kanban columns to avoid N+1 queries in status_display property
+            # Load global columns (project_id is None) since tasks don't have project-specific columns
+            kanban_columns = KanbanColumn.get_active_columns(project_id=None)
+            status_display_map = {}
+            for col in kanban_columns:
+                status_display_map[col.key] = col.label
+            
+            # Fallback status map if no columns found
+            fallback_status_map = {
+                "todo": "To Do",
+                "in_progress": "In Progress",
+                "review": "Review",
+                "done": "Done",
+                "cancelled": "Cancelled",
+            }
+            
             # Cache the calculated values on task objects to avoid property queries
             for task in tasks:
                 total_seconds = total_hours_map.get(task.id, 0) or 0
                 task._cached_total_hours = round(total_seconds / 3600, 2) if total_seconds else 0.0
+                
+                # Cache status_display to avoid N+1 queries
+                task._cached_status_display = status_display_map.get(
+                    task.status,
+                    fallback_status_map.get(task.status, task.status.replace("_", " ").title())
+                )
 
         return {"tasks": tasks, "pagination": pagination, "total": pagination.total}

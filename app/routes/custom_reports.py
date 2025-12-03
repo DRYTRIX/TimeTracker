@@ -6,8 +6,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db
-from app.models import SavedReportView, TimeEntry, Project, Task, User
+from app.models import SavedReportView, TimeEntry, Project, Task, User, Client
 from app.utils.db import safe_commit
+from app.services.unpaid_hours_service import UnpaidHoursService
 import json
 from datetime import datetime, timedelta
 
@@ -29,7 +30,21 @@ def report_builder():
         {"id": "expenses", "name": "Expenses", "icon": "receipt"},
     ]
 
-    return render_template("reports/builder.html", saved_views=saved_views, data_sources=data_sources)
+    # Get available clients for custom field filtering
+    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    
+    # Extract unique custom field keys from clients
+    custom_field_keys = set()
+    for client in clients:
+        if client.custom_fields:
+            custom_field_keys.update(client.custom_fields.keys())
+
+    return render_template(
+        "reports/builder.html",
+        saved_views=saved_views,
+        data_sources=data_sources,
+        custom_field_keys=sorted(list(custom_field_keys)),
+    )
 
 
 @custom_reports_bp.route("/reports/builder/save", methods=["POST"])
@@ -177,43 +192,115 @@ def generate_report_data(config, user_id=None):
 
     # Generate data based on source
     if data_source == "time_entries":
-        query = TimeEntry.query.filter(
-            TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
-        )
+        # Check if unpaid hours filter is enabled
+        unpaid_only = filters.get("unpaid_only", False)
+        custom_field_filter = filters.get("custom_field_filter")  # e.g., {"salesman": "MM"}
 
-        # Filter by user if not admin or if user_id is specified
-        if user_id:
-            user = User.query.get(user_id)
-            if not user or not user.is_admin:
-                query = query.filter(TimeEntry.user_id == user_id)
+        if unpaid_only:
+            # Use unpaid hours service
+            unpaid_service = UnpaidHoursService()
+            entries = unpaid_service.get_unpaid_time_entries(
+                start_date=start_dt,
+                end_date=end_dt,
+                project_id=filters.get("project_id"),
+                client_id=filters.get("client_id"),
+                user_id=filters.get("user_id") or user_id,
+                custom_field_filter=custom_field_filter,
+            )
+        else:
+            # Standard query
+            query = TimeEntry.query.filter(
+                TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
+            )
 
-        project_id = filters.get("project_id")
-        if project_id:
-            # Convert to int if it's a string
-            try:
-                project_id = int(project_id) if isinstance(project_id, str) else project_id
-                query = query.filter(TimeEntry.project_id == project_id)
-            except (ValueError, TypeError):
-                from flask import current_app
-                current_app.logger.warning(f"Invalid project_id: {project_id}, ignoring filter")
-        if filters.get("user_id"):
-            query = query.filter(TimeEntry.user_id == filters["user_id"])
+            # Filter by user if not admin or if user_id is specified
+            if user_id:
+                user = User.query.get(user_id)
+                if not user or not user.is_admin:
+                    query = query.filter(TimeEntry.user_id == user_id)
 
-        entries = query.all()
+            project_id = filters.get("project_id")
+            if project_id:
+                # Convert to int if it's a string
+                try:
+                    project_id = int(project_id) if isinstance(project_id, str) else project_id
+                    query = query.filter(TimeEntry.project_id == project_id)
+                except (ValueError, TypeError):
+                    from flask import current_app
+                    current_app.logger.warning(f"Invalid project_id: {project_id}, ignoring filter")
+            
+            if filters.get("user_id"):
+                query = query.filter(TimeEntry.user_id == filters["user_id"])
+
+            # Apply custom field filter if provided
+            if custom_field_filter:
+                # Get all entries first, then filter by custom fields
+                all_entries = query.all()
+                entries = []
+                for entry in all_entries:
+                    client = None
+                    if entry.project and entry.project.client:
+                        client = entry.project.client
+                    elif entry.client:
+                        client = entry.client
+
+                    if client and client.custom_fields:
+                        matches = True
+                        for field_name, field_value in custom_field_filter.items():
+                            client_value = client.custom_fields.get(field_name)
+                            if str(client_value).upper().strip() != str(field_value).upper().strip():
+                                matches = False
+                                break
+                        if matches:
+                            entries.append(entry)
+            else:
+                entries = query.all()
+
+        # Build response data
+        client_data = {}
+        data_list = []
+        
+        for e in entries:
+            client = None
+            if e.project and e.project.client:
+                client = e.project.client
+            elif e.client:
+                client = e.client
+            
+            client_name = client.name if client else "Unknown"
+            salesman = None
+            if client and client.custom_fields:
+                salesman = client.custom_fields.get("salesman")
+
+            entry_data = {
+                "id": e.id,
+                "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
+                "project": e.project.name if e.project else "",
+                "client": client_name,
+                "salesman": salesman or "",
+                "user": e.user.username if e.user else "",
+                "duration": e.duration_hours,
+                "notes": e.notes or "",
+                "billable": e.billable,
+                "paid": e.paid,
+            }
+            
+            data_list.append(entry_data)
+            
+            # Group by client for summary
+            if client_name not in client_data:
+                client_data[client_name] = {"hours": 0, "entries": []}
+            client_data[client_name]["hours"] += e.duration_hours or 0
+            client_data[client_name]["entries"].append(entry_data)
 
         return {
-            "data": [
-                {
-                    "id": e.id,
-                    "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
-                    "project": e.project.name if e.project else "",
-                    "user": e.user.username if e.user else "",
-                    "duration": e.duration_hours,
-                    "notes": e.notes or "",
-                }
-                for e in entries
-            ],
-            "summary": {"total_entries": len(entries), "total_hours": sum(e.duration_hours or 0 for e in entries)},
+            "data": data_list,
+            "summary": {
+                "total_entries": len(entries),
+                "total_hours": round(sum(e.duration_hours or 0 for e in entries), 2),
+                "unpaid_only": unpaid_only,
+                "by_client": client_data,
+            },
         }
 
     elif data_source == "projects":

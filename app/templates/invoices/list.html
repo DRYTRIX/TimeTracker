@@ -123,14 +123,18 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Change Status for Selected Invoices') }}</h3>
-            <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
-            <select id="bulkStatusSelect" class="form-input w-full mb-4">
-                <option value="">-- Select Status --</option>
-                <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
+            <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Select Status') }}</label>
+            <select id="bulkStatusSelect" class="form-input w-full mb-4" onchange="toggleInvoiceReferenceField()">
+                <option value="">-- {{ _('Select Status') }} --</option>
+                <option value="draft">{{ _('Draft') }}</option>
+                <option value="sent">{{ _('Sent') }}</option>
+                <option value="paid">{{ _('Paid') }}</option>
+                <option value="overdue">{{ _('Overdue') }}</option>
             </select>
+            <div id="invoiceReferenceField" class="hidden mb-4">
+                <label for="bulkInvoiceReference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Invoice Reference') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional') }})</span></label>
+                <input type="text" id="bulkInvoiceReference" class="form-input w-full" placeholder="{{ _('e.g., Payment confirmation number') }}">
+            </div>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closeBulkStatusDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
                 <button type="button" onclick="submitBulkStatus()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Update Status') }}</button>
@@ -616,12 +620,41 @@ function submitBulkDelete() {
 }
 
 function showBulkStatusDialog() {
-    document.getElementById('bulkStatusDialog').classList.remove('hidden');
+    const dialog = document.getElementById('bulkStatusDialog');
+    if (dialog) {
+        dialog.classList.remove('hidden');
+        // Reset form fields
+        const statusSelect = document.getElementById('bulkStatusSelect');
+        const referenceField = document.getElementById('invoiceReferenceField');
+        const referenceInput = document.getElementById('bulkInvoiceReference');
+        if (statusSelect) statusSelect.value = '';
+        if (referenceField) referenceField.classList.add('hidden');
+        if (referenceInput) referenceInput.value = '';
+    }
     return false;
 }
 
 function closeBulkStatusDialog() {
     document.getElementById('bulkStatusDialog').classList.add('hidden');
+    // Reset form fields
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    const referenceField = document.getElementById('invoiceReferenceField');
+    const referenceInput = document.getElementById('bulkInvoiceReference');
+    if (statusSelect) statusSelect.value = '';
+    if (referenceField) referenceField.classList.add('hidden');
+    if (referenceInput) referenceInput.value = '';
+}
+
+function toggleInvoiceReferenceField() {
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    const referenceField = document.getElementById('invoiceReferenceField');
+    if (!statusSelect || !referenceField) return;
+    
+    if (statusSelect.value === 'paid') {
+        referenceField.classList.remove('hidden');
+    } else {
+        referenceField.classList.add('hidden');
+    }
 }
 
 function submitBulkStatus() {
@@ -640,6 +673,22 @@ function submitBulkStatus() {
     const statusValueInput = document.getElementById('bulkStatusValue');
     if (statusValueInput) {
         statusValueInput.value = status;
+    }
+    
+    // Clear existing invoice_reference input if any
+    const existingRefInput = form.querySelector('input[name="invoice_reference"]');
+    if (existingRefInput) {
+        existingRefInput.remove();
+    }
+    
+    // Add invoice reference if provided and status is paid
+    const referenceInput = document.getElementById('bulkInvoiceReference');
+    if (status === 'paid' && referenceInput && referenceInput.value.trim()) {
+        const refInput = document.createElement('input');
+        refInput.type = 'hidden';
+        refInput.name = 'invoice_reference';
+        refInput.value = referenceInput.value.trim();
+        form.appendChild(refInput);
     }
     
     // Clear existing hidden inputs

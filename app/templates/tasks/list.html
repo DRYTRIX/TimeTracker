@@ -16,10 +16,10 @@
 
 <!-- Task Summary Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-animation">
-    {% set todo_count = tasks|selectattr('status', 'equalto', 'todo')|list|length %}
-    {% set in_progress_count = tasks|selectattr('status', 'equalto', 'in_progress')|list|length %}
-    {% set review_count = tasks|selectattr('status', 'equalto', 'review')|list|length %}
-    {% set done_count = tasks|selectattr('status', 'equalto', 'done')|list|length %}
+    {% set todo_count = task_counts.get('todo', 0) if task_counts else (tasks|selectattr('status', 'equalto', 'todo')|list|length) %}
+    {% set in_progress_count = task_counts.get('in_progress', 0) if task_counts else (tasks|selectattr('status', 'equalto', 'in_progress')|list|length) %}
+    {% set review_count = task_counts.get('review', 0) if task_counts else (tasks|selectattr('status', 'equalto', 'review')|list|length) %}
+    {% set done_count = task_counts.get('done', 0) if task_counts else (tasks|selectattr('status', 'equalto', 'done')|list|length) %}
     
     {{ stat_card('To Do', todo_count, 'fas fa-list', 'slate-500') }}
     {{ stat_card('In Progress', in_progress_count, 'fas fa-spinner', 'blue-500') }}

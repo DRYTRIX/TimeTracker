@@ -147,15 +147,18 @@ class OfflineSyncManager {
                 }
                 
                 const index = store.index('processed');
-                // Use getAll with a key range for boolean values
-                // IndexedDB can be finicky with boolean values, so we'll use a cursor approach
-                const request = index.openCursor(IDBKeyRange.only(false));
+                // IndexedDB doesn't support boolean values in IDBKeyRange, so we use a cursor approach
+                // Iterate through all items and filter for processed === false
+                const request = index.openCursor();
                 let count = 0;
                 
                 request.onsuccess = (event) => {
                     const cursor = event.target.result;
                     if (cursor) {
-                        count++;
+                        // Check if the value is false (unprocessed)
+                        if (cursor.value.processed === false || cursor.value.processed === 0 || !cursor.value.processed) {
+                            count++;
+                        }
                         cursor.continue();
                     } else {
                         resolve(count);
@@ -399,14 +402,18 @@ class OfflineSyncManager {
                 }
                 
                 const index = store.index('synced');
-                // Use openCursor for boolean values to avoid IDBKeyRange issues
-                const request = index.openCursor(IDBKeyRange.only(false));
+                // IndexedDB doesn't support boolean values in IDBKeyRange, so we use a cursor approach
+                // Iterate through all items and filter for synced === false
+                const request = index.openCursor();
                 const results = [];
                 
                 request.onsuccess = (event) => {
                     const cursor = event.target.result;
                     if (cursor) {
-                        results.push(cursor.value);
+                        // Check if the value is false (unsynced)
+                        if (cursor.value.synced === false || cursor.value.synced === 0 || !cursor.value.synced) {
+                            results.push(cursor.value);
+                        }
                         cursor.continue();
                     } else {
                         resolve(results);
@@ -501,7 +508,8 @@ class OfflineSyncManager {
                 }
                 
                 const index = store.index('processed');
-                const request = index.openCursor(IDBKeyRange.only(false));
+                // IndexedDB doesn't support boolean values in IDBKeyRange, so we use a cursor approach
+                const request = index.openCursor();
 
                 request.onerror = () => {
                     // Fallback: iterate manually if index query fails
@@ -526,8 +534,11 @@ class OfflineSyncManager {
                     const cursor = event.target.result;
                     if (cursor) {
                         const item = cursor.value;
-                        // Process queue item based on type
-                        // This will be handled by specific sync methods
+                        // Check if the item is unprocessed
+                        if (item.processed === false || item.processed === 0 || !item.processed) {
+                            // Process queue item based on type
+                            // This will be handled by specific sync methods
+                        }
                         cursor.continue();
                     } else {
                         resolve();

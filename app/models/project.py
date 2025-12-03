@@ -23,6 +23,7 @@ class Project(db.Model):
     estimated_hours = db.Column(db.Float, nullable=True)
     budget_amount = db.Column(db.Numeric(10, 2), nullable=True)
     budget_threshold_percent = db.Column(db.Integer, nullable=False, default=80)  # alert when exceeded
+    custom_fields = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     # Archiving metadata
@@ -321,6 +322,50 @@ class Project(db.Model):
             return self.favorited_by.filter_by(id=user.id).count() > 0
         return False
 
+    def get_custom_field(self, key, default=None):
+        """Get a custom field value"""
+        if not self.custom_fields:
+            return default
+        return self.custom_fields.get(key, default)
+
+    def set_custom_field(self, key, value):
+        """Set a custom field value"""
+        if self.custom_fields is None:
+            self.custom_fields = {}
+        self.custom_fields[key] = value
+        self.updated_at = datetime.utcnow()
+
+    def remove_custom_field(self, key):
+        """Remove a custom field"""
+        if self.custom_fields and key in self.custom_fields:
+            del self.custom_fields[key]
+            self.updated_at = datetime.utcnow()
+
+    def get_rendered_links(self):
+        """Get all rendered links from active link templates that match this project's custom fields"""
+        from .link_template import LinkTemplate
+
+        if not self.custom_fields:
+            return []
+
+        links = []
+        templates = LinkTemplate.get_active_templates()
+
+        for template in templates:
+            if template.field_key in self.custom_fields:
+                field_value = self.custom_fields[template.field_key]
+                if field_value:
+                    rendered_url = template.render_url(field_value)
+                    if rendered_url:
+                        links.append({
+                            "name": template.name,
+                            "url": rendered_url,
+                            "icon": template.icon,
+                            "description": template.description
+                        })
+
+        return links
+
     def to_dict(self, user=None):
         """Convert project to dictionary for API responses"""
         data = {
@@ -347,6 +392,7 @@ class Project(db.Model):
             "total_costs": self.total_costs,
             "total_billable_costs": self.total_billable_costs,
             "total_project_value": self.total_project_value,
+            "custom_fields": self.custom_fields or {},
             # Archiving metadata
             "is_archived": self.is_archived,
             "archived_at": self.archived_at.isoformat() if self.archived_at else None,

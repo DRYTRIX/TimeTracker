@@ -256,7 +256,8 @@
                 btn.setAttribute('aria-label', 'Toggle column visibility');
                 
                 const dropdown = document.createElement('div');
-                dropdown.className = 'column-visibility-dropdown hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50 p-2';
+                dropdown.className = 'column-visibility-dropdown hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg p-2';
+                dropdown.style.zIndex = '9999';
                 
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -269,8 +270,42 @@
                 btnContainer.appendChild(btn);
                 btnContainer.appendChild(dropdown);
                 
-                // If existing toolbar (Finance tables), append to the right side container
-                if (existingToolbarRight) {
+                // Check if this is the projects table - if so, add to right side next to bulk actions
+                const isProjectsTable = this.table.closest('#projectsContainer') || this.table.closest('#projectsListContainer');
+                
+                if (isProjectsTable) {
+                    // For projects table, add to right side next to bulk actions
+                    const projectsListContainer = this.table.closest('#projectsListContainer');
+                    if (projectsListContainer) {
+                        // Find the flex container with the header
+                        const headerContainer = projectsListContainer.querySelector('.flex.justify-between.items-center');
+                        if (headerContainer) {
+                            // Find the right container (last child div with flex class)
+                            const rightContainer = headerContainer.querySelector('div:last-child.flex');
+                            if (rightContainer) {
+                                // Insert before bulk actions button if it exists
+                                const bulkActionsBtn = rightContainer.querySelector('#bulkActionsBtn');
+                                if (bulkActionsBtn && bulkActionsBtn.parentElement) {
+                                    rightContainer.insertBefore(btnContainer, bulkActionsBtn.parentElement);
+                                } else {
+                                    rightContainer.appendChild(btnContainer);
+                                }
+                            } else {
+                                // Fallback: append to header
+                                headerContainer.appendChild(btnContainer);
+                            }
+                        } else {
+                            // Fallback: insert before the table
+                            const tableWrapper = this.table.closest('div') || this.table.parentElement;
+                            if (tableWrapper) {
+                                const rightToolbar = document.createElement('div');
+                                rightToolbar.className = 'table-toolbar-right flex items-center gap-2 mb-4';
+                                rightToolbar.appendChild(btnContainer);
+                                tableWrapper.insertBefore(rightToolbar, this.table);
+                            }
+                        }
+                    }
+                } else if (existingToolbarRight) {
                     // Insert at the beginning of the button group (before Export and Bulk Actions)
                     existingToolbarRight.insertBefore(btnContainer, existingToolbarRight.firstChild);
                 } else {
