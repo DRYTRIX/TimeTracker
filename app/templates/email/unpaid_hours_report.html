@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f59e0b;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .content {
+            background-color: #f9fafb;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .summary-box {
+            background-color: white;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+            border-radius: 5px;
+            border: 2px solid #f59e0b;
+        }
+        .summary-box h2 {
+            margin: 0;
+            color: #f59e0b;
+            font-size: 36px;
+        }
+        .summary-box p {
+            margin: 5px 0;
+            color: #6b7280;
+        }
+        .warning-box {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .clients-section {
+            margin: 20px 0;
+        }
+        .client-group {
+            background-color: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #3b82f6;
+        }
+        .client-group h3 {
+            margin-top: 0;
+            color: #3b82f6;
+        }
+        .entries-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .entries-table th {
+            background-color: #e0f2fe;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .entries-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 12px;
+        }
+        .entries-table tr:last-child td {
+            border-bottom: none;
+        }
+        .hours-badge {
+            background-color: #f59e0b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .footer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚠️ Unpaid Hours Report</h1>
+        <p>Salesman: {{ salesman_initial }}</p>
+        <p>{{ start_date }} to {{ end_date }}</p>
+    </div>
+    
+    <div class="content">
+        <p>Hello,</p>
+        
+        <p>This report contains all unpaid (unbilled) hours for clients assigned to you ({{ salesman_initial }}).</p>
+        
+        <div class="summary-box">
+            <p>Total Unpaid Hours</p>
+            <h2>{{ "%.2f"|format(report_data.total_hours) }}</h2>
+            <p>{{ report_data.total_entries }} time entries</p>
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ Action Required:</strong> These hours need to be reviewed and billed to clients.
+        </div>
+
+        <div class="clients-section">
+            <h3>Clients with Unpaid Hours:</h3>
+            <p><strong>{{ report_data.clients|join(', ') }}</strong></p>
+        </div>
+
+        <div class="clients-section">
+            <h3>Projects with Unpaid Hours:</h3>
+            <p><strong>{{ report_data.projects|join(', ') }}</strong></p>
+        </div>
+
+        {% if report_data.entries %}
+        <h3 style="margin-top: 30px;">Time Entry Details</h3>
+        
+        <table class="entries-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Project</th>
+                    <th>User</th>
+                    <th style="text-align: right;">Hours</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in report_data.entries %}
+                <tr>
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.client }}</td>
+                    <td>{{ entry.project }}</td>
+                    <td>{{ entry.user }}</td>
+                    <td style="text-align: right;">
+                        <span class="hours-badge">{{ "%.2f"|format(entry.duration) }}</span>
+                    </td>
+                    <td>{{ entry.notes[:50] }}{% if entry.notes|length > 50 %}...{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        
+        <p style="margin-top: 20px;">Please review these entries and create invoices as needed.</p>
+        
+        <center>
+            <a href="{{ url_for('reports.reports', _external=True) }}" class="button">
+                View Reports in TimeTracker
+            </a>
+        </center>
+    </div>
+    
+    <div class="footer">
+        <p>TimeTracker - Time Tracking & Project Management</p>
+        <p>This is an automated report. For questions, please contact your administrator.</p>
+    </div>
+</body>
+</html>
+

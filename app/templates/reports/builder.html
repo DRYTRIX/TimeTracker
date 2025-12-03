@@ -85,6 +85,52 @@
                     </select>
                 </div>
             </div>
+            
+            <!-- Advanced Filters (for Time Entries) -->
+            <div id="timeEntriesFilters" class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+                <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">{{ _('Advanced Filters') }}</h4>
+                
+                <!-- Unpaid Hours Filter -->
+                <div class="mb-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="filterUnpaidOnly" class="form-checkbox mr-2">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-exclamation-triangle text-orange-500 mr-1"></i>
+                            {{ _('Unpaid Hours Only') }}
+                        </span>
+                    </label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                        {{ _('Show only billable hours that have not been invoiced') }}
+                    </p>
+                </div>
+                
+                <!-- Custom Field Filter -->
+                {% if custom_field_keys %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {{ _('Custom Field') }}
+                        </label>
+                        <select id="filterCustomFieldName" class="form-input">
+                            <option value="">{{ _('No Filter') }}</option>
+                            {% for field_key in custom_field_keys %}
+                            <option value="{{ field_key }}">{{ field_key|replace('_', ' ')|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="filterCustomFieldValueContainer" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {{ _('Field Value') }}
+                        </label>
+                        <input type="text" id="filterCustomFieldValue" class="form-input" 
+                               placeholder="{{ _('e.g., MM, PB') }}">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {{ _('Enter the value to filter by (e.g., salesman initial)') }}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -243,11 +289,22 @@ function previewReport() {
     // Collect current filters
     const projectSelect = document.getElementById('filterProject');
     const projectValue = projectSelect ? projectSelect.value : '';
+    
     reportConfig.filters = {
         start_date: document.getElementById('filterStartDate').value || null,
         end_date: document.getElementById('filterEndDate').value || null,
-        project_id: projectValue || null
+        project_id: projectValue || null,
+        unpaid_only: document.getElementById('filterUnpaidOnly')?.checked || false
     };
+    
+    // Add custom field filter if set
+    const customFieldName = document.getElementById('filterCustomFieldName')?.value;
+    const customFieldValue = document.getElementById('filterCustomFieldValue')?.value;
+    if (customFieldName && customFieldValue) {
+        reportConfig.filters.custom_field_filter = {
+            [customFieldName]: customFieldValue
+        };
+    }
     
     // Show preview modal
     const modal = document.getElementById('previewModal');
@@ -424,8 +481,18 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
     reportConfig.filters = {
         start_date: document.getElementById('filterStartDate').value,
         end_date: document.getElementById('filterEndDate').value,
-        project_id: document.getElementById('filterProject').value || null
+        project_id: document.getElementById('filterProject').value || null,
+        unpaid_only: document.getElementById('filterUnpaidOnly')?.checked || false
     };
+    
+    // Add custom field filter if set
+    const customFieldName = document.getElementById('filterCustomFieldName')?.value;
+    const customFieldValue = document.getElementById('filterCustomFieldValue')?.value;
+    if (customFieldName && customFieldValue) {
+        reportConfig.filters.custom_field_filter = {
+            [customFieldName]: customFieldValue
+        };
+    }
     
     try {
         // Get CSRF token from meta tag
@@ -458,6 +525,37 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
         alert('{{ _("Error saving report") }}: ' + error.message);
     }
 });
+
+// Show/hide custom field value input based on field selection
+document.getElementById('filterCustomFieldName')?.addEventListener('change', function() {
+    const valueContainer = document.getElementById('filterCustomFieldValueContainer');
+    const valueInput = document.getElementById('filterCustomFieldValue');
+    if (this.value) {
+        valueContainer.classList.remove('hidden');
+        valueInput.required = true;
+    } else {
+        valueContainer.classList.add('hidden');
+        valueInput.required = false;
+        valueInput.value = '';
+    }
+});
+
+// Show time entries filters only when time_entries is selected
+function updateFiltersVisibility() {
+    const timeEntriesFilters = document.getElementById('timeEntriesFilters');
+    if (reportConfig.data_source === 'time_entries') {
+        timeEntriesFilters?.classList.remove('hidden');
+    } else {
+        timeEntriesFilters?.classList.add('hidden');
+    }
+}
+
+// Update filter visibility when data source changes
+const originalAddDataSource = addDataSourceToCanvas;
+addDataSourceToCanvas = function(sourceId) {
+    originalAddDataSource(sourceId);
+    updateFiltersVisibility();
+};
 </script>
 {% endblock %}
 

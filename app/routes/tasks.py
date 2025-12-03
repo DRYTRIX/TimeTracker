@@ -47,8 +47,7 @@ def list_tasks():
     # Get filter options (these could also be cached)
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     users = User.query.order_by(User.username).all()
-    # Force fresh kanban columns from database (no cache)
-    db.session.expire_all()
+    # Get kanban columns (already queries fresh from database)
     kanban_columns = KanbanColumn.get_active_columns() if KanbanColumn else []
 
     # Check if this is an AJAX request
@@ -68,6 +67,17 @@ def list_tasks():
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
 
+    # Pre-calculate task counts by status for summary cards (avoid template iteration)
+    task_counts = {
+        'todo': 0,
+        'in_progress': 0,
+        'review': 0,
+        'done': 0
+    }
+    for task in result["tasks"]:
+        if task.status in task_counts:
+            task_counts[task.status] += 1
+
     # Prevent browser caching of kanban board
     response = render_template(
         "tasks/list.html",
@@ -82,6 +92,7 @@ def list_tasks():
         assigned_to=assigned_to,
         search=search,
         overdue=overdue,
+        task_counts=task_counts,
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

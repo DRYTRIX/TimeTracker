@@ -6,8 +6,9 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from flask import current_app
 from app import db
-from app.models import ReportEmailSchedule, SavedReportView, User
+from app.models import ReportEmailSchedule, SavedReportView, User, SalesmanEmailMapping
 from app.services.reporting_service import ReportingService
+from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.email import send_email
 from app.utils.timezone import now_in_app_timezone
 import logging
@@ -106,6 +107,10 @@ class ScheduledReportService:
             except:
                 config = {}
 
+            # Check if we should split by salesman
+            if schedule.split_by_salesman:
+                return self._generate_and_send_salesman_reports(schedule, saved_view, config)
+            
             # Generate report data based on config
             report_data = self._generate_report_data(saved_view, config)
 
@@ -275,3 +280,118 @@ class ScheduledReportService:
             db.session.rollback()
             logger.error(f"Error deleting schedule: {e}")
             return {"success": False, "message": f"Error deleting schedule: {str(e)}"}
+
+    def _generate_and_send_salesman_reports(
+        self, schedule: ReportEmailSchedule, saved_view: SavedReportView, config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Generate and send reports split by salesman.
+        
+        This generates individual reports for each salesman and sends them
+        to their configured email addresses.
+        
+        Returns:
+            dict with 'success', 'message', and 'sent_count' keys
+        """
+        try:
+            from datetime import timedelta
+            
+            # Get date range from config or use defaults
+            end_date = now_in_app_timezone()
+            if config.get("end_date"):
+                if isinstance(config["end_date"], str):
+                    end_date = datetime.fromisoformat(config["end_date"])
+                else:
+                    end_date = config["end_date"]
+            
+            # Default to last month if no start date
+            start_date = end_date - timedelta(days=30)
+            if config.get("start_date"):
+                if isinstance(config["start_date"], str):
+                    start_date = datetime.fromisoformat(config["start_date"])
+                else:
+                    start_date = config["start_date"]
+            
+            # Get salesman field name (default: 'salesman')
+            salesman_field_name = schedule.salesman_field_name or "salesman"
+            
+            # Get unpaid hours grouped by salesman
+            unpaid_service = UnpaidHoursService()
+            salesman_reports = unpaid_service.get_unpaid_hours_by_salesman(
+                start_date=start_date,
+                end_date=end_date,
+                salesman_field_name=salesman_field_name,
+            )
+            
+            sent_count = 0
+            errors = []
+            
+            for salesman_initial, report_data in salesman_reports.items():
+                # Skip unassigned entries
+                if salesman_initial == "_UNASSIGNED_":
+                    continue
+                
+                # Get email for this salesman
+                email = SalesmanEmailMapping.get_email_for_initial(salesman_initial)
+                if not email:
+                    logger.warning(f"No email mapping found for salesman {salesman_initial}, skipping")
+                    errors.append(f"No email for {salesman_initial}")
+                    continue
+                
+                # Format report data for email
+                formatted_data = {
+                    "salesman_initial": salesman_initial,
+                    "total_hours": report_data["total_hours"],
+                    "total_entries": report_data["total_entries"],
+                    "clients": report_data["clients"],
+                    "projects": report_data["projects"],
+                    "entries": [
+                        {
+                            "id": e.id,
+                            "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
+                            "project": e.project.name if e.project else "",
+                            "client": (e.project.client.name if e.project and e.project.client else (e.client.name if e.client else "Unknown")),
+                            "user": e.user.username if e.user else "",
+                            "duration": e.duration_hours,
+                            "notes": e.notes or "",
+                        }
+                        for e in report_data["entries"]
+                    ],
+                }
+                
+                try:
+                    send_email(
+                        to=email,
+                        subject=f"Unpaid Hours Report - {salesman_initial} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})",
+                        template="email/unpaid_hours_report.html",
+                        salesman_initial=salesman_initial,
+                        report_data=formatted_data,
+                        start_date=start_date.strftime("%Y-%m-%d"),
+                        end_date=end_date.strftime("%Y-%m-%d"),
+                    )
+                    sent_count += 1
+                    logger.info(f"Sent unpaid hours report to {email} for salesman {salesman_initial}")
+                except Exception as e:
+                    error_msg = f"Error sending to {email} ({salesman_initial}): {str(e)}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+            
+            # Update schedule
+            schedule.last_run_at = now_in_app_timezone()
+            schedule.next_run_at = self._calculate_next_run(schedule.cadence, schedule.cron, schedule.timezone)
+            db.session.commit()
+            
+            message = f"Reports sent to {sent_count} salesmen."
+            if errors:
+                message += f" Errors: {len(errors)}"
+            
+            return {
+                "success": True,
+                "message": message,
+                "sent_count": sent_count,
+                "errors": errors,
+            }
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error generating and sending salesman reports: {e}")
+            return {"success": False, "message": f"Error generating reports: {str(e)}"}

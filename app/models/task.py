@@ -123,6 +123,10 @@ class Task(db.Model):
     @property
     def status_display(self):
         """Get human-readable status from kanban columns"""
+        # Use cached value if available (set by TaskService.list_tasks for performance)
+        if hasattr(self, '_cached_status_display'):
+            return self._cached_status_display
+            
         from .kanban_column import KanbanColumn
 
         column = KanbanColumn.get_column_by_key(self.status)

@@ -33,6 +33,8 @@ class ReportEmailSchedule(db.Model):
     next_run_at = db.Column(db.DateTime, nullable=True)
     last_run_at = db.Column(db.DateTime, nullable=True)
     active = db.Column(db.Boolean, default=True, nullable=False)
+    split_by_salesman = db.Column(db.Boolean, default=False, nullable=False)  # Split report by salesman
+    salesman_field_name = db.Column(db.String(50), nullable=True)  # Custom field name for salesman (default: 'salesman')
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

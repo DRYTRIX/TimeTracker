@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 import json
 from app.utils.db import safe_commit
 from app.utils.posthog_funnels import track_onboarding_first_timer, track_onboarding_first_time_entry
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import ProgrammingError
 
 timer_bp = Blueprint("timer", __name__)
 
@@ -665,6 +667,39 @@ def edit_timer(timer_id):
     return render_template("timer/edit_timer.html", timer=timer, projects=projects, tasks=tasks)
 
 
+@timer_bp.route("/timer/view/<int:timer_id>")
+@login_required
+def view_timer(timer_id):
+    """View a time entry (read-only)"""
+    timer = TimeEntry.query.get_or_404(timer_id)
+
+    # Check if user can view this timer
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    if not can_view_all and timer.user_id != current_user.id:
+        flash(_("You do not have permission to view this time entry"), "error")
+        return redirect(url_for("main.dashboard"))
+
+    # Get link templates for invoice_number (for clickable values)
+    from app.models import LinkTemplate
+    from sqlalchemy.exc import ProgrammingError
+    link_templates_by_field = {}
+    try:
+        for template in LinkTemplate.get_active_templates():
+            if template.field_key == 'invoice_number':
+                link_templates_by_field['invoice_number'] = template
+    except ProgrammingError as e:
+        # Handle case where link_templates table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "link_templates table does not exist. Run migration: flask db upgrade"
+            )
+            link_templates_by_field = {}
+        else:
+            raise
+
+    return render_template("timer/view_timer.html", timer=timer, link_templates_by_field=link_templates_by_field)
+
+
 @timer_bp.route("/timer/delete/<int:timer_id>", methods=["POST"])
 @login_required
 def delete_timer(timer_id):
@@ -696,7 +731,43 @@ def delete_timer(timer_id):
     client_name = timer.client.name if timer.client else None
     entity_name = project_name or client_name or _("Unknown")
 
-    db.session.delete(timer)
+    # Check if time_entry_approvals table exists before deletion
+    # This prevents errors when the table doesn't exist but the relationship is defined
+    inspector = inspect(db.engine)
+    approvals_table_exists = "time_entry_approvals" in inspector.get_table_names()
+    
+    # If the approvals table exists, manually delete related approvals first
+    # to avoid SQLAlchemy trying to query a non-existent table
+    if approvals_table_exists:
+        try:
+            # Delete related approvals if they exist
+            from app.models.time_entry_approval import TimeEntryApproval
+            TimeEntryApproval.query.filter_by(time_entry_id=entry_id).delete()
+        except Exception as e:
+            current_app.logger.warning(
+                f"Could not delete related approvals for time entry {entry_id}: {e}"
+            )
+            # Continue with deletion anyway
+
+    # If the approvals table doesn't exist, we need to prevent SQLAlchemy from
+    # trying to query the relationship. We'll expunge the object and use a direct delete.
+    if not approvals_table_exists:
+        try:
+            # Expunge the object from the session to prevent relationship queries
+            db.session.expunge(timer)
+            # Use a direct SQL delete to avoid relationship queries
+            db.session.execute(
+                text("DELETE FROM time_entries WHERE id = :id"),
+                {"id": entry_id}
+            )
+        except Exception as e:
+            current_app.logger.error(f"Error deleting time entry {entry_id} with direct SQL: {e}")
+            flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
+            return redirect(url_for("main.dashboard"))
+    else:
+        # Normal deletion path when the table exists
+        db.session.delete(timer)
+    
     if not safe_commit("delete_timer", {"timer_id": entry_id}):
         flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
@@ -731,6 +802,100 @@ def delete_timer(timer_id):
     dashboard_url = url_for("main.dashboard")
     separator = "&" if "?" in dashboard_url else "?"
     redirect_url = f"{dashboard_url}{separator}_refresh={int(time.time())}"
+    return redirect(redirect_url)
+
+
+@timer_bp.route("/time-entries/bulk-delete", methods=["POST"])
+@login_required
+def bulk_delete_time_entries():
+    """Bulk delete time entries"""
+    from app.utils.db import safe_commit
+    
+    entry_ids = request.form.getlist("entry_ids[]")
+    
+    if not entry_ids:
+        flash(_("No time entries selected"), "warning")
+        return redirect(url_for("timer.time_entries_overview"))
+    
+    # Load entries
+    entry_ids_int = [int(eid) for eid in entry_ids if eid.isdigit()]
+    if not entry_ids_int:
+        flash(_("Invalid entry IDs"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+    
+    entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids_int)).all()
+    
+    if not entries:
+        flash(_("No time entries found"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+    
+    # Permission check
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    deleted_count = 0
+    skipped_count = 0
+    
+    for entry in entries:
+        # Check permissions
+        if not can_view_all and entry.user_id != current_user.id:
+            skipped_count += 1
+            continue
+        
+        # Don't allow deletion of active timers
+        if entry.is_active:
+            skipped_count += 1
+            continue
+        
+        # Delete the entry
+        db.session.delete(entry)
+        deleted_count += 1
+        
+        # Log activity
+        Activity.log(
+            user_id=current_user.id,
+            action="deleted",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"Time entry #{entry.id}",
+            description=f"Deleted time entry",
+            extra_data={"project_id": entry.project_id, "client_id": entry.client_id, "duration": entry.duration_formatted},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+    
+    if deleted_count > 0:
+        if not safe_commit("bulk_delete_time_entries", {"count": deleted_count}):
+            flash(_("Could not delete time entries due to a database error. Please check server logs."), "error")
+            return redirect(url_for("timer.time_entries_overview"))
+        
+        flash(
+            _("Successfully deleted %(count)d time entry/entries", count=deleted_count),
+            "success"
+        )
+    
+    if skipped_count > 0:
+        flash(
+            _("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count),
+            "warning"
+        )
+    
+    # Track event
+    track_event(
+        current_user.id,
+        "time_entries.bulk_delete",
+        {"count": deleted_count}
+    )
+    
+    # Preserve filters in redirect
+    redirect_url = url_for("timer.time_entries_overview")
+    filters = {}
+    for key in ["user_id", "project_id", "client_id", "start_date", "end_date", "paid", "billable", "search", "page"]:
+        value = request.form.get(key) or request.args.get(key)
+        if value:
+            filters[key] = value
+    
+    if filters:
+        redirect_url += "?" + "&".join(f"{k}={v}" for k, v in filters.items())
+    
     return redirect(redirect_url)
 
 
@@ -1796,6 +1961,24 @@ def time_entries_overview():
     from app.models import CustomFieldDefinition
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
     
+    # Get link templates for invoice_number (for clickable values)
+    from app.models import LinkTemplate
+    from sqlalchemy.exc import ProgrammingError
+    link_templates_by_field = {}
+    try:
+        for template in LinkTemplate.get_active_templates():
+            if template.field_key == 'invoice_number':
+                link_templates_by_field['invoice_number'] = template
+    except ProgrammingError as e:
+        # Handle case where link_templates table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "link_templates table does not exist. Run migration: flask db upgrade"
+            )
+            link_templates_by_field = {}
+        else:
+            raise
+    
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the time entries list HTML for AJAX requests
@@ -1807,6 +1990,7 @@ def time_entries_overview():
             can_view_all=can_view_all,
             filters=filters_dict,
             custom_field_definitions=custom_field_definitions,
+            link_templates_by_field=link_templates_by_field,
         ))
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response
@@ -1821,6 +2005,7 @@ def time_entries_overview():
         can_view_all=can_view_all,
         filters=filters_dict,
         custom_field_definitions=custom_field_definitions,
+        link_templates_by_field=link_templates_by_field,
         totals={
             "total_hours": round(total_hours, 2),
             "total_billable_hours": round(total_billable_hours, 2),
@@ -1838,6 +2023,7 @@ def bulk_mark_paid():
     
     entry_ids = request.form.getlist("entry_ids[]")
     paid_status = request.form.get("paid", "").strip().lower()
+    invoice_reference = request.form.get("invoice_reference", "").strip()
     
     if not entry_ids:
         flash(_("No time entries selected"), "warning")
@@ -1877,8 +2063,11 @@ def bulk_mark_paid():
             skipped_count += 1
             continue
         
-        # Update paid status
-        entry.set_paid(is_paid)
+        # Update paid status with invoice reference if provided
+        if is_paid and invoice_reference:
+            entry.set_paid(is_paid, invoice_number=invoice_reference)
+        else:
+            entry.set_paid(is_paid)
         updated_count += 1
         
         # Log activity

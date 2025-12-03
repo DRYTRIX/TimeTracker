@@ -220,12 +220,31 @@ def view_invoice(invoice_id):
     approval_service = InvoiceApprovalService()
     approval = approval_service.get_invoice_approval(invoice_id)
 
+    # Get link templates for payment_reference (for clickable values)
+    from app.models import LinkTemplate
+    from sqlalchemy.exc import ProgrammingError
+    link_templates_by_field = {}
+    try:
+        for template in LinkTemplate.get_active_templates():
+            if template.field_key == 'payment_reference':
+                link_templates_by_field['payment_reference'] = template
+    except ProgrammingError as e:
+        # Handle case where link_templates table doesn't exist (migration not run)
+        if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+            current_app.logger.warning(
+                "link_templates table does not exist. Run migration: flask db upgrade"
+            )
+            link_templates_by_field = {}
+        else:
+            raise
+
     return render_template(
         "invoices/view.html",
         invoice=invoice,
         email_templates=email_templates,
         email_history=email_history,
         approval=approval,
+        link_templates_by_field=link_templates_by_field,
     )
 
 
@@ -602,6 +621,7 @@ def bulk_update_status():
     """Update status for multiple invoices at once"""
     invoice_ids = request.form.getlist("invoice_ids[]")
     new_status = request.form.get("status", "").strip()
+    invoice_reference = request.form.get("invoice_reference", "").strip()
 
     if not invoice_ids:
         flash(_("No invoices selected"), "warning")
@@ -637,6 +657,9 @@ def bulk_update_status():
                 invoice.payment_status = "fully_paid"
                 if not invoice.payment_date:
                     invoice.payment_date = datetime.utcnow().date()
+                # Set invoice reference if provided
+                if invoice_reference:
+                    invoice.payment_reference = invoice_reference
 
             updated_count += 1
 
