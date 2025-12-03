@@ -176,19 +176,38 @@ class PWAEnhancements {
             if ('Notification' in window && Notification.permission === 'granted') {
                 // Subscribe to push notifications if permission already granted
                 if (this.serviceWorkerRegistration && this.serviceWorkerRegistration.pushManager) {
-                    const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: this.urlBase64ToUint8Array(this.getVapidPublicKey())
-                    });
-
-                    this.pushSubscription = subscription;
+                    const vapidKey = this.getVapidPublicKey();
                     
-                    // Send subscription to server
-                    await this.sendSubscriptionToServer(subscription);
+                    // Only subscribe if VAPID key is available and valid
+                    if (!vapidKey || vapidKey.trim() === '') {
+                        console.log('Push notifications: VAPID public key not configured, skipping subscription');
+                        return;
+                    }
+                    
+                    try {
+                        const applicationServerKey = this.urlBase64ToUint8Array(vapidKey);
+                        const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: applicationServerKey
+                        });
+
+                        this.pushSubscription = subscription;
+                        
+                        // Send subscription to server
+                        await this.sendSubscriptionToServer(subscription);
+                    } catch (keyError) {
+                        // If key conversion fails, log but don't throw
+                        console.warn('Push notifications: Invalid VAPID key format, skipping subscription:', keyError);
+                    }
                 }
             }
         } catch (error) {
-            console.error('Push notification setup failed:', error);
+            // Only log as warning if it's a key-related error, otherwise error
+            if (error.name === 'InvalidAccessError' && error.message.includes('applicationServerKey')) {
+                console.warn('Push notifications: VAPID key configuration issue, skipping subscription');
+            } else {
+                console.error('Push notification setup failed:', error);
+            }
         }
     }
 
@@ -203,15 +222,28 @@ class PWAEnhancements {
                 if (permission === 'granted') {
                     // Subscribe to push notifications
                     if (this.serviceWorkerRegistration && this.serviceWorkerRegistration.pushManager) {
-                        const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: this.urlBase64ToUint8Array(this.getVapidPublicKey())
-                        });
-
-                        this.pushSubscription = subscription;
+                        const vapidKey = this.getVapidPublicKey();
                         
-                        // Send subscription to server
-                        await this.sendSubscriptionToServer(subscription);
+                        // Only subscribe if VAPID key is available and valid
+                        if (!vapidKey || vapidKey.trim() === '') {
+                            console.warn('Push notifications: VAPID public key not configured, cannot subscribe');
+                            return permission;
+                        }
+                        
+                        try {
+                            const applicationServerKey = this.urlBase64ToUint8Array(vapidKey);
+                            const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: applicationServerKey
+                            });
+
+                            this.pushSubscription = subscription;
+                            
+                            // Send subscription to server
+                            await this.sendSubscriptionToServer(subscription);
+                        } catch (keyError) {
+                            console.warn('Push notifications: Invalid VAPID key format:', keyError);
+                        }
                     }
                 }
                 return permission;

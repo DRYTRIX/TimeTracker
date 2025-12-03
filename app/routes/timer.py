@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 import json
 from app.utils.db import safe_commit
 from app.utils.posthog_funnels import track_onboarding_first_timer, track_onboarding_first_time_entry
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import ProgrammingError
 
 timer_bp = Blueprint("timer", __name__)
 
@@ -696,7 +698,43 @@ def delete_timer(timer_id):
     client_name = timer.client.name if timer.client else None
     entity_name = project_name or client_name or _("Unknown")
 
-    db.session.delete(timer)
+    # Check if time_entry_approvals table exists before deletion
+    # This prevents errors when the table doesn't exist but the relationship is defined
+    inspector = inspect(db.engine)
+    approvals_table_exists = "time_entry_approvals" in inspector.get_table_names()
+    
+    # If the approvals table exists, manually delete related approvals first
+    # to avoid SQLAlchemy trying to query a non-existent table
+    if approvals_table_exists:
+        try:
+            # Delete related approvals if they exist
+            from app.models.time_entry_approval import TimeEntryApproval
+            TimeEntryApproval.query.filter_by(time_entry_id=entry_id).delete()
+        except Exception as e:
+            current_app.logger.warning(
+                f"Could not delete related approvals for time entry {entry_id}: {e}"
+            )
+            # Continue with deletion anyway
+
+    # If the approvals table doesn't exist, we need to prevent SQLAlchemy from
+    # trying to query the relationship. We'll expunge the object and use a direct delete.
+    if not approvals_table_exists:
+        try:
+            # Expunge the object from the session to prevent relationship queries
+            db.session.expunge(timer)
+            # Use a direct SQL delete to avoid relationship queries
+            db.session.execute(
+                text("DELETE FROM time_entries WHERE id = :id"),
+                {"id": entry_id}
+            )
+        except Exception as e:
+            current_app.logger.error(f"Error deleting time entry {entry_id} with direct SQL: {e}")
+            flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
+            return redirect(url_for("main.dashboard"))
+    else:
+        # Normal deletion path when the table exists
+        db.session.delete(timer)
+    
     if not safe_commit("delete_timer", {"timer_id": entry_id}):
         flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))

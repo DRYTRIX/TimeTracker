@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any, Callable, TypeVar
 from flask import current_app
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
 from app import db
 
 T = TypeVar('T')
@@ -59,10 +59,72 @@ def safe_commit(action: Optional[str] = None, context: Optional[Dict[str, Any]] 
     - Rolls back the session on failure
     - Logs the exception with context
     - Returns True on success, False on failure
+    - Handles missing table errors gracefully (for optional relationships)
     """
     try:
         db.session.commit()
         return True
+    except ProgrammingError as e:
+        # Check if this is a "relation does not exist" error for time_entry_approvals
+        # This can happen when the model defines a relationship but the table hasn't been created yet
+        error_str = str(e.orig) if hasattr(e, 'orig') else str(e)
+        if 'time_entry_approvals' in error_str and 'does not exist' in error_str:
+            # This is a missing table error for an optional relationship
+            # Try to rollback and retry the commit, or proceed if it's just a relationship query
+            try:
+                db.session.rollback()
+                # If this is during a delete operation, the object might still be in the session
+                # Try to expunge and re-add, or just retry the commit
+                current_app.logger.warning(
+                    f"Missing time_entry_approvals table detected during {action or 'commit'}. "
+                    "This is expected if the migration hasn't been run yet. Proceeding with operation."
+                )
+                # Retry the commit - the relationship query will fail but we can ignore it
+                # if we're just deleting a time entry
+                try:
+                    db.session.commit()
+                    return True
+                except Exception:
+                    # If retry fails, rollback and return False
+                    db.session.rollback()
+                    if action:
+                        if context:
+                            current_app.logger.exception(
+                                "Database commit failed during %s after handling missing table | context=%s | error=%s",
+                                action,
+                                context,
+                                e,
+                            )
+                        else:
+                            current_app.logger.exception(
+                                "Database commit failed during %s after handling missing table | error=%s", action, e
+                            )
+                    return False
+            except Exception as rollback_error:
+                current_app.logger.exception(f"Error during rollback: {rollback_error}")
+                return False
+        else:
+            # Other ProgrammingError - treat as regular SQLAlchemyError
+            try:
+                db.session.rollback()
+            finally:
+                pass
+            try:
+                if action:
+                    if context:
+                        current_app.logger.exception(
+                            "Database commit failed during %s | context=%s | error=%s",
+                            action,
+                            context,
+                            e,
+                        )
+                    else:
+                        current_app.logger.exception("Database commit failed during %s | error=%s", action, e)
+                else:
+                    current_app.logger.exception("Database commit failed: %s", e)
+            except Exception:
+                pass
+            return False
     except SQLAlchemyError as e:
         try:
             db.session.rollback()

@@ -21,6 +21,16 @@ depends_on = None
 
 def upgrade():
     """Create custom_field_definitions table"""
+    # Check if table already exists (idempotent migration)
+    from sqlalchemy import inspect
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    existing_tables = inspector.get_table_names()
+    
+    if 'custom_field_definitions' in existing_tables:
+        # Table already exists, skip creation
+        return
+    
     op.create_table(
         'custom_field_definitions',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -29,7 +39,7 @@ def upgrade():
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('is_mandatory', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('order', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column('order', sa.Integer(), nullable=False, server_default='0'),  # 'order' is reserved, but SQLAlchemy handles it
         sa.Column('created_by', sa.Integer(), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
@@ -37,8 +47,17 @@ def upgrade():
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('field_key')
     )
-    op.create_index('idx_custom_field_definitions_field_key', 'custom_field_definitions', ['field_key'])
-    op.create_index('idx_custom_field_definitions_is_active', 'custom_field_definitions', ['is_active'])
+    
+    # Create indexes if they don't exist
+    try:
+        op.create_index('idx_custom_field_definitions_field_key', 'custom_field_definitions', ['field_key'])
+    except Exception:
+        pass  # Index might already exist
+    
+    try:
+        op.create_index('idx_custom_field_definitions_is_active', 'custom_field_definitions', ['is_active'])
+    except Exception:
+        pass  # Index might already exist
 
 
 def downgrade():

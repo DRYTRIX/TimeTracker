@@ -403,8 +403,22 @@ def register_scheduled_tasks(scheduler, app=None):
         logger.info("Registered integration sync task")
 
         # Process scheduled reports every hour
+        # Create a closure that captures the app instance
+        def process_scheduled_reports_with_app():
+            """Wrapper that uses the captured app instance"""
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for scheduled reports processing")
+                    return
+
+            with app_instance.app_context():
+                process_scheduled_reports()
+
         scheduler.add_job(
-            func=process_scheduled_reports,
+            func=process_scheduled_reports_with_app,
             trigger="cron",
             minute=0,
             id="process_scheduled_reports",
@@ -412,30 +426,6 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True,
         )
         logger.info("Registered scheduled reports task")
-
-        # Sync integrations every hour
-        def sync_integrations_with_app():
-            """Wrapper that uses the captured app instance"""
-            app_instance = app
-            if app_instance is None:
-                try:
-                    app_instance = current_app._get_current_object()
-                except RuntimeError:
-                    logger.error("No app instance available for integration sync")
-                    return
-
-            with app_instance.app_context():
-                sync_integrations()
-
-        scheduler.add_job(
-            func=sync_integrations_with_app,
-            trigger="cron",
-            minute=0,  # Every hour at minute 0
-            id="sync_integrations",
-            name="Sync all active integrations",
-            replace_existing=True,
-        )
-        logger.info("Registered integration sync task")
 
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
@@ -446,38 +436,40 @@ def process_scheduled_reports():
 
     This task should be run periodically to check for scheduled reports
     that are due and send them via email.
+
+    Note: This function should be called within an app context.
+    Use process_scheduled_reports_with_app() wrapper for scheduled tasks.
     """
-    with current_app.app_context():
-        try:
-            logger.info("Processing scheduled reports...")
+    try:
+        logger.info("Processing scheduled reports...")
 
-            now = datetime.utcnow()
-            due_schedules = ReportEmailSchedule.query.filter(
-                ReportEmailSchedule.active == True, ReportEmailSchedule.next_run_at <= now
-            ).all()
+        now = datetime.utcnow()
+        due_schedules = ReportEmailSchedule.query.filter(
+            ReportEmailSchedule.active == True, ReportEmailSchedule.next_run_at <= now
+        ).all()
 
-            logger.info(f"Found {len(due_schedules)} scheduled reports due")
+        logger.info(f"Found {len(due_schedules)} scheduled reports due")
 
-            service = ScheduledReportService()
-            processed = 0
+        service = ScheduledReportService()
+        processed = 0
 
-            for schedule in due_schedules:
-                try:
-                    result = service.generate_and_send_report(schedule.id)
-                    if result["success"]:
-                        processed += 1
-                        logger.info(f"Sent scheduled report {schedule.id} to {result['sent_count']} recipients")
-                    else:
-                        logger.error(f"Error sending scheduled report {schedule.id}: {result['message']}")
-                except Exception as e:
-                    logger.error(f"Error processing scheduled report {schedule.id}: {e}")
+        for schedule in due_schedules:
+            try:
+                result = service.generate_and_send_report(schedule.id)
+                if result["success"]:
+                    processed += 1
+                    logger.info(f"Sent scheduled report {schedule.id} to {result['sent_count']} recipients")
+                else:
+                    logger.error(f"Error sending scheduled report {schedule.id}: {result['message']}")
+            except Exception as e:
+                logger.error(f"Error processing scheduled report {schedule.id}: {e}")
 
-            logger.info(f"Processed {processed} scheduled reports")
-            return processed
+        logger.info(f"Processed {processed} scheduled reports")
+        return processed
 
-        except Exception as e:
-            logger.error(f"Error processing scheduled reports: {e}")
-            return 0
+    except Exception as e:
+        logger.error(f"Error processing scheduled reports: {e}")
+        return 0
 
 
 def retry_failed_webhooks():
