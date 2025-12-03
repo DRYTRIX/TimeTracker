@@ -76,6 +76,7 @@ from .gamification import Badge, UserBadge, Leaderboard, LeaderboardEntry
 from .expense_gps import MileageTrack
 from .link_template import LinkTemplate
 from .custom_field_definition import CustomFieldDefinition
+from .salesman_email_mapping import SalesmanEmailMapping
 
 __all__ = [
     "User",
@@ -178,4 +179,5 @@ __all__ = [
     "MileageTrack",
     "LinkTemplate",
     "CustomFieldDefinition",
+    "SalesmanEmailMapping",
 ]

@@ -263,6 +263,93 @@ def generate_recurring_invoices():
             return 0
 
 
+def send_monthly_unpaid_hours_reports():
+    """Send monthly unpaid hours reports split by salesman
+    
+    This task runs on the first day of each month and generates
+    unpaid hours reports for each salesman based on their client assignments.
+    """
+    with current_app.app_context():
+        try:
+            logger.info("Sending monthly unpaid hours reports by salesman...")
+            
+            from app.services.unpaid_hours_service import UnpaidHoursService
+            from app.models import SalesmanEmailMapping
+            from app.utils.email import send_email
+            from datetime import datetime, timedelta
+            
+            # Get last month's date range
+            now = datetime.now()
+            if now.month == 1:
+                last_month_start = datetime(now.year - 1, 12, 1)
+                last_month_end = datetime(now.year, 1, 1) - timedelta(seconds=1)
+            else:
+                last_month_start = datetime(now.year, now.month - 1, 1)
+                last_month_end = datetime(now.year, now.month, 1) - timedelta(seconds=1)
+            
+            # Get unpaid hours grouped by salesman
+            unpaid_service = UnpaidHoursService()
+            salesman_reports = unpaid_service.get_unpaid_hours_by_salesman(
+                start_date=last_month_start,
+                end_date=last_month_end,
+                salesman_field_name="salesman",
+            )
+            
+            sent_count = 0
+            for salesman_initial, report_data in salesman_reports.items():
+                if salesman_initial == "_UNASSIGNED_":
+                    continue
+                
+                # Get email for this salesman
+                email = SalesmanEmailMapping.get_email_for_initial(salesman_initial)
+                if not email:
+                    logger.warning(f"No email mapping for salesman {salesman_initial}, skipping")
+                    continue
+                
+                # Format report data
+                formatted_data = {
+                    "salesman_initial": salesman_initial,
+                    "total_hours": report_data["total_hours"],
+                    "total_entries": report_data["total_entries"],
+                    "clients": report_data["clients"],
+                    "projects": report_data["projects"],
+                    "entries": [
+                        {
+                            "id": e.id,
+                            "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
+                            "project": e.project.name if e.project else "",
+                            "client": (e.project.client.name if e.project and e.project.client else (e.client.name if e.client else "Unknown")),
+                            "user": e.user.username if e.user else "",
+                            "duration": e.duration_hours,
+                            "notes": e.notes or "",
+                        }
+                        for e in report_data["entries"]
+                    ],
+                }
+                
+                try:
+                    send_email(
+                        to=email,
+                        subject=f"Monthly Unpaid Hours Report - {salesman_initial} ({last_month_start.strftime('%Y-%m-%d')} to {last_month_end.strftime('%Y-%m-%d')})",
+                        template="email/unpaid_hours_report.html",
+                        salesman_initial=salesman_initial,
+                        report_data=formatted_data,
+                        start_date=last_month_start.strftime("%Y-%m-%d"),
+                        end_date=last_month_end.strftime("%Y-%m-%d"),
+                    )
+                    sent_count += 1
+                    logger.info(f"Sent monthly unpaid hours report to {email} for {salesman_initial}")
+                except Exception as e:
+                    logger.error(f"Error sending report to {email} ({salesman_initial}): {e}")
+            
+            logger.info(f"Sent {sent_count} monthly unpaid hours reports")
+            return sent_count
+            
+        except Exception as e:
+            logger.error(f"Error sending monthly unpaid hours reports: {e}")
+            return 0
+
+
 def register_scheduled_tasks(scheduler, app=None):
     """Register all scheduled tasks with APScheduler
 
@@ -319,6 +406,31 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True,
         )
         logger.info("Registered recurring invoices generation task")
+
+        # Send monthly unpaid hours reports by salesman (first day of month at 9 AM)
+        def send_monthly_unpaid_hours_reports_with_app():
+            """Wrapper that uses the captured app instance"""
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for monthly unpaid hours reports")
+                    return
+            with app_instance.app_context():
+                send_monthly_unpaid_hours_reports()
+
+        scheduler.add_job(
+            func=send_monthly_unpaid_hours_reports_with_app,
+            trigger="cron",
+            day=1,
+            hour=9,
+            minute=0,
+            id="send_monthly_unpaid_hours_reports",
+            name="Send monthly unpaid hours reports by salesman",
+            replace_existing=True,
+        )
+        logger.info("Registered monthly unpaid hours reports task")
 
         # Retry failed webhook deliveries every 5 minutes
         # Create a closure that captures the app instance
