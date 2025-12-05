@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from app import db
+from sqlalchemy.exc import ProgrammingError
 
 
 class CustomFieldDefinition(db.Model):
@@ -43,18 +44,132 @@ class CustomFieldDefinition(db.Model):
 
     @classmethod
     def get_active_definitions(cls):
-        """Get all active custom field definitions ordered by order and label"""
-        return cls.query.filter_by(is_active=True).order_by(cls.order, cls.label).all()
+        """Get all active custom field definitions ordered by order and label.
+        
+        Returns empty list if table doesn't exist (migration not run yet).
+        """
+        try:
+            return cls.query.filter_by(is_active=True).order_by(cls.order, cls.label).all()
+        except ProgrammingError as e:
+            # Handle case where custom_field_definitions table doesn't exist (migration not run)
+            if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+                try:
+                    from flask import current_app
+                    if current_app:
+                        current_app.logger.warning(
+                            "custom_field_definitions table does not exist. Run migration: flask db upgrade"
+                        )
+                except RuntimeError:
+                    pass  # No application context
+                # Rollback the failed transaction
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                return []
+            raise
+        except Exception:
+            # For other database errors, return empty list to prevent breaking the app
+            try:
+                from flask import current_app
+                if current_app:
+                    current_app.logger.warning(
+                        "Could not query custom_field_definitions. Returning empty list."
+                    )
+            except RuntimeError:
+                pass  # No application context
+            # Rollback the failed transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return []
 
     @classmethod
     def get_mandatory_definitions(cls):
-        """Get all active mandatory custom field definitions"""
-        return cls.query.filter_by(is_active=True, is_mandatory=True).order_by(cls.order, cls.label).all()
+        """Get all active mandatory custom field definitions.
+        
+        Returns empty list if table doesn't exist (migration not run yet).
+        """
+        try:
+            return cls.query.filter_by(is_active=True, is_mandatory=True).order_by(cls.order, cls.label).all()
+        except ProgrammingError as e:
+            # Handle case where custom_field_definitions table doesn't exist (migration not run)
+            if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+                try:
+                    from flask import current_app
+                    if current_app:
+                        current_app.logger.warning(
+                            "custom_field_definitions table does not exist. Run migration: flask db upgrade"
+                        )
+                except RuntimeError:
+                    pass  # No application context
+                # Rollback the failed transaction
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                return []
+            raise
+        except Exception:
+            # For other database errors, return empty list to prevent breaking the app
+            try:
+                from flask import current_app
+                if current_app:
+                    current_app.logger.warning(
+                        "Could not query custom_field_definitions. Returning empty list."
+                    )
+            except RuntimeError:
+                pass  # No application context
+            # Rollback the failed transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return []
 
     @classmethod
     def get_by_key(cls, field_key):
-        """Get a custom field definition by its key"""
-        return cls.query.filter_by(field_key=field_key, is_active=True).first()
+        """Get a custom field definition by its key.
+        
+        Returns None if table doesn't exist (migration not run yet).
+        """
+        try:
+            return cls.query.filter_by(field_key=field_key, is_active=True).first()
+        except ProgrammingError as e:
+            # Handle case where custom_field_definitions table doesn't exist (migration not run)
+            if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+                try:
+                    from flask import current_app
+                    if current_app:
+                        current_app.logger.warning(
+                            "custom_field_definitions table does not exist. Run migration: flask db upgrade"
+                        )
+                except RuntimeError:
+                    pass  # No application context
+                # Rollback the failed transaction
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                return None
+            raise
+        except Exception:
+            # For other database errors, return None to prevent breaking the app
+            try:
+                from flask import current_app
+                if current_app:
+                    current_app.logger.warning(
+                        "Could not query custom_field_definitions. Returning None."
+                    )
+            except RuntimeError:
+                pass  # No application context
+            # Rollback the failed transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return None
 
     def count_clients_with_value(self):
         """Count how many clients have a value for this custom field"""
