@@ -501,6 +501,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Preserve pagination parameters from current URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('per_page')) {
+            params.per_page = urlParams.get('per_page');
+        }
+        if (urlParams.has('page')) {
+            params.page = urlParams.get('page');
+        }
+        
         return params;
     }
     
