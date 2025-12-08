@@ -1,19 +1,20 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header %}
 
-{% block title %}{{ _('Custom Report Builder') }} - {{ app_name }}{% endblock %}
+{% block title %}{% if saved_view %}{{ _('Edit Report') }}: {{ saved_view.name }} - {{ app_name }}{% else %}{{ _('Custom Report Builder') }} - {{ app_name }}{% endif %}{% endblock %}
 
 {% block content %}
 {% set breadcrumbs = [
     {'text': 'Reports', 'url': url_for('reports.reports')},
-    {'text': 'Report Builder'}
+    {'text': 'Report Builder' if not saved_view else saved_view.name}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-chart-bar',
-    title_text='Custom Report Builder',
-    subtitle_text='Create custom reports with drag-and-drop',
-    breadcrumbs=breadcrumbs
+    title_text=saved_view.name if saved_view else 'Custom Report Builder',
+    subtitle_text='Edit report' if saved_view else 'Create custom reports with drag-and-drop',
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("custom_reports.list_saved_views") + '" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"><i class="fas fa-list mr-2"></i>' + _('Saved Views') + '</a>'
 ) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -167,14 +168,14 @@
         <form id="saveForm">
             <div class="mb-4">
                 <label for="reportName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Report Name') }} *</label>
-                <input type="text" id="reportName" required class="form-input" placeholder="{{ _('My Custom Report') }}">
+                <input type="text" id="reportName" required class="form-input" placeholder="{{ _('My Custom Report') }}" value="{% if saved_view %}{{ saved_view.name }}{% endif %}">
             </div>
             <div class="mb-4">
                 <label for="reportScope" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Scope') }}</label>
                 <select id="reportScope" class="form-input">
-                    <option value="private">{{ _('Private') }}</option>
-                    <option value="team">{{ _('Team') }}</option>
-                    <option value="public">{{ _('Public') }}</option>
+                    <option value="private" {% if saved_view and saved_view.scope == 'private' %}selected{% endif %}>{{ _('Private') }}</option>
+                    <option value="team" {% if saved_view and saved_view.scope == 'team' %}selected{% endif %}>{{ _('Team') }}</option>
+                    <option value="public" {% if saved_view and saved_view.scope == 'public' %}selected{% endif %}>{{ _('Public') }}</option>
                 </select>
             </div>
             <div class="flex justify-end gap-4">
@@ -191,6 +192,73 @@ let reportConfig = {
     components: [],
     filters: {}
 };
+
+{% if saved_view and config %}
+// Load saved configuration when editing
+(function() {
+    const savedConfig = {{ config|tojson }};
+    reportConfig = {
+        data_source: savedConfig.data_source || null,
+        components: savedConfig.components ? [...savedConfig.components] : [],
+        filters: savedConfig.filters ? {...savedConfig.filters} : {},
+        columns: savedConfig.columns || [],
+        grouping: savedConfig.grouping || {}
+    };
+    
+    // Clear canvas first
+    const canvas = document.getElementById('reportCanvas');
+    canvas.innerHTML = '<p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">{{ _("Drag data sources and components here to build your report") }}</p>';
+    
+    // Load data source
+    if (reportConfig.data_source) {
+        addDataSourceToCanvas(reportConfig.data_source);
+    }
+    
+    // Load components
+    if (reportConfig.components && Array.isArray(reportConfig.components)) {
+        reportConfig.components.forEach(component => {
+            addComponentToCanvas(component);
+        });
+    }
+    
+    // Load filters
+    if (reportConfig.filters) {
+        if (reportConfig.filters.start_date) {
+            document.getElementById('filterStartDate').value = reportConfig.filters.start_date;
+        }
+        if (reportConfig.filters.end_date) {
+            document.getElementById('filterEndDate').value = reportConfig.filters.end_date;
+        }
+        if (reportConfig.filters.project_id) {
+            const projectSelect = document.getElementById('filterProject');
+            if (projectSelect) {
+                projectSelect.value = reportConfig.filters.project_id;
+            }
+        }
+        if (reportConfig.filters.unpaid_only) {
+            const unpaidCheckbox = document.getElementById('filterUnpaidOnly');
+            if (unpaidCheckbox) {
+                unpaidCheckbox.checked = true;
+            }
+        }
+        if (reportConfig.filters.custom_field_filter) {
+            const fieldName = Object.keys(reportConfig.filters.custom_field_filter)[0];
+            const fieldValue = reportConfig.filters.custom_field_filter[fieldName];
+            const fieldNameSelect = document.getElementById('filterCustomFieldName');
+            const fieldValueInput = document.getElementById('filterCustomFieldValue');
+            if (fieldNameSelect && fieldValueInput) {
+                fieldNameSelect.value = fieldName;
+                fieldValueInput.value = fieldValue;
+                document.getElementById('filterCustomFieldValueContainer')?.classList.remove('hidden');
+                fieldValueInput.required = true;
+            }
+        }
+    }
+    
+    // Update filter visibility
+    updateFiltersVisibility();
+})();
+{% endif %}
 
 // Drag and drop handlers
 document.querySelectorAll('[draggable="true"]').forEach(item => {
@@ -227,6 +295,12 @@ canvas.addEventListener('drop', (e) => {
 });
 
 function addDataSourceToCanvas(sourceId) {
+    // Remove existing data source if any
+    const existingSource = canvas.querySelector('[data-report-source]');
+    if (existingSource) {
+        existingSource.remove();
+    }
+    
     const sourceNames = {
         'time_entries': '{{ _("Time Entries") }}',
         'projects': '{{ _("Projects") }}',
@@ -237,13 +311,14 @@ function addDataSourceToCanvas(sourceId) {
     
     const element = document.createElement('div');
     element.className = 'p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4';
+    element.setAttribute('data-report-source', sourceId);
     element.innerHTML = `
         <div class="flex justify-between items-center">
             <div>
                 <i class="fas fa-database mr-2"></i>
                 <strong>${sourceNames[sourceId] || sourceId}</strong>
             </div>
-            <button onclick="this.parentElement.parentElement.remove()" class="text-red-600 hover:text-red-800">
+            <button type="button" onclick="removeDataSource()" class="text-red-600 hover:text-red-800">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -251,9 +326,28 @@ function addDataSourceToCanvas(sourceId) {
     
     canvas.querySelector('p')?.remove();
     canvas.appendChild(element);
+    reportConfig.data_source = sourceId;
+}
+
+function removeDataSource() {
+    const sourceElement = canvas.querySelector('[data-report-source]');
+    if (sourceElement) {
+        sourceElement.remove();
+        reportConfig.data_source = null;
+        // Show empty state if canvas is empty
+        if (canvas.children.length === 0) {
+            canvas.innerHTML = '<p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">{{ _("Drag data sources and components here to build your report") }}</p>';
+        }
+    }
 }
 
 function addComponentToCanvas(componentId) {
+    // Check if component already exists
+    const existingComponent = canvas.querySelector(`[data-report-component="${componentId}"]`);
+    if (existingComponent) {
+        return; // Don't add duplicates
+    }
+    
     const componentNames = {
         'table': '{{ _("Table") }}',
         'chart': '{{ _("Chart") }}',
@@ -262,13 +356,14 @@ function addComponentToCanvas(componentId) {
     
     const element = document.createElement('div');
     element.className = 'p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4';
+    element.setAttribute('data-report-component', componentId);
     element.innerHTML = `
         <div class="flex justify-between items-center">
             <div>
                 <i class="fas fa-${componentId === 'table' ? 'table' : componentId === 'chart' ? 'chart-line' : 'calculator'} mr-2"></i>
                 <strong>${componentNames[componentId] || componentId}</strong>
             </div>
-            <button onclick="this.parentElement.parentElement.remove()" class="text-red-600 hover:text-red-800">
+            <button type="button" onclick="removeComponent('${componentId}')" class="text-red-600 hover:text-red-800">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -276,7 +371,27 @@ function addComponentToCanvas(componentId) {
     
     canvas.querySelector('p')?.remove();
     canvas.appendChild(element);
-    reportConfig.components.push(componentId);
+    
+    // Add to components array if not already present
+    if (!reportConfig.components.includes(componentId)) {
+        reportConfig.components.push(componentId);
+    }
+}
+
+function removeComponent(componentId) {
+    const componentElement = canvas.querySelector(`[data-report-component="${componentId}"]`);
+    if (componentElement) {
+        componentElement.remove();
+        // Remove from components array
+        const index = reportConfig.components.indexOf(componentId);
+        if (index > -1) {
+            reportConfig.components.splice(index, 1);
+        }
+        // Show empty state if canvas is empty
+        if (canvas.children.length === 0) {
+            canvas.innerHTML = '<p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">{{ _("Drag data sources and components here to build your report") }}</p>';
+        }
+    }
 }
 
 function previewReport() {
@@ -474,13 +589,25 @@ function closeSaveModal() {
 document.getElementById('saveForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const name = document.getElementById('reportName').value;
+    const name = document.getElementById('reportName').value.trim();
     const scope = document.getElementById('reportScope').value;
+    
+    // Validate name
+    if (!name) {
+        alert('{{ _("Please enter a report name") }}');
+        return;
+    }
+    
+    // Validate data source is selected
+    if (!reportConfig.data_source) {
+        alert('{{ _("Please select a data source first") }}');
+        return;
+    }
     
     // Collect filters
     reportConfig.filters = {
-        start_date: document.getElementById('filterStartDate').value,
-        end_date: document.getElementById('filterEndDate').value,
+        start_date: document.getElementById('filterStartDate').value || null,
+        end_date: document.getElementById('filterEndDate').value || null,
         project_id: document.getElementById('filterProject').value || null,
         unpaid_only: document.getElementById('filterUnpaidOnly')?.checked || false
     };
@@ -494,6 +621,26 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
         };
     }
     
+    // Ensure columns and grouping exist
+    if (!reportConfig.columns) {
+        reportConfig.columns = [];
+    }
+    if (!reportConfig.grouping) {
+        reportConfig.grouping = {};
+    }
+    
+    // Rebuild components array from DOM to ensure it matches what's visible
+    const componentElements = canvas.querySelectorAll('[data-report-component]');
+    reportConfig.components = Array.from(componentElements).map(el => el.getAttribute('data-report-component'));
+    
+    // Ensure data source matches what's in the DOM
+    const sourceElement = canvas.querySelector('[data-report-source]');
+    if (sourceElement) {
+        reportConfig.data_source = sourceElement.getAttribute('data-report-source');
+    }
+    
+    console.log('Saving report config:', reportConfig);
+    
     try {
         // Get CSRF token from meta tag
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -502,27 +649,73 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
+                'X-CSRFToken': csrfToken  // Flask-WTF default header name for JSON requests
             },
             credentials: 'same-origin',
             body: JSON.stringify({
                 name: name,
                 scope: scope,
-                config: reportConfig
+                config: reportConfig,
+                view_id: {% if saved_view %}{{ saved_view.id }}{% else %}null{% endif %}
             })
         });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            try {
+                const errorJson = JSON.parse(errorText);
+                throw new Error(errorJson.message || errorJson.error || `HTTP ${response.status}: ${response.statusText}`);
+            } catch {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}. ${errorText}`);
+            }
+        }
         
         const result = await response.json();
         
         if (result.success) {
-            alert('{{ _("Report saved successfully!") }}');
+            // Show toast notification
+            const message = result.action === 'created' 
+                ? '{{ _("Report created successfully!") }}' 
+                : '{{ _("Report updated successfully!") }}';
+            
+            if (window.toastManager) {
+                window.toastManager.success(message, '{{ _("Success") }}', 3000);
+            } else if (window.showToast) {
+                window.showToast(message, 'success');
+            } else {
+                alert(message);
+            }
+            
             closeSaveModal();
-            window.location.href = '{{ url_for("reports.reports") }}';
+            
+            // If editing, stay on edit page; if creating, reload to show in list
+            {% if saved_view %}
+            // Editing - reload to show updated config
+            window.location.reload();
+            {% else %}
+            // Creating - redirect to saved views list
+            window.location.href = '{{ url_for("custom_reports.list_saved_views") }}';
+            {% endif %}
         } else {
-            alert(result.message || '{{ _("Failed to save report") }}');
+            const errorMsg = result.message || '{{ _("Failed to save report") }}';
+            if (window.toastManager) {
+                window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+            } else if (window.showToast) {
+                window.showToast(errorMsg, 'error');
+            } else {
+                alert(errorMsg);
+            }
         }
     } catch (error) {
-        alert('{{ _("Error saving report") }}: ' + error.message);
+        console.error('Error saving report:', error);
+        const errorMsg = '{{ _("Error saving report") }}: ' + error.message;
+        if (window.toastManager) {
+            window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+        } else if (window.showToast) {
+            window.showToast(errorMsg, 'error');
+        } else {
+            alert(errorMsg);
+        }
     }
 });
 

@@ -28,9 +28,13 @@
             </div>
             
             <div class="md:col-span-2">
-                <label for="recipients" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Recipients') }} *</label>
+                <label for="recipients" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <i class="fas fa-envelope mr-2"></i>{{ _('Email Recipients') }} *
+                </label>
                 <input type="text" id="recipients" name="recipients" required class="form-input" placeholder="{{ _('email1@example.com, email2@example.com') }}">
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Comma-separated email addresses') }}</p>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    <i class="fas fa-info-circle mr-1"></i>{{ _('Enter one or more email addresses separated by commas. These recipients will receive the scheduled report via email.') }}
+                </p>
             </div>
             
             <div>
@@ -51,6 +55,21 @@
             </div>
         </div>
         
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ _('Report Iteration (Optional)') }}</h3>
+            <div class="space-y-3">
+                <div class="flex items-center">
+                    <input type="checkbox" id="split_by_custom_field" name="split_by_custom_field" value="1" class="form-checkbox" onchange="toggleCustomFieldInput()">
+                    <label for="split_by_custom_field" class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Split report by custom field value') }}</label>
+                </div>
+                <div id="customFieldInput" class="hidden">
+                    <label for="custom_field_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Custom Field Name') }}</label>
+                    <input type="text" id="custom_field_name" name="custom_field_name" class="form-input" placeholder="salesman">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The custom field name to iterate over (e.g., "salesman"). A separate report will be generated for each unique value.') }}</p>
+                </div>
+            </div>
+        </div>
+        
         <div class="flex justify-end gap-4">
             <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Schedule') }}</button>
@@ -66,6 +85,16 @@ function toggleCronField() {
         cronField.classList.remove('hidden');
     } else {
         cronField.classList.add('hidden');
+    }
+}
+
+function toggleCustomFieldInput() {
+    const splitCheckbox = document.getElementById('split_by_custom_field');
+    const customFieldInput = document.getElementById('customFieldInput');
+    if (splitCheckbox.checked) {
+        customFieldInput.classList.remove('hidden');
+    } else {
+        customFieldInput.classList.add('hidden');
     }
 }
 </script>

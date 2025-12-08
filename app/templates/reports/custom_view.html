@@ -24,11 +24,12 @@
         {% if component == 'table' %}
         <div>
             <h3 class="text-lg font-semibold mb-4">{{ _('Data Table') }}</h3>
+            {% if report_data.data and report_data.data|length > 0 %}
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border-light dark:divide-border-dark">
                     <thead>
                         <tr>
-                            {% for col in report_data.data[0].keys() if report_data.data %}
+                            {% for col in report_data.data[0].keys() %}
                             <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase">{{ col|replace('_', ' ')|title }}</th>
                             {% endfor %}
                         </tr>
@@ -44,10 +45,25 @@
                     </tbody>
                 </table>
             </div>
+            {% else %}
+            <div class="text-center py-12">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+                    <i class="fas fa-inbox text-3xl text-gray-400"></i>
+                </div>
+                <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">{{ _('No data found') }}</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">
+                    {{ _('This report has no data matching the current filters. Try adjusting your date range or filters.') }}
+                </p>
+                <a href="{{ url_for('custom_reports.report_builder') }}" class="btn btn-primary">
+                    <i class="fas fa-edit mr-2"></i>{{ _('Edit Report') }}
+                </a>
+            </div>
+            {% endif %}
         </div>
         {% elif component == 'summary' %}
         <div>
             <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
+            {% if report_data.summary and report_data.summary|length > 0 %}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {% for key, value in report_data.summary.items() %}
                 <div class="bg-background-light dark:bg-background-dark p-4 rounded-lg">
@@ -56,46 +72,68 @@
                 </div>
                 {% endfor %}
             </div>
+            {% else %}
+            <p class="text-center text-text-muted-light dark:text-text-muted-dark py-4">{{ _('No summary data available.') }}</p>
+            {% endif %}
         </div>
         {% elif component == 'chart' %}
         <div>
             <h3 class="text-lg font-semibold mb-4">{{ _('Chart') }}</h3>
+            {% if report_data.data and report_data.data|length > 0 %}
             <canvas id="reportChart" width="400" height="200"></canvas>
+            {% else %}
+            <p class="text-center text-text-muted-light dark:text-text-muted-dark py-4">{{ _('No data available for chart.') }}</p>
+            {% endif %}
         </div>
         {% endif %}
         {% endfor %}
     </div>
     {% else %}
-    <p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">{{ _('No components configured for this report.') }}</p>
+    <div class="text-center py-12">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+            <i class="fas fa-cog text-3xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">{{ _('No components configured') }}</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">
+            {{ _('This report has no components configured. Please edit the report to add components.') }}
+        </p>
+        <a href="{{ url_for('custom_reports.report_builder') }}" class="btn btn-primary">
+            <i class="fas fa-edit mr-2"></i>{{ _('Edit Report') }}
+        </a>
+    </div>
     {% endif %}
 </div>
 
 <script>
 // Render chart if chart component exists
-{% if 'chart' in config.components %}
+{% if 'chart' in config.components and report_data.data and report_data.data|length > 0 %}
 const ctx = document.getElementById('reportChart');
 if (ctx) {
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: {{ report_data.data|map(attribute='date')|list|tojson }},
-            datasets: [{
-                label: 'Hours',
-                data: {{ report_data.data|map(attribute='duration')|list|tojson }},
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
+    try {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ report_data.data|map(attribute='date')|list|tojson }},
+                datasets: [{
+                    label: 'Hours',
+                    data: {{ report_data.data|map(attribute='duration')|list|tojson }},
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error rendering chart:', error);
+    }
 }
 {% endif %}
 </script>

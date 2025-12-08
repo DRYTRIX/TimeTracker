@@ -16,10 +16,28 @@ custom_reports_bp = Blueprint("custom_reports", __name__)
 
 
 @custom_reports_bp.route("/reports/builder")
+@custom_reports_bp.route("/reports/builder/<int:view_id>/edit")
 @login_required
-def report_builder():
-    """Custom report builder page."""
+def report_builder(view_id=None):
+    """Custom report builder page. If view_id is provided, load that saved view for editing."""
     saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).all()
+    
+    # Load saved view if editing
+    saved_view = None
+    if view_id:
+        saved_view = SavedReportView.query.get_or_404(view_id)
+        # Check access
+        if saved_view.owner_id != current_user.id and saved_view.scope == "private":
+            flash(_("You do not have permission to edit this report."), "error")
+            return redirect(url_for("custom_reports.report_builder"))
+        
+        # Parse config
+        try:
+            config = json.loads(saved_view.config_json)
+        except:
+            config = {}
+    else:
+        config = {}
 
     # Get available data sources
     data_sources = [
@@ -44,6 +62,8 @@ def report_builder():
         saved_views=saved_views,
         data_sources=data_sources,
         custom_field_keys=sorted(list(custom_field_keys)),
+        saved_view=saved_view,
+        config=config,
     )
 
 
@@ -52,36 +72,81 @@ def report_builder():
 def save_report_view():
     """Save a custom report view."""
     try:
-        data = request.json
+        # Check if request has JSON data
+        if not request.is_json:
+            return jsonify({"success": False, "message": "Request must be JSON"}), 400
+        
+        data = request.get_json(silent=False)
+        if data is None:
+            return jsonify({"success": False, "message": "Invalid JSON in request body"}), 400
+        
         name = data.get("name")
         config = data.get("config", {})
         scope = data.get("scope", "private")
+        view_id = data.get("view_id")  # For editing existing reports
 
-        if not name:
+        if not name or not name.strip():
             return jsonify({"success": False, "message": "Report name is required"}), 400
 
-        # Check if name already exists
-        existing = SavedReportView.query.filter_by(name=name, owner_id=current_user.id).first()
+        name = name.strip()
 
-        if existing:
+        # Validate config is a dictionary
+        if not isinstance(config, dict):
+            return jsonify({"success": False, "message": "Config must be a dictionary"}), 400
+
+        # If view_id is provided, update existing report
+        if view_id:
+            existing = SavedReportView.query.get(view_id)
+            if not existing:
+                return jsonify({"success": False, "message": "Report not found"}), 404
+            
+            # Check permission
+            if existing.owner_id != current_user.id and existing.scope == "private":
+                return jsonify({"success": False, "message": "You do not have permission to edit this report"}), 403
+            
             # Update existing
+            existing.name = name
             existing.config_json = json.dumps(config)
             existing.scope = scope
             existing.updated_at = datetime.utcnow()
+            saved_view = existing
+            action = "updated"
         else:
-            # Create new
-            saved_view = SavedReportView(
-                name=name, owner_id=current_user.id, scope=scope, config_json=json.dumps(config)
-            )
-            db.session.add(saved_view)
+            # Check if name already exists (for new reports)
+            existing = SavedReportView.query.filter_by(name=name, owner_id=current_user.id).first()
+            if existing:
+                # Update existing with same name
+                existing.config_json = json.dumps(config)
+                existing.scope = scope
+                existing.updated_at = datetime.utcnow()
+                saved_view = existing
+                action = "updated"
+            else:
+                # Create new
+                saved_view = SavedReportView(
+                    name=name, owner_id=current_user.id, scope=scope, config_json=json.dumps(config)
+                )
+                db.session.add(saved_view)
+                action = "created"
 
         if safe_commit("save_report_view", {"user_id": current_user.id}):
-            return jsonify({"success": True, "message": "Report saved successfully"})
+            return jsonify({
+                "success": True, 
+                "message": _("Report %(action)s successfully", action=action),
+                "view_id": saved_view.id,
+                "action": action
+            })
         else:
-            return jsonify({"success": False, "message": "Failed to save report"}), 500
+            db.session.rollback()
+            return jsonify({"success": False, "message": "Failed to save report due to a database error"}), 500
 
+    except json.JSONDecodeError as e:
+        return jsonify({"success": False, "message": f"Invalid JSON: {str(e)}"}), 400
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        db.session.rollback()
+        from flask import current_app
+        current_app.logger.error(f"Error saving report view: {str(e)}", exc_info=True)
+        return jsonify({"success": False, "message": f"Error saving report: {str(e)}"}), 500
 
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>")
@@ -239,8 +304,8 @@ def generate_report_data(config, user_id=None):
                 entries = []
                 for entry in all_entries:
                     client = None
-                    if entry.project and entry.project.client:
-                        client = entry.project.client
+                    if entry.project and entry.project.client_obj:
+                        client = entry.project.client_obj
                     elif entry.client:
                         client = entry.client
 
@@ -262,8 +327,8 @@ def generate_report_data(config, user_id=None):
         
         for e in entries:
             client = None
-            if e.project and e.project.client:
-                client = e.project.client
+            if e.project and e.project.client_obj:
+                client = e.project.client_obj
             elif e.client:
                 client = e.client
             
@@ -316,7 +381,7 @@ def generate_report_data(config, user_id=None):
                 {
                     "id": p.id,
                     "name": p.name,
-                    "client": p.client.name if p.client else "",
+                    "client": p.client_obj.name if p.client_obj else "",
                     "status": p.status,
                     "total_hours": sum(e.duration_hours or 0 for e in p.time_entries if e.end_time),
                 }
@@ -327,3 +392,41 @@ def generate_report_data(config, user_id=None):
 
     # Add more data sources as needed
     return {"data": [], "summary": {}}
+
+
+@custom_reports_bp.route("/reports/builder/saved")
+@login_required
+def list_saved_views():
+    """List all saved report views for the current user."""
+    from app.utils.timezone import convert_app_datetime_to_user
+    saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).order_by(SavedReportView.created_at.desc()).all()
+    return render_template("reports/saved_views_list.html", saved_views=saved_views, convert_app_datetime_to_user=convert_app_datetime_to_user)
+
+
+@custom_reports_bp.route("/reports/builder/<int:view_id>/delete", methods=["POST"])
+@login_required
+def delete_saved_view(view_id):
+    """Delete a saved report view."""
+    saved_view = SavedReportView.query.get_or_404(view_id)
+    
+    # Check permission
+    if saved_view.owner_id != current_user.id and not current_user.is_admin:
+        flash(_("You do not have permission to delete this report view."), "error")
+        return redirect(url_for("custom_reports.list_saved_views"))
+    
+    view_name = saved_view.name
+    
+    # Check if it's used in any schedules
+    from app.models import ReportEmailSchedule
+    schedules = ReportEmailSchedule.query.filter_by(saved_view_id=view_id).all()
+    if schedules:
+        flash(_("Cannot delete report view: it is used in %(count)d scheduled report(s).", count=len(schedules)), "error")
+        return redirect(url_for("custom_reports.list_saved_views"))
+    
+    db.session.delete(saved_view)
+    if safe_commit("delete_saved_view", {"view_id": view_id}):
+        flash(_('Report view "%(name)s" deleted successfully.', name=view_name), "success")
+    else:
+        flash(_("Could not delete report view due to a database error"), "error")
+    
+    return redirect(url_for("custom_reports.list_saved_views"))
