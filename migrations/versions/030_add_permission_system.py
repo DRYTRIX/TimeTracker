@@ -198,6 +198,48 @@ def seed_permissions_and_roles():
         role['updated_at'] = now
     op.bulk_insert(roles_table, roles_data)
     
+    # Fix sequences after bulk insert to prevent duplicate key errors
+    # Get connection for executing queries
+    connection = op.get_bind()
+    
+    # Fix roles sequence - set to max(id) + 1
+    connection.execute(sa.text("""
+        DO $$
+        BEGIN
+            CREATE SEQUENCE IF NOT EXISTS roles_id_seq;
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_depend 
+                WHERE objid = 'roles_id_seq'::regclass 
+                AND refobjid = 'roles'::regclass
+            ) THEN
+                ALTER TABLE roles ALTER COLUMN id SET DEFAULT nextval('roles_id_seq');
+                ALTER SEQUENCE roles_id_seq OWNED BY roles.id;
+            END IF;
+            PERFORM setval('roles_id_seq', 
+                COALESCE((SELECT MAX(id) FROM roles), 0) + 1, 
+                false);
+        END $$;
+    """))
+    
+    # Fix permissions sequence - set to max(id) + 1
+    connection.execute(sa.text("""
+        DO $$
+        BEGIN
+            CREATE SEQUENCE IF NOT EXISTS permissions_id_seq;
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_depend 
+                WHERE objid = 'permissions_id_seq'::regclass 
+                AND refobjid = 'permissions'::regclass
+            ) THEN
+                ALTER TABLE permissions ALTER COLUMN id SET DEFAULT nextval('permissions_id_seq');
+                ALTER SEQUENCE permissions_id_seq OWNED BY permissions.id;
+            END IF;
+            PERFORM setval('permissions_id_seq', 
+                COALESCE((SELECT MAX(id) FROM permissions), 0) + 1, 
+                false);
+        END $$;
+    """))
+    
     # Define role-permission mappings
     role_permission_mappings = []
     

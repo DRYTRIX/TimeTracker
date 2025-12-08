@@ -178,6 +178,23 @@
         <a href="{{ url_for('reports.unpaid_hours_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
             <i class="fas fa-money-bill-wave mr-2"></i>{{ _('Unpaid Hours Report') }}
         </a>
+        <a href="{{ url_for('custom_reports.report_builder') }}" class="bg-secondary text-white p-4 rounded-lg text-center hover:bg-secondary/90 transition-colors">
+            <i class="fas fa-magic mr-2"></i>{{ _('Report Builder') }}
+        </a>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Report Management') }}</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="{{ url_for('custom_reports.list_saved_views') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-4 rounded-lg text-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-save mr-2"></i>{{ _('Saved Report Views') }}
+            <p class="text-sm mt-2 text-gray-600 dark:text-gray-400">{{ _('View and manage your saved report configurations') }}</p>
+        </a>
+        <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-4 rounded-lg text-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-clock mr-2"></i>{{ _('Scheduled Reports') }}
+            <p class="text-sm mt-2 text-gray-600 dark:text-gray-400">{{ _('Manage automated report delivery via email') }}</p>
+        </a>
     </div>
 </div>
 

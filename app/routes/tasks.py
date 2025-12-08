@@ -8,6 +8,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.timezone import now_in_app_timezone, convert_app_datetime_to_user
+from app.utils.pagination import get_pagination_params
 import csv
 import io
 
@@ -20,7 +21,9 @@ def list_tasks():
     """List all tasks with filtering options - REFACTORED to use service layer with eager loading"""
     from app.services import TaskService
 
-    page = request.args.get("page", 1, type=int)
+    # Get pagination parameters from request (respects per_page query param, defaults to DEFAULT_PAGE_SIZE)
+    page, per_page = get_pagination_params()
+    
     status = request.args.get("status", "")
     priority = request.args.get("priority", "")
     project_id = request.args.get("project_id", type=int)
@@ -41,7 +44,7 @@ def list_tasks():
         user_id=current_user.id,
         is_admin=current_user.is_admin,
         page=page,
-        per_page=20,
+        per_page=per_page,
     )
 
     # Get filter options (these could also be cached)
