@@ -1182,7 +1182,23 @@ def create_app(config=None):
                 )
                 app.logger.info("OIDC client registered with issuer %s", issuer)
             except Exception as e:
-                app.logger.error("Failed to register OIDC client: %s", e)
+                error_msg = str(e)
+                # Check for DNS resolution errors
+                if "NameResolutionError" in error_msg or "Failed to resolve" in error_msg or "[Errno -2]" in error_msg:
+                    issuer_host = urlparse(issuer).netloc.split(":")[0] if issuer else "unknown"
+                    app.logger.error(
+                        "Failed to register OIDC client due to DNS resolution error: %s\n"
+                        "This typically occurs when Python's DNS resolver cannot resolve the OIDC issuer domain.\n"
+                        "Troubleshooting:\n"
+                        "1. Verify DNS resolution: docker exec -it <container> python -c \"import socket; print(socket.gethostbyname('%s'))\"\n"
+                        "2. Configure DNS servers in Docker/Portainer stack (add 'dns: [8.8.8.8, 8.8.4.4]' to service)\n"
+                        "3. If both containers are on same Docker network, use container name instead of external domain\n"
+                        "4. See docs/TROUBLESHOOTING_OIDC_DNS.md for detailed solutions",
+                        error_msg,
+                        issuer_host,
+                    )
+                else:
+                    app.logger.error("Failed to register OIDC client: %s", e)
         else:
             app.logger.warning(
                 "AUTH_METHOD is %s but OIDC envs are incomplete; OIDC login will not work",

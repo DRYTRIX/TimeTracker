@@ -34,6 +34,8 @@ class ScheduledReportService:
         created_by: int,
         cron: Optional[str] = None,
         timezone: Optional[str] = None,
+        split_by_custom_field: bool = False,
+        custom_field_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a scheduled report.
@@ -67,6 +69,8 @@ class ScheduledReportService:
                 next_run_at=next_run_at,
                 active=True,
                 created_by=created_by,
+                split_by_salesman=split_by_custom_field,  # Reuse existing field
+                salesman_field_name=custom_field_name,  # Reuse existing field
             )
 
             db.session.add(schedule)
@@ -107,9 +111,9 @@ class ScheduledReportService:
             except:
                 config = {}
 
-            # Check if we should split by salesman
-            if schedule.split_by_salesman:
-                return self._generate_and_send_salesman_reports(schedule, saved_view, config)
+            # Check if we should split by custom field
+            if schedule.split_by_salesman and schedule.salesman_field_name:
+                return self._generate_and_send_custom_field_reports(schedule, saved_view, config)
             
             # Generate report data based on config
             report_data = self._generate_report_data(saved_view, config)
@@ -118,15 +122,28 @@ class ScheduledReportService:
             recipients = [email.strip() for email in schedule.recipients.split(",")]
             sent_count = 0
 
+            # Render email template
+            try:
+                from flask import render_template
+                html_body = render_template(
+                    "email/scheduled_report.html",
+                    report_name=saved_view.name,
+                    report_data=report_data,
+                    generated_at=now_in_app_timezone(),
+                )
+                text_body = f"Scheduled Report: {saved_view.name}\n\nGenerated at: {now_in_app_timezone()}"
+            except Exception as e:
+                logger.warning(f"Could not render email template, using plain text: {e}")
+                html_body = None
+                text_body = f"Scheduled Report: {saved_view.name}\n\nGenerated at: {now_in_app_timezone()}\n\nReport data available in HTML version."
+
             for recipient in recipients:
                 try:
                     send_email(
-                        to=recipient,
                         subject=f"Scheduled Report: {saved_view.name}",
-                        template="email/scheduled_report.html",
-                        report_name=saved_view.name,
-                        report_data=report_data,
-                        generated_at=now_in_app_timezone(),
+                        recipients=[recipient],
+                        text_body=text_body,
+                        html_body=html_body,
                     )
                     sent_count += 1
                 except Exception as e:
@@ -223,7 +240,8 @@ class ScheduledReportService:
 
     def list_schedules(self, user_id: Optional[int] = None, active_only: bool = True) -> List[ReportEmailSchedule]:
         """List scheduled reports"""
-        query = ReportEmailSchedule.query
+        from sqlalchemy.orm import joinedload
+        query = ReportEmailSchedule.query.options(joinedload(ReportEmailSchedule.saved_view))
         if user_id:
             query = query.filter_by(created_by=user_id)
         if active_only:
@@ -281,107 +299,163 @@ class ScheduledReportService:
             logger.error(f"Error deleting schedule: {e}")
             return {"success": False, "message": f"Error deleting schedule: {str(e)}"}
 
-    def _generate_and_send_salesman_reports(
+    def _generate_and_send_custom_field_reports(
         self, schedule: ReportEmailSchedule, saved_view: SavedReportView, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Generate and send reports split by salesman.
+        Generate and send reports split by custom field value.
         
-        This generates individual reports for each salesman and sends them
-        to their configured email addresses.
+        This generates individual reports for each unique value of the specified
+        custom field and sends them to the configured recipients.
         
         Returns:
             dict with 'success', 'message', and 'sent_count' keys
         """
         try:
             from datetime import timedelta
+            from app.models import Client, TimeEntry
+            # Import the generate_report_data function from custom_reports module
+            import app.routes.custom_reports as custom_reports_module
+            generate_report_data = custom_reports_module.generate_report_data
+            
+            # Get custom field name
+            custom_field_name = schedule.salesman_field_name or "salesman"
             
             # Get date range from config or use defaults
+            # Config can have filters at top level or nested
+            filters = config.get("filters", {}) if isinstance(config.get("filters"), dict) else {}
+            if not filters and "start_date" in config:
+                # Filters might be at top level
+                filters = config
+            
             end_date = now_in_app_timezone()
-            if config.get("end_date"):
-                if isinstance(config["end_date"], str):
-                    end_date = datetime.fromisoformat(config["end_date"])
+            if filters.get("end_date"):
+                end_date_str = filters["end_date"]
+                if isinstance(end_date_str, str):
+                    try:
+                        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+                    except ValueError:
+                        try:
+                            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+                        except:
+                            logger.warning(f"Could not parse end_date: {end_date_str}, using current time")
+                            end_date = now_in_app_timezone()
                 else:
-                    end_date = config["end_date"]
+                    end_date = end_date_str
             
             # Default to last month if no start date
             start_date = end_date - timedelta(days=30)
-            if config.get("start_date"):
-                if isinstance(config["start_date"], str):
-                    start_date = datetime.fromisoformat(config["start_date"])
+            if filters.get("start_date"):
+                start_date_str = filters["start_date"]
+                if isinstance(start_date_str, str):
+                    try:
+                        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+                    except ValueError:
+                        try:
+                            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+                        except:
+                            logger.warning(f"Could not parse start_date: {start_date_str}, using default")
+                            start_date = end_date - timedelta(days=30)
                 else:
-                    start_date = config["start_date"]
+                    start_date = start_date_str
             
-            # Get salesman field name (default: 'salesman')
-            salesman_field_name = schedule.salesman_field_name or "salesman"
+            # Get all unique values for the custom field from clients that have time entries in the date range
+            # First, get all clients with the custom field
+            clients = Client.query.filter_by(status="active").all()
+            unique_values = set()
             
-            # Get unpaid hours grouped by salesman
-            unpaid_service = UnpaidHoursService()
-            salesman_reports = unpaid_service.get_unpaid_hours_by_salesman(
-                start_date=start_date,
-                end_date=end_date,
-                salesman_field_name=salesman_field_name,
-            )
+            # Also check time entries in the date range to get values that actually have data
+            time_entries = TimeEntry.query.filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= start_date,
+                TimeEntry.start_time <= end_date
+            ).all()
             
+            # Collect unique values from both clients and time entries
+            for client in clients:
+                if client.custom_fields and custom_field_name in client.custom_fields:
+                    value = client.custom_fields[custom_field_name]
+                    if value:
+                        unique_values.add(str(value).strip())
+            
+            # Also check from time entries (in case client was deleted or field changed)
+            for entry in time_entries:
+                client = None
+                if entry.project and entry.project.client:
+                    client = entry.project.client
+                elif entry.client:
+                    client = entry.client
+                
+                if client and client.custom_fields and custom_field_name in client.custom_fields:
+                    value = client.custom_fields[custom_field_name]
+                    if value:
+                        unique_values.add(str(value).strip())
+            
+            if not unique_values:
+                logger.warning(f"No unique values found for custom field '{custom_field_name}'")
+                return {
+                    "success": False,
+                    "message": f"No unique values found for custom field '{custom_field_name}'",
+                    "sent_count": 0,
+                }
+            
+            # Generate a report for each unique value
+            recipients = [email.strip() for email in schedule.recipients.split(",")]
             sent_count = 0
             errors = []
             
-            for salesman_initial, report_data in salesman_reports.items():
-                # Skip unassigned entries
-                if salesman_initial == "_UNASSIGNED_":
-                    continue
+            for field_value in sorted(unique_values):
+                # Create a modified config with the custom field filter
+                modified_config = config.copy()
+                # Ensure filters dict exists
+                if "filters" not in modified_config:
+                    modified_config["filters"] = {}
+                elif not isinstance(modified_config["filters"], dict):
+                    modified_config["filters"] = {}
+                modified_config["filters"]["custom_field_filter"] = {custom_field_name: field_value}
                 
-                # Get email for this salesman
-                email = SalesmanEmailMapping.get_email_for_initial(salesman_initial)
-                if not email:
-                    logger.warning(f"No email mapping found for salesman {salesman_initial}, skipping")
-                    errors.append(f"No email for {salesman_initial}")
-                    continue
+                # Generate report data with the filter
+                report_data = generate_report_data(modified_config, schedule.created_by)
                 
-                # Format report data for email
-                formatted_data = {
-                    "salesman_initial": salesman_initial,
-                    "total_hours": report_data["total_hours"],
-                    "total_entries": report_data["total_entries"],
-                    "clients": report_data["clients"],
-                    "projects": report_data["projects"],
-                    "entries": [
-                        {
-                            "id": e.id,
-                            "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
-                            "project": e.project.name if e.project else "",
-                            "client": (e.project.client.name if e.project and e.project.client else (e.client.name if e.client else "Unknown")),
-                            "user": e.user.username if e.user else "",
-                            "duration": e.duration_hours,
-                            "notes": e.notes or "",
-                        }
-                        for e in report_data["entries"]
-                    ],
-                }
-                
+                # Render email template
                 try:
-                    send_email(
-                        to=email,
-                        subject=f"Unpaid Hours Report - {salesman_initial} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})",
-                        template="email/unpaid_hours_report.html",
-                        salesman_initial=salesman_initial,
-                        report_data=formatted_data,
-                        start_date=start_date.strftime("%Y-%m-%d"),
-                        end_date=end_date.strftime("%Y-%m-%d"),
+                    from flask import render_template
+                    html_body = render_template(
+                        "email/scheduled_report.html",
+                        report_name=f"{saved_view.name} ({custom_field_name}={field_value})",
+                        report_data=report_data,
+                        generated_at=now_in_app_timezone(),
+                        custom_field_name=custom_field_name,
+                        custom_field_value=field_value,
                     )
-                    sent_count += 1
-                    logger.info(f"Sent unpaid hours report to {email} for salesman {salesman_initial}")
+                    text_body = f"Scheduled Report: {saved_view.name} - {custom_field_name}={field_value}\n\nGenerated at: {now_in_app_timezone()}"
                 except Exception as e:
-                    error_msg = f"Error sending to {email} ({salesman_initial}): {str(e)}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
+                    logger.warning(f"Could not render email template, using plain text: {e}")
+                    html_body = None
+                    text_body = f"Scheduled Report: {saved_view.name} - {custom_field_name}={field_value}\n\nGenerated at: {now_in_app_timezone()}\n\nReport data available in HTML version."
+                
+                # Send email to all recipients
+                for recipient in recipients:
+                    try:
+                        send_email(
+                            subject=f"Scheduled Report: {saved_view.name} - {custom_field_name}={field_value}",
+                            recipients=[recipient],
+                            text_body=text_body,
+                            html_body=html_body,
+                        )
+                        sent_count += 1
+                        logger.info(f"Sent report to {recipient} for {custom_field_name}={field_value}")
+                    except Exception as e:
+                        error_msg = f"Error sending to {recipient} ({custom_field_name}={field_value}): {str(e)}"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
             
             # Update schedule
             schedule.last_run_at = now_in_app_timezone()
             schedule.next_run_at = self._calculate_next_run(schedule.cadence, schedule.cron, schedule.timezone)
             db.session.commit()
             
-            message = f"Reports sent to {sent_count} salesmen."
+            message = f"Reports sent for {len(unique_values)} unique {custom_field_name} values to {len(recipients)} recipient(s)."
             if errors:
                 message += f" Errors: {len(errors)}"
             
@@ -393,5 +467,5 @@ class ScheduledReportService:
             }
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error generating and sending salesman reports: {e}")
+            logger.error(f"Error generating and sending custom field reports: {e}")
             return {"success": False, "message": f"Error generating reports: {str(e)}"}

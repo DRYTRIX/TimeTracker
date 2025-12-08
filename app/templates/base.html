@@ -364,7 +364,6 @@
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
                         </button>
                         <ul id="financeDropdown" class="{% if not finance_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
-                            {% set nav_active_reports = ep.startswith('reports.') and not ep.startswith('scheduled_reports.') %}
                             {% set nav_active_invoices = ep.startswith('invoices.') %}
                             {% set nav_active_invoice_approvals = ep.startswith('invoice_approvals.') %}
                             {% set nav_active_payment_gateways = ep.startswith('payment_gateways.') %}
@@ -374,25 +373,41 @@
                             {% set nav_active_mileage = ep.startswith('mileage.') %}
                             {% set nav_active_perdiem = ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates') %}
                             {% set nav_active_budget = ep.startswith('budget_alerts.') %}
+                            {% set reports_open = ep.startswith('reports.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
                             {% if settings.ui_allow_reports and current_user.ui_show_reports %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('reports.reports') }}">
-                                    <i class="fas fa-chart-bar w-4 mr-2"></i>{{ _('Reports') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if settings.ui_allow_report_builder and current_user.ui_show_report_builder %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('custom_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.report_builder') }}">
-                                    <i class="fas fa-magic w-4 mr-2"></i>{{ _('Report Builder') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if settings.ui_allow_scheduled_reports and current_user.ui_show_scheduled_reports %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('scheduled_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('scheduled_reports.list_scheduled') }}">
-                                    <i class="fas fa-clock w-4 mr-2"></i>{{ _('Scheduled Reports') }}
-                                </a>
+                                <button onclick="toggleDropdown('reportsDropdown', event)" data-dropdown="reportsDropdown" class="w-full flex items-center px-2 py-1 rounded {% if reports_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                                    <i class="fas fa-chart-bar w-4 mr-2"></i>
+                                    <span class="flex-1 text-left">{{ _('Reports') }}</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <ul id="reportsDropdown" class="{% if not reports_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                    {% set nav_active_reports = ep.startswith('reports.') and not ep.startswith('scheduled_reports.') and not ep.startswith('custom_reports.') %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('reports.reports') }}">
+                                            <i class="fas fa-chart-line w-4 mr-2"></i>{{ _('All Reports') }}
+                                        </a>
+                                    </li>
+                                    {% if settings.ui_allow_report_builder and current_user.ui_show_report_builder %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'custom_reports.report_builder' or ep == 'custom_reports.view_custom_report' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.report_builder') }}">
+                                            <i class="fas fa-magic w-4 mr-2"></i>{{ _('Report Builder') }}
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'custom_reports.list_saved_views' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.list_saved_views') }}">
+                                            <i class="fas fa-save w-4 mr-2"></i>{{ _('Saved Views') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if settings.ui_allow_scheduled_reports and current_user.ui_show_scheduled_reports %}
+                                    <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('scheduled_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('scheduled_reports.list_scheduled') }}">
+                                            <i class="fas fa-clock w-4 mr-2"></i>{{ _('Scheduled Reports') }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
                             </li>
                             {% endif %}
                             <li>
@@ -1324,11 +1339,23 @@
                 'adminSecurityDropdown': 'adminDropdown',
                 'adminIntegrationsDropdown': 'adminDropdown',
                 'adminDataDropdown': 'adminDropdown',
-                'adminMaintenanceDropdown': 'adminDropdown'
+                'adminMaintenanceDropdown': 'adminDropdown',
+                'reportsDropdown': 'financeDropdown'  // Reports is nested under Finance
             };
             
             // If this is a nested dropdown, don't close its parent
             const parentDropdown = nestedDropdowns[id];
+            
+            // Special handling for reportsDropdown: keep it open if already open and on a reports page
+            if (id === 'reportsDropdown' && !isCurrentlyHidden) {
+                // Check if we're on a reports page by checking the current URL
+                const currentPath = window.location.pathname;
+                const isReportsPage = currentPath.includes('/reports/') || currentPath.includes('/scheduled') || currentPath.includes('/builder');
+                if (isReportsPage) {
+                    // Don't close if we're on a reports page
+                    return;
+                }
+            }
             
             // Close all other top-level dropdowns in the sidebar (accordion behavior)
             // Note: Nested dropdowns (like pdfDropdown) are not in this list, so they work independently
@@ -1340,6 +1367,10 @@
                 }
                 // Don't close adminDropdown if clicking on any of its submenus
                 if (dropdownId === 'adminDropdown' && parentDropdown === 'adminDropdown') {
+                    return;
+                }
+                // Don't close financeDropdown if clicking on reportsDropdown
+                if (dropdownId === 'financeDropdown' && parentDropdown === 'financeDropdown') {
                     return;
                 }
                 if (dropdownId !== id) {
@@ -1366,6 +1397,13 @@
                     const adminDropdown = document.getElementById('adminDropdown');
                     if (adminDropdown) {
                         adminDropdown.classList.remove('hidden');
+                    }
+                }
+                // If opening reportsDropdown, ensure financeDropdown is also open
+                if (parentDropdown === 'financeDropdown') {
+                    const financeDropdown = document.getElementById('financeDropdown');
+                    if (financeDropdown) {
+                        financeDropdown.classList.remove('hidden');
                     }
                 }
             } else {

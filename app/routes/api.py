@@ -829,6 +829,17 @@ def create_entry():
         return jsonify({"error": result.get("message", "Could not create time entry")}), 400
 
     entry = result.get("entry")
+    
+    # Invalidate dashboard cache for the entry owner so new entry appears immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{entry.user_id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s after entry creation", entry.user_id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+    
     payload = entry.to_dict()
     payload["project_name"] = entry.project.name if entry.project else None
     payload["client_name"] = entry.client.name if entry.client else None
@@ -1362,6 +1373,16 @@ def update_entry(entry_id):
     if not safe_commit("api_update_entry", {"entry_id": entry_id}):
         return jsonify({"error": "Database error while updating entry"}), 500
 
+    # Invalidate dashboard cache for the entry owner so changes appear immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{entry.user_id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s after entry update", entry.user_id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+
     payload = entry.to_dict()
     payload["project_name"] = entry.project.name if entry.project else None
     return jsonify({"success": True, "entry": payload})
@@ -1386,9 +1407,20 @@ def delete_entry(entry_id):
     client_name = entry.client.name if entry.client else None
     entity_name = project_name or client_name or "Unknown"
     duration_formatted = entry.duration_formatted
+    entry_user_id = entry.user_id  # Capture user_id before deletion
 
     db.session.delete(entry)
     db.session.commit()
+
+    # Invalidate dashboard cache for the entry owner so changes appear immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{entry_user_id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s after entry deletion", entry_user_id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
     # Log activity
     from app.models import Activity

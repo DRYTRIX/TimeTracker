@@ -653,6 +653,16 @@ def edit_timer(timer_id):
             flash(_("Could not update timer due to a database error. Please check server logs."), "error")
             return redirect(url_for("main.dashboard"))
 
+        # Invalidate dashboard cache for the timer owner so changes appear immediately
+        try:
+            from app.utils.cache import get_cache
+            cache = get_cache()
+            cache_key = f"dashboard:{timer.user_id}"
+            cache.delete(cache_key)
+            current_app.logger.debug("Invalidated dashboard cache for user %s after timer edit", timer.user_id)
+        except Exception as e:
+            current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+
         flash(_("Timer updated successfully"), "success")
         return redirect(url_for("main.dashboard"))
 
@@ -730,6 +740,7 @@ def delete_timer(timer_id):
     project_name = timer.project.name if timer.project else None
     client_name = timer.client.name if timer.client else None
     entity_name = project_name or client_name or _("Unknown")
+    timer_user_id = timer.user_id  # Capture user_id before deletion
 
     # Check if time_entry_approvals table exists before deletion
     # This prevents errors when the table doesn't exist but the relationship is defined
@@ -771,6 +782,16 @@ def delete_timer(timer_id):
     if not safe_commit("delete_timer", {"timer_id": entry_id}):
         flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
+
+    # Invalidate dashboard cache for the timer owner so changes appear immediately
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache_key = f"dashboard:{timer_user_id}"
+        cache.delete(cache_key)
+        current_app.logger.debug("Invalidated dashboard cache for user %s after timer deletion", timer_user_id)
+    except Exception as e:
+        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
     # Log activity
     Activity.log(

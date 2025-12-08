@@ -70,9 +70,15 @@ def create_scheduled():
         cadence = request.form.get("cadence", "").strip()
         cron = request.form.get("cron", "").strip() or None
         timezone = request.form.get("timezone", "").strip() or None
+        split_by_custom_field = request.form.get("split_by_custom_field") == "1"
+        custom_field_name = request.form.get("custom_field_name", "").strip() or None
 
         if not saved_view_id or not recipients or not cadence:
             flash(_("Please fill in all required fields."), "error")
+            return render_template("reports/schedule_form.html", saved_views=saved_views)
+
+        if split_by_custom_field and not custom_field_name:
+            flash(_("Please specify a custom field name when enabling report iteration."), "error")
             return render_template("reports/schedule_form.html", saved_views=saved_views)
 
         result = service.create_schedule(
@@ -82,6 +88,8 @@ def create_scheduled():
             created_by=current_user.id,
             cron=cron,
             timezone=timezone,
+            split_by_custom_field=split_by_custom_field,
+            custom_field_name=custom_field_name,
         )
 
         if result["success"]:
@@ -120,9 +128,14 @@ def api_create_scheduled():
     cadence = data.get("cadence", "").strip()
     cron = data.get("cron", "").strip() or None
     timezone = data.get("timezone", "").strip() or None
+    split_by_custom_field = data.get("split_by_custom_field", False)
+    custom_field_name = data.get("custom_field_name", "").strip() or None
 
     if not saved_view_id or not recipients or not cadence:
         return jsonify({"success": False, "error": _("Please fill in all required fields.")}), 400
+
+    if split_by_custom_field and not custom_field_name:
+        return jsonify({"success": False, "error": _("Please specify a custom field name when enabling report iteration.")}), 400
 
     result = service.create_schedule(
         saved_view_id=saved_view_id,
@@ -131,6 +144,8 @@ def api_create_scheduled():
         created_by=current_user.id,
         cron=cron,
         timezone=timezone,
+        split_by_custom_field=split_by_custom_field,
+        custom_field_name=custom_field_name,
     )
 
     if result["success"]:
