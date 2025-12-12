@@ -12,6 +12,8 @@ services:
       - ADMIN_USERNAMES=${ADMIN_USERNAMES:-admin}
       # Security (required in production)
       - SECRET_KEY=${SECRET_KEY}
+      # Version (inherited from image, but can be overridden)
+      - APP_VERSION=${APP_VERSION:-}
       # Database (bundled Postgres)
       - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
       # CSRF & cookies (safe for HTTP local; tighten for HTTPS)

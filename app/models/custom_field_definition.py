@@ -61,9 +61,10 @@ class CustomFieldDefinition(db.Model):
                         )
                 except RuntimeError:
                     pass  # No application context
-                # Rollback the failed transaction
+                # Rollback the failed transaction and clear session state
                 try:
                     db.session.rollback()
+                    db.session.expunge_all()  # Clear all objects from session
                 except Exception:
                     pass
                 return []
@@ -104,9 +105,10 @@ class CustomFieldDefinition(db.Model):
                         )
                 except RuntimeError:
                     pass  # No application context
-                # Rollback the failed transaction
+                # Rollback the failed transaction and clear session state
                 try:
                     db.session.rollback()
+                    db.session.expunge_all()  # Clear all objects from session
                 except Exception:
                     pass
                 return []
@@ -147,9 +149,10 @@ class CustomFieldDefinition(db.Model):
                         )
                 except RuntimeError:
                     pass  # No application context
-                # Rollback the failed transaction
+                # Rollback the failed transaction and clear session state
                 try:
                     db.session.rollback()
+                    db.session.expunge_all()  # Clear all objects from session
                 except Exception:
                     pass
                 return None

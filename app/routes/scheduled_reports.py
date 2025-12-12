@@ -7,6 +7,9 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app.models import SavedReportView, ReportEmailSchedule
 from app.services.scheduled_report_service import ScheduledReportService
+import logging
+
+logger = logging.getLogger(__name__)
 
 scheduled_reports_bp = Blueprint("scheduled_reports", __name__)
 
@@ -50,11 +53,43 @@ def api_list_scheduled():
 @scheduled_reports_bp.route("/reports/scheduled")
 @login_required
 def list_scheduled():
-    """List scheduled reports"""
-    service = ScheduledReportService()
-    schedules = service.list_schedules(user_id=current_user.id)
-
-    return render_template("reports/scheduled.html", schedules=schedules)
+    """List scheduled reports with error handling"""
+    try:
+        service = ScheduledReportService()
+        schedules = service.list_schedules(user_id=current_user.id)
+        
+        # Validate schedules and filter out invalid ones
+        valid_schedules = []
+        for schedule in schedules:
+            try:
+                # Check if saved_view exists and is valid
+                if schedule.saved_view:
+                    # Try to parse config to validate
+                    import json
+                    try:
+                        config = json.loads(schedule.saved_view.config_json) if isinstance(schedule.saved_view.config_json, str) else schedule.saved_view.config_json
+                        if not isinstance(config, dict):
+                            logger.warning(f"Invalid config for schedule {schedule.id}, skipping")
+                            continue
+                    except:
+                        logger.warning(f"Could not parse config for schedule {schedule.id}, skipping")
+                        continue
+                else:
+                    logger.warning(f"Schedule {schedule.id} has no saved_view, skipping")
+                    continue
+                
+                valid_schedules.append(schedule)
+            except Exception as e:
+                from flask import current_app
+                current_app.logger.error(f"Error validating schedule {schedule.id}: {e}", exc_info=True)
+                continue
+        
+        return render_template("reports/scheduled.html", schedules=valid_schedules)
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"Error loading scheduled reports: {e}", exc_info=True)
+        flash(_("Error loading scheduled reports. Please check the logs."), "error")
+        return render_template("reports/scheduled.html", schedules=[])
 
 
 @scheduled_reports_bp.route("/reports/scheduled/create", methods=["GET", "POST"])
@@ -72,6 +107,8 @@ def create_scheduled():
         timezone = request.form.get("timezone", "").strip() or None
         split_by_custom_field = request.form.get("split_by_custom_field") == "1"
         custom_field_name = request.form.get("custom_field_name", "").strip() or None
+        email_distribution_mode = request.form.get("email_distribution_mode", "").strip() or None
+        recipient_email_template = request.form.get("recipient_email_template", "").strip() or None
 
         if not saved_view_id or not recipients or not cadence:
             flash(_("Please fill in all required fields."), "error")
@@ -90,6 +127,8 @@ def create_scheduled():
             timezone=timezone,
             split_by_custom_field=split_by_custom_field,
             custom_field_name=custom_field_name,
+            email_distribution_mode=email_distribution_mode,
+            recipient_email_template=recipient_email_template,
         )
 
         if result["success"]:
@@ -130,6 +169,8 @@ def api_create_scheduled():
     timezone = data.get("timezone", "").strip() or None
     split_by_custom_field = data.get("split_by_custom_field", False)
     custom_field_name = data.get("custom_field_name", "").strip() or None
+    email_distribution_mode = data.get("email_distribution_mode", "").strip() or None
+    recipient_email_template = data.get("recipient_email_template", "").strip() or None
 
     if not saved_view_id or not recipients or not cadence:
         return jsonify({"success": False, "error": _("Please fill in all required fields.")}), 400
@@ -146,6 +187,8 @@ def api_create_scheduled():
         timezone=timezone,
         split_by_custom_field=split_by_custom_field,
         custom_field_name=custom_field_name,
+        email_distribution_mode=email_distribution_mode,
+        recipient_email_template=recipient_email_template,
     )
 
     if result["success"]:
@@ -216,3 +259,48 @@ def api_saved_views():
             ]
         }
     )
+
+
+@scheduled_reports_bp.route("/reports/scheduled/<int:schedule_id>/fix", methods=["POST"])
+@login_required
+def fix_scheduled(schedule_id):
+    """Fix or remove an invalid scheduled report"""
+    from app import db
+    import json
+    
+    schedule = ReportEmailSchedule.query.get_or_404(schedule_id)
+    
+    # Check permission
+    if schedule.created_by != current_user.id and not current_user.is_admin:
+        flash(_("You do not have permission to fix this schedule."), "error")
+        return redirect(url_for("scheduled_reports.list_scheduled"))
+    
+    # Try to validate the saved view
+    if not schedule.saved_view:
+        # Saved view doesn't exist - delete the schedule
+        db.session.delete(schedule)
+        db.session.commit()
+        flash(_("Scheduled report deleted: saved view no longer exists."), "success")
+        return redirect(url_for("scheduled_reports.list_scheduled"))
+    
+    # Try to parse config
+    try:
+        config = json.loads(schedule.saved_view.config_json) if isinstance(schedule.saved_view.config_json, str) else schedule.saved_view.config_json
+        if not isinstance(config, dict):
+            # Invalid config - deactivate the schedule
+            schedule.active = False
+            db.session.commit()
+            flash(_("Scheduled report deactivated: invalid configuration."), "warning")
+            return redirect(url_for("scheduled_reports.list_scheduled"))
+    except:
+        # Could not parse config - deactivate
+        schedule.active = False
+        db.session.commit()
+        flash(_("Scheduled report deactivated: could not parse configuration."), "warning")
+        return redirect(url_for("scheduled_reports.list_scheduled"))
+    
+    # If we get here, the schedule is valid - reactivate it
+    schedule.active = True
+    db.session.commit()
+    flash(_("Scheduled report validated and reactivated."), "success")
+    return redirect(url_for("scheduled_reports.list_scheduled"))

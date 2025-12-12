@@ -47,7 +47,11 @@ def gantt_data():
     if project_id:
         query = query.filter_by(id=project_id)
 
-    if not current_user.is_admin:
+    # Check if user has permission to view all projects
+    # Users with view_projects permission can see all projects, otherwise filter by their own
+    has_view_all_projects = current_user.is_admin or current_user.has_permission("view_projects")
+    
+    if not has_view_all_projects:
         # Filter by user's projects or projects they have time entries for
         query = query.filter(
             db.or_(
