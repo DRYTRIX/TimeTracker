@@ -26,6 +26,7 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Name') }}</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Scope') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Features') }}</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Created') }}</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Updated') }}</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Actions') }}</th>
@@ -39,6 +40,15 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs rounded bg-primary/10 text-primary">{{ view.scope|title }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex flex-wrap gap-1">
+                            {% if view.iterative_report_generation %}
+                            <span class="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" title="{{ _('Iterative Report Generation') }}">
+                                <i class="fas fa-sync-alt mr-1"></i>{{ _('Iterative') }}
+                            </span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm">{% if view.created_at %}{{ convert_app_datetime_to_user(view.created_at, user=current_user).strftime('%Y-%m-%d %H:%M') }}{% endif %}</div>

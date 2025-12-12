@@ -12,11 +12,14 @@ kanban_bp = Blueprint("kanban", __name__)
 @kanban_bp.route("/kanban")
 @login_required
 def board():
-    """Kanban board page with optional project filter"""
+    """Kanban board page with optional project and user filters"""
     project_id = request.args.get("project_id", type=int)
+    user_id = request.args.get("user_id", type=int)
     query = Task.query
     if project_id:
         query = query.filter_by(project_id=project_id)
+    if user_id:
+        query = query.filter_by(assigned_to=user_id)
     # Order tasks for stable rendering
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
     # Fresh columns - use project-specific columns if project_id is provided
@@ -34,12 +37,14 @@ def board():
     else:
         columns = []
     # Provide projects for filter dropdown
-    from app.models import Project
+    from app.models import Project, User
 
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    # Provide users for filter dropdown (active users only)
+    users = User.query.filter_by(is_active=True).order_by(User.full_name, User.username).all()
     # No-cache
     response = render_template(
-        "kanban/board.html", tasks=tasks, kanban_columns=columns, projects=projects, project_id=project_id
+        "kanban/board.html", tasks=tasks, kanban_columns=columns, projects=projects, users=users, project_id=project_id, user_id=user_id
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

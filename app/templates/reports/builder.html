@@ -178,6 +178,33 @@
                     <option value="public" {% if saved_view and saved_view.scope == 'public' %}selected{% endif %}>{{ _('Public') }}</option>
                 </select>
             </div>
+            
+            <!-- Iterative Report Generation -->
+            <div class="mb-4 pt-4 border-t border-border-light dark:border-border-dark">
+                <label class="flex items-center cursor-pointer mb-3">
+                    <input type="checkbox" id="iterativeReportGeneration" class="form-checkbox mr-2" {% if saved_view and saved_view.iterative_report_generation %}checked{% endif %}>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <i class="fas fa-sync-alt text-blue-500 mr-1"></i>
+                        {{ _('Iterative Report Generation') }}
+                    </span>
+                </label>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 ml-6">
+                    {{ _('Generate one report per custom field value (e.g., one report per salesman)') }}
+                </p>
+                <div id="iterativeFieldContainer" class="ml-6 {% if not saved_view or not saved_view.iterative_report_generation %}hidden{% endif %}">
+                    <label for="iterativeCustomFieldName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Custom Field Name') }}</label>
+                    <select id="iterativeCustomFieldName" class="form-input">
+                        <option value="">{{ _('Select Field') }}</option>
+                        {% for field_key in custom_field_keys %}
+                        <option value="{{ field_key }}" {% if saved_view and saved_view.iterative_custom_field_name == field_key %}selected{% endif %}>{{ field_key|replace('_', ' ')|title }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {{ _('Select the custom field to iterate over (e.g., "salesman")') }}
+                    </p>
+                </div>
+            </div>
+            
             <div class="flex justify-end gap-4">
                 <button type="button" onclick="closeSaveModal()" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</button>
                 <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">{{ _('Save') }}</button>
@@ -193,10 +220,10 @@ let reportConfig = {
     filters: {}
 };
 
-{% if saved_view and config %}
+{% if saved_view %}
 // Load saved configuration when editing
 (function() {
-    const savedConfig = {{ config|tojson }};
+    const savedConfig = {{ (config or {})|tojson }};
     reportConfig = {
         data_source: savedConfig.data_source || null,
         components: savedConfig.components ? [...savedConfig.components] : [],
@@ -586,6 +613,16 @@ function closeSaveModal() {
     document.getElementById('saveModal').classList.add('hidden');
 }
 
+// Toggle iterative field container based on checkbox
+document.getElementById('iterativeReportGeneration')?.addEventListener('change', function(e) {
+    const container = document.getElementById('iterativeFieldContainer');
+    if (e.target.checked) {
+        container.classList.remove('hidden');
+    } else {
+        container.classList.add('hidden');
+    }
+});
+
 document.getElementById('saveForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -656,7 +693,9 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
                 name: name,
                 scope: scope,
                 config: reportConfig,
-                view_id: {% if saved_view %}{{ saved_view.id }}{% else %}null{% endif %}
+                view_id: {% if saved_view %}{{ saved_view.id }}{% else %}null{% endif %},
+                iterative_report_generation: document.getElementById('iterativeReportGeneration')?.checked || false,
+                iterative_custom_field_name: document.getElementById('iterativeCustomFieldName')?.value || null
             })
         });
         

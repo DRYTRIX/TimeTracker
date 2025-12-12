@@ -43,6 +43,7 @@ def list_tasks():
         overdue=overdue,
         user_id=current_user.id,
         is_admin=current_user.is_admin,
+        has_view_all_tasks=current_user.is_admin or current_user.has_permission("view_all_tasks"),
         page=page,
         per_page=per_page,
     )
@@ -1033,8 +1034,9 @@ def export_tasks():
         today_local = now_in_app_timezone().date()
         query = query.filter(Task.due_date < today_local, Task.status.in_(["todo", "in_progress", "review"]))
 
-    # Show user's tasks first, then others
-    if not current_user.is_admin:
+    # Permission filter - users without view_all_tasks permission only see their tasks
+    has_view_all_tasks = current_user.is_admin or current_user.has_permission("view_all_tasks")
+    if not has_view_all_tasks:
         query = query.filter(db.or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id))
 
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()

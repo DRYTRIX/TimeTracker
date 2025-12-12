@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from app import db
+from sqlalchemy.exc import ProgrammingError
 
 
 class LinkTemplate(db.Model):
@@ -65,8 +66,47 @@ class LinkTemplate(db.Model):
 
     @classmethod
     def get_active_templates(cls, field_key=None):
-        """Get active link templates, optionally filtered by field_key"""
-        query = cls.query.filter_by(is_active=True)
-        if field_key:
-            query = query.filter_by(field_key=field_key)
-        return query.order_by(cls.order, cls.name).all()
+        """Get active link templates, optionally filtered by field_key.
+        
+        Returns empty list if table doesn't exist (migration not run yet).
+        """
+        try:
+            query = cls.query.filter_by(is_active=True)
+            if field_key:
+                query = query.filter_by(field_key=field_key)
+            return query.order_by(cls.order, cls.name).all()
+        except ProgrammingError as e:
+            # Handle case where link_templates table doesn't exist (migration not run)
+            if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
+                try:
+                    from flask import current_app
+                    if current_app:
+                        current_app.logger.warning(
+                            "link_templates table does not exist. Run migration: flask db upgrade"
+                        )
+                except RuntimeError:
+                    pass  # No application context
+                # Rollback the failed transaction and clear session state
+                try:
+                    db.session.rollback()
+                    db.session.expunge_all()  # Clear all objects from session
+                except Exception:
+                    pass
+                return []
+            raise
+        except Exception:
+            # For other database errors, return empty list to prevent breaking the app
+            try:
+                from flask import current_app
+                if current_app:
+                    current_app.logger.warning(
+                        "Could not query link_templates. Returning empty list."
+                    )
+            except RuntimeError:
+                pass  # No application context
+            # Rollback the failed transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return []

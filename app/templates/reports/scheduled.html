@@ -36,9 +36,24 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="font-medium">{{ schedule.saved_view.name if schedule.saved_view else _('Unknown') }}</div>
+                        {% if schedule.split_by_salesman and schedule.salesman_field_name %}
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            <i class="fas fa-sync-alt mr-1"></i>{{ _('Split by') }}: {{ schedule.salesman_field_name }}
+                        </div>
+                        {% endif %}
+                        {% if schedule.email_distribution_mode and schedule.email_distribution_mode != 'single' %}
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            <i class="fas fa-envelope mr-1"></i>{{ _('Distribution') }}: {{ schedule.email_distribution_mode|title }}
+                        </div>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4">
                         <div class="text-sm">{{ schedule.recipients }}</div>
+                        {% if schedule.recipient_email_template %}
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Template') }}: {{ schedule.recipient_email_template }}
+                        </div>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs rounded bg-primary/10 text-primary">{{ schedule.cadence|title }}</span>
@@ -51,19 +66,33 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% if schedule.active %}
+                        {% if not schedule.saved_view %}
+                        <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" title="{{ _('Invalid: saved view not found') }}">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>{{ _('Error') }}
+                        </span>
+                        {% elif schedule.active %}
                         <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
                         {% else %}
                         <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ _('Inactive') }}</span>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <form method="POST" action="{{ url_for('scheduled_reports.delete_scheduled', schedule_id=schedule.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this scheduled report?') }}')">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="text-red-600 hover:text-red-800">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
+                        <div class="flex justify-end gap-2">
+                            {% if not schedule.saved_view %}
+                            <form method="POST" action="{{ url_for('scheduled_reports.fix_scheduled', schedule_id=schedule.id) }}" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-yellow-600 hover:text-yellow-800" title="{{ _('Fix or remove invalid schedule') }}">
+                                    <i class="fas fa-wrench"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('scheduled_reports.delete_scheduled', schedule_id=schedule.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this scheduled report?') }}')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-600 hover:text-red-800" title="{{ _('Delete') }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
