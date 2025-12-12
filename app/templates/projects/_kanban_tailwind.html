@@ -1,9 +1,9 @@
 {# Reusable Kanban board for tasks. Expects `tasks` and `kanban_columns` in context. #}
 
 <div class="kanban-board-wrapper p-4">
-    <div id="kanbanBoard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6" role="list" aria-label="{{ _('Kanban board columns') }}">
+    <div id="kanbanBoard" class="flex flex-row gap-6 overflow-x-auto" role="list" aria-label="{{ _('Kanban board columns') }}">
         {% for col in kanban_columns %}
-        <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm ring-1 ring-border-light/60 dark:ring-border-dark/60 flex flex-col" role="region" aria-labelledby="col-{{ col.key }}-title">
+        <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm ring-1 ring-border-light/60 dark:ring-border-dark/60 flex flex-col flex-1 min-w-[280px] max-w-full" role="region" aria-labelledby="col-{{ col.key }}-title">
             <div class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gradient-to-b from-background-light/60 dark:from-background-dark/40 to-transparent rounded-t-xl">
                 <h3 id="col-{{ col.key }}-title" class="text-base font-semibold flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full" style="background-color: {{ col.color or '#4A90E2' }}"></span>

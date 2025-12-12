@@ -18,6 +18,13 @@
             <option value="{{ p.id }}" {% if project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
             {% endfor %}
         </select>
+        <label for="user_id" class="text-sm text-text-muted-light dark:text-text-muted-dark ml-2">{{ _('Assigned To') }}</label>
+        <select id="user_id" name="user_id" class="bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 px-3 text-sm text-text-light dark:text-text-dark" onchange="this.form.submit()">
+            <option value="">{{ _('All') }}</option>
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if user_id == u.id %}selected{% endif %}>{{ u.display_name }}</option>
+            {% endfor %}
+        </select>
     </form>
     {% if current_user.is_admin %}
     <a href="{{ url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition-colors">
