@@ -94,6 +94,10 @@ def save_report_view():
         if not isinstance(config, dict):
             return jsonify({"success": False, "message": "Config must be a dictionary"}), 400
 
+        # Extract iterative report generation settings
+        iterative_report_generation = data.get("iterative_report_generation", False)
+        iterative_custom_field_name = data.get("iterative_custom_field_name", "").strip() or None
+        
         # If view_id is provided, update existing report
         if view_id:
             existing = SavedReportView.query.get(view_id)
@@ -108,6 +112,8 @@ def save_report_view():
             existing.name = name
             existing.config_json = json.dumps(config)
             existing.scope = scope
+            existing.iterative_report_generation = iterative_report_generation
+            existing.iterative_custom_field_name = iterative_custom_field_name
             existing.updated_at = datetime.utcnow()
             saved_view = existing
             action = "updated"
@@ -124,7 +130,12 @@ def save_report_view():
             else:
                 # Create new
                 saved_view = SavedReportView(
-                    name=name, owner_id=current_user.id, scope=scope, config_json=json.dumps(config)
+                    name=name,
+                    owner_id=current_user.id,
+                    scope=scope,
+                    config_json=json.dumps(config),
+                    iterative_report_generation=iterative_report_generation,
+                    iterative_custom_field_name=iterative_custom_field_name,
                 )
                 db.session.add(saved_view)
                 action = "created"
@@ -152,7 +163,7 @@ def save_report_view():
 @custom_reports_bp.route("/reports/builder/<int:view_id>")
 @login_required
 def view_custom_report(view_id):
-    """View a custom report."""
+    """View a custom report. Supports iterative generation if enabled."""
     saved_view = SavedReportView.query.get_or_404(view_id)
 
     # Check access
@@ -166,7 +177,12 @@ def view_custom_report(view_id):
     except:
         config = {}
 
-    # Generate report data based on config
+    # Check if iterative report generation is enabled
+    if saved_view.iterative_report_generation and saved_view.iterative_custom_field_name:
+        # Generate reports for each custom field value
+        return _generate_iterative_reports(saved_view, config, current_user.id)
+    
+    # Generate single report data based on config
     report_data = generate_report_data(config, current_user.id)
 
     return render_template("reports/custom_view.html", saved_view=saved_view, config=config, report_data=report_data)
@@ -403,6 +419,46 @@ def list_saved_views():
     return render_template("reports/saved_views_list.html", saved_views=saved_views, convert_app_datetime_to_user=convert_app_datetime_to_user)
 
 
+@custom_reports_bp.route("/reports/builder/<int:view_id>/edit", methods=["GET"])
+@login_required
+def edit_saved_view(view_id):
+    """Edit a saved report view - redirects to builder with view_id."""
+    saved_view = SavedReportView.query.get_or_404(view_id)
+    
+    # Check permission
+    if saved_view.owner_id != current_user.id and saved_view.scope == "private":
+        flash(_("You do not have permission to edit this report."), "error")
+        return redirect(url_for("custom_reports.list_saved_views"))
+    
+    # Redirect to builder with edit mode
+    return redirect(url_for("custom_reports.report_builder", view_id=view_id))
+
+
+@custom_reports_bp.route("/api/reports/builder/custom-field-values", methods=["GET"])
+@login_required
+def get_custom_field_values():
+    """Get unique values for a custom field from clients."""
+    custom_field_name = request.args.get("field_name")
+    if not custom_field_name:
+        return jsonify({"success": False, "message": "field_name parameter is required"}), 400
+    
+    # Get all active clients
+    clients = Client.query.filter_by(status="active").all()
+    unique_values = set()
+    
+    for client in clients:
+        if client.custom_fields and custom_field_name in client.custom_fields:
+            value = client.custom_fields[custom_field_name]
+            if value:
+                unique_values.add(str(value).strip())
+    
+    return jsonify({
+        "success": True,
+        "field_name": custom_field_name,
+        "values": sorted(list(unique_values))
+    })
+
+
 @custom_reports_bp.route("/reports/builder/<int:view_id>/delete", methods=["POST"])
 @login_required
 def delete_saved_view(view_id):
@@ -430,3 +486,87 @@ def delete_saved_view(view_id):
         flash(_("Could not delete report view due to a database error"), "error")
     
     return redirect(url_for("custom_reports.list_saved_views"))
+
+
+def _generate_iterative_reports(saved_view: SavedReportView, config: dict, user_id: int):
+    """
+    Generate multiple reports, one per custom field value.
+    
+    Returns a template with all reports grouped by custom field value.
+    """
+    from app.models import Client, TimeEntry
+    from flask import render_template
+    
+    custom_field_name = saved_view.iterative_custom_field_name
+    
+    # Get date range from config
+    filters = config.get("filters", {})
+    start_date = filters.get("start_date")
+    end_date = filters.get("end_date")
+    
+    try:
+        if start_date and isinstance(start_date, str) and start_date.strip():
+            start_dt = datetime.strptime(start_date.strip(), "%Y-%m-%d")
+        else:
+            start_dt = datetime.utcnow() - timedelta(days=30)
+    except (ValueError, AttributeError):
+        start_dt = datetime.utcnow() - timedelta(days=30)
+    
+    try:
+        if end_date and isinstance(end_date, str) and end_date.strip():
+            end_dt = datetime.strptime(end_date.strip(), "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+        else:
+            end_dt = datetime.utcnow()
+    except (ValueError, AttributeError):
+        end_dt = datetime.utcnow()
+    
+    # Get all unique values for the custom field
+    clients = Client.query.filter_by(status="active").all()
+    unique_values = set()
+    
+    # Collect unique values from clients
+    for client in clients:
+        if client.custom_fields and custom_field_name in client.custom_fields:
+            value = client.custom_fields[custom_field_name]
+            if value:
+                unique_values.add(str(value).strip())
+    
+    # Also check from time entries in the date range
+    time_entries = TimeEntry.query.filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt
+    ).all()
+    
+    for entry in time_entries:
+        client = None
+        if entry.project and entry.project.client_obj:
+            client = entry.project.client_obj
+        elif entry.client:
+            client = entry.client
+        
+        if client and client.custom_fields and custom_field_name in client.custom_fields:
+            value = client.custom_fields[custom_field_name]
+            if value:
+                unique_values.add(str(value).strip())
+    
+    # Generate report for each value
+    iterative_reports = {}
+    for field_value in sorted(unique_values):
+        # Create modified config with custom field filter
+        modified_config = config.copy()
+        if "filters" not in modified_config:
+            modified_config["filters"] = {}
+        modified_config["filters"]["custom_field_filter"] = {custom_field_name: field_value}
+        
+        # Generate report data
+        report_data = generate_report_data(modified_config, user_id)
+        iterative_reports[field_value] = report_data
+    
+    return render_template(
+        "reports/iterative_view.html",
+        saved_view=saved_view,
+        config=config,
+        iterative_reports=iterative_reports,
+        custom_field_name=custom_field_name,
+    )

@@ -36,6 +36,8 @@ class ScheduledReportService:
         timezone: Optional[str] = None,
         split_by_custom_field: bool = False,
         custom_field_name: Optional[str] = None,
+        email_distribution_mode: Optional[str] = None,
+        recipient_email_template: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a scheduled report.
@@ -71,6 +73,8 @@ class ScheduledReportService:
                 created_by=created_by,
                 split_by_salesman=split_by_custom_field,  # Reuse existing field
                 salesman_field_name=custom_field_name,  # Reuse existing field
+                email_distribution_mode=email_distribution_mode or ("single" if not split_by_custom_field else None),
+                recipient_email_template=recipient_email_template,
             )
 
             db.session.add(schedule)
@@ -114,6 +118,11 @@ class ScheduledReportService:
             # Check if we should split by custom field
             if schedule.split_by_salesman and schedule.salesman_field_name:
                 return self._generate_and_send_custom_field_reports(schedule, saved_view, config)
+            
+            # Validate config before proceeding
+            if not isinstance(config, dict):
+                logger.error(f"Invalid config for schedule {schedule_id}: config is not a dict")
+                return {"success": False, "message": "Invalid report configuration. Please check the saved report view."}
             
             # Generate report data based on config
             report_data = self._generate_report_data(saved_view, config)
@@ -434,8 +443,13 @@ class ScheduledReportService:
                     html_body = None
                     text_body = f"Scheduled Report: {saved_view.name} - {custom_field_name}={field_value}\n\nGenerated at: {now_in_app_timezone()}\n\nReport data available in HTML version."
                 
-                # Send email to all recipients
-                for recipient in recipients:
+                # Determine recipient(s) based on distribution mode
+                report_recipients = self._get_recipients_for_field_value(
+                    schedule, field_value, recipients
+                )
+                
+                # Send email to determined recipients
+                for recipient in report_recipients:
                     try:
                         send_email(
                             subject=f"Scheduled Report: {saved_view.name} - {custom_field_name}={field_value}",
@@ -467,5 +481,50 @@ class ScheduledReportService:
             }
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error generating and sending custom field reports: {e}")
+            logger.error(f"Error generating and sending custom field reports: {e}", exc_info=True)
             return {"success": False, "message": f"Error generating reports: {str(e)}"}
+    
+    def _get_recipients_for_field_value(
+        self, schedule: ReportEmailSchedule, field_value: str, default_recipients: List[str]
+    ) -> List[str]:
+        """
+        Get recipient email addresses for a specific custom field value.
+        
+        Supports three modes:
+        - 'mapping': Use SalesmanEmailMapping table
+        - 'template': Use recipient_email_template with {value} placeholder
+        - 'single': Use default recipients (fallback)
+        
+        Args:
+            schedule: ReportEmailSchedule object
+            field_value: The custom field value (e.g., 'MM', 'PB')
+            default_recipients: Fallback recipients if mapping/template fails
+            
+        Returns:
+            List of email addresses
+        """
+        distribution_mode = schedule.email_distribution_mode or "single"
+        
+        if distribution_mode == "mapping":
+            # Use SalesmanEmailMapping
+            from app.models import SalesmanEmailMapping
+            email = SalesmanEmailMapping.get_email_for_initial(field_value)
+            if email:
+                return [email]
+            else:
+                logger.warning(f"No email mapping found for {field_value}, using default recipients")
+                return default_recipients
+        
+        elif distribution_mode == "template":
+            # Use email template
+            template = schedule.recipient_email_template
+            if template and "{value}" in template:
+                email = template.replace("{value}", field_value)
+                return [email]
+            else:
+                logger.warning(f"Invalid email template '{template}', using default recipients")
+                return default_recipients
+        
+        else:
+            # Single mode: use default recipients
+            return default_recipients
