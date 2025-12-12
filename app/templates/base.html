@@ -1494,36 +1494,52 @@
                 
                 // Show install button in UI
                 if (window.toastManager) {
-                    const toast = window.toastManager.info('Install TimeTracker as an app!', 0);
-                    const btn = document.createElement('button');
-                    btn.textContent = 'Install';
-                    btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
-                    btn.onclick = async () => {
-                        if (!deferredPrompt) return;
-                        deferredPrompt.prompt();
-                        const { outcome } = await deferredPrompt.userChoice;
-                        if (outcome === 'accepted') {
-                            window.toastManager.success('App installed successfully!');
+                    // Create a non-dismissible toast so we can add custom buttons
+                    const toastId = window.toastManager.show({
+                        message: 'Install TimeTracker as an app!',
+                        type: 'info',
+                        duration: 0,
+                        dismissible: false
+                    });
+                    // Get the toast element after it's added to DOM
+                    requestAnimationFrame(() => {
+                        const toastElement = document.querySelector(`[data-toast-id="${toastId}"]`);
+                        if (toastElement) {
+                            const btn = document.createElement('button');
+                            btn.textContent = 'Install';
+                            btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
+                            btn.onclick = async () => {
+                                if (!deferredPrompt) return;
+                                deferredPrompt.prompt();
+                                const { outcome } = await deferredPrompt.userChoice;
+                                if (outcome === 'accepted') {
+                                    window.toastManager.success('App installed successfully!');
+                                }
+                                // Always mark as dismissed after user interaction
+                                localStorage.setItem('pwa-install-dismissed', 'true');
+                                deferredPrompt = null;
+                                window.toastManager.dismiss(toastId);
+                            };
+                            
+                            // Add a dismiss button
+                            const dismissBtn = document.createElement('button');
+                            dismissBtn.textContent = '×';
+                            dismissBtn.className = 'ml-2 px-2 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded';
+                            dismissBtn.title = 'Dismiss permanently';
+                            dismissBtn.onclick = () => {
+                                localStorage.setItem('pwa-install-dismissed', 'true');
+                                deferredPrompt = null;
+                                window.toastManager.dismiss(toastId);
+                            };
+                            
+                            // Insert buttons in the toast content area
+                            const content = toastElement.querySelector('.toast-content');
+                            if (content) {
+                                content.appendChild(btn);
+                                content.appendChild(dismissBtn);
+                            }
                         }
-                        // Always mark as dismissed after user interaction
-                        localStorage.setItem('pwa-install-dismissed', 'true');
-                        deferredPrompt = null;
-                        toast.remove();
-                    };
-                    
-                    // Add a dismiss button
-                    const dismissBtn = document.createElement('button');
-                    dismissBtn.textContent = '×';
-                    dismissBtn.className = 'ml-2 px-2 py-1 text-white hover:bg-white/20 rounded';
-                    dismissBtn.title = 'Dismiss permanently';
-                    dismissBtn.onclick = () => {
-                        localStorage.setItem('pwa-install-dismissed', 'true');
-                        deferredPrompt = null;
-                        toast.remove();
-                    };
-                    
-                    toast.appendChild(btn);
-                    toast.appendChild(dismissBtn);
+                    });
                 }
             });
             
