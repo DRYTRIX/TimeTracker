@@ -179,6 +179,7 @@ class TaskService:
         overdue: bool = False,
         user_id: Optional[int] = None,
         is_admin: bool = False,
+        has_view_all_tasks: bool = False,
         page: int = 1,
         per_page: int = 20,
     ) -> Dict[str, Any]:
@@ -229,8 +230,8 @@ class TaskService:
             today_local = now_in_app_timezone().date()
             query = query.filter(Task.due_date < today_local, Task.status.in_(["todo", "in_progress", "review"]))
 
-        # Permission filter - non-admins only see their tasks
-        if not is_admin and user_id:
+        # Permission filter - users without view_all_tasks permission only see their tasks
+        if not has_view_all_tasks and user_id:
             query = query.filter(db.or_(Task.assigned_to == user_id, Task.created_by == user_id))
         logger.debug(f"[TaskService.list_tasks] Step 3: Applying filters took {(time.time() - step_start) * 1000:.2f}ms")
 

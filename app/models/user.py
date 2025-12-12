@@ -149,6 +149,12 @@ class User(UserMixin, db.Model):
         return any(role.name in ["admin", "super_admin"] for role in self.roles)
 
     @property
+    def is_super_admin(self):
+        """Check if user is a super admin"""
+        # Check if user has super_admin role
+        return any(role.name == "super_admin" for role in self.roles)
+
+    @property
     def active_timer(self):
         """Get the user's currently active timer"""
         from .time_entry import TimeEntry

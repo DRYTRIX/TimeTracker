@@ -218,18 +218,43 @@ def manage_user_roles(user_id):
         # Get selected role IDs
         role_ids = request.form.getlist("roles")
 
+        # Validate role assignments - only super_admins can assign super_admin roles
+        # and only super_admins can remove admin roles
+        is_super_admin = current_user.is_super_admin
+        selected_roles = [Role.query.get(int(role_id)) for role_id in role_ids if role_id]
+        selected_roles = [r for r in selected_roles if r]  # Remove None values
+        
+        # Check if trying to assign super_admin role
+        has_super_admin = any(r.name == "super_admin" for r in selected_roles)
+        if has_super_admin and not is_super_admin:
+            flash(_("Only Super Admins can assign the super_admin role"), "error")
+            all_roles = Role.query.order_by(Role.name).all()
+            return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
+        
+        # Check if trying to remove admin role from self
+        current_has_admin = any(r.name == "admin" for r in user.roles)
+        new_has_admin = any(r.name == "admin" for r in selected_roles)
+        if current_has_admin and not new_has_admin and user.id == current_user.id and not is_super_admin:
+            flash(_("Only Super Admins can remove the admin role from themselves"), "error")
+            all_roles = Role.query.order_by(Role.name).all()
+            return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
+        
+        # Check if trying to remove admin role from another user
+        if current_has_admin and not new_has_admin and user.id != current_user.id and not is_super_admin:
+            flash(_("Only Super Admins can remove the admin role from other users"), "error")
+            all_roles = Role.query.order_by(Role.name).all()
+            return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
+
         # Clear current roles
         user.roles = []
 
         # Assign selected roles
         primary_role_name = None
-        for role_id in role_ids:
-            role = Role.query.get(int(role_id))
-            if role:
-                user.add_role(role)
-                # Use the first role as the primary role for backward compatibility
-                if primary_role_name is None:
-                    primary_role_name = role.name
+        for role in selected_roles:
+            user.add_role(role)
+            # Use the first role as the primary role for backward compatibility
+            if primary_role_name is None:
+                primary_role_name = role.name
 
         # Update legacy role field for backward compatibility
         # This ensures the old role field stays in sync with the new role system
