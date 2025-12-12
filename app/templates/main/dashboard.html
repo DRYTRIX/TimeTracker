@@ -337,9 +337,24 @@
                     </div>
                     <div>
                         <label for="startTimerTask" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task (optional)') }}</label>
-                        <select id="startTimerTask" name="task_id" class="form-input">
-                            <option value="">—</option>
-                        </select>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="startTimerTask" 
+                                name="task_name" 
+                                list="startTimerTaskList" 
+                                autocomplete="off"
+                                class="form-input w-full"
+                                placeholder="{{ _('Select existing task or type new task name') }}"
+                            />
+                            <input type="hidden" id="startTimerTaskId" name="task_id" value="" />
+                            <datalist id="startTimerTaskList">
+                                <!-- Options will be populated dynamically via JavaScript -->
+                            </datalist>
+                        </div>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Select an existing task or type a new task name to create it') }}
+                        </p>
                     </div>
                     <div>
                         <label for="startTimerNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes (optional)') }}</label>
@@ -415,32 +430,84 @@
 
             const projectSelect = document.getElementById('startTimerProject');
             const clientSelect = document.getElementById('startTimerClient');
-            const taskSelect = document.getElementById('startTimerTask');
+            const taskInput = document.getElementById('startTimerTask');
+            const taskInputId = document.getElementById('startTimerTaskId');
+            const taskDatalist = document.getElementById('startTimerTaskList');
+            let availableTasks = []; // Store tasks for matching
 
-            async function loadTasksForProject(pid) {
-                if (!taskSelect) return;
-                taskSelect.innerHTML = '<option value="">—</option>';
+            async function loadTasksForProject(pid, preserveTaskId = false) {
+                if (!taskInput || !taskDatalist) return;
+                
+                // Preserve current task_id if requested
+                const preservedTaskId = preserveTaskId && taskInputId ? taskInputId.value : null;
+                const preservedTaskName = preserveTaskId && taskInput ? taskInput.value : null;
+                
+                // Clear datalist and task input
+                taskDatalist.innerHTML = '';
+                taskInput.value = '';
+                taskInputId.value = '';
+                availableTasks = [];
+                
                 if (!pid) {
-                    taskSelect.disabled = false;
+                    taskInput.disabled = false;
                     return;
                 }
+                
                 try {
                     const res = await fetch(`/api/projects/${pid}/tasks`, { credentials: 'same-origin' });
                     const data = await res.json();
                     if (data && data.tasks) {
+                        availableTasks = data.tasks;
                         data.tasks.forEach(t => {
                             const opt = document.createElement('option');
-                            opt.value = t.id; opt.textContent = t.name; taskSelect.appendChild(opt);
+                            opt.value = t.name;
+                            opt.dataset.taskId = t.id;
+                            taskDatalist.appendChild(opt);
                         });
                     }
-                    taskSelect.disabled = false;
+                    
+                    // Restore preserved values if requested
+                    if (preserveTaskId && preservedTaskId) {
+                        taskInputId.value = preservedTaskId;
+                        if (preservedTaskName) {
+                            taskInput.value = preservedTaskName;
+                        }
+                    }
+                    
+                    taskInput.disabled = false;
                 } catch (err) {
                     console.error('Failed to load tasks', err);
-                    taskSelect.disabled = true;
+                    taskInput.disabled = true;
                 }
             }
 
-            if (projectSelect && clientSelect && taskSelect) {
+            // Handle task input change to detect selection vs typing
+            if (taskInput) {
+                taskInput.addEventListener('input', () => {
+                    const inputValue = taskInput.value.trim();
+                    // Try to find matching task
+                    const matchedTask = availableTasks.find(t => t.name === inputValue);
+                    if (matchedTask) {
+                        taskInputId.value = matchedTask.id;
+                    } else {
+                        // Clear task_id if no match (new task name)
+                        taskInputId.value = '';
+                    }
+                });
+                
+                // Also handle selection from datalist
+                taskInput.addEventListener('change', () => {
+                    const inputValue = taskInput.value.trim();
+                    const matchedTask = availableTasks.find(t => t.name === inputValue);
+                    if (matchedTask) {
+                        taskInputId.value = matchedTask.id;
+                    } else {
+                        taskInputId.value = '';
+                    }
+                });
+            }
+
+            if (projectSelect && clientSelect && taskInput) {
                 projectSelect.addEventListener('change', () => {
                     const pid = projectSelect.value;
                     if (pid) {
@@ -453,10 +520,13 @@
                     const cid = clientSelect.value;
                     if (cid) {
                         projectSelect.value = '';
-                        taskSelect.innerHTML = '<option value="">—</option>';
-                        taskSelect.disabled = true;
+                        taskInput.value = '';
+                        taskInputId.value = '';
+                        taskDatalist.innerHTML = '';
+                        availableTasks = [];
+                        taskInput.disabled = true;
                     } else {
-                        taskSelect.disabled = false;
+                        taskInput.disabled = false;
                     }
                 });
             }
@@ -468,34 +538,109 @@
                 const submitBtn = startTimerForm.querySelector('button[type="submit"]');
                 let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
                 
-                startTimerForm.addEventListener('submit', function(e) {
+                startTimerForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
                     // Validate project or client selection
                     const projectVal = projectSelect ? projectSelect.value : '';
                     const clientVal = clientSelect ? clientSelect.value : '';
                     if (!projectVal && !clientVal) {
-                        e.preventDefault();
-                        e.stopImmediatePropagation(); // Stop other handlers from running
-                        
-                        // Ensure button state is preserved
-                        if (submitBtn && originalButtonHTML) {
-                            submitBtn.innerHTML = originalButtonHTML;
-                            submitBtn.disabled = false;
-                        }
-                        
-                        // Show error message using toast notification
                         const errorMsg = '{{ _("Please select either a project or a client") }}';
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
                             window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
                         } else {
                             alert(errorMsg);
                         }
-                        // After showing error, ensure button is still in correct state
-                        if (submitBtn && originalButtonHTML) {
-                            submitBtn.innerHTML = originalButtonHTML;
-                            submitBtn.disabled = false;
-                        }
                         return false;
                     }
+                    
+                    // Handle new task creation if needed
+                    const taskName = taskInput ? taskInput.value.trim() : '';
+                    const taskId = taskInputId ? taskInputId.value : '';
+                    
+                    // If task name is provided but no task_id, create the task first
+                    if (taskName && !taskId && projectVal) {
+                        try {
+                            // Disable submit button
+                            if (submitBtn) {
+                                submitBtn.disabled = true;
+                                if (originalButtonHTML) {
+                                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Creating task...") }}';
+                                }
+                            }
+                            
+                            // Create task via AJAX
+                            const csrfToken = startTimerForm.querySelector('input[name="csrf_token"]')?.value;
+                            const createTaskRes = await fetch('/api/tasks/create', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRFToken': csrfToken || ''
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({
+                                    name: taskName,
+                                    project_id: parseInt(projectVal)
+                                })
+                            });
+                            
+                            if (!createTaskRes.ok) {
+                                const errorData = await createTaskRes.json().catch(() => ({}));
+                                throw new Error(errorData.error || 'Failed to create task');
+                            }
+                            
+                            const taskData = await createTaskRes.json();
+                            // Set the task_id in the hidden field BEFORE reloading
+                            if (taskInputId && taskData.id) {
+                                taskInputId.value = taskData.id;
+                                // Also update the input to show the created task name
+                                if (taskInput) {
+                                    taskInput.value = taskData.name;
+                                }
+                            }
+                            
+                            // Reload tasks list to include the new task, preserving the task_id
+                            await loadTasksForProject(projectVal, preserveTaskId=true);
+                            
+                        } catch (error) {
+                            console.error('Failed to create task:', error);
+                            const errorMsg = '{{ _("Failed to create task: ") }}' + (error.message || error);
+                            if (window.toastManager && typeof window.toastManager.error === 'function') {
+                                window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+                            } else {
+                                alert(errorMsg);
+                            }
+                            // Restore button state
+                            if (submitBtn && originalButtonHTML) {
+                                submitBtn.innerHTML = originalButtonHTML;
+                                submitBtn.disabled = false;
+                            }
+                            return false;
+                        }
+                    }
+                    
+                    // Ensure task_id is set if we have a task name that matches an existing task
+                    if (taskName && !taskInputId.value) {
+                        const matchedTask = availableTasks.find(t => t.name === taskName);
+                        if (matchedTask && taskInputId) {
+                            taskInputId.value = matchedTask.id;
+                        }
+                    }
+                    
+                    // Restore button state
+                    if (submitBtn && originalButtonHTML) {
+                        submitBtn.innerHTML = originalButtonHTML;
+                        submitBtn.disabled = false;
+                    }
+                    
+                    // Debug: Log form data before submission
+                    if (taskInputId && taskInputId.value) {
+                        console.log('Submitting form with task_id:', taskInputId.value);
+                    }
+                    
+                    // Now submit the form normally
+                    startTimerForm.submit();
                 }, true); // Use capture phase to run before other handlers
             }
         }
@@ -511,10 +656,11 @@
                 
                 // Get form elements (re-select to avoid scope issues)
                 const projectSelect = document.getElementById('startTimerProject');
-                const taskSelect = document.getElementById('startTimerTask');
+                const taskInput = document.getElementById('startTimerTask');
+                const taskInputId = document.getElementById('startTimerTaskId');
                 const notesField = document.getElementById('startTimerNotes');
                 
-                if (!projectSelect || !taskSelect || !notesField) {
+                if (!projectSelect || !taskInput || !notesField) {
                     throw new Error('Form elements not found');
                 }
                 
@@ -526,8 +672,18 @@
                     
                     // Wait a bit for tasks to load, then select task
                     setTimeout(() => {
-                        if (template.task_id) {
-                            taskSelect.value = template.task_id;
+                        if (template.task_id && taskInputId) {
+                            taskInputId.value = template.task_id;
+                            // Find task name from loaded tasks
+                            const taskDatalist = document.getElementById('startTimerTaskList');
+                            if (taskDatalist) {
+                                const matchingOption = Array.from(taskDatalist.options).find(
+                                    opt => opt.dataset.taskId === String(template.task_id)
+                                );
+                                if (matchingOption) {
+                                    taskInput.value = matchingOption.value;
+                                }
+                            }
                         }
                     }, 300);
                 }

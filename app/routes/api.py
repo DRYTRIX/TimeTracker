@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app, send_from_directory, make_response
 from flask_login import login_required, current_user
+from flask_babel import gettext as _
 from app import db, socketio
 from app.models import (
     User,
@@ -1218,6 +1219,118 @@ def get_project_tasks(project_id):
             ],
         }
     )
+
+
+@api_bp.route("/api/tasks/create", methods=["POST"])
+@login_required
+def create_task_inline():
+    """Create a new task via AJAX with default values"""
+    # Detect AJAX/JSON request
+    try:
+        is_classic_form = request.mimetype in ("application/x-www-form-urlencoded", "multipart/form-data")
+    except Exception:
+        is_classic_form = False
+
+    try:
+        wants_json = (
+            request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or request.is_json
+            or (
+                not is_classic_form
+                and (request.accept_mimetypes["application/json"] > request.accept_mimetypes["text/html"])
+            )
+        )
+    except Exception:
+        wants_json = False
+
+    if request.method == "POST":
+        # Get data from JSON or form
+        if request.is_json:
+            data = request.get_json()
+            name = data.get("name", "").strip()
+            project_id = data.get("project_id")
+            if project_id is not None:
+                project_id = int(project_id)
+        else:
+            name = request.form.get("name", "").strip()
+            project_id = request.form.get("project_id", type=int)
+
+        # Validate required fields
+        if not name or not project_id:
+            if wants_json:
+                return jsonify({"error": "name and project_id are required"}), 400
+            from flask import flash, redirect, url_for
+            flash(_("Task name and project are required"), "error")
+            return redirect(url_for("tasks.list_tasks"))
+
+        # Validate project exists and is active
+        project = Project.query.filter_by(id=project_id, status="active").first()
+        if not project:
+            if wants_json:
+                return jsonify({"error": "Project not found or inactive"}), 404
+            from flask import flash, redirect, url_for
+            flash(_("Selected project does not exist or is inactive"), "error")
+            return redirect(url_for("tasks.list_tasks"))
+
+        # Create task with defaults using TaskService
+        from app.services import TaskService
+
+        task_service = TaskService()
+        result = task_service.create_task(
+            name=name,
+            project_id=project_id,
+            created_by=current_user.id,
+            assignee_id=current_user.id,  # Assign to current user
+            priority="medium",  # Default priority
+            due_date=None,  # No due date
+            description=None,
+            estimated_hours=None,
+        )
+
+        if not result["success"]:
+            if wants_json:
+                return jsonify({"error": result.get("message", "Failed to create task")}), 400
+            from flask import flash, redirect, url_for
+            flash(_(result["message"]), "error")
+            return redirect(url_for("tasks.list_tasks"))
+
+        task = result["task"]
+
+        # Log task creation
+        from app.models import Activity
+        from app import log_event, track_event
+
+        log_event(
+            "task.created",
+            user_id=current_user.id,
+            task_id=task.id,
+            project_id=project_id,
+            priority="medium",
+        )
+        track_event(
+            current_user.id, "task.created", {"task_id": task.id, "project_id": project_id, "priority": "medium"}
+        )
+
+        Activity.log(
+            user_id=current_user.id,
+            action="created",
+            entity_type="task",
+            entity_id=task.id,
+            entity_name=task.name,
+            description=f'Created task "{task.name}" in project "{project.name}"',
+            extra_data={"project_id": project_id, "priority": "medium"},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+
+        if wants_json:
+            return jsonify({"success": True, "id": task.id, "name": task.name, "task": task.to_dict()}), 201
+        from flask import flash, redirect, url_for
+        flash(_('Task "%(name)s" created successfully', name=name), "success")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+
+    # GET request - redirect to task list
+    return redirect(url_for("tasks.list_tasks"))
 
 
 # Fetch a single time entry (details for edit modal)
