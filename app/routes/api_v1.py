@@ -133,10 +133,17 @@ def api_info():
             documentation_url:
               type: string
     """
+    # Get app version from setup.py (single source of truth)
+    from app.config.analytics_defaults import get_version_from_setup
+    app_version = get_version_from_setup()
+    if app_version == "unknown":
+        # Fallback to config or default
+        app_version = current_app.config.get("APP_VERSION", "1.0.0")
+    
     return jsonify(
         {
             "api_version": "v1",
-            "app_version": current_app.config.get("APP_VERSION", "1.0.0"),
+            "app_version": app_version,
             "documentation_url": "/api/docs",
             "authentication": "API Token (Bearer or X-API-Key header)",
             "endpoints": {
