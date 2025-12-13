@@ -29,7 +29,7 @@ SENTRY_TRACES_RATE_DEFAULT = "0.1"
 TELE_ENABLED_DEFAULT = "false"  # Disabled by default for privacy
 
 
-def _get_version_from_setup():
+def get_version_from_setup():
     """
     Get the application version from setup.py.
 
@@ -37,32 +37,75 @@ def _get_version_from_setup():
     This function reads setup.py at runtime to get the current version.
     All other code should reference this function, not define versions themselves.
 
+    This function tries multiple paths to find setup.py to work correctly
+    in both production and development modes.
+
     Returns:
-        str: Application version (e.g., "3.1.0") or "unknown" if setup.py can't be read
+        str: Application version (e.g., "4.5.0") or "unknown" if setup.py can't be read
     """
     import os
     import re
 
+    # Try multiple possible paths to setup.py
+    possible_paths = []
+    
+    # Path 1: Relative to this file (app/config/analytics_defaults.py -> setup.py)
     try:
-        # Get path to setup.py (root of project)
-        setup_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "setup.py")
-
-        # Read setup.py
-        with open(setup_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        # Extract version using regex
-        # Matches: version='X.Y.Z' or version="X.Y.Z"
-        version_match = re.search(r'version\s*=\s*[\'"]([^\'"]+)[\'"]', content)
-
-        if version_match:
-            return version_match.group(1)
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        possible_paths.append(os.path.join(base_path, "setup.py"))
     except Exception:
         pass
+    
+    # Path 2: Current working directory
+    try:
+        possible_paths.append(os.path.join(os.getcwd(), "setup.py"))
+    except Exception:
+        pass
+    
+    # Path 3: From environment variable (if set)
+    try:
+        project_root = os.getenv("PROJECT_ROOT") or os.getenv("APP_ROOT")
+        if project_root:
+            possible_paths.append(os.path.join(project_root, "setup.py"))
+    except Exception:
+        pass
+    
+    # Path 4: Try to find setup.py by walking up from current file
+    try:
+        current = os.path.dirname(__file__)
+        for _ in range(5):  # Max 5 levels up
+            current = os.path.dirname(current)
+            setup_path = os.path.join(current, "setup.py")
+            if os.path.exists(setup_path):
+                possible_paths.append(setup_path)
+                break
+    except Exception:
+        pass
+
+    # Try each path until we find setup.py
+    for setup_path in possible_paths:
+        try:
+            if os.path.exists(setup_path):
+                # Read setup.py
+                with open(setup_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                # Extract version using regex
+                # Matches: version='X.Y.Z' or version="X.Y.Z"
+                version_match = re.search(r'version\s*=\s*[\'"]([^\'"]+)[\'"]', content)
+
+                if version_match:
+                    return version_match.group(1)
+        except Exception:
+            continue
 
     # Fallback version if setup.py can't be read
     # This is the ONLY place besides setup.py where version is defined
     return "unknown"
+
+
+# Keep the old function name for backward compatibility
+_get_version_from_setup = get_version_from_setup
 
 
 def get_analytics_config():
@@ -92,7 +135,7 @@ def get_analytics_config():
     sentry_dsn = SENTRY_DSN_DEFAULT if not is_placeholder(SENTRY_DSN_DEFAULT) else ""
 
     # App version - read from setup.py at runtime
-    app_version = _get_version_from_setup()
+    app_version = get_version_from_setup()
 
     # Note: Environment variables are NOT checked for keys to prevent override
     # Users control telemetry via the opt-in/opt-out toggle in admin dashboard

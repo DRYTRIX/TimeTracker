@@ -204,7 +204,13 @@ class TaskService:
 
         step_start = time.time()
         # Eagerly load relations to prevent N+1
-        query = query.options(joinedload(Task.project), joinedload(Task.assigned_user), joinedload(Task.creator))
+        # Use selectinload for better performance with many tasks (avoids cartesian product)
+        from sqlalchemy.orm import selectinload
+        query = query.options(
+            selectinload(Task.project),
+            selectinload(Task.assigned_user),
+            selectinload(Task.creator)
+        )
         logger.debug(f"[TaskService.list_tasks] Step 2: Eager loading setup took {(time.time() - step_start) * 1000:.2f}ms")
 
         step_start = time.time()
@@ -241,8 +247,53 @@ class TaskService:
         logger.debug(f"[TaskService.list_tasks] Step 4: Ordering query took {(time.time() - step_start) * 1000:.2f}ms")
 
         step_start = time.time()
-        # Paginate (always use pagination for performance)
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        # Optimize pagination: fetch one extra item to check for next page without full count
+        offset = (page - 1) * per_page
+        tasks_with_extra = query.limit(per_page + 1).offset(offset).all()
+        
+        # Check if there's a next page
+        has_next = len(tasks_with_extra) > per_page
+        tasks = tasks_with_extra[:per_page]  # Remove extra item if present
+        
+        # For count, use a simpler query without joins (much faster)
+        # Only count if we're on first page or we detected a next page
+        if page == 1 or has_next:
+            count_start = time.time()
+            count_query = self.task_repo.query()
+            # Apply same filters but without eager loading (faster)
+            if status:
+                count_query = count_query.filter(Task.status == status)
+            if priority:
+                count_query = count_query.filter(Task.priority == priority)
+            if project_id:
+                count_query = count_query.filter(Task.project_id == project_id)
+            if assigned_to:
+                count_query = count_query.filter(Task.assigned_to == assigned_to)
+            if search:
+                like = f"%{search}%"
+                count_query = count_query.filter(db.or_(Task.name.ilike(like), Task.description.ilike(like)))
+            if overdue:
+                today_local = now_in_app_timezone().date()
+                count_query = count_query.filter(Task.due_date < today_local, Task.status.in_(["todo", "in_progress", "review"]))
+            if not has_view_all_tasks and user_id:
+                count_query = count_query.filter(db.or_(Task.assigned_to == user_id, Task.created_by == user_id))
+            total = count_query.count()
+            logger.debug(f"[TaskService.list_tasks] Count query took {(time.time() - count_start) * 1000:.2f}ms")
+        else:
+            # Estimate: we know there's no next page, so total is at most current page items
+            total = (page - 1) * per_page + len(tasks)
+        
+        # Create pagination-like object compatible with Flask-SQLAlchemy pagination
+        from types import SimpleNamespace
+        pagination = SimpleNamespace()
+        pagination.items = tasks
+        pagination.page = page
+        pagination.per_page = per_page
+        pagination.total = total
+        pagination.pages = (total + per_page - 1) // per_page if total else 1
+        pagination.has_next = has_next
+        pagination.has_prev = page > 1
+        
         logger.debug(f"[TaskService.list_tasks] Step 5: Pagination query execution took {(time.time() - step_start) * 1000:.2f}ms (total: {pagination.total} tasks, page: {page}, per_page: {per_page})")
 
         step_start = time.time()

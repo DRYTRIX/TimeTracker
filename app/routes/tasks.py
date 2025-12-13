@@ -32,8 +32,18 @@ def list_tasks():
     overdue_param = request.args.get("overdue", "").strip().lower()
     overdue = overdue_param in ["1", "true", "on", "yes"]
 
+    # Check if this is an AJAX request first (before loading filter data)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    
     # Use service layer to get tasks (prevents N+1 queries)
     task_service = TaskService()
+    
+    # Optimize permission check - check is_admin first (no DB query needed)
+    has_view_all_tasks = current_user.is_admin
+    if not has_view_all_tasks:
+        # Only check permission if not admin (roles are already loaded via lazy="joined")
+        has_view_all_tasks = current_user.has_permission("view_all_tasks")
+    
     result = task_service.list_tasks(
         status=status if status else None,
         priority=priority if priority else None,
@@ -43,19 +53,13 @@ def list_tasks():
         overdue=overdue,
         user_id=current_user.id,
         is_admin=current_user.is_admin,
-        has_view_all_tasks=current_user.is_admin or current_user.has_permission("view_all_tasks"),
+        has_view_all_tasks=has_view_all_tasks,
         page=page,
         per_page=per_page,
     )
 
-    # Get filter options (these could also be cached)
-    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
-    users = User.query.order_by(User.username).all()
-    # Get kanban columns (already queries fresh from database)
-    kanban_columns = KanbanColumn.get_active_columns() if KanbanColumn else []
-
     # Check if this is an AJAX request
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+    if is_ajax:
         # Return only the tasks list HTML for AJAX requests
         response = make_response(render_template(
             "tasks/_tasks_list.html",
@@ -70,6 +74,16 @@ def list_tasks():
         ))
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
+
+    # Get filter options - only load for full page loads, not AJAX requests
+    # These are used for filter dropdowns in the template
+    # Use reasonable limits to avoid loading too many records
+    projects = Project.query.filter_by(status="active").order_by(Project.name).limit(500).all()
+    users = User.query.filter_by(is_active=True).order_by(User.username).limit(200).all()
+    
+    # Kanban columns are already loaded in TaskService, but we need them for the template
+    # This is a lightweight query, so it's acceptable
+    kanban_columns = KanbanColumn.get_active_columns(project_id=None) if KanbanColumn else []
 
     # Pre-calculate task counts by status for summary cards (avoid template iteration)
     task_counts = {
