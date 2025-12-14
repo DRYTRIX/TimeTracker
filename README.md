@@ -6,7 +6,7 @@
 
 **Track time. Manage projects. Generate invoices. All in one place.**
 
-[🆕 What's New](#-whats-new) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🐳 Deploy](#-deployment)
+[🆕 What's New](#-whats-new) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
 
 ---
 
@@ -27,6 +27,17 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 ## 🆕 What's New
 
 TimeTracker has been continuously enhanced with powerful new features! Here's what's been added recently:
+
+> **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
+
+**Latest Release: v4.6.0** (December 2025)
+- ✨ **Comprehensive Issue/Bug Tracking System** — Complete issue and bug tracking functionality with full lifecycle management
+
+**Recent Releases:**
+- **v4.5.1** — Performance optimizations and version management improvements
+- **v4.5.0** — Advanced Report Builder, quick task creation, Kanban enhancements, and PWA improvements
+- **v4.4.1** — Dashboard cache fixes and custom reports enhancements
+- **v4.4.0** — Project custom fields, file attachments, and salesman-based report splitting
 
 ### 🎯 **Major Feature Additions**
 
@@ -404,6 +415,9 @@ Even if you're not billing anyone, understanding where your time goes is valuabl
 ## 📚 Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+### Release Information
+- **[📋 Changelog](CHANGELOG.md)** — Complete release history with all changes and new features (⭐ See what's new!)
 
 ### Getting Started
 - **[📖 Getting Started Guide](docs/GETTING_STARTED.md)** — Complete beginner's guide (⭐ Start here!)
