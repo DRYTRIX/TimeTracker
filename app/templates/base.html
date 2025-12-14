@@ -216,7 +216,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') %}
@@ -280,6 +280,7 @@
                             {% set nav_active_clients = ep.startswith('clients.') %}
                             {% set nav_active_quotes = ep.startswith('quotes.') %}
                             {% set nav_active_tasks = ep.startswith('tasks.') %}
+                            {% set nav_active_issues = ep.startswith('issues.') %}
                             {% set nav_active_kanban = ep.startswith('kanban.') %}
                             {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
                             {% set nav_active_goals = ep.startswith('weekly_goals.') %}
@@ -318,6 +319,13 @@
                                     <i class="fas fa-tasks w-4 mr-2"></i>{{ _('Tasks') }}
                                 </a>
                             </li>
+                            {% if settings.ui_allow_issues and current_user.ui_show_issues %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_issues %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('issues.list_issues') }}">
+                                    <i class="fas fa-bug w-4 mr-2"></i>{{ _('Issues') }}
+                                </a>
+                            </li>
+                            {% endif %}
                             {% if settings.ui_allow_kanban_board and current_user.ui_show_kanban_board %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_kanban %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('kanban.board') }}">

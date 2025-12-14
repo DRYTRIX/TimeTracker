@@ -1,0 +1,110 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ issue.title }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Issues'), 'url': url_for('client_portal.issues')},
+    {'text': issue.title}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bug',
+    title_text=issue.title,
+    subtitle_text=_('Issue #%(id)s', id=issue.id),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Description') }}</h2>
+            {% if issue.description %}
+            <div class="prose prose-sm dark:prose-invert max-w-none">
+                {{ issue.description | markdown | safe }}
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No description provided.') }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Details') }}</h2>
+            <div class="space-y-3">
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}:</span>
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full 
+                        {% if issue.status == 'open' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                        {% elif issue.status == 'in_progress' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                        {% elif issue.status == 'resolved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif issue.status == 'closed' %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
+                        {{ issue.status_display }}
+                    </span>
+                </div>
+                
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Priority') }}:</span>
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full 
+                        {% if issue.priority == 'urgent' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                        {% elif issue.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
+                        {% elif issue.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
+                        {{ issue.priority_display }}
+                    </span>
+                </div>
+                
+                {% if issue.project %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}:</span>
+                    <span class="ml-2">{{ issue.project.name }}</span>
+                </div>
+                {% endif %}
+                
+                {% if issue.task %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Linked Task') }}:</span>
+                    <span class="ml-2">{{ issue.task.name }}</span>
+                </div>
+                {% endif %}
+                
+                {% if issue.assigned_user %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Assigned To') }}:</span>
+                    <span class="ml-2">{{ issue.assigned_user.username }}</span>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}:</span>
+                    <span class="ml-2">{{ issue.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                
+                {% if issue.updated_at != issue.created_at %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Last Updated') }}:</span>
+                    <span class="ml-2">{{ issue.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% endif %}
+                
+                {% if issue.resolved_at %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Resolved') }}:</span>
+                    <span class="ml-2">{{ issue.resolved_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('client_portal.issues') }}" class="text-primary hover:underline">
+        <i class="fas fa-arrow-left mr-2"></i>{{ _('Back to Issues') }}
+    </a>
+</div>
+{% endblock %}

@@ -123,6 +123,12 @@
                                     {{ _('Allow Weekly Goals') }}
                                 </label>
                             </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="ui_allow_issues" id="ui_allow_issues" {% if settings.ui_allow_issues %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="ui_allow_issues" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ _('Allow Issues') }}
+                                </label>
+                            </div>
                         </div>
                     </div>
 

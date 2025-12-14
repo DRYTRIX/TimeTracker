@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Issues', 'url': url_for('issues.list_issues')},
+    {'text': issue.title, 'url': url_for('issues.view_issue', issue_id=issue.id)},
+    {'text': 'Edit'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-edit',
+    title_text=_('Edit Issue'),
+    subtitle_text=issue.title,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('issues.edit_issue', issue_id=issue.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="space-y-4">
+            <div>
+                <label for="title" class="block text-sm font-medium mb-1">{{ _('Title') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="title" name="title" value="{{ issue.title }}" required
+                       class="form-input w-full">
+            </div>
+            
+            <div>
+                <label for="description" class="block text-sm font-medium mb-1">{{ _('Description') }}</label>
+                <textarea id="description" name="description" rows="6"
+                          class="form-input w-full">{{ issue.description or '' }}</textarea>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="status" class="block text-sm font-medium mb-1">{{ _('Status') }}</label>
+                    <select id="status" name="status" class="form-input w-full">
+                        <option value="open" {% if issue.status == 'open' %}selected{% endif %}>{{ _('Open') }}</option>
+                        <option value="in_progress" {% if issue.status == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
+                        <option value="resolved" {% if issue.status == 'resolved' %}selected{% endif %}>{{ _('Resolved') }}</option>
+                        <option value="closed" {% if issue.status == 'closed' %}selected{% endif %}>{{ _('Closed') }}</option>
+                        <option value="cancelled" {% if issue.status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="priority" class="block text-sm font-medium mb-1">{{ _('Priority') }}</label>
+                    <select id="priority" name="priority" class="form-input w-full">
+                        <option value="low" {% if issue.priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
+                        <option value="medium" {% if issue.priority == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
+                        <option value="high" {% if issue.priority == 'high' %}selected{% endif %}>{{ _('High') }}</option>
+                        <option value="urgent" {% if issue.priority == 'urgent' %}selected{% endif %}>{{ _('Urgent') }}</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
+                    <select id="project_id" name="project_id" class="form-input w-full">
+                        <option value="">{{ _('No project') }}</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if issue.project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="assigned_to" class="block text-sm font-medium mb-1">{{ _('Assigned To') }}</label>
+                    <select id="assigned_to" name="assigned_to" class="form-input w-full">
+                        <option value="">{{ _('Unassigned') }}</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if issue.assigned_to == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-3">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ _('Save Changes') }}
+            </button>
+            <a href="{{ url_for('issues.view_issue', issue_id=issue.id) }}" class="bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark px-4 py-2 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

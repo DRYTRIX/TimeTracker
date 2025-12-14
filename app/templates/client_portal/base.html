@@ -50,6 +50,12 @@
                     <a href="{{ url_for('client_portal.time_entries') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
                         <i class="fas fa-clock mr-1"></i>{{ _('Time Entries') }}
                     </a>
+                    {% set current_client = get_current_client() %}
+                    {% if current_client and current_client.portal_issues_enabled %}
+                    <a href="{{ url_for('client_portal.issues') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-bug mr-1"></i>{{ _('Issues') }}
+                    </a>
+                    {% endif %}
                     <a href="{{ url_for('client_portal.logout') }}" class="text-sm text-text-light dark:text-text-dark hover:text-red-600 transition-colors">
                         <i class="fas fa-sign-out-alt mr-1"></i>{{ _('Logout') }}
                     </a>

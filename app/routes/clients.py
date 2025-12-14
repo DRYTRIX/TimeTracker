@@ -512,6 +512,7 @@ def edit_client(client_id):
 
         # Handle portal settings
         portal_enabled = request.form.get("portal_enabled") == "on"
+        portal_issues_enabled = request.form.get("portal_issues_enabled") == "on"
         portal_username = request.form.get("portal_username", "").strip()
         portal_password = request.form.get("portal_password", "").strip()
 
@@ -555,6 +556,7 @@ def edit_client(client_id):
         client.prepaid_hours_monthly = prepaid_hours_monthly
         client.prepaid_reset_day = prepaid_reset_day
         client.portal_enabled = portal_enabled
+        client.portal_issues_enabled = portal_issues_enabled if portal_enabled else False
         client.custom_fields = custom_fields if custom_fields else None
 
         # Update portal credentials

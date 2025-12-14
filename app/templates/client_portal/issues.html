@@ -1,0 +1,96 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Issues') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Issues')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bug',
+    title_text=_('Issue Reports'),
+    subtitle_text=_('Report and track issues for %(client_name)s', client_name=client.name),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="mb-4 flex justify-between items-center">
+    <div class="flex gap-2">
+        <a href="{{ url_for('client_portal.issues', status='all') }}" 
+           class="px-3 py-1 rounded {% if status_filter == 'all' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
+            {{ _('All') }}
+        </a>
+        <a href="{{ url_for('client_portal.issues', status='open') }}" 
+           class="px-3 py-1 rounded {% if status_filter == 'open' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
+            {{ _('Open') }}
+        </a>
+        <a href="{{ url_for('client_portal.issues', status='in_progress') }}" 
+           class="px-3 py-1 rounded {% if status_filter == 'in_progress' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
+            {{ _('In Progress') }}
+        </a>
+        <a href="{{ url_for('client_portal.issues', status='resolved') }}" 
+           class="px-3 py-1 rounded {% if status_filter == 'resolved' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
+            {{ _('Resolved') }}
+        </a>
+        <a href="{{ url_for('client_portal.issues', status='closed') }}" 
+           class="px-3 py-1 rounded {% if status_filter == 'closed' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
+            {{ _('Closed') }}
+        </a>
+    </div>
+    <a href="{{ url_for('client_portal.new_issue') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition-colors">
+        <i class="fas fa-plus mr-2"></i>{{ _('Report New Issue') }}
+    </a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if issues %}
+    <div class="space-y-4">
+        {% for issue in issues %}
+        <div class="border border-border-light dark:border-border-dark rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                    <a href="{{ url_for('client_portal.view_issue', issue_id=issue.id) }}" class="text-lg font-semibold text-primary hover:underline">
+                        {{ issue.title }}
+                    </a>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            {% if issue.status == 'open' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                            {% elif issue.status == 'in_progress' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                            {% elif issue.status == 'resolved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                            {% elif issue.status == 'closed' %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
+                            {{ issue.status_display }}
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            {% if issue.priority == 'urgent' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                            {% elif issue.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
+                            {% elif issue.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
+                            {{ issue.priority_display }}
+                        </span>
+                        {% if issue.project %}
+                        <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            <i class="fas fa-folder-open mr-1"></i>{{ issue.project.name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-right text-sm text-text-muted-light dark:text-text-muted-dark">
+                    {{ issue.created_at.strftime('%Y-%m-%d') }}
+                </div>
+            </div>
+            {% if issue.description %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                {{ issue.description[:200] }}{% if issue.description|length > 200 %}...{% endif %}
+            </p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No issues found.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

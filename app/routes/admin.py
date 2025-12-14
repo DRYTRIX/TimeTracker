@@ -518,6 +518,7 @@ def settings():
                 settings_obj.ui_allow_kanban_board = request.form.get("ui_allow_kanban_board") == "on"
             if hasattr(settings_obj, "ui_allow_weekly_goals"):
                 settings_obj.ui_allow_weekly_goals = request.form.get("ui_allow_weekly_goals") == "on"
+            settings_obj.ui_allow_issues = request.form.get("ui_allow_issues") == "on"
 
             # CRM
             if hasattr(settings_obj, "ui_allow_quotes"):

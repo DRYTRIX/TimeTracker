@@ -53,6 +53,7 @@ class Settings(db.Model):
     ui_allow_gantt_chart = db.Column(db.Boolean, default=True, nullable=False)
     ui_allow_kanban_board = db.Column(db.Boolean, default=True, nullable=False)
     ui_allow_weekly_goals = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_issues = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Issues feature
 
     # CRM section
     ui_allow_quotes = db.Column(db.Boolean, default=True, nullable=False)
@@ -420,6 +421,7 @@ class Settings(db.Model):
             "ui_allow_gantt_chart": getattr(self, "ui_allow_gantt_chart", True),
             "ui_allow_kanban_board": getattr(self, "ui_allow_kanban_board", True),
             "ui_allow_weekly_goals": getattr(self, "ui_allow_weekly_goals", True),
+            "ui_allow_issues": getattr(self, "ui_allow_issues", True),
             "ui_allow_quotes": getattr(self, "ui_allow_quotes", True),
             "ui_allow_reports": getattr(self, "ui_allow_reports", True),
             "ui_allow_report_builder": getattr(self, "ui_allow_report_builder", True),

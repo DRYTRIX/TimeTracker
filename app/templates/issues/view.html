@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import confirm_dialog %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">{{ issue.title }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Issue #%(id)s', id=issue.id) }}</p>
+    </div>
+    <div class="flex gap-2">
+        <a href="{{ url_for('issues.edit_issue', issue_id=issue.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">
+            <i class="fas fa-edit mr-2"></i>{{ _('Edit Issue') }}
+        </a>
+        {% if current_user.is_admin %}
+        <form method="POST" action="{{ url_for('issues.delete_issue', issue_id=issue.id) }}" 
+              onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this issue?') }}', { title: '{{ _('Delete Issue') }}', confirmText: '{{ _('Delete') }}' }).then(ok=>{ if(ok){ this.submit(); } });" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0">
+                <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Issue Details -->
+    <div class="lg:col-span-2 space-y-6">
+        {% if issue.description %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Description') }}</h2>
+            <div class="prose prose-sm dark:prose-invert max-w-none">{{ issue.description | markdown | safe }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Link to Task or Create Task -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Task Management') }}</h2>
+            {% if issue.task %}
+            <div class="mb-4">
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Linked Task') }}:</p>
+                <a href="{{ url_for('tasks.view_task', task_id=issue.task.id) }}" class="text-primary hover:underline font-medium">
+                    <i class="fas fa-tasks mr-2"></i>{{ issue.task.name }}
+                </a>
+            </div>
+            {% else %}
+            <div class="space-y-4">
+                <div>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Link to existing task') }}:</p>
+                    <form method="POST" action="{{ url_for('issues.link_task', issue_id=issue.id) }}" class="flex gap-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="task_id" class="form-input flex-1" required>
+                            <option value="">{{ _('Select a task') }}</option>
+                            {% for task in related_tasks %}
+                            <option value="{{ task.id }}">{{ task.name }} ({{ task.status_display }})</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90">
+                            {{ _('Link') }}
+                        </button>
+                    </form>
+                </div>
+                <div class="border-t border-border-light dark:border-border-dark pt-4">
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Create new task from this issue') }}:</p>
+                    <form method="POST" action="{{ url_for('issues.create_task_from_issue', issue_id=issue.id) }}" class="space-y-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="project_id" class="form-input w-full" required>
+                            <option value="">{{ _('Select a project') }}</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if issue.project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="assigned_to" class="form-input w-full">
+                            <option value="">{{ _('Unassigned') }}</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">
+                            <i class="fas fa-plus mr-2"></i>{{ _('Create Task') }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column: Issue Info -->
+    <div class="space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Details') }}</h2>
+            <div class="space-y-3">
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}:</span>
+                    <div class="mt-1">
+                        <form method="POST" action="{{ url_for('issues.update_status', issue_id=issue.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="status" onchange="this.form.submit()" class="form-input text-sm">
+                                <option value="open" {% if issue.status == 'open' %}selected{% endif %}>{{ _('Open') }}</option>
+                                <option value="in_progress" {% if issue.status == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
+                                <option value="resolved" {% if issue.status == 'resolved' %}selected{% endif %}>{{ _('Resolved') }}</option>
+                                <option value="closed" {% if issue.status == 'closed' %}selected{% endif %}>{{ _('Closed') }}</option>
+                                <option value="cancelled" {% if issue.status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Priority') }}:</span>
+                    <div class="mt-1">
+                        <form method="POST" action="{{ url_for('issues.update_priority', issue_id=issue.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="priority" onchange="this.form.submit()" class="form-input text-sm">
+                                <option value="low" {% if issue.priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
+                                <option value="medium" {% if issue.priority == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
+                                <option value="high" {% if issue.priority == 'high' %}selected{% endif %}>{{ _('High') }}</option>
+                                <option value="urgent" {% if issue.priority == 'urgent' %}selected{% endif %}>{{ _('Urgent') }}</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Client') }}:</span>
+                    <p class="font-medium">{{ issue.client.name }}</p>
+                </div>
+                
+                {% if issue.project %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}:</span>
+                    <p class="font-medium">{{ issue.project.name }}</p>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Assigned To') }}:</span>
+                    <div class="mt-1">
+                        <form method="POST" action="{{ url_for('issues.assign_issue', issue_id=issue.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="user_id" onchange="this.form.submit()" class="form-input text-sm">
+                                <option value="">{{ _('Unassigned') }}</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if issue.assigned_to == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                
+                {% if issue.submitted_by_client %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Submitted By') }}:</span>
+                    <p class="font-medium">
+                        {% if issue.client_submitter_name %}{{ issue.client_submitter_name }}{% else %}{{ _('Client') }}{% endif %}
+                        {% if issue.client_submitter_email %}
+                        <br><span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ issue.client_submitter_email }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}:</span>
+                    <p class="font-medium">{{ issue.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                
+                {% if issue.updated_at != issue.created_at %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Last Updated') }}:</span>
+                    <p class="font-medium">{{ issue.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                {% endif %}
+                
+                {% if issue.resolved_at %}
+                <div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Resolved') }}:</span>
+                    <p class="font-medium">{{ issue.resolved_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-6">
+    <a href="{{ url_for('issues.list_issues') }}" class="text-primary hover:underline">
+        <i class="fas fa-arrow-left mr-2"></i>{{ _('Back to Issues') }}
+    </a>
+</div>
+{% endblock %}

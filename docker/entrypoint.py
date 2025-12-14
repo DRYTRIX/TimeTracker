@@ -37,23 +37,20 @@ def wait_for_database():
         
         try:
             if db_url.startswith('postgresql'):
-                # Parse connection string
+                # Parse connection string using urlparse for proper handling
+                # Handle both postgresql:// and postgresql+psycopg2:// schemes
                 if db_url.startswith('postgresql+psycopg2://'):
-                    db_url = db_url.replace('postgresql+psycopg2://', '')
-                
-                if '@' in db_url:
-                    auth_part, rest = db_url.split('@', 1)
-                    user, password = auth_part.split(':', 1)
-                    if ':' in rest:
-                        host_port, database = rest.rsplit('/', 1)
-                        if ':' in host_port:
-                            host, port = host_port.split(':', 1)
-                        else:
-                            host, port = host_port, '5432'
-                    else:
-                        host, port, database = rest, '5432', 'timetracker'
+                    parsed_url = urlparse(db_url.replace('postgresql+psycopg2://', 'postgresql://'))
                 else:
-                    host, port, database, user, password = 'db', '5432', 'timetracker', 'timetracker', 'timetracker'
+                    parsed_url = urlparse(db_url)
+                
+                # Extract connection parameters
+                user = parsed_url.username or 'timetracker'
+                password = parsed_url.password or 'timetracker'
+                host = parsed_url.hostname or 'db'
+                port = parsed_url.port or 5432
+                # Remove leading slash from path to get database name
+                database = parsed_url.path.lstrip('/') or 'timetracker'
                 
                 conn = psycopg2.connect(
                     host=host,
