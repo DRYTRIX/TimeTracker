@@ -131,6 +131,7 @@ def settings():
             current_user.ui_show_gantt_chart = "ui_show_gantt_chart" in request.form
             current_user.ui_show_kanban_board = "ui_show_kanban_board" in request.form
             current_user.ui_show_weekly_goals = "ui_show_weekly_goals" in request.form
+            current_user.ui_show_issues = "ui_show_issues" in request.form
 
             # UI feature flags - CRM
             current_user.ui_show_quotes = "ui_show_quotes" in request.form

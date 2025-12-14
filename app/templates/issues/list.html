@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, stat_card %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Issues'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bug',
+    title_text='Issues',
+    subtitle_text='Manage client-reported issues and bugs',
+    breadcrumbs=breadcrumbs
+) }}
+
+<!-- Issue Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {{ stat_card('Total Issues', total_issues, 'fas fa-bug', 'slate-500') }}
+    {{ stat_card('Open Issues', open_issues, 'fas fa-exclamation-circle', 'blue-500') }}
+    {{ stat_card('Resolved', resolved_issues, 'fas fa-check-circle', 'green-500') }}
+    {{ stat_card('Closed', closed_issues, 'fas fa-times-circle', 'gray-500') }}
+</div>
+
+<!-- Filters -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Filter Issues') }}</h2>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+            <label for="search" class="block text-sm font-medium mb-1">{{ _('Search') }}</label>
+            <input type="text" name="search" id="search" value="{{ search or '' }}" 
+                   class="form-input" placeholder="{{ _('Search by title or description') }}">
+        </div>
+        <div>
+            <label for="status" class="block text-sm font-medium mb-1">{{ _('Status') }}</label>
+            <select name="status" id="status" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                <option value="open" {% if status == 'open' %}selected{% endif %}>{{ _('Open') }}</option>
+                <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
+                <option value="resolved" {% if status == 'resolved' %}selected{% endif %}>{{ _('Resolved') }}</option>
+                <option value="closed" {% if status == 'closed' %}selected{% endif %}>{{ _('Closed') }}</option>
+                <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+            </select>
+        </div>
+        <div>
+            <label for="priority" class="block text-sm font-medium mb-1">{{ _('Priority') }}</label>
+            <select name="priority" id="priority" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                <option value="low" {% if priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
+                <option value="medium" {% if priority == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
+                <option value="high" {% if priority == 'high' %}selected{% endif %}>{{ _('High') }}</option>
+                <option value="urgent" {% if priority == 'urgent' %}selected{% endif %}>{{ _('Urgent') }}</option>
+            </select>
+        </div>
+        <div>
+            <label for="client_id" class="block text-sm font-medium mb-1">{{ _('Client') }}</label>
+            <select name="client_id" id="client_id" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
+            <select name="project_id" id="project_id" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="assigned_to" class="block text-sm font-medium mb-1">{{ _('Assigned To') }}</label>
+            <select name="assigned_to" id="assigned_to" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if assigned_to == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
+                <i class="fas fa-filter mr-2"></i>{{ _('Apply Filters') }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Issues List -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    {% if issues %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-3">{{ _('Title') }}</th>
+                    <th class="p-3">{{ _('Client') }}</th>
+                    <th class="p-3">{{ _('Project') }}</th>
+                    <th class="p-3">{{ _('Status') }}</th>
+                    <th class="p-3">{{ _('Priority') }}</th>
+                    <th class="p-3">{{ _('Assigned To') }}</th>
+                    <th class="p-3">{{ _('Created') }}</th>
+                    <th class="p-3">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in issues %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                    <td class="p-3">
+                        <a href="{{ url_for('issues.view_issue', issue_id=issue.id) }}" class="text-primary hover:underline font-medium">
+                            {{ issue.title }}
+                        </a>
+                    </td>
+                    <td class="p-3">{{ issue.client.name }}</td>
+                    <td class="p-3">{{ issue.project.name if issue.project else '-' }}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            {% if issue.status == 'open' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                            {% elif issue.status == 'in_progress' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                            {% elif issue.status == 'resolved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                            {% elif issue.status == 'closed' %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
+                            {{ issue.status_display }}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            {% if issue.priority == 'urgent' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                            {% elif issue.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
+                            {% elif issue.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
+                            {{ issue.priority_display }}
+                        </span>
+                    </td>
+                    <td class="p-3">{{ issue.assigned_user.display_name if issue.assigned_user else '-' }}</td>
+                    <td class="p-3">{{ issue.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="p-3">
+                        <a href="{{ url_for('issues.view_issue', issue_id=issue.id) }}" class="text-primary hover:underline text-sm">
+                            <i class="fas fa-eye mr-1"></i>{{ _('View') }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="mt-4 flex justify-center">
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('issues.list_issues', page=pagination.prev_num, status=status, priority=priority, client_id=client_id, project_id=project_id, assigned_to=assigned_to, search=search) }}" 
+               class="px-3 py-1 bg-card-light dark:bg-card-dark rounded border border-border-light dark:border-border-dark">
+                {{ _('Previous') }}
+            </a>
+            {% endif %}
+            <span class="px-3 py-1">{{ _('Page') }} {{ pagination.page }} {{ _('of') }} {{ pagination.pages }}</span>
+            {% if pagination.has_next %}
+            <a href="{{ url_for('issues.list_issues', page=pagination.next_num, status=status, priority=priority, client_id=client_id, project_id=project_id, assigned_to=assigned_to, search=search) }}" 
+               class="px-3 py-1 bg-card-light dark:bg-card-dark rounded border border-border-light dark:border-border-dark">
+                {{ _('Next') }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No issues found.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

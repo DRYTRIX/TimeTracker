@@ -66,6 +66,7 @@ class User(UserMixin, db.Model):
     ui_show_gantt_chart = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Gantt Chart
     ui_show_kanban_board = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Kanban Board
     ui_show_weekly_goals = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Weekly Goals
+    ui_show_issues = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Issues feature
 
     # CRM section
     ui_show_quotes = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Quotes

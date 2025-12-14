@@ -1,0 +1,90 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Report New Issue') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Issues'), 'url': url_for('client_portal.issues')},
+    {'text': _('Report New Issue')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bug',
+    title_text=_('Report New Issue'),
+    subtitle_text=_('Report a bug or issue you\'ve encountered'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST" action="{{ url_for('client_portal.new_issue') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="space-y-4">
+            <div>
+                <label for="title" class="block text-sm font-medium mb-1">{{ _('Title') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="title" name="title" value="{{ title or '' }}" required
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                       placeholder="{{ _('Brief description of the issue') }}">
+            </div>
+            
+            <div>
+                <label for="description" class="block text-sm font-medium mb-1">{{ _('Description') }}</label>
+                <textarea id="description" name="description" rows="6"
+                          class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                          placeholder="{{ _('Detailed description of the issue, steps to reproduce, etc.') }}">{{ description or '' }}</textarea>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
+                    <select id="project_id" name="project_id"
+                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+                        <option value="">{{ _('Select a project (optional)') }}</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="priority" class="block text-sm font-medium mb-1">{{ _('Priority') }}</label>
+                    <select id="priority" name="priority"
+                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+                        <option value="low" {% if priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
+                        <option value="medium" {% if priority == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
+                        <option value="high" {% if priority == 'high' %}selected{% endif %}>{{ _('High') }}</option>
+                        <option value="urgent" {% if priority == 'urgent' %}selected{% endif %}>{{ _('Urgent') }}</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="submitter_name" class="block text-sm font-medium mb-1">{{ _('Your Name') }}</label>
+                    <input type="text" id="submitter_name" name="submitter_name" value="{{ submitter_name or '' }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                           placeholder="{{ _('Your name (optional)') }}">
+                </div>
+                
+                <div>
+                    <label for="submitter_email" class="block text-sm font-medium mb-1">{{ _('Your Email') }}</label>
+                    <input type="email" id="submitter_email" name="submitter_email" value="{{ submitter_email or '' }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                           placeholder="{{ _('Your email (optional)') }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-3">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition-colors">
+                <i class="fas fa-paper-plane mr-2"></i>{{ _('Submit Issue') }}
+            </button>
+            <a href="{{ url_for('client_portal.issues') }}" class="bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark px-4 py-2 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

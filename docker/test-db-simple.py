@@ -6,6 +6,7 @@ Simple database connection test script
 import os
 import sys
 import psycopg2
+from urllib.parse import urlparse
 
 def test_database_connection():
     """Test basic database connection"""
@@ -15,22 +16,22 @@ def test_database_connection():
     db_url = os.getenv('DATABASE_URL', 'postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker')
     
     # Parse the URL to get connection details
-    if db_url.startswith('postgresql+psycopg2://'):
-        db_url = db_url.replace('postgresql+psycopg2://', '')
-    
-    # Extract host, port, database, user, password
-    if '@' in db_url:
-        auth_part, rest = db_url.split('@', 1)
-        user, password = auth_part.split(':', 1)
-        if ':' in rest:
-            host_port, database = rest.rsplit('/', 1)
-            if ':' in host_port:
-                host, port = host_port.split(':', 1)
-            else:
-                host, port = host_port, '5432'
+    # Handle both postgresql:// and postgresql+psycopg2:// schemes
+    if db_url.startswith('postgresql'):
+        if db_url.startswith('postgresql+psycopg2://'):
+            parsed_url = urlparse(db_url.replace('postgresql+psycopg2://', 'postgresql://'))
         else:
-            host, port, database = rest, '5432', 'timetracker'
+            parsed_url = urlparse(db_url)
+        
+        # Extract connection parameters
+        user = parsed_url.username or 'timetracker'
+        password = parsed_url.password or 'timetracker'
+        host = parsed_url.hostname or 'db'
+        port = parsed_url.port or 5432
+        # Remove leading slash from path to get database name
+        database = parsed_url.path.lstrip('/') or 'timetracker'
     else:
+        # Fallback for other formats
         host, port, database, user, password = 'db', '5432', 'timetracker', 'timetracker', 'timetracker'
     
     print(f"Connection details:")

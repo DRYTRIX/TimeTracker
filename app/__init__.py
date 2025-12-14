@@ -956,6 +956,7 @@ def create_app(config=None):
     from app.routes.api_docs import api_docs_bp, swaggerui_blueprint
     from app.routes.analytics import analytics_bp
     from app.routes.tasks import tasks_bp
+    from app.routes.issues import issues_bp
     from app.routes.invoices import invoices_bp
     from app.routes.recurring_invoices import recurring_invoices_bp
     from app.routes.payments import payments_bp
@@ -1011,6 +1012,7 @@ def create_app(config=None):
     app.register_blueprint(swaggerui_blueprint)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(tasks_bp)
+    app.register_blueprint(issues_bp)
     app.register_blueprint(invoices_bp)
     app.register_blueprint(recurring_invoices_bp)
     app.register_blueprint(payments_bp)
@@ -1273,6 +1275,7 @@ def create_app(config=None):
                 Settings,
                 TaskActivity,
                 Comment,
+                Issue,
             )
 
             # Create database tables
@@ -1280,6 +1283,9 @@ def create_app(config=None):
 
             # Check and migrate Task Management tables if needed
             migrate_task_management_tables()
+            
+            # Check and migrate Issues table if needed
+            migrate_issues_table()
 
             # Create default admin user if it doesn't exist
             admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
@@ -1423,6 +1429,32 @@ def migrate_task_management_tables():
         print("  The application will continue, but Task Management features may not work properly")
 
 
+def migrate_issues_table():
+    """Check and migrate Issues table if it doesn't exist"""
+    try:
+        from sqlalchemy import inspect
+
+        # Check if issues table exists
+        inspector = inspect(db.engine)
+        existing_tables = inspector.get_table_names()
+
+        if "issues" not in existing_tables:
+            print("Issues: Creating issues table...")
+            # Import Issue model to ensure it's registered
+            from app.models import Issue
+            # Create the issues table
+            Issue.__table__.create(db.engine, checkfirst=True)
+            print("✓ Issues table created successfully")
+        else:
+            print("Issues: Issues table already exists")
+
+        print("Issues migration check completed")
+
+    except Exception as e:
+        print(f"⚠ Warning: Issues migration check failed: {e}")
+        print("  The application will continue, but Issues features may not work properly")
+
+
 def init_database(app):
     """Initialize database tables and create default admin user"""
     with app.app_context():
@@ -1436,6 +1468,7 @@ def init_database(app):
                 Settings,
                 TaskActivity,
                 Comment,
+                Issue,
             )
 
             # Create database tables

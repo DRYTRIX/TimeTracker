@@ -111,6 +111,15 @@
                             <label for="portal_enabled" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Enable Client Portal') }}</label>
                         </div>
                         <div id="portal_fields" style="display: {% if client.portal_enabled %}block{% else %}none{% endif %};">
+                            <div class="mt-4">
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="portal_issues_enabled" id="portal_issues_enabled" {% if client.portal_issues_enabled %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <label for="portal_issues_enabled" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Enable Issue Reporting') }}</label>
+                                </div>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 ml-6">
+                                    {{ _('Allow clients to report bugs and issues through the portal') }}
+                                </p>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label for="portal_username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Portal Username') }}</label>

@@ -1,0 +1,120 @@
+# Changelog
+
+All notable changes to TimeTracker will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Additional features and improvements in development
+
+## [4.6.0] - 2025-12-14
+
+### Added
+- **Comprehensive Issue/Bug Tracking System** - Complete issue and bug tracking functionality with full lifecycle management
+
+## [4.5.1] - 2025-12-13
+
+### Changed
+- **Performance Optimization** - Optimized task listing queries and improved version management
+- **Version Management** - Enhanced version management system
+
+## [4.5.0] - 2025-12-12
+
+### Added
+- **Advanced Report Builder** - Iterative report generation with email distribution capabilities
+- **Quick Task Creation** - Create tasks directly from the Start Timer modal for faster workflow
+- **Kanban Board Enhancements** - Added user filter and flexible column layout options
+- **PWA Install UI** - Improved Progressive Web App installation user interface
+
+### Fixed
+- **Permission and Role Management** - Fixed bugs in permission and role management system
+
+### Changed
+- **Error Handling** - Improved error handling throughout the application
+- **Performance Logging** - Enhanced performance logging and monitoring
+
+## [4.4.1] - 2025-12-08
+
+### Added
+- **Custom Reports Enhancement** - Enhanced custom reports and scheduled reports functionality
+
+### Fixed
+- **Dashboard Cache Invalidation** - Fixed dashboard cache invalidation when editing timer entries (#342)
+- **Custom Field Definitions** - Fixed graceful handling of missing custom_field_definitions table (#344)
+
+## [4.4.0] - 2025-12-03
+
+### Added
+- **Project Custom Fields** - Add custom fields to projects for enhanced project tracking
+- **File Attachments** - File attachment support for projects and clients
+- **Salesman-Based Report Splitting** - Report splitting and email distribution based on salesperson assignments
+
+### Changed
+- **Performance Optimization** - Optimized task queries and fixed N+1 performance issues
+- **Version Update** - Updated setup.py version to 4.4.0
+
+## [4.3.2] - 2025-12-02
+
+### Added
+- **Custom Field Filtering** - Custom field filtering and display for clients, projects, and time entries
+- **Client Count Tracking** - Client count tracking and cleanup for custom field definitions
+- **Unpaid Hours Report** - New unpaid hours report with Ajax filtering and Excel export
+- **Time Entries Overview** - New time entries overview page with AJAX filters and bulk mark as paid
+- **Configurable Duplicate Detection** - Configurable duplicate detection fields for CSV client import
+- **Enhanced Audit Logging** - Improved error handling and diagnostic tools for audit logging
+
+### Changed
+- **Offline Sync** - Enhanced offline sync functionality and performance improvements
+- **Error Handling** - Improved error handling throughout the application
+- **Docker Healthchecks** - Enhanced Docker healthcheck functionality
+
+## [4.3.1] - 2025-12-01
+
+### Changed
+- **Offline Sync** - Enhanced offline sync functionality and performance improvements
+
+## [4.3.0] - 2025-12-01
+
+### Added
+- **Custom Field Filtering** - Custom field filtering and display for clients, projects, and time entries
+- **Client Count Tracking** - Client count tracking and cleanup for custom field definitions
+- **Unpaid Hours Report** - New unpaid hours report with Ajax filtering and Excel export
+- **Time Entries Overview** - New time entries overview page with AJAX filters and bulk mark as paid
+- **Configurable Duplicate Detection** - Configurable duplicate detection fields for CSV client import
+- **Enhanced Audit Logging** - Improved error handling and diagnostic tools for audit logging
+
+### Changed
+- **Error Handling** - Improved error handling throughout the application
+- **Docker Healthchecks** - Enhanced Docker healthcheck functionality
+- **Offline Sync** - Enhanced offline sync functionality
+
+## [4.2.1] - 2025-12-01
+
+### Fixed
+- **AUTH_METHOD=none** - Fixed authentication method when set to none
+- **Schema Verification** - Added comprehensive schema verification
+
+## [4.2.0] - 2025-11-30
+
+### Added
+- **CSV Import/Export** - CSV import/export for clients with custom fields and contacts
+- **Global Custom Field Definitions** - Global custom field definitions with link template support
+- **Paid Status Tracking** - Paid status tracking for time entries with invoice reference
+- **OAuth Credentials Dropdown** - Converted OAuth credentials section to dropdown in System Settings
+
+---
+
+## Release Notes Format
+
+Each release includes:
+- **Added** - New features
+- **Changed** - Changes in existing functionality
+- **Deprecated** - Soon-to-be removed features
+- **Removed** - Removed features
+- **Fixed** - Bug fixes
+- **Security** - Security improvements
+
+For detailed information about each release, see the [GitHub Releases](https://github.com/drytrix/TimeTracker/releases) page.

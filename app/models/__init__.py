@@ -77,6 +77,7 @@ from .expense_gps import MileageTrack
 from .link_template import LinkTemplate
 from .custom_field_definition import CustomFieldDefinition
 from .salesman_email_mapping import SalesmanEmailMapping
+from .issue import Issue
 
 __all__ = [
     "User",
@@ -180,4 +181,5 @@ __all__ = [
     "LinkTemplate",
     "CustomFieldDefinition",
     "SalesmanEmailMapping",
+    "Issue",
 ]

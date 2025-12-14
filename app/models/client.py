@@ -32,6 +32,7 @@ class Client(db.Model):
     portal_password_hash = db.Column(db.String(255), nullable=True)  # Hashed password for portal access
     password_setup_token = db.Column(db.String(100), nullable=True, index=True)  # Token for password setup/reset
     password_setup_token_expires = db.Column(db.DateTime, nullable=True)  # Token expiration time
+    portal_issues_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable issue reporting in portal
 
     # Custom fields for flexible data storage (e.g., debtor_number, ERP IDs, etc.)
     custom_fields = db.Column(db.JSON, nullable=True)

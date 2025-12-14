@@ -8,80 +8,110 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 
 - **[🚀 Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial (⭐ Start here!)
 - **[Main README](../README.md)** — Product overview and quick start
-- **[Installation Guide](#-installation--deployment)** — Get TimeTracker running
+- **[Installation & Deployment](#-installation--deployment)** — Get TimeTracker running
 - **[Feature Guides](#-feature-documentation)** — Learn what TimeTracker can do
 - **[Troubleshooting](#-troubleshooting)** — Solve common issues
 
 ---
 
-## 🚀 Installation & Deployment
+## 🗺️ Documentation Map
+
+```
+docs/
+├── 👤 User Documentation
+│   ├── Getting Started
+│   ├── Feature Guides
+│   └── User Guides
+│
+├── 🔧 Administrator Documentation
+│   ├── Configuration
+│   ├── Deployment
+│   ├── Security
+│   └── Monitoring
+│
+├── 👨‍💻 Developer Documentation
+│   ├── Contributing
+│   ├── Architecture
+│   ├── Development Setup
+│   └── Testing
+│
+└── 📚 Reference
+    ├── API Documentation
+    ├── Implementation Notes
+    └── Reports
+```
+
+---
+
+## 👤 User Documentation
 
 ### Getting Started
 - **[🚀 Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial (⭐ Start here!)
 - **[Requirements](REQUIREMENTS.md)** — System requirements and dependencies
-- **[Docker Public Setup](DOCKER_PUBLIC_SETUP.md)** — Production deployment with Docker
-- **[Local Testing with SQLite](LOCAL_TESTING_WITH_SQLITE.md)** — Quick test without database setup
 
-### Database & Migrations
-- **[Database Migrations](../migrations/README.md)** — Database schema management with Flask-Migrate
-- **[Migration Guide](../migrations/MIGRATION_GUIDE.md)** — Migrate existing databases
-- **[Enhanced Database Startup](ENHANCED_DATABASE_STARTUP.md)** — Automatic database initialization
-- **[Database Startup Fix](DATABASE_STARTUP_FIX_README.md)** — Database connection troubleshooting
+### User Guides
+- **[Deployment Guide](guides/DEPLOYMENT_GUIDE.md)** — How to deploy TimeTracker
+- **[Quick Start Guide](guides/QUICK_START_GUIDE.md)** — Get started quickly
+- **[Quick Start Local Development](guides/QUICK_START_LOCAL_DEVELOPMENT.md)** — Local development setup
 
-### Docker & Containers
-- **[Docker Startup Troubleshooting](DOCKER_STARTUP_TROUBLESHOOTING.md)** — Fix Docker issues
-- **[Docker Startup Configuration](../docker/STARTUP_MIGRATION_CONFIG.md)** — Container startup behavior
-- **[Docker Connection Troubleshooting](../docker/TROUBLESHOOTING_DB_CONNECTION.md)** — Database connection in Docker
-
----
-
-## ✨ Feature Documentation
-
-### Complete Features Reference
-- **[📋 Complete Features Overview](FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features across 12 categories (⭐ Start here for complete feature list!)
-
-### Core Features
+### Feature Documentation
+- **[📋 Complete Features Overview](FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features (⭐ Complete reference!)
 - **[Task Management](TASK_MANAGEMENT_README.md)** — Complete task tracking system
-- **[Task Management Overview](TASK_MANAGEMENT.md)** — Task management concepts
 - **[Client Management](CLIENT_MANAGEMENT_README.md)** — Manage clients and relationships
-- **[Client Notes](CLIENT_NOTES_FEATURE.md)** — Add internal notes about clients
 - **[Invoice System](INVOICE_FEATURE_README.md)** — Generate and track invoices
-- **[Enhanced Invoice System](ENHANCED_INVOICE_SYSTEM_README.md)** — Advanced invoicing features
 - **[Calendar Features](CALENDAR_FEATURES_README.md)** — Calendar view and bulk entry
-
-### Financial Features
 - **[Expense Tracking](EXPENSE_TRACKING.md)** — Track business expenses
 - **[Payment Tracking](PAYMENT_TRACKING.md)** — Track invoice payments
 - **[Budget Alerts & Forecasting](BUDGET_ALERTS_AND_FORECASTING.md)** — Monitor project budgets
-
-### Productivity Features
 - **[Command Palette](COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts and quick actions
 - **[Bulk Time Entry](BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
 - **[Weekly Time Goals](WEEKLY_TIME_GOALS.md)** — Set and track weekly hour targets
-- **[Toast Notification System](TOAST_NOTIFICATION_SYSTEM.md)** — User feedback and notifications
 
-### Advanced Features
-- **[Role-Based Permissions](ADVANCED_PERMISSIONS.md)** — Granular access control system
-- **[Logo Upload System](LOGO_UPLOAD_SYSTEM_README.md)** — Brand your invoices
-- **[Translation System](TRANSLATION_SYSTEM.md)** — Multi-language support
-
-### Additional Documentation
-- **[Mobile Improvements](MOBILE_IMPROVEMENTS.md)** — Mobile-optimized interface
-- **[Invoice Interface Improvements](INVOICE_INTERFACE_IMPROVEMENTS.md)** — Invoice UI enhancements
-- **[PDF Generation Troubleshooting](PDF_GENERATION_TROUBLESHOOTING.md)** — Fix PDF generation issues
+See [features/](features/) for additional feature documentation.
 
 ---
 
-## 🔧 Technical Documentation
+## 🔧 Administrator Documentation
 
-### Project Structure
-- **[Project Structure](PROJECT_STRUCTURE.md)** — Codebase organization and architecture
-- **[Solution Guide](SOLUTION_GUIDE.md)** — Technical solutions and patterns
+### Configuration
+- **[Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Docker deployment guide
+- **[Docker Public Setup](admin/configuration/DOCKER_PUBLIC_SETUP.md)** — Production deployment
+- **[Docker Startup Troubleshooting](admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Fix startup issues
+- **[Email Configuration](admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
+- **[OIDC Setup](admin/configuration/OIDC_SETUP.md)** — OIDC/SSO authentication setup
 
-### Development
-- **[Contributing Guidelines](CONTRIBUTING.md)** — How to contribute to TimeTracker
-- **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community standards and expectations
-- **[Version Management](VERSION_MANAGEMENT.md)** — Release process and versioning
+### Deployment
+- **[Version Management](admin/deployment/VERSION_MANAGEMENT.md)** — Managing versions
+- **[Release Process](admin/deployment/RELEASE_PROCESS.md)** — Release workflow
+- **[Official Builds](admin/deployment/OFFICIAL_BUILDS.md)** — Official build information
+
+### Security
+- **[Security Documentation](admin/security/)** — Security guides and configuration
+- See [admin/security/](admin/security/) for all security-related documentation
+
+### Monitoring
+- **[Monitoring Documentation](admin/monitoring/)** — Monitoring and analytics setup
+- See [admin/monitoring/](admin/monitoring/) for telemetry and analytics guides
+
+**📖 See [admin/README.md](admin/README.md) for complete administrator documentation**
+
+---
+
+## 👨‍💻 Developer Documentation
+
+### Getting Started
+- **[Contributing Guidelines](development/CONTRIBUTING.md)** — How to contribute to TimeTracker
+- **[Code of Conduct](development/CODE_OF_CONDUCT.md)** — Community standards
+- **[Project Structure](development/PROJECT_STRUCTURE.md)** — Codebase organization and architecture
+
+### Development Setup
+- **[Local Testing with SQLite](development/LOCAL_TESTING_WITH_SQLITE.md)** — Quick local testing setup
+- **[Local Development with Analytics](development/LOCAL_DEVELOPMENT_WITH_ANALYTICS.md)** — Development setup with analytics
+
+### Testing
+- **[Testing Quick Reference](TESTING_QUICK_REFERENCE.md)** — Testing overview
+- **[Testing Coverage Guide](TESTING_COVERAGE_GUIDE.md)** — Coverage documentation
+- See [testing/](testing/) for additional testing documentation
 
 ### CI/CD
 - **[CI/CD Documentation](cicd/)** — Continuous integration and deployment
@@ -89,21 +119,51 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
   - **[Quick Start](cicd/CI_CD_QUICK_START.md)** — Get started with CI/CD
   - **[Implementation Summary](cicd/CI_CD_IMPLEMENTATION_SUMMARY.md)** — What was implemented
   - **[GitHub Actions Setup](cicd/GITHUB_ACTIONS_SETUP.md)** — Configure GitHub Actions
-  - **[GitHub Actions Verification](cicd/GITHUB_ACTIONS_VERIFICATION.md)** — Verify CI/CD setup
 
-### Release & Images
-- **[Release Process](RELEASE_PROCESS.md)** — How to create releases
-- **[GitHub Workflow Images](GITHUB_WORKFLOW_IMAGES.md)** — Docker images on GitHub Container Registry
+### Technical Documentation
+- **[Solution Guide](SOLUTION_GUIDE.md)** — Technical solutions and patterns
+- **[Database Migrations](../migrations/README.md)** — Database schema management
+- **[Implementation Notes](implementation-notes/)** — Development notes and summaries
+
+**📖 See [development/README.md](development/README.md) for complete developer documentation**
+
+---
+
+## 📚 API Documentation
+
+- **[REST API](api/REST_API.md)** — Complete API reference with all endpoints
+- **[API Token Scopes](api/API_TOKEN_SCOPES.md)** — Understanding token permissions and scopes
+- **[API Versioning](api/API_VERSIONING.md)** — API versioning strategy
+- **[API Enhancements](api/API_ENHANCEMENTS.md)** — Recent API improvements
+
+**📖 See [api/README.md](api/README.md) for complete API documentation**
+
+---
+
+## 🚀 Installation & Deployment
+
+### Quick Start
+1. **[Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial
+2. **[Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Recommended deployment method
+3. **[Requirements](REQUIREMENTS.md)** — System requirements
+
+### Database & Migrations
+- **[Database Migrations](../migrations/README.md)** — Database schema management with Flask-Migrate
+- **[Migration Guide](../migrations/MIGRATION_GUIDE.md)** — Migrate existing databases
+- **[Enhanced Database Startup](ENHANCED_DATABASE_STARTUP.md)** — Automatic database initialization
+- **[Database Startup Fix](DATABASE_STARTUP_FIX_README.md)** — Database connection troubleshooting
+- **[Docker Connection Troubleshooting](../docker/TROUBLESHOOTING_DB_CONNECTION.md)** — Database connection in Docker
 
 ---
 
 ## 🛠️ Troubleshooting
 
 ### Common Issues
-- **[Docker Startup Troubleshooting](DOCKER_STARTUP_TROUBLESHOOTING.md)** — Docker won't start
+- **[Docker Startup Troubleshooting](admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Docker won't start
 - **[Database Connection Issues](../docker/TROUBLESHOOTING_DB_CONNECTION.md)** — Can't connect to database
 - **[PDF Generation Issues](PDF_GENERATION_TROUBLESHOOTING.md)** — PDFs not generating
 - **[Solution Guide](SOLUTION_GUIDE.md)** — General problem solving
+- **[Troubleshooting Transaction Error](TROUBLESHOOTING_TRANSACTION_ERROR.md)** — Transaction issues
 
 ### Quick Fixes
 - **Port conflicts**: Change `PORT=8081` in docker-compose command
@@ -113,95 +173,112 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 
 ---
 
-## 📚 Additional Resources
-
-### Features & Improvements
-Detailed documentation about features and improvements is available in:
-- **[Implementation Notes](implementation-notes/)** — Development summaries and changelogs
-- **[Feature Guides](features/)** — Specific feature documentation
+## 📝 Additional Resources
 
 ### Implementation Notes
-Recent improvements and changes:
-- **[Layout & UX Improvements](implementation-notes/IMPLEMENTATION_COMPLETE_SUMMARY.md)** — Complete UI/UX overhaul with 16 major improvements 🆕
-- **[High-Impact Features](implementation-notes/HIGH_IMPACT_SUMMARY.md)** — Enhanced search, keyboard shortcuts, and data tables 🆕
-- **[Advanced Features](implementation-notes/COMPLETE_ADVANCED_FEATURES_SUMMARY.md)** — Keyboard shortcuts system and quick actions menu
-- **[Analytics Improvements](implementation-notes/ANALYTICS_IMPROVEMENTS_SUMMARY.md)**
-- **[Calendar Improvements](implementation-notes/CALENDAR_IMPROVEMENTS_SUMMARY.md)**
-- **[Command Palette Improvements](implementation-notes/COMMAND_PALETTE_IMPROVEMENTS.md)**
-- **[Dashboard & Navbar](implementation-notes/DASHBOARD_NAVBAR_IMPROVEMENTS.md)**
-- **[Kanban Improvements](implementation-notes/KANBAN_IMPROVEMENTS.md)**
-- **[Notification System](implementation-notes/NOTIFICATION_SYSTEM_SUMMARY.md)**
-- **[OIDC Improvements](implementation-notes/OIDC_IMPROVEMENTS.md)**
-- **[Reports Improvements](implementation-notes/REPORTS_IMPROVEMENTS_SUMMARY.md)**
-- **[Styling Consistency](implementation-notes/STYLING_CONSISTENCY_SUMMARY.md)**
-- **[Toast Notifications](implementation-notes/TOAST_NOTIFICATION_IMPROVEMENTS.md)**
-- **[Translation Improvements](implementation-notes/TRANSLATION_IMPROVEMENTS_SUMMARY.md)**
-- **[Translation Fixes](implementation-notes/TRANSLATION_FIXES_SUMMARY.md)**
-- **[UI Improvements](implementation-notes/UI_IMPROVEMENTS_SUMMARY.md)**
+Recent improvements and changes are documented in [implementation-notes/](implementation-notes/):
+- Layout & UX improvements
+- Feature implementations
+- Bug fixes and improvements
+- Architecture changes
 
-### Feature Specific
-Feature documentation and quick starts:
-- **[Layout Improvements Complete](features/LAYOUT_IMPROVEMENTS_COMPLETE.md)** — Comprehensive UX improvements documentation 🆕
-- **[Alembic Migrations](features/ALEMBIC_MIGRATION_README.md)**
-- **[Project Costs](features/PROJECT_COSTS_FEATURE.md)**
-- **[Project Costs Quick Start](features/QUICK_START_PROJECT_COSTS.md)**
-- **[Calendar Quick Start](features/CALENDAR_QUICK_START.md)**
-- **[Badges](features/BADGES.md)**
-- **[Code Formatting](features/RUN_BLACK_FORMATTING.md)**
+### Reports & Analysis
+Analysis reports and summaries are available in [reports/](reports/):
+- Bugfix summaries
+- Audit reports
+- Translation analysis
+
+### Feature-Specific Documentation
+Detailed feature documentation is available in [features/](features/):
+- Feature guides
+- Quick start guides
+- Implementation status
+
+### User Guides
+Additional user guides are available in [user-guides/](user-guides/):
+- Step-by-step guides
+- Tips and tricks
+- Best practices
 
 ---
 
-## 🔍 Documentation by Topic
+## 🔍 Documentation by Role
 
 ### For New Users
 1. Start with **[Main README](../README.md)** for product overview
-2. Review **[Requirements](REQUIREMENTS.md)** to check if your system is compatible
-3. Follow **[Docker Public Setup](DOCKER_PUBLIC_SETUP.md)** for installation
-4. Explore **[Feature Documentation](#-feature-documentation)** to learn what TimeTracker can do
-
-### For Developers
-1. Read **[Contributing Guidelines](CONTRIBUTING.md)** before making changes
-2. Review **[Project Structure](PROJECT_STRUCTURE.md)** to understand the codebase
-3. Check **[Solution Guide](SOLUTION_GUIDE.md)** for technical patterns
-4. Use **[Local Testing with SQLite](LOCAL_TESTING_WITH_SQLITE.md)** for development
+2. Follow **[Getting Started Guide](GETTING_STARTED.md)** for installation
+3. Review **[Requirements](REQUIREMENTS.md)** to check system compatibility
+4. Explore **[Feature Documentation](#-feature-documentation)** to learn features
 
 ### For Administrators
-1. Follow **[Docker Public Setup](DOCKER_PUBLIC_SETUP.md)** for deployment
-2. Review **[Version Management](VERSION_MANAGEMENT.md)** for updates
-3. Set up **[Database Migrations](../migrations/README.md)** for schema management
-4. Configure **[CI/CD](cicd/)** for automated deployments
+1. Follow **[Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md)** for deployment
+2. Review **[Version Management](admin/deployment/VERSION_MANAGEMENT.md)** for updates
+3. Set up **[Email Configuration](admin/configuration/EMAIL_CONFIGURATION.md)** if needed
+4. Configure **[OIDC/SSO](admin/configuration/OIDC_SETUP.md)** for authentication
+5. See **[admin/README.md](admin/README.md)** for complete admin documentation
+
+### For Developers
+1. Read **[Contributing Guidelines](development/CONTRIBUTING.md)** before making changes
+2. Review **[Project Structure](development/PROJECT_STRUCTURE.md)** to understand codebase
+3. Check **[Solution Guide](SOLUTION_GUIDE.md)** for technical patterns
+4. Use **[Local Testing with SQLite](development/LOCAL_TESTING_WITH_SQLITE.md)** for development
+5. See **[development/README.md](development/README.md)** for complete developer documentation
 
 ### For Troubleshooting
-1. Check **[Docker Startup Troubleshooting](DOCKER_STARTUP_TROUBLESHOOTING.md)**
+1. Check **[Docker Startup Troubleshooting](admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)**
 2. Review **[Database Connection Issues](../docker/TROUBLESHOOTING_DB_CONNECTION.md)**
 3. Consult **[Solution Guide](SOLUTION_GUIDE.md)** for common problems
 4. Check specific feature documentation if issue is feature-related
 
 ---
 
-## 📝 Documentation Structure
+## 📁 Documentation Structure
 
 ```
 docs/
 ├── README.md                          # This file - documentation index
+├── GETTING_STARTED.md                 # Beginner tutorial
 ├── REQUIREMENTS.md                    # System requirements
-├── PROJECT_STRUCTURE.md               # Codebase architecture
-├── CONTRIBUTING.md                    # Contribution guidelines
-├── CODE_OF_CONDUCT.md                 # Community standards
+├── FEATURES_COMPLETE.md               # Complete features list
 │
-├── cicd/                              # CI/CD documentation
-│   ├── CI_CD_DOCUMENTATION.md
-│   ├── CI_CD_QUICK_START.md
+├── guides/                            # User-facing guides
+│   ├── DEPLOYMENT_GUIDE.md
+│   ├── QUICK_START_GUIDE.md
+│   └── ...
+│
+├── admin/                             # Administrator documentation
+│   ├── configuration/                 # Configuration guides
+│   ├── deployment/                    # Deployment guides
+│   ├── security/                      # Security documentation
+│   └── monitoring/                    # Monitoring & analytics
+│
+├── development/                       # Developer documentation
+│   ├── CONTRIBUTING.md
+│   ├── CODE_OF_CONDUCT.md
+│   ├── PROJECT_STRUCTURE.md
+│   └── ...
+│
+├── api/                               # API documentation
+│   ├── REST_API.md
+│   ├── API_TOKEN_SCOPES.md
 │   └── ...
 │
 ├── features/                          # Feature-specific guides
-│   ├── ALEMBIC_MIGRATION_README.md
-│   ├── PROJECT_COSTS_FEATURE.md
 │   └── ...
 │
-└── implementation-notes/              # Development notes
-    ├── ANALYTICS_IMPROVEMENTS_SUMMARY.md
-    ├── UI_IMPROVEMENTS_SUMMARY.md
+├── implementation-notes/              # Development notes
+│   └── ...
+│
+├── testing/                           # Testing documentation
+│   └── ...
+│
+├── reports/                           # Reports & analysis
+│   └── ...
+│
+├── user-guides/                       # Additional user guides
+│   └── ...
+│
+└── cicd/                              # CI/CD documentation
     └── ...
 ```
 
@@ -211,7 +288,7 @@ docs/
 
 Found an error? Want to improve the docs?
 
-1. Check the **[Contributing Guidelines](CONTRIBUTING.md)**
+1. Check the **[Contributing Guidelines](development/CONTRIBUTING.md)**
 2. Make your changes to the relevant documentation file
 3. Test that all links work correctly
 4. Submit a pull request with a clear description
@@ -225,7 +302,7 @@ Good documentation helps everyone! 📚
 - **Use the search function** in your browser (Ctrl/Cmd + F) to find specific topics
 - **Follow links** to related documentation for deeper understanding
 - **Start with Quick Links** at the top if you're in a hurry
-- **Browse by topic** using the categorized sections
+- **Browse by role** using the role-based sections above
 - **Check Implementation Notes** for recent changes and improvements
 
 ---
@@ -234,7 +311,7 @@ Good documentation helps everyone! 📚
 
 **Need help?** [Open an issue](https://github.com/drytrix/TimeTracker/issues) or check the [troubleshooting section](#-troubleshooting)
 
-**Want to contribute?** See our [Contributing Guidelines](CONTRIBUTING.md)
+**Want to contribute?** See our [Contributing Guidelines](development/CONTRIBUTING.md)
 
 ---
 

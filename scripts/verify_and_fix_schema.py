@@ -96,8 +96,14 @@ def verify_and_fix_table(engine, inspector, model_class, dialect):
     
     # Check if table exists
     if table_name not in inspector.get_table_names():
-        print(f"⚠ Table '{table_name}' does not exist (will be created by migrations)")
-        return 0
+        print(f"⚠ Table '{table_name}' does not exist, creating it...")
+        try:
+            # Create the table
+            model_class.__table__.create(engine, checkfirst=True)
+            print(f"  ✓ Created table '{table_name}'")
+        except Exception as e:
+            print(f"  ✗ Failed to create table '{table_name}': {e}")
+            return 0
     
     # Get expected columns from model
     expected_columns = {}

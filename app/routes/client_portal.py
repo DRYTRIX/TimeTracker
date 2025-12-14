@@ -7,7 +7,7 @@ invoices, and time entries. Uses separate authentication from regular users.
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, session
 from flask_babel import gettext as _
 from app import db
-from app.models import Client, Project, Invoice, TimeEntry, User, Quote
+from app.models import Client, Project, Invoice, TimeEntry, User, Quote, Issue
 from app.utils.db import safe_commit
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -451,3 +451,151 @@ def time_entries():
         date_from=date_from,
         date_to=date_to,
     )
+
+
+@client_portal_bp.route("/client-portal/issues")
+def issues():
+    """List all issues reported by the client"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+    
+    # Check if issue reporting is enabled
+    if not client.has_portal_access or not client.portal_issues_enabled:
+        flash(_("Issue reporting is not available."), "error")
+        return redirect(url_for("client_portal.dashboard"))
+    
+    # Get all issues for this client
+    issues_list = Issue.get_issues_by_client(client.id)
+    
+    # Filter by status if requested
+    status_filter = request.args.get("status", "all")
+    if status_filter != "all":
+        issues_list = [issue for issue in issues_list if issue.status == status_filter]
+    
+    # Get projects for filter dropdown
+    portal_data = get_portal_data(client)
+    projects = portal_data["projects"] if portal_data else []
+    
+    return render_template(
+        "client_portal/issues.html",
+        client=client,
+        issues=issues_list,
+        status_filter=status_filter,
+        projects=projects,
+    )
+
+
+@client_portal_bp.route("/client-portal/issues/new", methods=["GET", "POST"])
+def new_issue():
+    """Create a new issue report"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+    
+    # Check if issue reporting is enabled
+    if not client.has_portal_access or not client.portal_issues_enabled:
+        flash(_("Issue reporting is not available."), "error")
+        return redirect(url_for("client_portal.dashboard"))
+    
+    # Get projects for dropdown
+    portal_data = get_portal_data(client)
+    projects = portal_data["projects"] if portal_data else []
+    
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        project_id = request.form.get("project_id", type=int)
+        priority = request.form.get("priority", "medium")
+        submitter_name = request.form.get("submitter_name", "").strip()
+        submitter_email = request.form.get("submitter_email", "").strip()
+        
+        # Validate
+        if not title:
+            flash(_("Title is required."), "error")
+            return render_template(
+                "client_portal/new_issue.html",
+                client=client,
+                projects=projects,
+                title=title,
+                description=description,
+                project_id=project_id,
+                priority=priority,
+                submitter_name=submitter_name,
+                submitter_email=submitter_email,
+            )
+        
+        # Validate project belongs to client
+        if project_id:
+            project = Project.query.get(project_id)
+            if not project or project.client_id != client.id:
+                flash(_("Invalid project selected."), "error")
+                return render_template(
+                    "client_portal/new_issue.html",
+                    client=client,
+                    projects=projects,
+                    title=title,
+                    description=description,
+                    project_id=project_id,
+                    priority=priority,
+                    submitter_name=submitter_name,
+                    submitter_email=submitter_email,
+                )
+        
+        # Create issue
+        issue = Issue(
+            client_id=client.id,
+            title=title,
+            description=description if description else None,
+            project_id=project_id,
+            priority=priority,
+            status="open",
+            submitted_by_client=True,
+            client_submitter_name=submitter_name if submitter_name else None,
+            client_submitter_email=submitter_email if submitter_email else None,
+        )
+        
+        db.session.add(issue)
+        
+        if not safe_commit("client_create_issue", {"client_id": client.id, "issue_id": issue.id}):
+            flash(_("Could not create issue due to a database error."), "error")
+            return render_template(
+                "client_portal/new_issue.html",
+                client=client,
+                projects=projects,
+                title=title,
+                description=description,
+                project_id=project_id,
+                priority=priority,
+                submitter_name=submitter_name,
+                submitter_email=submitter_email,
+            )
+        
+        flash(_("Issue reported successfully. We will review it shortly."), "success")
+        return redirect(url_for("client_portal.issues"))
+    
+    return render_template("client_portal/new_issue.html", client=client, projects=projects)
+
+
+@client_portal_bp.route("/client-portal/issues/<int:issue_id>")
+def view_issue(issue_id):
+    """View a specific issue"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+    
+    # Check if issue reporting is enabled
+    if not client.has_portal_access or not client.portal_issues_enabled:
+        flash(_("Issue reporting is not available."), "error")
+        return redirect(url_for("client_portal.dashboard"))
+    
+    # Verify issue belongs to this client
+    issue = Issue.query.get_or_404(issue_id)
+    if issue.client_id != client.id:
+        flash(_("Issue not found."), "error")
+        abort(404)
+    
+    return render_template("client_portal/issue_detail.html", client=client, issue=issue)
