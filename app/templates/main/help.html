@@ -736,44 +736,78 @@
                 </details>
                 <details class="group border border-border-light dark:border-border-dark rounded p-4">
                     <summary class="font-semibold cursor-pointer flex items-center"><i class="fas fa-question-circle mr-2"></i>{{ _('Where can I get additional help?') }}</summary>
-                    <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 text-text-muted-light dark:text-text-muted-dark">
+                    <div class="mt-2 space-y-4 text-text-muted-light dark:text-text-muted-dark">
                         <div>
-                            <h4 class="font-semibold">{{ _('Documentation') }}</h4>
-                            <p>{{ _('This help page covers most common questions and features.') }}</p>
+                            <h4 class="font-semibold mb-2">{{ _('Documentation') }}</h4>
+                            <p class="mb-2">{{ _('This help page covers most common questions and features. For complete documentation:') }}</p>
+                            <ul class="list-disc ml-6 space-y-1">
+                                <li><a class="text-primary hover:underline" href="https://github.com/drytrix/TimeTracker/blob/main/docs/README.md" target="_blank">{{ _('Complete Documentation Index') }}</a></li>
+                                <li><a class="text-primary hover:underline" href="https://github.com/drytrix/TimeTracker/blob/main/docs/GETTING_STARTED.md" target="_blank">{{ _('Getting Started Guide') }}</a></li>
+                                <li><a class="text-primary hover:underline" href="https://github.com/drytrix/TimeTracker/blob/main/README.md" target="_blank">{{ _('Product Overview & Features') }}</a></li>
+                                <li><a class="text-primary hover:underline" href="https://github.com/drytrix/TimeTracker/blob/main/CHANGELOG.md" target="_blank">{{ _('Changelog') }}</a></li>
+                            </ul>
                         </div>
                         <div>
-                            <h4 class="font-semibold">{{ _('Community Support') }}</h4>
-                            <p>{{ _('Report issues and request features on') }} <a class="text-primary" href="https://github.com/drytrix/TimeTracker/issues" target="_blank">GitHub Issues</a>.</p>
+                            <h4 class="font-semibold mb-2">{{ _('Community Support') }}</h4>
+                            <p>{{ _('Report issues and request features on') }} <a class="text-primary hover:underline" href="https://github.com/drytrix/TimeTracker/issues" target="_blank">GitHub Issues</a>.</p>
                         </div>
                     </div>
                     {% if current_user.is_admin %}
                     <div class="mt-3 p-3 rounded border border-sky-600/30 bg-sky-50 dark:bg-sky-900/20">
-                        <i class="fas fa-info-circle mr-2"></i>{{ _('As an admin, you can access additional system information and diagnostics in the') }} <a class="text-primary" href="{{ url_for('admin.system_info') }}">{{ _('System Info') }}</a> {{ _('section.') }}
-                                </div>
-                                {% endif %}
+                        <i class="fas fa-info-circle mr-2"></i>{{ _('As an admin, you can access additional system information and diagnostics in the') }} <a class="text-primary hover:underline" href="{{ url_for('admin.system_info') }}">{{ _('System Info') }}</a> {{ _('section.') }}
+                        <div class="mt-2 text-sm">
+                            {{ _('Admin documentation:') }} <a class="text-primary hover:underline" href="https://github.com/drytrix/TimeTracker/blob/main/docs/admin/README.md" target="_blank">{{ _('Administrator Guide') }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
                 </details>
                 </div>
             </section>
 
             <!-- Footer Help -->
-        <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow text-center">
-            <h3 class="text-lg font-semibold">{{ _('Still Need Help?') }}</h3>
-            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Can\'t find what you\'re looking for? Here are additional resources:') }}</p>
+        <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-center mb-4">{{ _('Still Need Help?') }}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4 text-center">{{ _('Can\'t find what you\'re looking for? Here are additional resources:') }}</p>
+            
+            <!-- Documentation Links -->
+            <div class="mb-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <h4 class="font-semibold mb-2 flex items-center">
+                    <i class="fas fa-book mr-2 text-primary"></i>{{ _('Complete Documentation') }}
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <a href="https://github.com/drytrix/TimeTracker/blob/main/docs/README.md" target="_blank" rel="noopener" class="text-primary hover:underline flex items-center">
+                        <i class="fas fa-list mr-1"></i>{{ _('Documentation Index') }}
+                    </a>
+                    <a href="https://github.com/drytrix/TimeTracker/blob/main/docs/GETTING_STARTED.md" target="_blank" rel="noopener" class="text-primary hover:underline flex items-center">
+                        <i class="fas fa-rocket mr-1"></i>{{ _('Getting Started') }}
+                    </a>
+                    <a href="https://github.com/drytrix/TimeTracker/blob/main/docs/features/" target="_blank" rel="noopener" class="text-primary hover:underline flex items-center">
+                        <i class="fas fa-star mr-1"></i>{{ _('Feature Guides') }}
+                    </a>
+                    {% if current_user.is_admin %}
+                    <a href="https://github.com/drytrix/TimeTracker/blob/main/docs/admin/README.md" target="_blank" rel="noopener" class="text-primary hover:underline flex items-center">
+                        <i class="fas fa-cog mr-1"></i>{{ _('Admin Documentation') }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
             <div class="flex flex-wrap gap-3 justify-center">
-                        {% if current_user.is_admin %}
+                {% if current_user.is_admin %}
                 <a href="{{ url_for('admin.system_info') }}" class="px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10">
                     <i class="fas fa-info-circle mr-1"></i>{{ _('System Info') }}
-                        </a>
-                        {% endif %}
+                </a>
+                {% endif %}
                 <a href="https://github.com/drytrix/TimeTracker" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
                     <i class="fab fa-github mr-1"></i>{{ _('GitHub Repository') }}
-                        </a>
+                </a>
                 <a href="https://github.com/drytrix/TimeTracker/issues" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg border border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20">
                     <i class="fas fa-bug mr-1"></i>{{ _('Report Issue') }}
-                        </a>
+                </a>
                 <a href="https://buymeacoffee.com/DryTrix" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg border border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                     <i class="fas fa-mug-saucer mr-1"></i>{{ _('Support Development') }}
-                        </a>
+                </a>
             </div>
         </div>
     </section>

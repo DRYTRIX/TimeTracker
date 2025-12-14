@@ -347,7 +347,7 @@ docker-compose up -d
 
 **First login creates the admin account** — just enter your username!
 
-**📖 See the complete setup guide:** [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
+**📖 See the complete setup guide:** [`docs/admin/configuration/DOCKER_COMPOSE_SETUP.md`](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)
 
 ### Option 2: Docker with Plain HTTP (Development/Testing)
 
@@ -421,13 +421,13 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
 ### Getting Started
 - **[📖 Getting Started Guide](docs/GETTING_STARTED.md)** — Complete beginner's guide (⭐ Start here!)
-- **[Installation Guide](docs/DOCKER_PUBLIC_SETUP.md)** — Detailed setup instructions
+- **[Installation Guide](docs/admin/configuration/DOCKER_PUBLIC_SETUP.md)** — Detailed setup instructions
 - **[Requirements](docs/REQUIREMENTS.md)** — System requirements and dependencies
-- **[Troubleshooting](docs/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Common issues and solutions
-- **[CSRF Token Issues](CSRF_TROUBLESHOOTING.md)** — Fix "CSRF token missing or invalid" errors
-- **[CSRF IP Access Fix](CSRF_IP_ACCESS_FIX.md)** — 🔥 Fix cookies not working when accessing via IP address
-- **[HTTPS Auto-Setup](README_HTTPS_AUTO.md)** — 🚀 Automatic HTTPS at startup (one command!)
-- **[HTTPS Manual Setup (mkcert)](README_HTTPS.md)** — 🔒 Manual HTTPS with no certificate warnings
+- **[Troubleshooting](docs/admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Common issues and solutions
+- **[CSRF Token Issues](docs/admin/security/CSRF_TROUBLESHOOTING.md)** — Fix "CSRF token missing or invalid" errors
+- **[CSRF IP Access Fix](docs/admin/security/CSRF_IP_ACCESS_FIX.md)** — 🔥 Fix cookies not working when accessing via IP address
+- **[HTTPS Auto-Setup](docs/admin/security/README_HTTPS_AUTO.md)** — 🚀 Automatic HTTPS at startup (one command!)
+- **[HTTPS Manual Setup (mkcert)](docs/admin/security/README_HTTPS.md)** — 🔒 Manual HTTPS with no certificate warnings
 
 ### Features
 - **[📋 Complete Features Overview](docs/FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features (⭐ Complete reference!)
@@ -444,15 +444,15 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Role-Based Permissions](docs/ADVANCED_PERMISSIONS.md)** — Granular access control
 
 ### Technical Documentation
-- **[Project Structure](docs/PROJECT_STRUCTURE.md)** — Codebase architecture
+- **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase architecture
 - **[Database Migrations](migrations/README.md)** — Database schema management
-- **[Version Management](docs/VERSION_MANAGEMENT.md)** — Release and versioning
-- **[CSRF Configuration](docs/CSRF_CONFIGURATION.md)** — Security and CSRF token setup for Docker
+- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Release and versioning
+- **[CSRF Configuration](docs/admin/security/CSRF_CONFIGURATION.md)** — Security and CSRF token setup for Docker
 - **[CI/CD Documentation](docs/cicd/)** — Continuous integration setup
 
 ### Contributing
-- **[Contributing Guidelines](docs/CONTRIBUTING.md)** — How to contribute
-- **[Code of Conduct](docs/CODE_OF_CONDUCT.md)** — Community standards
+- **[Contributing Guidelines](docs/development/CONTRIBUTING.md)** — How to contribute
+- **[Code of Conduct](docs/development/CODE_OF_CONDUCT.md)** — Community standards
 
 ---
 
@@ -492,7 +492,7 @@ docker-compose up -d
 docker-compose -f docker-compose.remote.yml up -d
 ```
 
-> **⚠️ Security Note:** Always set a unique `SECRET_KEY` in production! See [CSRF Configuration](docs/CSRF_CONFIGURATION.md) for details.
+> **⚠️ Security Note:** Always set a unique `SECRET_KEY` in production! See [CSRF Configuration](docs/admin/security/CSRF_CONFIGURATION.md) for details.
 
 ### Raspberry Pi Deployment
 TimeTracker runs perfectly on Raspberry Pi 4 (2GB+ RAM):
@@ -525,8 +525,8 @@ docker-compose up -d
 # Prometheus: http://localhost:9090
 ```
 
-**📖 See [Deployment Guide](docs/DOCKER_PUBLIC_SETUP.md) for detailed instructions**  
-**📖 See [Docker Compose Setup](docs/DOCKER_COMPOSE_SETUP.md) for configuration options**
+**📖 See [Deployment Guide](docs/admin/configuration/DOCKER_PUBLIC_SETUP.md) for detailed instructions**  
+**📖 See [Docker Compose Setup](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md) for configuration options**
 
 ---
 
@@ -534,7 +534,7 @@ docker-compose up -d
 
 TimeTracker is highly configurable through environment variables. For a comprehensive list and recommended values, see:
 
-- [`docs/DOCKER_COMPOSE_SETUP.md`](docs/DOCKER_COMPOSE_SETUP.md)
+- [`docs/admin/configuration/DOCKER_COMPOSE_SETUP.md`](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)
 - [`env.example`](env.example)
 
 Common settings:
@@ -733,7 +733,7 @@ We welcome contributions! Whether it's:
 - 📝 **Documentation** — Improve our docs
 - 💻 **Code Contributions** — Submit pull requests
 
-**📖 See [Contributing Guidelines](docs/CONTRIBUTING.md) to get started**
+**📖 See [Contributing Guidelines](docs/development/CONTRIBUTING.md) to get started**
 
 ---
 
