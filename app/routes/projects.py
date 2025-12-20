@@ -410,13 +410,16 @@ def create_project():
             )
 
         # Log activity
+        # NOTE: Project.client is a backward-compatibility property that returns a *string*.
+        # The actual relationship is Project.client_obj (via Client.projects backref).
+        client_name = project.client_obj.name if getattr(project, "client_obj", None) else project.client
         Activity.log(
             user_id=current_user.id,
             action="created",
             entity_type="project",
             entity_id=project.id,
             entity_name=project.name,
-            description=f'Created project "{project.name}" for {project.client.name}',
+            description=f'Created project "{project.name}" for {client_name}',
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
         )
@@ -699,6 +702,67 @@ def project_dashboard(project_id):
         timeline_data=timeline_data,
         cost_data=cost_data,
         period=period,
+    )
+
+
+@projects_bp.route("/projects/<int:project_id>/time-entries-overview")
+@login_required
+def project_time_entries_overview(project_id):
+    """Per-project chronological time entries overview with date filters."""
+    from datetime import datetime
+    from sqlalchemy.orm import joinedload
+
+    project = Project.query.get_or_404(project_id)
+
+    start_date = (request.args.get("start_date") or "").strip()
+    end_date = (request.args.get("end_date") or "").strip()
+
+    query = (
+        TimeEntry.query.options(joinedload(TimeEntry.user), joinedload(TimeEntry.task))
+        .filter(TimeEntry.project_id == project_id, TimeEntry.end_time.isnot(None))
+        .order_by(TimeEntry.start_time.asc())
+    )
+
+    # Apply date range filters (inclusive)
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(TimeEntry.start_time >= start_dt)
+        except ValueError:
+            start_date = ""
+
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(TimeEntry.start_time <= end_dt)
+        except ValueError:
+            end_date = ""
+
+    entries = query.all()
+
+    # Group by local date of start_time (stored as naive local)
+    grouped = []
+    current_date = None
+    current_bucket = None
+    for entry in entries:
+        entry_date = entry.start_time.date() if entry.start_time else None
+        if entry_date != current_date:
+            current_date = entry_date
+            current_bucket = {"date": current_date, "entries": [], "total_hours": 0.0}
+            grouped.append(current_bucket)
+        current_bucket["entries"].append(entry)
+        current_bucket["total_hours"] += float(entry.duration_hours or 0)
+
+    total_hours = round(sum(float(e.duration_hours or 0) for e in entries), 2)
+
+    return render_template(
+        "projects/time_entries_overview.html",
+        project=project,
+        grouped=grouped,
+        total_hours=total_hours,
+        start_date=start_date,
+        end_date=end_date,
+        total_entries=len(entries),
     )
 
 

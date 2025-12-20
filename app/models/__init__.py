@@ -65,6 +65,7 @@ from .invoice_approval import InvoiceApproval
 from .payment_gateway import PaymentGateway, PaymentTransaction
 from .calendar_integration import CalendarIntegration, CalendarSyncEvent
 from .integration import Integration, IntegrationCredential, IntegrationEvent
+from .integration_external_event_link import IntegrationExternalEventLink
 from .workflow import WorkflowRule, WorkflowExecution
 from .time_entry_approval import TimeEntryApproval, ApprovalPolicy, ApprovalStatus
 from .recurring_task import RecurringTask
@@ -158,6 +159,7 @@ __all__ = [
     "Integration",
     "IntegrationCredential",
     "IntegrationEvent",
+    "IntegrationExternalEventLink",
     "WorkflowRule",
     "WorkflowExecution",
     "TimeEntryApproval",

@@ -52,8 +52,12 @@ def connect_integration(provider):
         flash(_("Trello uses API key authentication. Please configure it in Admin → Integrations."), "info")
         return redirect(url_for("admin.integration_setup", provider=provider))
 
-    # Google Calendar is per-user, all others are global
-    is_global = provider != "google_calendar"
+    # CalDAV doesn't use OAuth - redirect to setup form
+    if provider == "caldav_calendar":
+        return redirect(url_for("integrations.caldav_setup"))
+
+    # Google Calendar and CalDAV are per-user, all others are global
+    is_global = provider not in ("google_calendar", "caldav_calendar")
 
     if is_global:
         # For global integrations, check if one exists
@@ -300,6 +304,130 @@ def sync_integration(integration_id):
         flash(_("Error during sync: %(error)s", error=str(e)), "error")
 
     return redirect(url_for("integrations.view_integration", integration_id=integration_id))
+
+
+@integrations_bp.route("/integrations/caldav_calendar/setup", methods=["GET", "POST"])
+@login_required
+def caldav_setup():
+    """Setup CalDAV integration (non-OAuth, uses username/password)."""
+    from app.models import Project
+
+    service = IntegrationService()
+
+    # Get or create integration
+    existing = Integration.query.filter_by(provider="caldav_calendar", user_id=current_user.id, is_global=False).first()
+    if existing:
+        integration = existing
+    else:
+        result = service.create_integration("caldav_calendar", user_id=current_user.id, is_global=False)
+        if not result["success"]:
+            flash(result["message"], "error")
+            return redirect(url_for("integrations.list_integrations"))
+        integration = result["integration"]
+
+    connector = service.get_connector(integration)
+    if not connector:
+        flash(_("Could not initialize CalDAV connector."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+
+    # Get user's active projects for default project selection
+    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+
+    if request.method == "POST":
+        server_url = request.form.get("server_url", "").strip()
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        calendar_url = request.form.get("calendar_url", "").strip()
+        calendar_name = request.form.get("calendar_name", "").strip()
+        default_project_id = request.form.get("default_project_id", "").strip()
+        verify_ssl = request.form.get("verify_ssl") == "on"
+        lookback_days_str = request.form.get("lookback_days", "90") or "90"
+
+        # Validation
+        errors = []
+        
+        if not server_url and not calendar_url:
+            errors.append(_("Either server URL or calendar URL is required."))
+        
+        # Check if we need to update credentials (username provided or password provided)
+        existing_creds = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
+        needs_creds_update = username or password or not existing_creds
+        
+        if needs_creds_update:
+            if not username:
+                # Try to get existing username if password is being updated
+                if existing_creds and existing_creds.extra_data:
+                    username = existing_creds.extra_data.get("username", "")
+                if not username:
+                    errors.append(_("Username is required."))
+            if not password and not existing_creds:
+                errors.append(_("Password is required for new setup."))
+        
+        if not default_project_id:
+            errors.append(_("Default project is required."))
+        else:
+            # Validate project exists and is active
+            try:
+                project_id_int = int(default_project_id)
+                project = Project.query.filter_by(id=project_id_int, status="active").first()
+                if not project:
+                    errors.append(_("Selected project not found or is not active."))
+            except ValueError:
+                errors.append(_("Invalid project selected."))
+        
+        try:
+            lookback_days = int(lookback_days_str)
+            if lookback_days < 1 or lookback_days > 365:
+                errors.append(_("Lookback days must be between 1 and 365."))
+        except ValueError:
+            errors.append(_("Lookback days must be a valid number."))
+            lookback_days = 90
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return render_template(
+                "integrations/caldav_setup.html",
+                integration=integration,
+                connector=connector,
+                projects=projects,
+            )
+
+        # Update config
+        if not integration.config:
+            integration.config = {}
+        integration.config["server_url"] = server_url if server_url else None
+        integration.config["calendar_url"] = calendar_url if calendar_url else None
+        integration.config["calendar_name"] = calendar_name if calendar_name else None
+        integration.config["verify_ssl"] = verify_ssl
+        integration.config["sync_direction"] = "calendar_to_time_tracker"  # MVP: import only
+        integration.config["lookback_days"] = lookback_days
+        integration.config["default_project_id"] = int(default_project_id)
+
+        # Save credentials (only if username/password provided)
+        if username and (password or existing_creds):
+            service.save_credentials(
+                integration_id=integration.id,
+                access_token=password if password else (existing_creds.access_token if existing_creds else ""),
+                refresh_token=None,
+                expires_at=None,
+                token_type="Basic",
+                scope="caldav",
+                extra_data={"username": username},
+            )
+
+        if safe_commit("caldav_setup", {"integration_id": integration.id}):
+            flash(_("CalDAV integration configured successfully."), "success")
+            return redirect(url_for("integrations.view_integration", integration_id=integration.id))
+        else:
+            flash(_("Failed to save CalDAV configuration."), "error")
+
+    return render_template(
+        "integrations/caldav_setup.html",
+        integration=integration,
+        connector=connector,
+        projects=projects,
+    )
 
 
 @integrations_bp.route("/integrations/<provider>/webhook", methods=["POST"])

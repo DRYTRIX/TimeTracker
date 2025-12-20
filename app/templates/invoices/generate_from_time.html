@@ -17,7 +17,38 @@
 
                 <div class="mb-6">
                     <h2 class="text-lg font-semibold mb-3">{{ _('Unbilled Time Entries') }}</h2>
-                    {% if time_entries %}
+                    {% if grouped_time_entries %}
+                    <div class="space-y-4">
+                        {% for day in grouped_time_entries %}
+                        <div class="rounded-lg border border-border-light dark:border-border-dark overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800">
+                                <div class="font-semibold">
+                                    <i class="fas fa-calendar-day text-primary mr-2"></i>
+                                    {{ day.date.strftime('%Y-%m-%d') if day.date else '-' }}
+                                </div>
+                                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                                    <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(day.total_hours) }}</span> {{ _('h') }}
+                                    · {{ day.entries|length }} {{ _('entries') }}
+                                </div>
+                            </div>
+                            <div class="p-3 space-y-2">
+                                {% for entry in day.entries %}
+                                <label class="flex items-start gap-3 p-3 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                                    <input type="checkbox" class="mt-1" name="time_entries[]" value="{{ entry.id }}">
+                                    <div class="flex-1 text-sm">
+                                        <div class="font-medium">{{ entry.task.name if entry.task else _('Time Entry') }} · {{ '%.2f'|format(entry.duration_hours) }} {{ _('h') }}</div>
+                                        <div class="text-text-muted-light dark:text-text-muted-dark">
+                                            {{ entry.start_time|user_datetime('%H:%M') }} → {{ entry.end_time|user_datetime('%H:%M') if entry.end_time else '-' }}
+                                            {% if entry.notes %} · {{ entry.notes[:120] }}{% if entry.notes|length > 120 %}…{% endif %}{% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% elif time_entries %}
                     <div class="space-y-2">
                         {% for entry in time_entries %}
                         <label class="flex items-start gap-3 p-3 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">

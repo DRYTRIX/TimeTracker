@@ -834,7 +834,7 @@ def generate_from_time(invoice_id):
         TimeEntry.query.filter(
             TimeEntry.project_id == invoice.project_id, TimeEntry.end_time.isnot(None), TimeEntry.billable == True
         )
-        .order_by(TimeEntry.start_time.desc())
+        .order_by(TimeEntry.start_time.asc())
         .all()
     )
 
@@ -870,6 +870,19 @@ def generate_from_time(invoice_id):
         .all()
     )
 
+    # Group time entries by day for a clearer selection UI
+    grouped_time_entries = []
+    current_date = None
+    current_bucket = None
+    for entry in unbilled_entries:
+        entry_date = entry.start_time.date() if entry.start_time else None
+        if entry_date != current_date:
+            current_date = entry_date
+            current_bucket = {"date": current_date, "entries": [], "total_hours": 0.0}
+            grouped_time_entries.append(current_bucket)
+        current_bucket["entries"].append(entry)
+        current_bucket["total_hours"] += float(entry.duration_hours or 0)
+
     # Calculate totals
     total_available_hours = sum(entry.duration_hours for entry in unbilled_entries)
     total_available_costs = sum(float(cost.amount) for cost in unbilled_costs)
@@ -903,6 +916,7 @@ def generate_from_time(invoice_id):
         "invoices/generate_from_time.html",
         invoice=invoice,
         time_entries=unbilled_entries,
+        grouped_time_entries=grouped_time_entries,
         project_costs=unbilled_costs,
         expenses=unbilled_expenses,
         extra_goods=project_goods,

@@ -265,7 +265,12 @@ class UnpaidHoursService:
             projects = set()
             for entry in salesman_entries:
                 if entry.project and entry.project.client:
-                    clients.add(entry.project.client.name)
+                    # Project.client is a string property; relationship is Project.client_obj
+                    clients.add(
+                        entry.project.client_obj.name
+                        if getattr(entry.project, "client_obj", None)
+                        else entry.project.client
+                    )
                 elif entry.client:
                     clients.add(entry.client.name)
                 if entry.project:

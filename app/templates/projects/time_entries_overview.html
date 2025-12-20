@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, stat_card %}
+
+{% block title %}{{ _('Time Entries') }} · {{ project.name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Projects'), 'url': url_for('projects.list_projects')},
+    {'text': project.name, 'url': url_for('projects.view_project', project_id=project.id)},
+    {'text': _('Time Entries Overview')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-list',
+    title_text=_('Time Entries Overview'),
+    subtitle_text=project.name,
+    breadcrumbs=breadcrumbs,
+    actions_html='<a class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg" href="' ~ url_for('projects.view_project', project_id=project.id) ~ '"><i class="fas fa-arrow-left mr-2"></i>' ~ _('Back to Project') ~ '</a>'
+) }}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    {{ stat_card(_('Total Hours'), '%.2f'|format(total_hours), 'fas fa-hourglass-half', 'blue-500') }}
+    {{ stat_card(_('Entries'), total_entries, 'fas fa-list', 'purple-500') }}
+    {{ stat_card(_('Days'), grouped|length, 'fas fa-calendar-day', 'emerald-500') }}
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Filters') }}</h2>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="start_date">{{ _('Start Date') }}</label>
+            <input type="date" class="form-input" id="start_date" name="start_date" value="{{ start_date }}">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="end_date">{{ _('End Date') }}</label>
+            <input type="date" class="form-input" id="end_date" name="end_date" value="{{ end_date }}">
+        </div>
+        <div class="flex items-end gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Apply') }}</button>
+            <a class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg" href="{{ url_for('projects.project_time_entries_overview', project_id=project.id) }}">{{ _('Reset') }}</a>
+        </div>
+    </form>
+</div>
+
+{% if not grouped %}
+<div class="bg-card-light dark:bg-card-dark p-8 rounded-lg shadow text-center text-text-muted-light dark:text-text-muted-dark">
+    <i class="fas fa-clock text-4xl mb-4"></i>
+    <p>{{ _('No time entries found for this project in the selected period.') }}</p>
+</div>
+{% else %}
+<div class="space-y-6">
+    {% for day in grouped %}
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
+            <div class="font-semibold flex items-center gap-2">
+                <i class="fas fa-calendar-day text-primary"></i>
+                <span>{{ day.date.strftime('%Y-%m-%d') if day.date else '-' }}</span>
+            </div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(day.total_hours) }}</span> {{ _('hours') }}
+                · {{ day.entries|length }} {{ _('entries') }}
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                        <th class="p-3">{{ _('Start') }}</th>
+                        <th class="p-3">{{ _('End') }}</th>
+                        <th class="p-3">{{ _('Hours') }}</th>
+                        <th class="p-3">{{ _('Task') }}</th>
+                        <th class="p-3">{{ _('Description') }}</th>
+                        <th class="p-3">{{ _('User') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in day.entries %}
+                    <tr class="border-t border-border-light dark:border-border-dark">
+                        <td class="p-3 whitespace-nowrap">{{ entry.start_time|user_datetime('%H:%M') if entry.start_time else '-' }}</td>
+                        <td class="p-3 whitespace-nowrap">{{ entry.end_time|user_datetime('%H:%M') if entry.end_time else '-' }}</td>
+                        <td class="p-3 whitespace-nowrap font-medium">{{ '%.2f'|format(entry.duration_hours) }}</td>
+                        <td class="p-3">{{ entry.task.name if entry.task else '—' }}</td>
+                        <td class="p-3">
+                            {% if entry.notes %}
+                                <span class="break-words">{{ entry.notes }}</span>
+                            {% else %}
+                                <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-3">{{ entry.user.display_name if entry.user and entry.user.display_name else (entry.user.username if entry.user else '—') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+
