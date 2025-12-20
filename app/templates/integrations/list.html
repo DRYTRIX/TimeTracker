@@ -58,6 +58,11 @@
             <i class="fab fa-google mr-2"></i>{{ _('Connect Google Calendar') }}
             <div class="text-xs mt-1 opacity-90">{{ _('Automatically redirects to Google') }}</div>
         </a>
+        {% elif provider.provider == 'caldav_calendar' %}
+        <a href="{{ url_for('integrations.caldav_setup') }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
+            <i class="fas fa-calendar mr-2"></i>{{ _('Setup CalDAV Calendar') }}
+            <div class="text-xs mt-1 opacity-90">{{ _('Connect to Zimbra or other CalDAV server') }}</div>
+        </a>
         {% else %}
         <a href="{{ url_for('integrations.connect_integration', provider=provider.provider) }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
             <i class="fas fa-plus mr-2"></i>{{ _('Connect') }}

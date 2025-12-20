@@ -9,6 +9,7 @@ from app.integrations.slack import SlackConnector
 from app.integrations.github import GitHubConnector
 from app.integrations.google_calendar import GoogleCalendarConnector
 from app.integrations.outlook_calendar import OutlookCalendarConnector
+from app.integrations.caldav_calendar import CalDAVCalendarConnector
 from app.integrations.microsoft_teams import MicrosoftTeamsConnector
 from app.integrations.asana import AsanaConnector
 from app.integrations.trello import TrelloConnector
@@ -24,6 +25,7 @@ def register_connectors():
     IntegrationService.register_connector("github", GitHubConnector)
     IntegrationService.register_connector("google_calendar", GoogleCalendarConnector)
     IntegrationService.register_connector("outlook_calendar", OutlookCalendarConnector)
+    IntegrationService.register_connector("caldav_calendar", CalDAVCalendarConnector)
     IntegrationService.register_connector("microsoft_teams", MicrosoftTeamsConnector)
     IntegrationService.register_connector("asana", AsanaConnector)
     IntegrationService.register_connector("trello", TrelloConnector)
