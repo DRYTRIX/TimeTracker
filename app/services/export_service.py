@@ -118,7 +118,8 @@ class ExportService:
             writer.writerow(
                 [
                     project.name,
-                    project.client.name if project.client else "",
+                    # Project.client is a string property; relationship is Project.client_obj
+                    (project.client_obj.name if getattr(project, "client_obj", None) else project.client) if project else "",
                     project.status,
                     "Yes" if project.billable else "No",
                     str(project.hourly_rate) if project.hourly_rate else "",

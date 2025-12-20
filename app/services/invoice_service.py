@@ -70,7 +70,8 @@ class InvoiceService:
             invoice_number=invoice_number,
             project_id=project_id,
             client_id=project.client_id,
-            client_name=project.client.name if project.client else "",
+            # Project.client is a string property; relationship is Project.client_obj
+            client_name=(project.client_obj.name if getattr(project, "client_obj", None) else project.client) or "",
             issue_date=issue_date or date.today(),
             due_date=due_date or date.today(),
             status=InvoiceStatus.DRAFT.value,

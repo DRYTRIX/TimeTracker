@@ -410,13 +410,16 @@ def create_project():
             )
 
         # Log activity
+        # NOTE: Project.client is a backward-compatibility property that returns a *string*.
+        # The actual relationship is Project.client_obj (via Client.projects backref).
+        client_name = project.client_obj.name if getattr(project, "client_obj", None) else project.client
         Activity.log(
             user_id=current_user.id,
             action="created",
             entity_type="project",
             entity_id=project.id,
             entity_name=project.name,
-            description=f'Created project "{project.name}" for {project.client.name}',
+            description=f'Created project "{project.name}" for {client_name}',
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
         )

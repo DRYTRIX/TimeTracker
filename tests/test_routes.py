@@ -135,6 +135,49 @@ def test_projects_create_page_contains_client_modal_trigger(admin_authenticated_
 
 @pytest.mark.integration
 @pytest.mark.routes
+def test_create_project_post_does_not_500_and_logs_activity(admin_authenticated_client, test_client, app):
+    """Regression: creating a project should not 500 due to project.client being a string property."""
+    from app import db
+    from app.models import Project, Activity
+
+    with app.app_context():
+        name = "Project Name test"
+        resp = admin_authenticated_client.post(
+            "/projects/create",
+            data={
+                "name": name,
+                "client_id": str(test_client.id),
+                "description": "Created via test",
+                "billable": "",
+                "hourly_rate": "",
+                "billing_ref": "",
+                "budget_amount": "",
+                "budget_threshold_percent": "80",
+                "code": "",
+            },
+            follow_redirects=False,
+        )
+
+        # On success we redirect to the project page
+        assert resp.status_code in (302, 303)
+
+        created = Project.query.filter_by(name=name).order_by(Project.id.desc()).first()
+        assert created is not None
+        assert created.client_id == test_client.id
+
+        # Ensure we wrote the activity entry with a description that includes the client name
+        db.session.expire_all()
+        activity = (
+            Activity.query.filter_by(entity_type="project", entity_id=created.id, action="created")
+            .order_by(Activity.id.desc())
+            .first()
+        )
+        assert activity is not None
+        assert test_client.name in (activity.description or "")
+
+
+@pytest.mark.integration
+@pytest.mark.routes
 @pytest.mark.xfail(reason="Endpoint /projects/new may not exist or uses different URL")
 def test_project_create_page(authenticated_client):
     """Test project creation page."""

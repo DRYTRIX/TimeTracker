@@ -318,7 +318,11 @@ def send_monthly_unpaid_hours_reports():
                             "id": e.id,
                             "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
                             "project": e.project.name if e.project else "",
-                            "client": (e.project.client.name if e.project and e.project.client else (e.client.name if e.client else "Unknown")),
+                            # Project.client is a string property; relationship is Project.client_obj
+                            "client": (
+                                (e.project.client_obj.name if (e.project and getattr(e.project, "client_obj", None)) else (e.project.client if e.project else ""))
+                                or (e.client.name if e.client else "Unknown")
+                            ),
                             "user": e.user.username if e.user else "",
                             "duration": e.duration_hours,
                             "notes": e.notes or "",
