@@ -21,6 +21,11 @@
         
         <!-- Actions and Time Period Filter -->
         <div class="mt-4 md:mt-0 flex gap-3 flex-wrap">
+            <a href="{{ url_for('projects.project_time_entries_overview', project_id=project.id) }}"
+               class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                <i class="fas fa-list"></i>
+                {{ _('Entries Overview') }}
+            </a>
             {% if project.budget_amount %}
             <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
                class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-lg">

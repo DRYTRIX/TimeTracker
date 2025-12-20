@@ -12,8 +12,12 @@
         </h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.client }}</p>
     </div>
-    {% if current_user.is_admin or has_any_permission(['edit_projects', 'archive_projects']) %}
     <div class="flex gap-2 flex-wrap">
+        <a href="{{ url_for('projects.project_time_entries_overview', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition">
+            <i class="fas fa-list"></i>
+            {{ _('Entries Overview') }}
+        </a>
+        {% if current_user.is_admin or has_any_permission(['edit_projects', 'archive_projects']) %}
         <a href="{{ url_for('projects.project_dashboard', project_id=project.id) }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition">
             <i class="fas fa-chart-line"></i>
             {{ _('Dashboard') }}
@@ -57,8 +61,8 @@
         <form id="confirmDeleteProject-{{ project.id }}-form" method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="hidden">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
