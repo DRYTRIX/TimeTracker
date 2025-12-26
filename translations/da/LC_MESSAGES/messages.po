@@ -1,0 +1,1000 @@
+msgid ""
+msgstr ""
+"Project-Id-Version:  TimeTracker\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-11-24 06:11+0100\n"
+"PO-Revision-Date: 2025-12-26 00:00+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: da\n"
+"Language-Team: da <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.14.0\n"
+
+#: app/__init__.py:721 app/__init__.py:754
+msgid "Your session expired or the page was open too long. Please try again."
+msgstr "Din session udløb, eller siden var åben for længe. Prøv igen."
+
+#: app/routes/admin.py:41
+msgid "Administrator access required"
+msgstr "Administratoradgang påkrævet"
+
+#: app/routes/admin.py:162 app/routes/admin.py:199 app/routes/auth.py:61
+msgid "Username is required"
+msgstr "Brugernavn er påkrævet"
+
+#: app/routes/admin.py:167
+msgid "User already exists"
+msgstr "Bruger findes allerede"
+
+#: app/routes/admin.py:174
+msgid "Could not create user due to a database error. Please check server logs."
+msgstr "Kunne ikke oprette bruger på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/admin.py:177
+#, python-format
+msgid "User \"%(username)s\" created successfully"
+msgstr "Bruger \"%(username)s\" blev oprettet"
+
+#: app/routes/admin.py:205
+msgid "Username already exists"
+msgstr "Brugernavn findes allerede"
+
+#: app/routes/admin.py:210
+msgid "Please select a client when enabling client portal access."
+msgstr "Vælg en kunde, når du aktiverer adgang til kundeportalen."
+
+#: app/routes/admin.py:221
+msgid "Could not update user due to a database error. Please check server logs."
+msgstr "Kunne ikke opdatere bruger på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/admin.py:224
+#, python-format
+msgid "User \"%(username)s\" updated successfully"
+msgstr "Bruger \"%(username)s\" blev opdateret"
+
+#: app/routes/admin.py:240
+msgid "Cannot delete the last administrator"
+msgstr "Kan ikke slette den sidste administrator"
+
+#: app/routes/admin.py:245
+msgid "Cannot delete user with existing time entries"
+msgstr "Kan ikke slette bruger med eksisterende tidsregistreringer"
+
+#: app/routes/admin.py:251
+msgid "Could not delete user due to a database error. Please check server logs."
+msgstr "Kunne ikke slette bruger på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/admin.py:254
+#, python-format
+msgid "User \"%(username)s\" deleted successfully"
+msgstr "Bruger \"%(username)s\" blev slettet"
+
+#: app/routes/admin.py:314
+msgid "Telemetry has been enabled. Thank you for helping us improve!"
+msgstr "Telemetri er aktiveret. Tak fordi du hjælper os med at blive bedre!"
+
+#: app/routes/admin.py:316
+msgid "Telemetry has been disabled."
+msgstr "Telemetri er deaktiveret."
+
+#: app/routes/admin.py:350
+#, python-format
+msgid "Invalid timezone: %(timezone)s"
+msgstr "Ugyldig tidszone: %(timezone)s"
+
+#: app/routes/admin.py:394
+msgid ""
+"Could not update settings due to a database error. Please check server "
+"logs."
+msgstr "Kunne ikke opdatere indstillingerne på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/admin.py:396
+msgid "Settings updated successfully"
+msgstr "Indstillinger opdateret"
+
+#: app/routes/admin.py:441 app/routes/admin.py:539
+msgid "Could not update PDF layout due to a database error."
+msgstr "Kunne ikke opdatere PDF-layout på grund af en databasefejl."
+
+#: app/routes/admin.py:444 app/routes/admin.py:541
+msgid "PDF layout updated successfully"
+msgstr "PDF-layout opdateret"
+
+#: app/routes/admin.py:502 app/routes/admin.py:605
+msgid "Could not reset PDF layout due to a database error."
+msgstr "Kunne ikke nulstille PDF-layout på grund af en databasefejl."
+
+#: app/routes/admin.py:504 app/routes/admin.py:607
+msgid "PDF layout reset to defaults"
+msgstr "PDF-layout nulstillet til standard"
+
+#: app/routes/admin.py:1139 app/routes/admin.py:1144
+msgid "No logo file selected"
+msgstr "Ingen logofil valgt"
+
+#: app/routes/admin.py:1160 app/routes/auth.py:234
+msgid "Invalid image file."
+msgstr "Ugyldig billedfil."
+
+#: app/routes/admin.py:1187
+msgid "Could not save logo due to a database error. Please check server logs."
+msgstr "Kunne ikke gemme logo på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/admin.py:1190
+msgid ""
+"Company logo uploaded successfully! You can see it in the \"Current "
+"Company Logo\" section above. It will appear on invoices and PDF "
+"documents."
+msgstr "Firmalogoet er uploadet! Du kan se det i sektionen \"Aktuelt firmalogo\" ovenfor. Det vises på fakturaer og PDF-dokumenter."
+
+#: app/routes/admin.py:1192
+msgid "Invalid file type. Allowed types: PNG, JPG, JPEG, GIF, SVG, WEBP"
+msgstr "Ugyldig filtype. Tilladte typer: PNG, JPG, JPEG, GIF, SVG, WEBP"
+
+#: app/routes/admin.py:1215
+msgid "Could not remove logo due to a database error. Please check server logs."
+msgstr "Kunne ikke fjerne logo på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/admin.py:1217
+msgid ""
+"Company logo removed successfully. Upload a new logo in the section below"
+" if needed."
+msgstr "Firmalogoet blev fjernet. Upload et nyt logo i sektionen nedenfor, hvis nødvendigt."
+
+#: app/routes/admin.py:1219
+msgid "No logo to remove"
+msgstr "Intet logo at fjerne"
+
+#: app/routes/admin.py:1278
+msgid "Backup failed: archive not created"
+msgstr "Backup mislykkedes: arkiv blev ikke oprettet"
+
+#: app/routes/admin.py:1283
+#, python-format
+msgid "Backup failed: %(error)s"
+msgstr "Backup mislykkedes: %(error)s"
+
+#: app/routes/admin.py:1295 app/routes/admin.py:1316
+msgid "Invalid file type"
+msgstr "Ugyldig filtype"
+
+#: app/routes/admin.py:1302 app/routes/admin.py:1327
+msgid "Backup file not found"
+msgstr "Backupfil ikke fundet"
+
+#: app/routes/admin.py:1325
+#, python-format
+msgid "Backup \"%(filename)s\" deleted successfully"
+msgstr "Backup \"%(filename)s\" blev slettet"
+
+#: app/routes/admin.py:1329
+#, python-format
+msgid "Failed to delete backup: %(error)s"
+msgstr "Kunne ikke slette backup: %(error)s"
+
+#: app/routes/admin.py:1347
+msgid "Invalid file type. Please select a .zip backup archive."
+msgstr "Ugyldig filtype. Vælg et .zip-backuparkiv."
+
+#: app/routes/admin.py:1351
+msgid "Backup file not found."
+msgstr "Backupfil ikke fundet."
+
+#: app/routes/admin.py:1362
+msgid "Invalid file type. Please upload a .zip backup archive."
+msgstr "Ugyldig filtype. Upload et .zip-backuparkiv."
+
+#: app/routes/admin.py:1369
+msgid "No backup file provided"
+msgstr "Ingen backupfil angivet"
+
+#: app/routes/admin.py:1403
+msgid "Restore started. You can monitor progress on this page."
+msgstr "Gendannelse startet. Du kan følge status på denne side."
+
+#: app/routes/admin.py:1522
+msgid "OIDC is not enabled. Set AUTH_METHOD to \"oidc\" or \"both\"."
+msgstr "OIDC er ikke aktiveret. Sæt AUTH_METHOD til \"oidc\" eller \"both\"."
+
+#: app/routes/admin.py:1527
+msgid "OIDC_ISSUER is not configured"
+msgstr "OIDC_ISSUER er ikke konfigureret"
+
+#: app/routes/admin.py:1537
+#, python-format
+msgid "✓ Discovery document fetched successfully from %(url)s"
+msgstr "✓ Discovery-dokument hentet fra %(url)s"
+
+#: app/routes/admin.py:1540
+#, python-format
+msgid "✗ Timeout fetching discovery document from %(url)s"
+msgstr "✗ Timeout ved hentning af discovery-dokument fra %(url)s"
+
+#: app/routes/admin.py:1544
+#, python-format
+msgid "✗ Failed to fetch discovery document: %(error)s"
+msgstr "✗ Kunne ikke hente discovery-dokument: %(error)s"
+
+#: app/routes/admin.py:1548
+#, python-format
+msgid "✗ Unexpected error: %(error)s"
+msgstr "✗ Uventet fejl: %(error)s"
+
+#: app/routes/admin.py:1556
+msgid "✓ OAuth client is registered in application"
+msgstr "✓ OAuth-klient er registreret i applikationen"
+
+#: app/routes/admin.py:1559
+msgid "✗ OAuth client is not registered"
+msgstr "✗ OAuth-klient er ikke registreret"
+
+#: app/routes/admin.py:1562
+#, python-format
+msgid "✗ Failed to create OAuth client: %(error)s"
+msgstr "✗ Kunne ikke oprette OAuth-klient: %(error)s"
+
+#: app/routes/admin.py:1569
+#, python-format
+msgid "✓ %(endpoint)s: %(url)s"
+msgstr "✓ %(endpoint)s: %(url)s"
+
+#: app/routes/admin.py:1571
+#, python-format
+msgid "✗ Missing %(endpoint)s in discovery document"
+msgstr "✗ Mangler %(endpoint)s i discovery-dokumentet"
+
+#: app/routes/admin.py:1578
+#, python-format
+msgid "✓ Scope \"%(scope)s\" is supported by provider"
+msgstr "✓ Scope \"%(scope)s\" understøttes af udbyderen"
+
+#: app/routes/admin.py:1580
+#, python-format
+msgid ""
+"⚠ Scope \"%(scope)s\" may not be supported by provider (supported: "
+"%(supported)s)"
+msgstr "⚠ Scope \"%(scope)s\" understøttes muligvis ikke af udbyderen (understøttet: %(supported)s)"
+
+#: app/routes/admin.py:1585
+#, python-format
+msgid "ℹ Provider supports claims: %(claims)s"
+msgstr "ℹ Udbyderen understøtter claims: %(claims)s"
+
+#: app/routes/admin.py:1597
+#, python-format
+msgid "✓ Configured %(claim_type)s claim \"%(claim_name)s\" is supported"
+msgstr "✓ Konfigureret %(claim_type)s-claim \"%(claim_name)s\" er understøttet"
+
+#: app/routes/admin.py:1599
+#, python-format
+msgid ""
+"⚠ Configured %(claim_type)s claim \"%(claim_name)s\" not in supported "
+"claims list (may still work)"
+msgstr "⚠ Konfigureret %(claim_type)s-claim \"%(claim_name)s\" er ikke på listen over understøttede claims (kan muligvis virke alligevel)"
+
+#: app/routes/admin.py:1601
+msgid "OIDC configuration test completed"
+msgstr "OIDC-konfigurationstest fuldført"
+
+#: app/routes/admin.py:1931 app/routes/admin.py:1995 app/routes/quotes.py:1041
+#: app/routes/quotes.py:1126 app/routes/time_entry_templates.py:51
+#: app/routes/time_entry_templates.py:167
+msgid "Template name is required"
+msgstr "Skabelonnavn er påkrævet"
+
+#: app/routes/admin.py:1937 app/routes/admin.py:2004
+msgid "A template with this name already exists"
+msgstr "En skabelon med dette navn findes allerede"
+
+#: app/routes/admin.py:1956
+msgid "Could not create email template due to a database error."
+msgstr "Kunne ikke oprette e-mailskabelon på grund af en databasefejl."
+
+#: app/routes/admin.py:1959
+msgid "Email template created successfully"
+msgstr "E-mailskabelon oprettet"
+
+#: app/routes/admin.py:2020
+msgid "Could not update email template due to a database error."
+msgstr "Kunne ikke opdatere e-mailskabelon på grund af en databasefejl."
+
+#: app/routes/admin.py:2023
+msgid "Email template updated successfully"
+msgstr "E-mailskabelon opdateret"
+
+#: app/routes/admin.py:2041
+msgid "Cannot delete template that is in use by invoices or recurring invoices"
+msgstr "Kan ikke slette skabelon, der bruges af fakturaer eller tilbagevendende fakturaer"
+
+#: app/routes/admin.py:2046
+msgid "Could not delete email template due to a database error."
+msgstr "Kunne ikke slette e-mailskabelon på grund af en databasefejl."
+
+#: app/routes/admin.py:2048
+#, python-format
+msgid "Email template \"%(name)s\" deleted successfully"
+msgstr "E-mailskabelon \"%(name)s\" blev slettet"
+
+#: app/routes/audit_logs.py:24
+msgid "Audit logs table does not exist. Please run: flask db upgrade"
+msgstr "Auditlog-tabellen findes ikke. Kør: flask db upgrade"
+
+#: app/routes/auth.py:83
+msgid ""
+"Could not create your account due to a database error. Please try again "
+"later."
+msgstr "Kunne ikke oprette din konto på grund af en databasefejl. Prøv igen senere."
+
+#: app/routes/auth.py:94 app/routes/auth.py:508
+msgid "Welcome! Your account has been created."
+msgstr "Velkommen! Din konto er oprettet."
+
+#: app/routes/auth.py:97
+msgid "User not found. Please contact an administrator."
+msgstr "Bruger blev ikke fundet. Kontakt en administrator."
+
+#: app/routes/auth.py:105
+msgid "Could not update your account role due to a database error."
+msgstr "Kunne ikke opdatere din kontorolle på grund af en databasefejl."
+
+#: app/routes/auth.py:111 app/routes/auth.py:550
+msgid "Account is disabled. Please contact an administrator."
+msgstr "Kontoen er deaktiveret. Kontakt en administrator."
+
+#: app/routes/auth.py:135 app/routes/auth.py:581
+#, python-format
+msgid "Welcome back, %(username)s!"
+msgstr "Velkommen tilbage, %(username)s!"
+
+#: app/routes/auth.py:139
+msgid "Unexpected error during login. Please try again or check server logs."
+msgstr "Uventet fejl under login. Prøv igen eller tjek serverloggene."
+
+#: app/routes/auth.py:169
+#, python-format
+msgid "Goodbye, %(username)s!"
+msgstr "Farvel, %(username)s!"
+
+#: app/routes/auth.py:224
+msgid "Invalid avatar file type. Allowed: PNG, JPG, JPEG, GIF, WEBP"
+msgstr "Ugyldig avatar-filtype. Tilladt: PNG, JPG, JPEG, GIF, WEBP"
+
+#: app/routes/auth.py:247
+msgid "Failed to save avatar on server."
+msgstr "Kunne ikke gemme avatar på serveren."
+
+#: app/routes/auth.py:266
+msgid "Profile updated successfully"
+msgstr "Profil opdateret"
+
+#: app/routes/auth.py:269
+msgid "Could not update your profile due to a database error."
+msgstr "Kunne ikke opdatere din profil på grund af en databasefejl."
+
+#: app/routes/auth.py:291
+msgid "Avatar removed"
+msgstr "Avatar fjernet"
+
+#: app/routes/auth.py:294
+msgid "Failed to remove avatar."
+msgstr "Kunne ikke fjerne avatar."
+
+#: app/routes/auth.py:342
+msgid "Single Sign-On is not configured yet. Please contact an administrator."
+msgstr "Single Sign-On er ikke konfigureret endnu. Kontakt en administrator."
+
+#: app/routes/auth.py:361
+msgid "Single Sign-On is not configured."
+msgstr "Single Sign-On er ikke konfigureret."
+
+#: app/routes/auth.py:464
+msgid ""
+"Authentication failed: missing issuer or subject claim. Please check OIDC"
+" configuration."
+msgstr "Godkendelse mislykkedes: mangler issuer- eller subject-claim. Tjek OIDC-konfigurationen."
+
+#: app/routes/auth.py:488
+msgid "User account does not exist and self-registration is disabled."
+msgstr "Brugerkontoen findes ikke, og selvregistrering er deaktiveret."
+
+#: app/routes/auth.py:511
+msgid "Could not create your account due to a database error."
+msgstr "Kunne ikke oprette din konto på grund af en databasefejl."
+
+#: app/routes/auth.py:586
+msgid "Unexpected error during SSO login. Please try again or contact support."
+msgstr "Uventet fejl under SSO-login. Prøv igen eller kontakt support."
+
+#: app/routes/budget_alerts.py:342
+msgid "You do not have access to this project."
+msgstr "Du har ikke adgang til dette projekt."
+
+#: app/routes/budget_alerts.py:349
+msgid "This project does not have a budget set."
+msgstr "Dette projekt har ikke et budget angivet."
+
+#: app/routes/calendar.py:153
+msgid "Event created successfully"
+msgstr "Begivenhed oprettet"
+
+#: app/routes/calendar.py:233
+msgid "Event updated successfully"
+msgstr "Begivenhed opdateret"
+
+#: app/routes/calendar.py:252
+msgid "You do not have permission to delete this event."
+msgstr "Du har ikke tilladelse til at slette denne begivenhed."
+
+#: app/routes/calendar.py:260
+msgid "Failed to delete event"
+msgstr "Kunne ikke slette begivenhed"
+
+#: app/routes/calendar.py:265 app/routes/calendar.py:270
+msgid "Event deleted successfully"
+msgstr "Begivenhed slettet"
+
+#: app/routes/calendar.py:276
+#, python-format
+msgid "Error deleting event: %(error)s"
+msgstr "Fejl ved sletning af begivenhed: %(error)s"
+
+#: app/routes/calendar.py:306
+msgid "Event moved successfully"
+msgstr "Begivenhed flyttet"
+
+#: app/routes/calendar.py:344
+msgid "Event resized successfully"
+msgstr "Begivenhed ændret i størrelse"
+
+#: app/routes/calendar.py:362
+msgid "You do not have permission to view this event."
+msgstr "Du har ikke tilladelse til at se denne begivenhed."
+
+#: app/routes/calendar.py:413
+msgid "You do not have permission to edit this event."
+msgstr "Du har ikke tilladelse til at redigere denne begivenhed."
+
+#: app/routes/client_notes.py:23 app/routes/client_notes.py:79
+msgid "Note content cannot be empty"
+msgstr "Notatets indhold må ikke være tomt"
+
+#: app/routes/client_notes.py:45
+msgid "Note added successfully"
+msgstr "Notat tilføjet"
+
+#: app/routes/client_notes.py:47
+msgid "Error adding note"
+msgstr "Fejl ved tilføjelse af notat"
+
+#: app/routes/client_notes.py:50 app/routes/client_notes.py:52
+#, python-format
+msgid "Error adding note: %(error)s"
+msgstr "Fejl ved tilføjelse af notat: %(error)s"
+
+#: app/routes/client_notes.py:65 app/routes/client_notes.py:110
+msgid "Note does not belong to this client"
+msgstr "Notatet tilhører ikke denne kunde"
+
+#: app/routes/client_notes.py:70
+msgid "You do not have permission to edit this note"
+msgstr "Du har ikke tilladelse til at redigere dette notat"
+
+#: app/routes/client_notes.py:85 app/templates/clients/view.html:327
+#: app/templates/clients/view.html:332
+msgid "Error updating note"
+msgstr "Fejl ved opdatering af notat"
+
+#: app/routes/client_notes.py:92
+msgid "Note updated successfully"
+msgstr "Notat opdateret"
+
+#: app/routes/client_notes.py:96 app/routes/client_notes.py:98
+#, python-format
+msgid "Error updating note: %(error)s"
+msgstr "Fejl ved opdatering af notat: %(error)s"
+
+#: app/routes/client_notes.py:115
+msgid "You do not have permission to delete this note"
+msgstr "Du har ikke tilladelse til at slette dette notat"
+
+#: app/routes/client_notes.py:124
+msgid "Error deleting note"
+msgstr "Fejl ved sletning af notat"
+
+#: app/routes/client_notes.py:131
+msgid "Note deleted successfully"
+msgstr "Notat slettet"
+
+#: app/routes/client_notes.py:134
+#, python-format
+msgid "Error deleting note: %(error)s"
+msgstr "Fejl ved sletning af notat: %(error)s"
+
+#: app/routes/client_portal.py:55 app/routes/client_portal.py:82
+#: app/routes/client_portal.py:91 app/routes/client_portal.py:95
+#: app/routes/client_portal.py:121
+msgid "Please log in to access the client portal."
+msgstr "Log ind for at få adgang til kundeportalen."
+
+#: app/routes/client_portal.py:59
+msgid "Client portal access is not enabled for your account."
+msgstr "Adgang til kundeportalen er ikke aktiveret for din konto."
+
+#: app/routes/client_portal.py:64
+msgid "Your client account is inactive."
+msgstr "Din kundekonto er inaktiv."
+
+#: app/routes/client_portal.py:161
+msgid "Username and password are required."
+msgstr "Brugernavn og adgangskode er påkrævet."
+
+#: app/routes/client_portal.py:168
+msgid "Invalid username or password."
+msgstr "Ugyldigt brugernavn eller adgangskode."
+
+#: app/routes/client_portal.py:175
+#, python-format
+msgid "Welcome, %(client_name)s!"
+msgstr "Velkommen, %(client_name)s!"
+
+#: app/routes/client_portal.py:189
+msgid "You have been logged out."
+msgstr "Du er blevet logget ud."
+
+#: app/routes/client_portal.py:199
+msgid "Invalid or missing password setup token."
+msgstr "Ugyldigt eller manglende token til opsætning af adgangskode."
+
+#: app/routes/client_portal.py:206
+msgid "Invalid or expired password setup token. Please request a new one."
+msgstr "Ugyldigt eller udløbet token til opsætning af adgangskode. Anmod om et nyt."
+
+#: app/routes/client_portal.py:215
+msgid "Password is required."
+msgstr "Adgangskode er påkrævet."
+
+#: app/routes/client_portal.py:219
+msgid "Password must be at least 8 characters long."
+msgstr "Adgangskoden skal være mindst 8 tegn."
+
+#: app/routes/client_portal.py:223
+msgid "Passwords do not match."
+msgstr "Adgangskoderne matcher ikke."
+
+#: app/routes/client_portal.py:231
+msgid "Could not set password due to a database error."
+msgstr "Kunne ikke sætte adgangskode på grund af en databasefejl."
+
+#: app/routes/client_portal.py:234
+msgid "Password set successfully! You can now log in to the portal."
+msgstr "Adgangskoden er gemt! Du kan nu logge ind på portalen."
+
+#: app/routes/client_portal.py:251 app/routes/client_portal.py:321
+#: app/routes/client_portal.py:356 app/routes/client_portal.py:454
+msgid "Unable to load client portal data."
+msgstr "Kan ikke indlæse data til kundeportalen."
+
+#: app/routes/client_portal.py:392
+msgid "Invoice not found."
+msgstr "Faktura ikke fundet."
+
+#: app/routes/client_portal.py:434
+msgid "Quote not found."
+msgstr "Tilbud ikke fundet."
+
+#: app/routes/clients.py:76 app/routes/clients.py:78
+msgid "You do not have permission to create clients"
+msgstr "Du har ikke tilladelse til at oprette kunder"
+
+#: app/routes/clients.py:105 app/routes/clients.py:264
+msgid "Client name is required"
+msgstr "Kundenavn er påkrævet"
+
+#: app/routes/clients.py:116 app/routes/clients.py:270
+msgid "A client with this name already exists"
+msgstr "En kunde med dette navn findes allerede"
+
+#: app/routes/clients.py:129 app/routes/clients.py:277 app/routes/offers.py:92
+#: app/routes/offers.py:228 app/routes/projects.py:242
+#: app/routes/projects.py:652 app/routes/quotes.py:158
+msgid "Invalid hourly rate format"
+msgstr "Ugyldigt format for timepris"
+
+#: app/routes/clients.py:141 app/routes/clients.py:285
+msgid "Prepaid hours must be a positive number."
+msgstr "Forudbetalte timer skal være et positivt tal."
+
+#: app/routes/clients.py:153 app/routes/clients.py:294
+msgid "Prepaid reset day must be between 1 and 28."
+msgstr "Forudbetalt reset-dag skal være mellem 1 og 28."
+
+#: app/routes/clients.py:176
+msgid "Could not create client due to a database error. Please check server logs."
+msgstr "Kunne ikke oprette kunde på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/clients.py:248
+msgid "You do not have permission to edit clients"
+msgstr "Du har ikke tilladelse til at redigere kunder"
+
+#: app/routes/clients.py:305
+msgid "Portal username is required when enabling portal access."
+msgstr "Portals brugernavn er påkrævet, når portaladgang aktiveres."
+
+#: app/routes/clients.py:311
+msgid "This portal username is already in use by another client."
+msgstr "Dette portalbrugernavn er allerede i brug af en anden kunde."
+
+#: app/routes/clients.py:339
+msgid "Could not update client due to a database error. Please check server logs."
+msgstr "Kunne ikke opdatere kunde på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/clients.py:360
+msgid "You do not have permission to send portal emails"
+msgstr "Du har ikke tilladelse til at sende portal-e-mails"
+
+#: app/routes/clients.py:365
+msgid "Client portal is not enabled for this client."
+msgstr "Kundeportalen er ikke aktiveret for denne kunde."
+
+#: app/routes/clients.py:369
+msgid "Portal username is not set for this client."
+msgstr "Portalbrugernavn er ikke sat for denne kunde."
+
+#: app/routes/clients.py:373
+msgid "Client email address is not set. Cannot send password setup email."
+msgstr "Kundens e-mailadresse er ikke sat. Kan ikke sende e-mail til opsætning af adgangskode."
+
+#: app/routes/clients.py:380
+msgid "Could not generate password setup token due to a database error."
+msgstr "Kunne ikke generere token til opsætning af adgangskode på grund af en databasefejl."
+
+#: app/routes/clients.py:394
+#, python-format
+msgid "Password setup email sent successfully to %(email)s"
+msgstr "E-mail til opsætning af adgangskode blev sendt til %(email)s"
+
+#: app/routes/clients.py:404
+msgid ""
+"Email server is not configured. Please configure email settings in Admin "
+"→ Email Configuration or set MAIL_SERVER environment variable."
+msgstr "Mailserver er ikke konfigureret. Konfigurer e-mailindstillinger i Admin → E-mailkonfiguration eller sæt MAIL_SERVER miljøvariablen."
+
+#: app/routes/clients.py:406
+msgid ""
+"Failed to send password setup email. Please check email configuration and"
+" server logs for details."
+msgstr "Kunne ikke sende e-mail til opsætning af adgangskode. Tjek e-mailkonfiguration og serverlogs for detaljer."
+
+#: app/routes/clients.py:409
+#, python-format
+msgid "An error occurred while sending the email: %(error)s"
+msgstr "Der opstod en fejl under afsendelse af e-mailen: %(error)s"
+
+#: app/routes/clients.py:421
+msgid "You do not have permission to archive clients"
+msgstr "Du har ikke tilladelse til at arkivere kunder"
+
+#: app/routes/clients.py:425
+msgid "Client is already inactive"
+msgstr "Kunde er allerede inaktiv"
+
+#: app/routes/clients.py:442
+msgid "You do not have permission to activate clients"
+msgstr "Du har ikke tilladelse til at aktivere kunder"
+
+#: app/routes/clients.py:446
+msgid "Client is already active"
+msgstr "Kunde er allerede aktiv"
+
+#: app/routes/clients.py:461 app/routes/clients.py:489
+msgid "You do not have permission to delete clients"
+msgstr "Du har ikke tilladelse til at slette kunder"
+
+#: app/routes/clients.py:466
+msgid "Cannot delete client with existing projects"
+msgstr "Kan ikke slette kunde med eksisterende projekter"
+
+#: app/routes/clients.py:473
+msgid "Could not delete client due to a database error. Please check server logs."
+msgstr "Kunne ikke slette kunde på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/clients.py:495
+msgid "No clients selected for deletion"
+msgstr "Ingen kunder valgt til sletning"
+
+#: app/routes/clients.py:534
+msgid ""
+"Could not delete clients due to a database error. Please check server "
+"logs."
+msgstr "Kunne ikke slette kunder på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/clients.py:545
+msgid "No clients were deleted"
+msgstr "Ingen kunder blev slettet"
+
+#: app/routes/clients.py:555
+msgid "You do not have permission to change client status"
+msgstr "Du har ikke tilladelse til at ændre kundestatus"
+
+#: app/routes/clients.py:562
+msgid "No clients selected"
+msgstr "Ingen kunder valgt"
+
+#: app/routes/clients.py:566 app/routes/projects.py:968 app/routes/tasks.py:399
+msgid "Invalid status"
+msgstr "Ugyldig status"
+
+#: app/routes/clients.py:595
+msgid ""
+"Could not update client status due to a database error. Please check "
+"server logs."
+msgstr "Kunne ikke opdatere kundestatus på grund af en databasefejl. Tjek serverloggene."
+
+#: app/routes/clients.py:607
+msgid "No clients were updated"
+msgstr "Ingen kunder blev opdateret"
+
+#: app/routes/comments.py:24 app/routes/comments.py:114
+msgid "Comment content cannot be empty"
+msgstr "Kommentarindhold må ikke være tomt"
+
+#: app/routes/comments.py:28
+msgid "Comment must be associated with a project, task, or quote"
+msgstr "Kommentar skal være knyttet til et projekt, en opgave eller et tilbud"
+
+#: app/routes/comments.py:34
+msgid "Comment cannot be associated with multiple targets"
+msgstr "Kommentar kan ikke knyttes til flere mål"
+
+#: app/routes/comments.py:56
+msgid "Invalid parent comment"
+msgstr "Ugyldig forælderkommentar"
+
+#: app/routes/comments.py:81
+msgid "Comment added successfully"
+msgstr "Kommentar tilføjet"
+
+#: app/routes/comments.py:83
+msgid "Error adding comment"
+msgstr "Fejl ved tilføjelse af kommentar"
+
+#: app/routes/comments.py:86
+#, python-format
+msgid "Error adding comment: %(error)s"
+msgstr "Fejl ved tilføjelse af kommentar: %(error)s"
+
+#: app/routes/comments.py:106
+msgid "You do not have permission to edit this comment"
+msgstr "Du har ikke tilladelse til at redigere denne kommentar"
+
+#: app/routes/comments.py:123
+msgid "Comment updated successfully"
+msgstr "Kommentar opdateret"
+
+#: app/routes/comments.py:136
+#, python-format
+msgid "Error updating comment: %(error)s"
+msgstr "Fejl ved opdatering af kommentar: %(error)s"
+
+#: app/routes/comments.py:148
+msgid "You do not have permission to delete this comment"
+msgstr "Du har ikke tilladelse til at slette denne kommentar"
+
+#: app/routes/comments.py:163
+msgid "Comment deleted successfully"
+msgstr "Kommentar slettet"
+
+#: app/routes/comments.py:176
+#, python-format
+msgid "Error deleting comment: %(error)s"
+msgstr "Fejl ved sletning af kommentar: %(error)s"
+
+#: app/routes/contacts.py:57
+msgid "Contact created successfully"
+msgstr "Kontakt oprettet"
+
+#: app/routes/contacts.py:61
+#, python-format
+msgid "Error creating contact: %(error)s"
+msgstr "Fejl ved oprettelse af kontakt: %(error)s"
+
+#: app/routes/contacts.py:104
+msgid "Contact updated successfully"
+msgstr "Kontakt opdateret"
+
+#: app/routes/contacts.py:108
+#, python-format
+msgid "Error updating contact: %(error)s"
+msgstr "Fejl ved opdatering af kontakt: %(error)s"
+
+#: app/routes/contacts.py:123
+msgid "Contact deleted successfully"
+msgstr "Kontakt slettet"
+
+#: app/routes/contacts.py:126
+#, python-format
+msgid "Error deleting contact: %(error)s"
+msgstr "Fejl ved sletning af kontakt: %(error)s"
+
+#: app/routes/contacts.py:139
+msgid "Contact set as primary"
+msgstr "Kontakt sat som primær"
+
+#: app/routes/contacts.py:142
+#, python-format
+msgid "Error setting primary contact: %(error)s"
+msgstr "Fejl ved at sætte primær kontakt: %(error)s"
+
+#: app/routes/contacts.py:178
+msgid "Communication recorded successfully"
+msgstr "Kommunikation registreret"
+
+#: app/routes/contacts.py:182
+#, python-format
+msgid "Error recording communication: %(error)s"
+msgstr "Fejl ved registrering af kommunikation: %(error)s"
+
+#: app/routes/deals.py:104 app/routes/deals.py:178
+msgid "Invalid deal value"
+msgstr "Ugyldig aftaleværdi"
+
+#: app/routes/deals.py:137
+msgid "Deal created successfully"
+msgstr "Aftale oprettet"
+
+#: app/routes/deals.py:141
+#, python-format
+msgid "Error creating deal: %(error)s"
+msgstr "Fejl ved oprettelse af aftale: %(error)s"
+
+#: app/routes/deals.py:206
+msgid "Deal updated successfully"
+msgstr "Aftale opdateret"
+
+#: app/routes/deals.py:210
+#, python-format
+msgid "Error updating deal: %(error)s"
+msgstr "Fejl ved opdatering af aftale: %(error)s"
+
+#: app/routes/deals.py:242
+msgid "Deal closed as won"
+msgstr "Aftale lukket som vundet"
+
+#: app/routes/deals.py:245 app/routes/deals.py:272
+#, python-format
+msgid "Error closing deal: %(error)s"
+msgstr "Fejl ved lukning af aftale: %(error)s"
+
+#: app/routes/deals.py:269
+msgid "Deal closed as lost"
+msgstr "Aftale lukket som tabt"
+
+#: app/routes/deals.py:304 app/routes/leads.py:309
+msgid "Activity recorded successfully"
+msgstr "Aktivitet registreret"
+
+#: app/routes/deals.py:308 app/routes/leads.py:313
+#, python-format
+msgid "Error recording activity: %(error)s"
+msgstr "Fejl ved registrering af aktivitet: %(error)s"
+
+#: app/routes/expense_categories.py:50 app/routes/expense_categories.py:138
+msgid "Category name is required"
+msgstr "Kategorinavn er påkrævet"
+
+#: app/routes/expense_categories.py:85
+msgid "Expense category created successfully"
+msgstr "Udgiftskategori oprettet"
+
+#: app/routes/expense_categories.py:90 app/routes/expense_categories.py:96
+msgid "Error creating expense category"
+msgstr "Fejl ved oprettelse af udgiftskategori"
+
+#: app/routes/expense_categories.py:169
+msgid "Expense category updated successfully"
+msgstr "Udgiftskategori opdateret"
+
+#: app/routes/expense_categories.py:174 app/routes/expense_categories.py:180
+msgid "Error updating expense category"
+msgstr "Fejl ved opdatering af udgiftskategori"
+
+#: app/routes/expense_categories.py:197
+msgid "Expense category deactivated successfully"
+msgstr "Udgiftskategori deaktiveret"
+
+#: app/routes/expense_categories.py:201 app/routes/expense_categories.py:206
+msgid "Error deactivating expense category"
+msgstr "Fejl ved deaktivering af udgiftskategori"
+
+#: app/routes/expenses.py:231
+msgid "Title is required"
+msgstr "Titel er påkrævet"
+
+#: app/routes/expenses.py:235
+msgid "Category is required"
+msgstr "Kategori er påkrævet"
+
+#: app/routes/expenses.py:239
+msgid "Amount is required"
+msgstr "Beløb er påkrævet"
+
+#: app/routes/expenses.py:243
+msgid "Expense date is required"
+msgstr "Udgiftsdato er påkrævet"
+
+#: app/routes/expenses.py:250 app/routes/expenses.py:413
+#: app/routes/expenses.py:1205 app/routes/mileage.py:179
+#: app/routes/per_diem.py:136 app/routes/projects.py:1226
+#: app/routes/projects.py:1297 app/routes/reports.py:181
+#: app/routes/reports.py:326 app/routes/reports.py:460
+#: app/routes/reports.py:656 app/routes/reports.py:740
+#: app/routes/reports.py:800 app/routes/timer.py:743
+#: app/routes/weekly_goals.py:87
+msgid "Invalid date format"
+msgstr "Ugyldigt datoformat"
+
+#: app/routes/expenses.py:258 app/routes/expenses.py:421
+#: app/routes/expenses.py:1213 app/routes/projects.py:1219
+#: app/routes/projects.py:1290
+msgid "Invalid amount format"
+msgstr "Ugyldigt beløbsformat"
+
+#: app/routes/expenses.py:325
+msgid "Expense created successfully"
+msgstr "Udgift oprettet"
+
+#: app/routes/expenses.py:336 app/routes/expenses.py:341
+#: app/routes/expenses.py:1258 app/routes/expenses.py:1263
+msgid "Error creating expense"
+msgstr "Fejl ved oprettelse af udgift"
+
+#: app/routes/expenses.py:353
+msgid "You do not have permission to view this expense"
+msgstr "Du har ikke tilladelse til at se denne udgift"
+
+#: app/routes/expenses.py:371
+msgid "You do not have permission to edit this expense"
+msgstr "Du har ikke tilladelse til at redigere denne udgift"
+
+#: app/routes/expenses.py:376
+msgid "Cannot edit approved or reimbursed expenses"
+msgstr "Kan ikke redigere godkendte eller refunderede udgifter"
+
+#: app/routes/expenses.py:406 app/routes/expenses.py:1198
+#: app/routes/mileage.py:172 app/routes/per_diem.py:128
+#: app/routes/per_diem.py:550 app/routes/per_diem.py:601
+msgid "Please fill in all required fields"
+msgstr "Udfyld alle påkrævede felter"
+
+#: app/routes/expenses.py:482
+msgid "Expense updated successfully"
+msgstr "Udgift opdateret"
+
+#: app/routes/expenses.py:487 app/routes/expenses.py:492
+msgid "Error updating expense"
+msgstr "Fejl ved opdatering af udgift"
+
+#: app/routes/expenses.py:504
+msgid "You do not have permission to delete this expense"
+msgstr "Du har ikke tilladelse til at slette denne udgift"
+
+#: app/routes/expenses.py:509
+msgid "Cannot delete approved or invoiced expenses"
+msgstr "Kan ikke slette godkendte eller fakturerede udgifter"
+
+#: app/routes/expenses.py:525
+msgid "Expense deleted successfully"
+msgstr "Udgift slettet"
+
+#: app/routes/expenses.py:529 app/routes/expenses.py:533
+msgid "Error deleting expense"
+msgstr "Fejl ved sletning af udgift"
+
+#: app/routes/expenses.py:544
+msgid "No expenses selected for deletion"
+msgstr "Ingen udgifter valgt til sletning"
+
+[... fortsæt med at oversætte de resterende msgid->msgstr på samme måde ...]
