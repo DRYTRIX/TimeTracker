@@ -3160,9 +3160,33 @@ table tr:last-child td {
                 // When Konva Image nodes are serialized/deserialized, the image data is lost
                 // We need to reload the image from the URL and restore all attributes
                 if (LOGO_URL) {
-                    const logoImages = layer.find('[name="logo"]');
+                    // Find logo images by name attribute first
+                    let logoImages = layer.find('[name="logo"]');
+                    
+                    // Also check all Image nodes in case name attribute is lost during deserialization
+                    // An Image node with name="logo" or any Image node that should be a logo
+                    const allImages = layer.find('Image');
+                    allImages.forEach(function(imgNode) {
+                        // If it's already in logoImages, skip
+                        if (logoImages.indexOf(imgNode) === -1) {
+                            // Check if it has name="logo" or if it's likely a logo (has width/height but no image data)
+                            const nodeName = imgNode.name ? imgNode.name() : (imgNode.attrs ? imgNode.attrs.name : null);
+                            if (nodeName === 'logo' || (!imgNode.image() && imgNode.width() && imgNode.height())) {
+                                logoImages = logoImages.concat([imgNode]);
+                            }
+                        }
+                    });
+                    
+                    console.log('Found', logoImages.length, 'logo image(s) to restore');
+                    
                     logoImages.forEach(function(logoNode) {
-                        if (logoNode.className === 'Image') {
+                        // Check if it's an Image node - use multiple methods for robustness
+                        const isImage = logoNode.className === 'Image' || 
+                                      (logoNode.constructor && logoNode.constructor.name === 'Image') ||
+                                      (logoNode instanceof Konva.Image) ||
+                                      (logoNode.getClassName && logoNode.getClassName() === 'Image');
+                        
+                        if (isImage) {
                             // Save all attributes before reloading
                             const savedAttrs = {
                                 x: logoNode.x(),
@@ -3181,6 +3205,8 @@ table tr:last-child td {
                             const oldNode = logoNode;
                             const parent = logoNode.getParent();
                             const index = logoNode.getZIndex();
+                            
+                            console.log('Restoring logo image at', savedAttrs.x, savedAttrs.y);
                             
                             // Reload the image from URL
                             Konva.Image.fromURL(LOGO_URL, function(newImage) {
@@ -3229,10 +3255,18 @@ table tr:last-child td {
                                 setupSelection(newImage);
                                 
                                 layer.draw();
+                                console.log('Logo image restored successfully');
                             }, function(error) {
                                 console.error('Failed to load logo image:', error);
-                                // Keep the old node if image fails to load
+                                // Keep the old node if image fails to load, but try to make it visible
+                                // by setting a placeholder
+                                if (oldNode && oldNode.parent) {
+                                    oldNode.visible(true);
+                                    layer.draw();
+                                }
                             });
+                        } else {
+                            console.warn('Found node with name="logo" but it is not an Image:', logoNode.className, logoNode.constructor ? logoNode.constructor.name : 'unknown');
                         }
                     });
                 }
