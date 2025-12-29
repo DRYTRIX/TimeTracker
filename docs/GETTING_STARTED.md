@@ -106,6 +106,7 @@ python app.py
    - Set via `ADMIN_USERNAMES` environment variable (default: `admin`)
    - When you login with a username matching the list, you get admin role
    - Example: If `ADMIN_USERNAMES=admin,manager`, logging in as "admin" or "manager" gives admin access
+   - **Important**: Only the first username in the list is automatically created during database initialization. Additional admin usernames must either self-register (if `ALLOW_SELF_REGISTER=true`) or be created manually by an existing admin user.
 
 4. **You're in!** Welcome to your dashboard
 

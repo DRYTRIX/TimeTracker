@@ -39,8 +39,8 @@ def init_db():
         db.session.commit()
         print("Database initialized with default settings")
     
-    # Create admin user if it doesn't exist
-    admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0]
+    # Create admin user if it doesn't exist (first username, stripped)
+    admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0].strip()
     if not User.query.filter_by(username=admin_username).first():
         admin_user = User(username=admin_username, role='admin')
         db.session.add(admin_user)

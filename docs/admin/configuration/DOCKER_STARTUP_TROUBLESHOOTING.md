@@ -118,3 +118,111 @@ If the issue persists, check:
 - Windows line ending settings
 - Antivirus software blocking Docker
 - Docker daemon logs
+
+---
+
+## Additional Troubleshooting
+
+### Database Tables Not Created (PostgreSQL)
+
+**Symptoms**: Services start successfully, but database tables are missing when using PostgreSQL. Works fine with SQLite.
+
+**Causes**:
+- Flask-Migrate initialization didn't run properly
+- Database container wasn't ready when app started
+- Migration scripts failed silently
+
+**Solutions**:
+
+1. **Check database initialization logs**:
+   ```bash
+   docker-compose logs app | grep -i "database\|migration\|initialization\|flask db"
+   ```
+
+2. **Verify database container is healthy**:
+   ```bash
+   docker-compose ps db
+   docker-compose logs db
+   ```
+
+3. **Manually trigger database initialization**:
+   ```bash
+   docker-compose exec app flask db upgrade
+   ```
+
+4. **For a complete fresh start** (⚠️ **WARNING**: This will delete all data):
+   ```bash
+   docker-compose down -v
+   docker-compose up -d
+   ```
+
+5. **Verify tables exist**:
+   ```bash
+   # PostgreSQL
+   docker-compose exec db psql -U timetracker -d timetracker -c "\dt"
+   
+   # Or check from app container
+   docker-compose exec app python -c "from app import create_app, db; app = create_app(); app.app_context().push(); print(db.engine.table_names())"
+   ```
+
+**Prevention**: The entrypoint script should automatically handle this. If issues persist, check that:
+- The entrypoint script runs properly (check container logs)
+- Database container has `healthcheck` configured
+- App service has `depends_on` with `condition: service_healthy` for the db service
+
+### Admin User Authentication Issues
+
+**Symptoms**: Cannot login with usernames from `ADMIN_USERNAMES` environment variable (e.g., `ADMIN_USERNAMES=admin,manager`).
+
+**Important Understanding**:
+- Only the **first** username in `ADMIN_USERNAMES` is automatically created during database initialization
+- Additional admin usernames in the comma-separated list must be created separately before they can login
+- If `ADMIN_USERNAMES=admin,manager`, only "admin" is created automatically
+
+**Solutions**:
+
+1. **Login with the first admin user**:
+   - Use the first username from `ADMIN_USERNAMES` (default: "admin")
+   - If using `AUTH_METHOD=local`, you may need to set a password on first login
+   - If using `AUTH_METHOD=none`, you can login immediately (no password required)
+
+2. **Create additional admin users**:
+
+   **Option A: Self-Registration** (if `ALLOW_SELF_REGISTER=true`):
+   - Go to login page
+   - Enter the additional admin username (e.g., "manager")
+   - Set a password and login
+   - The user will automatically get admin role because their username is in `ADMIN_USERNAMES`
+
+   **Option B: Manual Creation** (recommended for production):
+   - Login with the first admin user
+   - Navigate to **Admin → Users → Create User**
+   - Create the additional admin users
+   - They will automatically get admin role when they login (if their username is in `ADMIN_USERNAMES`)
+
+3. **Verify admin user exists**:
+   ```bash
+   # PostgreSQL
+   docker-compose exec db psql -U timetracker -d timetracker -c "SELECT username, role, is_active FROM users;"
+   ```
+
+4. **Check environment variable is set correctly**:
+   ```bash
+   docker-compose exec app env | grep ADMIN_USERNAMES
+   ```
+
+5. **If the first admin user doesn't exist**, check:
+   - Database initialization completed successfully (check logs)
+   - `ADMIN_USERNAMES` is set in `.env` file before starting containers
+   - Container logs show admin user creation
+
+**Example Configuration**:
+```bash
+# .env file
+ADMIN_USERNAMES=admin,manager
+ALLOW_SELF_REGISTER=true  # Allows "manager" to self-register
+```
+
+In this example:
+- "admin" is created automatically during initialization
+- "manager" must self-register by logging in (or be created manually)

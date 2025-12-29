@@ -550,6 +550,8 @@ IDLE_TIMEOUT_MINUTES=30
 ROUNDING_MINUTES=1
 
 # User management
+# Note: Only the first username in ADMIN_USERNAMES is auto-created during initialization.
+# Additional usernames must self-register (if ALLOW_SELF_REGISTER=true) or be created manually.
 ADMIN_USERNAMES=admin,manager
 ALLOW_SELF_REGISTER=false
 

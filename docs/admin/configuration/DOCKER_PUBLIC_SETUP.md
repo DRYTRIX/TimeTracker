@@ -82,6 +82,10 @@ IDLE_TIMEOUT_MINUTES=30
 DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
 ```
 
+> **Important**: When using multiple admin usernames (e.g., `ADMIN_USERNAMES=admin,manager`), only the first username ("admin") is automatically created during database initialization. Additional admin usernames ("manager") must either:
+> - Self-register by logging in (if `ALLOW_SELF_REGISTER=true`), or
+> - Be created manually by the first admin user.
+
 ### Docker Compose Configuration
 
 Use `docker-compose.remote.yml` (production) or `docker-compose.remote-dev.yml` (testing):
@@ -159,6 +163,39 @@ docker-compose -f docker-compose.remote.yml up -d
 **Solution:**
 - The image supports multiple architectures automatically
 - If you're on ARM64, the correct image will be pulled automatically
+
+#### 4. Database Tables Not Created (PostgreSQL)
+
+**Symptoms**: Services start successfully, but database tables are missing when using PostgreSQL.
+
+**Solution:**
+1. Check container logs for initialization errors:
+   ```bash
+   docker-compose -f docker-compose.remote.yml logs app | grep -i "database\|migration\|initialization"
+   ```
+
+2. Manually trigger database initialization:
+   ```bash
+   docker-compose -f docker-compose.remote.yml exec app flask db upgrade
+   ```
+
+3. For a fresh start with clean volumes:
+   ```bash
+   docker-compose -f docker-compose.remote.yml down -v
+   docker-compose -f docker-compose.remote.yml up -d
+   ```
+
+#### 5. Cannot Login with Admin Username
+
+**Symptoms**: Cannot login with usernames from `ADMIN_USERNAMES` (e.g., `ADMIN_USERNAMES=admin,manager`).
+
+**Important**: Only the **first** username in `ADMIN_USERNAMES` is automatically created. Additional admin usernames must be created separately.
+
+**Solution:**
+- **First admin user**: Should be created automatically. If not, check database initialization logs.
+- **Additional admin users**: Either:
+  - Self-register by logging in (if `ALLOW_SELF_REGISTER=true`), or
+  - Login as the first admin and create them manually via **Admin → Users → Create User**
 
 ### Debugging
 
