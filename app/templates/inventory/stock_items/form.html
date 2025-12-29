@@ -29,11 +29,11 @@
             </div>
             <div class="md:col-span-2">
                 <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Description') }}</label>
-                <textarea name="description" id="description" rows="3" class="form-input">{{ item.description if item else '' }}</textarea>
+                <textarea name="description" id="description" rows="3" class="form-input">{{ item.description or '' if item else '' }}</textarea>
             </div>
             <div>
                 <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Category') }}</label>
-                <input type="text" name="category" id="category" value="{{ item.category if item else '' }}" class="form-input" list="categories">
+                <input type="text" name="category" id="category" value="{{ item.category or '' if item else '' }}" class="form-input" list="categories">
                 <datalist id="categories">
                     <option value="Electronics">
                     <option value="Tools">
@@ -47,7 +47,7 @@
             </div>
             <div>
                 <label for="barcode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Barcode') }}</label>
-                <input type="text" name="barcode" id="barcode" value="{{ item.barcode if item else '' }}" class="form-input">
+                <input type="text" name="barcode" id="barcode" value="{{ item.barcode or '' if item else '' }}" class="form-input">
             </div>
             <div>
                 <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Currency') }}</label>
@@ -75,11 +75,11 @@
             </div>
             <div class="md:col-span-2">
                 <label for="image_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Image URL') }}</label>
-                <input type="url" name="image_url" id="image_url" value="{{ item.image_url if item else '' }}" class="form-input">
+                <input type="url" name="image_url" id="image_url" value="{{ item.image_url or '' if item else '' }}" class="form-input">
             </div>
             <div class="md:col-span-2">
                 <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
-                <textarea name="notes" id="notes" rows="3" class="form-input">{{ item.notes if item else '' }}</textarea>
+                <textarea name="notes" id="notes" rows="3" class="form-input">{{ item.notes or '' if item else '' }}</textarea>
             </div>
             <div class="md:col-span-2 space-y-2">
                 <label class="flex items-center">
