@@ -61,140 +61,160 @@ def timer_status():
 @api_bp.route("/api/search")
 @login_required
 def search():
-    """Global search endpoint for projects, tasks, clients, and time entries"""
+    """Global search endpoint for projects, tasks, clients, and time entries
+    
+    Query Parameters:
+        q (str): Search query (minimum 2 characters)
+        limit (int): Maximum number of results per category (default: 10, max: 50)
+        types (str): Comma-separated list of types to search (project, task, client, entry)
+    
+    Returns:
+        JSON object with search results array
+    """
     query = request.args.get("q", "").strip()
-    limit = request.args.get("limit", 10, type=int)
-
+    limit = min(request.args.get("limit", 10, type=int), 50)  # Cap at 50
+    types_filter = request.args.get("types", "").strip().lower()
+    
     if not query or len(query) < 2:
-        return jsonify({"results": []})
+        return jsonify({"results": [], "query": query})
+
+    # Parse types filter
+    allowed_types = {"project", "task", "client", "entry"}
+    if types_filter:
+        requested_types = {t.strip() for t in types_filter.split(",") if t.strip()}
+        search_types = requested_types.intersection(allowed_types)
+    else:
+        search_types = allowed_types
 
     results = []
     search_pattern = f"%{query}%"
 
     # Search projects
-    try:
-        projects = (
-            Project.query.filter(
-                Project.status == "active",
-                or_(Project.name.ilike(search_pattern), Project.description.ilike(search_pattern)),
+    if "project" in search_types:
+        try:
+            projects = (
+                Project.query.filter(
+                    Project.status == "active",
+                    or_(Project.name.ilike(search_pattern), Project.description.ilike(search_pattern)),
+                )
+                .limit(limit)
+                .all()
             )
-            .limit(limit)
-            .all()
-        )
 
-        for project in projects:
-            results.append(
-                {
-                    "type": "project",
-                    "category": "project",
-                    "id": project.id,
-                    "title": project.name,
-                    "description": project.description or "",
-                    "url": f"/projects/{project.id}",
-                    "badge": "Project",
-                }
-            )
-    except Exception as e:
-        current_app.logger.error(f"Error searching projects: {e}")
+            for project in projects:
+                results.append(
+                    {
+                        "type": "project",
+                        "category": "project",
+                        "id": project.id,
+                        "title": project.name,
+                        "description": project.description or "",
+                        "url": f"/projects/{project.id}",
+                        "badge": "Project",
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching projects: {e}")
 
     # Search tasks
-    try:
-        tasks = (
-            Task.query.join(Project)
-            .filter(
-                Project.status == "active", or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern))
+    if "task" in search_types:
+        try:
+            tasks = (
+                Task.query.join(Project)
+                .filter(
+                    Project.status == "active",
+                    or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern))
+                )
+                .limit(limit)
+                .all()
             )
-            .limit(limit)
-            .all()
-        )
 
-        for task in tasks:
-            results.append(
-                {
-                    "type": "task",
-                    "category": "task",
-                    "id": task.id,
-                    "title": task.name,
-                    "description": f"{task.project.name if task.project else 'No Project'}",
-                    "url": f"/tasks/{task.id}",
-                    "badge": task.status.replace("_", " ").title() if task.status else "Task",
-                }
-            )
-    except Exception as e:
-        current_app.logger.error(f"Error searching tasks: {e}")
+            for task in tasks:
+                results.append(
+                    {
+                        "type": "task",
+                        "category": "task",
+                        "id": task.id,
+                        "title": task.name,
+                        "description": f"{task.project.name if task.project else 'No Project'}",
+                        "url": f"/tasks/{task.id}",
+                        "badge": task.status.replace("_", " ").title() if task.status else "Task",
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching tasks: {e}")
 
     # Search clients
-    try:
-        clients = (
-            Client.query.filter(
-                or_(
-                    Client.name.ilike(search_pattern),
-                    Client.email.ilike(search_pattern),
-                    Client.company.ilike(search_pattern),
+    if "client" in search_types:
+        try:
+            clients = (
+                Client.query.filter(
+                    or_(
+                        Client.name.ilike(search_pattern),
+                        Client.email.ilike(search_pattern),
+                        Client.company.ilike(search_pattern),
+                    )
                 )
+                .limit(limit)
+                .all()
             )
-            .limit(limit)
-            .all()
-        )
 
-        for client in clients:
-            results.append(
-                {
-                    "type": "client",
-                    "category": "client",
-                    "id": client.id,
-                    "title": client.name,
-                    "description": client.company or client.email or "",
-                    "url": f"/clients/{client.id}",
-                    "badge": "Client",
-                }
-            )
-    except Exception as e:
-        current_app.logger.error(f"Error searching clients: {e}")
+            for client in clients:
+                results.append(
+                    {
+                        "type": "client",
+                        "category": "client",
+                        "id": client.id,
+                        "title": client.name,
+                        "description": client.company or client.email or "",
+                        "url": f"/clients/{client.id}",
+                        "badge": "Client",
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching clients: {e}")
 
     # Search time entries (notes and tags)
-    try:
-        entries = (
-            TimeEntry.query.filter(
-                TimeEntry.user_id == current_user.id,
-                TimeEntry.end_time.isnot(None),
-                or_(TimeEntry.notes.ilike(search_pattern), TimeEntry.tags.ilike(search_pattern)),
+    if "entry" in search_types:
+        try:
+            entries = (
+                TimeEntry.query.filter(
+                    TimeEntry.user_id == current_user.id,
+                    TimeEntry.end_time.isnot(None),
+                    or_(TimeEntry.notes.ilike(search_pattern), TimeEntry.tags.ilike(search_pattern)),
+                )
+                .order_by(TimeEntry.start_time.desc())
+                .limit(limit)
+                .all()
             )
-            .order_by(TimeEntry.start_time.desc())
-            .limit(limit)
-            .all()
-        )
 
-        for entry in entries:
-            title_parts = []
-            if entry.project:
-                title_parts.append(entry.project.name)
-            if entry.task:
-                title_parts.append(f"• {entry.task.name}")
-            title = " ".join(title_parts) if title_parts else "Time Entry"
+            for entry in entries:
+                title_parts = []
+                if entry.project:
+                    title_parts.append(entry.project.name)
+                if entry.task:
+                    title_parts.append(f"• {entry.task.name}")
+                title = " ".join(title_parts) if title_parts else "Time Entry"
 
-            description = entry.notes[:100] if entry.notes else ""
-            if entry.tags:
-                description += f" [{entry.tags}]"
+                description = entry.notes[:100] if entry.notes else ""
+                if entry.tags:
+                    description += f" [{entry.tags}]"
 
-            results.append(
-                {
-                    "type": "entry",
-                    "category": "entry",
-                    "id": entry.id,
-                    "title": title,
-                    "description": description,
-                    "url": f"/timer/edit/{entry.id}",
-                    "badge": entry.duration_formatted,
-                }
-            )
-    except Exception as e:
-        current_app.logger.error(f"Error searching time entries: {e}")
+                results.append(
+                    {
+                        "type": "entry",
+                        "category": "entry",
+                        "id": entry.id,
+                        "title": title,
+                        "description": description,
+                        "url": f"/timer/edit/{entry.id}",
+                        "badge": entry.duration_formatted,
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching time entries: {e}")
 
-    # Limit total results
-    results = results[:limit]
-
-    return jsonify({"results": results})
+    return jsonify({"results": results, "query": query, "count": len(results)})
 
 
 @api_bp.route("/api/deadlines/upcoming")

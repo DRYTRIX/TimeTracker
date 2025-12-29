@@ -120,13 +120,14 @@ class BaseConnector(ABC):
         # Default implementation - override in subclasses
         return {"success": False, "message": "Sync not implemented for this connector"}
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
         """
         Handle incoming webhook from the service.
 
         Args:
-            payload: Webhook payload
+            payload: Webhook payload (parsed JSON/dict)
             headers: Request headers
+            raw_body: Raw request body bytes (for signature verification)
 
         Returns:
             Dict with processing results

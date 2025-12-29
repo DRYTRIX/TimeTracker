@@ -104,8 +104,11 @@ class GitLabConnector(BaseConnector):
                         "name": user_data.get("name"),
                         "email": user_data.get("email"),
                     }
-            except Exception:
-                pass
+            except Exception as e:
+                # Log error but don't fail - user info is optional
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"Could not fetch GitLab user info: {e}")
 
         return {
             "access_token": data.get("access_token"),

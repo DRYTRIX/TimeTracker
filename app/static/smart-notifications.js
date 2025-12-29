@@ -190,112 +190,226 @@ class SmartNotificationManager {
 
     // Check idle time and remind to log time
     checkIdleTime() {
-        let idleTime = 0;
-        let lastActivity = Date.now();
+        try {
+            let idleTime = 0;
+            let lastActivity = Date.now();
+            let notificationSent = false;
 
-        const resetTimer = () => {
-            lastActivity = Date.now();
-            idleTime = 0;
-        };
+            const resetTimer = () => {
+                lastActivity = Date.now();
+                idleTime = 0;
+                notificationSent = false; // Reset notification flag on activity
+            };
 
-        document.addEventListener('mousemove', resetTimer);
-        document.addEventListener('keydown', resetTimer);
-
-        setInterval(() => {
-            idleTime = Date.now() - lastActivity;
+            // Use passive event listeners for better performance
+            const resetTimerPassive = () => resetTimer();
             
-            // If idle for 30 minutes
-            if (idleTime > 30 * 60 * 1000) {
-                this.show({
-                    title: 'Still working?',
-                    message: 'You\'ve been idle for 30 minutes. Don\'t forget to log your time!',
-                    type: 'info',
-                    priority: 'normal',
-                    actions: [
-                        { id: 'log-time', label: 'Log Time' },
-                        { id: 'dismiss', label: 'Dismiss' }
-                    ]
-                });
-                
-                // Reset to avoid spam
-                resetTimer();
-            }
-        }, 5 * 60 * 1000); // Check every 5 minutes
+            document.addEventListener('mousemove', resetTimerPassive, { passive: true });
+            document.addEventListener('keydown', resetTimerPassive, { passive: true });
+            document.addEventListener('click', resetTimerPassive, { passive: true });
+            document.addEventListener('scroll', resetTimerPassive, { passive: true });
+
+            setInterval(() => {
+                try {
+                    idleTime = Date.now() - lastActivity;
+                    
+                    // If idle for 30 minutes and haven't sent notification yet
+                    if (idleTime > 30 * 60 * 1000 && !notificationSent) {
+                        this.show({
+                            title: 'Still working?',
+                            message: 'You\'ve been idle for 30 minutes. Don\'t forget to log your time!',
+                            type: 'info',
+                            priority: 'normal',
+                            actions: [
+                                { id: 'log-time', label: 'Log Time' },
+                                { id: 'dismiss', label: 'Dismiss' }
+                            ]
+                        });
+                        
+                        notificationSent = true; // Mark as sent to avoid spam
+                    }
+                } catch (error) {
+                    console.error('[SmartNotifications] Error in idle time check:', error);
+                }
+            }, 5 * 60 * 1000); // Check every 5 minutes
+        } catch (error) {
+            console.error('[SmartNotifications] Error initializing idle time check:', error);
+        }
     }
 
     // Check upcoming deadlines
     checkDeadlines() {
-        // This would typically fetch from API
-        setInterval(async () => {
-            try {
-                const response = await fetch('/api/deadlines/upcoming');
-                
-                // Check if response is OK before reading body
-                if (!response.ok) {
-                    // If response is not OK, the error handler may have already consumed the body
-                    // Just return early to avoid "Body has already been consumed" error
-                    return;
-                }
-                
-                const deadlines = await response.json();
-                
-                deadlines.forEach(deadline => {
-                    const timeUntil = new Date(deadline.due_date) - Date.now();
-                    const hoursUntil = timeUntil / (1000 * 60 * 60);
-                    
-                    if (hoursUntil <= 24 && hoursUntil > 0) {
-                        this.show({
-                            title: 'Deadline Approaching',
-                            message: `${deadline.task_name} is due in ${Math.round(hoursUntil)} hours`,
-                            type: 'warning',
-                            priority: 'high',
-                            url: `/tasks/${deadline.task_id}`,
-                            group: 'deadlines'
-                        });
+        try {
+            let lastCheckTime = 0;
+            const checkInterval = 60 * 60 * 1000; // 1 hour
+            const notifiedDeadlines = new Set(); // Track notified deadlines to avoid duplicates
+            
+            const checkDeadlinesNow = async () => {
+                try {
+                    // Skip if checked recently (within last 50 minutes)
+                    const now = Date.now();
+                    if (now - lastCheckTime < checkInterval - 10 * 60 * 1000) {
+                        return;
                     }
-                });
-            } catch (error) {
-                // Only log if it's not a "body consumed" error (which is expected when response is not OK)
-                if (!error.message || !error.message.includes('already been consumed')) {
-                    console.error('Error checking deadlines:', error);
+                    lastCheckTime = now;
+                    
+                    // Check if fetch is available
+                    if (typeof fetch === 'undefined') {
+                        console.warn('[SmartNotifications] Fetch not available for deadline check');
+                        return;
+                    }
+                    
+                    const response = await fetch('/api/deadlines/upcoming', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    // Check if response is OK before reading body
+                    if (!response.ok) {
+                        // Log status but don't throw error
+                        if (response.status !== 404) {
+                            console.warn('[SmartNotifications] Deadline check failed:', response.status, response.statusText);
+                        }
+                        return;
+                    }
+                    
+                    const deadlines = await response.json();
+                    
+                    // Validate response is an array
+                    if (!Array.isArray(deadlines)) {
+                        console.warn('[SmartNotifications] Invalid deadlines response format');
+                        return;
+                    }
+                    
+                    deadlines.forEach(deadline => {
+                        try {
+                            // Validate deadline structure
+                            if (!deadline || !deadline.due_date || !deadline.task_id) {
+                                return;
+                            }
+                            
+                            const deadlineKey = `deadline_${deadline.task_id}`;
+                            
+                            // Skip if already notified
+                            if (notifiedDeadlines.has(deadlineKey)) {
+                                return;
+                            }
+                            
+                            const dueDate = new Date(deadline.due_date);
+                            if (isNaN(dueDate.getTime())) {
+                                console.warn('[SmartNotifications] Invalid due date:', deadline.due_date);
+                                return;
+                            }
+                            
+                            const timeUntil = dueDate.getTime() - Date.now();
+                            const hoursUntil = timeUntil / (1000 * 60 * 60);
+                            
+                            // Notify if deadline is within 24 hours
+                            if (hoursUntil <= 24 && hoursUntil > 0) {
+                                this.show({
+                                    title: 'Deadline Approaching',
+                                    message: `${deadline.task_name || 'Task'} is due in ${Math.round(hoursUntil)} hours`,
+                                    type: 'warning',
+                                    priority: 'high',
+                                    url: `/tasks/${deadline.task_id}`,
+                                    group: 'deadlines'
+                                });
+                                
+                                notifiedDeadlines.add(deadlineKey);
+                                
+                                // Remove from set after 25 hours to allow re-notification if deadline changes
+                                setTimeout(() => {
+                                    notifiedDeadlines.delete(deadlineKey);
+                                }, 25 * 60 * 60 * 1000);
+                            }
+                        } catch (deadlineError) {
+                            console.error('[SmartNotifications] Error processing deadline:', deadlineError);
+                        }
+                    });
+                } catch (error) {
+                    // Only log if it's not a network/abort error (which are expected in some cases)
+                    if (error.name !== 'AbortError' && error.name !== 'TypeError') {
+                        console.error('[SmartNotifications] Error checking deadlines:', error);
+                    }
                 }
-            }
-        }, 60 * 60 * 1000); // Check every hour
+            };
+            
+            // Initial check after 1 minute (to avoid immediate check on page load)
+            setTimeout(checkDeadlinesNow, 60 * 1000);
+            
+            // Then check every hour
+            setInterval(checkDeadlinesNow, checkInterval);
+        } catch (error) {
+            console.error('[SmartNotifications] Error initializing deadline check:', error);
+        }
     }
 
     // Daily summary
     checkDailySummary() {
-        const sendSummary = () => {
-            const now = new Date();
-            const hour = now.getHours();
+        try {
+            let lastSummarySent = null;
+            const targetHour = 18; // 6 PM
             
-            // Send at 6 PM
-            if (hour === 18) {
-                this.sendDailySummary();
-            }
-        };
+            const sendSummary = () => {
+                try {
+                    const now = new Date();
+                    const hour = now.getHours();
+                    const date = now.toDateString();
+                    
+                    // Send at 6 PM, but only once per day
+                    if (hour === targetHour && lastSummarySent !== date) {
+                        this.sendDailySummary();
+                        lastSummarySent = date;
+                    }
+                } catch (error) {
+                    console.error('[SmartNotifications] Error in daily summary check:', error);
+                }
+            };
 
-        // Check every hour
-        setInterval(sendSummary, 60 * 60 * 1000);
-        
-        // Don't check immediately on page load - only show at scheduled time (6 PM)
+            // Check every hour
+            setInterval(sendSummary, 60 * 60 * 1000);
+            
+            // Also check immediately if it's already 6 PM
+            const now = new Date();
+            if (now.getHours() === targetHour) {
+                sendSummary();
+            }
+        } catch (error) {
+            console.error('[SmartNotifications] Error initializing daily summary check:', error);
+        }
     }
 
     async sendDailySummary() {
         if (!this.preferences.dailySummary) return;
 
         try {
-            const response = await fetch('/api/summary/today');
+            // Check if fetch is available
+            if (typeof fetch === 'undefined') {
+                console.warn('[SmartNotifications] Fetch not available for daily summary');
+                return;
+            }
+            
+            const response = await fetch('/api/summary/today', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
             
             // Check if response is OK before reading body
             if (!response.ok) {
-                // If response is not OK, the error handler may have already consumed the body
-                // Just return early to avoid "Body has already been consumed" error
+                // Log status but don't throw error (404 is expected if endpoint doesn't exist)
+                if (response.status !== 404) {
+                    console.warn('[SmartNotifications] Daily summary check failed:', response.status, response.statusText);
+                }
                 return;
             }
             
             const summary = await response.json();
 
+            // Safely extract values with defaults
             const hours = (summary && typeof summary.hours === 'number')
                 ? summary.hours
                 : (summary && summary.hours ? Number(summary.hours) : 0);
@@ -304,9 +418,9 @@ class SmartNotificationManager {
                 : (summary && summary.projects ? Number(summary.projects) : 0);
 
             // Build a safe, human-friendly message
-            const hoursText = isNaN(hours) ? '0' : String(hours);
-            const projectsText = isNaN(projects) ? '0' : String(projects);
-            const message = `Today you logged ${hoursText}h across ${projectsText} projects. Great work!`;
+            const hoursText = isNaN(hours) || hours < 0 ? '0' : hours.toFixed(1);
+            const projectsText = isNaN(projects) || projects < 0 ? '0' : String(projects);
+            const message = `Today you logged ${hoursText}h across ${projectsText} project${projects !== 1 ? 's' : ''}. Great work!`;
 
             // Auto-dismiss after 8s; no permanent sticky summary to avoid lingering toasts
             if (window.toastManager && typeof window.toastManager.show === 'function') {
@@ -321,9 +435,9 @@ class SmartNotificationManager {
                 });
             }
         } catch (error) {
-            // Only log if it's not a "body consumed" error (which is expected when response is not OK)
-            if (!error.message || !error.message.includes('already been consumed')) {
-                console.error('Error fetching daily summary:', error);
+            // Only log if it's not a network/abort error (which are expected in some cases)
+            if (error.name !== 'AbortError' && error.name !== 'TypeError') {
+                console.error('[SmartNotifications] Error fetching daily summary:', error);
             }
         }
     }
@@ -519,17 +633,27 @@ class SmartNotificationManager {
     }
 
     startBackgroundTasks() {
-        // Background sync for notifications
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(registration => {
-                if (registration && registration.sync) {
-                    registration.sync.register('sync-notifications').catch(() => {
-                        // Sync not supported, ignore
-                    });
-                }
-            }).catch(() => {
-                // Service worker not ready, ignore
-            });
+        try {
+            // Background sync for notifications
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(registration => {
+                    try {
+                        if (registration && 'sync' in registration && registration.sync) {
+                            registration.sync.register('sync-notifications').catch((error) => {
+                                // Sync not supported or failed, ignore silently
+                                console.debug('[SmartNotifications] Background sync not available:', error);
+                            });
+                        }
+                    } catch (error) {
+                        console.debug('[SmartNotifications] Error registering background sync:', error);
+                    }
+                }).catch((error) => {
+                    // Service worker not ready, ignore silently
+                    console.debug('[SmartNotifications] Service worker not ready:', error);
+                });
+            }
+        } catch (error) {
+            console.error('[SmartNotifications] Error starting background tasks:', error);
         }
     }
 }

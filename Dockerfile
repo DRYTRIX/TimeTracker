@@ -65,14 +65,17 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
-COPY . .
+# Create non-root user early (before copying files)
+RUN useradd -m -u 1000 timetracker
+
+# Copy project files with correct ownership
+COPY --chown=timetracker:timetracker . .
 
 # Also install certificate generation script to a stable path used by docs/compose
-COPY scripts/generate-certs.sh /scripts/generate-certs.sh
+COPY --chown=timetracker:timetracker scripts/generate-certs.sh /scripts/generate-certs.sh
 
 # Copy compiled assets from frontend stage (overwriting the stale one from COPY .)
-COPY --from=frontend /app/app/static/dist/output.css /app/app/static/dist/output.css
+COPY --chown=timetracker:timetracker --from=frontend /app/app/static/dist/output.css /app/app/static/dist/output.css
 
 # Create all directories and set permissions in a single layer
 RUN mkdir -p \
@@ -88,7 +91,7 @@ RUN mkdir -p \
     && chmod -R 755 /app/app/static/uploads /app/static/uploads
 
 # Copy the startup script
-COPY docker/start-fixed.py /app/start.py
+COPY --chown=timetracker:timetracker docker/start-fixed.py /app/start.py
 
 # Fix line endings and set permissions in a single layer
 RUN find /app/docker -name "*.sh" -o -name "*.py" | xargs dos2unix 2>/dev/null || true \
@@ -113,10 +116,9 @@ RUN find /app/docker -name "*.sh" -o -name "*.py" | xargs dos2unix 2>/dev/null |
     /app/docker/simple_test.sh \
     /scripts/generate-certs.sh
 
-# Create non-root user and set ownership
-RUN useradd -m -u 1000 timetracker \
-    && chown -R timetracker:timetracker \
-    /app \
+# Set ownership only for directories that need write access
+# (Most files already have correct ownership from COPY --chown)
+RUN chown -R timetracker:timetracker \
     /data \
     /app/logs \
     /app/instance \

@@ -91,6 +91,30 @@ class User(UserMixin, db.Model):
 
     # Tools & Data section
     ui_show_tools = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Tools & Data section
+    ui_show_integrations = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Integrations
+    ui_show_import_export = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Import/Export
+    ui_show_saved_filters = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Saved Filters
+
+    # CRM section (additional)
+    ui_show_contacts = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Contacts
+    ui_show_deals = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Deals
+    ui_show_leads = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Leads
+
+    # Finance section (additional)
+    ui_show_invoices = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Invoices
+    ui_show_expenses = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Expenses
+
+    # Time Tracking section (additional)
+    ui_show_time_entry_templates = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Time Entry Templates
+
+    # Advanced features
+    ui_show_workflows = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Workflows
+    ui_show_time_approvals = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Time Approvals
+    ui_show_activity_feed = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Activity Feed
+    ui_show_recurring_tasks = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Recurring Tasks
+    ui_show_team_chat = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Team Chat
+    ui_show_client_portal = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Client Portal
+    ui_show_kiosk = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Kiosk Mode
 
     # Relationships
     time_entries = db.relationship("TimeEntry", backref="user", lazy="dynamic", cascade="all, delete-orphan")

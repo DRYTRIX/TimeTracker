@@ -219,7 +219,7 @@
                 {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
-                {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') %}
+                {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') or ep.startswith('contacts.') or ep.startswith('deals.') or ep.startswith('leads.') %}
                 {% set inventory_open = ep.startswith('inventory.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') or ep.startswith('integrations.') %}
@@ -244,7 +244,7 @@
                             <span class="ml-3 sidebar-label">{{ _('Dashboard') }}</span>
                         </a>
                     </li>
-                    {% if (not settings or settings.ui_allow_calendar) and current_user.ui_show_calendar %}
+                    {% if is_module_enabled('calendar') %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('calendarDropdown')" data-dropdown="calendarDropdown" class="w-full flex items-center p-2 rounded-lg {% if calendar_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-calendar-alt w-6 text-center"></i>
@@ -300,14 +300,14 @@
                                     <i class="fas fa-folder w-4 mr-2"></i>{{ _('Projects') }}
                                 </a>
                             </li>
-                            {% if settings.ui_allow_project_templates and current_user.ui_show_project_templates %}
+                            {% if is_module_enabled('project_templates') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_project_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('project_templates.list_templates') }}">
                                     <i class="fas fa-layer-group w-4 mr-2"></i>{{ _('Project Templates') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_gantt_chart and current_user.ui_show_gantt_chart %}
+                            {% if is_module_enabled('gantt') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep.startswith('gantt.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('gantt.gantt_view') }}">
                                     <i class="fas fa-project-diagram w-4 mr-2"></i>{{ _('Gantt Chart') }}
@@ -319,24 +319,31 @@
                                     <i class="fas fa-tasks w-4 mr-2"></i>{{ _('Tasks') }}
                                 </a>
                             </li>
-                            {% if settings.ui_allow_issues and current_user.ui_show_issues %}
+                            {% if is_module_enabled('issues') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_issues %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('issues.list_issues') }}">
                                     <i class="fas fa-bug w-4 mr-2"></i>{{ _('Issues') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_kanban_board and current_user.ui_show_kanban_board %}
+                            {% if is_module_enabled('kanban') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_kanban %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('kanban.board') }}">
                                     <i class="fas fa-columns w-4 mr-2"></i>{{ _('Kanban Board') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_weekly_goals and current_user.ui_show_weekly_goals %}
+                            {% if is_module_enabled('weekly_goals') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_goals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('weekly_goals.index') }}">
                                     <i class="fas fa-bullseye w-4 mr-2"></i>{{ _('Weekly Goals') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('time_entry_templates') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
+                                    <i class="fas fa-clipboard-list w-4 mr-2"></i>{{ _('Time Entry Templates') }}
                                 </a>
                             </li>
                             {% endif %}
@@ -351,12 +358,37 @@
                         <ul id="crmDropdown" class="{% if not crm_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_clients = ep.startswith('clients.') %}
                             {% set nav_active_quotes = ep.startswith('quotes.') %}
+                            {% set nav_active_contacts = ep.startswith('contacts.') %}
+                            {% set nav_active_deals = ep.startswith('deals.') %}
+                            {% set nav_active_leads = ep.startswith('leads.') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_clients %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('clients.list_clients') }}">
                                     <i class="fas fa-users w-4 mr-2"></i>{{ _('Clients') }}
                                 </a>
                             </li>
-                            {% if settings.ui_allow_quotes and current_user.ui_show_quotes %}
+                            {% if is_module_enabled('contacts') %}
+                            <li>
+                                <span class="block px-2 py-1 text-text-muted-light dark:text-text-muted-dark text-sm">
+                                    <i class="fas fa-address-book w-4 mr-2"></i>{{ _('Contacts') }}
+                                    <span class="text-xs ml-2">({{ _('via Clients') }})</span>
+                                </span>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('deals') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_deals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('deals.list_deals') }}">
+                                    <i class="fas fa-handshake w-4 mr-2"></i>{{ _('Deals') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('leads') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_leads %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('leads.list_leads') }}">
+                                    <i class="fas fa-user-tag w-4 mr-2"></i>{{ _('Leads') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('quotes') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_quotes %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('quotes.list_quotes') }}">
                                     <i class="fas fa-file-contract w-4 mr-2"></i>{{ _('Quotes') }}
@@ -382,7 +414,7 @@
                             {% set nav_active_perdiem = ep.startswith('per_diem.') and not ep.startswith('per_diem.list_rates') %}
                             {% set nav_active_budget = ep.startswith('budget_alerts.') %}
                             {% set reports_open = ep.startswith('reports.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
-                            {% if settings.ui_allow_reports and current_user.ui_show_reports %}
+                            {% if is_module_enabled('reports') %}
                             <li>
                                 <button onclick="toggleDropdown('reportsDropdown', event)" data-dropdown="reportsDropdown" class="w-full flex items-center px-2 py-1 rounded {% if reports_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                                     <i class="fas fa-chart-bar w-4 mr-2"></i>
@@ -396,7 +428,7 @@
                                             <i class="fas fa-chart-line w-4 mr-2"></i>{{ _('All Reports') }}
                                         </a>
                                     </li>
-                                    {% if settings.ui_allow_report_builder and current_user.ui_show_report_builder %}
+                                    {% if is_module_enabled('custom_reports') %}
                                     <li>
                                         <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'custom_reports.report_builder' or ep == 'custom_reports.view_custom_report' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.report_builder') }}">
                                             <i class="fas fa-magic w-4 mr-2"></i>{{ _('Report Builder') }}
@@ -408,7 +440,7 @@
                                         </a>
                                     </li>
                                     {% endif %}
-                                    {% if settings.ui_allow_scheduled_reports and current_user.ui_show_scheduled_reports %}
+                                    {% if is_module_enabled('scheduled_reports') %}
                                     <li>
                                         <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep.startswith('scheduled_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('scheduled_reports.list_scheduled') }}">
                                             <i class="fas fa-clock w-4 mr-2"></i>{{ _('Scheduled Reports') }}
@@ -418,59 +450,63 @@
                                 </ul>
                             </li>
                             {% endif %}
+                            {% if is_module_enabled('invoices') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
                                     <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoices') }}
                                 </a>
                             </li>
-                            {% if settings.ui_allow_invoice_approvals and current_user.ui_show_invoice_approvals %}
+                            {% endif %}
+                            {% if is_module_enabled('invoice_approvals') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoice_approvals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoice_approvals.list_approvals') }}">
                                     <i class="fas fa-check-circle w-4 mr-2"></i>{{ _('Invoice Approvals') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_payment_gateways and current_user.ui_show_payment_gateways %}
+                            {% if is_module_enabled('payment_gateways') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_payment_gateways %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payment_gateways.list_gateways') }}">
                                     <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payment Gateways') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_recurring_invoices and current_user.ui_show_recurring_invoices %}
+                            {% if is_module_enabled('recurring_invoices') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_recurring_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('recurring_invoices.list_recurring_invoices') }}">
                                     <i class="fas fa-sync-alt w-4 mr-2"></i>{{ _('Recurring Invoices') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_payments and current_user.ui_show_payments %}
+                            {% if is_module_enabled('payments') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_payments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payments.list_payments') }}">
                                     <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payments') }}
                                 </a>
                             </li>
                             {% endif %}
+                            {% if is_module_enabled('expenses') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_expenses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('expenses.list_expenses') }}">
                                     <i class="fas fa-receipt w-4 mr-2"></i>{{ _('Expenses') }}
                                 </a>
                             </li>
-                            {% if settings.ui_allow_mileage and current_user.ui_show_mileage %}
+                            {% endif %}
+                            {% if is_module_enabled('mileage') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_mileage %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('mileage.list_mileage') }}">
                                     <i class="fas fa-car w-4 mr-2"></i>{{ _('Mileage') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_per_diem and current_user.ui_show_per_diem %}
+                            {% if is_module_enabled('per_diem') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_perdiem %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('per_diem.list_per_diem') }}">
                                     <i class="fas fa-utensils w-4 mr-2"></i>{{ _('Per Diem') }}
                                 </a>
                             </li>
                             {% endif %}
-                            {% if settings.ui_allow_budget_alerts and current_user.ui_show_budget_alerts %}
+                            {% if is_module_enabled('budget_alerts') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_budget %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('budget_alerts.budget_dashboard') }}">
                                     <i class="fas fa-exclamation-triangle w-4 mr-2"></i>{{ _('Budget Alerts') }}
@@ -479,7 +515,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    {% if settings.ui_allow_inventory and current_user.ui_show_inventory %}
+                    {% if is_module_enabled('inventory') %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" class="w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-boxes w-6 text-center"></i>
@@ -556,7 +592,7 @@
                         </ul>
                     </li>
                     {% endif %}
-                    {% if settings.ui_allow_analytics and current_user.ui_show_analytics %}
+                    {% if is_module_enabled('analytics') %}
                     <li class="mt-2">
                         <a href="{{ url_for('analytics.analytics_dashboard') }}" class="flex items-center p-2 rounded-lg {% if analytics_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-chart-line w-6 text-center"></i>
@@ -564,7 +600,7 @@
                         </a>
                     </li>
                     {% endif %}
-                    {% if settings.ui_allow_tools and current_user.ui_show_tools %}
+                    {% if is_module_enabled('integrations') or is_module_enabled('import_export') or is_module_enabled('saved_filters') %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('toolsDropdown')" data-dropdown="toolsDropdown" class="w-full flex items-center p-2 rounded-lg {% if tools_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-tools w-6 text-center"></i>
@@ -575,21 +611,27 @@
                             {% set nav_active_import_export = ep.startswith('import_export.') %}
                             {% set nav_active_filters = ep.startswith('saved_filters.') %}
                             {% set nav_active_integrations = ep.startswith('integrations.') %}
+                            {% if is_module_enabled('integrations') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_integrations %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('integrations.list_integrations') }}">
                                     <i class="fas fa-plug w-4 mr-2"></i>{{ _('Integrations') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if is_module_enabled('import_export') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_import_export %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('import_export.import_export_page') }}">
                                     <i class="fas fa-exchange-alt w-4 mr-2"></i>{{ _('Import / Export') }}
                                 </a>
                             </li>
+                            {% endif %}
+                            {% if is_module_enabled('saved_filters') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_filters %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('saved_filters.list_filters') }}">
                                     <i class="fas fa-filter w-4 mr-2"></i>{{ _('Saved Filters') }}
                                 </a>
                             </li>
+                            {% endif %}
                         </ul>
                     </li>
                     {% endif %}
@@ -651,6 +693,11 @@
                                         </a>
                                     </li>
                                     <li>
+                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.manage_modules' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.manage_modules') }}">
+                                            <i class="fas fa-puzzle-piece w-4 mr-2"></i>{{ _('Module Management') }}
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.email_support' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.email_support') }}">
                                             <i class="fas fa-envelope w-4 mr-2"></i>{{ _('Email Configuration') }}
                                         </a>
@@ -666,7 +713,7 @@
                                             <span class="flex-1 text-left">{{ _('PDF Templates') }}</span>
                                             <i class="fas fa-chevron-down text-xs"></i>
                                         </button>
-                                        <ul id="pdfDropdown" class="{% if pdf_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
+                                        <ul id="pdfDropdown" class="{% if pdf_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6" onclick="event.stopPropagation();">
                                             <li>
                                                 <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
                                                     <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice PDF') }}
@@ -1351,6 +1398,21 @@
                 'reportsDropdown': 'financeDropdown'  // Reports is nested under Finance
             };
             
+            // Prevent parent dropdowns from closing when clicking inside nested dropdowns
+            // Add click handlers to nested dropdowns to stop propagation
+            if (id in nestedDropdowns) {
+                const nestedDropdown = document.getElementById(id);
+                if (nestedDropdown) {
+                    // Remove existing handler if any to avoid duplicates
+                    nestedDropdown.removeEventListener('click', nestedDropdown._stopPropagationHandler);
+                    // Add new handler
+                    nestedDropdown._stopPropagationHandler = function(e) {
+                        e.stopPropagation();
+                    };
+                    nestedDropdown.addEventListener('click', nestedDropdown._stopPropagationHandler);
+                }
+            }
+            
             // If this is a nested dropdown, don't close its parent
             const parentDropdown = nestedDropdowns[id];
             
@@ -1368,9 +1430,21 @@
             // Close all other top-level dropdowns in the sidebar (accordion behavior)
             // Note: Nested dropdowns (like pdfDropdown) are not in this list, so they work independently
             const allSidebarDropdowns = ['workDropdown', 'financeDropdown', 'adminDropdown', 'crmDropdown', 'toolsDropdown'];
+            
+            // Build a list of all ancestor dropdowns that should stay open
+            const ancestorsToKeepOpen = [];
+            if (parentDropdown) {
+                ancestorsToKeepOpen.push(parentDropdown);
+                // Check if parent has a grandparent
+                const grandparent = nestedDropdowns[parentDropdown];
+                if (grandparent) {
+                    ancestorsToKeepOpen.push(grandparent);
+                }
+            }
+            
             allSidebarDropdowns.forEach(dropdownId => {
-                // Don't close the parent if this is a nested dropdown
-                if (dropdownId === parentDropdown) {
+                // Don't close if this dropdown is an ancestor of the nested dropdown being opened
+                if (ancestorsToKeepOpen.includes(dropdownId)) {
                     return;
                 }
                 // Don't close adminDropdown if clicking on any of its submenus
@@ -1400,18 +1474,20 @@
             // Toggle the clicked dropdown
             if (isCurrentlyHidden) {
                 dropdown.classList.remove('hidden');
-                // If opening a submenu of adminDropdown, ensure adminDropdown is also open
-                if (parentDropdown === 'adminDropdown') {
-                    const adminDropdown = document.getElementById('adminDropdown');
-                    if (adminDropdown) {
-                        adminDropdown.classList.remove('hidden');
+                // If this is a nested dropdown, ensure all ancestor dropdowns are open
+                if (parentDropdown) {
+                    // Open the direct parent
+                    const parent = document.getElementById(parentDropdown);
+                    if (parent) {
+                        parent.classList.remove('hidden');
                     }
-                }
-                // If opening reportsDropdown, ensure financeDropdown is also open
-                if (parentDropdown === 'financeDropdown') {
-                    const financeDropdown = document.getElementById('financeDropdown');
-                    if (financeDropdown) {
-                        financeDropdown.classList.remove('hidden');
+                    // Check if parent has a grandparent and open it too
+                    const grandparent = nestedDropdowns[parentDropdown];
+                    if (grandparent) {
+                        const grandparentDropdown = document.getElementById(grandparent);
+                        if (grandparentDropdown) {
+                            grandparentDropdown.classList.remove('hidden');
+                        }
                     }
                 }
             } else {
@@ -1428,6 +1504,57 @@
                 }
             }
         }
+        
+        // Prevent parent dropdowns from closing when clicking inside nested dropdowns
+        // This handles clicks on links and other elements inside nested dropdowns
+        document.addEventListener('click', function(e) {
+            // Check if the click is inside a nested dropdown
+            const clickedInsideNested = e.target.closest('#pdfDropdown') || 
+                                       e.target.closest('#reportsDropdown') ||
+                                       e.target.closest('#adminUserMgmtDropdown') ||
+                                       e.target.closest('#adminSecurityDropdown') ||
+                                       e.target.closest('#adminIntegrationsDropdown') ||
+                                       e.target.closest('#adminDataDropdown') ||
+                                       e.target.closest('#adminMaintenanceDropdown');
+            
+            if (clickedInsideNested) {
+                // Find the parent dropdown and keep it open
+                const nestedDropdowns = {
+                    'pdfDropdown': 'adminSettingsDropdown',
+                    'adminUserMgmtDropdown': 'adminDropdown',
+                    'adminSettingsDropdown': 'adminDropdown',
+                    'adminSecurityDropdown': 'adminDropdown',
+                    'adminIntegrationsDropdown': 'adminDropdown',
+                    'adminDataDropdown': 'adminDropdown',
+                    'adminMaintenanceDropdown': 'adminDropdown',
+                    'reportsDropdown': 'financeDropdown'
+                };
+                
+                // Find which nested dropdown was clicked
+                let clickedDropdownId = null;
+                for (const [nestedId, parentId] of Object.entries(nestedDropdowns)) {
+                    if (e.target.closest('#' + nestedId)) {
+                        clickedDropdownId = nestedId;
+                        break;
+                    }
+                }
+                
+                if (clickedDropdownId && nestedDropdowns[clickedDropdownId]) {
+                    const parentId = nestedDropdowns[clickedDropdownId];
+                    const parentDropdown = document.getElementById(parentId);
+                    if (parentDropdown) {
+                        parentDropdown.classList.remove('hidden');
+                    }
+                    // Also keep adminDropdown open if parent is adminSettingsDropdown
+                    if (parentId === 'adminSettingsDropdown') {
+                        const adminDropdown = document.getElementById('adminDropdown');
+                        if (adminDropdown) {
+                            adminDropdown.classList.remove('hidden');
+                        }
+                    }
+                }
+            }
+        }, true); // Use capture phase to catch events early
     </script>
     
     <!-- Enhanced UI Scripts -->

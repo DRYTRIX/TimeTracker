@@ -429,6 +429,56 @@ def clear_cache():
     return render_template("admin/clear_cache.html")
 
 
+@admin_bp.route("/admin/modules", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("manage_settings")
+def manage_modules():
+    """Manage module visibility settings"""
+    from app.utils.module_registry import ModuleRegistry, ModuleCategory
+    
+    # Initialize registry
+    ModuleRegistry.initialize_defaults()
+    
+    settings_obj = Settings.get_settings()
+    
+    if request.method == "POST":
+        # Update all module flags dynamically
+        updated_count = 0
+        for module_id, module in ModuleRegistry.get_all().items():
+            if module.settings_flag:
+                flag_name = module.settings_flag
+                if hasattr(settings_obj, flag_name):
+                    new_value = request.form.get(flag_name) == "on"
+                    old_value = getattr(settings_obj, flag_name, True)
+                    if new_value != old_value:
+                        setattr(settings_obj, flag_name, new_value)
+                        updated_count += 1
+        
+        if updated_count > 0:
+            if not safe_commit("admin_update_module_settings"):
+                flash(_("Could not update module settings due to a database error."), "error")
+            else:
+                flash(_("Module settings updated successfully"), "success")
+        else:
+            flash(_("No changes to save"), "info")
+        
+        return redirect(url_for("admin.manage_modules"))
+    
+    # Group modules by category for display
+    modules_by_category = {}
+    for category in ModuleCategory:
+        modules = ModuleRegistry.get_by_category(category)
+        if modules:  # Only include categories with modules
+            modules_by_category[category] = modules
+    
+    return render_template(
+        "admin/modules.html",
+        modules_by_category=modules_by_category,
+        settings=settings_obj,
+        ModuleCategory=ModuleCategory,
+    )
+
+
 @admin_bp.route("/admin/settings", methods=["GET", "POST"])
 @login_required
 @admin_or_permission_required("manage_settings")
@@ -557,6 +607,46 @@ def settings():
             # Tools & Data
             if hasattr(settings_obj, "ui_allow_tools"):
                 settings_obj.ui_allow_tools = request.form.get("ui_allow_tools") == "on"
+            if hasattr(settings_obj, "ui_allow_integrations"):
+                settings_obj.ui_allow_integrations = request.form.get("ui_allow_integrations") == "on"
+            if hasattr(settings_obj, "ui_allow_import_export"):
+                settings_obj.ui_allow_import_export = request.form.get("ui_allow_import_export") == "on"
+            if hasattr(settings_obj, "ui_allow_saved_filters"):
+                settings_obj.ui_allow_saved_filters = request.form.get("ui_allow_saved_filters") == "on"
+            
+            # CRM (additional)
+            if hasattr(settings_obj, "ui_allow_contacts"):
+                settings_obj.ui_allow_contacts = request.form.get("ui_allow_contacts") == "on"
+            if hasattr(settings_obj, "ui_allow_deals"):
+                settings_obj.ui_allow_deals = request.form.get("ui_allow_deals") == "on"
+            if hasattr(settings_obj, "ui_allow_leads"):
+                settings_obj.ui_allow_leads = request.form.get("ui_allow_leads") == "on"
+            
+            # Finance (additional)
+            if hasattr(settings_obj, "ui_allow_invoices"):
+                settings_obj.ui_allow_invoices = request.form.get("ui_allow_invoices") == "on"
+            if hasattr(settings_obj, "ui_allow_expenses"):
+                settings_obj.ui_allow_expenses = request.form.get("ui_allow_expenses") == "on"
+            
+            # Time Tracking (additional)
+            if hasattr(settings_obj, "ui_allow_time_entry_templates"):
+                settings_obj.ui_allow_time_entry_templates = request.form.get("ui_allow_time_entry_templates") == "on"
+            
+            # Advanced features
+            if hasattr(settings_obj, "ui_allow_workflows"):
+                settings_obj.ui_allow_workflows = request.form.get("ui_allow_workflows") == "on"
+            if hasattr(settings_obj, "ui_allow_time_approvals"):
+                settings_obj.ui_allow_time_approvals = request.form.get("ui_allow_time_approvals") == "on"
+            if hasattr(settings_obj, "ui_allow_activity_feed"):
+                settings_obj.ui_allow_activity_feed = request.form.get("ui_allow_activity_feed") == "on"
+            if hasattr(settings_obj, "ui_allow_recurring_tasks"):
+                settings_obj.ui_allow_recurring_tasks = request.form.get("ui_allow_recurring_tasks") == "on"
+            if hasattr(settings_obj, "ui_allow_team_chat"):
+                settings_obj.ui_allow_team_chat = request.form.get("ui_allow_team_chat") == "on"
+            if hasattr(settings_obj, "ui_allow_client_portal"):
+                settings_obj.ui_allow_client_portal = request.form.get("ui_allow_client_portal") == "on"
+            if hasattr(settings_obj, "ui_allow_kiosk"):
+                settings_obj.ui_allow_kiosk = request.form.get("ui_allow_kiosk") == "on"
         except Exception as e:
             # Log any errors but don't fail silently
             import logging

@@ -1868,6 +1868,65 @@ function initializePDFEditor() {
             }
         });
         
+        // For Image nodes, convert scale changes to width/height changes
+        // This ensures the size is stored correctly when resizing
+        if (node.className === 'Image') {
+            // Get the actual displayed dimensions (accounting for any existing scale)
+            const image = node;
+            const currentScaleX = image.scaleX();
+            const currentScaleY = image.scaleY();
+            let originalWidth = image.width() * currentScaleX;
+            let originalHeight = image.height() * currentScaleY;
+            
+            // If image already has scale, normalize it first
+            if (currentScaleX !== 1 || currentScaleY !== 1) {
+                image.width(originalWidth);
+                image.height(originalHeight);
+                image.scaleX(1);
+                image.scaleY(1);
+                layer.draw();
+            }
+            
+            // Handle transform end - convert scale to width/height
+            const handleTransformEnd = function() {
+                const scaleX = image.scaleX();
+                const scaleY = image.scaleY();
+                
+                // Only update if scale has changed
+                if (scaleX !== 1 || scaleY !== 1) {
+                    // Update width and height based on scale
+                    const newWidth = originalWidth * scaleX;
+                    const newHeight = originalHeight * scaleY;
+                    
+                    // Reset scale to 1 and apply the new dimensions
+                    image.width(newWidth);
+                    image.height(newHeight);
+                    image.scaleX(1);
+                    image.scaleY(1);
+                    
+                    // Update original dimensions for next transform
+                    originalWidth = newWidth;
+                    originalHeight = newHeight;
+                    
+                    // Update properties panel if visible
+                    if (selectedElement === image) {
+                        updatePropertiesPanel(image);
+                    }
+                    
+                    layer.draw();
+                }
+            };
+            
+            transformer.on('transformend', handleTransformEnd);
+            
+            // Also update on transform (during drag) to keep properties panel in sync
+            transformer.on('transform', function() {
+                if (selectedElement === image) {
+                    updatePropertiesPanel(image);
+                }
+            });
+        }
+        
         layer.add(transformer);
         layer.draw();
         
@@ -2543,7 +2602,7 @@ function initializePDFEditor() {
                 const w = Math.round(attrs.width || 100);
                 const h = Math.round(attrs.height || 50);
                 {% raw %}
-                bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
+                bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) if settings.has_logo() and settings.get_logo_path() else '' }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
                 {% endraw %}
             } else if (child.className === 'Rect') {
                 const w = Math.round(attrs.width || 100);
@@ -3097,11 +3156,130 @@ table tr:last-child td {
                 // Redraw grid for new size
                 drawGrid();
                 
+                // Fix logo images: Konva Image nodes need to reload the image from URL
+                // When Konva Image nodes are serialized/deserialized, the image data is lost
+                // We need to reload the image from the URL and restore all attributes
+                if (LOGO_URL) {
+                    // Find logo images by name attribute first
+                    let logoImages = layer.find('[name="logo"]');
+                    
+                    // Also check all Image nodes in case name attribute is lost during deserialization
+                    // An Image node with name="logo" or any Image node that should be a logo
+                    const allImages = layer.find('Image');
+                    allImages.forEach(function(imgNode) {
+                        // If it's already in logoImages, skip
+                        if (logoImages.indexOf(imgNode) === -1) {
+                            // Check if it has name="logo" or if it's likely a logo (has width/height but no image data)
+                            const nodeName = imgNode.name ? imgNode.name() : (imgNode.attrs ? imgNode.attrs.name : null);
+                            if (nodeName === 'logo' || (!imgNode.image() && imgNode.width() && imgNode.height())) {
+                                logoImages = logoImages.concat([imgNode]);
+                            }
+                        }
+                    });
+                    
+                    console.log('Found', logoImages.length, 'logo image(s) to restore');
+                    
+                    logoImages.forEach(function(logoNode) {
+                        // Check if it's an Image node - use multiple methods for robustness
+                        const isImage = logoNode.className === 'Image' || 
+                                      (logoNode.constructor && logoNode.constructor.name === 'Image') ||
+                                      (logoNode instanceof Konva.Image) ||
+                                      (logoNode.getClassName && logoNode.getClassName() === 'Image');
+                        
+                        if (isImage) {
+                            // Save all attributes before reloading
+                            const savedAttrs = {
+                                x: logoNode.x(),
+                                y: logoNode.y(),
+                                width: logoNode.width(),
+                                height: logoNode.height(),
+                                scaleX: logoNode.scaleX(),
+                                scaleY: logoNode.scaleY(),
+                                rotation: logoNode.rotation(),
+                                opacity: logoNode.opacity(),
+                                draggable: logoNode.draggable(),
+                                visible: logoNode.visible()
+                            };
+                            
+                            // Store reference to update elements array
+                            const oldNode = logoNode;
+                            const parent = logoNode.getParent();
+                            const index = logoNode.getZIndex();
+                            
+                            console.log('Restoring logo image at', savedAttrs.x, savedAttrs.y);
+                            
+                            // Reload the image from URL
+                            Konva.Image.fromURL(LOGO_URL, function(newImage) {
+                                // Calculate actual size considering scale
+                                // If scaleX/scaleY are not 1, the actual size is width*scaleX and height*scaleY
+                                let finalWidth = savedAttrs.width;
+                                let finalHeight = savedAttrs.height;
+                                
+                                // If scale was applied, we need to account for it
+                                // Reset scale to 1 and apply the scaled dimensions as the new width/height
+                                if (savedAttrs.scaleX !== 1 || savedAttrs.scaleY !== 1) {
+                                    finalWidth = savedAttrs.width * savedAttrs.scaleX;
+                                    finalHeight = savedAttrs.height * savedAttrs.scaleY;
+                                }
+                                
+                                // Restore all attributes, but reset scale to 1 and use calculated dimensions
+                                newImage.setAttrs({
+                                    x: savedAttrs.x,
+                                    y: savedAttrs.y,
+                                    width: finalWidth,
+                                    height: finalHeight,
+                                    scaleX: 1,
+                                    scaleY: 1,
+                                    rotation: savedAttrs.rotation,
+                                    opacity: savedAttrs.opacity,
+                                    draggable: savedAttrs.draggable,
+                                    visible: savedAttrs.visible
+                                });
+                                newImage.name('logo');
+                                
+                                // Replace the old node with the new one
+                                oldNode.destroy();
+                                parent.add(newImage);
+                                newImage.zIndex(index);
+                                
+                                // Update elements array
+                                const elementIndex = elements.findIndex(e => e.node === oldNode);
+                                if (elementIndex !== -1) {
+                                    elements[elementIndex].node = newImage;
+                                } else {
+                                    // Add to elements array if not found
+                                    elements.push({ type: 'logo', node: newImage });
+                                }
+                                
+                                // Setup selection for the new image
+                                setupSelection(newImage);
+                                
+                                layer.draw();
+                                console.log('Logo image restored successfully');
+                            }, function(error) {
+                                console.error('Failed to load logo image:', error);
+                                // Keep the old node if image fails to load, but try to make it visible
+                                // by setting a placeholder
+                                if (oldNode && oldNode.parent) {
+                                    oldNode.visible(true);
+                                    layer.draw();
+                                }
+                            });
+                        } else {
+                            console.warn('Found node with name="logo" but it is not an Image:', logoNode.className, logoNode.constructor ? logoNode.constructor.name : 'unknown');
+                        }
+                    });
+                }
+                
                 // Re-setup selections for all elements (skip background and grid lines)
                 layer.children.forEach(child => {
                     if (child !== background && 
                         child.className !== 'Transformer' && 
                         !(child.className === 'Line' && child.attrs.name === 'grid-line')) {
+                        // Skip logo images as they're handled above
+                        if (child.className === 'Image' && child.attrs.name === 'logo') {
+                            return;
+                        }
                         setupSelection(child);
                         // If it's a table Group, also setup selection on children
                         if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {

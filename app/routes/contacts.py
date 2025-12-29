@@ -7,6 +7,7 @@ from app import db
 from app.models import Contact, Client, ContactCommunication
 from app.utils.db import safe_commit
 from app.utils.timezone import parse_local_datetime
+from app.utils.module_helpers import module_enabled
 from datetime import datetime
 
 contacts_bp = Blueprint("contacts", __name__)
@@ -14,6 +15,7 @@ contacts_bp = Blueprint("contacts", __name__)
 
 @contacts_bp.route("/clients/<int:client_id>/contacts")
 @login_required
+@module_enabled("contacts")
 def list_contacts(client_id):
     """List all contacts for a client"""
     client = Client.query.get_or_404(client_id)

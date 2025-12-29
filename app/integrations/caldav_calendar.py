@@ -339,6 +339,57 @@ class CalDAVClient:
 
         return events
 
+    def create_or_update_event(self, calendar_url: str, event_uid: str, ical_content: str, event_href: Optional[str] = None) -> bool:
+        """
+        Create or update a calendar event using PUT request.
+        
+        Args:
+            calendar_url: Calendar collection URL
+            event_uid: Unique identifier for the event
+            ical_content: iCalendar content (VCALENDAR with VEVENT)
+            event_href: Optional existing event href for updates
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        calendar_url = _ensure_trailing_slash(calendar_url)
+        # Use provided href if available, otherwise construct from UID
+        if event_href:
+            event_url = event_href
+        else:
+            # Event URL is typically: calendar_url + event_uid + ".ics"
+            event_url = urljoin(calendar_url, f"{event_uid}.ics")
+        
+        headers = {
+            "Content-Type": "text/calendar; charset=utf-8",
+        }
+        
+        try:
+            resp = self._request("PUT", event_url, headers=headers, data=ical_content)
+            resp.raise_for_status()
+            return True
+        except requests.exceptions.HTTPError as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            if e.response.status_code == 404:
+                logger.warning(f"CalDAV event {event_uid} not found at {event_url}, attempting to create")
+                # Try creating with standard URL if custom href failed
+                if event_href and event_href != urljoin(calendar_url, f"{event_uid}.ics"):
+                    standard_url = urljoin(calendar_url, f"{event_uid}.ics")
+                    try:
+                        resp = self._request("PUT", standard_url, headers=headers, data=ical_content)
+                        resp.raise_for_status()
+                        return True
+                    except Exception:
+                        pass
+            logger.error(f"Failed to create/update CalDAV event {event_uid}: {e}")
+            return False
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to create/update CalDAV event {event_uid}: {e}", exc_info=True)
+            return False
+
     def _find_href(self, root: ET.Element, prop_paths: List[Tuple[str, ...]]) -> Optional[str]:
         """
         Find a DAV:href under a given prop path.
@@ -508,159 +559,33 @@ class CalDAVCalendarConnector(BaseConnector):
             lookback_days = int(cfg.get("lookback_days", 90))
 
             if sync_direction in ("calendar_to_time_tracker", "bidirectional"):
-                if not default_project_id:
-                    return {"success": False, "message": "default_project_id is required to import calendar events as time entries."}
+                calendar_result = self._sync_calendar_to_time_tracker(cfg, calendar_url, sync_type, default_project_id, lookback_days)
+                # If bidirectional, also do TimeTracker to Calendar sync
+                if sync_direction == "bidirectional":
+                    tracker_result = self._sync_time_tracker_to_calendar(cfg, calendar_url, sync_type)
+                    # Merge results
+                    if calendar_result.get("success") and tracker_result.get("success"):
+                        return {
+                            "success": True,
+                            "synced_items": calendar_result.get("synced_items", 0) + tracker_result.get("synced_items", 0),
+                            "imported": calendar_result.get("imported", 0),
+                            "skipped": calendar_result.get("skipped", 0),
+                            "errors": calendar_result.get("errors", []) + tracker_result.get("errors", []),
+                            "message": f"Bidirectional sync: Calendar→TimeTracker: {calendar_result.get('message', '')} | TimeTracker→Calendar: {tracker_result.get('message', '')}",
+                        }
+                    elif calendar_result.get("success"):
+                        return calendar_result
+                    elif tracker_result.get("success"):
+                        return tracker_result
+                    else:
+                        return {"success": False, "message": f"Both sync directions failed. Calendar→TimeTracker: {calendar_result.get('message')}, TimeTracker→Calendar: {tracker_result.get('message')}"}
+                return calendar_result
 
-                # Determine time window
-                if sync_type == "incremental" and self.integration.last_sync_at:
-                    # last_sync_at stored as naive UTC in Integration; treat as UTC
-                    time_min_utc = self.integration.last_sync_at.replace(tzinfo=timezone.utc)
-                else:
-                    time_min_utc = datetime.now(timezone.utc) - timedelta(days=lookback_days)
-                time_max_utc = datetime.now(timezone.utc) + timedelta(days=7)
-
-                logger.info(f"Fetching events from {calendar_url} between {time_min_utc} and {time_max_utc}")
-                client = self._client()
-                try:
-                    events = client.fetch_events(calendar_url, time_min_utc, time_max_utc)
-                    logger.info(f"Fetched {len(events)} events from CalDAV calendar")
-                    if len(events) == 0:
-                        logger.warning(f"No events found in calendar {calendar_url} for time range {time_min_utc} to {time_max_utc}")
-                except Exception as e:
-                    logger.error(f"Failed to fetch events from calendar: {e}", exc_info=True)
-                    return {"success": False, "message": f"Failed to fetch events from calendar: {str(e)}"}
-
-                # Preload projects for title matching
-                projects = Project.query.filter_by(status="active").order_by(Project.name).all()
-
-                imported = 0
-                skipped = 0
-                errors: List[str] = []
-
-                if len(events) == 0:
-                    # Update integration status even if no events found (this is a successful sync)
-                    self.integration.last_sync_at = datetime.utcnow()
-                    self.integration.last_sync_status = "success"
-                    self.integration.last_error = None
-                    db.session.commit()
-                    return {
-                        "success": True,
-                        "imported": 0,
-                        "skipped": 0,
-                        "synced_items": 0,
-                        "errors": [],
-                        "message": f"No events found in calendar for the specified time range ({time_min_utc.date()} to {time_max_utc.date()}).",
-                    }
-
-                for ev in events:
-                    try:
-                        uid = ev["uid"]
-                        # Check if this event was already imported (idempotency)
-                        existing_link = IntegrationExternalEventLink.query.filter_by(
-                            integration_id=self.integration.id, external_uid=uid
-                        ).first()
-                        if existing_link:
-                            skipped += 1
-                            continue
-
-                        start_dt: datetime = ev["start"]
-                        end_dt: datetime = ev["end"]
-
-                        # Convert to local naive for DB storage
-                        start_local = _to_local_naive(start_dt)
-                        end_local = _to_local_naive(end_dt)
-
-                        # Ensure valid duration
-                        if end_local <= start_local:
-                            skipped += 1
-                            continue
-
-                        # Try project match, else default
-                        project_id = int(default_project_id)
-                        title = (ev.get("summary") or "").strip()
-                        for p in projects:
-                            if p and p.name and p.name in title:
-                                project_id = p.id
-                                break
-
-                        notes_parts = []
-                        if title:
-                            notes_parts.append(title)
-                        desc = (ev.get("description") or "").strip()
-                        if desc:
-                            notes_parts.append(desc)
-                        notes = "\n\n".join(notes_parts) if notes_parts else None
-
-                        time_entry = TimeEntry(
-                            user_id=self.integration.user_id,
-                            project_id=project_id,
-                            start_time=start_local,
-                            end_time=end_local,
-                            notes=notes,
-                            source="auto",
-                            billable=True,
-                        )
-
-                        db.session.add(time_entry)
-                        db.session.flush()  # get id
-
-                        link = IntegrationExternalEventLink(
-                            integration_id=self.integration.id,
-                            time_entry_id=time_entry.id,
-                            external_uid=uid,
-                            external_href=ev.get("href"),
-                        )
-                        db.session.add(link)
-                        # Flush to check for duplicate UID constraint violation
-                        db.session.flush()
-
-                        imported += 1
-                    except Exception as e:
-                        # Check if it's a duplicate UID error (unique constraint violation)
-                        # This can happen in rare race conditions
-                        error_str = str(e).lower()
-                        if "unique" in error_str or "duplicate" in error_str or "uq_integration_external_uid" in error_str:
-                            # Duplicate UID - mark as skipped (likely imported by another process)
-                            skipped += 1
-                            logger.debug(f"Event {ev.get('uid', 'unknown')} already imported (duplicate UID - race condition)")
-                            # Don't rollback - the time_entry might have been created
-                            # Just continue to next event
-                        else:
-                            # Other error - log it and continue
-                            error_msg = f"Event {ev.get('uid', 'unknown')}: {str(e)}"
-                            errors.append(error_msg)
-                            logger.warning(f"Failed to import event {ev.get('uid', 'unknown')}: {e}")
-                            # For other errors, we might want to rollback this specific event
-                            # but that's complex with SQLAlchemy, so we'll let the final commit handle it
-                            # The duplicate check at the start should catch most issues
-
-                # Update integration status
-                self.integration.last_sync_at = datetime.utcnow()
-                self.integration.last_sync_status = "success" if not errors else "partial"
-                self.integration.last_error = "; ".join(errors[:3]) if errors else None
-
-                db.session.commit()
-
-                # Build detailed message
-                if imported == 0 and skipped > 0:
-                    message = f"No new events imported ({skipped} already imported, {len(events)} total found)."
-                elif imported == 0:
-                    message = f"No events found in calendar for the specified time range ({time_min_utc.date()} to {time_max_utc.date()})."
-                else:
-                    message = f"Imported {imported} events ({skipped} skipped, {len(events)} total found)."
-
-                logger.info(f"CalDAV sync completed: {message}")
-
-                return {
-                    "success": True,
-                    "imported": imported,
-                    "skipped": skipped,
-                    "synced_items": imported,  # For compatibility with scheduled_tasks
-                    "errors": errors,
-                    "message": message,
-                }
-
-            return {"success": False, "message": "Sync direction not implemented for CalDAV yet."}
+            # Handle TimeTracker to Calendar sync
+            if sync_direction == "time_tracker_to_calendar":
+                return self._sync_time_tracker_to_calendar(cfg, calendar_url, sync_type)
+            
+            return {"success": False, "message": f"Unknown sync direction: {sync_direction}"}
         except Exception as e:
             try:
                 from app import db
@@ -678,5 +603,298 @@ class CalDAVCalendarConnector(BaseConnector):
                 except Exception:
                     pass
             return {"success": False, "message": f"Sync failed: {str(e)}"}
+    
+    def _sync_calendar_to_time_tracker(self, cfg: Dict[str, Any], calendar_url: str, sync_type: str, default_project_id: Optional[int], lookback_days: int) -> Dict[str, Any]:
+        """Sync calendar events to TimeTracker time entries."""
+        from app.models import Project, TimeEntry
+        from app.models.integration_external_event_link import IntegrationExternalEventLink
+        
+        if not default_project_id:
+            return {"success": False, "message": "default_project_id is required to import calendar events as time entries."}
+
+        # Determine time window
+        if sync_type == "incremental" and self.integration.last_sync_at:
+            time_min_utc = self.integration.last_sync_at.replace(tzinfo=timezone.utc)
+        else:
+            time_min_utc = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+        time_max_utc = datetime.now(timezone.utc) + timedelta(days=7)
+
+        logger.info(f"Fetching events from {calendar_url} between {time_min_utc} and {time_max_utc}")
+        client = self._client()
+        try:
+            events = client.fetch_events(calendar_url, time_min_utc, time_max_utc)
+            logger.info(f"Fetched {len(events)} events from CalDAV calendar")
+            if len(events) == 0:
+                logger.warning(f"No events found in calendar {calendar_url} for time range {time_min_utc} to {time_max_utc}")
+        except Exception as e:
+            logger.error(f"Failed to fetch events from calendar: {e}", exc_info=True)
+            return {"success": False, "message": f"Failed to fetch events from calendar: {str(e)}"}
+
+        # Preload projects for title matching
+        projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+
+        imported = 0
+        skipped = 0
+        errors: List[str] = []
+
+        if len(events) == 0:
+            self.integration.last_sync_at = datetime.utcnow()
+            self.integration.last_sync_status = "success"
+            self.integration.last_error = None
+            db.session.commit()
+            return {
+                "success": True,
+                "imported": 0,
+                "skipped": 0,
+                "synced_items": 0,
+                "errors": [],
+                "message": f"No events found in calendar for the specified time range ({time_min_utc.date()} to {time_max_utc.date()}).",
+            }
+
+        for ev in events:
+            try:
+                uid = ev["uid"]
+                existing_link = IntegrationExternalEventLink.query.filter_by(
+                    integration_id=self.integration.id, external_uid=uid
+                ).first()
+                if existing_link:
+                    skipped += 1
+                    continue
+
+                start_dt: datetime = ev["start"]
+                end_dt: datetime = ev["end"]
+
+                start_local = _to_local_naive(start_dt)
+                end_local = _to_local_naive(end_dt)
+
+                if end_local <= start_local:
+                    skipped += 1
+                    continue
+
+                project_id = int(default_project_id)
+                title = (ev.get("summary") or "").strip()
+                for p in projects:
+                    if p and p.name and p.name in title:
+                        project_id = p.id
+                        break
+
+                notes_parts = []
+                if title:
+                    notes_parts.append(title)
+                desc = (ev.get("description") or "").strip()
+                if desc:
+                    notes_parts.append(desc)
+                notes = "\n\n".join(notes_parts) if notes_parts else None
+
+                time_entry = TimeEntry(
+                    user_id=self.integration.user_id,
+                    project_id=project_id,
+                    start_time=start_local,
+                    end_time=end_local,
+                    notes=notes,
+                    source="auto",
+                    billable=True,
+                )
+
+                db.session.add(time_entry)
+                db.session.flush()
+
+                link = IntegrationExternalEventLink(
+                    integration_id=self.integration.id,
+                    time_entry_id=time_entry.id,
+                    external_uid=uid,
+                    external_href=ev.get("href"),
+                )
+                db.session.add(link)
+                db.session.flush()
+
+                imported += 1
+            except Exception as e:
+                error_str = str(e).lower()
+                if "unique" in error_str or "duplicate" in error_str or "uq_integration_external_uid" in error_str:
+                    skipped += 1
+                    logger.debug(f"Event {ev.get('uid', 'unknown')} already imported (duplicate UID - race condition)")
+                else:
+                    error_msg = f"Event {ev.get('uid', 'unknown')}: {str(e)}"
+                    errors.append(error_msg)
+                    logger.warning(f"Failed to import event {ev.get('uid', 'unknown')}: {e}")
+
+        self.integration.last_sync_at = datetime.utcnow()
+        self.integration.last_sync_status = "success" if not errors else "partial"
+        self.integration.last_error = "; ".join(errors[:3]) if errors else None
+
+        db.session.commit()
+
+        if imported == 0 and skipped > 0:
+            message = f"No new events imported ({skipped} already imported, {len(events)} total found)."
+        elif imported == 0:
+            message = f"No events found in calendar for the specified time range ({time_min_utc.date()} to {time_max_utc.date()})."
+        else:
+            message = f"Imported {imported} events ({skipped} skipped, {len(events)} total found)."
+
+        logger.info(f"CalDAV sync completed: {message}")
+
+        return {
+            "success": True,
+            "imported": imported,
+            "skipped": skipped,
+            "synced_items": imported,
+            "errors": errors,
+            "message": message,
+        }
+    
+    def _sync_time_tracker_to_calendar(self, cfg: Dict[str, Any], calendar_url: str, sync_type: str) -> Dict[str, Any]:
+        """Sync TimeTracker time entries to CalDAV calendar."""
+        from app.models import TimeEntry, Project, Task
+        from app.models.integration_external_event_link import IntegrationExternalEventLink
+        
+        lookback_days = int(cfg.get("lookback_days", 90))
+        lookahead_days = int(cfg.get("lookahead_days", 7))
+        
+        if sync_type == "incremental" and self.integration.last_sync_at:
+            time_min = self.integration.last_sync_at.replace(tzinfo=timezone.utc)
+        else:
+            time_min = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+        time_max = datetime.now(timezone.utc) + timedelta(days=lookahead_days)
+        
+        time_min_local = _to_local_naive(time_min)
+        time_max_local = _to_local_naive(time_max)
+        
+        time_entries = TimeEntry.query.filter(
+            TimeEntry.user_id == self.integration.user_id,
+            TimeEntry.start_time >= time_min_local,
+            TimeEntry.start_time <= time_max_local,
+            TimeEntry.end_time.isnot(None),
+        ).order_by(TimeEntry.start_time).all()
+        
+        if not time_entries:
+            self.integration.last_sync_at = datetime.utcnow()
+            self.integration.last_sync_status = "success"
+            self.integration.last_error = None
+            db.session.commit()
+            return {
+                "success": True,
+                "synced_items": 0,
+                "errors": [],
+                "message": f"No time entries found in the specified time range ({time_min_local.date()} to {time_max_local.date()}).",
+            }
+        
+        client = self._client()
+        synced = 0
+        updated = 0
+        errors: List[str] = []
+        
+        for time_entry in time_entries:
+            try:
+                event_uid = f"timetracker-{time_entry.id}@timetracker.local"
+                
+                existing_link = IntegrationExternalEventLink.query.filter_by(
+                    integration_id=self.integration.id,
+                    time_entry_id=time_entry.id
+                ).first()
+                
+                project = Project.query.get(time_entry.project_id) if time_entry.project_id else None
+                task = Task.query.get(time_entry.task_id) if time_entry.task_id else None
+                
+                title_parts = []
+                if project:
+                    title_parts.append(project.name)
+                if task:
+                    title_parts.append(task.name)
+                if not title_parts:
+                    title_parts.append("Time Entry")
+                title = " - ".join(title_parts)
+                
+                description_parts = []
+                if time_entry.notes:
+                    description_parts.append(time_entry.notes)
+                if time_entry.tags:
+                    description_parts.append(f"Tags: {time_entry.tags}")
+                description = "\n\n".join(description_parts) if description_parts else "TimeTracker: Created from time entry"
+                
+                start_utc = local_to_utc(time_entry.start_time)
+                end_utc = local_to_utc(time_entry.end_time) if time_entry.end_time else start_utc + timedelta(hours=1)
+                
+                ical_content = self._generate_icalendar_event(
+                    uid=event_uid,
+                    title=title,
+                    description=description,
+                    start=start_utc,
+                    end=end_utc,
+                    created=time_entry.created_at.replace(tzinfo=timezone.utc) if time_entry.created_at else datetime.now(timezone.utc),
+                    updated=time_entry.updated_at.replace(tzinfo=timezone.utc) if time_entry.updated_at else datetime.now(timezone.utc),
+                )
+                
+                # Use existing href if available, otherwise generate new one
+                event_href = existing_link.external_href if existing_link else urljoin(calendar_url, f"{event_uid}.ics")
+                
+                # For updates, we need to use the existing href
+                if existing_link:
+                    # Update existing event using its href
+                    success = client.create_or_update_event(calendar_url, event_uid, ical_content, event_href=existing_link.external_href)
+                    if success:
+                        updated += 1
+                    else:
+                        errors.append(f"Failed to update time entry {time_entry.id} in calendar")
+                else:
+                    # Create new event
+                    success = client.create_or_update_event(calendar_url, event_uid, ical_content)
+                    if success:
+                        link = IntegrationExternalEventLink(
+                            integration_id=self.integration.id,
+                            time_entry_id=time_entry.id,
+                            external_uid=event_uid,
+                            external_href=event_href,
+                        )
+                        db.session.add(link)
+                        synced += 1
+                    else:
+                        errors.append(f"Failed to create time entry {time_entry.id} in calendar")
+                    
+            except Exception as e:
+                error_msg = f"Time entry {time_entry.id}: {str(e)}"
+                errors.append(error_msg)
+                logger.warning(f"Failed to sync time entry {time_entry.id} to CalDAV: {e}")
+        
+        self.integration.last_sync_at = datetime.utcnow()
+        self.integration.last_sync_status = "success" if not errors else "partial"
+        self.integration.last_error = "; ".join(errors[:3]) if errors else None
+        
+        db.session.commit()
+        
+        message = f"Synced {synced} new events, updated {updated} events to CalDAV calendar."
+        logger.info(f"CalDAV TimeTracker→Calendar sync completed: {message}")
+        
+        return {
+            "success": True,
+            "synced_items": synced + updated,
+            "errors": errors,
+            "message": message,
+        }
+    
+    def _generate_icalendar_event(self, uid: str, title: str, description: str, start: datetime, end: datetime, created: datetime, updated: datetime) -> str:
+        """Generate iCalendar content for an event."""
+        from icalendar import Event
+        
+        event = Event()
+        event.add('uid', uid)
+        event.add('summary', title)
+        event.add('description', description)
+        event.add('dtstart', start)
+        event.add('dtend', end)
+        event.add('dtstamp', datetime.now(timezone.utc))
+        event.add('created', created)
+        event.add('last-modified', updated)
+        event.add('status', 'CONFIRMED')
+        event.add('transp', 'OPAQUE')
+        
+        cal = Calendar()
+        cal.add('prodid', '-//TimeTracker//CalDAV Integration//EN')
+        cal.add('version', '2.0')
+        cal.add('calscale', 'GREGORIAN')
+        cal.add('method', 'PUBLISH')
+        cal.add_component(event)
+        
+        return cal.to_ical().decode('utf-8')
 
 

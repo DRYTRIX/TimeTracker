@@ -17,6 +17,9 @@ class EnhancedErrorHandler {
     }
 
     init() {
+        // Setup feature fallbacks first (before other initialization)
+        this.setupFeatureFallbacks();
+        
         // Setup network status monitoring
         this.setupNetworkMonitoring();
         
@@ -719,13 +722,143 @@ class EnhancedErrorHandler {
         // Fallback for fetch if not available
         if (typeof fetch === 'undefined') {
             console.warn('Fetch API not available, using XMLHttpRequest fallback');
-            // Implement XMLHttpRequest-based fetch polyfill if needed
+            this.polyfillFetch();
         }
         
         // Fallback for localStorage
-        if (typeof Storage === 'undefined') {
+        if (typeof Storage === 'undefined' || typeof localStorage === 'undefined') {
             console.warn('LocalStorage not available, using memory storage');
-            // Implement in-memory storage fallback
+            this.polyfillLocalStorage();
+        }
+    }
+
+    polyfillFetch() {
+        // Simple fetch polyfill using XMLHttpRequest
+        window.fetch = function(url, options = {}) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                const method = options.method || 'GET';
+                const headers = options.headers || {};
+                
+                xhr.open(method, url, true);
+                
+                // Set headers
+                Object.keys(headers).forEach(key => {
+                    xhr.setRequestHeader(key, headers[key]);
+                });
+                
+                // Handle response
+                xhr.onload = function() {
+                    const response = {
+                        ok: xhr.status >= 200 && xhr.status < 300,
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        headers: {
+                            get: function(name) {
+                                return xhr.getResponseHeader(name);
+                            }
+                        },
+                        text: function() {
+                            return Promise.resolve(xhr.responseText);
+                        },
+                        json: function() {
+                            try {
+                                return Promise.resolve(JSON.parse(xhr.responseText));
+                            } catch (e) {
+                                return Promise.reject(new Error('Invalid JSON response'));
+                            }
+                        },
+                        blob: function() {
+                            return Promise.resolve(new Blob([xhr.response]));
+                        },
+                        arrayBuffer: function() {
+                            return Promise.resolve(xhr.response);
+                        }
+                    };
+                    
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve(response);
+                    } else {
+                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    reject(new Error('Network request failed'));
+                };
+                
+                xhr.ontimeout = function() {
+                    reject(new Error('Request timeout'));
+                };
+                
+                // Set timeout if specified
+                if (options.timeout) {
+                    xhr.timeout = options.timeout;
+                }
+                
+                // Send request
+                if (options.body) {
+                    if (typeof options.body === 'string') {
+                        xhr.send(options.body);
+                    } else if (options.body instanceof FormData) {
+                        xhr.send(options.body);
+                    } else {
+                        xhr.send(JSON.stringify(options.body));
+                    }
+                } else {
+                    xhr.send();
+                }
+            });
+        };
+    }
+
+    polyfillLocalStorage() {
+        // In-memory storage fallback
+        const memoryStorage = {};
+        
+        window.localStorage = {
+            getItem: function(key) {
+                return memoryStorage[key] || null;
+            },
+            setItem: function(key, value) {
+                try {
+                    memoryStorage[key] = String(value);
+                    // Dispatch storage event for compatibility
+                    window.dispatchEvent(new Event('storage'));
+                } catch (e) {
+                    console.warn('Memory storage setItem failed:', e);
+                }
+            },
+            removeItem: function(key) {
+                try {
+                    delete memoryStorage[key];
+                    window.dispatchEvent(new Event('storage'));
+                } catch (e) {
+                    console.warn('Memory storage removeItem failed:', e);
+                }
+            },
+            clear: function() {
+                try {
+                    Object.keys(memoryStorage).forEach(key => {
+                        delete memoryStorage[key];
+                    });
+                    window.dispatchEvent(new Event('storage'));
+                } catch (e) {
+                    console.warn('Memory storage clear failed:', e);
+                }
+            },
+            get length() {
+                return Object.keys(memoryStorage).length;
+            },
+            key: function(index) {
+                const keys = Object.keys(memoryStorage);
+                return keys[index] || null;
+            }
+        };
+        
+        // Also polyfill sessionStorage with same in-memory implementation
+        if (typeof sessionStorage === 'undefined') {
+            window.sessionStorage = Object.create(window.localStorage);
         }
     }
 

@@ -20,6 +20,10 @@ custom_reports_bp = Blueprint("custom_reports", __name__)
 @login_required
 def report_builder(view_id=None):
     """Custom report builder page. If view_id is provided, load that saved view for editing."""
+    # Also check for view_id in query parameters as fallback
+    if not view_id:
+        view_id = request.args.get('view_id', type=int)
+    
     saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).all()
     
     # Load saved view if editing
@@ -96,7 +100,8 @@ def save_report_view():
 
         # Extract iterative report generation settings
         iterative_report_generation = data.get("iterative_report_generation", False)
-        iterative_custom_field_name = data.get("iterative_custom_field_name", "").strip() or None
+        iterative_custom_field_name_raw = data.get("iterative_custom_field_name")
+        iterative_custom_field_name = (iterative_custom_field_name_raw or "").strip() or None if iterative_custom_field_name_raw else None
         
         # If view_id is provided, update existing report
         if view_id:
@@ -279,13 +284,15 @@ def generate_report_data(config, user_id=None):
 
         if unpaid_only:
             # Use unpaid hours service
+            # Only filter by user_id if explicitly specified in filters, not by default
+            # This allows admins to see all unpaid entries globally
             unpaid_service = UnpaidHoursService()
             entries = unpaid_service.get_unpaid_time_entries(
                 start_date=start_dt,
                 end_date=end_dt,
                 project_id=filters.get("project_id"),
                 client_id=filters.get("client_id"),
-                user_id=filters.get("user_id") or user_id,
+                user_id=filters.get("user_id"),  # Only use if explicitly specified
                 custom_field_filter=custom_field_filter,
             )
         else:
@@ -422,7 +429,7 @@ def list_saved_views():
 @custom_reports_bp.route("/reports/builder/<int:view_id>/edit", methods=["GET"])
 @login_required
 def edit_saved_view(view_id):
-    """Edit a saved report view - redirects to builder with view_id."""
+    """Edit a saved report view - redirects to builder with view_id in path."""
     saved_view = SavedReportView.query.get_or_404(view_id)
     
     # Check permission
@@ -430,7 +437,7 @@ def edit_saved_view(view_id):
         flash(_("You do not have permission to edit this report."), "error")
         return redirect(url_for("custom_reports.list_saved_views"))
     
-    # Redirect to builder with edit mode
+    # Redirect to builder with edit mode using the /edit path pattern
     return redirect(url_for("custom_reports.report_builder", view_id=view_id))
 
 

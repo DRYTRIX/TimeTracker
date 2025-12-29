@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from app.utils.db import safe_commit
 from app.utils.timezone import now_in_app_timezone
 from app.utils.permissions import check_permission
+from app.utils.module_helpers import module_enabled
 import os
 
 calendar_bp = Blueprint("calendar", __name__)
@@ -15,6 +16,7 @@ calendar_bp = Blueprint("calendar", __name__)
 
 @calendar_bp.route("/calendar")
 @login_required
+@module_enabled("calendar")
 def view_calendar():
     """Display the calendar view with events, tasks, and time entries"""
     view_type = request.args.get("view", "month")  # day, week, month
@@ -40,6 +42,7 @@ def view_calendar():
 
 @calendar_bp.route("/api/calendar/events")
 @login_required
+@module_enabled("calendar")
 def get_events():
     """API endpoint to fetch calendar events for a date range"""
     start_str = request.args.get("start")
@@ -102,6 +105,7 @@ def get_events():
 
 @calendar_bp.route("/api/calendar/events", methods=["POST"])
 @login_required
+@module_enabled("calendar")
 def create_event():
     """Create a new calendar event"""
     data = request.get_json()
@@ -160,6 +164,7 @@ def create_event():
 
 @calendar_bp.route("/api/calendar/events/<int:event_id>", methods=["GET"])
 @login_required
+@module_enabled("calendar")
 def get_event(event_id):
     """Get a specific calendar event"""
     event = CalendarEvent.query.get_or_404(event_id)
@@ -411,6 +416,7 @@ def edit_event(event_id):
 
 @calendar_bp.route("/calendar/integrations")
 @login_required
+@module_enabled("calendar")
 def list_integrations():
     """List calendar integrations - redirect to main integrations page"""
     # Redirect to main integrations page to avoid duplication

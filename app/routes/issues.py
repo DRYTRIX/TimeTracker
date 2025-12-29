@@ -54,10 +54,39 @@ def list_issues():
     
     # Check permissions - non-admin users can only see issues for their assigned clients/projects
     if not current_user.is_admin:
-        # Get user's accessible client IDs (through projects they have access to)
-        # For simplicity, we'll show all issues but filter in template if needed
-        # In a real implementation, you'd want to filter by user permissions here
-        pass
+        # Check if user has permission to view all issues
+        has_view_all_issues = current_user.has_permission("view_all_issues") if hasattr(current_user, 'has_permission') else False
+        
+        if not has_view_all_issues:
+            # Get user's accessible project IDs (projects they created or have time entries for)
+            from app.models.time_entry import TimeEntry
+            
+            # Projects the user has time entries for
+            user_project_ids = db.session.query(TimeEntry.project_id).filter_by(
+                user_id=current_user.id
+            ).distinct().subquery()
+            
+            # Get client IDs from accessible projects
+            accessible_client_ids = db.session.query(Project.client_id).filter(
+                db.or_(
+                    Project.id.in_(db.session.query(user_project_ids)),
+                    # Also include projects where user is assigned to tasks
+                    Project.id.in_(
+                        db.session.query(Task.project_id).filter_by(assigned_to=current_user.id).distinct().subquery()
+                    )
+                )
+            ).distinct().subquery()
+            
+            # Filter issues by:
+            # 1. Issues assigned to the user
+            # 2. Issues for clients/projects the user has access to
+            query = query.filter(
+                db.or_(
+                    Issue.assigned_to == current_user.id,
+                    Issue.client_id.in_(db.session.query(accessible_client_ids)),
+                    Issue.project_id.in_(db.session.query(user_project_ids))
+                )
+            )
     
     # Order by priority and creation date
     query = query.order_by(
@@ -74,11 +103,35 @@ def list_issues():
     projects = Project.query.filter_by(status="active").order_by(Project.name).limit(500).all()
     users = User.query.filter_by(is_active=True).order_by(User.username).limit(200).all()
     
-    # Calculate statistics
-    total_issues = Issue.query.count()
-    open_issues = Issue.query.filter(Issue.status.in_(["open", "in_progress"])).count()
-    resolved_issues = Issue.query.filter_by(status="resolved").count()
-    closed_issues = Issue.query.filter_by(status="closed").count()
+    # Calculate statistics (respecting permissions)
+    stats_query = Issue.query
+    if not current_user.is_admin:
+        has_view_all_issues = current_user.has_permission("view_all_issues") if hasattr(current_user, 'has_permission') else False
+        if not has_view_all_issues:
+            from app.models.time_entry import TimeEntry
+            user_project_ids = db.session.query(TimeEntry.project_id).filter_by(
+                user_id=current_user.id
+            ).distinct().subquery()
+            accessible_client_ids = db.session.query(Project.client_id).filter(
+                db.or_(
+                    Project.id.in_(db.session.query(user_project_ids)),
+                    Project.id.in_(
+                        db.session.query(Task.project_id).filter_by(assigned_to=current_user.id).distinct().subquery()
+                    )
+                )
+            ).distinct().subquery()
+            stats_query = stats_query.filter(
+                db.or_(
+                    Issue.assigned_to == current_user.id,
+                    Issue.client_id.in_(db.session.query(accessible_client_ids)),
+                    Issue.project_id.in_(db.session.query(user_project_ids))
+                )
+            )
+    
+    total_issues = stats_query.count()
+    open_issues = stats_query.filter(Issue.status.in_(["open", "in_progress"])).count()
+    resolved_issues = stats_query.filter_by(status="resolved").count()
+    closed_issues = stats_query.filter_by(status="closed").count()
     
     return render_template(
         "issues/list.html",
@@ -105,6 +158,48 @@ def list_issues():
 def view_issue(issue_id):
     """View a specific issue"""
     issue = Issue.query.get_or_404(issue_id)
+    
+    # Check permissions - non-admin users can only view issues they have access to
+    if not current_user.is_admin:
+        has_view_all_issues = current_user.has_permission("view_all_issues") if hasattr(current_user, 'has_permission') else False
+        if not has_view_all_issues:
+            # Check if user has access to this issue
+            has_access = False
+            
+            # Check if assigned to user
+            if issue.assigned_to == current_user.id:
+                has_access = True
+            else:
+                # Check if user has access through projects
+                from app.models.time_entry import TimeEntry
+                user_project_ids = db.session.query(TimeEntry.project_id).filter_by(
+                    user_id=current_user.id
+                ).distinct().all()
+                user_project_ids = [p[0] for p in user_project_ids]
+                
+                # Also check projects where user is assigned to tasks
+                user_task_project_ids = db.session.query(Task.project_id).filter_by(
+                    assigned_to=current_user.id
+                ).distinct().all()
+                user_task_project_ids = [p[0] for p in user_task_project_ids]
+                
+                all_accessible_project_ids = set(user_project_ids + user_task_project_ids)
+                
+                # Check if issue's project or client's projects are accessible
+                if issue.project_id and issue.project_id in all_accessible_project_ids:
+                    has_access = True
+                elif issue.client_id:
+                    # Check if any project for this client is accessible
+                    client_project_ids = db.session.query(Project.id).filter_by(
+                        client_id=issue.client_id
+                    ).all()
+                    client_project_ids = [p[0] for p in client_project_ids]
+                    if any(pid in all_accessible_project_ids for pid in client_project_ids):
+                        has_access = True
+            
+            if not has_access:
+                flash(_("You do not have permission to view this issue."), "error")
+                return redirect(url_for("issues.list_issues"))
     
     # Get related tasks if project is set
     related_tasks = []
@@ -133,6 +228,40 @@ def view_issue(issue_id):
 def edit_issue(issue_id):
     """Edit an issue"""
     issue = Issue.query.get_or_404(issue_id)
+    
+    # Check permissions - non-admin users can only edit issues they have access to
+    if not current_user.is_admin:
+        has_edit_all_issues = current_user.has_permission("edit_all_issues") if hasattr(current_user, 'has_permission') else False
+        if not has_edit_all_issues:
+            # Check if user has access to this issue (same logic as view_issue)
+            has_access = False
+            if issue.assigned_to == current_user.id:
+                has_access = True
+            else:
+                from app.models.time_entry import TimeEntry
+                user_project_ids = db.session.query(TimeEntry.project_id).filter_by(
+                    user_id=current_user.id
+                ).distinct().all()
+                user_project_ids = [p[0] for p in user_project_ids]
+                user_task_project_ids = db.session.query(Task.project_id).filter_by(
+                    assigned_to=current_user.id
+                ).distinct().all()
+                user_task_project_ids = [p[0] for p in user_task_project_ids]
+                all_accessible_project_ids = set(user_project_ids + user_task_project_ids)
+                
+                if issue.project_id and issue.project_id in all_accessible_project_ids:
+                    has_access = True
+                elif issue.client_id:
+                    client_project_ids = db.session.query(Project.id).filter_by(
+                        client_id=issue.client_id
+                    ).all()
+                    client_project_ids = [p[0] for p in client_project_ids]
+                    if any(pid in all_accessible_project_ids for pid in client_project_ids):
+                        has_access = True
+            
+            if not has_access:
+                flash(_("You do not have permission to edit this issue."), "error")
+                return redirect(url_for("issues.view_issue", issue_id=issue_id))
     
     if request.method == "POST":
         title = request.form.get("title", "").strip()

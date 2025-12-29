@@ -7,6 +7,7 @@ from app import db
 from app.models import Deal, DealActivity, Client, Contact, Lead, Quote, Project
 from app.utils.db import safe_commit
 from app.utils.timezone import parse_local_datetime
+from app.utils.module_helpers import module_enabled
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 
@@ -18,6 +19,7 @@ PIPELINE_STAGES = ["prospecting", "qualification", "proposal", "negotiation", "c
 
 @deals_bp.route("/deals")
 @login_required
+@module_enabled("deals")
 def list_deals():
     """List all deals with pipeline view"""
     status = request.args.get("status", "open")

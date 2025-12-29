@@ -178,6 +178,7 @@ def api_info():
                 "webhooks": "/api/v1/webhooks",
                 "users": "/api/v1/users",
                 "reports": "/api/v1/reports",
+                "search": "/api/v1/search",
             },
         }
     )
@@ -5351,6 +5352,221 @@ def receive_purchase_order_api(po_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+# ==================== Search ====================
+
+
+@api_v1_bp.route("/search", methods=["GET"])
+@require_api_token("read:projects")
+def search():
+    """Global search endpoint across projects, tasks, clients, and time entries
+    ---
+    tags:
+      - Search
+    parameters:
+      - name: q
+        in: query
+        type: string
+        required: true
+        description: Search query (minimum 2 characters)
+      - name: limit
+        in: query
+        type: integer
+        default: 10
+        description: Maximum number of results per category (max 50)
+      - name: types
+        in: query
+        type: string
+        description: Comma-separated list of types to search (project, task, client, entry)
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Search results
+        schema:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [project, task, client, entry]
+                  category:
+                    type: string
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  url:
+                    type: string
+                  badge:
+                    type: string
+            query:
+              type: string
+            count:
+              type: integer
+      400:
+        description: Invalid query (too short)
+    """
+    query = request.args.get("q", "").strip()
+    limit = min(request.args.get("limit", 10, type=int), 50)  # Cap at 50
+    types_filter = request.args.get("types", "").strip().lower()
+    
+    if not query or len(query) < 2:
+        return jsonify({"error": "Query must be at least 2 characters", "results": []}), 400
+
+    # Parse types filter
+    allowed_types = {"project", "task", "client", "entry"}
+    if types_filter:
+        requested_types = {t.strip() for t in types_filter.split(",") if t.strip()}
+        search_types = requested_types.intersection(allowed_types)
+    else:
+        search_types = allowed_types
+
+    results = []
+    search_pattern = f"%{query}%"
+    
+    # Get authenticated user from API token
+    user = g.api_user
+
+    # Search projects
+    if "project" in search_types:
+        try:
+            projects = (
+                Project.query.filter(
+                    Project.status == "active",
+                    or_(Project.name.ilike(search_pattern), Project.description.ilike(search_pattern)),
+                )
+                .limit(limit)
+                .all()
+            )
+
+            for project in projects:
+                results.append(
+                    {
+                        "type": "project",
+                        "category": "project",
+                        "id": project.id,
+                        "title": project.name,
+                        "description": project.description or "",
+                        "url": f"/projects/{project.id}",
+                        "badge": "Project",
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching projects: {e}")
+
+    # Search tasks
+    if "task" in search_types:
+        try:
+            tasks = (
+                Task.query.join(Project)
+                .filter(
+                    Project.status == "active",
+                    or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern))
+                )
+                .limit(limit)
+                .all()
+            )
+
+            for task in tasks:
+                results.append(
+                    {
+                        "type": "task",
+                        "category": "task",
+                        "id": task.id,
+                        "title": task.name,
+                        "description": f"{task.project.name if task.project else 'No Project'}",
+                        "url": f"/tasks/{task.id}",
+                        "badge": task.status.replace("_", " ").title() if task.status else "Task",
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching tasks: {e}")
+
+    # Search clients
+    if "client" in search_types:
+        try:
+            clients = (
+                Client.query.filter(
+                    or_(
+                        Client.name.ilike(search_pattern),
+                        Client.email.ilike(search_pattern),
+                        Client.company.ilike(search_pattern),
+                    )
+                )
+                .limit(limit)
+                .all()
+            )
+
+            for client in clients:
+                results.append(
+                    {
+                        "type": "client",
+                        "category": "client",
+                        "id": client.id,
+                        "title": client.name,
+                        "description": client.company or client.email or "",
+                        "url": f"/clients/{client.id}",
+                        "badge": "Client",
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching clients: {e}")
+
+    # Search time entries (notes and tags)
+    # Non-admin users can only see their own entries
+    if "entry" in search_types:
+        try:
+            entries_query = TimeEntry.query.filter(
+                TimeEntry.end_time.isnot(None),
+                or_(TimeEntry.notes.ilike(search_pattern), TimeEntry.tags.ilike(search_pattern)),
+            )
+            
+            # Restrict to user's entries if not admin
+            if not user.is_admin:
+                entries_query = entries_query.filter(TimeEntry.user_id == user.id)
+            
+            entries = (
+                entries_query
+                .order_by(TimeEntry.start_time.desc())
+                .limit(limit)
+                .all()
+            )
+
+            for entry in entries:
+                title_parts = []
+                if entry.project:
+                    title_parts.append(entry.project.name)
+                if entry.task:
+                    title_parts.append(f"• {entry.task.name}")
+                title = " ".join(title_parts) if title_parts else "Time Entry"
+
+                description = entry.notes[:100] if entry.notes else ""
+                if entry.tags:
+                    description += f" [{entry.tags}]"
+
+                results.append(
+                    {
+                        "type": "entry",
+                        "category": "entry",
+                        "id": entry.id,
+                        "title": title,
+                        "description": description,
+                        "url": f"/timer/edit/{entry.id}",
+                        "badge": entry.duration_formatted,
+                    }
+                )
+        except Exception as e:
+            current_app.logger.error(f"Error searching time entries: {e}")
+
+    return jsonify({"results": results, "query": query, "count": len(results)})
 
 
 # ==================== Error Handlers ====================

@@ -171,6 +171,75 @@ GET /api/v1/health
 
 Check if the API is operational. No authentication required.
 
+### Search
+
+#### Global Search
+```
+GET /api/v1/search
+```
+
+Perform a global search across projects, tasks, clients, and time entries.
+
+**Required Scope:** `read:projects`
+
+**Query Parameters:**
+- `q` (required) - Search query (minimum 2 characters)
+- `limit` (optional) - Maximum number of results per category (default: 10, max: 50)
+- `types` (optional) - Comma-separated list of types to search: `project`, `task`, `client`, `entry`
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "https://your-domain.com/api/v1/search?q=website&limit=10"
+```
+
+**Search by specific types:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     "https://your-domain.com/api/v1/search?q=website&types=project,task"
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "type": "project",
+      "category": "project",
+      "id": 1,
+      "title": "Website Redesign",
+      "description": "Complete website overhaul",
+      "url": "/projects/1",
+      "badge": "Project"
+    },
+    {
+      "type": "task",
+      "category": "task",
+      "id": 5,
+      "title": "Update homepage",
+      "description": "Website Redesign",
+      "url": "/tasks/5",
+      "badge": "In Progress"
+    }
+  ],
+  "query": "website",
+  "count": 2
+}
+```
+
+**Search Behavior:**
+- **Projects**: Searches in name and description (active projects only)
+- **Tasks**: Searches in name and description (tasks from active projects only)
+- **Clients**: Searches in name, email, and company
+- **Time Entries**: Searches in notes and tags (non-admin users see only their own entries)
+
+**Error Responses:**
+- `400 Bad Request` - Query is too short (less than 2 characters)
+- `401 Unauthorized` - Missing or invalid API token
+- `403 Forbidden` - Token lacks `read:projects` scope
+
+**Note:** The legacy endpoint `/api/search` is also available for session-based authentication (requires login).
+
 ### Projects
 
 #### List Projects

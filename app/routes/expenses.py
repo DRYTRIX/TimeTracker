@@ -6,6 +6,7 @@ from app.models import Expense, Project, Client, User
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
 from app.utils.ocr import scan_receipt, get_suggested_expense_data, is_ocr_available
 import csv
 import io
@@ -27,6 +28,7 @@ def allowed_file(filename):
 
 @expenses_bp.route("/expenses")
 @login_required
+@module_enabled("expenses")
 def list_expenses():
     """List all expenses with filters"""
     # Track page view

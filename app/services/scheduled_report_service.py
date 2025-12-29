@@ -116,8 +116,19 @@ class ScheduledReportService:
                 config = {}
 
             # Check if we should split by custom field
-            if schedule.split_by_salesman and schedule.salesman_field_name:
-                return self._generate_and_send_custom_field_reports(schedule, saved_view, config)
+            # Use iterative_report_generation from saved_view if enabled, otherwise check schedule.split_by_salesman
+            if saved_view.iterative_report_generation and saved_view.iterative_custom_field_name:
+                # Use iterative report generation from saved view
+                return self._generate_and_send_custom_field_reports(
+                    schedule, saved_view, config, 
+                    custom_field_name=saved_view.iterative_custom_field_name
+                )
+            elif schedule.split_by_salesman and schedule.salesman_field_name:
+                # Use legacy split_by_salesman from schedule
+                return self._generate_and_send_custom_field_reports(
+                    schedule, saved_view, config,
+                    custom_field_name=schedule.salesman_field_name
+                )
             
             # Validate config before proceeding
             if not isinstance(config, dict):
@@ -309,13 +320,20 @@ class ScheduledReportService:
             return {"success": False, "message": f"Error deleting schedule: {str(e)}"}
 
     def _generate_and_send_custom_field_reports(
-        self, schedule: ReportEmailSchedule, saved_view: SavedReportView, config: Dict[str, Any]
+        self, schedule: ReportEmailSchedule, saved_view: SavedReportView, config: Dict[str, Any],
+        custom_field_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate and send reports split by custom field value.
         
         This generates individual reports for each unique value of the specified
         custom field and sends them to the configured recipients.
+        
+        Args:
+            schedule: ReportEmailSchedule object
+            saved_view: SavedReportView object
+            config: Report configuration dict
+            custom_field_name: Custom field name to iterate over (if None, uses schedule.salesman_field_name or "salesman")
         
         Returns:
             dict with 'success', 'message', and 'sent_count' keys
@@ -327,8 +345,9 @@ class ScheduledReportService:
             import app.routes.custom_reports as custom_reports_module
             generate_report_data = custom_reports_module.generate_report_data
             
-            # Get custom field name
-            custom_field_name = schedule.salesman_field_name or "salesman"
+            # Get custom field name - use provided parameter, or fall back to schedule or default
+            if not custom_field_name:
+                custom_field_name = schedule.salesman_field_name or saved_view.iterative_custom_field_name or "salesman"
             
             # Get date range from config or use defaults
             # Config can have filters at top level or nested
