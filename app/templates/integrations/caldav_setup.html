@@ -174,6 +174,20 @@
                             {{ _('How many days back to import events from (default: 90).') }}
                         </p>
                     </div>
+                    
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" 
+                                   name="auto_sync" 
+                                   id="auto_sync"
+                                   {% if integration.config and integration.config.get('auto_sync', True) %}checked{% endif %}
+                                   class="mr-2">
+                            <span class="text-sm">{{ _('Enable automatic sync') }}</span>
+                        </label>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                            {{ _('Automatically sync calendar events every hour. You can still trigger manual syncs.') }}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
