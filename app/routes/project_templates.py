@@ -76,9 +76,19 @@ def create_template():
         tasks = []
         tasks_json = request.form.get("tasks", "[]")
         try:
-            tasks = json.loads(tasks_json)
-        except:
-            pass
+            parsed_tasks = json.loads(tasks_json)
+            # Ensure it's a list
+            if isinstance(parsed_tasks, list):
+                tasks = parsed_tasks
+            else:
+                import logging
+                logging.getLogger(__name__).warning(f"Tasks JSON is not a list: {type(parsed_tasks)}")
+        except json.JSONDecodeError as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to parse tasks JSON: {e}, raw: {tasks_json}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
 
         # Get tags
         tags_str = request.form.get("tags", "").strip()
@@ -100,7 +110,8 @@ def create_template():
             flash(_("Template created successfully."), "success")
             return redirect(url_for("project_templates.list_templates"))
         else:
-            flash(result["message"], "error")
+            error_msg = result.get("message", "An error occurred while creating the template.")
+            flash(str(error_msg), "error")
 
     clients = Client.get_active_clients()
     return render_template("project_templates/create.html", clients=clients)
@@ -161,10 +172,21 @@ def edit_template(template_id):
         # Get tasks
         tasks = []
         tasks_json = request.form.get("tasks", "[]")
+        
         try:
-            tasks = json.loads(tasks_json)
-        except:
-            pass
+            parsed_tasks = json.loads(tasks_json)
+            # Ensure it's a list
+            if isinstance(parsed_tasks, list):
+                tasks = parsed_tasks
+            else:
+                import logging
+                logging.getLogger(__name__).warning(f"Tasks JSON is not a list: {type(parsed_tasks)}")
+        except json.JSONDecodeError as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to parse tasks JSON: {e}, raw: {tasks_json}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
 
         # Get tags
         tags_str = request.form.get("tags", "").strip()
@@ -186,7 +208,8 @@ def edit_template(template_id):
             flash(_("Template updated successfully."), "success")
             return redirect(url_for("project_templates.view_template", template_id=template_id))
         else:
-            flash(result["message"], "error")
+            error_msg = result.get("message", "An error occurred while updating the template.")
+            flash(str(error_msg), "error")
 
     clients = Client.get_active_clients()
     return render_template("project_templates/edit.html", template=template, clients=clients)
@@ -202,7 +225,8 @@ def delete_template(template_id):
     if result["success"]:
         flash(_("Template deleted successfully."), "success")
     else:
-        flash(result["message"], "error")
+        error_msg = result.get("message", "An error occurred while deleting the template.")
+        flash(str(error_msg), "error")
 
     return redirect(url_for("project_templates.list_templates"))
 
@@ -250,7 +274,8 @@ def create_project_from_template(template_id):
             flash(_("Project created from template successfully."), "success")
             return redirect(url_for("projects.view_project", project_id=result["project"].id))
         else:
-            flash(result["message"], "error")
+            error_msg = result.get("message", "An error occurred while creating the project from template.")
+            flash(str(error_msg), "error")
 
     clients = Client.get_active_clients()
     return render_template("project_templates/create_project.html", template=template, clients=clients)

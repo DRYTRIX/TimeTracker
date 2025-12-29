@@ -40,8 +40,18 @@ class ToastNotificationManager {
             return null;
         }
 
+        // Ensure message is always a string
+        let message = options.message;
+        if (typeof message !== 'string') {
+            try {
+                message = JSON.stringify(message);
+            } catch (e) {
+                message = String(message);
+            }
+        }
+
         const config = {
-            message: options.message,
+            message: message,
             title: options.title || this.getDefaultTitle(options.type),
             type: options.type || 'info',
             duration: options.duration !== undefined ? options.duration : this.defaultDuration,
@@ -294,8 +304,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     alerts.forEach(alert => {
         // Get message from data attribute or text content
-        const message = alert.getAttribute('data-toast-message') || alert.textContent.trim();
+        let message = alert.getAttribute('data-toast-message') || alert.textContent.trim();
         if (!message) return;
+        
+        // Ensure message is a string (handle objects that might have been passed)
+        if (typeof message !== 'string') {
+            try {
+                message = JSON.stringify(message);
+            } catch (e) {
+                message = String(message);
+            }
+        }
 
         // Get type from data attribute or class
         let type = alert.getAttribute('data-toast-type') || 'info';
