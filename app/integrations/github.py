@@ -137,25 +137,45 @@ class GitHubConnector(BaseConnector):
         from app.models import Task, Project
         from app import db
         from datetime import datetime, timedelta
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         token = self.get_access_token()
         if not token:
-            return {"success": False, "message": "No access token available"}
+            return {"success": False, "message": "No access token available. Please reconnect the integration."}
 
         # Get repositories from config
         repos_str = self.integration.config.get("repositories", "")
         if not repos_str:
             # Get user's repositories
-            repos_response = requests.get(
-                "https://api.github.com/user/repos", headers={"Authorization": f"token {token}"}
-            )
-            if repos_response.status_code == 200:
-                repos = repos_response.json()
-                repos_list = [f"{r['owner']['login']}/{r['name']}" for r in repos[:10]]  # Limit to 10 repos
-            else:
-                return {"success": False, "message": "Could not fetch repositories"}
+            try:
+                repos_response = requests.get(
+                    "https://api.github.com/user/repos",
+                    headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+                    timeout=30
+                )
+                if repos_response.status_code == 200:
+                    repos = repos_response.json()
+                    repos_list = [f"{r['owner']['login']}/{r['name']}" for r in repos[:10]]  # Limit to 10 repos
+                elif repos_response.status_code == 401:
+                    return {"success": False, "message": "GitHub authentication failed. Please reconnect the integration."}
+                else:
+                    error_msg = f"Could not fetch repositories: {repos_response.status_code} - {repos_response.text[:200]}"
+                    logger.error(error_msg)
+                    return {"success": False, "message": error_msg}
+            except requests.exceptions.Timeout:
+                return {"success": False, "message": "GitHub API request timed out. Please try again."}
+            except requests.exceptions.ConnectionError as e:
+                return {"success": False, "message": f"Failed to connect to GitHub API: {str(e)}"}
+            except Exception as e:
+                logger.error(f"Error fetching repositories: {e}", exc_info=True)
+                return {"success": False, "message": f"Error fetching repositories: {str(e)}"}
         else:
             repos_list = [r.strip() for r in repos_str.split(",") if r.strip()]
+
+        if not repos_list:
+            return {"success": False, "message": "No repositories configured or found"}
 
         synced_count = 0
         errors = []
@@ -163,38 +183,69 @@ class GitHubConnector(BaseConnector):
         try:
             for repo in repos_list:
                 try:
-                    owner, repo_name = repo.split("/")
+                    if "/" not in repo:
+                        errors.append(f"Invalid repository format: {repo} (expected owner/repo)")
+                        continue
+                    
+                    owner, repo_name = repo.split("/", 1)
 
                     # Find or create project
                     project = Project.query.filter_by(user_id=self.integration.user_id, name=repo).first()
 
                     if not project:
-                        project = Project(
-                            name=repo,
-                            description=f"GitHub repository: {repo}",
-                            user_id=self.integration.user_id,
-                            status="active",
-                        )
-                        db.session.add(project)
-                        db.session.flush()
+                        try:
+                            project = Project(
+                                name=repo,
+                                description=f"GitHub repository: {repo}",
+                                user_id=self.integration.user_id,
+                                status="active",
+                            )
+                            db.session.add(project)
+                            db.session.flush()
+                        except Exception as e:
+                            errors.append(f"Error creating project for {repo}: {str(e)}")
+                            logger.error(f"Error creating project for {repo}: {e}", exc_info=True)
+                            continue
 
                     # Fetch issues
-                    issues_response = requests.get(
-                        f"https://api.github.com/repos/{repo}/issues",
-                        headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
-                        params={"state": "open", "per_page": 100},
-                    )
+                    try:
+                        issues_response = requests.get(
+                            f"https://api.github.com/repos/{repo}/issues",
+                            headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+                            params={"state": "open", "per_page": 100},
+                            timeout=30
+                        )
 
-                    if issues_response.status_code != 200:
-                        errors.append(f"Error fetching issues for {repo}: {issues_response.status_code}")
+                        if issues_response.status_code == 404:
+                            errors.append(f"Repository {repo} not found or access denied")
+                            continue
+                        elif issues_response.status_code == 401:
+                            errors.append(f"Authentication failed for repository {repo}")
+                            continue
+                        elif issues_response.status_code != 200:
+                            error_text = issues_response.text[:200] if issues_response.text else ""
+                            errors.append(f"Error fetching issues for {repo}: {issues_response.status_code} - {error_text}")
+                            continue
+
+                        issues = issues_response.json()
+                    except requests.exceptions.Timeout:
+                        errors.append(f"Timeout fetching issues for {repo}")
                         continue
-
-                    issues = issues_response.json()
+                    except requests.exceptions.ConnectionError as e:
+                        errors.append(f"Connection error for {repo}: {str(e)}")
+                        continue
+                    except Exception as e:
+                        errors.append(f"Error fetching issues for {repo}: {str(e)}")
+                        logger.error(f"Error fetching issues for {repo}: {e}", exc_info=True)
+                        continue
 
                     for issue in issues:
                         try:
                             issue_number = issue.get("number")
                             issue_title = issue.get("title", "")
+
+                            if not issue_number:
+                                continue
 
                             # Find or create task
                             task = Task.query.filter_by(
@@ -202,34 +253,59 @@ class GitHubConnector(BaseConnector):
                             ).first()
 
                             if not task:
-                                task = Task(
-                                    project_id=project.id,
-                                    name=f"#{issue_number}: {issue_title}",
-                                    description=issue.get("body", ""),
-                                    status="todo",
-                                    notes=f"GitHub Issue: {issue.get('html_url', '')}",
-                                )
-                                db.session.add(task)
-                                db.session.flush()
+                                try:
+                                    task = Task(
+                                        project_id=project.id,
+                                        name=f"#{issue_number}: {issue_title}",
+                                        description=issue.get("body", ""),
+                                        status="todo",
+                                        notes=f"GitHub Issue: {issue.get('html_url', '')}",
+                                    )
+                                    db.session.add(task)
+                                    db.session.flush()
+                                except Exception as e:
+                                    errors.append(f"Error creating task for issue #{issue_number} in {repo}: {str(e)}")
+                                    logger.error(f"Error creating task for issue #{issue_number} in {repo}: {e}", exc_info=True)
+                                    continue
 
                             # Store GitHub issue info in task metadata
-                            if not hasattr(task, "metadata") or not task.metadata:
-                                task.metadata = {}
-                            task.metadata["github_repo"] = repo
-                            task.metadata["github_issue_number"] = issue_number
-                            task.metadata["github_issue_id"] = issue.get("id")
-                            task.metadata["github_issue_url"] = issue.get("html_url")
+                            try:
+                                if not hasattr(task, "metadata") or not task.metadata:
+                                    task.metadata = {}
+                                task.metadata["github_repo"] = repo
+                                task.metadata["github_issue_number"] = issue_number
+                                task.metadata["github_issue_id"] = issue.get("id")
+                                task.metadata["github_issue_url"] = issue.get("html_url")
+                            except Exception as e:
+                                logger.warning(f"Error updating task metadata for issue #{issue_number}: {e}")
 
                             synced_count += 1
                         except Exception as e:
                             errors.append(f"Error syncing issue #{issue.get('number', 'unknown')} in {repo}: {str(e)}")
-                except ValueError:
-                    errors.append(f"Invalid repository format: {repo}")
+                            logger.error(f"Error syncing issue #{issue.get('number', 'unknown')} in {repo}: {e}", exc_info=True)
+                except ValueError as e:
+                    errors.append(f"Invalid repository format: {repo} - {str(e)}")
                 except Exception as e:
                     errors.append(f"Error syncing repository {repo}: {str(e)}")
+                    logger.error(f"Error syncing repository {repo}: {e}", exc_info=True)
 
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                error_msg = f"Database error during sync: {str(e)}"
+                errors.append(error_msg)
+                logger.error(error_msg, exc_info=True)
+                return {"success": False, "message": error_msg, "synced_items": synced_count, "errors": errors}
 
+            if errors:
+                return {
+                    "success": True,
+                    "message": f"Sync completed with {len(errors)} error(s). Synced {synced_count} issues.",
+                    "synced_items": synced_count,
+                    "errors": errors,
+                }
+            
             return {
                 "success": True,
                 "message": f"Sync completed. Synced {synced_count} issues.",
@@ -237,17 +313,82 @@ class GitHubConnector(BaseConnector):
                 "errors": errors,
             }
         except Exception as e:
-            return {"success": False, "message": f"Sync failed: {str(e)}"}
+            logger.error(f"GitHub sync failed: {e}", exc_info=True)
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return {"success": False, "message": f"Sync failed: {str(e)}", "errors": errors}
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
         """Handle incoming webhook from GitHub."""
+        import hmac
+        import hashlib
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
         try:
             # Verify webhook signature if secret is configured
             signature = headers.get("X-Hub-Signature-256", "")
             if signature:
-                # Signature verification would go here
-                pass
+                # Get webhook secret from integration config
+                webhook_secret = self.integration.config.get("webhook_secret") if self.integration else None
+                
+                if webhook_secret:
+                    # GitHub sends signature as "sha256=<hash>"
+                    if not signature.startswith("sha256="):
+                        logger.warning("GitHub webhook signature format invalid (expected sha256= prefix)")
+                        return {
+                            "success": False,
+                            "message": "Invalid webhook signature format"
+                        }
+                    
+                    signature_hash = signature[7:]  # Remove "sha256=" prefix
+                    
+                    # GitHub signs the raw request body bytes, not the parsed JSON
+                    # This is critical for signature verification to work correctly
+                    if raw_body is None:
+                        # Fallback: try to reconstruct from payload (not ideal but better than nothing)
+                        import json
+                        raw_body = json.dumps(payload, sort_keys=True, separators=(',', ':')).encode('utf-8')
+                        logger.warning("GitHub webhook: Using reconstructed payload for signature verification (raw body not available)")
+                    
+                    # Compute expected signature using raw body bytes
+                    expected_signature = hmac.new(
+                        webhook_secret.encode('utf-8'),
+                        raw_body,
+                        hashlib.sha256
+                    ).hexdigest()
+                    
+                    # Use constant-time comparison to prevent timing attacks
+                    if not hmac.compare_digest(signature_hash, expected_signature):
+                        logger.warning("GitHub webhook signature verification failed")
+                        return {
+                            "success": False,
+                            "message": "Webhook signature verification failed"
+                        }
+                    
+                    logger.debug("GitHub webhook signature verified successfully")
+                else:
+                    # Signature provided but no secret configured - reject for security
+                    logger.warning("GitHub webhook signature provided but no secret configured - rejecting webhook")
+                    return {
+                        "success": False,
+                        "message": "Webhook secret not configured"
+                    }
+            else:
+                # No signature provided - check if secret is configured
+                webhook_secret = self.integration.config.get("webhook_secret") if self.integration else None
+                if webhook_secret:
+                    # Secret configured but no signature - reject for security
+                    logger.warning("GitHub webhook secret configured but no signature provided - rejecting webhook")
+                    return {
+                        "success": False,
+                        "message": "Webhook signature required but not provided"
+                    }
 
+            # Process webhook event
             action = payload.get("action")
             event_type = headers.get("X-GitHub-Event", "")
 
@@ -273,7 +414,13 @@ class GitHubConnector(BaseConnector):
                 }
 
             return {"success": True, "message": f"Webhook processed: {event_type}"}
+        except ValueError as e:
+            # Handle validation errors
+            logger.error(f"GitHub webhook validation error: {e}")
+            return {"success": False, "message": f"Webhook validation error: {str(e)}"}
         except Exception as e:
+            # Handle all other errors
+            logger.error(f"GitHub webhook processing error: {e}", exc_info=True)
             return {"success": False, "message": f"Error processing webhook: {str(e)}"}
 
     def get_config_schema(self) -> Dict[str, Any]:
@@ -294,6 +441,14 @@ class GitHubConnector(BaseConnector):
                     "label": "Auto Sync",
                     "default": True,
                     "description": "Automatically sync when webhooks are received",
+                },
+                {
+                    "name": "webhook_secret",
+                    "label": "Webhook Secret",
+                    "type": "password",
+                    "required": False,
+                    "placeholder": "Enter webhook secret from GitHub",
+                    "help": "Secret token for verifying webhook signatures (configure in GitHub webhook settings)",
                 },
             ],
             "required": [],

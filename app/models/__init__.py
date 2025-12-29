@@ -39,6 +39,7 @@ from .audit_log import AuditLog
 from .recurring_invoice import RecurringInvoice
 from .invoice_email import InvoiceEmail
 from .webhook import Webhook, WebhookDelivery
+from .push_subscription import PushSubscription
 from .quote import Quote, QuoteItem, QuotePDFTemplate
 from .quote_attachment import QuoteAttachment
 from .project_attachment import ProjectAttachment

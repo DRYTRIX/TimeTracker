@@ -265,33 +265,72 @@ class XeroConnector(BaseConnector):
 
     def _create_xero_invoice(self, invoice, access_token: str, tenant_id: str) -> Optional[Dict]:
         """Create invoice in Xero"""
+        # Get customer mapping from integration config or invoice metadata
+        contact_mapping = self.integration.config.get("contact_mappings", {}) if self.integration else {}
+        item_mapping = self.integration.config.get("item_mappings", {}) if self.integration else {}
+        
+        # Try to get Xero contact ID from mapping or metadata
+        contact_id = None
+        contact_name = invoice.client.name if invoice.client else "Unknown"
+        
+        if invoice.client_id:
+            # Check mapping first
+            contact_id = contact_mapping.get(str(invoice.client_id))
+            # Fallback to invoice metadata
+            if not contact_id and hasattr(invoice, "metadata") and invoice.metadata:
+                contact_id = invoice.metadata.get("xero_contact_id")
+        
         # Build Xero invoice structure
         xero_invoice = {
             "Type": "ACCREC",
-            "Contact": {"Name": invoice.client.name if invoice.client else "Unknown"},
             "Date": invoice.date.strftime("%Y-%m-%d") if invoice.date else datetime.utcnow().strftime("%Y-%m-%d"),
             "DueDate": (
                 invoice.due_date.strftime("%Y-%m-%d") if invoice.due_date else datetime.utcnow().strftime("%Y-%m-%d")
             ),
             "LineItems": [],
         }
+        
+        # Add contact - use ID if available, otherwise use name
+        if contact_id:
+            xero_invoice["Contact"] = {"ContactID": contact_id}
+        else:
+            xero_invoice["Contact"] = {"Name": contact_name}
+            logger.warning(f"Contact mapping not found for client {invoice.client_id}. Using name: {contact_name}")
 
         # Add invoice items
         for item in invoice.items:
-            xero_invoice["LineItems"].append(
-                {
-                    "Description": item.description,
-                    "Quantity": float(item.quantity),
-                    "UnitAmount": float(item.unit_price),
-                    "LineAmount": float(item.quantity * item.unit_price),
-                }
-            )
+            # Try to get Xero item code from mapping
+            item_code = item_mapping.get(str(item.id)) or item_mapping.get(item.description, {}).get("code")
+            
+            line_item = {
+                "Description": item.description,
+                "Quantity": float(item.quantity),
+                "UnitAmount": float(item.unit_price),
+                "LineAmount": float(item.quantity * item.unit_price),
+            }
+            
+            # Add item code if available
+            if item_code:
+                line_item["ItemCode"] = item_code
+            
+            xero_invoice["LineItems"].append(line_item)
 
         endpoint = "/api.xro/2.0/Invoices"
         return self._api_request("POST", endpoint, access_token, tenant_id)
 
     def _create_xero_expense(self, expense, access_token: str, tenant_id: str) -> Optional[Dict]:
         """Create expense in Xero"""
+        # Get account mapping from integration config
+        account_mapping = self.integration.config.get("account_mappings", {}) if self.integration else {}
+        default_expense_account = self.integration.config.get("default_expense_account_code", "200") if self.integration else "200"
+        
+        # Try to get account code from expense category mapping or use default
+        account_code = default_expense_account
+        if expense.category_id:
+            account_code = account_mapping.get(str(expense.category_id), default_expense_account)
+        elif hasattr(expense, "metadata") and expense.metadata:
+            account_code = expense.metadata.get("xero_account_code", default_expense_account)
+        
         # Build Xero expense structure
         xero_expense = {
             "Date": expense.date.strftime("%Y-%m-%d") if expense.date else datetime.utcnow().strftime("%Y-%m-%d"),
@@ -302,6 +341,7 @@ class XeroConnector(BaseConnector):
                     "Quantity": 1.0,
                     "UnitAmount": float(expense.amount),
                     "LineAmount": float(expense.amount),
+                    "AccountCode": account_code,
                 }
             ],
         }
@@ -321,6 +361,31 @@ class XeroConnector(BaseConnector):
                 },
                 {"name": "sync_invoices", "type": "boolean", "label": "Sync Invoices", "default": True},
                 {"name": "sync_expenses", "type": "boolean", "label": "Sync Expenses", "default": True},
+                {
+                    "name": "default_expense_account_code",
+                    "type": "string",
+                    "label": "Default Expense Account Code",
+                    "description": "Xero account code to use for expenses when no mapping is configured",
+                    "default": "200",
+                },
+                {
+                    "name": "contact_mappings",
+                    "type": "json",
+                    "label": "Contact Mappings",
+                    "description": "JSON mapping of TimeTracker client IDs to Xero Contact IDs (e.g., {\"1\": \"contact-uuid-123\"})",
+                },
+                {
+                    "name": "item_mappings",
+                    "type": "json",
+                    "label": "Item Mappings",
+                    "description": "JSON mapping of TimeTracker invoice items to Xero item codes",
+                },
+                {
+                    "name": "account_mappings",
+                    "type": "json",
+                    "label": "Account Mappings",
+                    "description": "JSON mapping of TimeTracker expense category IDs to Xero account codes",
+                },
             ],
             "required": ["tenant_id"],
         }

@@ -104,8 +104,11 @@ class GoogleCalendarConnector(BaseConnector):
                 "name": user_info_response.get("name"),
                 "picture": user_info_response.get("picture"),
             }
-        except Exception:
-            pass
+        except Exception as e:
+            # Log error but don't fail - user info is optional
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Could not fetch Google user info: {e}")
 
         return {
             "access_token": credentials.token,

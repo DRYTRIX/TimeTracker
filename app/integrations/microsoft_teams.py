@@ -112,8 +112,11 @@ class MicrosoftTeamsConnector(BaseConnector):
                         "displayName": user_data.get("displayName"),
                         "mail": user_data.get("mail"),
                     }
-            except Exception:
-                pass
+            except Exception as e:
+                # Log error but don't fail - user info is optional
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"Could not fetch Microsoft Teams user info: {e}")
 
         return {
             "access_token": data.get("access_token"),
