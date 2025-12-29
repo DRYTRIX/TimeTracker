@@ -238,9 +238,13 @@ def new_stock_item():
         except Exception as e:
             db.session.rollback()
             flash(_("Error creating stock item: %(error)s", error=str(e)), "error")
-            return render_template("inventory/stock_items/form.html", item=None)
+            suppliers = Supplier.query.filter_by(is_active=True).order_by(Supplier.name).all()
+            suppliers_dict = [supplier.to_dict() for supplier in suppliers]
+            return render_template("inventory/stock_items/form.html", item=None, suppliers=suppliers_dict)
 
-    return render_template("inventory/stock_items/form.html", item=None)
+    suppliers = Supplier.query.filter_by(is_active=True).order_by(Supplier.name).all()
+    suppliers_dict = [supplier.to_dict() for supplier in suppliers]
+    return render_template("inventory/stock_items/form.html", item=None, suppliers=suppliers_dict)
 
 
 @inventory_bp.route("/inventory/items/<int:item_id>")
@@ -288,7 +292,8 @@ def edit_stock_item(item_id):
                 if existing:
                     flash(_("SKU already exists. Please use a different SKU."), "error")
                     suppliers = Supplier.query.filter_by(is_active=True).order_by(Supplier.name).all()
-                    return render_template("inventory/stock_items/form.html", item=item, suppliers=suppliers)
+                    suppliers_dict = [supplier.to_dict() for supplier in suppliers]
+                    return render_template("inventory/stock_items/form.html", item=item, suppliers=suppliers_dict)
 
             item.sku = new_sku
             item.name = request.form.get("name", "").strip()
@@ -410,7 +415,8 @@ def edit_stock_item(item_id):
             flash(_("Error updating stock item: %(error)s", error=str(e)), "error")
 
     suppliers = Supplier.query.filter_by(is_active=True).order_by(Supplier.name).all()
-    return render_template("inventory/stock_items/form.html", item=item, suppliers=suppliers)
+    suppliers_dict = [supplier.to_dict() for supplier in suppliers]
+    return render_template("inventory/stock_items/form.html", item=item, suppliers=suppliers_dict)
 
 
 @inventory_bp.route("/inventory/items/<int:item_id>/delete", methods=["POST"])
