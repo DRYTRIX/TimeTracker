@@ -214,7 +214,15 @@ def view_integration(integration_id):
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
-    connector = service.get_connector(integration)
+    # Try to get connector, but handle errors gracefully
+    connector = None
+    connector_error = None
+    try:
+        connector = service.get_connector(integration)
+    except Exception as e:
+        logger.error(f"Error initializing connector for integration {integration_id}: {e}", exc_info=True)
+        connector_error = str(e)
+    
     credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).first()
 
     # Get recent sync events
@@ -231,6 +239,7 @@ def view_integration(integration_id):
         "integrations/view.html",
         integration=integration,
         connector=connector,
+        connector_error=connector_error,
         credentials=credentials,
         recent_events=recent_events,
     )
@@ -325,10 +334,12 @@ def caldav_setup():
             return redirect(url_for("integrations.list_integrations"))
         integration = result["integration"]
 
-    connector = service.get_connector(integration)
-    if not connector:
-        flash(_("Could not initialize CalDAV connector."), "error")
-        return redirect(url_for("integrations.list_integrations"))
+    # Try to get connector, but don't fail if credentials are missing (user is setting up)
+    connector = None
+    try:
+        connector = service.get_connector(integration)
+    except Exception as e:
+        logger.debug(f"Could not initialize CalDAV connector (may be normal during setup): {e}")
 
     # Get user's active projects for default project selection
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
@@ -341,6 +352,7 @@ def caldav_setup():
         calendar_name = request.form.get("calendar_name", "").strip()
         default_project_id = request.form.get("default_project_id", "").strip()
         verify_ssl = request.form.get("verify_ssl") == "on"
+        auto_sync = request.form.get("auto_sync") == "on"
         lookback_days_str = request.form.get("lookback_days", "90") or "90"
 
         # Validation
@@ -348,6 +360,25 @@ def caldav_setup():
         
         if not server_url and not calendar_url:
             errors.append(_("Either server URL or calendar URL is required."))
+        
+        # Validate URL format if provided
+        if server_url:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(server_url)
+                if not parsed.scheme or not parsed.netloc:
+                    errors.append(_("Server URL must be a valid URL (e.g., https://mail.example.com/dav)."))
+            except Exception:
+                errors.append(_("Server URL format is invalid."))
+        
+        if calendar_url:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(calendar_url)
+                if not parsed.scheme or not parsed.netloc:
+                    errors.append(_("Calendar URL must be a valid URL."))
+            except Exception:
+                errors.append(_("Calendar URL format is invalid."))
         
         # Check if we need to update credentials (username provided or password provided)
         existing_creds = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
@@ -403,18 +434,35 @@ def caldav_setup():
         integration.config["sync_direction"] = "calendar_to_time_tracker"  # MVP: import only
         integration.config["lookback_days"] = lookback_days
         integration.config["default_project_id"] = int(default_project_id)
+        integration.config["auto_sync"] = auto_sync
 
         # Save credentials (only if username/password provided)
         if username and (password or existing_creds):
-            service.save_credentials(
-                integration_id=integration.id,
-                access_token=password if password else (existing_creds.access_token if existing_creds else ""),
-                refresh_token=None,
-                expires_at=None,
-                token_type="Basic",
-                scope="caldav",
-                extra_data={"username": username},
-            )
+            # Use existing password if new password not provided
+            password_to_save = password if password else (existing_creds.access_token if existing_creds else "")
+            if password_to_save:
+                result = service.save_credentials(
+                    integration_id=integration.id,
+                    access_token=password_to_save,
+                    refresh_token=None,
+                    expires_at=None,
+                    token_type="Basic",
+                    scope="caldav",
+                    extra_data={"username": username},
+                )
+                if not result.get("success"):
+                    flash(_("Failed to save credentials: %(message)s", message=result.get("message", "Unknown error")), "error")
+                    return render_template(
+                        "integrations/caldav_setup.html",
+                        integration=integration,
+                        connector=connector,
+                        projects=projects,
+                    )
+
+        # Ensure integration is active if credentials exist
+        credentials_check = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
+        if credentials_check:
+            integration.is_active = True
 
         if safe_commit("caldav_setup", {"integration_id": integration.id}):
             flash(_("CalDAV integration configured successfully."), "success")

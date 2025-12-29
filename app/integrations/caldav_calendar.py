@@ -96,16 +96,23 @@ class CalDAVClient:
         }
         if headers:
             h.update(headers)
-        resp = requests.request(
-            method,
-            url,
-            headers=h,
-            data=data.encode("utf-8") if isinstance(data, str) else data,
-            auth=(self.username, self.password),
-            verify=self.verify_ssl,
-            timeout=self.timeout,
-        )
-        return resp
+        try:
+            resp = requests.request(
+                method,
+                url,
+                headers=h,
+                data=data.encode("utf-8") if isinstance(data, str) else data,
+                auth=(self.username, self.password),
+                verify=self.verify_ssl,
+                timeout=self.timeout,
+            )
+            return resp
+        except requests.exceptions.SSLError as e:
+            raise ValueError(f"SSL certificate verification failed. If using a self-signed certificate, disable SSL verification in settings. Error: {str(e)}") from e
+        except requests.exceptions.Timeout as e:
+            raise ValueError(f"Request timeout after {self.timeout} seconds. The server may be slow or unreachable.") from e
+        except requests.exceptions.ConnectionError as e:
+            raise ValueError(f"Connection error: {str(e)}. Please check the server URL and network connectivity.") from e
 
     def _propfind(self, url: str, xml_body: str, depth: str = "0") -> ET.Element:
         resp = self._request(
@@ -115,7 +122,12 @@ class CalDAVClient:
             data=xml_body,
         )
         resp.raise_for_status()
-        return ET.fromstring(resp.text)
+        if not resp.text or not resp.text.strip():
+            raise ValueError(f"Empty response from PROPFIND request to {url}")
+        try:
+            return ET.fromstring(resp.text)
+        except ET.ParseError as e:
+            raise ValueError(f"Invalid XML response from server: {str(e)}") from e
 
     def _report(self, url: str, xml_body: str, depth: str = "1") -> ET.Element:
         resp = self._request(
@@ -125,7 +137,13 @@ class CalDAVClient:
             data=xml_body,
         )
         resp.raise_for_status()
-        return ET.fromstring(resp.text)
+        if not resp.text or not resp.text.strip():
+            # Empty response might mean no events found, return empty multistatus
+            return ET.Element(_ns("multistatus", DAV_NS))
+        try:
+            return ET.fromstring(resp.text)
+        except ET.ParseError as e:
+            raise ValueError(f"Invalid XML response from server: {str(e)}") from e
 
     def discover_calendars(self, server_url: str) -> List[CalDAVCalendar]:
         """
@@ -137,31 +155,39 @@ class CalDAVClient:
         server_url = _ensure_trailing_slash(server_url)
 
         # 1) Find current-user-principal
-        body = (
-            '<?xml version="1.0" encoding="utf-8" ?>'
-            f'<d:propfind xmlns:d="{DAV_NS}">'
-            "<d:prop><d:current-user-principal/></d:prop>"
-            "</d:propfind>"
-        )
-        root = self._propfind(server_url, body, depth="0")
-        principal_href = self._find_href(root, [(_ns("current-user-principal", DAV_NS),)])
-        if not principal_href:
-            # Some servers support well-known principal path fallback
-            principal_href = "/.well-known/caldav"
+        try:
+            body = (
+                '<?xml version="1.0" encoding="utf-8" ?>'
+                f'<d:propfind xmlns:d="{DAV_NS}">'
+                "<d:prop><d:current-user-principal/></d:prop>"
+                "</d:propfind>"
+            )
+            root = self._propfind(server_url, body, depth="0")
+            principal_href = self._find_href(root, [(_ns("current-user-principal", DAV_NS),)])
+            if not principal_href:
+                # Some servers support well-known principal path fallback
+                principal_href = "/.well-known/caldav"
+        except Exception as e:
+            raise ValueError(f"Failed to discover current-user-principal from {server_url}: {str(e)}") from e
 
         principal_url = urljoin(server_url, principal_href)
 
         # 2) Find calendar-home-set on principal
-        body = (
-            '<?xml version="1.0" encoding="utf-8" ?>'
-            f'<d:propfind xmlns:d="{DAV_NS}" xmlns:cs="{CALDAV_NS}">'
-            "<d:prop><cs:calendar-home-set/></d:prop>"
-            "</d:propfind>"
-        )
-        root = self._propfind(principal_url, body, depth="0")
-        home_href = self._find_href(root, [(_ns("calendar-home-set", CALDAV_NS),)])
-        if not home_href:
-            raise ValueError("Could not discover calendar-home-set from CalDAV server.")
+        try:
+            body = (
+                '<?xml version="1.0" encoding="utf-8" ?>'
+                f'<d:propfind xmlns:d="{DAV_NS}" xmlns:cs="{CALDAV_NS}">'
+                "<d:prop><cs:calendar-home-set/></d:prop>"
+                "</d:propfind>"
+            )
+            root = self._propfind(principal_url, body, depth="0")
+            home_href = self._find_href(root, [(_ns("calendar-home-set", CALDAV_NS),)])
+            if not home_href:
+                raise ValueError("Could not discover calendar-home-set from CalDAV server. The server may not support CalDAV or the credentials may be incorrect.")
+        except ValueError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Failed to discover calendar-home-set from {principal_url}: {str(e)}") from e
 
         home_url = urljoin(server_url, home_href)
 
@@ -207,8 +233,15 @@ class CalDAVClient:
         """
         Fetch VEVENTs within a time range using a calendar-query REPORT.
         Returns a list of dicts with uid, summary, description, start, end, href.
+        
+        Note: Recurring events (RRULE) are not expanded - only instances that fall
+        within the time range are returned if the server supports it.
         """
         calendar_url = _ensure_trailing_slash(calendar_url)
+        
+        # Validate time range
+        if time_max_utc <= time_min_utc:
+            raise ValueError("time_max_utc must be after time_min_utc")
 
         start_utc = _datetime_to_caldav_utc(time_min_utc)
         end_utc = _datetime_to_caldav_utc(time_max_utc)
@@ -246,7 +279,11 @@ class CalDAVClient:
             ics = caldata_el.text
             try:
                 cal = Calendar.from_ical(ics)
-            except Exception:
+            except Exception as e:
+                # Log parsing errors but continue with other events
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"Failed to parse iCalendar data for event {href}: {e}")
                 continue
 
             for comp in cal.walk():
@@ -258,14 +295,32 @@ class CalDAVClient:
                     continue
 
                 dtstart = comp.get("DTSTART")
-                dtend = comp.get("DTEND")
-                if not dtstart or not dtend:
+                if not dtstart:
                     continue
 
                 start = dtstart.dt
-                end = dtend.dt
-                # Skip all-day events (date)
-                if not isinstance(start, datetime) or not isinstance(end, datetime):
+                # Skip all-day events (date objects, not datetime)
+                if not isinstance(start, datetime):
+                    continue
+
+                # Handle DTEND or DURATION
+                dtend = comp.get("DTEND")
+                duration = comp.get("DURATION")
+                
+                if dtend:
+                    end = dtend.dt
+                    if not isinstance(end, datetime):
+                        continue
+                elif duration:
+                    # Calculate end from start + duration
+                    dur = duration.dt
+                    if isinstance(dur, timedelta):
+                        end = start + dur
+                    else:
+                        # Skip if duration is not a timedelta
+                        continue
+                else:
+                    # No DTEND or DURATION - skip this event
                     continue
 
                 summary = str(comp.get("SUMMARY", "")).strip()
@@ -349,24 +404,46 @@ class CalDAVCalendarConnector(BaseConnector):
         Test connectivity and (optionally) discover calendars.
         """
         try:
+            # Check if credentials exist
+            if not self.credentials:
+                return {"success": False, "message": "No credentials configured. Please set up username and password."}
+            
+            # Check if we have username and password
+            try:
+                username, password = self._get_basic_creds()
+            except ValueError as e:
+                return {"success": False, "message": f"Missing credentials: {str(e)}. Please configure username and password."}
+            
             cfg = self.integration.config or {}
             server_url = cfg.get("server_url")
             calendar_url = cfg.get("calendar_url")
+
+            # Need at least one URL
+            if not server_url and not calendar_url:
+                return {"success": False, "message": "Either server URL or calendar URL must be configured."}
 
             client = self._client()
 
             calendars: List[CalDAVCalendar] = []
             if server_url:
-                calendars = client.discover_calendars(server_url)
+                try:
+                    calendars = client.discover_calendars(server_url)
+                except Exception as e:
+                    # If discovery fails but we have calendar_url, continue with calendar_url test
+                    if not calendar_url:
+                        return {"success": False, "message": f"Failed to discover calendars from server: {str(e)}"}
 
             # If a calendar URL is provided, validate we can run a REPORT against it (lightweight window)
             if calendar_url:
-                now_utc = datetime.now(timezone.utc)
-                _ = client.fetch_events(calendar_url, now_utc - timedelta(days=1), now_utc + timedelta(days=1))
+                try:
+                    now_utc = datetime.now(timezone.utc)
+                    _ = client.fetch_events(calendar_url, now_utc - timedelta(days=1), now_utc + timedelta(days=1))
+                except Exception as e:
+                    return {"success": False, "message": f"Failed to access calendar at {calendar_url}: {str(e)}"}
 
             return {
                 "success": True,
-                "message": f"Connected to CalDAV. Found {len(calendars)} calendars." if server_url else "Connected to CalDAV.",
+                "message": f"Connected to CalDAV. Found {len(calendars)} calendars." if server_url else "Connected to CalDAV calendar.",
                 "calendars": [{"url": c.href, "name": c.name} for c in calendars],
             }
         except Exception as e:
@@ -379,10 +456,22 @@ class CalDAVCalendarConnector(BaseConnector):
         """
         from app import db
         from app.models import TimeEntry, Project, IntegrationExternalEventLink
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         try:
             if not self.integration or not self.integration.user_id:
                 return {"success": False, "message": "CalDAV integration must be a per-user integration."}
+
+            # Check credentials
+            if not self.credentials:
+                return {"success": False, "message": "No credentials configured. Please set up username and password."}
+            
+            try:
+                username, password = self._get_basic_creds()
+            except ValueError as e:
+                return {"success": False, "message": f"Missing credentials: {str(e)}. Please configure username and password."}
 
             cfg = self.integration.config or {}
             calendar_url = cfg.get("calendar_url")
@@ -393,9 +482,11 @@ class CalDAVCalendarConnector(BaseConnector):
                     # Try to discover and use first calendar
                     try:
                         client = self._client()
+                        logger.info(f"Discovering calendars from server: {server_url}")
                         calendars = client.discover_calendars(server_url)
                         if calendars:
                             calendar_url = calendars[0].href
+                            logger.info(f"Discovered calendar: {calendar_url} ({calendars[0].name})")
                             # Update config with discovered calendar
                             if not self.integration.config:
                                 self.integration.config = {}
@@ -407,6 +498,7 @@ class CalDAVCalendarConnector(BaseConnector):
                         else:
                             return {"success": False, "message": "No calendars found on server. Please configure calendar URL manually."}
                     except Exception as e:
+                        logger.error(f"Could not discover calendars: {e}", exc_info=True)
                         return {"success": False, "message": f"Could not discover calendars: {str(e)}. Please configure calendar URL manually."}
                 else:
                     return {"success": False, "message": "No calendar selected. Please configure calendar URL or server URL first."}
@@ -427,8 +519,16 @@ class CalDAVCalendarConnector(BaseConnector):
                     time_min_utc = datetime.now(timezone.utc) - timedelta(days=lookback_days)
                 time_max_utc = datetime.now(timezone.utc) + timedelta(days=7)
 
+                logger.info(f"Fetching events from {calendar_url} between {time_min_utc} and {time_max_utc}")
                 client = self._client()
-                events = client.fetch_events(calendar_url, time_min_utc, time_max_utc)
+                try:
+                    events = client.fetch_events(calendar_url, time_min_utc, time_max_utc)
+                    logger.info(f"Fetched {len(events)} events from CalDAV calendar")
+                    if len(events) == 0:
+                        logger.warning(f"No events found in calendar {calendar_url} for time range {time_min_utc} to {time_max_utc}")
+                except Exception as e:
+                    logger.error(f"Failed to fetch events from calendar: {e}", exc_info=True)
+                    return {"success": False, "message": f"Failed to fetch events from calendar: {str(e)}"}
 
                 # Preload projects for title matching
                 projects = Project.query.filter_by(status="active").order_by(Project.name).all()
@@ -437,9 +537,25 @@ class CalDAVCalendarConnector(BaseConnector):
                 skipped = 0
                 errors: List[str] = []
 
+                if len(events) == 0:
+                    # Update integration status even if no events found (this is a successful sync)
+                    self.integration.last_sync_at = datetime.utcnow()
+                    self.integration.last_sync_status = "success"
+                    self.integration.last_error = None
+                    db.session.commit()
+                    return {
+                        "success": True,
+                        "imported": 0,
+                        "skipped": 0,
+                        "synced_items": 0,
+                        "errors": [],
+                        "message": f"No events found in calendar for the specified time range ({time_min_utc.date()} to {time_max_utc.date()}).",
+                    }
+
                 for ev in events:
                     try:
                         uid = ev["uid"]
+                        # Check if this event was already imported (idempotency)
                         existing_link = IntegrationExternalEventLink.query.filter_by(
                             integration_id=self.integration.id, external_uid=uid
                         ).first()
@@ -495,10 +611,28 @@ class CalDAVCalendarConnector(BaseConnector):
                             external_href=ev.get("href"),
                         )
                         db.session.add(link)
+                        # Flush to check for duplicate UID constraint violation
+                        db.session.flush()
 
                         imported += 1
                     except Exception as e:
-                        errors.append(str(e))
+                        # Check if it's a duplicate UID error (unique constraint violation)
+                        # This can happen in rare race conditions
+                        error_str = str(e).lower()
+                        if "unique" in error_str or "duplicate" in error_str or "uq_integration_external_uid" in error_str:
+                            # Duplicate UID - mark as skipped (likely imported by another process)
+                            skipped += 1
+                            logger.debug(f"Event {ev.get('uid', 'unknown')} already imported (duplicate UID - race condition)")
+                            # Don't rollback - the time_entry might have been created
+                            # Just continue to next event
+                        else:
+                            # Other error - log it and continue
+                            error_msg = f"Event {ev.get('uid', 'unknown')}: {str(e)}"
+                            errors.append(error_msg)
+                            logger.warning(f"Failed to import event {ev.get('uid', 'unknown')}: {e}")
+                            # For other errors, we might want to rollback this specific event
+                            # but that's complex with SQLAlchemy, so we'll let the final commit handle it
+                            # The duplicate check at the start should catch most issues
 
                 # Update integration status
                 self.integration.last_sync_at = datetime.utcnow()
@@ -507,12 +641,23 @@ class CalDAVCalendarConnector(BaseConnector):
 
                 db.session.commit()
 
+                # Build detailed message
+                if imported == 0 and skipped > 0:
+                    message = f"No new events imported ({skipped} already imported, {len(events)} total found)."
+                elif imported == 0:
+                    message = f"No events found in calendar for the specified time range ({time_min_utc.date()} to {time_max_utc.date()})."
+                else:
+                    message = f"Imported {imported} events ({skipped} skipped, {len(events)} total found)."
+
+                logger.info(f"CalDAV sync completed: {message}")
+
                 return {
                     "success": True,
                     "imported": imported,
                     "skipped": skipped,
+                    "synced_items": imported,  # For compatibility with scheduled_tasks
                     "errors": errors,
-                    "message": f"Imported {imported} events ({skipped} skipped).",
+                    "message": message,
                 }
 
             return {"success": False, "message": "Sync direction not implemented for CalDAV yet."}

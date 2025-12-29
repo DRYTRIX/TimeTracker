@@ -78,7 +78,10 @@ All environment variables can be provided via `.env` and are consumed by the `ap
 - SINGLE_ACTIVE_TIMER: Allow only one active timer per user. Default: `true`.
 - IDLE_TIMEOUT_MINUTES: Auto-pause after idle. Default: `30`.
 - ALLOW_SELF_REGISTER: Allow new users to self-register. Default: `true`.
-- ADMIN_USERNAMES: Comma-separated admin usernames. Default: `admin`.
+- ADMIN_USERNAMES: Comma-separated admin usernames. Default: `admin`. **Important**: Only the first username in the list is automatically created during database initialization. Additional admin usernames must either:
+  - Self-register by logging in (if `ALLOW_SELF_REGISTER=true`), or
+  - Be created manually by an existing admin user.
+  Example: `ADMIN_USERNAMES=admin,manager` - only "admin" is created automatically; "manager" must self-register or be created manually.
 
 ### Authentication
 
@@ -170,5 +173,71 @@ For CSRF and cookie issues behind proxies, see `docs/CSRF_CONFIGURATION.md`.
 - CSRF token errors: Ensure `SECRET_KEY` is stable and set correct CSRF/cookie flags for HTTP vs HTTPS.
 - Database connection: Confirm `db` service is healthy and `DATABASE_URL` points to it.
 - Timezone issues: Set `TZ` to your local timezone [[memory:7499916]].
+
+### Database Tables Not Created (PostgreSQL)
+
+**Symptoms**: Services start successfully, but database tables are missing when using PostgreSQL (works fine with SQLite).
+
+**Solution**:
+1. Ensure the database container is healthy and the `app` service waits for it:
+   ```bash
+   docker-compose ps
+   docker-compose logs app | grep -i "database\|migration\|initialization"
+   ```
+
+2. Check that Flask-Migrate runs properly during startup. The entrypoint script should automatically:
+   - Initialize Flask-Migrate if needed
+   - Create and apply migrations
+   - Verify tables exist
+
+3. If tables are still missing, manually trigger database initialization:
+   ```bash
+   docker-compose exec app flask db upgrade
+   ```
+
+4. For a fresh start with clean volumes:
+   ```bash
+   docker-compose down -v
+   docker-compose up -d
+   ```
+
+5. Verify tables were created:
+   ```bash
+   docker-compose exec db psql -U timetracker -d timetracker -c "\dt"
+   ```
+
+### Admin User Authentication Issues
+
+**Symptoms**: Cannot login with usernames from `ADMIN_USERNAMES` (e.g., `ADMIN_USERNAMES=admin,manager`).
+
+**Important Notes**:
+- Only the **first** username in `ADMIN_USERNAMES` is automatically created during database initialization
+- Additional admin usernames in the list must be created separately before they can login
+
+**Solutions**:
+
+1. **If using multiple admin usernames**, create them using one of these methods:
+
+   **Option A: Self-Registration** (if `ALLOW_SELF_REGISTER=true`):
+   - Go to the login page
+   - Enter the username (e.g., "manager")
+   - Set a password and login
+   - The user will automatically get admin role if their username is in `ADMIN_USERNAMES`
+
+   **Option B: Manual Creation** (recommended for production):
+   - Login with the first admin user (e.g., "admin")
+   - Go to **Admin → Users → Create User**
+   - Create the additional admin users manually
+   - They will automatically get admin role when they login (if their username is in `ADMIN_USERNAMES`)
+
+2. **If you cannot login with the first admin user**:
+   - Verify the user was created: `docker-compose exec db psql -U timetracker -d timetracker -c "SELECT username, role FROM users;"`
+   - If the user doesn't exist, check container logs for initialization errors
+   - The default admin username is "admin" (or the first value in `ADMIN_USERNAMES`)
+
+3. **For fresh installations**, ensure:
+   - `ADMIN_USERNAMES` is set in your `.env` file before starting containers
+   - Database initialization completed successfully (check logs)
+   - If using `AUTH_METHOD=local`, you'll need to set a password after first login
 
 

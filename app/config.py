@@ -41,7 +41,7 @@ class Config:
 
     # User management
     ALLOW_SELF_REGISTER = os.getenv("ALLOW_SELF_REGISTER", "true").lower() == "true"
-    ADMIN_USERNAMES = os.getenv("ADMIN_USERNAMES", "admin").split(",")
+    ADMIN_USERNAMES = [u.strip() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
 
     # Authentication method: 'none' | 'local' | 'oidc' | 'both'
     # 'none' = no password authentication (username only)

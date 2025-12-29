@@ -268,8 +268,8 @@ def insert_initial_data(engine):
         from app.utils.installation import InstallationConfig
         installation_config = InstallationConfig()
         
-        # Get admin username from environment
-        admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0]
+        # Get admin username from environment (first username, stripped)
+        admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0].strip()
         
         # Base SQL for admin user and settings (always run)
         base_sql = f"""

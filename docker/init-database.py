@@ -157,8 +157,8 @@ def initialize_database(engine):
             existing_tables = inspector.get_table_names()
             print(f"Tables after creation: {existing_tables}")
             
-            # Create default admin user if it doesn't exist
-            admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0]
+            # Create default admin user if it doesn't exist (first username, stripped)
+            admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0].strip()
             print(f"Checking for admin user: {admin_username}")
             
             if not User.query.filter_by(username=admin_username).first():

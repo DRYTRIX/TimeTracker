@@ -357,8 +357,8 @@ def insert_initial_data(engine):
         installation_config = InstallationConfig()
         
         with engine.connect() as conn:
-            # Get admin username from environment
-            admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0]
+            # Get admin username from environment (first username, stripped)
+            admin_username = os.getenv('ADMIN_USERNAMES', 'admin').split(',')[0].strip()
             
             # Insert default admin user (idempotent via unique username)
             conn.execute(text(f"""
