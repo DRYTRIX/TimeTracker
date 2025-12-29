@@ -231,7 +231,7 @@ def new_stock_item():
 
             safe_commit()
 
-            log_event("stock_item_created", {"stock_item_id": item.id, "sku": item.sku})
+            log_event("stock_item_created", stock_item_id=item.id, sku=item.sku)
             flash(_("Stock item created successfully."), "success")
             return redirect(url_for("inventory.view_stock_item", item_id=item.id))
 
@@ -401,7 +401,7 @@ def edit_stock_item(item_id):
 
             safe_commit()
 
-            log_event("stock_item_updated", {"stock_item_id": item.id})
+            log_event("stock_item_updated", stock_item_id=item.id)
             flash(_("Stock item updated successfully."), "success")
             return redirect(url_for("inventory.view_stock_item", item_id=item.id))
 
@@ -432,7 +432,7 @@ def delete_stock_item(item_id):
         db.session.delete(item)
         safe_commit()
 
-        log_event("stock_item_deleted", {"stock_item_id": item_id, "sku": item.sku})
+        log_event("stock_item_deleted", stock_item_id=item_id, sku=item.sku)
         flash(_("Stock item deleted successfully."), "success")
         return redirect(url_for("inventory.list_stock_items"))
     except Exception as e:
@@ -491,7 +491,7 @@ def new_warehouse():
             db.session.add(warehouse)
             safe_commit()
 
-            log_event("warehouse_created", {"warehouse_id": warehouse.id})
+            log_event("warehouse_created", warehouse_id=warehouse.id)
             flash(_("Warehouse created successfully."), "success")
             return redirect(url_for("inventory.view_warehouse", warehouse_id=warehouse.id))
 
@@ -556,7 +556,7 @@ def edit_warehouse(warehouse_id):
 
             safe_commit()
 
-            log_event("warehouse_updated", {"warehouse_id": warehouse.id})
+            log_event("warehouse_updated", warehouse_id=warehouse.id)
             flash(_("Warehouse updated successfully."), "success")
             return redirect(url_for("inventory.view_warehouse", warehouse_id=warehouse.id))
 
@@ -585,7 +585,7 @@ def delete_warehouse(warehouse_id):
         db.session.delete(warehouse)
         safe_commit()
 
-        log_event("warehouse_deleted", {"warehouse_id": warehouse_id})
+        log_event("warehouse_deleted", warehouse_id=warehouse_id)
         flash(_("Warehouse deleted successfully."), "success")
         return redirect(url_for("inventory.list_warehouses"))
     except Exception as e:
@@ -770,12 +770,10 @@ def new_movement():
 
             log_event(
                 "stock_movement_created",
-                {
-                    "movement_id": movement.id,
-                    "movement_type": movement_type,
-                    "stock_item_id": stock_item_id,
-                    "warehouse_id": warehouse_id,
-                },
+                movement_id=movement.id,
+                movement_type=movement_type,
+                stock_item_id=stock_item_id,
+                warehouse_id=warehouse_id,
             )
             flash(_("Stock movement recorded successfully."), "success")
             return redirect(url_for("inventory.list_movements"))
@@ -913,13 +911,11 @@ def new_transfer():
 
             log_event(
                 "stock_transfer_created",
-                {
-                    "transfer_ref_id": transfer_ref_id,
-                    "stock_item_id": stock_item_id,
-                    "from_warehouse_id": from_warehouse_id,
-                    "to_warehouse_id": to_warehouse_id,
-                    "quantity": float(quantity),
-                },
+                transfer_ref_id=transfer_ref_id,
+                stock_item_id=stock_item_id,
+                from_warehouse_id=from_warehouse_id,
+                to_warehouse_id=to_warehouse_id,
+                quantity=float(quantity),
             )
             flash(_("Stock transfer completed successfully."), "success")
             return redirect(url_for("inventory.list_transfers"))
@@ -1019,12 +1015,10 @@ def new_adjustment():
 
             log_event(
                 "stock_adjustment_created",
-                {
-                    "adjustment_id": movement.id,
-                    "stock_item_id": stock_item_id,
-                    "warehouse_id": warehouse_id,
-                    "quantity": float(quantity),
-                },
+                adjustment_id=movement.id,
+                stock_item_id=stock_item_id,
+                warehouse_id=warehouse_id,
+                quantity=float(quantity),
             )
             flash(_("Stock adjustment recorded successfully."), "success")
             return redirect(url_for("inventory.list_adjustments"))
@@ -1157,7 +1151,7 @@ def fulfill_reservation(reservation_id):
         reservation.fulfill()
         safe_commit()
 
-        log_event("stock_reservation_fulfilled", {"reservation_id": reservation_id})
+        log_event("stock_reservation_fulfilled", reservation_id=reservation_id)
         flash(_("Reservation fulfilled successfully."), "success")
     except Exception as e:
         db.session.rollback()
@@ -1177,7 +1171,7 @@ def cancel_reservation(reservation_id):
         reservation.cancel()
         safe_commit()
 
-        log_event("stock_reservation_cancelled", {"reservation_id": reservation_id})
+        log_event("stock_reservation_cancelled", reservation_id=reservation_id)
         flash(_("Reservation cancelled successfully."), "success")
     except Exception as e:
         db.session.rollback()
@@ -1238,7 +1232,7 @@ def new_supplier():
             db.session.add(supplier)
             safe_commit()
 
-            log_event("supplier_created", {"supplier_id": supplier.id, "supplier_code": supplier.code})
+            log_event("supplier_created", supplier_id=supplier.id, supplier_code=supplier.code)
             flash(_("Supplier created successfully."), "success")
             return redirect(url_for("inventory.view_supplier", supplier_id=supplier.id))
 
@@ -1306,7 +1300,7 @@ def edit_supplier(supplier_id):
 
             safe_commit()
 
-            log_event("supplier_updated", {"supplier_id": supplier.id})
+            log_event("supplier_updated", supplier_id=supplier.id)
             flash(_("Supplier updated successfully."), "success")
             return redirect(url_for("inventory.view_supplier", supplier_id=supplier.id))
 
@@ -1336,7 +1330,7 @@ def delete_supplier(supplier_id):
         db.session.delete(supplier)
         safe_commit()
 
-        log_event("supplier_deleted", {"supplier_code": code})
+        log_event("supplier_deleted", supplier_code=code)
         flash(_("Supplier deleted successfully."), "success")
     except Exception as e:
         db.session.rollback()
@@ -1466,7 +1460,8 @@ def new_purchase_order():
 
             log_event(
                 "purchase_order_created",
-                {"purchase_order_id": purchase_order.id, "po_number": purchase_order.po_number},
+                purchase_order_id=purchase_order.id,
+                po_number=purchase_order.po_number,
             )
             flash(_("Purchase order created successfully."), "success")
             return redirect(url_for("inventory.view_purchase_order", po_id=purchase_order.id))
@@ -1580,7 +1575,7 @@ def edit_purchase_order(po_id):
             purchase_order.calculate_totals()
             safe_commit()
 
-            log_event("purchase_order_updated", {"purchase_order_id": po_id})
+            log_event("purchase_order_updated", purchase_order_id=po_id)
             flash(_("Purchase order updated successfully."), "success")
             return redirect(url_for("inventory.view_purchase_order", po_id=po_id))
 
@@ -1613,7 +1608,7 @@ def send_purchase_order(po_id):
             purchase_order.mark_as_sent()
             safe_commit()
 
-            log_event("purchase_order_sent", {"purchase_order_id": po_id})
+            log_event("purchase_order_sent", purchase_order_id=po_id)
             flash(_("Purchase order marked as sent."), "success")
         except Exception as e:
             db.session.rollback()
@@ -1634,7 +1629,7 @@ def cancel_purchase_order(po_id):
             purchase_order.cancel()
             safe_commit()
 
-            log_event("purchase_order_cancelled", {"purchase_order_id": po_id})
+            log_event("purchase_order_cancelled", purchase_order_id=po_id)
             flash(_("Purchase order cancelled successfully."), "success")
         except Exception as e:
             db.session.rollback()
@@ -1660,7 +1655,7 @@ def delete_purchase_order(po_id):
             db.session.delete(purchase_order)
             safe_commit()
 
-            log_event("purchase_order_deleted", {"po_number": po_number})
+            log_event("purchase_order_deleted", po_number=po_number)
             flash(_("Purchase order deleted successfully."), "success")
             return redirect(url_for("inventory.list_purchase_orders"))
         except Exception as e:
@@ -1701,7 +1696,7 @@ def receive_purchase_order(po_id):
 
             safe_commit()
 
-            log_event("purchase_order_received", {"purchase_order_id": po_id})
+            log_event("purchase_order_received", purchase_order_id=po_id)
             flash(_("Purchase order marked as received and stock updated."), "success")
         except Exception as e:
             db.session.rollback()
