@@ -253,6 +253,12 @@ class JiraConnector(BaseConnector):
 
     def _map_jira_status(self, jira_status: str) -> str:
         """Map Jira status to TimeTracker task status."""
+        # Check for custom status mapping in config
+        status_mapping = self.get_status_mappings()
+        if status_mapping and jira_status in status_mapping:
+            return status_mapping[jira_status]
+        
+        # Default mapping
         status_map = {
             "To Do": "todo",
             "In Progress": "in_progress",
@@ -299,22 +305,109 @@ class JiraConnector(BaseConnector):
                     "type": "url",
                     "required": True,
                     "placeholder": "https://your-domain.atlassian.net",
+                    "description": "Your Jira instance URL",
+                    "help": "Enter your Jira Cloud or Server URL",
                 },
                 {
                     "name": "jql",
                     "label": "JQL Query",
                     "type": "text",
                     "required": False,
-                    "placeholder": "assignee = currentUser() AND status != Done",
-                    "help": "Jira Query Language query to filter issues to sync",
+                    "placeholder": "assignee = currentUser() AND status != Done ORDER BY updated DESC",
+                    "help": "Jira Query Language query to filter issues to sync. Leave empty to sync all assigned issues.",
+                    "description": "Filter which issues to sync from Jira",
+                },
+                {
+                    "name": "sync_direction",
+                    "type": "select",
+                    "label": "Sync Direction",
+                    "options": [
+                        {"value": "jira_to_timetracker", "label": "Jira → TimeTracker (Import only)"},
+                        {"value": "timetracker_to_jira", "label": "TimeTracker → Jira (Export only)"},
+                        {"value": "bidirectional", "label": "Bidirectional (Two-way sync)"},
+                    ],
+                    "default": "jira_to_timetracker",
+                    "description": "Choose how data flows between Jira and TimeTracker",
+                },
+                {
+                    "name": "sync_items",
+                    "type": "array",
+                    "label": "Items to Sync",
+                    "options": [
+                        {"value": "issues", "label": "Issues (Tasks)"},
+                        {"value": "projects", "label": "Projects"},
+                        {"value": "time_entries", "label": "Time Entries"},
+                    ],
+                    "default": ["issues"],
+                    "description": "Select which items to synchronize",
                 },
                 {
                     "name": "auto_sync",
                     "type": "boolean",
                     "label": "Auto Sync",
+                    "default": False,
+                    "description": "Automatically sync when webhooks are received from Jira",
+                },
+                {
+                    "name": "sync_interval",
+                    "type": "select",
+                    "label": "Sync Schedule",
+                    "options": [
+                        {"value": "manual", "label": "Manual only"},
+                        {"value": "hourly", "label": "Every hour"},
+                        {"value": "daily", "label": "Daily"},
+                        {"value": "weekly", "label": "Weekly"},
+                    ],
+                    "default": "manual",
+                    "description": "How often to automatically sync data",
+                },
+                {
+                    "name": "create_projects",
+                    "type": "boolean",
+                    "label": "Create Projects",
                     "default": True,
-                    "description": "Automatically sync when webhooks are received",
+                    "description": "Automatically create projects in TimeTracker from Jira projects",
+                },
+                {
+                    "name": "status_mapping",
+                    "type": "json",
+                    "label": "Status Mapping",
+                    "placeholder": '{"To Do": "todo", "In Progress": "in_progress", "Done": "completed"}',
+                    "description": "Map Jira statuses to TimeTracker statuses (JSON format)",
+                    "help": "Customize how Jira issue statuses map to TimeTracker task statuses",
+                },
+                {
+                    "name": "field_mapping",
+                    "type": "json",
+                    "label": "Field Mapping",
+                    "placeholder": '{"summary": "name", "description": "description", "assignee": "user_id"}',
+                    "description": "Map Jira fields to TimeTracker fields (JSON format)",
+                    "help": "Customize how Jira issue fields map to TimeTracker task fields",
                 },
             ],
             "required": ["jira_url"],
+            "sections": [
+                {
+                    "title": "Connection Settings",
+                    "description": "Configure your Jira connection",
+                    "fields": ["jira_url", "jql"],
+                },
+                {
+                    "title": "Sync Settings",
+                    "description": "Configure what and how to sync",
+                    "fields": ["sync_direction", "sync_items", "auto_sync", "sync_interval", "create_projects"],
+                },
+                {
+                    "title": "Data Mapping",
+                    "description": "Customize how data translates between Jira and TimeTracker",
+                    "fields": ["status_mapping", "field_mapping"],
+                },
+            ],
+            "sync_settings": {
+                "enabled": True,
+                "auto_sync": False,
+                "sync_interval": "manual",
+                "sync_direction": "jira_to_timetracker",
+                "sync_items": ["issues"],
+            },
         }

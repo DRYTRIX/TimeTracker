@@ -173,71 +173,242 @@
         <h2 class="text-lg font-semibold mb-4">
             <i class="fas fa-cog mr-2"></i>{{ _('Integration Configuration') }}
         </h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-6">
+            {{ _('Configure sync settings, data mappings, and other integration options.') }}
+        </p>
+        
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="update_config">
             
-            <div class="space-y-4">
-                {% for field in config_schema.fields %}
-                {% set field_name = field.name %}
-                {% set field_type = field.get('type', 'string') %}
-                {% set field_value = current_config.get(field_name, field.get('default', '')) %}
-                
-                <div>
-                    <label for="config_{{ field_name }}" class="block text-sm font-medium mb-2">
-                        {{ field.get('label', field_name) }}
-                        {% if field.get('required', False) %}
-                        <span class="text-red-500">*</span>
+            {% if config_schema.get('sections') %}
+                <!-- Display fields organized by sections -->
+                {% for section in config_schema.sections %}
+                <div class="mb-8 last:mb-0">
+                    <div class="border-b border-border-light dark:border-border-dark pb-2 mb-4">
+                        <h3 class="text-md font-semibold text-text-light dark:text-text-dark">
+                            {{ section.get('title', 'Settings') }}
+                        </h3>
+                        {% if section.get('description') %}
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ section.get('description') }}
+                        </p>
                         {% endif %}
-                    </label>
-                    
-                    {% if field_type == 'boolean' %}
-                    <div class="flex items-center">
-                        <input type="checkbox" 
-                               name="{{ field_name }}" 
-                               id="config_{{ field_name }}"
-                               {% if field_value %}checked{% endif %}
-                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
-                        <label for="config_{{ field_name }}" class="ml-2 text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ field.get('description', '') }}
-                        </label>
                     </div>
-                    {% elif field_type == 'text' or field_type == 'textarea' %}
-                    <textarea 
-                        name="{{ field_name }}" 
-                        id="config_{{ field_name }}"
-                        rows="{% if field_type == 'textarea' %}4{% else %}2{% endif %}"
-                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
-                        placeholder="{{ field.get('placeholder', '') }}"
-                        {% if field.get('required', False) %}required{% endif %}>{{ field_value }}</textarea>
-                    {% elif field_type == 'json' %}
-                    <textarea 
-                        name="{{ field_name }}" 
-                        id="config_{{ field_name }}"
-                        rows="4"
-                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark font-mono text-sm"
-                        placeholder='{{ field.get('placeholder', '{}') }}'
-                        {% if field.get('required', False) %}required{% endif %}>{% if field_value %}{{ field_value|tojson }}{% endif %}</textarea>
-                    {% else %}
-                    <input type="{{ field_type }}" 
-                           name="{{ field_name }}" 
-                           id="config_{{ field_name }}"
-                           value="{{ field_value }}"
-                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
-                           placeholder="{{ field.get('placeholder', '') }}"
-                           {% if field.get('required', False) %}required{% endif %}>
-                    {% endif %}
                     
-                    {% if field.get('help') or field.get('description') %}
-                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                        {{ field.get('help', field.get('description', '')) }}
-                    </p>
-                    {% endif %}
+                    <div class="space-y-4">
+                        {% for field_name in section.get('fields', []) %}
+                            {% set field = config_schema.fields|selectattr('name', 'equalto', field_name)|first %}
+                            {% if field %}
+                                {% set field_type = field.get('type', 'string') %}
+                                {% set field_value = current_config.get(field_name, field.get('default', '')) %}
+                                
+                                <div>
+                                    <label for="config_{{ field_name }}" class="block text-sm font-medium mb-2">
+                                        {{ field.get('label', field_name) }}
+                                        {% if field.get('required', False) %}
+                                        <span class="text-red-500">*</span>
+                                        {% endif %}
+                                    </label>
+                                    
+                                    {% if field_type == 'boolean' %}
+                                    <div class="flex items-center">
+                                        <input type="checkbox" 
+                                               name="{{ field_name }}" 
+                                               id="config_{{ field_name }}"
+                                               {% if field_value %}checked{% endif %}
+                                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                                        <label for="config_{{ field_name }}" class="ml-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+                                            {{ field.get('description', '') }}
+                                        </label>
+                                    </div>
+                                    {% elif field_type == 'select' %}
+                                    <select name="{{ field_name }}" 
+                                            id="config_{{ field_name }}"
+                                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                                            {% if field.get('required', False) %}required{% endif %}>
+                                        {% for option in field.get('options', []) %}
+                                        <option value="{{ option.get('value', option.get('label', '')) }}" 
+                                                {% if field_value == option.get('value', option.get('label', '')) or (not field_value and option.get('value', option.get('label', '')) == field.get('default')) %}selected{% endif %}>
+                                            {{ option.get('label', option.get('value', '')) }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% elif field_type == 'array' %}
+                                    <div class="space-y-2">
+                                        {% for option in field.get('options', []) %}
+                                        {% set option_value = option.get('value', option.get('label', '')) %}
+                                        {% set is_selected = field_value and option_value in field_value %}
+                                        <div class="flex items-center">
+                                            <input type="checkbox" 
+                                                   name="{{ field_name }}" 
+                                                   id="config_{{ field_name }}_{{ loop.index }}"
+                                                   value="{{ option_value }}"
+                                                   {% if is_selected or (not field_value and option_value in field.get('default', [])) %}checked{% endif %}
+                                                   class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                                            <label for="config_{{ field_name }}_{{ loop.index }}" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                                                {{ option.get('label', option_value) }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% elif field_type == 'number' %}
+                                    <input type="number" 
+                                           name="{{ field_name }}" 
+                                           id="config_{{ field_name }}"
+                                           value="{{ field_value }}"
+                                           {% if field.get('validation') %}
+                                           {% if field.validation.get('min') is not none %}min="{{ field.validation.min }}"{% endif %}
+                                           {% if field.validation.get('max') is not none %}max="{{ field.validation.max }}"{% endif %}
+                                           {% endif %}
+                                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                                           placeholder="{{ field.get('placeholder', '') }}"
+                                           {% if field.get('required', False) %}required{% endif %}>
+                                    {% elif field_type == 'text' or field_type == 'textarea' %}
+                                    <textarea 
+                                        name="{{ field_name }}" 
+                                        id="config_{{ field_name }}"
+                                        rows="{% if field_type == 'textarea' %}4{% else %}2{% endif %}"
+                                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                                        placeholder="{{ field.get('placeholder', '') }}"
+                                        {% if field.get('required', False) %}required{% endif %}>{{ field_value }}</textarea>
+                                    {% elif field_type == 'json' %}
+                                    <textarea 
+                                        name="{{ field_name }}" 
+                                        id="config_{{ field_name }}"
+                                        rows="6"
+                                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark font-mono text-sm"
+                                        placeholder="{{ field.get('placeholder', '{}') }}"
+                                        {% if field.get('required', False) %}required{% endif %}>{% if field_value %}{{ field_value|tojson|safe }}{% endif %}</textarea>
+                                    {% else %}
+                                    <input type="{{ field_type }}" 
+                                           name="{{ field_name }}" 
+                                           id="config_{{ field_name }}"
+                                           value="{{ field_value }}"
+                                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                                           placeholder="{{ field.get('placeholder', '') }}"
+                                           {% if field.get('required', False) %}required{% endif %}>
+                                    {% endif %}
+                                    
+                                    {% if field.get('help') or field.get('description') %}
+                                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        {{ field.get('help', field.get('description', '')) }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endfor %}
-            </div>
+            {% else %}
+                <!-- Fallback: Display all fields without sections -->
+                <div class="space-y-4">
+                    {% for field in config_schema.fields %}
+                    {% set field_name = field.name %}
+                    {% set field_type = field.get('type', 'string') %}
+                    {% set field_value = current_config.get(field_name, field.get('default', '')) %}
+                    
+                    <div>
+                        <label for="config_{{ field_name }}" class="block text-sm font-medium mb-2">
+                            {{ field.get('label', field_name) }}
+                            {% if field.get('required', False) %}
+                            <span class="text-red-500">*</span>
+                            {% endif %}
+                        </label>
+                        
+                        {% if field_type == 'boolean' %}
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   name="{{ field_name }}" 
+                                   id="config_{{ field_name }}"
+                                   {% if field_value %}checked{% endif %}
+                                   class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                            <label for="config_{{ field_name }}" class="ml-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+                                {{ field.get('description', '') }}
+                            </label>
+                        </div>
+                        {% elif field_type == 'select' %}
+                        <select name="{{ field_name }}" 
+                                id="config_{{ field_name }}"
+                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                                {% if field.get('required', False) %}required{% endif %}>
+                            {% for option in field.get('options', []) %}
+                            <option value="{{ option.get('value', option.get('label', '')) }}" 
+                                    {% if field_value == option.get('value', option.get('label', '')) or (not field_value and option.get('value', option.get('label', '')) == field.get('default')) %}selected{% endif %}>
+                                {{ option.get('label', option.get('value', '')) }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% elif field_type == 'array' %}
+                        <div class="space-y-2">
+                            {% for option in field.get('options', []) %}
+                            {% set option_value = option.get('value', option.get('label', '')) %}
+                            {% set is_selected = field_value and option_value in field_value %}
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="{{ field_name }}" 
+                                       id="config_{{ field_name }}_{{ loop.index }}"
+                                       value="{{ option_value }}"
+                                       {% if is_selected or (not field_value and option_value in field.get('default', [])) %}checked{% endif %}
+                                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                                <label for="config_{{ field_name }}_{{ loop.index }}" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                                    {{ option.get('label', option_value) }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% elif field_type == 'number' %}
+                        <input type="number" 
+                               name="{{ field_name }}" 
+                               id="config_{{ field_name }}"
+                               value="{{ field_value }}"
+                               {% if field.get('validation') %}
+                               {% if field.validation.get('min') is not none %}min="{{ field.validation.min }}"{% endif %}
+                               {% if field.validation.get('max') is not none %}max="{{ field.validation.max }}"{% endif %}
+                               {% endif %}
+                               class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                               placeholder="{{ field.get('placeholder', '') }}"
+                               {% if field.get('required', False) %}required{% endif %}>
+                        {% elif field_type == 'text' or field_type == 'textarea' %}
+                        <textarea 
+                            name="{{ field_name }}" 
+                            id="config_{{ field_name }}"
+                            rows="{% if field_type == 'textarea' %}4{% else %}2{% endif %}"
+                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                            placeholder="{{ field.get('placeholder', '') }}"
+                            {% if field.get('required', False) %}required{% endif %}>{{ field_value }}</textarea>
+                        {% elif field_type == 'json' %}
+                        <textarea 
+                            name="{{ field_name }}" 
+                            id="config_{{ field_name }}"
+                            rows="6"
+                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark font-mono text-sm"
+                            placeholder="{{ field.get('placeholder', '{}') }}"
+                            {% if field.get('required', False) %}required{% endif %}>{% if field_value %}{{ field_value|tojson|safe }}{% endif %}</textarea>
+                        {% else %}
+                        <input type="{{ field_type }}" 
+                               name="{{ field_name }}" 
+                               id="config_{{ field_name }}"
+                               value="{{ field_value }}"
+                               class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                               placeholder="{{ field.get('placeholder', '') }}"
+                               {% if field.get('required', False) %}required{% endif %}>
+                        {% endif %}
+                        
+                        {% if field.get('help') or field.get('description') %}
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            {{ field.get('help', field.get('description', '')) }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
             
-            <div class="mt-6">
+            <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
                 <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                     <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
                 </button>

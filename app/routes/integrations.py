@@ -386,6 +386,30 @@ def manage_integration(provider):
                     if field_type == "boolean":
                         # Checkboxes: present = True, absent = False
                         value = field_name in request.form
+                    elif field_type == "array":
+                        # Array fields - get all selected values
+                        values = request.form.getlist(field_name)
+                        value = values if values else field.get("default", [])
+                    elif field_type == "select":
+                        # Select fields - single value
+                        value = request.form.get(field_name, "").strip()
+                        if not value:
+                            value = field.get("default")
+                    elif field_type == "number":
+                        # Number fields - convert to int/float
+                        value_str = request.form.get(field_name, "").strip()
+                        if value_str:
+                            try:
+                                # Try int first, then float
+                                if "." in value_str:
+                                    value = float(value_str)
+                                else:
+                                    value = int(value_str)
+                            except ValueError:
+                                flash(_("Invalid number for field %(field)s", field=field.get("label", field_name)), "error")
+                                continue
+                        else:
+                            value = field.get("default")
                     elif field_type == "json":
                         # JSON fields - parse if provided
                         value_str = request.form.get(field_name, "").strip()
@@ -399,17 +423,19 @@ def manage_integration(provider):
                         else:
                             value = None
                     else:
-                        # String/number/url fields
+                        # String/url/text fields
                         value = request.form.get(field_name, "").strip()
                         if not value and field.get("required", False):
                             flash(_("Field %(field)s is required", field=field.get("label", field_name)), "error")
                             continue
+                        if not value:
+                            value = field.get("default")
                     
-                    # Only update if value is provided or it's a boolean (always set)
+                    # Only update if value is provided or it's a boolean/array (always set)
                     if value is not None and value != "":
                         integration_to_update.config[field_name] = value
-                    elif field_type == "boolean":
-                        # Always set boolean fields
+                    elif field_type in ("boolean", "array"):
+                        # Always set boolean and array fields
                         integration_to_update.config[field_name] = value
             
             # Ensure config is marked as modified
@@ -458,6 +484,25 @@ def manage_integration(provider):
     display_name = getattr(connector_class, "display_name", None) or provider.replace("_", " ").title()
     description = getattr(connector_class, "description", None) or ""
     
+    # Get config schema from connector
+    config_schema = {}
+    current_config = {}
+    active_integration = integration if integration else user_integration
+    
+    if active_integration:
+        current_config = active_integration.config or {}
+        if connector:
+            try:
+                config_schema = connector.get_config_schema()
+            except Exception as e:
+                logger.warning(f"Could not get config schema for {provider}: {e}")
+        elif connector_class and hasattr(connector_class, "get_config_schema"):
+            try:
+                temp_connector = connector_class(active_integration, None)
+                config_schema = temp_connector.get_config_schema()
+            except Exception as e:
+                logger.warning(f"Could not get config schema for {provider}: {e}")
+    
     return render_template(
         "integrations/manage.html",
         provider=provider,
@@ -466,11 +511,14 @@ def manage_integration(provider):
         connector_error=connector_error,
         integration=integration,
         user_integration=user_integration,
+        active_integration=active_integration,
         credentials=credentials,
         current_creds=current_creds,
         display_name=display_name,
         description=description,
         is_global=is_global,
+        config_schema=config_schema,
+        current_config=current_config,
     )
 
 
