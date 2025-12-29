@@ -488,7 +488,8 @@ def integration_webhook(provider):
         logger.warning(f"Webhook received for unknown provider: {provider}")
         return jsonify({"error": "Unknown provider"}), 404
 
-    # Get webhook payload
+    # Get webhook payload - preserve raw body for signature verification (GitHub, etc.)
+    raw_body = request.data  # Raw bytes for signature verification
     payload = request.get_json(silent=True) or request.form.to_dict()
     headers = dict(request.headers)
 
@@ -507,8 +508,8 @@ def integration_webhook(provider):
             if not connector:
                 continue
 
-            # Handle webhook
-            result = connector.handle_webhook(payload, headers)
+            # Handle webhook - pass raw body for signature verification
+            result = connector.handle_webhook(payload, headers, raw_body=raw_body)
             results.append(
                 {
                     "integration_id": integration.id,

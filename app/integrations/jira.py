@@ -261,8 +261,12 @@ class JiraConnector(BaseConnector):
         }
         return status_map.get(jira_status, "todo")
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
         """Handle incoming webhook from Jira."""
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
         try:
             event_type = payload.get("webhookEvent")
             issue = payload.get("issue", {})
@@ -278,7 +282,11 @@ class JiraConnector(BaseConnector):
                 return {"success": True, "message": f"Webhook received for issue {issue_key}", "event_type": event_type}
 
             return {"success": True, "message": f"Webhook processed: {event_type}"}
+        except KeyError as e:
+            logger.error(f"Jira webhook missing required field: {e}")
+            return {"success": False, "message": f"Invalid webhook payload: missing field {str(e)}"}
         except Exception as e:
+            logger.error(f"Jira webhook processing error: {e}", exc_info=True)
             return {"success": False, "message": f"Error processing webhook: {str(e)}"}
 
     def get_config_schema(self) -> Dict[str, Any]:

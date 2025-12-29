@@ -217,12 +217,19 @@ class SlackConnector(BaseConnector):
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
         """Handle incoming webhook from Slack."""
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
         try:
             # Slack webhooks typically use challenge-response for URL verification
             if payload.get("type") == "url_verification":
-                return {"success": True, "challenge": payload.get("challenge")}
+                challenge = payload.get("challenge")
+                if not challenge:
+                    return {"success": False, "message": "URL verification challenge missing"}
+                return {"success": True, "challenge": challenge}
 
             event = payload.get("event", {})
             event_type = event.get("type", "")
@@ -232,7 +239,11 @@ class SlackConnector(BaseConnector):
                 return {"success": True, "message": "Message event received", "event_type": event_type}
 
             return {"success": True, "message": f"Webhook processed: {event_type}"}
+        except KeyError as e:
+            logger.error(f"Slack webhook missing required field: {e}")
+            return {"success": False, "message": f"Invalid webhook payload: missing field {str(e)}"}
         except Exception as e:
+            logger.error(f"Slack webhook processing error: {e}", exc_info=True)
             return {"success": False, "message": f"Error processing webhook: {str(e)}"}
 
     def send_message(self, channel: str, text: str) -> Dict[str, Any]:
