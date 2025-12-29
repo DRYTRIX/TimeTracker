@@ -44,65 +44,6 @@ class Settings(db.Model):
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
 
-    # System-wide UI feature flags - control which features are available for users to customize
-    # Calendar section
-    ui_allow_calendar = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Time Tracking section items
-    ui_allow_project_templates = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_gantt_chart = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_kanban_board = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_weekly_goals = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_issues = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Issues feature
-
-    # CRM section
-    ui_allow_quotes = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Finance & Expenses section items
-    ui_allow_reports = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_report_builder = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_scheduled_reports = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_invoice_approvals = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_payment_gateways = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_recurring_invoices = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_payments = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_mileage = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_per_diem = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_budget_alerts = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Inventory section
-    ui_allow_inventory = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Analytics
-    ui_allow_analytics = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Tools & Data section
-    ui_allow_tools = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_integrations = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_import_export = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_saved_filters = db.Column(db.Boolean, default=True, nullable=False)
-
-    # CRM section (additional)
-    ui_allow_contacts = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_deals = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_leads = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Finance section (additional)
-    ui_allow_invoices = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_expenses = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Time Tracking section (additional)
-    ui_allow_time_entry_templates = db.Column(db.Boolean, default=True, nullable=False)
-
-    # Advanced features
-    ui_allow_workflows = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_time_approvals = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_activity_feed = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_recurring_tasks = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_team_chat = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_client_portal = db.Column(db.Boolean, default=True, nullable=False)
-    ui_allow_kiosk = db.Column(db.Boolean, default=True, nullable=False)
-
     # Kiosk mode settings
     kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
     kiosk_auto_logout_minutes = db.Column(db.Integer, default=15, nullable=False)
@@ -439,43 +380,6 @@ class Settings(db.Model):
             "xero_client_secret_set": bool(getattr(self, "xero_client_secret", "")),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            # UI feature flags (system-wide)
-            "ui_allow_calendar": getattr(self, "ui_allow_calendar", True),
-            "ui_allow_project_templates": getattr(self, "ui_allow_project_templates", True),
-            "ui_allow_gantt_chart": getattr(self, "ui_allow_gantt_chart", True),
-            "ui_allow_kanban_board": getattr(self, "ui_allow_kanban_board", True),
-            "ui_allow_weekly_goals": getattr(self, "ui_allow_weekly_goals", True),
-            "ui_allow_issues": getattr(self, "ui_allow_issues", True),
-            "ui_allow_quotes": getattr(self, "ui_allow_quotes", True),
-            "ui_allow_reports": getattr(self, "ui_allow_reports", True),
-            "ui_allow_report_builder": getattr(self, "ui_allow_report_builder", True),
-            "ui_allow_scheduled_reports": getattr(self, "ui_allow_scheduled_reports", True),
-            "ui_allow_invoice_approvals": getattr(self, "ui_allow_invoice_approvals", True),
-            "ui_allow_payment_gateways": getattr(self, "ui_allow_payment_gateways", True),
-            "ui_allow_recurring_invoices": getattr(self, "ui_allow_recurring_invoices", True),
-            "ui_allow_payments": getattr(self, "ui_allow_payments", True),
-            "ui_allow_mileage": getattr(self, "ui_allow_mileage", True),
-            "ui_allow_per_diem": getattr(self, "ui_allow_per_diem", True),
-            "ui_allow_budget_alerts": getattr(self, "ui_allow_budget_alerts", True),
-            "ui_allow_inventory": getattr(self, "ui_allow_inventory", True),
-            "ui_allow_analytics": getattr(self, "ui_allow_analytics", True),
-            "ui_allow_tools": getattr(self, "ui_allow_tools", True),
-            "ui_allow_integrations": getattr(self, "ui_allow_integrations", True),
-            "ui_allow_import_export": getattr(self, "ui_allow_import_export", True),
-            "ui_allow_saved_filters": getattr(self, "ui_allow_saved_filters", True),
-            "ui_allow_contacts": getattr(self, "ui_allow_contacts", True),
-            "ui_allow_deals": getattr(self, "ui_allow_deals", True),
-            "ui_allow_leads": getattr(self, "ui_allow_leads", True),
-            "ui_allow_invoices": getattr(self, "ui_allow_invoices", True),
-            "ui_allow_expenses": getattr(self, "ui_allow_expenses", True),
-            "ui_allow_time_entry_templates": getattr(self, "ui_allow_time_entry_templates", True),
-            "ui_allow_workflows": getattr(self, "ui_allow_workflows", True),
-            "ui_allow_time_approvals": getattr(self, "ui_allow_time_approvals", True),
-            "ui_allow_activity_feed": getattr(self, "ui_allow_activity_feed", True),
-            "ui_allow_recurring_tasks": getattr(self, "ui_allow_recurring_tasks", True),
-            "ui_allow_team_chat": getattr(self, "ui_allow_team_chat", True),
-            "ui_allow_client_portal": getattr(self, "ui_allow_client_portal", True),
-            "ui_allow_kiosk": getattr(self, "ui_allow_kiosk", True),
         }
 
     @classmethod

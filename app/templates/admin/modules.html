@@ -5,104 +5,82 @@
 {% block content %}
 <div class="max-w-7xl mx-auto">
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ _('Module Management') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Enable or disable modules and features system-wide. Disabled modules will be hidden from all users.') }}</p>
+        <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ _('Available Modules') }}</h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('All modules are enabled by default. Users can customize which modules appear in their navigation in their profile settings.') }}</p>
     </div>
 
-    <form method="POST" action="{{ url_for('admin.manage_modules') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="space-y-6">
-            {% for category, modules in modules_by_category.items() %}
-            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-6">
-                <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">
-                    {% if category == ModuleCategory.TIME_TRACKING %}
-                        <i class="fas fa-clock mr-2"></i>{{ _('Time Tracking') }}
-                    {% elif category == ModuleCategory.PROJECT_MANAGEMENT %}
-                        <i class="fas fa-project-diagram mr-2"></i>{{ _('Project Management') }}
-                    {% elif category == ModuleCategory.CRM %}
-                        <i class="fas fa-handshake mr-2"></i>{{ _('CRM') }}
-                    {% elif category == ModuleCategory.FINANCE %}
-                        <i class="fas fa-dollar-sign mr-2"></i>{{ _('Finance & Expenses') }}
-                    {% elif category == ModuleCategory.INVENTORY %}
-                        <i class="fas fa-boxes mr-2"></i>{{ _('Inventory') }}
-                    {% elif category == ModuleCategory.ANALYTICS %}
-                        <i class="fas fa-chart-line mr-2"></i>{{ _('Analytics') }}
-                    {% elif category == ModuleCategory.TOOLS %}
-                        <i class="fas fa-tools mr-2"></i>{{ _('Tools & Data') }}
-                    {% elif category == ModuleCategory.ADVANCED %}
-                        <i class="fas fa-rocket mr-2"></i>{{ _('Advanced Features') }}
-                    {% else %}
-                        {{ category.value|title }}
-                    {% endif %}
-                </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {% for module in modules %}
-                    <div class="flex items-start space-x-3 p-3 rounded-lg {% if module.category == ModuleCategory.CORE %}bg-background-light dark:bg-background-dark{% else %}hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-2">
-                                {% if module.icon %}
-                                <i class="fas {{ module.icon }} text-primary"></i>
+    <div class="space-y-6">
+        {% for category, modules in modules_by_category.items() %}
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-6">
+            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">
+                {% if category == ModuleCategory.TIME_TRACKING %}
+                    <i class="fas fa-clock mr-2"></i>{{ _('Time Tracking') }}
+                {% elif category == ModuleCategory.PROJECT_MANAGEMENT %}
+                    <i class="fas fa-project-diagram mr-2"></i>{{ _('Project Management') }}
+                {% elif category == ModuleCategory.CRM %}
+                    <i class="fas fa-handshake mr-2"></i>{{ _('CRM') }}
+                {% elif category == ModuleCategory.FINANCE %}
+                    <i class="fas fa-dollar-sign mr-2"></i>{{ _('Finance & Expenses') }}
+                {% elif category == ModuleCategory.INVENTORY %}
+                    <i class="fas fa-boxes mr-2"></i>{{ _('Inventory') }}
+                {% elif category == ModuleCategory.ANALYTICS %}
+                    <i class="fas fa-chart-line mr-2"></i>{{ _('Analytics') }}
+                {% elif category == ModuleCategory.TOOLS %}
+                    <i class="fas fa-tools mr-2"></i>{{ _('Tools & Data') }}
+                {% elif category == ModuleCategory.ADVANCED %}
+                    <i class="fas fa-rocket mr-2"></i>{{ _('Advanced Features') }}
+                {% else %}
+                    {{ category.value|title }}
+                {% endif %}
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for module in modules %}
+                <div class="flex items-start space-x-3 p-3 rounded-lg {% if module.category == ModuleCategory.CORE %}bg-background-light dark:bg-background-dark{% else %}hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2">
+                            {% if module.icon %}
+                            <i class="fas {{ module.icon }} text-primary"></i>
+                            {% endif %}
+                            <div class="font-medium text-text-light dark:text-text-dark">
+                                {% if module.category == ModuleCategory.CORE %}
+                                <span class="text-sm text-text-muted-light dark:text-text-muted-dark">({{ _('Core') }}) </span>
                                 {% endif %}
-                                <label class="font-medium text-text-light dark:text-text-dark cursor-pointer flex items-center">
-                                    {% if module.category == ModuleCategory.CORE %}
-                                    <input type="checkbox" 
-                                           name="{{ module.settings_flag }}" 
-                                           {% if module.settings_flag and getattr(settings, module.settings_flag, True) %}checked{% endif %}
-                                           disabled
-                                           class="mr-2 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary">
-                                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">({{ _('Core') }})</span>
-                                    {% else %}
-                                    <input type="checkbox" 
-                                           name="{{ module.settings_flag }}" 
-                                           {% if module.settings_flag and getattr(settings, module.settings_flag, True) %}checked{% endif %}
-                                           class="mr-2 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary">
-                                    {% endif %}
-                                    <span>{{ module.name }}</span>
-                                </label>
+                                <span>{{ module.name }}</span>
                             </div>
-                            {% if module.description %}
-                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1 ml-6">{{ module.description }}</p>
-                            {% endif %}
-                            {% if module.dependencies %}
-                            <div class="mt-2 ml-6">
-                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                                    <i class="fas fa-link mr-1"></i>{{ _('Depends on') }}: 
-                                    {% for dep_id in module.dependencies %}
-                                        {% set dep_module = None %}
-                                        {% for cat, mods in modules_by_category.items() %}
-                                            {% for mod in mods %}
-                                                {% if mod.id == dep_id %}
-                                                    {% set dep_module = mod %}
-                                                {% endif %}
-                                            {% endfor %}
-                                        {% endfor %}
-                                        {% if dep_module %}
-                                            {{ dep_module.name }}{% if not loop.last %}, {% endif %}
-                                        {% else %}
-                                            {{ dep_id }}{% if not loop.last %}, {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
-                                </p>
-                            </div>
-                            {% endif %}
                         </div>
+                        {% if module.description %}
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1 ml-6">{{ module.description }}</p>
+                        {% endif %}
+                        {% if module.dependencies %}
+                        <div class="mt-2 ml-6">
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                                <i class="fas fa-link mr-1"></i>{{ _('Depends on') }}: 
+                                {% for dep_id in module.dependencies %}
+                                    {% set dep_module = None %}
+                                    {% for cat, mods in modules_by_category.items() %}
+                                        {% for mod in mods %}
+                                            {% if mod.id == dep_id %}
+                                                {% set dep_module = mod %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {% if dep_module %}
+                                        {{ dep_module.name }}{% if not loop.last %}, {% endif %}
+                                    {% else %}
+                                        {{ dep_id }}{% if not loop.last %}, {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </p>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endfor %}
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
-
-        <div class="mt-6 flex justify-end space-x-4">
-            <a href="{{ url_for('admin.settings') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                {{ _('Cancel') }}
-            </a>
-            <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark">
-                <i class="fas fa-save mr-2"></i>{{ _('Save Changes') }}
-            </button>
-        </div>
-    </form>
+        {% endfor %}
+    </div>
 
     <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div class="flex items-start">
@@ -110,10 +88,9 @@
             <div class="text-sm text-blue-800 dark:text-blue-200">
                 <p class="font-semibold mb-1">{{ _('Note') }}:</p>
                 <ul class="list-disc list-inside space-y-1">
+                    <li>{{ _('All modules are enabled by default.') }}</li>
                     <li>{{ _('Core modules cannot be disabled as they are required for the application to function.') }}</li>
-                    <li>{{ _('Disabling a module will hide it from all users, but existing data will be preserved.') }}</li>
-                    <li>{{ _('If a module has dependencies, those must be enabled for the module to work properly.') }}</li>
-                    <li>{{ _('Individual users can further customize their view in their profile settings.') }}</li>
+                    <li>{{ _('Individual users can customize which modules appear in their navigation in their profile settings.') }}</li>
                 </ul>
             </div>
         </div>
