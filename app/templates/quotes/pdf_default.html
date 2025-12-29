@@ -15,9 +15,6 @@
                         {% set logo_data = get_logo_base64(logo_path) %}
                         {% if logo_data %}
                             <img src="{{ logo_data }}" alt="{{ _('Company Logo') }}" class="company-logo">
-                        {% else %}
-                            {# Fallback to file URI if base64 fails #}
-                            <img src="{{ Path(logo_path).resolve().as_uri() if Path and logo_path else 'file://' ~ logo_path }}" alt="{{ _('Company Logo') }}" class="company-logo">
                         {% endif %}
                     {% endif %}
                 {% endif %}

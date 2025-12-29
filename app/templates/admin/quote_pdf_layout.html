@@ -1863,6 +1863,33 @@ function initializePDFEditor() {
             }
         });
         
+        // For Image nodes, convert scale changes to width/height changes
+        // This ensures the size is stored correctly when resizing
+        if (node.className === 'Image') {
+            transformer.on('transformend', function() {
+                const image = node;
+                const scaleX = image.scaleX();
+                const scaleY = image.scaleY();
+                
+                // Update width and height based on scale
+                const newWidth = image.width() * scaleX;
+                const newHeight = image.height() * scaleY;
+                
+                // Reset scale to 1 and apply the new dimensions
+                image.width(newWidth);
+                image.height(newHeight);
+                image.scaleX(1);
+                image.scaleY(1);
+                
+                // Update properties panel if visible
+                if (selectedElement === image) {
+                    updatePropertiesPanel(image);
+                }
+                
+                layer.draw();
+            });
+        }
+        
         layer.add(transformer);
         layer.draw();
         
@@ -2538,7 +2565,7 @@ function initializePDFEditor() {
                 const w = Math.round(attrs.width || 100);
                 const h = Math.round(attrs.height || 50);
                 {% raw %}
-                bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
+                bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) if settings.has_logo() and settings.get_logo_path() else '' }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
                 {% endraw %}
             } else if (child.className === 'Rect') {
                 const w = Math.round(attrs.width || 100);
@@ -3092,11 +3119,96 @@ table tr:last-child td {
                 // Redraw grid for new size
                 drawGrid();
                 
+                // Fix logo images: Konva Image nodes need to reload the image from URL
+                // When Konva Image nodes are serialized/deserialized, the image data is lost
+                // We need to reload the image from the URL and restore all attributes
+                if (LOGO_URL) {
+                    const logoImages = layer.find('[name="logo"]');
+                    logoImages.forEach(function(logoNode) {
+                        if (logoNode.className === 'Image') {
+                            // Save all attributes before reloading
+                            const savedAttrs = {
+                                x: logoNode.x(),
+                                y: logoNode.y(),
+                                width: logoNode.width(),
+                                height: logoNode.height(),
+                                scaleX: logoNode.scaleX(),
+                                scaleY: logoNode.scaleY(),
+                                rotation: logoNode.rotation(),
+                                opacity: logoNode.opacity(),
+                                draggable: logoNode.draggable(),
+                                visible: logoNode.visible()
+                            };
+                            
+                            // Store reference to update elements array
+                            const oldNode = logoNode;
+                            const parent = logoNode.getParent();
+                            const index = logoNode.getZIndex();
+                            
+                            // Reload the image from URL
+                            Konva.Image.fromURL(LOGO_URL, function(newImage) {
+                                // Calculate actual size considering scale
+                                // If scaleX/scaleY are not 1, the actual size is width*scaleX and height*scaleY
+                                let finalWidth = savedAttrs.width;
+                                let finalHeight = savedAttrs.height;
+                                
+                                // If scale was applied, we need to account for it
+                                // Reset scale to 1 and apply the scaled dimensions as the new width/height
+                                if (savedAttrs.scaleX !== 1 || savedAttrs.scaleY !== 1) {
+                                    finalWidth = savedAttrs.width * savedAttrs.scaleX;
+                                    finalHeight = savedAttrs.height * savedAttrs.scaleY;
+                                }
+                                
+                                // Restore all attributes, but reset scale to 1 and use calculated dimensions
+                                newImage.setAttrs({
+                                    x: savedAttrs.x,
+                                    y: savedAttrs.y,
+                                    width: finalWidth,
+                                    height: finalHeight,
+                                    scaleX: 1,
+                                    scaleY: 1,
+                                    rotation: savedAttrs.rotation,
+                                    opacity: savedAttrs.opacity,
+                                    draggable: savedAttrs.draggable,
+                                    visible: savedAttrs.visible
+                                });
+                                newImage.name('logo');
+                                
+                                // Replace the old node with the new one
+                                oldNode.destroy();
+                                parent.add(newImage);
+                                newImage.zIndex(index);
+                                
+                                // Update elements array
+                                const elementIndex = elements.findIndex(e => e.node === oldNode);
+                                if (elementIndex !== -1) {
+                                    elements[elementIndex].node = newImage;
+                                } else {
+                                    // Add to elements array if not found
+                                    elements.push({ type: 'logo', node: newImage });
+                                }
+                                
+                                // Setup selection for the new image
+                                setupSelection(newImage);
+                                
+                                layer.draw();
+                            }, function(error) {
+                                console.error('Failed to load logo image:', error);
+                                // Keep the old node if image fails to load
+                            });
+                        }
+                    });
+                }
+                
                 // Re-setup selections for all elements (skip background and grid lines)
                 layer.children.forEach(child => {
                     if (child !== background && 
                         child.className !== 'Transformer' && 
                         !(child.className === 'Line' && child.attrs.name === 'grid-line')) {
+                        // Skip logo images as they're handled above
+                        if (child.className === 'Image' && child.attrs.name === 'logo') {
+                            return;
+                        }
                         setupSelection(child);
                         // If it's a table Group, also setup selection on children
                         if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
