@@ -267,3 +267,96 @@ class SlackConnector(BaseConnector):
             return {"success": True, "message": "Message sent successfully"}
         else:
             return {"success": False, "message": f"Slack API error: {data.get('error', 'Unknown error')}"}
+
+    def get_config_schema(self) -> Dict[str, Any]:
+        """Get configuration schema."""
+        return {
+            "fields": [
+                {
+                    "name": "sync_direction",
+                    "type": "select",
+                    "label": "Sync Direction",
+                    "options": [
+                        {"value": "slack_to_timetracker", "label": "Slack → TimeTracker (Import only)"},
+                        {"value": "timetracker_to_slack", "label": "TimeTracker → Slack (Export only)"},
+                        {"value": "bidirectional", "label": "Bidirectional (Two-way sync)"},
+                    ],
+                    "default": "slack_to_timetracker",
+                    "description": "Choose how data flows between Slack and TimeTracker",
+                },
+                {
+                    "name": "sync_items",
+                    "type": "array",
+                    "label": "Items to Sync",
+                    "options": [
+                        {"value": "channels", "label": "Channels"},
+                        {"value": "users", "label": "Users"},
+                        {"value": "messages", "label": "Messages (as tasks)"},
+                    ],
+                    "default": ["channels", "users"],
+                    "description": "Select which items to synchronize",
+                },
+                {
+                    "name": "notification_channel",
+                    "type": "text",
+                    "label": "Notification Channel",
+                    "required": False,
+                    "placeholder": "#general or channel-id",
+                    "help": "Channel ID or name where TimeTracker notifications will be sent",
+                    "description": "Default channel for notifications",
+                },
+                {
+                    "name": "auto_sync",
+                    "type": "boolean",
+                    "label": "Auto Sync",
+                    "default": False,
+                    "description": "Automatically sync when webhooks are received from Slack",
+                },
+                {
+                    "name": "sync_interval",
+                    "type": "select",
+                    "label": "Sync Schedule",
+                    "options": [
+                        {"value": "manual", "label": "Manual only"},
+                        {"value": "hourly", "label": "Every hour"},
+                        {"value": "daily", "label": "Daily"},
+                    ],
+                    "default": "manual",
+                    "description": "How often to automatically sync data",
+                },
+                {
+                    "name": "notify_on_time_entry",
+                    "type": "boolean",
+                    "label": "Notify on Time Entry",
+                    "default": False,
+                    "description": "Send Slack notifications when time entries are created",
+                },
+                {
+                    "name": "notify_on_task_complete",
+                    "type": "boolean",
+                    "label": "Notify on Task Complete",
+                    "default": False,
+                    "description": "Send Slack notifications when tasks are completed",
+                },
+            ],
+            "required": [],
+            "sections": [
+                {
+                    "title": "Sync Settings",
+                    "description": "Configure what and how to sync",
+                    "fields": ["sync_direction", "sync_items", "auto_sync", "sync_interval"],
+                },
+                {
+                    "title": "Notification Settings",
+                    "description": "Configure Slack notifications",
+                    "fields": ["notification_channel", "notify_on_time_entry", "notify_on_task_complete"],
+                },
+            ],
+            "sync_settings": {
+                "enabled": True,
+                "auto_sync": False,
+                "sync_interval": "manual",
+                "sync_direction": "slack_to_timetracker",
+                "sync_items": ["channels", "users"],
+            },
+        }

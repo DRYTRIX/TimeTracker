@@ -157,7 +157,7 @@
     <!-- Right Column: Real Insights -->
     <div class="space-y-6">
         <!-- Weekly Goal Widget -->
-        {% if settings and settings.ui_allow_weekly_goals and current_user.ui_show_weekly_goals %}
+        {% if is_module_enabled('weekly_goals') %}
             {% if current_week_goal %}
             <div class="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-lg shadow-lg dashboard-widget animated-card text-white">
                 <div class="flex items-center justify-between mb-4">

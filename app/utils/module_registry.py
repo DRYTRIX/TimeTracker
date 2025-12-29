@@ -33,8 +33,6 @@ class ModuleDefinition:
     default_enabled: bool = True
     requires_admin: bool = False
     dependencies: List[str] = field(default_factory=list)  # Module IDs this depends on
-    settings_flag: Optional[str] = None  # Settings.ui_allow_* field name
-    user_flag: Optional[str] = None  # User.ui_show_* field name
     routes: List[str] = field(default_factory=list)  # Route endpoints
     icon: Optional[str] = None  # FontAwesome icon class
     order: int = 0  # Display order in navigation
@@ -81,7 +79,7 @@ class ModuleRegistry:
         
         Args:
             module_id: The module ID to check
-            settings: Settings instance (optional, will fetch if not provided)
+            settings: Settings instance (deprecated, kept for backwards compatibility)
             user: User instance (optional, will use current_user if not provided)
         
         Returns:
@@ -103,32 +101,6 @@ class ModuleRegistry:
             if not user or not getattr(user, 'is_authenticated', False):
                 return False
             if not getattr(user, 'is_admin', False):
-                return False
-        
-        # Fetch settings if not provided
-        if settings is None:
-            try:
-                from app.models import Settings
-                settings = Settings.get_settings()
-            except Exception:
-                # If we can't get settings, use defaults
-                return module.default_enabled
-        
-        # Check system-wide setting
-        if module.settings_flag:
-            flag_value = getattr(settings, module.settings_flag, None)
-            if flag_value is False:
-                return False
-        
-        # Fetch user if not provided
-        if user is None:
-            from flask_login import current_user
-            user = current_user
-        
-        # Check user-specific setting
-        if module.user_flag and user and getattr(user, 'is_authenticated', False):
-            flag_value = getattr(user, module.user_flag, None)
-            if flag_value is False:
                 return False
         
         # Check dependencies recursively
@@ -229,8 +201,6 @@ class ModuleRegistry:
             category=ModuleCategory.TIME_TRACKING,
             blueprint_name="calendar",
             default_enabled=True,
-            settings_flag="ui_allow_calendar",
-            user_flag="ui_show_calendar",
             icon="fa-calendar-alt",
             order=10
         ))
@@ -243,8 +213,6 @@ class ModuleRegistry:
             blueprint_name="project_templates",
             default_enabled=True,
             dependencies=["projects"],
-            settings_flag="ui_allow_project_templates",
-            user_flag="ui_show_project_templates",
             icon="fa-layer-group",
             order=11
         ))
@@ -257,8 +225,6 @@ class ModuleRegistry:
             blueprint_name="gantt",
             default_enabled=True,
             dependencies=["tasks"],
-            settings_flag="ui_allow_gantt_chart",
-            user_flag="ui_show_gantt_chart",
             icon="fa-project-diagram",
             order=12
         ))
@@ -271,8 +237,6 @@ class ModuleRegistry:
             blueprint_name="kanban",
             default_enabled=True,
             dependencies=["tasks"],
-            settings_flag="ui_allow_kanban_board",
-            user_flag="ui_show_kanban_board",
             icon="fa-columns",
             order=13
         ))
@@ -284,8 +248,6 @@ class ModuleRegistry:
             category=ModuleCategory.TIME_TRACKING,
             blueprint_name="weekly_goals",
             default_enabled=True,
-            settings_flag="ui_allow_weekly_goals",
-            user_flag="ui_show_weekly_goals",
             icon="fa-bullseye",
             order=14
         ))
@@ -297,8 +259,6 @@ class ModuleRegistry:
             category=ModuleCategory.PROJECT_MANAGEMENT,
             blueprint_name="issues",
             default_enabled=True,
-            settings_flag="ui_allow_issues",
-            user_flag="ui_show_issues",
             icon="fa-bug",
             order=15
         ))
@@ -310,8 +270,6 @@ class ModuleRegistry:
             category=ModuleCategory.TIME_TRACKING,
             blueprint_name="time_entry_templates",
             default_enabled=True,
-            settings_flag="ui_allow_time_entry_templates",
-            user_flag="ui_show_time_entry_templates",
             icon="fa-clipboard-list",
             order=16
         ))
@@ -325,8 +283,6 @@ class ModuleRegistry:
             blueprint_name="quotes",
             default_enabled=True,
             dependencies=["clients"],
-            settings_flag="ui_allow_quotes",
-            user_flag="ui_show_quotes",
             icon="fa-file-contract",
             order=20
         ))
@@ -339,8 +295,6 @@ class ModuleRegistry:
             blueprint_name="contacts",
             default_enabled=True,
             dependencies=["clients"],
-            settings_flag="ui_allow_contacts",
-            user_flag="ui_show_contacts",
             icon="fa-address-book",
             order=21
         ))
@@ -353,8 +307,6 @@ class ModuleRegistry:
             blueprint_name="deals",
             default_enabled=True,
             dependencies=["clients"],
-            settings_flag="ui_allow_deals",
-            user_flag="ui_show_deals",
             icon="fa-handshake",
             order=22
         ))
@@ -367,8 +319,6 @@ class ModuleRegistry:
             blueprint_name="leads",
             default_enabled=True,
             dependencies=["clients"],
-            settings_flag="ui_allow_leads",
-            user_flag="ui_show_leads",
             icon="fa-user-tag",
             order=23
         ))
@@ -381,8 +331,6 @@ class ModuleRegistry:
             category=ModuleCategory.FINANCE,
             blueprint_name="reports",
             default_enabled=True,
-            settings_flag="ui_allow_reports",
-            user_flag="ui_show_reports",
             icon="fa-chart-bar",
             order=30
         ))
@@ -394,8 +342,6 @@ class ModuleRegistry:
             category=ModuleCategory.FINANCE,
             blueprint_name="custom_reports",
             default_enabled=True,
-            settings_flag="ui_allow_report_builder",
-            user_flag="ui_show_report_builder",
             icon="fa-magic",
             order=31
         ))
@@ -407,8 +353,6 @@ class ModuleRegistry:
             category=ModuleCategory.FINANCE,
             blueprint_name="scheduled_reports",
             default_enabled=True,
-            settings_flag="ui_allow_scheduled_reports",
-            user_flag="ui_show_scheduled_reports",
             icon="fa-clock",
             order=32
         ))
@@ -421,8 +365,6 @@ class ModuleRegistry:
             blueprint_name="invoices",
             default_enabled=True,
             dependencies=["projects"],
-            settings_flag="ui_allow_invoices",
-            user_flag="ui_show_invoices",
             icon="fa-file-invoice",
             order=33
         ))
@@ -435,8 +377,6 @@ class ModuleRegistry:
             blueprint_name="invoice_approvals",
             default_enabled=True,
             dependencies=["invoices"],
-            settings_flag="ui_allow_invoice_approvals",
-            user_flag="ui_show_invoice_approvals",
             icon="fa-check-circle",
             order=34
         ))
@@ -449,8 +389,6 @@ class ModuleRegistry:
             blueprint_name="recurring_invoices",
             default_enabled=True,
             dependencies=["invoices"],
-            settings_flag="ui_allow_recurring_invoices",
-            user_flag="ui_show_recurring_invoices",
             icon="fa-sync-alt",
             order=35
         ))
@@ -463,8 +401,6 @@ class ModuleRegistry:
             blueprint_name="payments",
             default_enabled=True,
             dependencies=["invoices"],
-            settings_flag="ui_allow_payments",
-            user_flag="ui_show_payments",
             icon="fa-credit-card",
             order=36
         ))
@@ -477,8 +413,6 @@ class ModuleRegistry:
             blueprint_name="payment_gateways",
             default_enabled=True,
             dependencies=["payments"],
-            settings_flag="ui_allow_payment_gateways",
-            user_flag="ui_show_payment_gateways",
             icon="fa-credit-card",
             order=37
         ))
@@ -491,8 +425,6 @@ class ModuleRegistry:
             blueprint_name="expenses",
             default_enabled=True,
             dependencies=["projects"],
-            settings_flag="ui_allow_expenses",
-            user_flag="ui_show_expenses",
             icon="fa-receipt",
             order=38
         ))
@@ -504,8 +436,6 @@ class ModuleRegistry:
             category=ModuleCategory.FINANCE,
             blueprint_name="mileage",
             default_enabled=True,
-            settings_flag="ui_allow_mileage",
-            user_flag="ui_show_mileage",
             icon="fa-car",
             order=39
         ))
@@ -517,8 +447,6 @@ class ModuleRegistry:
             category=ModuleCategory.FINANCE,
             blueprint_name="per_diem",
             default_enabled=True,
-            settings_flag="ui_allow_per_diem",
-            user_flag="ui_show_per_diem",
             icon="fa-utensils",
             order=40
         ))
@@ -531,8 +459,6 @@ class ModuleRegistry:
             blueprint_name="budget_alerts",
             default_enabled=True,
             dependencies=["projects"],
-            settings_flag="ui_allow_budget_alerts",
-            user_flag="ui_show_budget_alerts",
             icon="fa-exclamation-triangle",
             order=41
         ))
@@ -545,8 +471,6 @@ class ModuleRegistry:
             category=ModuleCategory.INVENTORY,
             blueprint_name="inventory",
             default_enabled=True,
-            settings_flag="ui_allow_inventory",
-            user_flag="ui_show_inventory",
             icon="fa-boxes",
             order=50
         ))
@@ -559,8 +483,6 @@ class ModuleRegistry:
             category=ModuleCategory.ANALYTICS,
             blueprint_name="analytics",
             default_enabled=True,
-            settings_flag="ui_allow_analytics",
-            user_flag="ui_show_analytics",
             icon="fa-chart-line",
             order=60
         ))
@@ -573,8 +495,6 @@ class ModuleRegistry:
             category=ModuleCategory.TOOLS,
             blueprint_name="integrations",
             default_enabled=True,
-            settings_flag="ui_allow_integrations",
-            user_flag="ui_show_integrations",
             icon="fa-plug",
             order=70
         ))
@@ -586,8 +506,6 @@ class ModuleRegistry:
             category=ModuleCategory.TOOLS,
             blueprint_name="import_export",
             default_enabled=True,
-            settings_flag="ui_allow_import_export",
-            user_flag="ui_show_import_export",
             icon="fa-exchange-alt",
             order=71
         ))
@@ -599,8 +517,6 @@ class ModuleRegistry:
             category=ModuleCategory.TOOLS,
             blueprint_name="saved_filters",
             default_enabled=True,
-            settings_flag="ui_allow_saved_filters",
-            user_flag="ui_show_saved_filters",
             icon="fa-filter",
             order=72
         ))
@@ -613,8 +529,6 @@ class ModuleRegistry:
             category=ModuleCategory.ADVANCED,
             blueprint_name="workflows",
             default_enabled=True,
-            settings_flag="ui_allow_workflows",
-            user_flag="ui_show_workflows",
             icon="fa-sitemap",
             order=80
         ))
@@ -627,8 +541,6 @@ class ModuleRegistry:
             blueprint_name="time_approvals",
             default_enabled=True,
             dependencies=["timer"],
-            settings_flag="ui_allow_time_approvals",
-            user_flag="ui_show_time_approvals",
             icon="fa-check-double",
             order=81
         ))
@@ -640,8 +552,6 @@ class ModuleRegistry:
             category=ModuleCategory.ADVANCED,
             blueprint_name="activity_feed",
             default_enabled=True,
-            settings_flag="ui_allow_activity_feed",
-            user_flag="ui_show_activity_feed",
             icon="fa-stream",
             order=82
         ))
@@ -654,8 +564,6 @@ class ModuleRegistry:
             blueprint_name="recurring_tasks",
             default_enabled=True,
             dependencies=["tasks"],
-            settings_flag="ui_allow_recurring_tasks",
-            user_flag="ui_show_recurring_tasks",
             icon="fa-redo",
             order=83
         ))
@@ -667,8 +575,6 @@ class ModuleRegistry:
             category=ModuleCategory.ADVANCED,
             blueprint_name="team_chat",
             default_enabled=True,
-            settings_flag="ui_allow_team_chat",
-            user_flag="ui_show_team_chat",
             icon="fa-comments",
             order=84
         ))
@@ -681,8 +587,6 @@ class ModuleRegistry:
             blueprint_name="client_portal",
             default_enabled=True,
             dependencies=["clients"],
-            settings_flag="ui_allow_client_portal",
-            user_flag="ui_show_client_portal",
             icon="fa-door-open",
             order=85
         ))
@@ -694,8 +598,6 @@ class ModuleRegistry:
             category=ModuleCategory.ADVANCED,
             blueprint_name="kiosk",
             default_enabled=True,
-            settings_flag="ui_allow_kiosk",
-            user_flag="ui_show_kiosk",
             icon="fa-desktop",
             order=86
         ))

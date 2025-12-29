@@ -222,12 +222,11 @@
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') or ep.startswith('contacts.') or ep.startswith('deals.') or ep.startswith('leads.') %}
                 {% set inventory_open = ep.startswith('inventory.') %}
                 {% set analytics_open = ep.startswith('analytics.') %}
-                {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') or ep.startswith('integrations.') %}
+                {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') or ep.startswith('integrations.') or ep == 'integrations.list_integrations' or ep == 'integrations.manage_integration' or ep == 'integrations.view_integration' or ep == 'integrations.connect_integration' or ep == 'integrations.caldav_setup' %}
                 {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') or ep.startswith('webhooks.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
                 {% set admin_user_mgmt_open = ep == 'admin.list_users' or ep.startswith('permissions.') %}
                 {% set admin_settings_open = ep == 'admin.settings' or ep == 'admin.email_support' or ep.startswith('admin.') and ('email_template' in ep or 'email-templates' in request.path) or ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' or ep == 'admin.oidc_debug' %}
                 {% set admin_security_open = ep == 'admin.api_tokens' or ep.startswith('webhooks.') or ep.startswith('audit_logs.') %}
-                {% set admin_integrations_open = ep == 'admin.list_integrations_admin' %}
                 {% set admin_data_open = ep == 'expense_categories.list_categories' or ep == 'per_diem.list_rates' or ep.startswith('time_entry_templates.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
                 {% set admin_maintenance_open = ep == 'admin.system_info' or ep == 'admin.backups_management' or ep == 'admin.telemetry_dashboard' %}
                 {% set pdf_open = ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}
@@ -610,7 +609,7 @@
                         <ul id="toolsDropdown" class="{% if not tools_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_import_export = ep.startswith('import_export.') %}
                             {% set nav_active_filters = ep.startswith('saved_filters.') %}
-                            {% set nav_active_integrations = ep.startswith('integrations.') %}
+                            {% set nav_active_integrations = ep.startswith('integrations.') or ep == 'integrations.list_integrations' or ep == 'integrations.manage_integration' or ep == 'integrations.view_integration' or ep == 'integrations.connect_integration' or ep == 'integrations.caldav_setup' %}
                             {% if is_module_enabled('integrations') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_integrations %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('integrations.list_integrations') }}">
@@ -771,25 +770,6 @@
                                 </ul>
                             </li>
                             {% endif %}
-                            
-                            <!-- Integrations Submenu -->
-                            {% if current_user.is_admin %}
-                            <li>
-                                <button onclick="toggleDropdown('adminIntegrationsDropdown', event)" data-dropdown="adminIntegrationsDropdown" class="w-full flex items-center px-2 py-1 rounded {% if admin_integrations_open %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
-                                    <i class="fas fa-plug w-4 mr-2"></i>
-                                    <span class="flex-1 text-left">{{ _('Integrations') }}</span>
-                                    <i class="fas fa-chevron-down text-xs"></i>
-                                </button>
-                                <ul id="adminIntegrationsDropdown" class="{% if admin_integrations_open %}{% else %}hidden {% endif %}mt-2 space-y-2 ml-6">
-                                    <li>
-                                        <a onclick="event.stopPropagation();" class="block px-2 py-1 rounded {% if ep == 'admin.list_integrations_admin' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.list_integrations_admin') }}">
-                                            <i class="fas fa-plug w-4 mr-2"></i>{{ _('Integrations') }}
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                            {% endif %}
-                            
                             <!-- Data Management Submenu -->
                             {% if current_user.is_admin or has_permission('manage_settings') %}
                             <li>

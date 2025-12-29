@@ -896,5 +896,134 @@ class CalDAVCalendarConnector(BaseConnector):
         cal.add_component(event)
         
         return cal.to_ical().decode('utf-8')
+    
+    def get_config_schema(self) -> Dict[str, Any]:
+        """Get configuration schema."""
+        return {
+            "fields": [
+                {
+                    "name": "server_url",
+                    "type": "url",
+                    "label": "Server URL",
+                    "required": False,
+                    "placeholder": "https://mail.example.com/dav",
+                    "description": "CalDAV server base URL (optional if calendar_url is provided)",
+                    "help": "Base URL of your CalDAV server (e.g., https://mail.example.com/dav)",
+                },
+                {
+                    "name": "calendar_url",
+                    "type": "url",
+                    "label": "Calendar URL",
+                    "required": False,
+                    "placeholder": "https://mail.example.com/dav/user/calendar/",
+                    "description": "Full URL to the calendar collection (ends with /)",
+                    "help": "Direct URL to your calendar. Must end with a forward slash (/).",
+                },
+                {
+                    "name": "calendar_name",
+                    "type": "string",
+                    "label": "Calendar Name",
+                    "required": False,
+                    "placeholder": "My Calendar",
+                    "description": "Display name for the calendar (optional)",
+                },
+                {
+                    "name": "sync_direction",
+                    "type": "select",
+                    "label": "Sync Direction",
+                    "options": [
+                        {"value": "calendar_to_time_tracker", "label": "Calendar → TimeTracker (Import only)"},
+                        {"value": "time_tracker_to_calendar", "label": "TimeTracker → Calendar (Export only)"},
+                        {"value": "bidirectional", "label": "Bidirectional (Two-way sync)"},
+                    ],
+                    "default": "calendar_to_time_tracker",
+                    "description": "Choose how data flows between CalDAV calendar and TimeTracker",
+                },
+                {
+                    "name": "sync_items",
+                    "type": "array",
+                    "label": "Items to Sync",
+                    "options": [
+                        {"value": "time_entries", "label": "Time Entries"},
+                        {"value": "events", "label": "Calendar Events"},
+                    ],
+                    "default": ["events"],
+                    "description": "Select which items to synchronize",
+                },
+                {
+                    "name": "default_project_id",
+                    "type": "number",
+                    "label": "Default Project",
+                    "required": True,
+                    "description": "Default project to assign imported calendar events to",
+                    "help": "Required for importing calendar events as time entries",
+                },
+                {
+                    "name": "lookback_days",
+                    "type": "number",
+                    "label": "Lookback Days",
+                    "default": 90,
+                    "validation": {"min": 1, "max": 365},
+                    "description": "Number of days in the past to sync (1-365)",
+                    "help": "How far back to sync calendar events",
+                },
+                {
+                    "name": "lookahead_days",
+                    "type": "number",
+                    "label": "Lookahead Days",
+                    "default": 7,
+                    "validation": {"min": 1, "max": 365},
+                    "description": "Number of days in the future to sync (1-365)",
+                    "help": "How far ahead to sync calendar events",
+                },
+                {
+                    "name": "verify_ssl",
+                    "type": "boolean",
+                    "label": "Verify SSL Certificate",
+                    "default": True,
+                    "description": "Verify SSL certificate when connecting to CalDAV server",
+                    "help": "Disable only if using a self-signed certificate",
+                },
+                {
+                    "name": "auto_sync",
+                    "type": "boolean",
+                    "label": "Auto Sync",
+                    "default": False,
+                    "description": "Automatically sync on a schedule",
+                },
+                {
+                    "name": "sync_interval",
+                    "type": "select",
+                    "label": "Sync Schedule",
+                    "options": [
+                        {"value": "manual", "label": "Manual only"},
+                        {"value": "hourly", "label": "Every hour"},
+                        {"value": "daily", "label": "Daily"},
+                    ],
+                    "default": "manual",
+                    "description": "How often to automatically sync data",
+                },
+            ],
+            "required": ["default_project_id"],
+            "sections": [
+                {
+                    "title": "Connection Settings",
+                    "description": "Configure your CalDAV server connection",
+                    "fields": ["server_url", "calendar_url", "calendar_name", "verify_ssl"],
+                },
+                {
+                    "title": "Sync Settings",
+                    "description": "Configure what and how to sync",
+                    "fields": ["sync_direction", "sync_items", "default_project_id", "lookback_days", "lookahead_days", "auto_sync", "sync_interval"],
+                },
+            ],
+            "sync_settings": {
+                "enabled": True,
+                "auto_sync": False,
+                "sync_interval": "manual",
+                "sync_direction": "calendar_to_time_tracker",
+                "sync_items": ["events"],
+            },
+        }
 
 

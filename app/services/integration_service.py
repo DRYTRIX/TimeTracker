@@ -262,6 +262,17 @@ class IntegrationService:
         )
         db.session.add(event)
         safe_commit("log_integration_event", {"integration_id": integration_id})
+    
+    def update_integration_active_status(self, integration_id: int):
+        """Update integration is_active status based on credentials."""
+        integration = Integration.query.get(integration_id)
+        if not integration:
+            return
+        
+        has_credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).first() is not None
+        if integration.is_active != has_credentials:
+            integration.is_active = has_credentials
+            safe_commit("update_integration_active_status", {"integration_id": integration_id})
 
     @classmethod
     def get_available_providers(cls) -> List[Dict[str, Any]]:

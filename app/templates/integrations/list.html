@@ -11,102 +11,77 @@
 {{ page_header(
     icon_class='fas fa-plug',
     title_text='Integrations',
-    subtitle_text='Connect with third-party services',
+    subtitle_text='Connect with third-party services to extend functionality',
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+        {{ _('Connect your Time Tracker with external services. Configure integrations below to sync data, automate workflows, and enhance productivity.') }}
+    </p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
     {% for provider in available_providers %}
     {% set existing_integration = integrations|selectattr('provider', 'equalto', provider.provider)|first if integrations else none %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-        <div class="flex items-start justify-between mb-4">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <i class="fas fa-{{ provider.icon }} text-primary text-xl"></i>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold">{{ provider.display_name }}</h3>
-                    {% if provider.description %}
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ provider.description }}</p>
-                    {% endif %}
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-{{ provider.icon }} text-primary text-xl"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark truncate">{{ provider.display_name }}</h3>
+                        {% if provider.description %}
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1 line-clamp-2">{{ provider.description }}</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
+            
+            <div class="flex items-center gap-2 mb-4">
+                {% if existing_integration %}
+                    {% if existing_integration.is_active %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 font-medium">
+                        <i class="fas fa-check-circle mr-1"></i>{{ _('Connected') }}
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-medium">
+                        <i class="fas fa-exclamation-circle mr-1"></i>{{ _('Not Connected') }}
+                    </span>
+                    {% endif %}
+                    {% if existing_integration.is_global %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {{ _('Global') }}
+                    </span>
+                    {% endif %}
+                    {% if existing_integration.last_sync_at %}
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Synced') }} {{ existing_integration.last_sync_at.strftime('%m/%d') }}
+                    </span>
+                    {% endif %}
+                {% else %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 font-medium">
+                        <i class="fas fa-circle mr-1"></i>{{ _('Not Set Up') }}
+                    </span>
+                {% endif %}
+            </div>
+            
+            <a href="{{ url_for('integrations.manage_integration', provider=provider.provider) }}" 
+               class="block w-full {% if existing_integration and existing_integration.is_active %}bg-gray-600 hover:bg-gray-700{% else %}bg-primary hover:bg-primary/90{% endif %} text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
+                {% if existing_integration %}
+                    {% if existing_integration.is_active %}
+                    <i class="fas fa-cog mr-2"></i>{{ _('Manage') }}
+                    {% else %}
+                    <i class="fas fa-link mr-2"></i>{{ _('Connect') }}
+                    {% endif %}
+                {% else %}
+                    <i class="fas fa-plus mr-2"></i>{{ _('Setup') }}
+                {% endif %}
+            </a>
         </div>
-        {% if existing_integration %}
-            {% if existing_integration.is_active %}
-            <a href="{{ url_for('integrations.view_integration', integration_id=existing_integration.id) }}" class="block w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-center">
-                <i class="fas fa-eye mr-2"></i>{{ _('View Integration') }}
-            </a>
-            {% else %}
-            {% if provider.provider == 'trello' %}
-            <a href="{{ url_for('admin.integration_setup', provider=provider.provider) if current_user.is_admin else '#' }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center {% if not current_user.is_admin %}opacity-50 cursor-not-allowed{% endif %}">
-                <i class="fas fa-cog mr-2"></i>{{ _('Configure') }}
-            </a>
-            {% else %}
-            <a href="{{ url_for('integrations.connect_integration', provider=provider.provider) }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
-                <i class="fas fa-link mr-2"></i>{{ _('Reconnect') }}
-            </a>
-            {% endif %}
-            {% endif %}
-        {% else %}
-        {% if provider.provider == 'trello' %}
-        <a href="{{ url_for('admin.integration_setup', provider=provider.provider) if current_user.is_admin else '#' }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center {% if not current_user.is_admin %}opacity-50 cursor-not-allowed{% endif %}">
-            <i class="fas fa-cog mr-2"></i>{{ _('Setup') }}
-        </a>
-        {% elif provider.provider == 'google_calendar' %}
-        <a href="{{ url_for('integrations.connect_integration', provider=provider.provider) }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
-            <i class="fab fa-google mr-2"></i>{{ _('Connect Google Calendar') }}
-            <div class="text-xs mt-1 opacity-90">{{ _('Automatically redirects to Google') }}</div>
-        </a>
-        {% elif provider.provider == 'caldav_calendar' %}
-        <a href="{{ url_for('integrations.caldav_setup') }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
-            <i class="fas fa-calendar mr-2"></i>{{ _('Setup CalDAV Calendar') }}
-            <div class="text-xs mt-1 opacity-90">{{ _('Connect to Zimbra or other CalDAV server') }}</div>
-        </a>
-        {% else %}
-        <a href="{{ url_for('integrations.connect_integration', provider=provider.provider) }}" class="block w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center">
-            <i class="fas fa-plus mr-2"></i>{{ _('Connect') }}
-        </a>
-        {% endif %}
-        {% endif %}
     </div>
     {% endfor %}
 </div>
-
-{% if integrations %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <h2 class="text-lg font-semibold mb-4">{{ _('Your Integrations') }}</h2>
-    <div class="space-y-4">
-        {% for integration in integrations %}
-        <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <h3 class="font-semibold">{{ integration.name }}</h3>
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {{ integration.provider|title|replace('_', ' ') }}
-                        {% if integration.is_global %}
-                        <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Global') }}</span>
-                        {% endif %}
-                        {% if integration.last_sync_at %}
-                        • {{ _('Last synced') }}: {{ integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    {% if integration.is_active %}
-                    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
-                    {% else %}
-                    <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ _('Inactive') }}</span>
-                    {% endif %}
-                    <a href="{{ url_for('integrations.view_integration', integration_id=integration.id) }}" class="text-primary hover:text-primary/80">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
 {% endblock %}
-

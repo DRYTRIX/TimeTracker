@@ -379,7 +379,9 @@ class QuickBooksConnector(BaseConnector):
                     # QuickBooks query syntax: SELECT * FROM Customer WHERE DisplayName = 'CustomerName'
                     # URL encode the query parameter
                     from urllib.parse import quote
-                    query = f"SELECT * FROM Customer WHERE DisplayName = '{customer_name.replace(\"'\", \"''\")}'"
+                    # Escape single quotes for SQL (replace ' with '')
+                    escaped_name = customer_name.replace("'", "''")
+                    query = f"SELECT * FROM Customer WHERE DisplayName = '{escaped_name}'"
                     query_url = f"/v3/company/{realm_id}/query?query={quote(query)}"
                     
                     customers_response = self._api_request(
@@ -439,7 +441,9 @@ class QuickBooksConnector(BaseConnector):
                     try:
                         # Query QuickBooks for item by Name
                         from urllib.parse import quote
-                        query = f"SELECT * FROM Item WHERE Name = '{item_qb_name.replace(\"'\", \"''\")}'"
+                        # Escape single quotes for SQL (replace ' with '')
+                        escaped_name = item_qb_name.replace("'", "''")
+                        query = f"SELECT * FROM Item WHERE Name = '{escaped_name}'"
                         query_url = f"/v3/company/{realm_id}/query?query={quote(query)}"
                         
                         items_response = self._api_request(
@@ -611,7 +615,10 @@ class QuickBooksConnector(BaseConnector):
                     "name": "realm_id",
                     "type": "string",
                     "label": "Company ID (Realm ID)",
+                    "required": True,
+                    "placeholder": "123456789",
                     "description": "QuickBooks company ID (realm ID)",
+                    "help": "Find your company ID in QuickBooks after connecting. It's automatically set during OAuth.",
                 },
                 {
                     "name": "use_sandbox",
@@ -620,33 +627,112 @@ class QuickBooksConnector(BaseConnector):
                     "default": True,
                     "description": "Use QuickBooks sandbox environment for testing",
                 },
-                {"name": "sync_invoices", "type": "boolean", "label": "Sync Invoices", "default": True},
-                {"name": "sync_expenses", "type": "boolean", "label": "Sync Expenses", "default": True},
+                {
+                    "name": "sync_direction",
+                    "type": "select",
+                    "label": "Sync Direction",
+                    "options": [
+                        {"value": "quickbooks_to_timetracker", "label": "QuickBooks → TimeTracker (Import only)"},
+                        {"value": "timetracker_to_quickbooks", "label": "TimeTracker → QuickBooks (Export only)"},
+                        {"value": "bidirectional", "label": "Bidirectional (Two-way sync)"},
+                    ],
+                    "default": "timetracker_to_quickbooks",
+                    "description": "Choose how data flows between QuickBooks and TimeTracker",
+                },
+                {
+                    "name": "sync_items",
+                    "type": "array",
+                    "label": "Items to Sync",
+                    "options": [
+                        {"value": "invoices", "label": "Invoices"},
+                        {"value": "expenses", "label": "Expenses"},
+                        {"value": "payments", "label": "Payments"},
+                        {"value": "customers", "label": "Customers"},
+                    ],
+                    "default": ["invoices", "expenses"],
+                    "description": "Select which items to synchronize",
+                },
+                {"name": "sync_invoices", "type": "boolean", "label": "Sync Invoices", "default": True, "description": "Enable invoice synchronization"},
+                {"name": "sync_expenses", "type": "boolean", "label": "Sync Expenses", "default": True, "description": "Enable expense synchronization"},
+                {
+                    "name": "auto_sync",
+                    "type": "boolean",
+                    "label": "Auto Sync",
+                    "default": False,
+                    "description": "Automatically sync when invoices or expenses are created/updated",
+                },
+                {
+                    "name": "sync_interval",
+                    "type": "select",
+                    "label": "Sync Schedule",
+                    "options": [
+                        {"value": "manual", "label": "Manual only"},
+                        {"value": "hourly", "label": "Every hour"},
+                        {"value": "daily", "label": "Daily"},
+                    ],
+                    "default": "manual",
+                    "description": "How often to automatically sync data",
+                },
                 {
                     "name": "default_expense_account_id",
                     "type": "string",
                     "label": "Default Expense Account ID",
-                    "description": "QuickBooks account ID to use for expenses when no mapping is configured",
+                    "required": False,
                     "default": "1",
+                    "description": "QuickBooks account ID to use for expenses when no mapping is configured",
+                    "help": "Find account IDs in QuickBooks Chart of Accounts",
                 },
                 {
                     "name": "customer_mappings",
                     "type": "json",
                     "label": "Customer Mappings",
-                    "description": "JSON mapping of TimeTracker client IDs to QuickBooks customer IDs (e.g., {\"1\": \"qb_customer_id_123\"})",
+                    "required": False,
+                    "placeholder": '{"1": "qb_customer_id_123", "2": "qb_customer_id_456"}',
+                    "description": "JSON mapping of TimeTracker client IDs to QuickBooks customer IDs",
+                    "help": "Map your TimeTracker clients to QuickBooks customers. Format: {\"timetracker_client_id\": \"quickbooks_customer_id\"}",
                 },
                 {
                     "name": "item_mappings",
                     "type": "json",
                     "label": "Item Mappings",
+                    "required": False,
+                    "placeholder": '{"service_1": "qb_item_id_123"}',
                     "description": "JSON mapping of TimeTracker invoice items to QuickBooks items",
+                    "help": "Map your TimeTracker services/products to QuickBooks items",
                 },
                 {
                     "name": "account_mappings",
                     "type": "json",
                     "label": "Account Mappings",
+                    "required": False,
+                    "placeholder": '{"expense_category_1": "qb_account_id_123"}',
                     "description": "JSON mapping of TimeTracker expense category IDs to QuickBooks account IDs",
+                    "help": "Map your TimeTracker expense categories to QuickBooks accounts",
                 },
             ],
             "required": ["realm_id"],
+            "sections": [
+                {
+                    "title": "Connection Settings",
+                    "description": "Configure your QuickBooks connection",
+                    "fields": ["realm_id", "use_sandbox"],
+                },
+                {
+                    "title": "Sync Settings",
+                    "description": "Configure what and how to sync",
+                    "fields": ["sync_direction", "sync_items", "sync_invoices", "sync_expenses", "auto_sync", "sync_interval"],
+                },
+                {
+                    "title": "Data Mapping",
+                    "description": "Map TimeTracker data to QuickBooks",
+                    "fields": ["default_expense_account_id", "customer_mappings", "item_mappings", "account_mappings"],
+                },
+            ],
+            "sync_settings": {
+                "enabled": True,
+                "auto_sync": False,
+                "sync_interval": "manual",
+                "sync_direction": "timetracker_to_quickbooks",
+                "sync_items": ["invoices", "expenses"],
+            },
         }

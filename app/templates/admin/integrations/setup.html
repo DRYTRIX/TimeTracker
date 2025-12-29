@@ -26,32 +26,40 @@
         <div class="space-y-4">
             <div>
                 <label for="trello_api_key" class="block text-sm font-medium mb-2">
-                    {{ _('Trello API Key') }}
+                    {{ _('Trello API Key') }} <span class="text-red-500">*</span>
                 </label>
                 <input type="text" 
                        name="trello_api_key" 
                        id="trello_api_key" 
                        value="{{ current_creds.get('api_key', '') }}"
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
-                       placeholder="{{ _('Get from https://trello.com/app-key') }}">
+                       placeholder="{{ _('Get from https://trello.com/app-key') }}"
+                       required>
                 <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                     {{ _('Get your API key from') }} <a href="https://trello.com/app-key" target="_blank" class="text-primary hover:underline">trello.com/app-key</a>
                 </p>
             </div>
             
             <div>
-                <label for="trello_token" class="block text-sm font-medium mb-2">
-                    {{ _('Trello Token') }}
+                <label for="trello_api_secret" class="block text-sm font-medium mb-2">
+                    {{ _('Trello API Secret') }} <span class="text-red-500">*</span>
                 </label>
                 <input type="password" 
-                       name="trello_token" 
-                       id="trello_token" 
+                       name="trello_api_secret" 
+                       id="trello_api_secret" 
+                       value="{{ current_creds.get('api_secret', '') }}"
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                        placeholder="{{ _('Leave empty to keep current value') }}">
                 <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                    {{ _('Generate a token with your API key. Visit') }} 
-                    <a href="https://trello.com/1/authorize?expiration=never&scope=read,write&response_type=token&name=TimeTracker&key=YOUR_API_KEY" target="_blank" class="text-primary hover:underline">trello.com/1/authorize</a>
-                    {{ _('(replace YOUR_API_KEY with your actual API key)') }}
+                    {{ _('Get your API secret from') }} <a href="https://trello.com/app-key" target="_blank" class="text-primary hover:underline">trello.com/app-key</a>
+                    {{ _('(shown after generating API key)') }}
+                </p>
+            </div>
+            
+            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('After saving API Key and Secret, you can connect Trello using OAuth flow. The token will be generated automatically during connection.') }}
                 </p>
             </div>
         </div>
@@ -61,25 +69,29 @@
         <div class="space-y-4">
             <div>
                 <label for="{{ provider }}_client_id" class="block text-sm font-medium mb-2">
-                    {{ _('OAuth Client ID') }}
+                    {{ _('OAuth Client ID') }} <span class="text-red-500">*</span>
                 </label>
                 <input type="text" 
                        name="{{ provider }}_client_id" 
                        id="{{ provider }}_client_id" 
                        value="{{ current_creds.get('client_id', '') }}"
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
-                       placeholder="{{ _('OAuth Client ID') }}">
+                       placeholder="{{ _('OAuth Client ID') }}"
+                       required>
             </div>
             
             <div>
                 <label for="{{ provider }}_client_secret" class="block text-sm font-medium mb-2">
-                    {{ _('OAuth Client Secret') }}
+                    {{ _('OAuth Client Secret') }} <span class="text-red-500">*</span>
                 </label>
                 <input type="password" 
                        name="{{ provider }}_client_secret" 
                        id="{{ provider }}_client_secret" 
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                        placeholder="{{ _('Leave empty to keep current value') }}">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Required for new setup. Leave empty to keep existing secret.') }}
+                </p>
             </div>
             
             {% if provider in ['outlook_calendar', 'microsoft_teams'] %}
@@ -92,21 +104,28 @@
                        id="{{ provider }}_tenant_id" 
                        value="{{ current_creds.get('tenant_id', '') }}"
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
-                       placeholder="{{ _('Use "common" for multi-tenant') }}">
+                       placeholder="{{ _('Leave empty for "common" (multi-tenant)') }}">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Leave empty to use "common" (multi-tenant). Enter your Azure AD tenant ID for single-tenant apps.') }}
+                </p>
             </div>
             {% endif %}
             
             {% if provider == 'gitlab' %}
             <div>
                 <label for="gitlab_instance_url" class="block text-sm font-medium mb-2">
-                    {{ _('GitLab Instance URL') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                    {{ _('GitLab Instance URL') }}
                 </label>
                 <input type="url" 
                        name="gitlab_instance_url" 
                        id="gitlab_instance_url" 
                        value="{{ current_creds.get('instance_url', 'https://gitlab.com') }}"
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
-                       placeholder="https://gitlab.com">
+                       placeholder="https://gitlab.com"
+                       required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('URL of your GitLab instance. Use "https://gitlab.com" for GitLab.com or your self-hosted GitLab URL.') }}
+                </p>
             </div>
             {% endif %}
         </div>
