@@ -379,7 +379,9 @@ class QuickBooksConnector(BaseConnector):
                     # QuickBooks query syntax: SELECT * FROM Customer WHERE DisplayName = 'CustomerName'
                     # URL encode the query parameter
                     from urllib.parse import quote
-                    query = f"SELECT * FROM Customer WHERE DisplayName = '{customer_name.replace(\"'\", \"''\")}'"
+                    # Escape single quotes for SQL (replace ' with '')
+                    escaped_name = customer_name.replace("'", "''")
+                    query = f"SELECT * FROM Customer WHERE DisplayName = '{escaped_name}'"
                     query_url = f"/v3/company/{realm_id}/query?query={quote(query)}"
                     
                     customers_response = self._api_request(
@@ -439,7 +441,9 @@ class QuickBooksConnector(BaseConnector):
                     try:
                         # Query QuickBooks for item by Name
                         from urllib.parse import quote
-                        query = f"SELECT * FROM Item WHERE Name = '{item_qb_name.replace(\"'\", \"''\")}'"
+                        # Escape single quotes for SQL (replace ' with '')
+                        escaped_name = item_qb_name.replace("'", "''")
+                        query = f"SELECT * FROM Item WHERE Name = '{escaped_name}'"
                         query_url = f"/v3/company/{realm_id}/query?query={quote(query)}"
                         
                         items_response = self._api_request(

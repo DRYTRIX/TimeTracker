@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ display_name }} {{ _('Integration') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Integrations', 'url': url_for('integrations.list_integrations')},
+    {'text': display_name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-plug',
+    title_text=display_name,
+    subtitle_text=description,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="space-y-6">
+    <!-- OAuth Credentials Setup Section (Admin only) -->
+    {% if current_user.is_admin %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-4">
+            <i class="fas fa-key mr-2"></i>{{ _('OAuth Credentials Setup') }}
+        </h2>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update_credentials">
+            
+            {% if provider == 'trello' %}
+            <!-- Trello API Key Setup -->
+            <div class="space-y-4">
+                <div>
+                    <label for="trello_api_key" class="block text-sm font-medium mb-2">
+                        {{ _('Trello API Key') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           name="trello_api_key" 
+                           id="trello_api_key" 
+                           value="{{ current_creds.get('api_key', '') }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="{{ _('Get from https://trello.com/app-key') }}"
+                           required>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Get your API key from') }} <a href="https://trello.com/app-key" target="_blank" class="text-primary hover:underline">trello.com/app-key</a>
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="trello_api_secret" class="block text-sm font-medium mb-2">
+                        {{ _('Trello API Secret') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="password" 
+                           name="trello_api_secret" 
+                           id="trello_api_secret" 
+                           value="{{ current_creds.get('api_secret', '') }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="{{ _('Leave empty to keep current value') }}">
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Get your API secret from') }} <a href="https://trello.com/app-key" target="_blank" class="text-primary hover:underline">trello.com/app-key</a>
+                        {{ _('(shown after generating API key)') }}
+                    </p>
+                </div>
+                
+                <div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        {{ _('After saving API Key and Secret, you can connect Trello using OAuth flow.') }}
+                    </p>
+                </div>
+            </div>
+            
+            {% else %}
+            <!-- OAuth-based Integrations -->
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ provider }}_client_id" class="block text-sm font-medium mb-2">
+                        {{ _('OAuth Client ID') }}
+                    </label>
+                    <input type="text" 
+                           name="{{ provider }}_client_id" 
+                           id="{{ provider }}_client_id" 
+                           value="{{ current_creds.get('client_id', '') }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="{{ _('OAuth Client ID') }}">
+                </div>
+                
+                <div>
+                    <label for="{{ provider }}_client_secret" class="block text-sm font-medium mb-2">
+                        {{ _('OAuth Client Secret') }}
+                    </label>
+                    <input type="password" 
+                           name="{{ provider }}_client_secret" 
+                           id="{{ provider }}_client_secret" 
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="{{ _('Leave empty to keep current value') }}">
+                </div>
+                
+                {% if provider in ['outlook_calendar', 'microsoft_teams'] %}
+                <div>
+                    <label for="{{ provider }}_tenant_id" class="block text-sm font-medium mb-2">
+                        {{ _('Tenant ID') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                    </label>
+                    <input type="text" 
+                           name="{{ provider }}_tenant_id" 
+                           id="{{ provider }}_tenant_id" 
+                           value="{{ current_creds.get('tenant_id', '') }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="{{ _('Use "common" for multi-tenant, or leave empty for common') }}">
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Leave empty to use "common" (multi-tenant). Enter your Azure AD tenant ID for single-tenant apps.') }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if provider == 'gitlab' %}
+                <div>
+                    <label for="gitlab_instance_url" class="block text-sm font-medium mb-2">
+                        {{ _('GitLab Instance URL') }}
+                    </label>
+                    <input type="url" 
+                           name="gitlab_instance_url" 
+                           id="gitlab_instance_url" 
+                           value="{{ current_creds.get('instance_url', 'https://gitlab.com') }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="https://gitlab.com"
+                           required>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('URL of your GitLab instance. Use "https://gitlab.com" for GitLab.com or your self-hosted GitLab URL.') }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if provider != 'trello' %}
+            <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h3 class="font-semibold mb-2">{{ _('OAuth Redirect URI') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
+                    {{ _('Add this URL as an authorized redirect URI in your OAuth app settings:') }}
+                </p>
+                <code class="block p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs break-all">
+                    {{ url_for('integrations.oauth_callback', provider=provider, _external=True) }}
+                </code>
+                {% if provider == 'google_calendar' %}
+                <div class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                    <p class="text-sm text-green-800 dark:text-green-200 font-semibold mb-2">
+                        <i class="fas fa-magic mr-2"></i>{{ _('Automatic Connection Flow') }}
+                    </p>
+                    <ul class="text-sm text-green-700 dark:text-green-300 space-y-1 list-disc list-inside">
+                        <li>{{ _('After you save these credentials, users can click "Connect Google Calendar"') }}</li>
+                        <li>{{ _('They will be automatically redirected to Google OAuth') }}</li>
+                        <li>{{ _('No manual credential entry needed - fully automatic!') }}</li>
+                        <li>{{ _('Each user connects their own Google Calendar account') }}</li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endif %}
+            
+            <div class="mt-6 flex gap-4">
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-save mr-2"></i>{{ _('Save Credentials') }}
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Integration Configuration Section (if connector provides config schema) -->
+    {% if active_integration and config_schema and config_schema.get('fields') %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-4">
+            <i class="fas fa-cog mr-2"></i>{{ _('Integration Configuration') }}
+        </h2>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update_config">
+            
+            <div class="space-y-4">
+                {% for field in config_schema.fields %}
+                {% set field_name = field.name %}
+                {% set field_type = field.get('type', 'string') %}
+                {% set field_value = current_config.get(field_name, field.get('default', '')) %}
+                
+                <div>
+                    <label for="config_{{ field_name }}" class="block text-sm font-medium mb-2">
+                        {{ field.get('label', field_name) }}
+                        {% if field.get('required', False) %}
+                        <span class="text-red-500">*</span>
+                        {% endif %}
+                    </label>
+                    
+                    {% if field_type == 'boolean' %}
+                    <div class="flex items-center">
+                        <input type="checkbox" 
+                               name="{{ field_name }}" 
+                               id="config_{{ field_name }}"
+                               {% if field_value %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="config_{{ field_name }}" class="ml-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ field.get('description', '') }}
+                        </label>
+                    </div>
+                    {% elif field_type == 'text' or field_type == 'textarea' %}
+                    <textarea 
+                        name="{{ field_name }}" 
+                        id="config_{{ field_name }}"
+                        rows="{% if field_type == 'textarea' %}4{% else %}2{% endif %}"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                        placeholder="{{ field.get('placeholder', '') }}"
+                        {% if field.get('required', False) %}required{% endif %}>{{ field_value }}</textarea>
+                    {% elif field_type == 'json' %}
+                    <textarea 
+                        name="{{ field_name }}" 
+                        id="config_{{ field_name }}"
+                        rows="4"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark font-mono text-sm"
+                        placeholder='{{ field.get('placeholder', '{}') }}'
+                        {% if field.get('required', False) %}required{% endif %}>{% if field_value %}{{ field_value|tojson }}{% endif %}</textarea>
+                    {% else %}
+                    <input type="{{ field_type }}" 
+                           name="{{ field_name }}" 
+                           id="config_{{ field_name }}"
+                           value="{{ field_value }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="{{ field.get('placeholder', '') }}"
+                           {% if field.get('required', False) %}required{% endif %}>
+                    {% endif %}
+                    
+                    {% if field.get('help') or field.get('description') %}
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ field.get('help', field.get('description', '')) }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-6">
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Connection Management Section -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-4">
+            <i class="fas fa-link mr-2"></i>{{ _('Connection Management') }}
+        </h2>
+        
+        {% set active_integration = integration if is_global else user_integration %}
+        
+        {% if connector_error %}
+        <div class="mb-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg">
+            <p class="text-sm text-red-800 dark:text-red-200">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                {{ _('Connector Error') }}: {{ connector_error }}
+            </p>
+        </div>
+        {% endif %}
+
+        {% if active_integration %}
+        <!-- Integration exists - show status and actions -->
+        <div class="space-y-4">
+            <div class="p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                <div class="flex items-center gap-2 mb-3">
+                    <h3 class="font-semibold text-lg">{{ display_name }}</h3>
+                    {% if active_integration.is_active %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 font-medium">
+                        <i class="fas fa-check-circle mr-1"></i>{{ _('Connected') }}
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-medium">
+                        <i class="fas fa-exclamation-circle mr-1"></i>{{ _('Not Connected') }}
+                    </span>
+                    {% endif %}
+                    {% if is_global %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {{ _('Global') }}
+                    </span>
+                    {% endif %}
+                    {% if active_integration.last_sync_status == 'success' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <i class="fas fa-check mr-1"></i>{{ _('Sync OK') }}
+                    </span>
+                    {% elif active_integration.last_sync_status == 'error' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>{{ _('Sync Error') }}
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    {% if credentials %}
+                    <div>
+                        <span class="font-medium text-text-light dark:text-text-dark">{{ _('Connection Status') }}:</span>
+                        <span class="text-text-muted-light dark:text-text-muted-dark ml-2">
+                            {% if credentials.expires_at %}
+                            {{ _('Expires') }}: {{ credentials.expires_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                            {{ _('No expiration') }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div>
+                        <span class="font-medium text-text-light dark:text-text-dark">{{ _('Connection Status') }}:</span>
+                        <span class="text-yellow-600 dark:text-yellow-400 ml-2">{{ _('Not connected') }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if active_integration.last_sync_at %}
+                    <div>
+                        <span class="font-medium text-text-light dark:text-text-dark">{{ _('Last Sync') }}:</span>
+                        <span class="text-text-muted-light dark:text-text-muted-dark ml-2">
+                            {{ active_integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div>
+                        <span class="font-medium text-text-light dark:text-text-dark">{{ _('Last Sync') }}:</span>
+                        <span class="text-text-muted-light dark:text-text-muted-dark ml-2">{{ _('Never') }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if active_integration.last_error %}
+                <div class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p class="text-sm text-red-800 dark:text-red-200">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <strong>{{ _('Last Error') }}:</strong> {{ active_integration.last_error }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if connector %}
+            <div class="flex gap-2">
+                <form method="POST" action="{{ url_for('integrations.test_integration', integration_id=active_integration.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-vial mr-2"></i>{{ _('Test Connection') }}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('integrations.sync_integration', integration_id=active_integration.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-sync mr-2"></i>{{ _('Sync Now') }}
+                    </button>
+                </form>
+                <a href="{{ url_for('integrations.view_integration', integration_id=active_integration.id) }}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors inline-block">
+                    <i class="fas fa-eye mr-2"></i>{{ _('View Details') }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% elif provider == 'caldav_calendar' %}
+        <!-- CalDAV setup -->
+        <div class="space-y-4">
+            <p class="text-text-muted-light dark:text-text-muted-dark">
+                {{ _('CalDAV uses username/password authentication. Click below to set up your CalDAV connection.') }}
+            </p>
+            <a href="{{ url_for('integrations.caldav_setup') }}" class="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-cog mr-2"></i>{{ _('Setup CalDAV Integration') }}
+            </a>
+        </div>
+        {% elif provider == 'trello' %}
+        <!-- Trello - requires admin setup first -->
+        {% if is_global and not current_user.is_admin %}
+        <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('Trello integration must be configured by an administrator.') }}
+            </p>
+        </div>
+        {% elif current_creds.get('api_key') %}
+        <div class="space-y-4">
+            <p class="text-text-muted-light dark:text-text-muted-dark">
+                {{ _('OAuth credentials are configured. You can now connect Trello.') }}
+            </p>
+            <a href="{{ url_for('integrations.connect_integration', provider=provider) }}" class="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-link mr-2"></i>{{ _('Connect Trello') }}
+            </a>
+        </div>
+        {% else %}
+        <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('Please configure Trello API key and token in the OAuth Credentials Setup section above.') }}
+            </p>
+        </div>
+        {% endif %}
+        {% else %}
+        <!-- OAuth-based integrations - show connect button if credentials are configured -->
+        {% if current_creds.get('client_id') or (is_global and current_user.is_admin) or (not is_global) %}
+        <div class="space-y-4">
+            {% if is_global and not current_creds.get('client_id') and current_user.is_admin %}
+            <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Please configure OAuth credentials in the section above before connecting.') }}
+                </p>
+            </div>
+            {% elif not is_global and not current_creds.get('client_id') %}
+            <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('OAuth credentials need to be configured by an administrator first.') }}
+                </p>
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark">
+                {% if provider == 'google_calendar' %}
+                {{ _('Connect your Google Calendar account. You will be redirected to Google for authorization.') }}
+                {% else %}
+                {{ _('Connect this integration. You will be redirected to the provider for authorization.') }}
+                {% endif %}
+            </p>
+            <a href="{{ url_for('integrations.connect_integration', provider=provider) }}" class="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-link mr-2"></i>
+                {% if provider == 'google_calendar' %}
+                {{ _('Connect Google Calendar') }}
+                {% else %}
+                {{ _('Connect') }} {{ display_name }}
+                {% endif %}
+            </a>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('OAuth credentials need to be configured by an administrator first.') }}
+            </p>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
