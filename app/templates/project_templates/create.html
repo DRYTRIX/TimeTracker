@@ -113,32 +113,102 @@
 function addTaskItem() {
     const container = document.getElementById('tasks-container');
     const newItem = container.firstElementChild.cloneNode(true);
-    newItem.querySelectorAll('input, select').forEach(el => el.value = '');
+    newItem.querySelectorAll('input, select').forEach(el => {
+        if (el.type === 'text' || el.type === 'number') {
+            el.value = '';
+        } else if (el.tagName === 'SELECT') {
+            el.selectedIndex = 1; // Select "medium" by default
+        }
+    });
     container.appendChild(newItem);
 }
 
-// Convert form data to JSON for tasks
-document.querySelector('form').addEventListener('submit', function(e) {
+// Function to collect tasks from form
+function collectTasks() {
     const tasks = [];
     const taskItems = document.querySelectorAll('.task-item');
-    taskItems.forEach(item => {
-        const name = item.querySelector('input[name="task_names[]"]').value;
-        if (name) {
-            tasks.push({
-                name: name,
-                priority: item.querySelector('select[name="task_priorities[]"]').value,
-                estimated_hours: item.querySelector('input[name="task_hours[]"]').value || null,
-                status: 'todo'
-            });
+    
+    taskItems.forEach((item) => {
+        const nameInput = item.querySelector('input[name="task_names[]"]');
+        if (nameInput) {
+            const name = nameInput.value.trim();
+            if (name) {
+                const hoursInput = item.querySelector('input[name="task_hours[]"]');
+                const hoursValue = hoursInput ? hoursInput.value : '';
+                let estimated_hours = null;
+                if (hoursValue && hoursValue.trim()) {
+                    const parsed = parseFloat(hoursValue);
+                    if (!isNaN(parsed)) {
+                        estimated_hours = parsed;
+                    }
+                }
+                const prioritySelect = item.querySelector('select[name="task_priorities[]"]');
+                tasks.push({
+                    name: name,
+                    priority: prioritySelect ? prioritySelect.value : 'medium',
+                    estimated_hours: estimated_hours,
+                    status: 'todo'
+                });
+            }
         }
     });
+    return tasks;
+}
+
+// Initialize form handling
+function initTemplateForm() {
+    const form = document.querySelector('form[method="POST"]') || document.querySelector('form');
+    if (!form) return;
     
-    const tasksInput = document.createElement('input');
-    tasksInput.type = 'hidden';
-    tasksInput.name = 'tasks';
-    tasksInput.value = JSON.stringify(tasks);
-    this.appendChild(tasksInput);
-});
+    setupFormTasks(form);
+}
+
+function setupFormTasks(form) {
+    // Create tasks input field (will be updated on submit)
+    let tasksInput = form.querySelector('input[name="tasks"]');
+    if (!tasksInput) {
+        tasksInput = document.createElement('input');
+        tasksInput.type = 'hidden';
+        tasksInput.name = 'tasks';
+        form.appendChild(tasksInput);
+    }
+    
+    // Update tasks input on form submit
+    form.addEventListener('submit', function(e) {
+        const tasks = collectTasks();
+        tasksInput.value = JSON.stringify(tasks);
+    });
+}
+
+// Also add immediate handler using capture phase (runs before other handlers)
+document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (form && form.tagName === 'FORM' && form.method === 'POST') {
+        const action = form.getAttribute('action') || '';
+        if (action.includes('edit_template') || action.includes('create_template')) {
+            const tasks = collectTasks();
+            const tasksJson = JSON.stringify(tasks);
+            
+            // Find or create tasks input
+            let tasksInput = form.querySelector('input[name="tasks"]');
+            if (!tasksInput) {
+                tasksInput = document.createElement('input');
+                tasksInput.type = 'hidden';
+                tasksInput.name = 'tasks';
+                form.appendChild(tasksInput);
+            }
+            tasksInput.value = tasksJson;
+        }
+    }
+}, true); // Use capture phase
+
+// Run initialization when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTemplateForm);
+} else {
+    // DOM is already loaded
+    initTemplateForm();
+}
 </script>
 {% endblock %}
 

@@ -66,6 +66,66 @@
         </div>
         
         <div class="border-t border-border-light dark:border-border-dark pt-4 mb-4">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Template Tasks') }}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Tasks will be created when a project is created from this template') }}</p>
+            <div id="tasks-container">
+                {% if template.tasks and template.tasks|length > 0 %}
+                    {% for task in template.tasks %}
+                    <div class="task-item border border-border-light dark:border-border-dark rounded-lg p-4 mb-2">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task Name') }}</label>
+                                    <input type="text" name="task_names[]" class="form-input" placeholder="{{ _('Task name') }}" value="{{ task.get('name', '') }}">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Priority') }}</label>
+                                    <select name="task_priorities[]" class="form-input">
+                                        <option value="low" {% if task.get('priority', 'medium') == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
+                                        <option value="medium" {% if task.get('priority', 'medium') == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
+                                        <option value="high" {% if task.get('priority', 'medium') == 'high' %}selected{% endif %}>{{ _('High') }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                                    <input type="number" step="0.1" name="task_hours[]" class="form-input" value="{{ task.get('estimated_hours', '') }}">
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeTaskItem(this)" class="ml-2 text-red-500 hover:text-red-700" title="{{ _('Remove Task') }}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="task-item border border-border-light dark:border-border-dark rounded-lg p-4 mb-2">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task Name') }}</label>
+                                <input type="text" name="task_names[]" class="form-input" placeholder="{{ _('Task name') }}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Priority') }}</label>
+                                <select name="task_priorities[]" class="form-input">
+                                    <option value="low">{{ _('Low') }}</option>
+                                    <option value="medium" selected>{{ _('Medium') }}</option>
+                                    <option value="high">{{ _('High') }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                                <input type="number" step="0.1" name="task_hours[]" class="form-input">
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            <button type="button" onclick="addTaskItem()" class="mt-2 text-primary hover:underline">
+                <i class="fas fa-plus mr-1"></i>{{ _('Add Task') }}
+            </button>
+        </div>
+        
+        <div class="border-t border-border-light dark:border-border-dark pt-4 mb-4">
             <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <input type="checkbox" id="is_public" name="is_public" {% if template.is_public %}checked{% endif %} class="rounded border-gray-300 text-primary shadow-sm">
                 {{ _('Make this template public (visible to all users)') }}
@@ -78,5 +138,133 @@
         </div>
     </form>
 </div>
+
+<script>
+function addTaskItem() {
+    const container = document.getElementById('tasks-container');
+    const newItem = container.firstElementChild.cloneNode(true);
+    newItem.querySelectorAll('input, select').forEach(el => {
+        if (el.type === 'text' || el.type === 'number') {
+            el.value = '';
+        } else if (el.tagName === 'SELECT') {
+            el.selectedIndex = 1; // Select "medium" by default
+        }
+    });
+    // Remove remove button if it exists and add it back
+    const removeBtn = newItem.querySelector('button[onclick*="removeTaskItem"]');
+    if (!removeBtn) {
+        const flexDiv = newItem.querySelector('.flex.justify-between');
+        if (flexDiv) {
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.onclick = function() { removeTaskItem(this); };
+            removeButton.className = 'ml-2 text-red-500 hover:text-red-700';
+            removeButton.title = '{{ _("Remove Task") }}';
+            removeButton.innerHTML = '<i class="fas fa-times"></i>';
+            flexDiv.appendChild(removeButton);
+        }
+    }
+    container.appendChild(newItem);
+}
+
+function removeTaskItem(button) {
+    const taskItem = button.closest('.task-item');
+    if (taskItem) {
+        taskItem.remove();
+    }
+    // Ensure at least one task item remains
+    const container = document.getElementById('tasks-container');
+    if (container.children.length === 0) {
+        addTaskItem();
+    }
+}
+
+// Function to collect tasks from form
+function collectTasks() {
+    const tasks = [];
+    const taskItems = document.querySelectorAll('.task-item');
+    
+    taskItems.forEach((item) => {
+        const nameInput = item.querySelector('input[name="task_names[]"]');
+        if (nameInput) {
+            const name = nameInput.value.trim();
+            if (name) {
+                const hoursInput = item.querySelector('input[name="task_hours[]"]');
+                const hoursValue = hoursInput ? hoursInput.value : '';
+                let estimated_hours = null;
+                if (hoursValue && hoursValue.trim()) {
+                    const parsed = parseFloat(hoursValue);
+                    if (!isNaN(parsed)) {
+                        estimated_hours = parsed;
+                    }
+                }
+                const prioritySelect = item.querySelector('select[name="task_priorities[]"]');
+                tasks.push({
+                    name: name,
+                    priority: prioritySelect ? prioritySelect.value : 'medium',
+                    estimated_hours: estimated_hours,
+                    status: 'todo'
+                });
+            }
+        }
+    });
+    return tasks;
+}
+
+// Initialize form handling
+function initTemplateForm() {
+    const form = document.querySelector('form[method="POST"]') || document.querySelector('form');
+    if (!form) return;
+    
+    setupFormTasks(form);
+}
+
+function setupFormTasks(form) {
+    // Create tasks input field (will be updated on submit)
+    let tasksInput = form.querySelector('input[name="tasks"]');
+    if (!tasksInput) {
+        tasksInput = document.createElement('input');
+        tasksInput.type = 'hidden';
+        tasksInput.name = 'tasks';
+        form.appendChild(tasksInput);
+    }
+    
+    // Update tasks input on form submit
+    form.addEventListener('submit', function(e) {
+        const tasks = collectTasks();
+        tasksInput.value = JSON.stringify(tasks);
+    });
+}
+
+// Also add immediate handler using capture phase (runs before other handlers)
+document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (form && form.tagName === 'FORM' && form.method === 'POST') {
+        const action = form.getAttribute('action') || '';
+        if (action.includes('edit_template') || action.includes('create_template')) {
+            const tasks = collectTasks();
+            const tasksJson = JSON.stringify(tasks);
+            
+            // Find or create tasks input
+            let tasksInput = form.querySelector('input[name="tasks"]');
+            if (!tasksInput) {
+                tasksInput = document.createElement('input');
+                tasksInput.type = 'hidden';
+                tasksInput.name = 'tasks';
+                form.appendChild(tasksInput);
+            }
+            tasksInput.value = tasksJson;
+        }
+    }
+}, true); // Use capture phase
+
+// Run initialization when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTemplateForm);
+} else {
+    // DOM is already loaded
+    initTemplateForm();
+}
+</script>
 {% endblock %}
 
