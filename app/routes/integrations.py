@@ -261,6 +261,18 @@ def manage_integration(provider):
                 # Trello uses API key + secret, not OAuth
                 api_key = request.form.get("trello_api_key", "").strip()
                 api_secret = request.form.get("trello_api_secret", "").strip()
+                
+                # Validate required fields
+                if not api_key:
+                    flash(_("Trello API Key is required."), "error")
+                    return redirect(url_for("integrations.manage_integration", provider=provider))
+                
+                # Check if we have existing credentials - if not, secret is required
+                existing_creds = settings.get_integration_credentials("trello")
+                if not existing_creds.get("api_secret") and not api_secret:
+                    flash(_("Trello API Secret is required for new setup."), "error")
+                    return redirect(url_for("integrations.manage_integration", provider=provider))
+                
                 if api_key:
                     settings.trello_api_key = api_key
                 if api_secret:
@@ -281,6 +293,17 @@ def manage_integration(provider):
                 # OAuth-based integrations
                 client_id = request.form.get(f"{provider}_client_id", "").strip()
                 client_secret = request.form.get(f"{provider}_client_secret", "").strip()
+                
+                # Validate required fields
+                if not client_id:
+                    flash(_("OAuth Client ID is required."), "error")
+                    return redirect(url_for("integrations.manage_integration", provider=provider))
+                
+                # Check if we have existing credentials - if not, secret is required
+                existing_creds = settings.get_integration_credentials(provider)
+                if not existing_creds.get("client_secret") and not client_secret:
+                    flash(_("OAuth Client Secret is required for new setup."), "error")
+                    return redirect(url_for("integrations.manage_integration", provider=provider))
 
                 # Map provider names to Settings attributes - support all known providers
                 attr_map = {
@@ -329,6 +352,17 @@ def manage_integration(provider):
                 elif provider == "gitlab":
                     instance_url = request.form.get("gitlab_instance_url", "").strip()
                     if instance_url:
+                        # Validate URL format
+                        try:
+                            from urllib.parse import urlparse
+                            parsed = urlparse(instance_url)
+                            if not parsed.scheme or not parsed.netloc:
+                                flash(_("GitLab Instance URL must be a valid URL (e.g., https://gitlab.com)."), "error")
+                                return redirect(url_for("integrations.manage_integration", provider=provider))
+                        except Exception:
+                            flash(_("GitLab Instance URL format is invalid."), "error")
+                            return redirect(url_for("integrations.manage_integration", provider=provider))
+                        
                         try:
                             settings.gitlab_instance_url = instance_url
                         except AttributeError:

@@ -75,25 +75,29 @@
             <div class="space-y-4">
                 <div>
                     <label for="{{ provider }}_client_id" class="block text-sm font-medium mb-2">
-                        {{ _('OAuth Client ID') }}
+                        {{ _('OAuth Client ID') }} <span class="text-red-500">*</span>
                     </label>
                     <input type="text" 
                            name="{{ provider }}_client_id" 
                            id="{{ provider }}_client_id" 
                            value="{{ current_creds.get('client_id', '') }}"
                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
-                           placeholder="{{ _('OAuth Client ID') }}">
+                           placeholder="{{ _('OAuth Client ID') }}"
+                           required>
                 </div>
                 
                 <div>
                     <label for="{{ provider }}_client_secret" class="block text-sm font-medium mb-2">
-                        {{ _('OAuth Client Secret') }}
+                        {{ _('OAuth Client Secret') }} <span class="text-red-500">*</span>
                     </label>
                     <input type="password" 
                            name="{{ provider }}_client_secret" 
                            id="{{ provider }}_client_secret" 
                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                            placeholder="{{ _('Leave empty to keep current value') }}">
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Required for new setup. Leave empty to keep existing secret.') }}
+                    </p>
                 </div>
                 
                 {% if provider in ['outlook_calendar', 'microsoft_teams'] %}
