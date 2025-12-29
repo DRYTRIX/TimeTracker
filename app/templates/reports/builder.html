@@ -626,20 +626,32 @@ document.getElementById('iterativeReportGeneration')?.addEventListener('change',
 document.getElementById('saveForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const name = document.getElementById('reportName').value.trim();
-    const scope = document.getElementById('reportScope').value;
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.innerHTML;
     
-    // Validate name
-    if (!name) {
-        alert('{{ _("Please enter a report name") }}');
-        return;
-    }
+    // Disable button and show loading state
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Saving...") }}';
     
-    // Validate data source is selected
-    if (!reportConfig.data_source) {
-        alert('{{ _("Please select a data source first") }}');
-        return;
-    }
+    try {
+        const name = document.getElementById('reportName').value.trim();
+        const scope = document.getElementById('reportScope').value;
+        
+        // Validate name
+        if (!name) {
+            alert('{{ _("Please enter a report name") }}');
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
+            return;
+        }
+        
+        // Validate data source is selected
+        if (!reportConfig.data_source) {
+            alert('{{ _("Please select a data source first") }}');
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
+            return;
+        }
     
     // Collect filters
     reportConfig.filters = {
@@ -744,6 +756,9 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
             } else {
                 alert(errorMsg);
             }
+            // Re-enable button on error
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
         }
     } catch (error) {
         console.error('Error saving report:', error);
@@ -755,6 +770,9 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
         } else {
             alert(errorMsg);
         }
+        // Re-enable button on error
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
     }
 });
 

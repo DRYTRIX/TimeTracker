@@ -7,6 +7,7 @@ from app import db
 from app.models import Lead, LeadActivity, Client, Deal
 from app.utils.db import safe_commit
 from app.utils.timezone import parse_local_datetime
+from app.utils.module_helpers import module_enabled
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
@@ -18,6 +19,7 @@ LEAD_STATUSES = ["new", "contacted", "qualified", "converted", "lost"]
 
 @leads_bp.route("/leads")
 @login_required
+@module_enabled("leads")
 def list_leads():
     """List all leads"""
     status = request.args.get("status", "")

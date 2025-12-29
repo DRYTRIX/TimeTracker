@@ -78,6 +78,30 @@ class Settings(db.Model):
 
     # Tools & Data section
     ui_allow_tools = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_integrations = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_import_export = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_saved_filters = db.Column(db.Boolean, default=True, nullable=False)
+
+    # CRM section (additional)
+    ui_allow_contacts = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_deals = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_leads = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Finance section (additional)
+    ui_allow_invoices = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_expenses = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Time Tracking section (additional)
+    ui_allow_time_entry_templates = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Advanced features
+    ui_allow_workflows = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_time_approvals = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_activity_feed = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_recurring_tasks = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_team_chat = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_client_portal = db.Column(db.Boolean, default=True, nullable=False)
+    ui_allow_kiosk = db.Column(db.Boolean, default=True, nullable=False)
 
     # Kiosk mode settings
     kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
@@ -436,6 +460,22 @@ class Settings(db.Model):
             "ui_allow_inventory": getattr(self, "ui_allow_inventory", True),
             "ui_allow_analytics": getattr(self, "ui_allow_analytics", True),
             "ui_allow_tools": getattr(self, "ui_allow_tools", True),
+            "ui_allow_integrations": getattr(self, "ui_allow_integrations", True),
+            "ui_allow_import_export": getattr(self, "ui_allow_import_export", True),
+            "ui_allow_saved_filters": getattr(self, "ui_allow_saved_filters", True),
+            "ui_allow_contacts": getattr(self, "ui_allow_contacts", True),
+            "ui_allow_deals": getattr(self, "ui_allow_deals", True),
+            "ui_allow_leads": getattr(self, "ui_allow_leads", True),
+            "ui_allow_invoices": getattr(self, "ui_allow_invoices", True),
+            "ui_allow_expenses": getattr(self, "ui_allow_expenses", True),
+            "ui_allow_time_entry_templates": getattr(self, "ui_allow_time_entry_templates", True),
+            "ui_allow_workflows": getattr(self, "ui_allow_workflows", True),
+            "ui_allow_time_approvals": getattr(self, "ui_allow_time_approvals", True),
+            "ui_allow_activity_feed": getattr(self, "ui_allow_activity_feed", True),
+            "ui_allow_recurring_tasks": getattr(self, "ui_allow_recurring_tasks", True),
+            "ui_allow_team_chat": getattr(self, "ui_allow_team_chat", True),
+            "ui_allow_client_portal": getattr(self, "ui_allow_client_portal", True),
+            "ui_allow_kiosk": getattr(self, "ui_allow_kiosk", True),
         }
 
     @classmethod

@@ -61,7 +61,7 @@
                             <a href="{{ url_for('custom_reports.view_custom_report', view_id=view.id) }}" class="text-blue-600 hover:text-blue-800" title="{{ _('View') }}">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <a href="{{ url_for('custom_reports.report_builder', view_id=view.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Edit') }}">
+                            <a href="{{ url_for('custom_reports.edit_saved_view', view_id=view.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Edit') }}">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <form method="POST" action="{{ url_for('custom_reports.delete_saved_view', view_id=view.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this report view?') }}')">

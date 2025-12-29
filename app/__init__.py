@@ -453,6 +453,9 @@ def create_app(config=None):
         app.jinja_env.globals.update(_=_gettext, ngettext=_ngettext)
     except Exception:
         pass
+    
+    # Add Python built-ins that are useful in templates
+    app.jinja_env.globals.update(getattr=getattr)
 
     # Log effective database URL (mask password)
     db_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
@@ -1234,6 +1237,11 @@ def create_app(config=None):
     from app.utils.template_filters import register_template_filters
 
     register_template_filters(app)
+
+    # Initialize module registry and helpers
+    from app.utils.module_helpers import init_module_helpers
+
+    init_module_helpers(app)
 
     # Register CLI commands
     from app.utils.cli import register_cli_commands

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
+from app.utils.module_helpers import module_enabled
 from app.models import (
     User,
     Project,
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 @invoices_bp.route("/invoices")
 @login_required
+@module_enabled("invoices")
 def list_invoices():
     """List all invoices - REFACTORED to use service layer with eager loading"""
     # Track invoice page viewed

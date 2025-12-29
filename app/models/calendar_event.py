@@ -199,7 +199,10 @@ class CalendarEvent(db.Model):
             logger.info(f"Querying time entries for user {user_id}")
             time_entries = (
                 TimeEntry.query.filter(
-                    TimeEntry.user_id == user_id, TimeEntry.start_time >= start_date, TimeEntry.start_time <= end_date
+                    TimeEntry.user_id == user_id,
+                    TimeEntry.start_time >= start_date,
+                    TimeEntry.start_time <= end_date,
+                    TimeEntry.end_time.isnot(None),  # Only include completed entries (CalDAV entries have end_time)
                 )
                 .order_by(TimeEntry.start_time)
                 .all()
@@ -218,8 +221,10 @@ class CalendarEvent(db.Model):
                     "taskId": entry.task_id,
                     "notes": entry.notes,
                     "type": "time_entry",
+                    "source": entry.source,  # Include source to identify CalDAV entries (source="auto")
                 }
                 for entry in time_entries
+                if entry.start_time and entry.end_time  # Ensure both times are set for proper display
             ]
         else:
             print(f"MODEL - Not including time entries (include_time_entries=False)")
