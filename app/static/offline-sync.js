@@ -373,13 +373,122 @@ class OfflineSyncManager {
     }
 
     async syncTasks() {
-        // Similar implementation for tasks
-        // TODO: Implement task sync
+        if (!this.db) return;
+
+        const unsyncedTasks = await this.getUnsyncedEntries('tasks');
+
+        for (const task of unsyncedTasks) {
+            try {
+                const taskData = {
+                    name: task.name,
+                    project_id: task.project_id,
+                    description: task.description,
+                    status: task.status,
+                    priority: task.priority,
+                    assigned_to: task.assigned_to,
+                    due_date: task.due_date ? this.formatDateToISO(task.due_date) : null,
+                    estimated_hours: task.estimated_hours,
+                    notes: task.notes
+                };
+
+                let response;
+                if (task.serverId) {
+                    // Update existing task
+                    response = await fetch(`/api/v1/tasks/${task.serverId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(taskData)
+                    });
+                } else {
+                    // Create new task
+                    response = await fetch('/api/v1/tasks', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(taskData)
+                    });
+                }
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const taskId = result.task?.id || result.id;
+                    if (taskId) {
+                        await this.markAsSynced('tasks', task.localId, taskId);
+                        this.pendingSyncCount--;
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error('[OfflineSync] Failed to sync task:', response.status, response.statusText, errorText);
+                }
+            } catch (error) {
+                console.error('[OfflineSync] Error syncing task:', error);
+            }
+        }
+
+        this.updateUI();
     }
 
     async syncProjects() {
-        // Similar implementation for projects
-        // TODO: Implement project sync
+        if (!this.db) return;
+
+        const unsyncedProjects = await this.getUnsyncedEntries('projects');
+
+        for (const project of unsyncedProjects) {
+            try {
+                const projectData = {
+                    name: project.name,
+                    description: project.description,
+                    client_id: project.client_id,
+                    status: project.status || 'active',
+                    billable: project.billable !== false,
+                    hourly_rate: project.hourly_rate,
+                    code: project.code,
+                    budget_amount: project.budget_amount,
+                    budget_threshold_percent: project.budget_threshold_percent,
+                    billing_ref: project.billing_ref
+                };
+
+                let response;
+                if (project.serverId) {
+                    // Update existing project
+                    response = await fetch(`/api/v1/projects/${project.serverId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(projectData)
+                    });
+                } else {
+                    // Create new project
+                    response = await fetch('/api/v1/projects', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(projectData)
+                    });
+                }
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const projectId = result.project?.id || result.id;
+                    if (projectId) {
+                        await this.markAsSynced('projects', project.localId, projectId);
+                        this.pendingSyncCount--;
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error('[OfflineSync] Failed to sync project:', response.status, response.statusText, errorText);
+                }
+            } catch (error) {
+                console.error('[OfflineSync] Error syncing project:', error);
+            }
+        }
+
+        this.updateUI();
     }
 
     async getUnsyncedEntries(storeName) {
@@ -455,7 +564,15 @@ class OfflineSyncManager {
                     putRequest.onsuccess = () => {
                         // Mark queue item as processed
                         const index = queueStore.index('type');
-                        const queueRequest = index.openCursor(IDBKeyRange.only('time_entry'));
+                        // Determine queue type based on store name
+                        let queueType = 'time_entry';
+                        if (storeName === 'tasks') {
+                            queueType = 'task';
+                        } else if (storeName === 'projects') {
+                            queueType = 'project';
+                        }
+                        
+                        const queueRequest = index.openCursor(IDBKeyRange.only(queueType));
                         queueRequest.onsuccess = (event) => {
                             const cursor = event.target.result;
                             if (cursor) {
@@ -464,9 +581,11 @@ class OfflineSyncManager {
                                     cursor.update(cursor.value);
                                 }
                                 cursor.continue();
+                            } else {
+                                resolve();
                             }
                         };
-                        resolve();
+                        queueRequest.onerror = () => resolve(); // Resolve even if queue update fails
                     };
                     putRequest.onerror = () => reject(putRequest.error);
                 } else {
@@ -583,6 +702,125 @@ class OfflineSyncManager {
         }));
     }
 
+    // Task Operations
+    async saveTaskOffline(taskData) {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+
+        const normalizedData = {
+            ...taskData,
+            due_date: taskData.due_date ? this.formatDateToISO(taskData.due_date) : null
+        };
+
+        const task = {
+            ...normalizedData,
+            localId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            serverId: null,
+            synced: false,
+            timestamp: new Date().toISOString(),
+            conflict: false
+        };
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['tasks', 'syncQueue'], 'readwrite');
+            const tasksStore = transaction.objectStore('tasks');
+            const queueStore = transaction.objectStore('syncQueue');
+
+            const addRequest = tasksStore.add(task);
+
+            addRequest.onsuccess = () => {
+                const queueItem = {
+                    type: 'task',
+                    action: task.serverId ? 'update' : 'create',
+                    localId: task.localId,
+                    data: normalizedData,
+                    timestamp: new Date().toISOString(),
+                    processed: false,
+                    retries: 0
+                };
+
+                queueStore.add(queueItem).onsuccess = () => {
+                    this.pendingSyncCount++;
+                    this.updateUI();
+                    resolve(task);
+                };
+            };
+
+            addRequest.onerror = () => reject(addRequest.error);
+        });
+    }
+
+    async getOfflineTasks() {
+        if (!this.db) return [];
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['tasks'], 'readonly');
+            const store = transaction.objectStore('tasks');
+            const request = store.getAll();
+
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result || []);
+        });
+    }
+
+    // Project Operations
+    async saveProjectOffline(projectData) {
+        if (!this.db) {
+            throw new Error('Database not initialized');
+        }
+
+        const project = {
+            ...projectData,
+            localId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            serverId: null,
+            synced: false,
+            timestamp: new Date().toISOString(),
+            conflict: false
+        };
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['projects', 'syncQueue'], 'readwrite');
+            const projectsStore = transaction.objectStore('projects');
+            const queueStore = transaction.objectStore('syncQueue');
+
+            const addRequest = projectsStore.add(project);
+
+            addRequest.onsuccess = () => {
+                const queueItem = {
+                    type: 'project',
+                    action: project.serverId ? 'update' : 'create',
+                    localId: project.localId,
+                    data: projectData,
+                    timestamp: new Date().toISOString(),
+                    processed: false,
+                    retries: 0
+                };
+
+                queueStore.add(queueItem).onsuccess = () => {
+                    this.pendingSyncCount++;
+                    this.updateUI();
+                    resolve(project);
+                };
+            };
+
+            addRequest.onerror = () => reject(addRequest.error);
+        });
+    }
+
+    async getOfflineProjects() {
+        if (!this.db) return [];
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['projects'], 'readonly');
+            const store = transaction.objectStore('projects');
+            const request = store.getAll();
+
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result || []);
+        });
+    }
+
     // Public API
     async createTimeEntryOffline(data) {
         // Normalize dates to ISO format
@@ -614,6 +852,56 @@ class OfflineSyncManager {
 
         // Save offline
         return await this.saveTimeEntryOffline(normalizedData);
+    }
+
+    async createTaskOffline(data) {
+        if (navigator.onLine) {
+            // Try online first
+            try {
+                const response = await fetch('/api/v1/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    return await response.json();
+                } else {
+                    const errorText = await response.text();
+                    console.error('[OfflineSync] Online task create failed:', response.status, response.statusText, errorText);
+                }
+            } catch (error) {
+                console.log('[OfflineSync] Online task create failed, saving offline:', error);
+            }
+        }
+
+        // Save offline
+        return await this.saveTaskOffline(data);
+    }
+
+    async createProjectOffline(data) {
+        if (navigator.onLine) {
+            // Try online first
+            try {
+                const response = await fetch('/api/v1/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    return await response.json();
+                } else {
+                    const errorText = await response.text();
+                    console.error('[OfflineSync] Online project create failed:', response.status, response.statusText, errorText);
+                }
+            } catch (error) {
+                console.log('[OfflineSync] Online project create failed, saving offline:', error);
+            }
+        }
+
+        // Save offline
+        return await this.saveProjectOffline(data);
     }
 
     async getPendingCount() {

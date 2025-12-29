@@ -945,21 +945,79 @@ class FormAutoSave {
     }
 
     init() {
-        // Create indicator
-        this.indicator = document.createElement('div');
-        this.indicator.className = 'autosave-indicator';
-        this.indicator.innerHTML = `
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <span class="autosave-text">Saving...</span>
-        `;
-        document.body.appendChild(this.indicator);
-        
-        // Load saved data
-        this.load();
-        
-        // Monitor form changes
-        this.form.addEventListener('input', () => this.scheduleAutoSave());
-        this.form.addEventListener('change', () => this.scheduleAutoSave());
+        try {
+            // Validate form element
+            if (!this.form || !(this.form instanceof HTMLFormElement)) {
+                console.error('[FormAutoSave] Invalid form element provided');
+                return;
+            }
+
+            // Create indicator
+            this.indicator = document.createElement('div');
+            this.indicator.className = 'autosave-indicator';
+            this.indicator.innerHTML = `
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <span class="autosave-text">Saving...</span>
+            `;
+            this.indicator.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                display: none;
+                align-items: center;
+                gap: 10px;
+                z-index: 10000;
+                font-size: 14px;
+            `;
+            document.body.appendChild(this.indicator);
+            
+            // Load saved data
+            this.load();
+            
+            // Monitor form changes with proper error handling
+            const scheduleSave = () => {
+                try {
+                    this.scheduleAutoSave();
+                } catch (error) {
+                    console.error('[FormAutoSave] Error scheduling save:', error);
+                }
+            };
+            
+            this.form.addEventListener('input', scheduleSave, { passive: true });
+            this.form.addEventListener('change', scheduleSave, { passive: true });
+            
+            // Clear saved data on successful submit
+            this.form.addEventListener('submit', () => {
+                try {
+                    // Wait a bit to ensure submission is successful
+                    setTimeout(() => {
+                        if (this.options.storageKey) {
+                            this.clear();
+                        }
+                    }, 1000);
+                } catch (error) {
+                    console.error('[FormAutoSave] Error clearing on submit:', error);
+                }
+            }, { passive: true });
+            
+            // Handle page unload - save current state
+            window.addEventListener('beforeunload', () => {
+                try {
+                    if (this.debounceTimer) {
+                        clearTimeout(this.debounceTimer);
+                        this.save();
+                    }
+                } catch (error) {
+                    console.error('[FormAutoSave] Error saving on unload:', error);
+                }
+            }, { passive: true });
+        } catch (error) {
+            console.error('[FormAutoSave] Initialization error:', error);
+        }
     }
 
     scheduleAutoSave() {
@@ -968,21 +1026,57 @@ class FormAutoSave {
     }
 
     save() {
-        this.showIndicator('saving');
-        
-        const formData = new FormData(this.form);
-        const data = Object.fromEntries(formData.entries());
-        
-        if (this.options.storageKey) {
-            localStorage.setItem(this.options.storageKey, JSON.stringify(data));
-        }
-        
-        if (this.options.onSave) {
-            this.options.onSave(data, () => {
+        try {
+            if (!this.form) {
+                console.warn('[FormAutoSave] Form element not available');
+                return;
+            }
+
+            this.showIndicator('saving');
+            
+            const formData = new FormData(this.form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Save to localStorage if storage key provided
+            if (this.options.storageKey) {
+                try {
+                    localStorage.setItem(this.options.storageKey, JSON.stringify(data));
+                } catch (storageError) {
+                    // Handle quota exceeded or other storage errors
+                    if (storageError.name === 'QuotaExceededError') {
+                        console.warn('[FormAutoSave] Storage quota exceeded, clearing old data');
+                        // Try to clear and retry
+                        try {
+                            localStorage.removeItem(this.options.storageKey);
+                            localStorage.setItem(this.options.storageKey, JSON.stringify(data));
+                        } catch (retryError) {
+                            console.error('[FormAutoSave] Failed to save after clearing:', retryError);
+                        }
+                    } else {
+                        console.error('[FormAutoSave] Storage error:', storageError);
+                    }
+                }
+            }
+            
+            // Call custom save handler if provided
+            if (this.options.onSave) {
+                try {
+                    this.options.onSave(data, () => {
+                        this.showIndicator('saved');
+                    }, (error) => {
+                        console.error('[FormAutoSave] Save handler error:', error);
+                        this.showIndicator('error');
+                    });
+                } catch (error) {
+                    console.error('[FormAutoSave] Error in save handler:', error);
+                    this.showIndicator('error');
+                }
+            } else {
                 this.showIndicator('saved');
-            });
-        } else {
-            this.showIndicator('saved');
+            }
+        } catch (error) {
+            console.error('[FormAutoSave] Save error:', error);
+            this.showIndicator('error');
         }
     }
 
@@ -1010,13 +1104,48 @@ class FormAutoSave {
     }
 
     showIndicator(state) {
-        this.indicator.className = 'autosave-indicator show ' + state;
-        this.indicator.querySelector('.autosave-text').textContent = 
-            state === 'saving' ? 'Saving...' : 'Saved';
-        
-        setTimeout(() => {
-            this.indicator.classList.remove('show');
-        }, 2000);
+        try {
+            if (!this.indicator) return;
+            
+            this.indicator.className = 'autosave-indicator show ' + state;
+            const textElement = this.indicator.querySelector('.autosave-text');
+            if (textElement) {
+                const messages = {
+                    'saving': 'Saving...',
+                    'saved': 'Saved',
+                    'error': 'Error saving'
+                };
+                textElement.textContent = messages[state] || 'Saving...';
+            }
+            
+            // Update icon based on state
+            const iconElement = this.indicator.querySelector('i');
+            if (iconElement) {
+                if (state === 'saved') {
+                    iconElement.className = 'fas fa-check';
+                    iconElement.classList.remove('fa-spin');
+                } else if (state === 'error') {
+                    iconElement.className = 'fas fa-exclamation-triangle';
+                    iconElement.classList.remove('fa-spin');
+                } else {
+                    iconElement.className = 'fas fa-circle-notch fa-spin';
+                }
+            }
+            
+            // Show indicator
+            this.indicator.style.display = 'flex';
+            
+            // Auto-hide after delay (longer for errors)
+            const delay = state === 'error' ? 5000 : 2000;
+            setTimeout(() => {
+                if (this.indicator) {
+                    this.indicator.style.display = 'none';
+                    this.indicator.classList.remove('show');
+                }
+            }, delay);
+        } catch (error) {
+            console.error('[FormAutoSave] Error showing indicator:', error);
+        }
     }
 
     clear() {
@@ -1236,22 +1365,60 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize auto-save forms
     document.querySelectorAll('form[data-auto-save]').forEach(form => {
-        new FormAutoSave(form, {
-            storageKey: form.dataset.autoSaveKey,
-            onSave: (data, callback) => {
-                // Custom save implementation
-                fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(() => callback())
-                .catch(console.error);
+        try {
+            // Skip if already initialized
+            if (form.dataset.autoSaveInitialized === 'true') {
+                return;
             }
-        });
+            
+            const storageKey = form.dataset.autoSaveKey || `autosave_${form.id || form.name || Date.now()}`;
+            const autoSave = new FormAutoSave(form, {
+                storageKey: storageKey,
+                debounceMs: parseInt(form.dataset.autoSaveDebounce || '1000'),
+                onSave: (data, callback, errorCallback) => {
+                    // Custom save implementation
+                    const formAction = form.action || window.location.pathname;
+                    const formMethod = form.method || 'POST';
+                    
+                    // Get CSRF token
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                                     document.querySelector('input[name="csrf_token"]')?.value;
+                    
+                    fetch(formAction, {
+                        method: formMethod,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken || '',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            callback();
+                        } else {
+                            throw new Error(`Save failed: ${response.status} ${response.statusText}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('[FormAutoSave] Save request failed:', error);
+                        if (errorCallback) {
+                            errorCallback(error);
+                        } else {
+                            callback(); // Still show saved indicator even on error
+                        }
+                    });
+                }
+            });
+            
+            // Mark as initialized
+            form.dataset.autoSaveInitialized = 'true';
+            
+            // Store reference for potential cleanup
+            form._autoSaveInstance = autoSave;
+        } catch (error) {
+            console.error('[EnhancedUI] Error initializing form auto-save:', error);
+        }
     });
     
     // Count-up animations
