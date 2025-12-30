@@ -1030,25 +1030,6 @@
             <main id="mainContentAnchor" class="flex-1 p-6">
                 {% block content %}{% endblock %}
             </main>
-            
-            <!-- Footer -->
-            <footer class="bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark py-4 px-6 mt-auto">
-                <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-text-muted-light dark:text-text-muted-dark">
-                    <div class="flex items-center gap-4 flex-wrap justify-center md:justify-start">
-                        <span>&copy; <span id="currentYear"></span> TimeTracker</span>
-                        <a href="{{ url_for('main.about') }}" class="hover:text-text-light dark:hover:text-text-dark">{{ _('About') }}</a>
-                        <a href="{{ url_for('main.help') }}" class="hover:text-text-light dark:hover:text-text-dark">{{ _('Help') }}</a>
-                        <a href="{{ url_for('main.donate') }}" class="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium">
-                            <i class="fas fa-heart mr-1"></i>{{ _('Support') }}
-                        </a>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <a href="{{ url_for('main.donate') }}" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-medium rounded-lg transition-all shadow-md hover:shadow-lg">
-                            <i class="fas fa-mug-saucer mr-1"></i>{{ _('Donate') }}
-                        </a>
-                    </div>
-                </div>
-            </footer>
         </div>
 
         <!-- Mobile Bottom Navigation -->
@@ -1973,10 +1954,6 @@
     </script>
     {% endif %}
     
-    <!-- Set current year in footer -->
-    <script>
-        document.getElementById('currentYear').textContent = new Date().getFullYear();
-    </script>
     
     <!-- Global donation tracking function -->
     <script>

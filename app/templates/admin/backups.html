@@ -20,7 +20,7 @@
     <!-- Action Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <!-- Create Backup -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
             <div class="flex items-center mb-4">
                 <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
                     <i class="fas fa-download text-blue-600 dark:text-blue-400 text-xl"></i>
@@ -39,7 +39,7 @@
         </div>
 
         <!-- Restore Backup -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
             <div class="flex items-center mb-4">
                 <div class="p-3 bg-green-100 dark:bg-green-900 rounded-full">
                     <i class="fas fa-upload text-green-600 dark:text-green-400 text-xl"></i>
@@ -56,7 +56,7 @@
     </div>
 
     <!-- Existing Backups -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ _('Existing Backups') }}</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Backups stored on the server</p>
@@ -73,7 +73,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody class="bg-card-light dark:bg-card-dark divide-y divide-gray-200 dark:divide-gray-700">
                     {% for backup in backups %}
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -135,7 +135,7 @@
 
 <!-- Restore Confirmation Modal -->
 <div id="restoreModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-medium text-red-600 dark:text-red-400">
                 <i class="fas fa-exclamation-triangle mr-2"></i>Confirm Restore
@@ -173,7 +173,7 @@
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden z-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ _('Confirm Deletion') }}</h3>
         </div>

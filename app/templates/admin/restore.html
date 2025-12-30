@@ -42,7 +42,7 @@
 
     <!-- Progress Display (if restore is running) -->
     {% if progress %}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 p-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow mb-6 p-6">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             <i class="fas fa-sync-alt {% if progress.status == 'running' %}fa-spin{% endif %} mr-2"></i>
             Restore Progress
@@ -115,7 +115,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Upload Backup Form -->
         <div class="lg:col-span-2">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
                         <i class="fas fa-upload mr-2"></i>Upload Backup File
@@ -177,7 +177,7 @@
         <!-- Safety Information Sidebar -->
         <div class="lg:col-span-1">
             <!-- Pre-Restore Checklist -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow mb-6">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                         <i class="fas fa-tasks mr-2"></i>Pre-Restore Checklist
@@ -210,7 +210,7 @@
             </div>
 
             <!-- What Gets Restored -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow mb-6">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                         <i class="fas fa-database mr-2"></i>What Gets Restored

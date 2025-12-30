@@ -4,7 +4,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
     <!-- Keyboard Shortcuts Help Modal -->
     <div id="keyboard-help" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+        <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-gray-900 dark:text-white">Keyboard Shortcuts</h3>
                 <button onclick="document.getElementById('keyboard-help').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800 rounded-lg p-1 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="{{ _('Close keyboard shortcuts') }}">
@@ -33,7 +33,7 @@
     </div>
 
     <!-- Barcode Scanner Section -->
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="barcode-scanner-section">
+    <section class="bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="barcode-scanner-section">
         <div class="max-w-3xl mx-auto">
             <div class="text-center mb-6">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
@@ -72,7 +72,7 @@
             
             <!-- Loading Skeleton for Item Display -->
             <div id="item-loading-skeleton" class="hidden mt-6">
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 animate-pulse">
+                <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 animate-pulse">
                     <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
                     <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6"></div>
                     <div class="grid grid-cols-2 gap-4">
@@ -98,7 +98,7 @@
     </section>
 
     <!-- Item Display Section -->
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="item-section" style="display: none;">
+    <section class="bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="item-section" style="display: none;">
         <div class="flex items-start justify-between mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
             <div class="flex-1">
                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2" id="item-name"></h2>
@@ -140,7 +140,7 @@
     </section>
 
     <!-- Operations Section -->
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="operations-section" style="display: none;">
+    <section class="bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card-elevated" id="operations-section" style="display: none;">
         <!-- Note: Tabs are handled by main navigation, no duplicate tabs here -->
 
         <!-- Adjust Tab -->
@@ -361,7 +361,7 @@
 
     <!-- Recent Items -->
     {% if recent_items %}
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card">
+    <section class="bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 kiosk-card">
         <div class="flex items-center gap-3 mb-6">
             <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <i class="fas fa-history text-primary"></i>

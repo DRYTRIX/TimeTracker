@@ -29,7 +29,7 @@
 
     <!-- Goal Overview -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Target Hours') }}</h3>
                 <i class="fas fa-bullseye text-2xl text-blue-500"></i>
@@ -37,7 +37,7 @@
             <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ goal.target_hours }}h</p>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Actual Hours') }}</h3>
                 <i class="fas fa-clock text-2xl text-green-500 dark:text-green-400"></i>
@@ -45,7 +45,7 @@
             <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ goal.actual_hours }}h</p>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ _('Status') }}</h3>
                 {% if goal.status == 'completed' %}
@@ -71,7 +71,7 @@
     </div>
 
     <!-- Progress Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             <i class="fas fa-chart-line mr-2"></i>
             {{ _('Progress') }}
@@ -113,7 +113,7 @@
     </div>
 
     <!-- Daily Breakdown -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             <i class="fas fa-calendar-alt mr-2"></i>
             {{ _('Daily Breakdown') }}
@@ -145,7 +145,7 @@
 
     <!-- Notes -->
     {% if goal.notes %}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             <i class="fas fa-sticky-note mr-2"></i>
             {{ _('Notes') }}
@@ -156,7 +156,7 @@
 
     <!-- Time Entries -->
     {% if time_entries %}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             <i class="fas fa-list mr-2"></i>
             {{ _('Time Entries This Week') }} ({{ time_entries|length }})

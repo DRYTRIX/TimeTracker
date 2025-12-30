@@ -21,12 +21,12 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Template Name *</label>
-                <input type="text" id="name" name="name" value="{{ recurring.name }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="text" id="name" name="name" value="{{ recurring.name }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="frequency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frequency *</label>
-                <select id="frequency" name="frequency" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <select id="frequency" name="frequency" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
                     <option value="daily" {% if recurring.frequency == 'daily' %}selected{% endif %}>Daily</option>
                     <option value="weekly" {% if recurring.frequency == 'weekly' %}selected{% endif %}>Weekly</option>
                     <option value="monthly" {% if recurring.frequency == 'monthly' %}selected{% endif %}>Monthly</option>
@@ -36,53 +36,53 @@
             
             <div>
                 <label for="interval" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Interval</label>
-                <input type="number" id="interval" name="interval" value="{{ recurring.interval }}" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="number" id="interval" name="interval" value="{{ recurring.interval }}" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="next_run_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Next Run Date *</label>
-                <input type="date" id="next_run_date" name="next_run_date" value="{{ recurring.next_run_date.strftime('%Y-%m-%d') if recurring.next_run_date else '' }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="date" id="next_run_date" name="next_run_date" value="{{ recurring.next_run_date.strftime('%Y-%m-%d') if recurring.next_run_date else '' }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date (Optional)</label>
-                <input type="date" id="end_date" name="end_date" value="{{ recurring.end_date.strftime('%Y-%m-%d') if recurring.end_date else '' }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="date" id="end_date" name="end_date" value="{{ recurring.end_date.strftime('%Y-%m-%d') if recurring.end_date else '' }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="due_date_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date (Days from Issue)</label>
-                <input type="number" id="due_date_days" name="due_date_days" value="{{ recurring.due_date_days }}" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="number" id="due_date_days" name="due_date_days" value="{{ recurring.due_date_days }}" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tax Rate (%)</label>
-                <input type="number" id="tax_rate" name="tax_rate" value="{{ recurring.tax_rate }}" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="number" id="tax_rate" name="tax_rate" value="{{ recurring.tax_rate }}" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
         </div>
         
         <div>
             <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Name</label>
-            <input type="text" id="client_name" name="client_name" value="{{ recurring.client_name }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <input type="text" id="client_name" name="client_name" value="{{ recurring.client_name }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
         </div>
         
         <div>
             <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Email</label>
-            <input type="email" id="client_email" name="client_email" value="{{ recurring.client_email or '' }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <input type="email" id="client_email" name="client_email" value="{{ recurring.client_email or '' }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
         </div>
         
         <div>
             <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Address</label>
-            <textarea id="client_address" name="client_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{{ recurring.client_address or '' }}</textarea>
+            <textarea id="client_address" name="client_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">{{ recurring.client_address or '' }}</textarea>
         </div>
         
         <div>
             <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
-            <textarea id="notes" name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{{ recurring.notes or '' }}</textarea>
+            <textarea id="notes" name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">{{ recurring.notes or '' }}</textarea>
         </div>
         
         <div>
             <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Terms</label>
-            <textarea id="terms" name="terms" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{{ recurring.terms or '' }}</textarea>
+            <textarea id="terms" name="terms" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">{{ recurring.terms or '' }}</textarea>
         </div>
         
         <div class="flex items-center space-x-4">

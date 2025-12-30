@@ -30,7 +30,7 @@
                 </h3>
                 <div class="space-y-3">
                     {% for deal in deals_by_stage[stage] %}
-                    <div class="bg-white dark:bg-gray-800 p-3 rounded border border-border-light dark:border-border-dark hover:shadow-md transition cursor-pointer"
+                    <div class="bg-card-light dark:bg-card-dark p-3 rounded border border-border-light dark:border-border-dark hover:shadow-md transition cursor-pointer"
                          onclick="window.location.href='{{ url_for('deals.view_deal', deal_id=deal.id) }}'">
                         <h4 class="font-medium text-sm mb-1">{{ deal.name }}</h4>
                         {% if deal.client %}

@@ -16,7 +16,7 @@
     </div>
 
     <!-- Form -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
         <form method="POST" action="{{ url_for('weekly_goals.create') }}" novalidate data-validate-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
