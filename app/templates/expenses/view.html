@@ -342,7 +342,7 @@
 
 <!-- Rejection Modal -->
 <div id="rejectModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg p-6 max-w-md w-full mx-4">
         <h3 class="text-lg font-semibold mb-4">{{ _('Reject Expense') }}</h3>
         <form method="POST" action="{{ url_for('expenses.reject_expense', expense_id=expense.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

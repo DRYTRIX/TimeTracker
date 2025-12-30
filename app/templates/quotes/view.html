@@ -501,7 +501,7 @@ function hideRejectApprovalModal() {
 
 <!-- Approve Modal -->
 <div id="approve-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg p-6 max-w-md w-full mx-4">
         <h3 class="text-lg font-semibold mb-4">{{ _('Approve Quote') }}</h3>
         <form method="POST" action="{{ url_for('quotes.approve_quote', quote_id=quote.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -519,7 +519,7 @@ function hideRejectApprovalModal() {
 
 <!-- Reject Approval Modal -->
 <div id="reject-approval-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg p-6 max-w-md w-full mx-4">
         <h3 class="text-lg font-semibold mb-4">{{ _('Reject Quote Approval') }}</h3>
         <form method="POST" action="{{ url_for('quotes.reject_approval', quote_id=quote.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -537,7 +537,7 @@ function hideRejectApprovalModal() {
 
 <!-- Delete Confirmation Modal -->
 <div id="confirmDeleteQuote-{{ quote.id }}" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg p-6 max-w-md w-full mx-4">
         <h3 class="text-lg font-semibold mb-4">{{ _('Delete Quote') }}</h3>
         <p class="mb-4 text-gray-600 dark:text-gray-400">{{ _('Are you sure you want to delete this quote? This action cannot be undone.') }}</p>
         <div class="flex gap-2">

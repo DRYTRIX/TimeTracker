@@ -20,12 +20,12 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Template Name *</label>
-                <input type="text" id="name" name="name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="text" id="name" name="name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project *</label>
-                <select id="project_id" name="project_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <select id="project_id" name="project_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
                     <option value="">Select Project</option>
                     {% for project in projects %}
                     <option value="{{ project.id }}" data-client-id="{{ project.client_id if project.client_id else '' }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }}</option>
@@ -35,7 +35,7 @@
             
             <div>
                 <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client *</label>
-                <select id="client_id" name="client_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <select id="client_id" name="client_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
                     <option value="">Select Client</option>
                     {% for client in clients %}
                     <option value="{{ client.id }}">{{ client.name }}</option>
@@ -45,7 +45,7 @@
             
             <div>
                 <label for="frequency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frequency *</label>
-                <select id="frequency" name="frequency" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <select id="frequency" name="frequency" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="monthly" selected>Monthly</option>
@@ -55,54 +55,54 @@
             
             <div>
                 <label for="interval" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Interval</label>
-                <input type="number" id="interval" name="interval" value="1" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="number" id="interval" name="interval" value="1" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
                 <p class="text-xs text-gray-500 mt-1">Every N periods (e.g., every 2 weeks)</p>
             </div>
             
             <div>
                 <label for="next_run_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Next Run Date *</label>
-                <input type="date" id="next_run_date" name="next_run_date" value="{{ default_next_run_date }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="date" id="next_run_date" name="next_run_date" value="{{ default_next_run_date }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date (Optional)</label>
-                <input type="date" id="end_date" name="end_date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="date" id="end_date" name="end_date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="due_date_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date (Days from Issue)</label>
-                <input type="number" id="due_date_days" name="due_date_days" value="30" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="number" id="due_date_days" name="due_date_days" value="30" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
             
             <div>
                 <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tax Rate (%)</label>
-                <input type="number" id="tax_rate" name="tax_rate" value="0" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <input type="number" id="tax_rate" name="tax_rate" value="0" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
             </div>
         </div>
         
         <div>
             <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Name</label>
-            <input type="text" id="client_name" name="client_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <input type="text" id="client_name" name="client_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
         </div>
         
         <div>
             <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Email</label>
-            <input type="email" id="client_email" name="client_email" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <input type="email" id="client_email" name="client_email" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100">
         </div>
         
         <div>
             <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Address</label>
-            <textarea id="client_address" name="client_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+            <textarea id="client_address" name="client_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100"></textarea>
         </div>
         
         <div>
             <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
-            <textarea id="notes" name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+            <textarea id="notes" name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100"></textarea>
         </div>
         
         <div>
             <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Terms</label>
-            <textarea id="terms" name="terms" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+            <textarea id="terms" name="terms" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100"></textarea>
         </div>
         
         <div class="flex items-center space-x-4">
