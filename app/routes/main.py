@@ -105,6 +105,25 @@ def dashboard():
     # Get recent activities for activity feed widget
     recent_activities = Activity.get_recent(user_id=None if current_user.is_admin else current_user.id, limit=10)
 
+    # Get user stats for smart banner and donation widget
+    try:
+        from app.models import DonationInteraction
+        user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
+    except Exception:
+        # Fallback if table doesn't exist yet
+        days_since_signup = (datetime.utcnow() - current_user.created_at).days if current_user.created_at else 0
+        time_entries_count = TimeEntry.query.filter_by(user_id=current_user.id).count()
+        total_hours = current_user.total_hours if hasattr(current_user, "total_hours") else 0.0
+        user_stats = {
+            "days_since_signup": days_since_signup,
+            "time_entries_count": time_entries_count,
+            "total_hours": total_hours,
+        }
+    
+    # Get donation widget stats (separate from user_stats for clarity)
+    time_entries_count = user_stats.get("time_entries_count", 0)
+    total_hours = user_stats.get("total_hours", 0.0)
+    
     # Prepare template data
     template_data = {
         "active_timer": active_timer,
@@ -118,6 +137,9 @@ def dashboard():
         "current_week_goal": current_week_goal,
         "templates": templates,
         "recent_activities": recent_activities,
+        "user_stats": user_stats,  # For smart banner
+        "time_entries_count": time_entries_count,  # For donation widget
+        "total_hours": total_hours,  # For donation widget
     }
 
     # Cache for 5 minutes
@@ -152,6 +174,93 @@ def about():
 def help():
     """Help page"""
     return render_template("main/help.html")
+
+
+@main_bp.route("/donate")
+@login_required
+def donate():
+    """Donation page explaining why donations are important"""
+    from app.models import TimeEntry
+    
+    # Get user engagement metrics
+    days_since_signup = (datetime.utcnow() - current_user.created_at).days if current_user.created_at else 0
+    time_entries_count = TimeEntry.query.filter_by(user_id=current_user.id).count()
+    total_hours = current_user.total_hours if hasattr(current_user, "total_hours") else 0.0
+    
+    # Record page view (only if table exists)
+    try:
+        from app.models import DonationInteraction
+        DonationInteraction.record_interaction(
+            user_id=current_user.id,
+            interaction_type="page_viewed",
+            source="donate_page",
+            user_metrics={
+                "days_since_signup": days_since_signup,
+                "time_entries_count": time_entries_count,
+                "total_hours": total_hours,
+            }
+        )
+    except Exception:
+        # Don't fail if tracking fails (e.g., table doesn't exist yet)
+        pass
+    
+    return render_template(
+        "main/donate.html",
+        days_since_signup=days_since_signup,
+        time_entries_count=time_entries_count,
+        total_hours=total_hours,
+    )
+
+
+@main_bp.route("/donate/track-click", methods=["POST"])
+@login_required
+def track_donation_click():
+    """Track donation link clicks"""
+    try:
+        from app.models import DonationInteraction
+        
+        data = request.get_json() or {}
+        source = data.get("source", "unknown")
+        
+        # Get user metrics
+        metrics = DonationInteraction.get_user_engagement_metrics(current_user.id)
+        
+        # Record click
+        DonationInteraction.record_interaction(
+            user_id=current_user.id,
+            interaction_type="link_clicked",
+            source=source,
+            user_metrics=metrics,
+        )
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        # Return success even if tracking fails (e.g., table doesn't exist yet)
+        return jsonify({"success": True, "note": "Tracking unavailable"})
+
+
+@main_bp.route("/donate/track-banner-dismissal", methods=["POST"])
+@login_required
+def track_banner_dismissal():
+    """Track banner dismissals"""
+    try:
+        from app.models import DonationInteraction
+        
+        # Get user metrics
+        metrics = DonationInteraction.get_user_engagement_metrics(current_user.id)
+        
+        # Record dismissal
+        DonationInteraction.record_interaction(
+            user_id=current_user.id,
+            interaction_type="banner_dismissed",
+            source="banner",
+            user_metrics=metrics,
+        )
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        # Return success even if tracking fails (e.g., table doesn't exist yet)
+        return jsonify({"success": True, "note": "Tracking unavailable"})
 
 
 @main_bp.route("/debug/i18n")

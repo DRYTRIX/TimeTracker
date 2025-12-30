@@ -865,9 +865,9 @@
                         </a>
                     </li>
                     <li class="mt-2">
-                        <a href="https://buymeacoffee.com/DryTrix" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 group">
+                        <a href="{{ url_for('main.donate') }}" class="flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group">
                             <i class="fas fa-mug-saucer w-6 text-center group-hover:scale-110 transition-transform"></i>
-                            <span class="ml-3 sidebar-label font-medium">{{ _('Buy me a coffee') }}</span>
+                            <span class="ml-3 sidebar-label font-medium">{{ _('Support Development') }}</span>
                             <span class="ml-auto text-xs opacity-70">☕</span>
                         </a>
                     </li>
@@ -907,9 +907,10 @@
                 <!-- Right side controls -->
                 <div class="flex items-center space-x-4">
                     <!-- BuyMeACoffee Button -->
-                    <a href="https://buymeacoffee.com/DryTrix" 
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=header&utm_campaign=support" 
                        target="_blank" 
                        rel="noopener noreferrer"
+                       onclick="trackDonationClick('header')"
                        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 text-sm font-medium"
                        title="{{ _('Support TimeTracker development') }}">
                         <i class="fas fa-mug-saucer"></i>
@@ -972,6 +973,7 @@
                             </li>
                             <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('My Profile') }}</a></li>
                             <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('My Settings') }}</a></li>
+                            <li><a href="{{ url_for('main.donate') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-mug-saucer w-4"></i> {{ _('Support Development') }}</a></li>
                             <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
                         </ul>
                     </div>
@@ -995,20 +997,25 @@
                     <div class="flex items-center gap-3 flex-1">
                         <i class="fas fa-mug-saucer text-amber-600 dark:text-amber-400 text-lg"></i>
                         <div class="flex-1">
-                            <p class="text-sm font-medium text-amber-900 dark:text-amber-100">
+                            <p class="text-sm font-medium text-amber-900 dark:text-amber-100" id="bannerTitle">
                                 {{ _('Enjoying TimeTracker?') }}
                             </p>
-                            <p class="text-xs text-amber-700 dark:text-amber-300">
-                                {{ _('Support continued development with a coffee') }} ☕
+                            <p class="text-xs text-amber-700 dark:text-amber-300" id="bannerMessage">
+                                {{ _('Your support helps fund server costs and new features') }} ☕
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="https://buymeacoffee.com/DryTrix" 
+                        <a href="{{ url_for('main.donate') }}" 
+                           class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            {{ _('Learn More') }}
+                        </a>
+                        <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=banner&utm_campaign=support" 
                            target="_blank" 
                            rel="noopener noreferrer"
-                           class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            {{ _('Support') }}
+                           onclick="trackDonationClick('banner')"
+                           class="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-600 text-sm font-medium rounded-lg transition-colors border border-amber-600">
+                            {{ _('Donate') }}
                         </a>
                         <button onclick="dismissSupportBanner()" 
                                 class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
@@ -1023,6 +1030,25 @@
             <main id="mainContentAnchor" class="flex-1 p-6">
                 {% block content %}{% endblock %}
             </main>
+            
+            <!-- Footer -->
+            <footer class="bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark py-4 px-6 mt-auto">
+                <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <div class="flex items-center gap-4 flex-wrap justify-center md:justify-start">
+                        <span>&copy; <span id="currentYear"></span> TimeTracker</span>
+                        <a href="{{ url_for('main.about') }}" class="hover:text-text-light dark:hover:text-text-dark">{{ _('About') }}</a>
+                        <a href="{{ url_for('main.help') }}" class="hover:text-text-light dark:hover:text-text-dark">{{ _('Help') }}</a>
+                        <a href="{{ url_for('main.donate') }}" class="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium">
+                            <i class="fas fa-heart mr-1"></i>{{ _('Support') }}
+                        </a>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ url_for('main.donate') }}" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-medium rounded-lg transition-all shadow-md hover:shadow-lg">
+                            <i class="fas fa-mug-saucer mr-1"></i>{{ _('Donate') }}
+                        </a>
+                    </div>
+                </div>
+            </footer>
         </div>
 
         <!-- Mobile Bottom Navigation -->
@@ -1788,28 +1814,112 @@
         // Close on Escape
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
         
-        // Support Banner Logic
+        // Support Banner Logic with Smart Prompts
         function dismissSupportBanner() {
             const banner = document.getElementById('supportBanner');
             if (banner) {
                 banner.classList.add('opacity-0', 'invisible', 'max-h-0', 'overflow-hidden');
                 banner.classList.remove('opacity-100', 'visible', 'max-h-[100px]');
-                // Store dismissal timestamp (show again after 7 days)
+                // Store dismissal timestamp (show again after 30 days)
                 try {
                     localStorage.setItem('supportBannerDismissed', Date.now().toString());
+                    // Track dismissal
+                    trackBannerDismissal();
                 } catch(e) {}
             }
         }
         
+        function trackBannerDismissal() {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            
+            fetch('{{ url_for("main.track_banner_dismissal") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({})
+            }).catch(() => {
+                // Silently fail if tracking doesn't work
+            });
+        }
+        
+        function trackDonationClick(source) {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            
+            fetch('{{ url_for("main.track_donation_click") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    source: source
+                })
+            }).catch(() => {
+                // Silently fail if tracking doesn't work
+            });
+        }
+        
         function shouldShowSupportBanner() {
             try {
+                // Check if dismissed recently (30 days)
                 const dismissed = localStorage.getItem('supportBannerDismissed');
-                if (!dismissed) return true;
-                const dismissedTime = parseInt(dismissed);
-                const sevenDays = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-                return (Date.now() - dismissedTime) > sevenDays;
+                if (dismissed) {
+                    const dismissedTime = parseInt(dismissed);
+                    const thirtyDays = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+                    if ((Date.now() - dismissedTime) < thirtyDays) {
+                        return false;
+                    }
+                }
+                
+                // Check if user clicked donation link recently (30 days)
+                const lastClick = localStorage.getItem('donationLinkClicked');
+                if (lastClick) {
+                    const clickTime = parseInt(lastClick);
+                    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+                    if ((Date.now() - clickTime) < thirtyDays) {
+                        return false;
+                    }
+                }
+                
+                return true;
             } catch(e) {
                 return true; // Show by default if localStorage fails
+            }
+        }
+        
+        function updateBannerMessage() {
+            // Get user stats from page if available
+            const bannerTitle = document.getElementById('bannerTitle');
+            const bannerMessage = document.getElementById('bannerMessage');
+            
+            if (!bannerTitle || !bannerMessage) return;
+            
+            // Try to get user stats from data attributes or API
+            const userStats = window.userStats || {};
+            const daysSinceSignup = userStats.days_since_signup || 0;
+            const timeEntriesCount = userStats.time_entries_count || 0;
+            const totalHours = userStats.total_hours || 0;
+            
+            // Smart messaging based on milestones
+            if (totalHours >= 100) {
+                bannerTitle.textContent = '{{ _("Amazing! You\'ve tracked over 100 hours") }}';
+                bannerMessage.textContent = '{{ _("Your support helps us keep TimeTracker free and improving") }} ☕';
+            } else if (timeEntriesCount >= 50) {
+                bannerTitle.textContent = '{{ _("Great progress! You\'ve logged 50+ entries") }}';
+                bannerMessage.textContent = '{{ _("Help us continue developing features you love") }} ☕';
+            } else if (daysSinceSignup >= 7) {
+                bannerTitle.textContent = '{{ _("Thanks for using TimeTracker!") }}';
+                bannerMessage.textContent = '{{ _("Your support helps fund server costs and new features") }} ☕';
+            } else {
+                // Default message
+                bannerTitle.textContent = '{{ _("Enjoying TimeTracker?") }}';
+                bannerMessage.textContent = '{{ _("Your support helps fund server costs and new features") }} ☕';
             }
         }
         
@@ -1820,6 +1930,9 @@
             if (!banner) return;
             
             if (shouldShowSupportBanner()) {
+                // Update banner message based on user stats
+                updateBannerMessage();
+                
                 // Reserve space immediately by removing height constraints
                 // This prevents layout shift when banner becomes visible
                 banner.classList.remove('max-h-0', 'overflow-hidden');
@@ -1835,9 +1948,60 @@
                 banner.classList.add('max-h-0', 'overflow-hidden');
             }
         })();
+        
+        // Track donation link clicks
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href*="buymeacoffee.com"]');
+            if (link) {
+                try {
+                    localStorage.setItem('donationLinkClicked', Date.now().toString());
+                } catch(e) {}
+            }
+        });
     </script>
     
     <script src="{{ url_for('static', filename='data-tables-enhanced.js') }}"></script>
+    
+    <!-- User Stats for Smart Banner -->
+    {% if current_user.is_authenticated %}
+    <script>
+        window.userStats = {
+            days_since_signup: {{ user_stats.days_since_signup if user_stats else 0 }},
+            time_entries_count: {{ user_stats.time_entries_count if user_stats else 0 }},
+            total_hours: {{ user_stats.total_hours if user_stats else 0.0 }}
+        };
+    </script>
+    {% endif %}
+    
+    <!-- Set current year in footer -->
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    </script>
+    
+    <!-- Global donation tracking function -->
+    <script>
+        function trackDonationClick(source) {
+            {% if current_user.is_authenticated %}
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            
+            fetch('{{ url_for("main.track_donation_click") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    source: source
+                })
+            }).catch(() => {
+                // Silently fail if tracking doesn't work
+            });
+            {% endif %}
+        }
+    </script>
+    
     {% block scripts_extra %}{% endblock %}
 </body>
 </html>

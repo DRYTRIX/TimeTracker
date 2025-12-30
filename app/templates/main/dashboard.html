@@ -264,7 +264,7 @@
             </div>
         </div>
 
-        <!-- BuyMeACoffee Widget -->
+        <!-- Support TimeTracker Widget -->
         <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-6 rounded-lg shadow-lg dashboard-widget animated-card text-white">
             <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
@@ -273,18 +273,36 @@
                         {{ _('Support TimeTracker') }}
                     </h2>
                     <p class="text-sm opacity-90 mb-4">
-                        {{ _('Enjoying TimeTracker? Consider buying me a coffee to support continued development!') }}
+                        {{ _('Your support helps fund server costs, new features, and keeps TimeTracker free for everyone.') }}
                     </p>
+                    {% if time_entries_count > 0 or total_hours > 0 %}
+                    <div class="text-xs opacity-75 mb-3 space-y-1">
+                        {% if time_entries_count > 0 %}
+                        <div><i class="fas fa-check-circle mr-1"></i>{{ _('You\'ve tracked %(count)s time entries', count=time_entries_count) }}</div>
+                        {% endif %}
+                        {% if total_hours > 0 %}
+                        <div><i class="fas fa-check-circle mr-1"></i>{{ _('You\'ve logged %(hours)s hours', hours="%.1f"|format(total_hours)) }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-            <a href="https://buymeacoffee.com/DryTrix" 
-               target="_blank" 
-               rel="noopener noreferrer"
-               class="inline-flex items-center justify-center w-full bg-white text-amber-600 px-4 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                <i class="fas fa-mug-saucer mr-2"></i>
-                {{ _('Buy me a coffee') }}
-                <i class="fas fa-external-link-alt ml-2 text-xs"></i>
-            </a>
+            <div class="flex gap-2">
+                <a href="{{ url_for('main.donate') }}" 
+                   class="inline-flex items-center justify-center flex-1 bg-white text-amber-600 px-4 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <i class="fas fa-heart mr-2"></i>
+                    {{ _('Learn More') }}
+                </a>
+                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=dashboard&utm_campaign=support" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   onclick="trackDonationClick('dashboard_widget')"
+                   class="inline-flex items-center justify-center flex-1 bg-amber-700 hover:bg-amber-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <i class="fas fa-mug-saucer mr-2"></i>
+                    {{ _('Donate Now') }}
+                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                </a>
+            </div>
         </div>
     </div>
     <!-- Delete Entry Confirmation Dialogs -->
