@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Support TimeTracker') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="mb-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+        <a href="{{ url_for('main.dashboard') }}" class="hover:text-text-light dark:hover:text-text-dark">{{ _('Dashboard') }}</a>
+        <span class="mx-2">/</span>
+        <span class="text-text-light dark:text-text-dark">{{ _('Support Development') }}</span>
+    </nav>
+    
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-8 rounded-lg shadow-lg text-white mb-6">
+        <div class="text-center">
+            <i class="fas fa-mug-saucer text-6xl mb-4"></i>
+            <h1 class="text-4xl font-bold mb-4">{{ _('Support TimeTracker Development') }}</h1>
+            <p class="text-xl opacity-90 mb-6">
+                {{ _('Your support helps keep TimeTracker free and continuously improving') }}
+            </p>
+            <div class="flex flex-wrap gap-3 justify-center">
+                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   onclick="trackDonationClick('donate_page_hero')"
+                   class="px-6 py-3 bg-white text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <i class="fas fa-mug-saucer mr-2"></i>{{ _('Donate Now') }}
+                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Why Donations Matter -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6">
+        <h2 class="text-2xl font-semibold mb-4">
+            <i class="fas fa-heart text-rose-500 mr-2"></i>
+            {{ _('Why Your Support Matters') }}
+        </h2>
+        <div class="space-y-4 text-text-light dark:text-text-dark">
+            <p class="text-lg">
+                {{ _('TimeTracker is a free, open-source project built with passion and dedication. Your donations directly support:') }}
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-server text-primary mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold mb-1">{{ _('Server Infrastructure') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Hosting, databases, and CDN costs to keep TimeTracker fast and reliable') }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-code text-primary mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold mb-1">{{ _('Feature Development') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('New features, improvements, and bug fixes based on your feedback') }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-shield-alt text-primary mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold mb-1">{{ _('Security & Maintenance') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Regular security updates, dependency maintenance, and performance optimization') }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-globe text-primary mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold mb-1">{{ _('Internationalization') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Translation support, localization, and making TimeTracker accessible worldwide') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Your Usage Stats -->
+    {% if time_entries_count > 0 or total_hours > 0 %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6">
+        <h2 class="text-2xl font-semibold mb-4">
+            <i class="fas fa-chart-line text-primary mr-2"></i>
+            {{ _('Your TimeTracker Journey') }}
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% if days_since_signup > 0 %}
+            <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                <div class="text-3xl font-bold text-primary">{{ days_since_signup }}</div>
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ _('Days using TimeTracker') }}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if time_entries_count > 0 %}
+            <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                <div class="text-3xl font-bold text-primary">{{ time_entries_count }}</div>
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ _('Time entries tracked') }}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if total_hours > 0 %}
+            <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
+                <div class="text-3xl font-bold text-primary">{{ "%.1f"|format(total_hours) }}</div>
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ _('Hours tracked') }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <p class="text-center mt-4 text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Thank you for being part of the TimeTracker community!') }}
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Donation Options -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6">
+        <h2 class="text-2xl font-semibold mb-4">
+            <i class="fas fa-hand-holding-heart text-amber-500 mr-2"></i>
+            {{ _('How to Support') }}
+        </h2>
+        <p class="mb-6 text-text-light dark:text-text-dark">
+            {{ _('Every contribution, no matter the size, makes a difference. Your support helps ensure TimeTracker remains free and continues to evolve.') }}
+        </p>
+        
+        <div class="text-center">
+            <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page&utm_campaign=support" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               onclick="trackDonationClick('donate_page_button')"
+               class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-4 rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
+                <i class="fas fa-mug-saucer text-2xl"></i>
+                <span>{{ _('Support on Buy Me a Coffee') }}</span>
+                <i class="fas fa-external-link-alt text-sm"></i>
+            </a>
+        </div>
+        
+        <p class="text-center mt-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+            {{ _('You\'ll be redirected to Buy Me a Coffee where you can choose your contribution amount') }}
+        </p>
+    </div>
+
+    <!-- Impact -->
+    <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+        <h2 class="text-2xl font-semibold mb-4 text-green-900 dark:text-green-100">
+            <i class="fas fa-seedling mr-2"></i>
+            {{ _('The Impact of Your Support') }}
+        </h2>
+        <ul class="space-y-2 text-green-800 dark:text-green-200">
+            <li class="flex items-start gap-2">
+                <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-1"></i>
+                <span>{{ _('Enables faster development cycles and quicker feature releases') }}</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-1"></i>
+                <span>{{ _('Supports better documentation and user guides') }}</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-1"></i>
+                <span>{{ _('Helps maintain high-quality code and security standards') }}</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <i class="fas fa-check-circle text-green-600 dark:text-green-400 mt-1"></i>
+                <span>{{ _('Keeps TimeTracker free and accessible for everyone') }}</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Alternative Ways to Help -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mt-6">
+        <h2 class="text-2xl font-semibold mb-4">
+            <i class="fas fa-users text-primary mr-2"></i>
+            {{ _('Other Ways to Help') }}
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a href="https://github.com/drytrix/TimeTracker" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
+                <i class="fab fa-github text-2xl text-text-light dark:text-text-dark"></i>
+                <div>
+                    <div class="font-semibold">{{ _('Contribute on GitHub') }}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Report bugs, suggest features, or submit code') }}
+                    </div>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('main.help') }}" 
+               class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
+                <i class="fas fa-book text-2xl text-text-light dark:text-text-dark"></i>
+                <div>
+                    <div class="font-semibold">{{ _('Help Others') }}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Share your knowledge in the community') }}
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function trackDonationClick(source) {
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    
+    // Track donation link click
+    fetch('{{ url_for("main.track_donation_click") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+            source: source
+        })
+    }).catch(() => {
+        // Silently fail if tracking doesn't work
+    });
+}
+</script>
+{% endblock %}
+

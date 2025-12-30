@@ -175,9 +175,34 @@
         <a href="https://github.com/drytrix/TimeTracker" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
             <i class="fab fa-github mr-2"></i>{{ _('View on GitHub') }}
         </a>
-        <a href="https://buymeacoffee.com/DryTrix" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg border border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20">
-            <i class="fas fa-mug-saucer mr-2"></i>{{ _('Support Development') }}
+        <a href="{{ url_for('main.donate') }}" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md hover:shadow-lg transition-all">
+            <i class="fas fa-heart mr-2"></i>{{ _('Support Development') }}
         </a>
+    </div>
+    
+    <!-- Support Section -->
+    <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-lg border border-amber-200 dark:border-amber-800 mt-6">
+        <div class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+                <i class="fas fa-mug-saucer text-3xl text-amber-600 dark:text-amber-400"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-lg font-semibold mb-2 text-amber-900 dark:text-amber-100">
+                    {{ _('Support TimeTracker Development') }}
+                </h3>
+                <p class="text-sm text-amber-800 dark:text-amber-200 mb-4">
+                    {{ _('TimeTracker is free and open-source. Your support helps fund server costs, new features, security updates, and keeps the project alive. Every contribution makes a difference!') }}
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ url_for('main.donate') }}" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-info-circle mr-2"></i>{{ _('Learn More') }}
+                    </a>
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=about_page&utm_campaign=support" target="_blank" rel="noopener" onclick="trackDonationClick('about_page')" class="px-4 py-2 bg-white hover:bg-amber-50 text-amber-600 rounded-lg font-medium transition-colors border border-amber-600">
+                        <i class="fas fa-mug-saucer mr-2"></i>{{ _('Donate Now') }}
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

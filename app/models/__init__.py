@@ -80,6 +80,7 @@ from .link_template import LinkTemplate
 from .custom_field_definition import CustomFieldDefinition
 from .salesman_email_mapping import SalesmanEmailMapping
 from .issue import Issue
+from .donation_interaction import DonationInteraction
 
 __all__ = [
     "User",
@@ -185,4 +186,5 @@ __all__ = [
     "CustomFieldDefinition",
     "SalesmanEmailMapping",
     "Issue",
+    "DonationInteraction",
 ]
