@@ -120,17 +120,26 @@ try:
     \"\"\")
     has_alembic = cursor.fetchone()[0]
     
+    # Check for actual application tables (not just alembic_version)
     cursor.execute(\"\"\"
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
+        AND table_name NOT IN ('alembic_version', 'spatial_ref_sys')
         ORDER BY table_name
     \"\"\")
     existing_tables = [row[0] for row in cursor.fetchall()]
     
+    # Count core application tables
+    core_tables = ['users', 'projects', 'time_entries', 'settings', 'clients']
+    core_table_count = len([t for t in existing_tables if t in core_tables])
+    
     conn.close()
     
-    if has_alembic:
+    # If alembic_version exists but no core tables, treat as fresh (stale alembic_version)
+    if has_alembic and core_table_count == 0:
+        print('fresh')
+    elif has_alembic and core_table_count >= 3:
         print('migrated')
     elif existing_tables:
         print('legacy')
@@ -157,12 +166,23 @@ try:
     cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name=\"alembic_version\"')
     has_alembic = cursor.fetchone() is not None
     
-    cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\"')
-    existing_tables = [row[0] for row in cursor.fetchall()]
+    # Get all tables except system tables
+    cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name NOT IN (\"sqlite_sequence\")')
+    all_tables = [row[0] for row in cursor.fetchall()]
+    
+    # Filter out alembic_version to get actual application tables
+    existing_tables = [t for t in all_tables if t != 'alembic_version']
+    
+    # Count core application tables
+    core_tables = ['users', 'projects', 'time_entries', 'settings', 'clients']
+    core_table_count = len([t for t in existing_tables if t in core_tables])
     
     conn.close()
     
-    if has_alembic:
+    # If alembic_version exists but no core tables, treat as fresh (stale alembic_version)
+    if has_alembic and core_table_count == 0:
+        print('fresh')
+    elif has_alembic and core_table_count >= 3:
         print('migrated')
     elif existing_tables:
         print('legacy')
@@ -279,6 +299,74 @@ execute_fresh_init() {
         export FLASK_APP=app.py
     fi
     
+    # Clean up any stale alembic_version table if database is truly fresh (no core tables)
+    log "Checking for stale alembic_version table..."
+    if [[ "$db_url" == sqlite://* ]]; then
+        local db_file="${db_url#sqlite://}"
+        if [[ -f "$db_file" ]]; then
+            local core_table_count=$(python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name IN (\"users\", \"projects\", \"time_entries\", \"settings\", \"clients\")')
+    core_tables = cursor.fetchall()
+    conn.close()
+    print(len(core_tables))
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+            if [[ "$core_table_count" -eq 0 ]]; then
+                log "No core tables found, cleaning up stale alembic_version if present..."
+                python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute('DROP TABLE IF EXISTS alembic_version')
+    conn.commit()
+    conn.close()
+except:
+    pass
+" 2>/dev/null || true
+            fi
+        fi
+    elif [[ "$db_url" == postgresql* ]]; then
+        local core_table_count=$(python -c "
+import psycopg2
+try:
+    conn_str = '$db_url'.replace('+psycopg2://', '://')
+    conn = psycopg2.connect(conn_str)
+    cursor = conn.cursor()
+    cursor.execute(\"\"\"
+        SELECT COUNT(*) 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name IN ('users', 'projects', 'time_entries', 'settings', 'clients')
+    \"\"\")
+    count = cursor.fetchone()[0]
+    conn.close()
+    print(count)
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+        if [[ "$core_table_count" -eq 0 ]]; then
+            log "No core tables found, cleaning up stale alembic_version if present..."
+            python -c "
+import psycopg2
+try:
+    conn_str = '$db_url'.replace('+psycopg2://', '://')
+    conn = psycopg2.connect(conn_str)
+    cursor = conn.cursor()
+    cursor.execute('DROP TABLE IF EXISTS alembic_version')
+    conn.commit()
+    conn.close()
+except:
+    pass
+" 2>/dev/null || true
+        fi
+    fi
+    
     # Check if migrations directory already exists
     if [[ -d "/app/migrations" ]]; then
         log "⚠ Migrations directory already exists, checking if it's properly configured..."
@@ -372,11 +460,21 @@ except:
             # Apply any pending migrations
             log "Applying pending migrations..."
             
-            # Show migration output for debugging
-            if ! flask db upgrade 2>&1; then
+            # Show migration output for debugging - capture both stdout and stderr
+            MIGRATION_OUTPUT=$(mktemp)
+            if ! flask db upgrade > "$MIGRATION_OUTPUT" 2>&1; then
                 log "✗ Migration application failed"
+                log "Error details:"
+                cat "$MIGRATION_OUTPUT"
+                rm -f "$MIGRATION_OUTPUT"
                 return 1
             fi
+            # Show migration output even on success for debugging
+            if [[ -s "$MIGRATION_OUTPUT" ]]; then
+                log "Migration output:"
+                cat "$MIGRATION_OUTPUT" | head -30
+            fi
+            rm -f "$MIGRATION_OUTPUT"
             log "✓ Migrations applied"
             
             # Wait a moment for tables to be fully committed
@@ -419,12 +517,17 @@ except:
     # Apply migration
     log "Applying initial migration..."
     MIGRATION_OUTPUT=$(mktemp)
-    if ! flask db upgrade 2>&1 | tee "$MIGRATION_OUTPUT"; then
+    if ! flask db upgrade > "$MIGRATION_OUTPUT" 2>&1; then
         log "✗ Initial migration application failed"
         log "Error details:"
         cat "$MIGRATION_OUTPUT"
         rm -f "$MIGRATION_OUTPUT"
         return 1
+    fi
+    # Show migration output even on success for debugging
+    if [[ -s "$MIGRATION_OUTPUT" ]]; then
+        log "Migration output:"
+        cat "$MIGRATION_OUTPUT" | head -30
     fi
     rm -f "$MIGRATION_OUTPUT"
     log "✓ Initial migration applied"
@@ -441,14 +544,102 @@ execute_check_migrations() {
     local current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "unknown")
     log "Current migration revision: $current_revision"
     
+    # Check if database actually has tables (not just alembic_version)
+    # This handles the case where alembic_version exists but migrations were never applied
+    local has_core_tables=false
+    if [[ "$db_url" == sqlite://* ]]; then
+        local db_file="${db_url#sqlite://}"
+        if [[ -f "$db_file" ]]; then
+            local core_table_count=$(python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name IN (\"users\", \"projects\", \"time_entries\", \"settings\", \"clients\")')
+    core_tables = cursor.fetchall()
+    conn.close()
+    print(len(core_tables))
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+            if [[ "$core_table_count" -ge 3 ]]; then
+                has_core_tables=true
+            fi
+        fi
+    elif [[ "$db_url" == postgresql* ]]; then
+        local core_table_count=$(python -c "
+import psycopg2
+try:
+    conn_str = '$db_url'.replace('+psycopg2://', '://')
+    conn = psycopg2.connect(conn_str)
+    cursor = conn.cursor()
+    cursor.execute(\"\"\"
+        SELECT COUNT(*) 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name IN ('users', 'projects', 'time_entries', 'settings', 'clients')
+    \"\"\")
+    count = cursor.fetchone()[0]
+    conn.close()
+    print(count)
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+        if [[ "$core_table_count" -ge 3 ]]; then
+            has_core_tables=true
+        fi
+    fi
+    
+    # If alembic_version exists but no core tables, treat as fresh and apply all migrations
+    if [[ "$current_revision" != "none" ]] && [[ "$has_core_tables" == "false" ]]; then
+        log "⚠ Database has alembic_version but no core tables detected"
+        log "This indicates migrations were never applied. Applying all migrations from beginning..."
+        # Drop alembic_version table to start fresh
+        if [[ "$db_url" == sqlite://* ]]; then
+            local db_file="${db_url#sqlite://}"
+            python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute('DROP TABLE IF EXISTS alembic_version')
+    conn.commit()
+    conn.close()
+    print('Dropped stale alembic_version table')
+except Exception as e:
+    print(f'Error: {e}')
+" 2>/dev/null || true
+        elif [[ "$db_url" == postgresql* ]]; then
+            python -c "
+import psycopg2
+try:
+    conn_str = '$db_url'.replace('+psycopg2://', '://')
+    conn = psycopg2.connect(conn_str)
+    cursor = conn.cursor()
+    cursor.execute('DROP TABLE IF EXISTS alembic_version')
+    conn.commit()
+    conn.close()
+    print('Dropped stale alembic_version table')
+except Exception as e:
+    print(f'Error: {e}')
+" 2>/dev/null || true
+        fi
+        log "Now applying all migrations..."
+    fi
+    
     # Check for pending migrations
     MIGRATION_OUTPUT=$(mktemp)
-    if ! flask db upgrade 2>&1 | tee "$MIGRATION_OUTPUT"; then
+    if ! flask db upgrade > "$MIGRATION_OUTPUT" 2>&1; then
         log "✗ Migration check failed"
         log "Error details:"
         cat "$MIGRATION_OUTPUT"
         rm -f "$MIGRATION_OUTPUT"
         return 1
+    fi
+    # Show migration output even on success for debugging
+    if [[ -s "$MIGRATION_OUTPUT" ]]; then
+        log "Migration output:"
+        cat "$MIGRATION_OUTPUT" | head -30
     fi
     rm -f "$MIGRATION_OUTPUT"
     log "✓ Migrations checked and applied"
