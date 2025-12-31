@@ -307,8 +307,54 @@ execute_fresh_init() {
             local current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "none")
             log "Current migration revision: $current_revision"
             
-            if [[ "$current_revision" == "none" ]]; then
-                log "Database not stamped, stamping with current revision..."
+            # Check if database has any tables (to determine if it's truly fresh)
+            local has_tables=false
+            if [[ "$db_url" == sqlite://* ]]; then
+                local db_file="${db_url#sqlite://}"
+                if [[ -f "$db_file" ]]; then
+                    local table_count=$(python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name != \"sqlite_sequence\"')
+    tables = cursor.fetchall()
+    conn.close()
+    print(len(tables))
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+                    if [[ "$table_count" -gt 0 ]]; then
+                        has_tables=true
+                    fi
+                fi
+            elif [[ "$db_url" == postgresql* ]]; then
+                local table_count=$(python -c "
+import psycopg2
+try:
+    conn_str = '$db_url'.replace('+psycopg2://', '://')
+    conn = psycopg2.connect(conn_str)
+    cursor = conn.cursor()
+    cursor.execute(\"\"\"
+        SELECT COUNT(*) 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+    \"\"\")
+    count = cursor.fetchone()[0]
+    conn.close()
+    print(count)
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+                if [[ "$table_count" -gt 0 ]]; then
+                    has_tables=true
+                fi
+            fi
+            
+            # Only stamp if database has tables but no alembic_version (legacy database)
+            # For truly fresh databases, we should apply migrations from the beginning
+            if [[ "$current_revision" == "none" ]] && [[ "$has_tables" == "true" ]]; then
+                log "Database has tables but no alembic_version, stamping with current revision..."
                 local head_revision=$(flask db heads 2>/dev/null | tr -d '\n' || echo "")
                 if [[ -n "$head_revision" ]]; then
                     if ! flask db stamp "$head_revision"; then
@@ -319,21 +365,18 @@ execute_fresh_init() {
                     fi
                     log "✓ Database stamped with revision: $head_revision"
                 fi
+            elif [[ "$current_revision" == "none" ]] && [[ "$has_tables" == "false" ]]; then
+                log "Fresh database detected (no tables), will apply migrations from beginning..."
             fi
             
             # Apply any pending migrations
             log "Applying pending migrations..."
             
-            # Capture output to a temporary file so we can show it if migration fails
-            MIGRATION_OUTPUT=$(mktemp)
-            if ! flask db upgrade 2>&1 | tee "$MIGRATION_OUTPUT"; then
+            # Show migration output for debugging
+            if ! flask db upgrade 2>&1; then
                 log "✗ Migration application failed"
-                log "Error details:"
-                cat "$MIGRATION_OUTPUT"
-                rm -f "$MIGRATION_OUTPUT"
                 return 1
             fi
-            rm -f "$MIGRATION_OUTPUT"
             log "✓ Migrations applied"
             
             # Wait a moment for tables to be fully committed
