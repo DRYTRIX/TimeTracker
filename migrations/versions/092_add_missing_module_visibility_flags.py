@@ -105,6 +105,7 @@ def upgrade():
 
     # Users table - Time Tracking section (additional)
     _add_bool_column("users", "ui_show_time_entry_templates")
+    _add_bool_column("users", "ui_show_issues")  # Missing from migration 077
 
     # Users table - Advanced features
     _add_bool_column("users", "ui_show_workflows")

@@ -395,6 +395,46 @@ except:
             local current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "none")
             log "Current migration revision: $current_revision"
             
+            # If we have alembic_version but no tables, check what revision is stored
+            if [[ "$current_revision" != "none" ]] && [[ -n "$current_revision" ]]; then
+                log "Database has alembic_version with revision: $current_revision"
+                # Check if we actually have tables
+                if [[ "$db_url" == sqlite://* ]]; then
+                    local db_file="${db_url#sqlite://}"
+                    if [[ -f "$db_file" ]]; then
+                        local table_count=$(python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name != \"sqlite_sequence\" AND name != \"alembic_version\"')
+    tables = cursor.fetchall()
+    conn.close()
+    print(len(tables))
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+                        if [[ "$table_count" -eq 0 ]]; then
+                            log "⚠ Database has alembic_version but no application tables"
+                            log "This indicates a failed migration. Clearing alembic_version to start fresh..."
+                            python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute('DROP TABLE IF EXISTS alembic_version')
+    conn.commit()
+    conn.close()
+    print('Cleared stale alembic_version table')
+except Exception as e:
+    print(f'Error: {e}')
+" 2>/dev/null || true
+                            current_revision="none"
+                        fi
+                    fi
+                fi
+            fi
+            
             # Check if database has any tables (to determine if it's truly fresh)
             local has_tables=false
             if [[ "$db_url" == sqlite://* ]]; then
@@ -460,19 +500,94 @@ except:
             # Apply any pending migrations
             log "Applying pending migrations..."
             
-            # Show migration output for debugging - capture both stdout and stderr
+            # Ensure we're in the right directory and FLASK_APP is set
+            cd /app
+            export FLASK_APP=${FLASK_APP:-app.py}
+            
+            # Run migration with proper error capture
+            # Store output in a file and also show it in real-time for debugging
             MIGRATION_OUTPUT=$(mktemp)
-            if ! flask db upgrade > "$MIGRATION_OUTPUT" 2>&1; then
-                log "✗ Migration application failed"
-                log "Error details:"
-                cat "$MIGRATION_OUTPUT"
+            
+            set +e  # Don't exit on error immediately
+            
+            # Run migration with Python traceback enabled for better error visibility
+            # Use 'heads' instead of 'head' to handle multiple migration branches
+            PYTHONUNBUFFERED=1 python -u -c "
+import sys
+import traceback
+import os
+
+# Set up environment
+os.environ['PYTHONUNBUFFERED'] = '1'
+
+try:
+    from flask import Flask
+    from flask_migrate import upgrade
+    from app import create_app
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            # Use 'heads' to upgrade all migration heads (handles branching)
+            upgrade(revision='heads')
+            sys.exit(0)
+        except Exception as e:
+            print('ERROR: Migration failed!', file=sys.stderr)
+            print(f'Error type: {type(e).__name__}', file=sys.stderr)
+            print(f'Error message: {e}', file=sys.stderr)
+            print('\\nFull traceback:', file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            sys.exit(1)
+except Exception as e:
+    print('ERROR: Failed to initialize Flask app for migration!', file=sys.stderr)
+    print(f'Error type: {type(e).__name__}', file=sys.stderr)
+    print(f'Error message: {e}', file=sys.stderr)
+    print('\\nFull traceback:', file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    sys.exit(1)
+" 2>&1 | tee "$MIGRATION_OUTPUT"
+            MIGRATION_EXIT_CODE=${PIPESTATUS[0]}
+            
+            set -e  # Re-enable exit on error
+            
+            if [[ $MIGRATION_EXIT_CODE -ne 0 ]]; then
+                log "✗ Migration application failed (exit code: $MIGRATION_EXIT_CODE)"
+                log "Full error output:"
+                if [[ -s "$MIGRATION_OUTPUT" ]]; then
+                    cat "$MIGRATION_OUTPUT"
+                else
+                    log "No output captured - migration may have failed before producing output"
+                fi
+                # Get additional debugging info
+                log "Debugging information:"
+                log "Current migration revision:"
+                flask db current 2>&1 || log "  (could not determine)"
+                if [[ "$db_url" == sqlite://* ]]; then
+                    local db_file="${db_url#sqlite://}"
+                    log "Database file: $db_file"
+                    if [[ -f "$db_file" ]]; then
+                        log "  File exists: yes"
+                        log "  File size: $(stat -c%s "$db_file" 2>/dev/null || echo 'unknown') bytes"
+                        log "  Tables in database:"
+                        python -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('$db_file')
+    cursor = conn.cursor()
+    cursor.execute(\"SELECT name FROM sqlite_master WHERE type='table'\")
+    tables = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    for table in tables:
+        print(f'    - {table}')
+except Exception as e:
+    print(f'    Error: {e}')
+" 2>&1 || true
+                    else
+                        log "  File exists: no"
+                    fi
+                fi
                 rm -f "$MIGRATION_OUTPUT"
                 return 1
-            fi
-            # Show migration output even on success for debugging
-            if [[ -s "$MIGRATION_OUTPUT" ]]; then
-                log "Migration output:"
-                cat "$MIGRATION_OUTPUT" | head -30
             fi
             rm -f "$MIGRATION_OUTPUT"
             log "✓ Migrations applied"
@@ -517,17 +632,27 @@ except:
     # Apply migration
     log "Applying initial migration..."
     MIGRATION_OUTPUT=$(mktemp)
-    if ! flask db upgrade > "$MIGRATION_OUTPUT" 2>&1; then
-        log "✗ Initial migration application failed"
+    set +e  # Don't exit on error immediately
+    # Use 'heads' to handle multiple migration branches
+    PYTHONUNBUFFERED=1 flask db upgrade heads > "$MIGRATION_OUTPUT" 2>&1
+    MIGRATION_EXIT_CODE=$?
+    set -e  # Re-enable exit on error
+    
+    if [[ $MIGRATION_EXIT_CODE -ne 0 ]]; then
+        log "✗ Initial migration application failed (exit code: $MIGRATION_EXIT_CODE)"
         log "Error details:"
-        cat "$MIGRATION_OUTPUT"
+        if [[ -s "$MIGRATION_OUTPUT" ]]; then
+            cat "$MIGRATION_OUTPUT"
+        else
+            log "No output captured from migration command"
+        fi
         rm -f "$MIGRATION_OUTPUT"
         return 1
     fi
     # Show migration output even on success for debugging
     if [[ -s "$MIGRATION_OUTPUT" ]]; then
         log "Migration output:"
-        cat "$MIGRATION_OUTPUT" | head -30
+        cat "$MIGRATION_OUTPUT" | head -50
     fi
     rm -f "$MIGRATION_OUTPUT"
     log "✓ Initial migration applied"
@@ -629,17 +754,27 @@ except Exception as e:
     
     # Check for pending migrations
     MIGRATION_OUTPUT=$(mktemp)
-    if ! flask db upgrade > "$MIGRATION_OUTPUT" 2>&1; then
-        log "✗ Migration check failed"
+    set +e  # Don't exit on error immediately
+    # Use 'heads' to handle multiple migration branches
+    PYTHONUNBUFFERED=1 flask db upgrade heads > "$MIGRATION_OUTPUT" 2>&1
+    MIGRATION_EXIT_CODE=$?
+    set -e  # Re-enable exit on error
+    
+    if [[ $MIGRATION_EXIT_CODE -ne 0 ]]; then
+        log "✗ Migration check failed (exit code: $MIGRATION_EXIT_CODE)"
         log "Error details:"
-        cat "$MIGRATION_OUTPUT"
+        if [[ -s "$MIGRATION_OUTPUT" ]]; then
+            cat "$MIGRATION_OUTPUT"
+        else
+            log "No output captured from migration command"
+        fi
         rm -f "$MIGRATION_OUTPUT"
         return 1
     fi
     # Show migration output even on success for debugging
     if [[ -s "$MIGRATION_OUTPUT" ]]; then
         log "Migration output:"
-        cat "$MIGRATION_OUTPUT" | head -30
+        cat "$MIGRATION_OUTPUT" | head -50
     fi
     rm -f "$MIGRATION_OUTPUT"
     log "✓ Migrations checked and applied"

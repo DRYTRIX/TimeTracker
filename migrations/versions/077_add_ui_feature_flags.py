@@ -18,134 +18,69 @@ depends_on = None
 
 def upgrade():
     """Add UI feature flag fields to users table"""
+    from sqlalchemy import inspect
     bind = op.get_bind()
+    inspector = inspect(bind)
     dialect_name = bind.dialect.name if bind else 'generic'
+    
+    # Check existing columns (idempotent)
+    existing_tables = inspector.get_table_names()
+    if 'users' not in existing_tables:
+        return
+    
+    users_columns = {c['name'] for c in inspector.get_columns('users')}
+    
+    # Helper function to add column if it doesn't exist
+    def _add_column_if_missing(column_name, description=""):
+        if column_name in users_columns:
+            print(f"✓ Column {column_name} already exists in users table")
+            return
+        try:
+            op.add_column('users', sa.Column(column_name, sa.Boolean(), nullable=False, server_default='1'))
+            print(f"✓ Added {column_name} column to users table{(' - ' + description) if description else ''}")
+        except Exception as e:
+            error_msg = str(e)
+            if 'already exists' in error_msg.lower() or 'duplicate' in error_msg.lower():
+                print(f"✓ Column {column_name} already exists in users table (detected via error)")
+            else:
+                print(f"⚠ Warning adding {column_name} column: {e}")
+                raise
     
     # Add UI feature flags to users table
     # All default to True (enabled) for backward compatibility
-    try:
-        # Show/hide Inventory section in navigation
-        op.add_column('users', sa.Column('ui_show_inventory', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_inventory column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_inventory column: {e}")
+    _add_column_if_missing('ui_show_inventory', 'Show/hide Inventory section in navigation')
     
-    try:
-        # Show/hide Mileage under Finance & Expenses
-        op.add_column('users', sa.Column('ui_show_mileage', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_mileage column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_mileage column: {e}")
-    
-    try:
-        # Show/hide Per Diem under Finance & Expenses
-        op.add_column('users', sa.Column('ui_show_per_diem', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_per_diem column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_per_diem column: {e}")
-    
-    try:
-        # Show/hide Kanban Board under Time Tracking
-        op.add_column('users', sa.Column('ui_show_kanban_board', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_kanban_board column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_kanban_board column: {e}")
+    _add_column_if_missing('ui_show_mileage', 'Show/hide Mileage under Finance & Expenses')
+    _add_column_if_missing('ui_show_per_diem', 'Show/hide Per Diem under Finance & Expenses')
+    _add_column_if_missing('ui_show_kanban_board', 'Show/hide Kanban Board under Time Tracking')
     
     # Calendar section
-    try:
-        op.add_column('users', sa.Column('ui_show_calendar', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_calendar column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_calendar column: {e}")
+    _add_column_if_missing('ui_show_calendar', 'Show/hide Calendar section')
     
     # Time Tracking section items
-    try:
-        op.add_column('users', sa.Column('ui_show_project_templates', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_project_templates column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_project_templates column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_gantt_chart', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_gantt_chart column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_gantt_chart column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_weekly_goals', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_weekly_goals column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_weekly_goals column: {e}")
+    _add_column_if_missing('ui_show_project_templates', 'Show/hide Project Templates')
+    _add_column_if_missing('ui_show_gantt_chart', 'Show/hide Gantt Chart')
+    _add_column_if_missing('ui_show_weekly_goals', 'Show/hide Weekly Goals')
+    _add_column_if_missing('ui_show_issues', 'Show/hide Issues feature')
     
     # CRM section
-    try:
-        op.add_column('users', sa.Column('ui_show_quotes', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_quotes column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_quotes column: {e}")
+    _add_column_if_missing('ui_show_quotes', 'Show/hide Quotes')
     
     # Finance & Expenses section items
-    try:
-        op.add_column('users', sa.Column('ui_show_reports', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_reports column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_reports column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_report_builder', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_report_builder column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_report_builder column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_scheduled_reports', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_scheduled_reports column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_scheduled_reports column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_invoice_approvals', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_invoice_approvals column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_invoice_approvals column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_payment_gateways', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_payment_gateways column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_payment_gateways column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_recurring_invoices', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_recurring_invoices column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_recurring_invoices column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_payments', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_payments column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_payments column: {e}")
-    
-    try:
-        op.add_column('users', sa.Column('ui_show_budget_alerts', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_budget_alerts column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_budget_alerts column: {e}")
+    _add_column_if_missing('ui_show_reports', 'Show/hide Reports')
+    _add_column_if_missing('ui_show_report_builder', 'Show/hide Report Builder')
+    _add_column_if_missing('ui_show_scheduled_reports', 'Show/hide Scheduled Reports')
+    _add_column_if_missing('ui_show_invoice_approvals', 'Show/hide Invoice Approvals')
+    _add_column_if_missing('ui_show_payment_gateways', 'Show/hide Payment Gateways')
+    _add_column_if_missing('ui_show_recurring_invoices', 'Show/hide Recurring Invoices')
+    _add_column_if_missing('ui_show_payments', 'Show/hide Payments')
+    _add_column_if_missing('ui_show_budget_alerts', 'Show/hide Budget Alerts')
     
     # Analytics
-    try:
-        op.add_column('users', sa.Column('ui_show_analytics', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_analytics column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_analytics column: {e}")
+    _add_column_if_missing('ui_show_analytics', 'Show/hide Analytics')
     
     # Tools & Data section
-    try:
-        op.add_column('users', sa.Column('ui_show_tools', sa.Boolean(), nullable=False, server_default='1'))
-        print("✓ Added ui_show_tools column to users table")
-    except Exception as e:
-        print(f"⚠ Warning adding ui_show_tools column: {e}")
+    _add_column_if_missing('ui_show_tools', 'Show/hide Tools & Data section')
 
 
 def downgrade():

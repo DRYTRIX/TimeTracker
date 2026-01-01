@@ -144,6 +144,9 @@ def upgrade():
         op.create_index('ix_per_diems_user_id', 'per_diems', ['user_id'])
         op.create_index('ix_per_diems_trip_start', 'per_diems', ['trip_start_date'])
     
+    # Check database dialect for SQLite batch mode
+    is_sqlite = conn.dialect.name == 'sqlite'
+    
     # Add new columns to expenses table (idempotent)
     if 'expenses' in existing_tables:
         existing_columns = [col['name'] for col in inspector.get_columns('expenses')]
@@ -158,31 +161,58 @@ def upgrade():
         # Add foreign keys from expenses to mileage and per_diems (idempotent)
         existing_fks = [fk['name'] for fk in inspector.get_foreign_keys('expenses')]
         
-        if 'fk_expenses_mileage' not in existing_fks:
-            op.create_foreign_key('fk_expenses_mileage', 'expenses', 'mileage', ['mileage_id'], ['id'])
-        if 'fk_expenses_per_diem' not in existing_fks:
-            op.create_foreign_key('fk_expenses_per_diem', 'expenses', 'per_diems', ['per_diem_id'], ['id'])
+        # SQLite requires batch mode for adding constraints to existing tables
+        if is_sqlite:
+            with op.batch_alter_table('expenses', schema=None) as batch_op:
+                if 'fk_expenses_mileage' not in existing_fks:
+                    batch_op.create_foreign_key('fk_expenses_mileage', 'mileage', ['mileage_id'], ['id'])
+                if 'fk_expenses_per_diem' not in existing_fks:
+                    batch_op.create_foreign_key('fk_expenses_per_diem', 'per_diems', ['per_diem_id'], ['id'])
+        else:
+            # PostgreSQL and other databases can add constraints directly
+            if 'fk_expenses_mileage' not in existing_fks:
+                op.create_foreign_key('fk_expenses_mileage', 'expenses', 'mileage', ['mileage_id'], ['id'])
+            if 'fk_expenses_per_diem' not in existing_fks:
+                op.create_foreign_key('fk_expenses_per_diem', 'expenses', 'per_diems', ['per_diem_id'], ['id'])
     
     # Now add the circular foreign keys from mileage and per_diems back to expenses (idempotent)
-    if 'mileage' in existing_tables:
-        mileage_fks = [fk['name'] for fk in inspector.get_foreign_keys('mileage')]
-        if 'fk_mileage_expense' not in mileage_fks:
-            op.create_foreign_key('fk_mileage_expense', 'mileage', 'expenses', ['expense_id'], ['id'])
+    # Re-check inspector after potential table creations
+    conn = op.get_bind()
+    inspector = inspect(conn)
     
-    if 'per_diems' in existing_tables:
+    if 'mileage' in inspector.get_table_names():
+        mileage_columns = [col['name'] for col in inspector.get_columns('mileage')]
+        mileage_fks = [fk['name'] for fk in inspector.get_foreign_keys('mileage')]
+        
+        # Ensure expense_id column exists before adding FK
+        if 'expense_id' in mileage_columns and 'fk_mileage_expense' not in mileage_fks:
+            if is_sqlite:
+                with op.batch_alter_table('mileage', schema=None) as batch_op:
+                    batch_op.create_foreign_key('fk_mileage_expense', 'expenses', ['expense_id'], ['id'])
+            else:
+                op.create_foreign_key('fk_mileage_expense', 'mileage', 'expenses', ['expense_id'], ['id'])
+    
+    if 'per_diems' in inspector.get_table_names():
+        per_diems_columns = [col['name'] for col in inspector.get_columns('per_diems')]
         per_diems_fks = [fk['name'] for fk in inspector.get_foreign_keys('per_diems')]
-        if 'fk_per_diems_expense' not in per_diems_fks:
-            op.create_foreign_key('fk_per_diems_expense', 'per_diems', 'expenses', ['expense_id'], ['id'])
+        
+        # Ensure expense_id column exists before adding FK
+        if 'expense_id' in per_diems_columns and 'fk_per_diems_expense' not in per_diems_fks:
+            if is_sqlite:
+                with op.batch_alter_table('per_diems', schema=None) as batch_op:
+                    batch_op.create_foreign_key('fk_per_diems_expense', 'expenses', ['expense_id'], ['id'])
+            else:
+                op.create_foreign_key('fk_per_diems_expense', 'per_diems', 'expenses', ['expense_id'], ['id'])
     
     # Insert default expense categories (idempotent)
     # Re-check table existence since tables may have been created in this migration
-    conn = op.get_bind()
-    inspector = inspect(conn)
     current_tables = inspector.get_table_names()
+    
+    # Determine database type for SQL syntax differences
+    is_postgresql = conn.dialect.name == 'postgresql'
     
     if 'expense_categories' in current_tables:
         # Use database-specific syntax for upsert
-        is_postgresql = conn.dialect.name == 'postgresql'
         
         if is_postgresql:
             # PostgreSQL syntax

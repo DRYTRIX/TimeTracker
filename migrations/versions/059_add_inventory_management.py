@@ -170,26 +170,86 @@ def upgrade():
     op.create_index('ix_project_stock_allocations_warehouse_id', 'project_stock_allocations', ['warehouse_id'], unique=False)
     op.create_index('ix_project_stock_allocations_allocated_by', 'project_stock_allocations', ['allocated_by'], unique=False)
     
-    # Add inventory fields to quote_items
-    op.add_column('quote_items', sa.Column('stock_item_id', sa.Integer(), nullable=True))
-    op.add_column('quote_items', sa.Column('warehouse_id', sa.Integer(), nullable=True))
-    op.add_column('quote_items', sa.Column('is_stock_item', sa.Boolean(), nullable=False, server_default='0'))
-    op.create_index('ix_quote_items_stock_item_id', 'quote_items', ['stock_item_id'], unique=False)
-    op.create_foreign_key('fk_quote_items_stock_item_id', 'quote_items', 'stock_items', ['stock_item_id'], ['id'])
-    op.create_foreign_key('fk_quote_items_warehouse_id', 'quote_items', 'warehouses', ['warehouse_id'], ['id'])
+    # Add inventory fields to quote_items (idempotent)
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    is_sqlite = conn.dialect.name == 'sqlite'
+    existing_tables = inspector.get_table_names()
     
-    # Add inventory fields to invoice_items
-    op.add_column('invoice_items', sa.Column('stock_item_id', sa.Integer(), nullable=True))
-    op.add_column('invoice_items', sa.Column('warehouse_id', sa.Integer(), nullable=True))
-    op.add_column('invoice_items', sa.Column('is_stock_item', sa.Boolean(), nullable=False, server_default='0'))
-    op.create_index('ix_invoice_items_stock_item_id', 'invoice_items', ['stock_item_id'], unique=False)
-    op.create_foreign_key('fk_invoice_items_stock_item_id', 'invoice_items', 'stock_items', ['stock_item_id'], ['id'])
-    op.create_foreign_key('fk_invoice_items_warehouse_id', 'invoice_items', 'warehouses', ['warehouse_id'], ['id'])
+    if 'quote_items' in existing_tables:
+        quote_items_columns = [col['name'] for col in inspector.get_columns('quote_items')]
+        quote_items_indexes = [idx['name'] for idx in inspector.get_indexes('quote_items')]
+        quote_items_fks = [fk['name'] for fk in inspector.get_foreign_keys('quote_items')]
+        
+        if 'stock_item_id' not in quote_items_columns:
+            op.add_column('quote_items', sa.Column('stock_item_id', sa.Integer(), nullable=True))
+        if 'warehouse_id' not in quote_items_columns:
+            op.add_column('quote_items', sa.Column('warehouse_id', sa.Integer(), nullable=True))
+        if 'is_stock_item' not in quote_items_columns:
+            op.add_column('quote_items', sa.Column('is_stock_item', sa.Boolean(), nullable=False, server_default='0'))
+        
+        if 'stock_item_id' in quote_items_columns and 'ix_quote_items_stock_item_id' not in quote_items_indexes:
+            op.create_index('ix_quote_items_stock_item_id', 'quote_items', ['stock_item_id'], unique=False)
+        
+        if is_sqlite:
+            with op.batch_alter_table('quote_items', schema=None) as batch_op:
+                if 'stock_item_id' in quote_items_columns and 'fk_quote_items_stock_item_id' not in quote_items_fks:
+                    batch_op.create_foreign_key('fk_quote_items_stock_item_id', 'stock_items', ['stock_item_id'], ['id'])
+                if 'warehouse_id' in quote_items_columns and 'fk_quote_items_warehouse_id' not in quote_items_fks:
+                    batch_op.create_foreign_key('fk_quote_items_warehouse_id', 'warehouses', ['warehouse_id'], ['id'])
+        else:
+            if 'stock_item_id' in quote_items_columns and 'fk_quote_items_stock_item_id' not in quote_items_fks:
+                op.create_foreign_key('fk_quote_items_stock_item_id', 'quote_items', 'stock_items', ['stock_item_id'], ['id'])
+            if 'warehouse_id' in quote_items_columns and 'fk_quote_items_warehouse_id' not in quote_items_fks:
+                op.create_foreign_key('fk_quote_items_warehouse_id', 'quote_items', 'warehouses', ['warehouse_id'], ['id'])
     
-    # Add inventory field to extra_goods
-    op.add_column('extra_goods', sa.Column('stock_item_id', sa.Integer(), nullable=True))
-    op.create_index('ix_extra_goods_stock_item_id', 'extra_goods', ['stock_item_id'], unique=False)
-    op.create_foreign_key('fk_extra_goods_stock_item_id', 'extra_goods', 'stock_items', ['stock_item_id'], ['id'])
+    # Add inventory fields to invoice_items (idempotent)
+    if 'invoice_items' in existing_tables:
+        invoice_items_columns = [col['name'] for col in inspector.get_columns('invoice_items')]
+        invoice_items_indexes = [idx['name'] for idx in inspector.get_indexes('invoice_items')]
+        invoice_items_fks = [fk['name'] for fk in inspector.get_foreign_keys('invoice_items')]
+        
+        if 'stock_item_id' not in invoice_items_columns:
+            op.add_column('invoice_items', sa.Column('stock_item_id', sa.Integer(), nullable=True))
+        if 'warehouse_id' not in invoice_items_columns:
+            op.add_column('invoice_items', sa.Column('warehouse_id', sa.Integer(), nullable=True))
+        if 'is_stock_item' not in invoice_items_columns:
+            op.add_column('invoice_items', sa.Column('is_stock_item', sa.Boolean(), nullable=False, server_default='0'))
+        
+        if 'stock_item_id' in invoice_items_columns and 'ix_invoice_items_stock_item_id' not in invoice_items_indexes:
+            op.create_index('ix_invoice_items_stock_item_id', 'invoice_items', ['stock_item_id'], unique=False)
+        
+        if is_sqlite:
+            with op.batch_alter_table('invoice_items', schema=None) as batch_op:
+                if 'stock_item_id' in invoice_items_columns and 'fk_invoice_items_stock_item_id' not in invoice_items_fks:
+                    batch_op.create_foreign_key('fk_invoice_items_stock_item_id', 'stock_items', ['stock_item_id'], ['id'])
+                if 'warehouse_id' in invoice_items_columns and 'fk_invoice_items_warehouse_id' not in invoice_items_fks:
+                    batch_op.create_foreign_key('fk_invoice_items_warehouse_id', 'warehouses', ['warehouse_id'], ['id'])
+        else:
+            if 'stock_item_id' in invoice_items_columns and 'fk_invoice_items_stock_item_id' not in invoice_items_fks:
+                op.create_foreign_key('fk_invoice_items_stock_item_id', 'invoice_items', 'stock_items', ['stock_item_id'], ['id'])
+            if 'warehouse_id' in invoice_items_columns and 'fk_invoice_items_warehouse_id' not in invoice_items_fks:
+                op.create_foreign_key('fk_invoice_items_warehouse_id', 'invoice_items', 'warehouses', ['warehouse_id'], ['id'])
+    
+    # Add inventory field to extra_goods (idempotent)
+    if 'extra_goods' in existing_tables:
+        extra_goods_columns = [col['name'] for col in inspector.get_columns('extra_goods')]
+        extra_goods_indexes = [idx['name'] for idx in inspector.get_indexes('extra_goods')]
+        extra_goods_fks = [fk['name'] for fk in inspector.get_foreign_keys('extra_goods')]
+        
+        if 'stock_item_id' not in extra_goods_columns:
+            op.add_column('extra_goods', sa.Column('stock_item_id', sa.Integer(), nullable=True))
+        
+        if 'stock_item_id' in extra_goods_columns and 'ix_extra_goods_stock_item_id' not in extra_goods_indexes:
+            op.create_index('ix_extra_goods_stock_item_id', 'extra_goods', ['stock_item_id'], unique=False)
+        
+        if 'stock_item_id' in extra_goods_columns and 'fk_extra_goods_stock_item_id' not in extra_goods_fks:
+            if is_sqlite:
+                with op.batch_alter_table('extra_goods', schema=None) as batch_op:
+                    batch_op.create_foreign_key('fk_extra_goods_stock_item_id', 'stock_items', ['stock_item_id'], ['id'])
+            else:
+                op.create_foreign_key('fk_extra_goods_stock_item_id', 'extra_goods', 'stock_items', ['stock_item_id'], ['id'])
 
 
 def downgrade():

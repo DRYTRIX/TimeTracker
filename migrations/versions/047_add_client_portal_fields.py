@@ -18,23 +18,46 @@ depends_on = None
 
 def upgrade():
     """Add client_portal_enabled and client_id columns to users table"""
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    is_sqlite = conn.dialect.name == 'sqlite'
+    existing_tables = inspector.get_table_names()
     
-    # Add client_portal_enabled column
-    op.add_column('users', 
-        sa.Column('client_portal_enabled', sa.Boolean(), nullable=False, server_default='0')
-    )
+    if 'users' not in existing_tables:
+        return
     
-    # Add client_id column with foreign key
-    op.add_column('users',
-        sa.Column('client_id', sa.Integer(), nullable=True)
-    )
-    op.create_index('ix_users_client_id', 'users', ['client_id'])
-    op.create_foreign_key(
-        'fk_users_client_id',
-        'users', 'clients',
-        ['client_id'], ['id'],
-        ondelete='SET NULL'
-    )
+    users_columns = [col['name'] for col in inspector.get_columns('users')]
+    users_indexes = [idx['name'] for idx in inspector.get_indexes('users')]
+    users_fks = [fk['name'] for fk in inspector.get_foreign_keys('users')]
+    
+    # Add client_portal_enabled column (idempotent)
+    if 'client_portal_enabled' not in users_columns:
+        op.add_column('users', 
+            sa.Column('client_portal_enabled', sa.Boolean(), nullable=False, server_default='0')
+        )
+    
+    # Add client_id column with foreign key (idempotent)
+    if 'client_id' not in users_columns:
+        op.add_column('users',
+            sa.Column('client_id', sa.Integer(), nullable=True)
+        )
+    
+    if 'client_id' in users_columns:
+        if 'ix_users_client_id' not in users_indexes:
+            op.create_index('ix_users_client_id', 'users', ['client_id'])
+        
+        if 'fk_users_client_id' not in users_fks:
+            if is_sqlite:
+                with op.batch_alter_table('users', schema=None) as batch_op:
+                    batch_op.create_foreign_key('fk_users_client_id', 'clients', ['client_id'], ['id'])
+            else:
+                op.create_foreign_key(
+                    'fk_users_client_id',
+                    'users', 'clients',
+                    ['client_id'], ['id'],
+                    ondelete='SET NULL'
+                )
 
 
 def downgrade():

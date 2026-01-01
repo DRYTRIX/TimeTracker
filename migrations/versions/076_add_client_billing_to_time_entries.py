@@ -50,31 +50,57 @@ def upgrade():
     except Exception:
         pass
 
+    conn = op.get_bind()
+    is_sqlite = conn.dialect.name == 'sqlite'
+    
     # Make project_id nullable
-    op.alter_column('time_entries', 'project_id',
-                    existing_type=sa.Integer(),
-                    nullable=True)
+    if is_sqlite:
+        with op.batch_alter_table('time_entries', schema=None) as batch_op:
+            batch_op.alter_column('project_id', nullable=True)
+            
+            # Add client_id column if it doesn't exist
+            if not _has_column(inspector, 'time_entries', 'client_id'):
+                batch_op.add_column(sa.Column('client_id', sa.Integer(), nullable=True))
+            
+            # Recreate foreign key constraint for project_id (nullable)
+            batch_op.create_foreign_key(
+                'fk_time_entries_project_id',
+                'projects',
+                ['project_id'], ['id']
+            )
+            
+            # Add foreign key constraint for client_id
+            if _has_column(inspector, 'time_entries', 'client_id'):
+                batch_op.create_foreign_key(
+                    'fk_time_entries_client_id',
+                    'clients',
+                    ['client_id'], ['id']
+                )
+    else:
+        op.alter_column('time_entries', 'project_id',
+                        existing_type=sa.Integer(),
+                        nullable=True)
 
-    # Add client_id column if it doesn't exist
-    if not _has_column(inspector, 'time_entries', 'client_id'):
-        op.add_column('time_entries', sa.Column('client_id', sa.Integer(), nullable=True))
-        op.create_index('idx_time_entries_client_id', 'time_entries', ['client_id'])
+        # Add client_id column if it doesn't exist
+        if not _has_column(inspector, 'time_entries', 'client_id'):
+            op.add_column('time_entries', sa.Column('client_id', sa.Integer(), nullable=True))
+            op.create_index('idx_time_entries_client_id', 'time_entries', ['client_id'])
 
-    # Recreate foreign key constraint for project_id (nullable)
-    op.create_foreign_key(
-        'fk_time_entries_project_id',
-        'time_entries', 'projects',
-        ['project_id'], ['id'],
-        ondelete='CASCADE'
-    )
+        # Recreate foreign key constraint for project_id (nullable)
+        op.create_foreign_key(
+            'fk_time_entries_project_id',
+            'time_entries', 'projects',
+            ['project_id'], ['id'],
+            ondelete='CASCADE'
+        )
 
-    # Add foreign key constraint for client_id
-    op.create_foreign_key(
-        'fk_time_entries_client_id',
-        'time_entries', 'clients',
-        ['client_id'], ['id'],
-        ondelete='CASCADE'
-    )
+        # Add foreign key constraint for client_id
+        op.create_foreign_key(
+            'fk_time_entries_client_id',
+            'time_entries', 'clients',
+            ['client_id'], ['id'],
+            ondelete='CASCADE'
+        )
 
     # Add check constraint to ensure either project_id or client_id is provided
     # Note: PostgreSQL check constraints can't directly check for NULL, so we use a function

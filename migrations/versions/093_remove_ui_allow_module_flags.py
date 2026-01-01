@@ -24,6 +24,7 @@ def upgrade():
     """
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    is_sqlite = bind.dialect.name == 'sqlite'
 
     # Check if settings table exists
     table_names = set(inspector.get_table_names())
@@ -71,26 +72,42 @@ def upgrade():
         "ui_allow_kiosk",
     ]
 
-    # Helper to drop a column if it exists
-    def _drop_column_if_exists(table_name: str, column_name: str):
-        try:
-            current_cols = {c['name'] for c in inspector.get_columns(table_name)}
-            if column_name in current_cols:
-                op.drop_column(table_name, column_name)
-                print(f"✓ Dropped {column_name} column from {table_name} table")
-            else:
-                print(f"⊘ Column {column_name} does not exist in {table_name} table, skipping")
-        except Exception as e:
-            error_msg = str(e)
-            # Column might already be dropped or not exist
-            if 'does not exist' in error_msg.lower() or 'no such column' in error_msg.lower():
-                print(f"⊘ Column {column_name} does not exist in {table_name} table (detected via error)")
-            else:
-                print(f"⚠ Warning: Could not drop {column_name} column: {e}")
+    # Get existing columns
+    current_cols = {c['name'] for c in inspector.get_columns('settings')}
+    
+    # Filter to only columns that exist
+    columns_to_drop = [col for col in ui_allow_columns if col in current_cols]
+    
+    if not columns_to_drop:
+        print("⊘ No ui_allow_ columns to remove from settings table")
+        return
 
-    # Drop all ui_allow_ columns
-    for column_name in ui_allow_columns:
-        _drop_column_if_exists("settings", column_name)
+    # Drop columns using batch mode for SQLite
+    if is_sqlite:
+        # SQLite requires batch mode for dropping columns
+        with op.batch_alter_table('settings', schema=None) as batch_op:
+            for column_name in columns_to_drop:
+                try:
+                    batch_op.drop_column(column_name)
+                    print(f"✓ Dropped {column_name} column from settings table")
+                except Exception as e:
+                    error_msg = str(e)
+                    if 'does not exist' in error_msg.lower() or 'no such column' in error_msg.lower():
+                        print(f"⊘ Column {column_name} does not exist in settings table (detected via error)")
+                    else:
+                        print(f"⚠ Warning: Could not drop {column_name} column: {e}")
+    else:
+        # PostgreSQL and other databases can use direct drop_column
+        for column_name in columns_to_drop:
+            try:
+                op.drop_column('settings', column_name)
+                print(f"✓ Dropped {column_name} column from settings table")
+            except Exception as e:
+                error_msg = str(e)
+                if 'does not exist' in error_msg.lower() or 'no such column' in error_msg.lower():
+                    print(f"⊘ Column {column_name} does not exist in settings table (detected via error)")
+                else:
+                    print(f"⚠ Warning: Could not drop {column_name} column: {e}")
 
 
 def downgrade():

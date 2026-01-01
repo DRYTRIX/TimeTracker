@@ -79,11 +79,22 @@ def upgrade():
         op.create_index('ix_quotes_approved_by', 'quotes', ['approved_by'], unique=False)
     
     # Add foreign keys (if they don't exist)
-    if not constraint_exists('quotes', 'fk_quotes_approved_by'):
-        op.create_foreign_key('fk_quotes_approved_by', 'quotes', 'users', ['approved_by'], ['id'], ondelete='SET NULL')
+    bind = op.get_bind()
+    is_sqlite = bind.dialect.name == 'sqlite'
     
-    if not constraint_exists('quotes', 'fk_quotes_rejected_by'):
-        op.create_foreign_key('fk_quotes_rejected_by', 'quotes', 'users', ['rejected_by'], ['id'], ondelete='SET NULL')
+    if not constraint_exists('quotes', 'fk_quotes_approved_by') and column_exists('quotes', 'approved_by'):
+        if is_sqlite:
+            with op.batch_alter_table('quotes', schema=None) as batch_op:
+                batch_op.create_foreign_key('fk_quotes_approved_by', 'users', ['approved_by'], ['id'])
+        else:
+            op.create_foreign_key('fk_quotes_approved_by', 'quotes', 'users', ['approved_by'], ['id'], ondelete='SET NULL')
+    
+    if not constraint_exists('quotes', 'fk_quotes_rejected_by') and column_exists('quotes', 'rejected_by'):
+        if is_sqlite:
+            with op.batch_alter_table('quotes', schema=None) as batch_op:
+                batch_op.create_foreign_key('fk_quotes_rejected_by', 'users', ['rejected_by'], ['id'])
+        else:
+            op.create_foreign_key('fk_quotes_rejected_by', 'quotes', 'users', ['rejected_by'], ['id'], ondelete='SET NULL')
 
 
 def downgrade():

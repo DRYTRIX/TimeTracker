@@ -25,6 +25,7 @@ def upgrade():
     """Ensure metadata columns have correct names"""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    is_sqlite = bind.dialect.name == 'sqlite'
     table_names = set(inspector.get_table_names())
 
     # 1. Fix user_badges.achievement_metadata
@@ -36,25 +37,37 @@ def upgrade():
         elif 'metadata' in user_badges_cols:
             # Rename metadata to achievement_metadata
             try:
-                op.alter_column('user_badges', 'metadata',
-                              new_column_name='achievement_metadata',
-                              existing_type=sa.JSON(),
-                              existing_nullable=True)
+                if is_sqlite:
+                    with op.batch_alter_table('user_badges', schema=None) as batch_op:
+                        batch_op.alter_column('metadata', new_column_name='achievement_metadata')
+                else:
+                    op.alter_column('user_badges', 'metadata',
+                                  new_column_name='achievement_metadata',
+                                  existing_type=sa.JSON(),
+                                  existing_nullable=True)
                 print("✓ Renamed user_badges.metadata to achievement_metadata")
             except Exception as e:
                 print(f"⚠ Error renaming user_badges.metadata: {e}")
                 # If rename fails, try adding the column instead
                 try:
-                    op.add_column('user_badges',
-                                sa.Column('achievement_metadata', sa.JSON(), nullable=True))
+                    if is_sqlite:
+                        with op.batch_alter_table('user_badges', schema=None) as batch_op:
+                            batch_op.add_column(sa.Column('achievement_metadata', sa.JSON(), nullable=True))
+                    else:
+                        op.add_column('user_badges',
+                                    sa.Column('achievement_metadata', sa.JSON(), nullable=True))
                     print("✓ Added user_badges.achievement_metadata column")
                 except Exception as e2:
                     print(f"⚠ Error adding user_badges.achievement_metadata: {e2}")
         else:
             # Neither column exists, add the correct one
             try:
-                op.add_column('user_badges',
-                            sa.Column('achievement_metadata', sa.JSON(), nullable=True))
+                if is_sqlite:
+                    with op.batch_alter_table('user_badges', schema=None) as batch_op:
+                        batch_op.add_column(sa.Column('achievement_metadata', sa.JSON(), nullable=True))
+                else:
+                    op.add_column('user_badges',
+                                sa.Column('achievement_metadata', sa.JSON(), nullable=True))
                 print("✓ Added user_badges.achievement_metadata column")
             except Exception as e:
                 print(f"⚠ Error adding user_badges.achievement_metadata: {e}")
@@ -68,25 +81,37 @@ def upgrade():
         elif 'metadata' in leaderboard_entries_cols:
             # Rename metadata to entry_metadata
             try:
-                op.alter_column('leaderboard_entries', 'metadata',
-                              new_column_name='entry_metadata',
-                              existing_type=sa.JSON(),
-                              existing_nullable=True)
+                if is_sqlite:
+                    with op.batch_alter_table('leaderboard_entries', schema=None) as batch_op:
+                        batch_op.alter_column('metadata', new_column_name='entry_metadata')
+                else:
+                    op.alter_column('leaderboard_entries', 'metadata',
+                                  new_column_name='entry_metadata',
+                                  existing_type=sa.JSON(),
+                                  existing_nullable=True)
                 print("✓ Renamed leaderboard_entries.metadata to entry_metadata")
             except Exception as e:
                 print(f"⚠ Error renaming leaderboard_entries.metadata: {e}")
                 # If rename fails, try adding the column instead
                 try:
-                    op.add_column('leaderboard_entries',
-                                sa.Column('entry_metadata', sa.JSON(), nullable=True))
+                    if is_sqlite:
+                        with op.batch_alter_table('leaderboard_entries', schema=None) as batch_op:
+                            batch_op.add_column(sa.Column('entry_metadata', sa.JSON(), nullable=True))
+                    else:
+                        op.add_column('leaderboard_entries',
+                                    sa.Column('entry_metadata', sa.JSON(), nullable=True))
                     print("✓ Added leaderboard_entries.entry_metadata column")
                 except Exception as e2:
                     print(f"⚠ Error adding leaderboard_entries.entry_metadata: {e2}")
         else:
             # Neither column exists, add the correct one
             try:
-                op.add_column('leaderboard_entries',
-                            sa.Column('entry_metadata', sa.JSON(), nullable=True))
+                if is_sqlite:
+                    with op.batch_alter_table('leaderboard_entries', schema=None) as batch_op:
+                        batch_op.add_column(sa.Column('entry_metadata', sa.JSON(), nullable=True))
+                else:
+                    op.add_column('leaderboard_entries',
+                                sa.Column('entry_metadata', sa.JSON(), nullable=True))
                 print("✓ Added leaderboard_entries.entry_metadata column")
             except Exception as e:
                 print(f"⚠ Error adding leaderboard_entries.entry_metadata: {e}")
@@ -96,6 +121,7 @@ def downgrade():
     """Revert column names back to metadata (if needed)"""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    is_sqlite = bind.dialect.name == 'sqlite'
     table_names = set(inspector.get_table_names())
 
     # 1. Revert user_badges.achievement_metadata back to metadata
@@ -103,10 +129,14 @@ def downgrade():
         user_badges_cols = {c['name'] for c in inspector.get_columns('user_badges')}
         if 'achievement_metadata' in user_badges_cols and 'metadata' not in user_badges_cols:
             try:
-                op.alter_column('user_badges', 'achievement_metadata',
-                              new_column_name='metadata',
-                              existing_type=sa.JSON(),
-                              existing_nullable=True)
+                if is_sqlite:
+                    with op.batch_alter_table('user_badges', schema=None) as batch_op:
+                        batch_op.alter_column('achievement_metadata', new_column_name='metadata')
+                else:
+                    op.alter_column('user_badges', 'achievement_metadata',
+                                  new_column_name='metadata',
+                                  existing_type=sa.JSON(),
+                                  existing_nullable=True)
                 print("✓ Renamed user_badges.achievement_metadata back to metadata")
             except Exception as e:
                 print(f"⚠ Error reverting user_badges.achievement_metadata: {e}")
@@ -116,10 +146,14 @@ def downgrade():
         leaderboard_entries_cols = {c['name'] for c in inspector.get_columns('leaderboard_entries')}
         if 'entry_metadata' in leaderboard_entries_cols and 'metadata' not in leaderboard_entries_cols:
             try:
-                op.alter_column('leaderboard_entries', 'entry_metadata',
-                              new_column_name='metadata',
-                              existing_type=sa.JSON(),
-                              existing_nullable=True)
+                if is_sqlite:
+                    with op.batch_alter_table('leaderboard_entries', schema=None) as batch_op:
+                        batch_op.alter_column('entry_metadata', new_column_name='metadata')
+                else:
+                    op.alter_column('leaderboard_entries', 'entry_metadata',
+                                  new_column_name='metadata',
+                                  existing_type=sa.JSON(),
+                                  existing_nullable=True)
                 print("✓ Renamed leaderboard_entries.entry_metadata back to metadata")
             except Exception as e:
                 print(f"⚠ Error reverting leaderboard_entries.entry_metadata: {e}")
