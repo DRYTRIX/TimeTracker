@@ -394,24 +394,35 @@ class Settings(db.Model):
             if settings:
                 return settings
         except Exception as e:
-            # Handle case where columns don't exist yet (migration not run)
-            # Check if it's a column error - if so, it's expected during migrations
+            # Handle case where table or columns don't exist yet (migration not run)
+            # Check if it's a table/column error - if so, it's expected during migrations
             error_str = str(e)
-            is_column_error = (
-                "UndefinedColumn" in error_str
-                or "does not exist" in error_str.lower()
-                or "no such column" in error_str.lower()
+            # Also check the underlying exception if it's a SQLAlchemy exception
+            underlying_error = ""
+            if hasattr(e, 'orig'):
+                underlying_error = str(e.orig)
+            elif hasattr(e, '__cause__') and e.__cause__:
+                underlying_error = str(e.__cause__)
+            
+            combined_error = f"{error_str} {underlying_error}".lower()
+            is_schema_error = (
+                "undefinedcolumn" in combined_error
+                or "does not exist" in combined_error
+                or "no such column" in combined_error
+                or "no such table" in combined_error
+                or ("relation" in combined_error and "does not exist" in combined_error)
+                or "operationalerror" in combined_error and ("no such table" in combined_error or "does not exist" in combined_error)
             )
 
             import logging
 
             logger = logging.getLogger(__name__)
 
-            if is_column_error:
+            if is_schema_error:
                 # This is expected during migrations when schema is incomplete
                 # Only log at debug level to avoid cluttering logs
                 logger.debug(
-                    f"Settings table schema incomplete (migration may be pending): {error_str.split('LINE')[0] if 'LINE' in error_str else error_str}"
+                    f"Settings table not available (migration may be pending): {error_str.split('LINE')[0] if 'LINE' in error_str else error_str}"
                 )
             else:
                 # Other errors should be logged as warnings

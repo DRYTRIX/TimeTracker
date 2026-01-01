@@ -73,19 +73,39 @@ def run_migrations_online():
 
     connectable = current_app.extensions['migrate'].db.get_engine()
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            process_revision_directives=process_revision_directives,
-            **current_app.extensions['migrate'].configure_args
-        )
+    try:
+        with connectable.connect() as connection:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                process_revision_directives=process_revision_directives,
+                **current_app.extensions['migrate'].configure_args
+            )
 
-        with context.begin_transaction():
-            context.run_migrations()
+            with context.begin_transaction():
+                context.run_migrations()
+    except Exception as e:
+        # Log the full error with traceback for debugging
+        import traceback
+        logger.error(f"Migration failed with error: {e}")
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
+        # Re-raise to ensure the migration command fails properly
+        raise
 
 
 if context.is_offline_mode():
-    run_migrations_offline()
+    try:
+        run_migrations_offline()
+    except Exception as e:
+        import traceback
+        logger.error(f"Migration failed (offline mode) with error: {e}")
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
+        raise
 else:
-    run_migrations_online()
+    try:
+        run_migrations_online()
+    except Exception as e:
+        import traceback
+        logger.error(f"Migration failed (online mode) with error: {e}")
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
+        raise

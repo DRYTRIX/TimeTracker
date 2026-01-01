@@ -21,6 +21,12 @@ depends_on = None
 def upgrade():
     """Fix sequences for roles and permissions tables"""
     connection = op.get_bind()
+    is_postgresql = connection.dialect.name == 'postgresql'
+    
+    # SQLite doesn't use sequences - it uses AUTOINCREMENT which is automatically managed
+    # This migration only applies to PostgreSQL
+    if not is_postgresql:
+        return
     
     # Fix roles sequence
     # Create sequence if it doesn't exist, link it to the table, then set it to max_id + 1

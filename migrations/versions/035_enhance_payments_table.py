@@ -57,11 +57,20 @@ def upgrade() -> None:
             op.add_column('payments', sa.Column('status', sa.String(20), nullable=False, server_default='completed'))
         
         if 'received_by' not in existing_columns:
-            op.add_column('payments', sa.Column('received_by', sa.Integer(), nullable=True))
-            try:
-                op.create_foreign_key('fk_payments_received_by', 'payments', 'users', ['received_by'], ['id'], ondelete='SET NULL')
-            except:
-                pass
+            is_sqlite = bind.dialect.name == 'sqlite'
+            if is_sqlite:
+                with op.batch_alter_table('payments', schema=None) as batch_op:
+                    batch_op.add_column(sa.Column('received_by', sa.Integer(), nullable=True))
+                    try:
+                        batch_op.create_foreign_key('fk_payments_received_by', 'users', ['received_by'], ['id'])
+                    except:
+                        pass
+            else:
+                op.add_column('payments', sa.Column('received_by', sa.Integer(), nullable=True))
+                try:
+                    op.create_foreign_key('fk_payments_received_by', 'payments', 'users', ['received_by'], ['id'], ondelete='SET NULL')
+                except:
+                    pass
         
         if 'gateway_transaction_id' not in existing_columns:
             op.add_column('payments', sa.Column('gateway_transaction_id', sa.String(255), nullable=True))

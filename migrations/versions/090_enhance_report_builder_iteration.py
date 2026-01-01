@@ -32,6 +32,20 @@ def upgrade():
     """Add iterative report generation and email distribution fields"""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    is_postgresql = bind.dialect.name == 'postgresql'
+    
+    # Fix alembic_version.version_num column size if it's too small
+    # Some revision IDs are longer than the default VARCHAR(32)
+    # This is needed for PostgreSQL; SQLite doesn't enforce VARCHAR lengths
+    if is_postgresql and 'alembic_version' in inspector.get_table_names():
+        try:
+            # Try to alter the column to VARCHAR(50) to accommodate longer revision IDs
+            # This is idempotent - if it's already VARCHAR(50) or larger, it will just work
+            op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(50)")
+        except Exception:
+            # Column might already be the right size, or alteration might have failed
+            # In either case, we'll continue - this is best-effort
+            pass
     
     # Add iterative report generation to saved_report_views
     if 'saved_report_views' in inspector.get_table_names():

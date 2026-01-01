@@ -274,12 +274,21 @@ def create_app(config=None):
     app.jinja_loader = ChoiceLoader([app.jinja_loader, FileSystemLoader(extra_templates_path)])
 
     # Prefer Postgres if POSTGRES_* envs are present but URL points to SQLite
+    # BUT only if DATABASE_URL was not explicitly set to SQLite
     current_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    explicit_database_url = os.getenv("DATABASE_URL", "")
+    
+    # Only auto-switch to PostgreSQL if:
+    # 1. Not in testing mode
+    # 2. Current URL is SQLite
+    # 3. POSTGRES_* env vars are present
+    # 4. DATABASE_URL was NOT explicitly set to SQLite (respect user's explicit choice)
     if (
         not app.config.get("TESTING")
         and isinstance(current_url, str)
         and current_url.startswith("sqlite")
         and (os.getenv("POSTGRES_DB") or os.getenv("POSTGRES_USER") or os.getenv("POSTGRES_PASSWORD"))
+        and not (explicit_database_url and explicit_database_url.startswith("sqlite"))
     ):
         pg_user = os.getenv("POSTGRES_USER", "timetracker")
         pg_pass = os.getenv("POSTGRES_PASSWORD", "timetracker")

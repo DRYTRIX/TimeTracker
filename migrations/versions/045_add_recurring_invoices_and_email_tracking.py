@@ -86,10 +86,38 @@ def upgrade():
     op.create_index('ix_invoice_emails_status', 'invoice_emails', ['status'])
     op.create_index('ix_invoice_emails_sent_at', 'invoice_emails', ['sent_at'])
     
-    # Add recurring_invoice_id to invoices table
-    op.add_column('invoices', sa.Column('recurring_invoice_id', sa.Integer(), nullable=True))
-    op.create_index('ix_invoices_recurring_invoice_id', 'invoices', ['recurring_invoice_id'])
-    op.create_foreign_key('fk_invoices_recurring_invoice_id', 'invoices', 'recurring_invoices', ['recurring_invoice_id'], ['id'], ondelete='SET NULL')
+    # Add recurring_invoice_id to invoices table (idempotent)
+    from sqlalchemy import inspect
+    inspector = inspect(op.get_bind())
+    existing_tables = inspector.get_table_names()
+    
+    if 'invoices' in existing_tables:
+        invoices_columns = [col['name'] for col in inspector.get_columns('invoices')]
+        invoices_indexes = [idx['name'] for idx in inspector.get_indexes('invoices')]
+        invoices_fks = [fk['name'] for fk in inspector.get_foreign_keys('invoices')]
+        is_sqlite = op.get_bind().dialect.name == 'sqlite'
+        
+        if 'recurring_invoice_id' not in invoices_columns:
+            op.add_column('invoices', sa.Column('recurring_invoice_id', sa.Integer(), nullable=True))
+        
+        if 'ix_invoices_recurring_invoice_id' not in invoices_indexes:
+            try:
+                op.create_index('ix_invoices_recurring_invoice_id', 'invoices', ['recurring_invoice_id'])
+            except:
+                pass
+        
+        if 'recurring_invoice_id' in invoices_columns and 'fk_invoices_recurring_invoice_id' not in invoices_fks:
+            if is_sqlite:
+                with op.batch_alter_table('invoices', schema=None) as batch_op:
+                    try:
+                        batch_op.create_foreign_key('fk_invoices_recurring_invoice_id', 'recurring_invoices', ['recurring_invoice_id'], ['id'])
+                    except:
+                        pass
+            else:
+                try:
+                    op.create_foreign_key('fk_invoices_recurring_invoice_id', 'invoices', 'recurring_invoices', ['recurring_invoice_id'], ['id'], ondelete='SET NULL')
+                except:
+                    pass
 
 
 def downgrade():

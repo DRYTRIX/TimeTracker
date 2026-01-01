@@ -203,14 +203,34 @@ def upgrade():
     op.create_index(op.f('ix_deal_activities_activity_date'), 'deal_activities', ['activity_date'], unique=False)
     
     # Add foreign key for related_deal_id in contact_communications (deferred)
-    # This is done after deals table is created
-    op.create_foreign_key(
-        'fk_contact_communications_related_deal_id',
-        'contact_communications',
-        'deals',
-        ['related_deal_id'],
-        ['id']
-    )
+    # This is done after deals table is created (idempotent)
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    is_sqlite = conn.dialect.name == 'sqlite'
+    existing_tables = inspector.get_table_names()
+    
+    if 'contact_communications' in existing_tables and 'deals' in existing_tables:
+        contact_comm_columns = [col['name'] for col in inspector.get_columns('contact_communications')]
+        contact_comm_fks = [fk['name'] for fk in inspector.get_foreign_keys('contact_communications')]
+        
+        if 'related_deal_id' in contact_comm_columns and 'fk_contact_communications_related_deal_id' not in contact_comm_fks:
+            if is_sqlite:
+                with op.batch_alter_table('contact_communications', schema=None) as batch_op:
+                    batch_op.create_foreign_key(
+                        'fk_contact_communications_related_deal_id',
+                        'deals',
+                        ['related_deal_id'],
+                        ['id']
+                    )
+            else:
+                op.create_foreign_key(
+                    'fk_contact_communications_related_deal_id',
+                    'contact_communications',
+                    'deals',
+                    ['related_deal_id'],
+                    ['id']
+                )
 
 
 def downgrade():

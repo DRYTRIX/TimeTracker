@@ -17,21 +17,42 @@ depends_on = None
 
 def upgrade():
     """Add quote_id and is_internal fields to comments table"""
-    # Add quote_id column
-    op.add_column('comments',
-        sa.Column('quote_id', sa.Integer(), nullable=True)
-    )
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    is_sqlite = conn.dialect.name == 'sqlite'
+    existing_tables = inspector.get_table_names()
     
-    # Add is_internal column (True = internal team comment, False = client-visible)
-    op.add_column('comments',
-        sa.Column('is_internal', sa.Boolean(), nullable=False, server_default='true')
-    )
+    if 'comments' not in existing_tables:
+        return
     
-    # Create index on quote_id
-    op.create_index('ix_comments_quote_id', 'comments', ['quote_id'], unique=False)
+    comments_columns = [col['name'] for col in inspector.get_columns('comments')]
+    comments_indexes = [idx['name'] for idx in inspector.get_indexes('comments')]
+    comments_fks = [fk['name'] for fk in inspector.get_foreign_keys('comments')]
     
-    # Add foreign key constraint
-    op.create_foreign_key('fk_comments_quote_id', 'comments', 'quotes', ['quote_id'], ['id'], ondelete='CASCADE')
+    # Add quote_id column (idempotent)
+    if 'quote_id' not in comments_columns:
+        op.add_column('comments',
+            sa.Column('quote_id', sa.Integer(), nullable=True)
+        )
+    
+    # Add is_internal column (True = internal team comment, False = client-visible) (idempotent)
+    if 'is_internal' not in comments_columns:
+        op.add_column('comments',
+            sa.Column('is_internal', sa.Boolean(), nullable=False, server_default='true')
+        )
+    
+    # Create index on quote_id (idempotent)
+    if 'quote_id' in comments_columns and 'ix_comments_quote_id' not in comments_indexes:
+        op.create_index('ix_comments_quote_id', 'comments', ['quote_id'], unique=False)
+    
+    # Add foreign key constraint (idempotent)
+    if 'quote_id' in comments_columns and 'fk_comments_quote_id' not in comments_fks:
+        if is_sqlite:
+            with op.batch_alter_table('comments', schema=None) as batch_op:
+                batch_op.create_foreign_key('fk_comments_quote_id', 'quotes', ['quote_id'], ['id'])
+        else:
+            op.create_foreign_key('fk_comments_quote_id', 'comments', 'quotes', ['quote_id'], ['id'], ondelete='CASCADE')
 
 
 def downgrade():
