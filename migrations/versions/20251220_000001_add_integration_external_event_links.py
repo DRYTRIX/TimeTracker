@@ -51,27 +51,50 @@ def _ensure_alembic_version_can_store_revision_ids(bind, min_len: int = 255) -> 
         if "alembic_version" not in inspector.get_table_names():
             return
 
+        # Prefer inspector length, but fall back to information_schema for older installs
+        # where reflection can be unreliable.
         cols = inspector.get_columns("alembic_version")
         version_col = next((c for c in cols if c.get("name") == "version_num"), None)
-        if not version_col:
-            return
+        current_len = None
+        if version_col:
+            col_type = version_col.get("type")
+            current_len = getattr(col_type, "length", None)
 
-        col_type = version_col.get("type")
-        current_len = getattr(col_type, "length", None)
+        if current_len is None:
+            try:
+                res = bind.execute(
+                    sa.text(
+                        """
+                        SELECT character_maximum_length
+                        FROM information_schema.columns
+                        WHERE table_name = 'alembic_version'
+                          AND column_name = 'version_num'
+                        """
+                    )
+                ).scalar()
+                if isinstance(res, int):
+                    current_len = res
+            except Exception:
+                # If we can't determine length, don't attempt a narrowing conversion.
+                current_len = None
 
-        # If we can't determine length, or it's already large enough, do nothing.
-        if current_len is None or current_len >= min_len:
+        if current_len is not None and current_len >= min_len:
             return
 
         op.execute(
             f"ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR({min_len})"
         )
-        print(
-            f"[Migration 091] ℹ Expanded alembic_version.version_num from {current_len} to {min_len}"
-        )
-    except Exception:
-        # Best-effort: if it fails, Alembic may still succeed on DBs that don't enforce VARCHAR length.
-        pass
+        if current_len is not None:
+            print(
+                f"[Migration 091] ℹ Expanded alembic_version.version_num from {current_len} to {min_len}"
+            )
+        else:
+            print(
+                f"[Migration 091] ℹ Ensured alembic_version.version_num is at least VARCHAR({min_len})"
+            )
+    except Exception as e:
+        # Best-effort: if it fails, migrations may still succeed on DBs that don't enforce VARCHAR length.
+        print(f"[Migration 091] ⚠ Could not expand alembic_version.version_num: {e}")
 
 
 def upgrade():
