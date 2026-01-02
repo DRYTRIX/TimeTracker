@@ -81,6 +81,7 @@ from .custom_field_definition import CustomFieldDefinition
 from .salesman_email_mapping import SalesmanEmailMapping
 from .issue import Issue
 from .donation_interaction import DonationInteraction
+from .client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
 
 __all__ = [
     "User",
@@ -187,4 +188,7 @@ __all__ = [
     "SalesmanEmailMapping",
     "Issue",
     "DonationInteraction",
+    "ClientNotification",
+    "ClientNotificationPreferences",
+    "NotificationType",
 ]

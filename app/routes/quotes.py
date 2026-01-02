@@ -336,6 +336,15 @@ def edit_quote(quote_id):
         quote.terms = terms.strip() if terms else None
         quote.payment_terms = payment_terms.strip() if payment_terms else None
         quote.visible_to_client = visible_to_client
+        
+        # Notify client if quote is made visible
+        if visible_to_client and quote.client_id:
+            try:
+                from app.services.client_notification_service import ClientNotificationService
+                notification_service = ClientNotificationService()
+                notification_service.notify_quote_available(quote.id, quote.client_id)
+            except Exception as e:
+                current_app.logger.error(f"Failed to send client notification for quote {quote.id}: {e}", exc_info=True)
 
         # Update discount fields
         quote.discount_type = discount_type if discount_type else None
@@ -774,6 +783,15 @@ def upload_attachment(quote_id):
     mime_type = file.content_type or "application/octet-stream"
     description = request.form.get("description", "").strip() or None
     is_visible_to_client = request.form.get("is_visible_to_client", "false").lower() == "true"
+    
+    # Notify client if quote is being made visible
+    if is_visible_to_client and not quote.visible_to_client and quote.client_id:
+        try:
+            from app.services.client_notification_service import ClientNotificationService
+            notification_service = ClientNotificationService()
+            notification_service.notify_quote_available(quote.id, quote.client_id)
+        except Exception as e:
+            current_app.logger.error(f"Failed to send client notification for quote {quote.id}: {e}", exc_info=True)
 
     # Create attachment record
     attachment = QuoteAttachment(

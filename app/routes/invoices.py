@@ -177,6 +177,15 @@ def create_invoice():
             },
         )
 
+        # Notify client about new invoice
+        if invoice.client_id:
+            try:
+                from app.services.client_notification_service import ClientNotificationService
+                notification_service = ClientNotificationService()
+                notification_service.notify_invoice_created(invoice.id, invoice.client_id)
+            except Exception as e:
+                logger.error(f"Failed to send client notification for invoice {invoice.id}: {e}", exc_info=True)
+
         flash(f"Invoice {invoice_number} created successfully", "success")
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 

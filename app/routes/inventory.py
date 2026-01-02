@@ -1218,8 +1218,16 @@ def new_supplier():
     """Create a new supplier"""
     if request.method == "POST":
         try:
+            code = request.form.get("code", "").strip()
+            
+            # Check for duplicate code
+            existing = Supplier.query.filter_by(code=code).first()
+            if existing:
+                flash(_("Supplier with code '%(code)s' already exists", code=code), "error")
+                return render_template("inventory/suppliers/form.html", supplier=None)
+            
             supplier = Supplier(
-                code=request.form.get("code", "").strip(),
+                code=code,
                 name=request.form.get("name", "").strip(),
                 created_by=current_user.id,
                 description=request.form.get("description", "").strip() or None,

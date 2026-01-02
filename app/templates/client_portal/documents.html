@@ -1,0 +1,65 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Documents') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Documents')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-alt',
+    title_text=_('Documents'),
+    subtitle_text=_('View and download project documents'),
+    breadcrumbs=breadcrumbs
+) }}
+
+{% if attachments %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for attachment in attachments %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+        <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
+                    <i class="fas fa-file text-primary-600 dark:text-primary-400 text-xl"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-semibold truncate" title="{{ attachment.original_filename if attachment.original_filename else attachment.filename }}">{{ attachment.original_filename if attachment.original_filename else attachment.filename }}</h3>
+                    {% if hasattr(attachment, 'project') and attachment.project %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ attachment.project.name }}</p>
+                    {% elif hasattr(attachment, 'client') and attachment.client %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Client Document') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="space-y-2 text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+            {% if attachment.uploaded_at %}
+            <p><i class="fas fa-calendar mr-2"></i>{{ attachment.uploaded_at.strftime('%Y-%m-%d') }}</p>
+            {% endif %}
+            {% if attachment.file_size %}
+            <p><i class="fas fa-hdd mr-2"></i>{{ attachment.file_size_display if hasattr(attachment, 'file_size_display') else ("%.2f"|format(attachment.file_size / 1024) + " KB") }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="flex gap-2">
+            <a href="{{ url_for('client_portal.download_attachment', attachment_id=attachment.id) }}" 
+               target="_blank"
+               class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                <i class="fas fa-download mr-2"></i>{{ _('Download') }}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
+    <i class="fas fa-folder-open text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+    <h3 class="text-xl font-semibold mb-2">{{ _('No Documents') }}</h3>
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No documents have been shared with you yet.') }}</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -206,6 +206,17 @@ class InvoiceService:
             {"invoice_id": invoice.id, "project_id": project_id, "client_id": client_id},
         )
 
+        # Notify client about new invoice
+        if client_id:
+            try:
+                from app.services.client_notification_service import ClientNotificationService
+                notification_service = ClientNotificationService()
+                notification_service.notify_invoice_created(invoice.id, client_id)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send client notification for invoice {invoice.id}: {e}", exc_info=True)
+
         return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
 
     def mark_as_sent(self, invoice_id: int) -> Dict[str, Any]:

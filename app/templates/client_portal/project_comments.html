@@ -1,0 +1,83 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Project Comments') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Projects'), 'url': url_for('client_portal.projects')},
+    {'text': project.name, 'url': url_for('client_portal.projects')},
+    {'text': _('Comments')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-comments',
+    title_text=_('Project Comments'),
+    subtitle_text=project.name,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h3 class="text-lg font-semibold mb-4">{{ _('Add Comment') }}</h3>
+    <form method="POST">
+        <div class="mb-4">
+            <label for="comment" class="block text-sm font-medium mb-2">{{ _('Your Comment') }}</label>
+            <textarea id="comment" name="comment" rows="4" required
+                      class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                      placeholder="{{ _('Enter your comment...') }}"></textarea>
+        </div>
+        <button type="submit" 
+                class="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+            <i class="fas fa-paper-plane mr-2"></i>{{ _('Post Comment') }}
+        </button>
+    </form>
+</div>
+
+<div class="space-y-4">
+    {% if comments %}
+        {% for comment in comments %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
+                        <i class="fas fa-user text-primary-600 dark:text-primary-400"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium">
+                            {% if comment.is_client_comment and comment.client_contact %}
+                                {{ comment.client_contact.full_name }}
+                                <span class="text-xs text-text-muted-light dark:text-text-muted-dark ml-2">({{ _('Client') }})</span>
+                            {% elif comment.author %}
+                                {{ comment.author.full_name if comment.author.full_name else comment.author.username }}
+                            {% else %}
+                                {{ _('Unknown') }}
+                            {% endif %}
+                        </p>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ comment.created_at.strftime('%Y-%m-%d %H:%M') if comment.created_at else _('N/A') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="ml-13">
+                <p class="whitespace-pre-line text-text-light dark:text-text-dark">{{ comment.content }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
+            <i class="fas fa-comments text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+            <h3 class="text-xl font-semibold mb-2">{{ _('No Comments') }}</h3>
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Be the first to comment on this project.') }}</p>
+        </div>
+    {% endif %}
+</div>
+
+<div class="mt-6">
+    <a href="{{ url_for('client_portal.projects') }}" 
+       class="inline-flex items-center px-4 py-2 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>{{ _('Back to Projects') }}
+    </a>
+</div>
+{% endblock %}

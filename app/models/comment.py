@@ -16,11 +16,13 @@ class Comment(db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=True, index=True)
     quote_id = db.Column(db.Integer, db.ForeignKey("quotes.id", ondelete="CASCADE"), nullable=True, index=True)
 
-    # Author of the comment
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    # Author of the comment (nullable for client comments)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    client_contact_id = db.Column(db.Integer, db.ForeignKey("contacts.id"), nullable=True, index=True)  # For client comments
 
     # Visibility: True = internal team comment, False = client-visible comment
     is_internal = db.Column(db.Boolean, default=True, nullable=False)
+    is_client_comment = db.Column(db.Boolean, default=False, nullable=False)  # True if from client contact
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
@@ -31,6 +33,7 @@ class Comment(db.Model):
 
     # Relationships
     author = db.relationship("User", backref="comments")
+    client_contact = db.relationship("Contact", backref="comments")
     project = db.relationship("Project", backref="comments")
     task = db.relationship("Task", backref="comments")
     quote = db.relationship("Quote", backref="comments")
@@ -39,13 +42,14 @@ class Comment(db.Model):
     parent = db.relationship("Comment", remote_side=[id], backref="replies")
 
     def __init__(
-        self, content, user_id, project_id=None, task_id=None, quote_id=None, parent_id=None, is_internal=True
+        self, content, user_id=None, client_contact_id=None, project_id=None, task_id=None, quote_id=None, parent_id=None, is_internal=True
     ):
         """Create a comment.
 
         Args:
             content: The comment text
-            user_id: ID of the user creating the comment
+            user_id: ID of the user creating the comment (optional for client comments)
+            client_contact_id: ID of the client contact (optional, for client comments)
             project_id: ID of the project (if this is a project comment)
             task_id: ID of the task (if this is a task comment)
             parent_id: ID of parent comment (if this is a reply)
@@ -58,13 +62,19 @@ class Comment(db.Model):
         if len(targets) > 1:
             raise ValueError("Comment cannot be associated with multiple targets")
 
+        # Must have either user_id or client_contact_id
+        if not user_id and not client_contact_id:
+            raise ValueError("Comment must have either user_id or client_contact_id")
+
         self.content = content.strip()
         self.user_id = user_id
+        self.client_contact_id = client_contact_id
         self.project_id = project_id
         self.task_id = task_id
         self.quote_id = quote_id
         self.parent_id = parent_id
         self.is_internal = is_internal
+        self.is_client_comment = client_contact_id is not None
 
     def __repr__(self):
         if self.project_id:
@@ -75,7 +85,14 @@ class Comment(db.Model):
             target = f"Quote {self.quote_id}"
         else:
             target = "Unknown"
-        return f'<Comment by {self.author.username if self.author else "Unknown"} on {target}>'
+        
+        author_name = "Unknown"
+        if self.author:
+            author_name = self.author.username
+        elif self.client_contact:
+            author_name = self.client_contact.full_name
+        
+        return f'<Comment by {author_name} on {target}>'
 
     @property
     def is_reply(self):
@@ -143,6 +160,15 @@ class Comment(db.Model):
 
     def to_dict(self):
         """Convert comment to dictionary for API responses"""
+        author_name = None
+        author_full_name = None
+        if self.author:
+            author_name = self.author.username
+            author_full_name = self.author.full_name if self.author.full_name else None
+        elif self.client_contact:
+            author_name = self.client_contact.full_name
+            author_full_name = self.client_contact.full_name
+        
         return {
             "id": self.id,
             "content": self.content,
@@ -150,8 +176,9 @@ class Comment(db.Model):
             "task_id": self.task_id,
             "quote_id": self.quote_id,
             "user_id": self.user_id,
-            "author": self.author.username if self.author else None,
-            "author_full_name": self.author.full_name if self.author and self.author.full_name else None,
+            "client_contact_id": self.client_contact_id,
+            "author": author_name,
+            "author_full_name": author_full_name,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "parent_id": self.parent_id,
@@ -160,6 +187,7 @@ class Comment(db.Model):
             "target_type": self.target_type,
             "target_name": self.target_name,
             "is_internal": self.is_internal,
+            "is_client_comment": self.is_client_comment,
         }
 
     @classmethod

@@ -1,0 +1,121 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Time Entry Approvals') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Approvals')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-check-circle',
+    title_text=_('Time Entry Approvals'),
+    subtitle_text=_('Review and approve time entries'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<!-- Status Filter -->
+<div class="mb-6">
+    <div class="flex gap-2">
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='pending') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'pending' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
+            {{ _('Pending') }} {% if status_filter == 'pending' %}({{ pending_count }}){% endif %}
+        </a>
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='approved') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'approved' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
+            {{ _('Approved') }}
+        </a>
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='rejected') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'rejected' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
+            {{ _('Rejected') }}
+        </a>
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='all') }}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'all' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
+            {{ _('All') }}
+        </a>
+    </div>
+</div>
+
+{% if approvals %}
+<div class="space-y-4">
+    {% for approval in approvals %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-4 mb-2">
+                    <h3 class="text-lg font-semibold">
+                        <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}" class="text-primary hover:underline">
+                            {{ _('Time Entry') }} #{{ approval.time_entry_id }}
+                        </a>
+                    </h3>
+                    <span class="px-3 py-1 text-xs rounded-full 
+                        {% if approval.status.value == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                        {% elif approval.status.value == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        {% elif approval.status.value == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                        {{ approval.status.value|title }}
+                    </span>
+                </div>
+                
+                {% if approval.time_entry %}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}:</span>
+                        <span class="font-medium">{{ approval.time_entry.project.name if approval.time_entry.project else _('N/A') }}</span>
+                    </div>
+                    <div>
+                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}:</span>
+                        <span class="font-medium">{{ "%.2f"|format(approval.time_entry.duration_hours) }} {{ _('hours') }}</span>
+                    </div>
+                    <div>
+                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}:</span>
+                        <span class="font-medium">{{ approval.time_entry.start_time.strftime('%Y-%m-%d') if approval.time_entry.start_time else _('N/A') }}</span>
+                    </div>
+                </div>
+                
+                {% if approval.time_entry.notes %}
+                <div class="mt-3">
+                    <span class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Notes') }}:</span>
+                    <p class="text-sm mt-1">{{ approval.time_entry.notes[:100] }}{% if approval.time_entry.notes|length > 100 %}...{% endif %}</p>
+                </div>
+                {% endif %}
+                {% endif %}
+                
+                {% if approval.request_comment %}
+                <div class="mt-3 p-3 bg-background-light dark:bg-background-dark rounded">
+                    <span class="text-text-muted-light dark:text-text-muted-dark text-sm font-medium">{{ _('Request Comment') }}:</span>
+                    <p class="text-sm mt-1">{{ approval.request_comment }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3 text-sm text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Requested on') }} {{ approval.requested_at.strftime('%Y-%m-%d %H:%M') if approval.requested_at else _('N/A') }}
+                </div>
+            </div>
+            
+            <div class="ml-4">
+                <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}" 
+                   class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                    <i class="fas fa-eye mr-2"></i>{{ _('View Details') }}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
+    <i class="fas fa-check-circle text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+    <h3 class="text-xl font-semibold mb-2">{{ _('No Approvals') }}</h3>
+    <p class="text-text-muted-light dark:text-text-muted-dark">
+        {% if status_filter == 'pending' %}
+        {{ _('You have no pending time entry approvals.') }}
+        {% else %}
+        {{ _('No approvals found for this status.') }}
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+{% endblock %}

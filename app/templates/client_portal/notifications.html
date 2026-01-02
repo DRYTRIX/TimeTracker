@@ -1,0 +1,105 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Notifications') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Notifications')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bell',
+    title_text=_('Notifications'),
+    subtitle_text=_('Stay updated on your projects and invoices'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<!-- Filter Tabs -->
+<div class="mb-6">
+    <div class="flex gap-2 border-b border-border-light dark:border-border-dark">
+        <a href="{{ url_for('client_portal.notifications', filter='all') }}" 
+           class="px-4 py-2 {% if filter_type == 'all' %}border-b-2 border-primary-600 text-primary-600 font-medium{% else %}text-text-muted-light dark:text-text-muted-dark hover:text-primary{% endif %} transition-colors">
+            {{ _('All') }}
+        </a>
+        <a href="{{ url_for('client_portal.notifications', filter='unread') }}" 
+           class="px-4 py-2 {% if filter_type == 'unread' %}border-b-2 border-primary-600 text-primary-600 font-medium{% else %}text-text-muted-light dark:text-text-muted-dark hover:text-primary{% endif %} transition-colors relative">
+            {{ _('Unread') }}
+            {% if unread_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-red-600 text-white text-xs rounded-full">{{ unread_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+</div>
+
+<!-- Mark All Read Button -->
+{% if unread_count > 0 %}
+<div class="mb-4">
+    <form method="POST" action="{{ url_for('client_portal.mark_all_notifications_read') }}" class="inline">
+        <button type="submit" 
+                class="inline-flex items-center px-4 py-2 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors">
+            <i class="fas fa-check-double mr-2"></i>{{ _('Mark All as Read') }}
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<!-- Notifications List -->
+{% if notifications %}
+<div class="space-y-3">
+    {% for notification in notifications %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow {% if not notification.is_read %}border-l-4 border-primary-600{% endif %}">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                    {% if not notification.is_read %}
+                    <span class="w-2 h-2 bg-primary-600 rounded-full"></span>
+                    {% endif %}
+                    <h3 class="text-lg font-semibold {% if not notification.is_read %}font-bold{% endif %}">
+                        {{ notification.title }}
+                    </h3>
+                    <span class="px-2 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200">
+                        {{ notification.type|replace('_', ' ')|title }}
+                    </span>
+                </div>
+                <p class="text-text-light dark:text-text-dark mb-3">{{ notification.message }}</p>
+                <div class="flex items-center gap-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <span>
+                        <i class="fas fa-clock mr-1"></i>{{ notification.created_at.strftime('%Y-%m-%d %H:%M') if notification.created_at else _('N/A') }}
+                    </span>
+                    {% if notification.link_url %}
+                    <a href="{{ notification.link_url }}" 
+                       class="text-primary hover:underline">
+                        <i class="fas fa-arrow-right mr-1"></i>{{ notification.link_text or _('View Details') }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% if not notification.is_read %}
+            <form method="POST" action="{{ url_for('client_portal.mark_notification_read', notification_id=notification.id) }}" class="ml-4">
+                <button type="submit" 
+                        class="px-3 py-1 text-sm bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+                        title="{{ _('Mark as read') }}">
+                    <i class="fas fa-check"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
+    <i class="fas fa-bell-slash text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+    <h3 class="text-xl font-semibold mb-2">{{ _('No Notifications') }}</h3>
+    <p class="text-text-muted-light dark:text-text-muted-dark">
+        {% if filter_type == 'unread' %}
+        {{ _('You have no unread notifications.') }}
+        {% else %}
+        {{ _('You have no notifications yet.') }}
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+{% endblock %}

@@ -664,8 +664,9 @@ def import_csv_clients_route():
                 try:
                     import_record.fail(str(e))
                     db.session.commit()
-                except:
+                except Exception as db_error:
                     db.session.rollback()
+                    current_app.logger.error(f"Failed to update import record status: {db_error}")
             return jsonify({"error": str(e)}), 400
         except Exception as e:
             current_app.logger.exception(f"Unexpected error in client import: {str(e)}")
@@ -673,8 +674,9 @@ def import_csv_clients_route():
                 try:
                     import_record.fail(f"Unexpected error: {str(e)}")
                     db.session.commit()
-                except:
+                except Exception as db_error:
                     db.session.rollback()
+                    current_app.logger.error(f"Failed to update import record status: {db_error}")
             # Return detailed error in debug mode, generic in production
             error_msg = str(e) if current_app.config.get("FLASK_DEBUG") else "Import failed. Please check the file format and try again."
             return jsonify({"error": error_msg}), 500

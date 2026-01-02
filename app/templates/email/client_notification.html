@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ notification.title }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h1 style="color: #2c3e50; margin-top: 0;">{{ notification.title }}</h1>
+    </div>
+    
+    <div style="background-color: #fff; padding: 20px; border-radius: 5px; border: 1px solid #ddd;">
+        <p>{{ notification.message }}</p>
+        
+        {% if notification.link_url %}
+        <div style="margin-top: 20px;">
+            <a href="{{ notification.link_url }}" 
+               style="display: inline-block; background-color: #3498db; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                {{ notification.link_text or 'View Details' }}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #777;">
+        <p>This is an automated notification from TimeTracker.</p>
+        <p>If you have any questions, please contact us directly.</p>
+    </div>
+</body>
+</html>
