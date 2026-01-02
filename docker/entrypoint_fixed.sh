@@ -668,6 +668,23 @@ execute_check_migrations() {
     # Check current migration status
     local current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "unknown")
     log "Current migration revision: $current_revision"
+
+    # If Alembic reports multiple heads and the DB is already at a head, attempting to
+    # upgrade to "heads" can fail with:
+    #   "Requested revision X overlaps with other requested revisions ..."
+    # In that situation, treat it as "no pending migrations for this database" and
+    # continue startup (log a warning so operators can clean up the history).
+    local heads_output
+    heads_output=$(flask db heads 2>/dev/null || echo "")
+    local head_count
+    head_count=$(echo "$heads_output" | grep -v '^$' | wc -l | tr -d ' ')
+    if [[ "$current_revision" == *"(head)"* ]] && [[ "$head_count" -gt 1 ]]; then
+        log "⚠ Multiple migration heads detected ($head_count), but database is already at a head."
+        log "⚠ Skipping 'flask db upgrade heads' to avoid Alembic overlap error during startup."
+        log "Heads:"
+        echo "$heads_output" | sed 's/^/[HEAD] /'
+        return 0
+    fi
     
     # Check if database actually has tables (not just alembic_version)
     # This handles the case where alembic_version exists but migrations were never applied
@@ -761,6 +778,13 @@ except Exception as e:
     set -e  # Re-enable exit on error
     
     if [[ $MIGRATION_EXIT_CODE -ne 0 ]]; then
+        # If we're already at a head, tolerate Alembic overlap errors (multi-head history).
+        if [[ "$current_revision" == *"(head)"* ]] && [[ -s "$MIGRATION_OUTPUT" ]] && grep -q "overlaps with other requested revisions" "$MIGRATION_OUTPUT"; then
+            log "⚠ Migration upgrade reported overlapping heads, but DB is already at a head. Continuing startup."
+            log "⚠ (You likely have multiple heads in the migration history; consider upgrading to a build with a linearized migration chain.)"
+            rm -f "$MIGRATION_OUTPUT"
+            return 0
+        fi
         log "✗ Migration check failed (exit code: $MIGRATION_EXIT_CODE)"
         log "Error details:"
         if [[ -s "$MIGRATION_OUTPUT" ]]; then

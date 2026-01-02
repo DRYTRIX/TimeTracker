@@ -10,7 +10,6 @@ This migration adds:
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -32,11 +31,14 @@ def upgrade():
     """Add custom_fields to clients and create link_templates table"""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    dialect_name = bind.dialect.name if bind else "generic"
+    bool_true_default = '1' if dialect_name == 'sqlite' else ('true' if dialect_name == 'postgresql' else '1')
 
     # Add custom_fields column to clients table if it doesn't exist
     if 'clients' in inspector.get_table_names():
         if not _has_column(inspector, 'clients', 'custom_fields'):
-            op.add_column('clients', sa.Column('custom_fields', postgresql.JSON(astext_type=sa.Text()), nullable=True))
+            # Use portable JSON type for cross-db compatibility (SQLite + PostgreSQL).
+            op.add_column('clients', sa.Column('custom_fields', sa.JSON(), nullable=True))
 
     # Create link_templates table
     op.create_table(
@@ -47,7 +49,7 @@ def upgrade():
         sa.Column('url_template', sa.String(length=1000), nullable=False),
         sa.Column('icon', sa.String(length=50), nullable=True),
         sa.Column('field_key', sa.String(length=100), nullable=False),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
+        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text(bool_true_default)),
         sa.Column('order', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('created_by', sa.Integer(), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),

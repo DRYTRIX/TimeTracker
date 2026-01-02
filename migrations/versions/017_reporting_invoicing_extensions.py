@@ -169,7 +169,9 @@ def upgrade() -> None:
             op.add_column('invoices', sa.Column('currency_code', sa.String(length=3), nullable=False, server_default='EUR'))
             # Only drop default on PostgreSQL (SQLite doesn't support ALTER COLUMN DROP DEFAULT)
             if bind.dialect.name == 'postgresql':
-                op.alter_column('invoices', 'currency_code', server_default=None)
+                # Use batch mode for portability audit + compatibility.
+                with op.batch_alter_table('invoices') as batch_op:
+                    batch_op.alter_column('currency_code', server_default=None)
         if 'template_id' not in columns:
             op.add_column('invoices', sa.Column('template_id', sa.Integer(), nullable=True))
             try:

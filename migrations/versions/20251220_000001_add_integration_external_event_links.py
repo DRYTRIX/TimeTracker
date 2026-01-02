@@ -36,12 +36,53 @@ def _has_index(inspector, table_name: str, index_name: str) -> bool:
         return False
 
 
+def _ensure_alembic_version_can_store_revision_ids(bind, min_len: int = 255) -> None:
+    """
+    Ensure alembic_version.version_num can store long revision IDs.
+
+    Some older installs have VARCHAR(32), but modern revision IDs (e.g.
+    '091_add_integration_external_event_links') can exceed that.
+    """
+    try:
+        if bind.dialect.name != "postgresql":
+            return
+
+        inspector = sa.inspect(bind)
+        if "alembic_version" not in inspector.get_table_names():
+            return
+
+        cols = inspector.get_columns("alembic_version")
+        version_col = next((c for c in cols if c.get("name") == "version_num"), None)
+        if not version_col:
+            return
+
+        col_type = version_col.get("type")
+        current_len = getattr(col_type, "length", None)
+
+        # If we can't determine length, or it's already large enough, do nothing.
+        if current_len is None or current_len >= min_len:
+            return
+
+        op.execute(
+            f"ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR({min_len})"
+        )
+        print(
+            f"[Migration 091] ℹ Expanded alembic_version.version_num from {current_len} to {min_len}"
+        )
+    except Exception:
+        # Best-effort: if it fails, Alembic may still succeed on DBs that don't enforce VARCHAR length.
+        pass
+
+
 def upgrade():
     # Import for checking table existence
     from sqlalchemy import inspect
     
     conn = op.get_bind()
     inspector = inspect(conn)
+
+    # Ensure Alembic can write this (and future) revision IDs to alembic_version
+    _ensure_alembic_version_can_store_revision_ids(conn)
     
     # Create table only if it doesn't exist
     if not _has_table(inspector, "integration_external_event_links"):

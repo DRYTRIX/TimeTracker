@@ -72,7 +72,10 @@ def upgrade() -> None:
                 # Note: SQLite doesn't support removing server defaults via ALTER COLUMN
                 # The default will remain but won't affect new records since we set explicit values
                 try:
-                    op.alter_column('invoices', 'payment_status', server_default=None)
+                    # Use batch mode for SQLite compatibility (even though this may still be unsupported
+                    # depending on SQLite version; we keep it best-effort).
+                    with op.batch_alter_table('invoices') as batch_op:
+                        batch_op.alter_column('payment_status', server_default=None)
                 except:
                     # SQLite doesn't support this operation, but it's not critical
                     pass
@@ -97,7 +100,10 @@ def upgrade() -> None:
                 """))
                 
                 # Now make the column NOT NULL
-                op.alter_column('invoices', 'payment_status', nullable=False)
+                # Use batch mode so this migration remains SQLite-safe if logic changes,
+                # and to satisfy portability audits.
+                with op.batch_alter_table('invoices') as batch_op:
+                    batch_op.alter_column('payment_status', nullable=False)
         
         # Create indexes for better performance
         try:

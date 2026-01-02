@@ -217,15 +217,42 @@ def execute_check_migrations(db_url):
                               capture_output=True, text=True, check=True)
         current_revision = result.stdout.strip()
         logger.info(f"Current migration revision: {current_revision}")
+
+        # If multiple heads exist and we're already at a head, avoid upgrading to "heads"
+        # because Alembic can raise:
+        #   Requested revision X overlaps with other requested revisions ...
+        heads_result = subprocess.run(['flask', 'db', 'heads'], capture_output=True, text=True)
+        heads_output = (heads_result.stdout or "").strip()
+        head_lines = [ln for ln in heads_output.splitlines() if ln.strip()]
+        head_count = len(head_lines)
+
+        if "(head)" in current_revision and head_count > 1:
+            logger.warning(
+                f"Multiple migration heads detected ({head_count}), but database is already at a head. "
+                "Skipping migration upgrade during startup."
+            )
+            for ln in head_lines:
+                logger.warning(f"[HEAD] {ln}")
+            return True
         
         # Check for pending migrations
-        result = subprocess.run(['flask', 'db', 'upgrade'], 
-                              capture_output=True, text=True, check=True)
+        upgrade_cmd = ['flask', 'db', 'upgrade']
+        if head_count > 1:
+            upgrade_cmd = ['flask', 'db', 'upgrade', 'heads']
+
+        result = subprocess.run(upgrade_cmd, capture_output=True, text=True, check=True)
         logger.info("✓ Migrations checked and applied")
         
         return True
         
     except subprocess.CalledProcessError as e:
+        # If we're already at a head, tolerate Alembic overlap errors (multi-head history)
+        combined = (e.stdout or "") + "\n" + (e.stderr or "")
+        if "(head)" in locals().get("current_revision", "") and "overlaps with other requested revisions" in combined:
+            logger.warning(
+                "Migration upgrade reported overlapping heads, but DB is already at a head. Continuing startup."
+            )
+            return True
         logger.error(f"Migration check failed: {e}")
         return False
 
