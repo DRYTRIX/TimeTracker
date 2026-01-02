@@ -35,6 +35,11 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # Docker Hub repo to also publish release images to.
+  # Requires GitHub Actions secrets:
+  # - DOCKERHUB_USERNAME
+  # - DOCKERHUB_TOKEN (recommended) or DOCKERHUB_PASSWORD
+  DOCKERHUB_IMAGE: driesp/timetracker
   PYTHON_VERSION: '3.11'
 
 jobs:
@@ -330,6 +335,12 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
       
       - name: Set lowercase image name
         id: image-name
@@ -344,7 +355,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           # Use lowercase image name for compatibility with Docker registries
-          images: ${{ steps.image-name.outputs.IMAGE_NAME_LOWER }}
+          images: |
+            ${{ steps.image-name.outputs.IMAGE_NAME_LOWER }}
+            ${{ env.DOCKERHUB_IMAGE }}
           tags: |
             type=semver,pattern={{version}},value=${{ needs.determine-version.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.determine-version.outputs.version }}
@@ -864,16 +877,22 @@ jobs:
           echo "> 🔒 **Security**: Secrets are embedded at build time and never exposed in logs" >> $GITHUB_STEP_SUMMARY
           echo "> 👥 **Privacy**: Users maintain full control via opt-in/opt-out in admin dashboard" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          
+          VERSION="${{ needs.determine-version.outputs.version }}"
+          VERSION_NO_V="${VERSION#v}"
+          
           echo "### 🐳 Docker Images" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_NO_V}" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.DOCKERHUB_IMAGE }}:${VERSION_NO_V}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.DOCKERHUB_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Quick Deploy" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "# Pull the image" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_NO_V}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "# Deploy with docker-compose" >> $GITHUB_STEP_SUMMARY
           echo "docker-compose -f docker-compose.production.yml up -d" >> $GITHUB_STEP_SUMMARY
