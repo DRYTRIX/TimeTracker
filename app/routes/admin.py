@@ -22,7 +22,7 @@ import os
 from werkzeug.utils import secure_filename
 import uuid
 from app.utils.db import safe_commit
-from app.utils.backup import create_backup, restore_backup
+from app.utils.backup import create_backup, restore_backup, get_backup_root_dir
 from app.utils.installation import get_installation_config
 from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
 from app.utils.permissions import admin_or_permission_required
@@ -111,8 +111,9 @@ def admin_dashboard():
     oidc_users_count = 0
     try:
         oidc_users_count = User.query.filter(User.oidc_issuer.isnot(None), User.oidc_sub.isnot(None)).count()
-    except Exception:
-        pass
+    except Exception as e:
+        # Log error but continue - OIDC user count is not critical for dashboard display
+        current_app.logger.warning(f"Failed to count OIDC users: {e}", exc_info=True)
 
     # Build stats object expected by the template
     stats = {
@@ -640,14 +641,20 @@ def pdf_layout():
 
                 m = _re.search(r"<body[^>]*>([\s\S]*?)</body>", html_src, _re.IGNORECASE)
                 initial_html = m.group(1).strip() if m else html_src
-            except Exception:
-                pass
+            except Exception as e:
+                # Log but continue - template parsing failure is not critical
+                current_app.logger.debug(f"Failed to parse PDF template HTML: {e}")
         if not initial_css:
-            env = current_app.jinja_env
-            css_src, _, _ = env.loader.get_source(env, "invoices/pdf_styles_default.css")
-            initial_css = css_src
-    except Exception:
-        pass
+            try:
+                env = current_app.jinja_env
+                css_src, _, _ = env.loader.get_source(env, "invoices/pdf_styles_default.css")
+                initial_css = css_src
+            except Exception as e:
+                # Log but continue - CSS loading failure is not critical
+                current_app.logger.debug(f"Failed to load default PDF CSS: {e}")
+    except Exception as e:
+        # Log but continue - PDF layout initialization failure is not critical
+        current_app.logger.warning(f"Failed to initialize PDF layout defaults: {e}", exc_info=True)
 
     return render_template(
         "admin/pdf_layout.html",
@@ -1523,7 +1530,7 @@ def serve_uploaded_logo(filename):
 def backups_management():
     """Backups management page"""
     # Get list of existing backups
-    backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, "..")), "backups")
+    backups_dir = get_backup_root_dir(current_app)
     backups = []
 
     if os.path.exists(backups_dir):
@@ -1543,7 +1550,7 @@ def backups_management():
     # Sort by creation date (newest first)
     backups.sort(key=lambda x: x["created"], reverse=True)
 
-    return render_template("admin/backups.html", backups=backups)
+    return render_template("admin/backups.html", backups=backups, backups_dir=backups_dir)
 
 
 @admin_bp.route("/admin/backup/create", methods=["POST"])
@@ -1574,7 +1581,7 @@ def download_backup(filename):
         flash(_("Invalid file type"), "error")
         return redirect(url_for("admin.backups_management"))
 
-    backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, "..")), "backups")
+    backups_dir = get_backup_root_dir(current_app)
     filepath = os.path.join(backups_dir, filename)
 
     if not os.path.exists(filepath):
@@ -1595,7 +1602,7 @@ def delete_backup(filename):
         flash(_("Invalid file type"), "error")
         return redirect(url_for("admin.backups_management"))
 
-    backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, "..")), "backups")
+    backups_dir = get_backup_root_dir(current_app)
     filepath = os.path.join(backups_dir, filename)
 
     try:
@@ -1618,7 +1625,7 @@ def delete_backup(filename):
 def restore(filename=None):
     """Restore from an uploaded backup archive or existing backup file."""
     if request.method == "POST":
-        backups_dir = os.path.join(os.path.abspath(os.path.join(current_app.root_path, "..")), "backups")
+        backups_dir = get_backup_root_dir(current_app)
 
         # If restoring from an existing backup file
         if filename:

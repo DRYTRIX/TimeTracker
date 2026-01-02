@@ -9,12 +9,50 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from urllib.parse import urlparse
 
 
-def _get_backup_root_dir(app):
-    """Compute the absolute backups directory path (project_root/backups)."""
-    project_root = os.path.abspath(os.path.join(app.root_path, ".."))
-    backups_dir = os.path.join(project_root, "backups")
-    os.makedirs(backups_dir, exist_ok=True)
+def get_backup_root_dir(app) -> str:
+    """Return the directory where backup archives should be stored.
+
+    Priority:
+    1) app.config["BACKUP_FOLDER"] (or env BACKUP_FOLDER / BACKUP_DIR)
+    2) <UPLOAD_FOLDER>/backups (UPLOAD_FOLDER defaults to /data/uploads)
+
+    The directory is created if missing.
+    """
+    # Prefer explicit backup folder if configured
+    configured = (
+        (app.config.get("BACKUP_FOLDER") if getattr(app, "config", None) else None)
+        or os.getenv("BACKUP_FOLDER")
+        or os.getenv("BACKUP_DIR")
+    )
+    if configured:
+        backups_dir = os.path.abspath(str(configured))
+    else:
+        upload_root = (app.config.get("UPLOAD_FOLDER") if getattr(app, "config", None) else None) or os.getenv(
+            "UPLOAD_FOLDER", "/data/uploads"
+        )
+        backups_dir = os.path.abspath(os.path.join(str(upload_root), "backups"))
+
+    # Ensure the directory exists and is writable
+    try:
+        os.makedirs(backups_dir, exist_ok=True)
+    except PermissionError as e:
+        raise PermissionError(
+            f"Permission denied creating backups directory '{backups_dir}'. "
+            "Set BACKUP_FOLDER (or BACKUP_DIR) to a writable path or fix volume permissions."
+        ) from e
+
+    if not os.access(backups_dir, os.W_OK):
+        raise PermissionError(
+            f"Backups directory '{backups_dir}' is not writable. "
+            "Set BACKUP_FOLDER (or BACKUP_DIR) to a writable path or fix volume permissions."
+        )
+
     return backups_dir
+
+
+def _get_backup_root_dir(app):
+    """Backward-compatible wrapper for internal callers."""
+    return get_backup_root_dir(app)
 
 
 def _now_timestamp():
@@ -194,8 +232,11 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
         try:
             if callable(progress_callback):
                 progress_callback(label, percent)
-        except Exception:
-            pass
+        except Exception as e:
+            # Log but continue - progress callback failure is not critical
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Progress callback failed: {e}")
 
     try:
         # Extract archive
@@ -209,8 +250,11 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
             try:
                 with open(manifest_path, "r", encoding="utf-8") as f:
                     _ = json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                # Log but continue - manifest reading failure is not critical
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"Failed to read backup manifest: {e}")
 
         # Proactively close any open DB connections before modifying files
         try:

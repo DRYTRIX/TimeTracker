@@ -67,6 +67,9 @@ class Config:
     # Backup settings
     BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", 30))
     BACKUP_TIME = os.getenv("BACKUP_TIME", "02:00")
+    # Optional override for where backup archives are stored.
+    # If unset, backups default to: <UPLOAD_FOLDER>/backups
+    BACKUP_FOLDER = os.getenv("BACKUP_FOLDER", os.getenv("BACKUP_DIR"))
 
     # Pagination
     ENTRIES_PER_PAGE = 50
@@ -74,7 +77,7 @@ class Config:
 
     # File upload settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-    UPLOAD_FOLDER = "/data/uploads"
+    UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/data/uploads")
 
     # CSRF protection
     WTF_CSRF_ENABLED = os.getenv("WTF_CSRF_ENABLED", "true").lower() == "true"
