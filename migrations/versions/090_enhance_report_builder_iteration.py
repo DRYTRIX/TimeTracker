@@ -42,10 +42,10 @@ def upgrade():
             # Try to alter the column to VARCHAR(50) to accommodate longer revision IDs
             # This is idempotent - if it's already VARCHAR(50) or larger, it will just work
             op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(50)")
-        except Exception:
+        except Exception as e:
             # Column might already be the right size, or alteration might have failed
             # In either case, we'll continue - this is best-effort
-            pass
+            print(f"[Migration 090] ⚠ Could not expand alembic_version.version_num: {e}")
     
     # Add iterative report generation to saved_report_views
     if 'saved_report_views' in inspector.get_table_names():

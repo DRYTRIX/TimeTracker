@@ -6,6 +6,7 @@ from logging.config import fileConfig
 from flask import current_app
 
 from alembic import context
+import sqlalchemy as sa
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -61,6 +62,66 @@ def run_migrations_online():
 
     """
 
+    def _ensure_alembic_version_can_store_long_revision_ids(connection, min_len: int = 255) -> None:
+        """
+        Ensure alembic_version.version_num is wide enough for long revision ids.
+
+        Some older PostgreSQL installs created alembic_version.version_num as VARCHAR(32),
+        but we use descriptive revision ids longer than that. If the column is too small,
+        Alembic can fail while updating the version table (even if the actual migration
+        itself succeeds).
+        """
+        try:
+            if connection.dialect.name != "postgresql":
+                return
+
+            inspector = sa.inspect(connection)
+            if "alembic_version" not in inspector.get_table_names():
+                return
+
+            # Prefer information_schema, which is reliable across SQLAlchemy versions.
+            current_len = None
+            try:
+                res = connection.execute(
+                    sa.text(
+                        """
+                        SELECT character_maximum_length
+                        FROM information_schema.columns
+                        WHERE table_name = 'alembic_version'
+                          AND column_name = 'version_num'
+                        """
+                    )
+                ).scalar()
+                if isinstance(res, int):
+                    current_len = res
+            except Exception:
+                current_len = None
+
+            if current_len is not None and current_len >= min_len:
+                return
+
+            connection.execute(
+                sa.text(
+                    f"ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR({min_len})"
+                )
+            )
+            try:
+                connection.commit()
+            except Exception:
+                # If we're already in a transaction, Alembic will commit/rollback later.
+                pass
+
+            if current_len is not None:
+                logger.info(
+                    f"Expanded alembic_version.version_num from {current_len} to {min_len}"
+                )
+            else:
+                logger.info(
+                    f"Ensured alembic_version.version_num is at least VARCHAR({min_len})"
+                )
+        except Exception as e:
+            logger.warning(f"Could not expand alembic_version.version_num: {e}")
+
     # this callback is used to prevent an auto-migration from being generated
     # when there are no changes to the schema
     # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
@@ -75,6 +136,9 @@ def run_migrations_online():
 
     try:
         with connectable.connect() as connection:
+            # Pre-flight fix: ensure alembic_version can store long revision ids
+            _ensure_alembic_version_can_store_long_revision_ids(connection)
+
             context.configure(
                 connection=connection,
                 target_metadata=target_metadata,
