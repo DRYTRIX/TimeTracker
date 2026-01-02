@@ -561,14 +561,32 @@ class QuickBooksConnector(BaseConnector):
                         else:
                             account_id = accounts.get("Id")
                 
-                if not account_id:
-                    # Fallback to a common expense account ID
-                    account_id = "1"
-                    logger.warning("No expense account found, using default account ID 1")
+                if account_id:
+                    # Auto-save mapping for future use if we found an account
+                    if expense.category_id:
+                        if not self.integration.config:
+                            self.integration.config = {}
+                        if "account_mappings" not in self.integration.config:
+                            self.integration.config["account_mappings"] = {}
+                        self.integration.config["account_mappings"][str(expense.category_id)] = account_id
+                        logger.info(f"Auto-mapped expense category {expense.category_id} to QuickBooks account {account_id}")
+                else:
+                    # No account found - require configuration
+                    error_msg = f"No expense account found for expense {expense.id}. Please configure account mapping or set default_expense_account_id in integration config."
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+            except ValueError:
+                # Re-raise ValueError (our own error)
+                raise
             except Exception as e:
                 logger.error(f"Error looking up QuickBooks expense account: {e}", exc_info=True)
-                # Use fallback
-                account_id = account_id or "1"
+                # If we have a default, use it; otherwise fail
+                if default_expense_account:
+                    account_id = default_expense_account
+                    logger.warning(f"Using default expense account {account_id} due to lookup error")
+                else:
+                    error_msg = f"Failed to determine QuickBooks account for expense {expense.id}. Please configure account mapping or default_expense_account_id."
+                    raise ValueError(error_msg)
         
         # Build QuickBooks expense structure
         qb_expense = {

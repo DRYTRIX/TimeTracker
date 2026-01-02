@@ -94,6 +94,17 @@ class PaymentService:
         # Emit domain event
         emit_event("payment.created", {"payment_id": payment.id, "invoice_id": invoice_id, "amount": float(amount)})
 
+        # Notify client about payment received
+        if invoice.client_id and status == "completed":
+            try:
+                from app.services.client_notification_service import ClientNotificationService
+                notification_service = ClientNotificationService()
+                notification_service.notify_invoice_paid(invoice_id, invoice.client_id, float(amount))
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send client notification for payment {payment.id}: {e}", exc_info=True)
+
         return {"success": True, "message": "Payment created successfully", "payment": payment}
 
     def get_invoice_payments(self, invoice_id: int) -> List[Payment]:

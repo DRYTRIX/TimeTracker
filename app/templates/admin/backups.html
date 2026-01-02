@@ -126,7 +126,7 @@
                     <li><strong>Backup Contents:</strong> Database data, uploaded files, and application settings</li>
                     <li><strong>Automatic Backups:</strong> Configured in Settings (retention: {{ config.get('BACKUP_RETENTION_DAYS', 30) }} days)</li>
                     <li><strong>Before Restore:</strong> Always create a backup before restoring to prevent data loss</li>
-                    <li><strong>Storage Location:</strong> Backups are stored in the <code class="bg-yellow-100 dark:bg-yellow-800 px-1 rounded">backups/</code> directory</li>
+                    <li><strong>Storage Location:</strong> Backups are stored in <code class="bg-yellow-100 dark:bg-yellow-800 px-1 rounded">{{ backups_dir }}</code></li>
                 </ul>
             </div>
         </div>

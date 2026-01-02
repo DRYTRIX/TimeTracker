@@ -53,7 +53,12 @@ def upgrade() -> None:
     # Add composite unique constraint if not present
     if not _has_constraint(inspector, 'users', 'uq_users_oidc_issuer_sub'):
         try:
-            op.create_unique_constraint('uq_users_oidc_issuer_sub', 'users', ['oidc_issuer', 'oidc_sub'])
+            # SQLite can't generally add constraints with ALTER TABLE; use batch mode there.
+            if bind.dialect.name == 'sqlite':
+                with op.batch_alter_table('users') as batch_op:
+                    batch_op.create_unique_constraint('uq_users_oidc_issuer_sub', ['oidc_issuer', 'oidc_sub'])
+            else:
+                op.create_unique_constraint('uq_users_oidc_issuer_sub', 'users', ['oidc_issuer', 'oidc_sub'])
         except Exception:
             pass
 

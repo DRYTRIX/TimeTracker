@@ -1800,8 +1800,9 @@ def time_entries_overview():
             from sqlalchemy import inspect
             engine = db.engine
             is_postgres = 'postgresql' in str(engine.url).lower()
-        except Exception:
-            pass
+        except Exception as e:
+            # Log but continue - database type detection failure is not critical
+            current_app.logger.debug(f"Failed to detect database type: {e}")
         
         # Build custom field filter conditions
         custom_field_conditions = []
@@ -1817,9 +1818,9 @@ def time_entries_overview():
                     custom_field_conditions.append(
                         db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
                     )
-                except Exception:
+                except Exception as e:
                     # Fallback to Python filtering if JSONB fails
-                    pass
+                    current_app.logger.debug(f"JSONB filtering failed for field {field_key}, will use Python filtering: {e}")
         
         if custom_field_conditions:
             query = query.filter(db.or_(*custom_field_conditions))

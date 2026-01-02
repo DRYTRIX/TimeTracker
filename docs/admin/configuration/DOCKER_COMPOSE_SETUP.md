@@ -125,6 +125,7 @@ All environment variables can be provided via `.env` and are consumed by the `ap
 ### File uploads and backups
 - MAX_CONTENT_LENGTH: Max upload size in bytes. Default: `16777216` (16MB).
 - UPLOAD_FOLDER: Upload path inside container. Default: `/data/uploads`.
+- BACKUP_FOLDER: Optional override for where backup archives are stored. Default: `<UPLOAD_FOLDER>/backups` (e.g. `/data/uploads/backups`).
 - BACKUP_RETENTION_DAYS: Retain DB backups (if enabled). Default: `30`.
 - BACKUP_TIME: Backup time (HH:MM). Default: `02:00`.
 

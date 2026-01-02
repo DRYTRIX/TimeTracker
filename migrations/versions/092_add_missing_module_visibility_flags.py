@@ -11,7 +11,9 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "092_missing_module_flags"
-down_revision = "090_report_builder_iteration"  # Update this to the latest migration
+# Important: this migration must come AFTER 091, otherwise Alembic sees 090 as a
+# branchpoint (multiple heads) and upgrades can fail.
+down_revision = "091_add_integration_external_event_links"
 branch_labels = None
 depends_on = None
 

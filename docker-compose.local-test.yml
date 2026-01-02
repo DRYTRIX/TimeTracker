@@ -18,6 +18,10 @@ services:
       - SECRET_KEY=${SECRET_KEY:-local-test-secret-key}
       # Use SQLite database for local testing
       - DATABASE_URL=sqlite:////data/timetracker.db
+      # Persist uploads/exports/backups in the /data volume
+      - UPLOAD_FOLDER=/data/uploads
+      # Optional override; defaults to <UPLOAD_FOLDER>/backups, but we set explicitly for clarity
+      - BACKUP_FOLDER=/data/uploads/backups
       - LOG_FILE=/app/logs/timetracker.log
       # CSRF Protection (can be disabled for local testing)
       - WTF_CSRF_ENABLED=${WTF_CSRF_ENABLED:-false}

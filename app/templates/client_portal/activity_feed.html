@@ -1,0 +1,56 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Activity Feed') }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Client Portal'), 'url': url_for('client_portal.dashboard')},
+    {'text': _('Activity Feed')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-history',
+    title_text=_('Activity Feed'),
+    subtitle_text=_('Recent project activities'),
+    breadcrumbs=breadcrumbs
+) }}
+
+{% if activities %}
+<div class="space-y-4">
+    {% for activity in activities %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-{{ activity.action_type|lower|replace('_', '-') }} text-primary-600 dark:text-primary-400"></i>
+            </div>
+            <div class="flex-1">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold">{{ activity.description or activity.action_type|replace('_', ' ')|title }}</h3>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ activity.created_at.strftime('%Y-%m-%d %H:%M') if activity.created_at else _('N/A') }}
+                    </span>
+                </div>
+                {% if activity.project %}
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <i class="fas fa-folder-open mr-1"></i>{{ activity.project.name }}
+                </p>
+                {% endif %}
+                {% if activity.user %}
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                    <i class="fas fa-user mr-1"></i>{{ activity.user.display_name if activity.user.display_name else activity.user.username }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
+    <i class="fas fa-history text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
+    <h3 class="text-xl font-semibold mb-2">{{ _('No Activity') }}</h3>
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No recent activity to display.') }}</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -7,7 +7,6 @@ Create Date: 2025-01-27
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '069_add_workflow_automation'
@@ -20,6 +19,8 @@ def upgrade():
     """Create workflow_rules and workflow_executions tables"""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    dialect_name = bind.dialect.name if bind else "generic"
+    bool_true_default = '1' if dialect_name == 'sqlite' else ('true' if dialect_name == 'postgresql' else '1')
 
     # Create workflow_rules table
     if 'workflow_rules' not in inspector.get_table_names():
@@ -29,9 +30,10 @@ def upgrade():
             sa.Column('name', sa.String(length=200), nullable=False),
             sa.Column('description', sa.Text(), nullable=True),
             sa.Column('trigger_type', sa.String(length=50), nullable=False),
-            sa.Column('trigger_conditions', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-            sa.Column('actions', postgresql.JSON(astext_type=sa.Text()), nullable=False),
-            sa.Column('enabled', sa.Boolean(), nullable=False, server_default='true'),
+            # Use portable JSON type for cross-db compatibility (SQLite + PostgreSQL).
+            sa.Column('trigger_conditions', sa.JSON(), nullable=True),
+            sa.Column('actions', sa.JSON(), nullable=False),
+            sa.Column('enabled', sa.Boolean(), nullable=False, server_default=sa.text(bool_true_default)),
             sa.Column('priority', sa.Integer(), nullable=False, server_default='0'),
             sa.Column('user_id', sa.Integer(), nullable=False),
             sa.Column('created_by', sa.Integer(), nullable=False),
@@ -54,8 +56,8 @@ def upgrade():
             sa.Column('executed_at', sa.DateTime(), nullable=False),
             sa.Column('success', sa.Boolean(), nullable=False),
             sa.Column('error_message', sa.Text(), nullable=True),
-            sa.Column('result', postgresql.JSON(astext_type=sa.Text()), nullable=True),
-            sa.Column('trigger_event', postgresql.JSON(astext_type=sa.Text()), nullable=True),
+            sa.Column('result', sa.JSON(), nullable=True),
+            sa.Column('trigger_event', sa.JSON(), nullable=True),
             sa.Column('execution_time_ms', sa.Integer(), nullable=True),
             sa.ForeignKeyConstraint(['rule_id'], ['workflow_rules.id'], ),
             sa.PrimaryKeyConstraint('id')

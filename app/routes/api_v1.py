@@ -179,6 +179,14 @@ def api_info():
                 "users": "/api/v1/users",
                 "reports": "/api/v1/reports",
                 "search": "/api/v1/search",
+                "inventory": {
+                    "items": "/api/v1/inventory/items",
+                    "warehouses": "/api/v1/inventory/warehouses",
+                    "stock_levels": "/api/v1/inventory/stock-levels",
+                    "movements": "/api/v1/inventory/movements",
+                    "suppliers": "/api/v1/inventory/suppliers",
+                    "purchase_orders": "/api/v1/inventory/purchase-orders",
+                },
             },
         }
     )
@@ -1456,15 +1464,17 @@ def update_invoice(invoice_id):
     if "tax_rate" in data:
         try:
             update_kwargs["tax_rate"] = float(data["tax_rate"])
-        except Exception:
-            pass
+        except (ValueError, TypeError) as e:
+            # Invalid tax rate format - log and skip
+            current_app.logger.warning(f"Invalid tax_rate value in invoice update: {data.get('tax_rate')} - {e}")
     if "amount_paid" in data:
         try:
             from decimal import Decimal
 
             update_kwargs["amount_paid"] = Decimal(str(data["amount_paid"]))
-        except Exception:
-            pass
+        except (ValueError, TypeError, InvalidOperation) as e:
+            # Invalid amount format - log and skip
+            current_app.logger.warning(f"Invalid amount_paid value in invoice update: {data.get('amount_paid')} - {e}")
 
     # Use service layer to update invoice
     invoice_service = InvoiceService()
@@ -5008,6 +5018,97 @@ def get_stock_item_api(item_id):
     return jsonify({"item": item.to_dict()})
 
 
+@api_v1_bp.route("/inventory/items", methods=["POST"])
+@require_api_token("write:projects")
+def create_stock_item_api():
+    """Create a stock item"""
+    from decimal import Decimal
+    data = request.get_json() or {}
+    
+    required_fields = ["sku", "name"]
+    missing = [f for f in required_fields if not data.get(f)]
+    if missing:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+    
+    try:
+        item = StockItem(
+            sku=data["sku"],
+            name=data["name"],
+            description=data.get("description"),
+            category=data.get("category"),
+            unit=data.get("unit", "pcs"),
+            default_price=Decimal(str(data["default_price"])) if data.get("default_price") else None,
+            default_cost=Decimal(str(data["default_cost"])) if data.get("default_cost") else None,
+            barcode=data.get("barcode"),
+            is_trackable=data.get("is_trackable", True),
+            currency_code=data.get("currency_code", "EUR"),
+            is_active=data.get("is_active", True),
+        )
+        db.session.add(item)
+        db.session.commit()
+        return jsonify({"message": "Stock item created successfully", "item": item.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating stock item: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
+@api_v1_bp.route("/inventory/items/<int:item_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:projects")
+def update_stock_item_api(item_id):
+    """Update a stock item"""
+    from decimal import Decimal
+    item = StockItem.query.get_or_404(item_id)
+    data = request.get_json() or {}
+    
+    try:
+        # Update fields
+        if "name" in data:
+            item.name = data["name"]
+        if "description" in data:
+            item.description = data.get("description")
+        if "category" in data:
+            item.category = data.get("category")
+        if "unit" in data:
+            item.unit = data["unit"]
+        if "default_price" in data:
+            item.default_price = Decimal(str(data["default_price"])) if data["default_price"] else None
+        if "default_cost" in data:
+            item.default_cost = Decimal(str(data["default_cost"])) if data["default_cost"] else None
+        if "barcode" in data:
+            item.barcode = data.get("barcode")
+        if "is_trackable" in data:
+            item.is_trackable = bool(data["is_trackable"])
+        if "currency_code" in data:
+            item.currency_code = data["currency_code"]
+        if "is_active" in data:
+            item.is_active = bool(data["is_active"])
+        
+        db.session.commit()
+        return jsonify({"message": "Stock item updated successfully", "item": item.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating stock item: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
+@api_v1_bp.route("/inventory/items/<int:item_id>", methods=["DELETE"])
+@require_api_token("write:projects")
+def delete_stock_item_api(item_id):
+    """Delete (deactivate) a stock item"""
+    item = StockItem.query.get_or_404(item_id)
+    
+    try:
+        # Soft delete by deactivating
+        item.is_active = False
+        db.session.commit()
+        return jsonify({"message": "Stock item deactivated successfully"})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deactivating stock item: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
 @api_v1_bp.route("/inventory/items/<int:item_id>/availability", methods=["GET"])
 @require_api_token("read:projects")
 def get_stock_availability_api(item_id):
@@ -5182,6 +5283,103 @@ def get_supplier_api(supplier_id):
     return jsonify({"supplier": supplier.to_dict()})
 
 
+@api_v1_bp.route("/inventory/suppliers", methods=["POST"])
+@require_api_token("write:projects")
+def create_supplier_api():
+    """Create a supplier"""
+    from app.models import Supplier
+    data = request.get_json() or {}
+    
+    required_fields = ["code", "name"]
+    missing = [f for f in required_fields if not data.get(f)]
+    if missing:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+    
+    try:
+        # Check for duplicate code
+        existing = Supplier.query.filter_by(code=data["code"]).first()
+        if existing:
+            return jsonify({"error": f"Supplier with code '{data['code']}' already exists"}), 400
+        
+        supplier = Supplier(
+            code=data["code"],
+            name=data["name"],
+            contact_person=data.get("contact_person"),
+            email=data.get("email"),
+            phone=data.get("phone"),
+            address=data.get("address"),
+            website=data.get("website"),
+            notes=data.get("notes"),
+            is_active=data.get("is_active", True),
+        )
+        db.session.add(supplier)
+        db.session.commit()
+        return jsonify({"message": "Supplier created successfully", "supplier": supplier.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating supplier: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
+@api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:projects")
+def update_supplier_api(supplier_id):
+    """Update a supplier"""
+    from app.models import Supplier
+    supplier = Supplier.query.get_or_404(supplier_id)
+    data = request.get_json() or {}
+    
+    try:
+        # Check for duplicate code if changing
+        if "code" in data and data["code"] != supplier.code:
+            existing = Supplier.query.filter_by(code=data["code"]).first()
+            if existing:
+                return jsonify({"error": f"Supplier with code '{data['code']}' already exists"}), 400
+            supplier.code = data["code"]
+        
+        if "name" in data:
+            supplier.name = data["name"]
+        if "contact_person" in data:
+            supplier.contact_person = data.get("contact_person")
+        if "email" in data:
+            supplier.email = data.get("email")
+        if "phone" in data:
+            supplier.phone = data.get("phone")
+        if "address" in data:
+            supplier.address = data.get("address")
+        if "website" in data:
+            supplier.website = data.get("website")
+        if "notes" in data:
+            supplier.notes = data.get("notes")
+        if "is_active" in data:
+            supplier.is_active = bool(data["is_active"])
+        
+        db.session.commit()
+        return jsonify({"message": "Supplier updated successfully", "supplier": supplier.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating supplier: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
+@api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["DELETE"])
+@require_api_token("write:projects")
+def delete_supplier_api(supplier_id):
+    """Delete (deactivate) a supplier"""
+    from app.models import Supplier
+    supplier = Supplier.query.get_or_404(supplier_id)
+    
+    try:
+        # Soft delete by deactivating
+        supplier.is_active = False
+        db.session.commit()
+        return jsonify({"message": "Supplier deactivated successfully"})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deactivating supplier: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>/stock-items", methods=["GET"])
 @require_api_token("read:projects")
 def get_supplier_stock_items_api(supplier_id):
@@ -5313,6 +5511,92 @@ def create_purchase_order_api():
         return jsonify({"error": str(e)}), 400
 
 
+@api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:projects")
+def update_purchase_order_api(po_id):
+    """Update a purchase order (only if status is 'draft')"""
+    from app.models import PurchaseOrder, PurchaseOrderItem
+    from datetime import datetime
+    from decimal import Decimal
+    
+    purchase_order = PurchaseOrder.query.get_or_404(po_id)
+    data = request.get_json() or {}
+    
+    # Only allow updates to draft purchase orders
+    if purchase_order.status != "draft":
+        return jsonify({"error": f"Cannot update purchase order with status '{purchase_order.status}'. Only draft orders can be updated."}), 400
+    
+    try:
+        # Update basic fields
+        if "order_date" in data:
+            purchase_order.order_date = datetime.strptime(data["order_date"], "%Y-%m-%d").date()
+        if "expected_delivery_date" in data:
+            purchase_order.expected_delivery_date = datetime.strptime(data["expected_delivery_date"], "%Y-%m-%d").date() if data["expected_delivery_date"] else None
+        if "notes" in data:
+            purchase_order.notes = data.get("notes")
+        if "internal_notes" in data:
+            purchase_order.internal_notes = data.get("internal_notes")
+        if "currency_code" in data:
+            purchase_order.currency_code = data["currency_code"]
+        
+        # Update items if provided
+        if "items" in data:
+            # Remove existing items
+            for item in purchase_order.items:
+                db.session.delete(item)
+            
+            # Add new items
+            for item_data in data["items"]:
+                item = PurchaseOrderItem(
+                    purchase_order_id=purchase_order.id,
+                    description=item_data.get("description", ""),
+                    quantity_ordered=Decimal(str(item_data.get("quantity_ordered", 1))),
+                    unit_cost=Decimal(str(item_data.get("unit_cost", 0))),
+                    stock_item_id=item_data.get("stock_item_id"),
+                    supplier_stock_item_id=item_data.get("supplier_stock_item_id"),
+                    supplier_sku=item_data.get("supplier_sku"),
+                    warehouse_id=item_data.get("warehouse_id"),
+                    currency_code=purchase_order.currency_code,
+                )
+                db.session.add(item)
+            
+            purchase_order.calculate_totals()
+        
+        db.session.commit()
+        return jsonify({"message": "Purchase order updated successfully", "purchase_order": purchase_order.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating purchase order: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
+@api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["DELETE"])
+@require_api_token("write:projects")
+def delete_purchase_order_api(po_id):
+    """Delete (cancel) a purchase order (only if status is 'draft')"""
+    from app.models import PurchaseOrder
+    
+    purchase_order = PurchaseOrder.query.get_or_404(po_id)
+    
+    # Only allow deletion of draft purchase orders
+    if purchase_order.status != "draft":
+        return jsonify({"error": f"Cannot delete purchase order with status '{purchase_order.status}'. Only draft orders can be deleted."}), 400
+    
+    try:
+        # Delete associated items first
+        for item in purchase_order.items:
+            db.session.delete(item)
+        
+        # Delete the purchase order
+        db.session.delete(purchase_order)
+        db.session.commit()
+        return jsonify({"message": "Purchase order deleted successfully"})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting purchase order: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 400
+
+
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>/receive", methods=["POST"])
 @require_api_token("write:projects")
 def receive_purchase_order_api(po_id):
@@ -5351,6 +5635,7 @@ def receive_purchase_order_api(po_id):
         )
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Error receiving purchase order: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 400
 
 

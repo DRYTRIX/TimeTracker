@@ -273,12 +273,50 @@ execute_check_migrations() {
     # Check current migration status
     local current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "unknown")
     log "Current migration revision: $current_revision"
+
+    # If Alembic reports multiple heads and the DB is already at a head, attempting to
+    # upgrade to all heads can fail with:
+    #   "Requested revision X overlaps with other requested revisions ..."
+    # In that situation, treat it as "no pending migrations for this database" and continue.
+    local heads_output
+    heads_output=$(flask db heads 2>/dev/null || echo "")
+    local head_count
+    head_count=$(echo "$heads_output" | grep -v '^$' | wc -l | tr -d ' ')
+    if [[ "$current_revision" == *"(head)"* ]] && [[ "$head_count" -gt 1 ]]; then
+        log "⚠ Multiple migration heads detected ($head_count), but database is already at a head."
+        log "⚠ Skipping migration upgrade during startup to avoid Alembic overlap error."
+        log "Heads:"
+        echo "$heads_output" | sed 's/^/[HEAD] /'
+        return 0
+    fi
     
     # Check for pending migrations
-    if ! flask db upgrade >/dev/null 2>&1; then
+    # If there are multiple heads and we're not at a head, upgrade all heads.
+    # Otherwise do the normal single-head upgrade.
+    local upgrade_target="upgrade"
+    if [[ "$head_count" -gt 1 ]]; then
+        upgrade_target="upgrade heads"
+    fi
+    # shellcheck disable=SC2086
+    local upgrade_output
+    upgrade_output=$(mktemp)
+    set +e
+    # shellcheck disable=SC2086
+    flask db $upgrade_target >"$upgrade_output" 2>&1
+    local rc=$?
+    set -e
+    if [[ $rc -ne 0 ]]; then
+        if [[ "$current_revision" == *"(head)"* ]] && grep -q "overlaps with other requested revisions" "$upgrade_output"; then
+            log "⚠ Migration upgrade reported overlapping heads, but DB is already at a head. Continuing startup."
+            rm -f "$upgrade_output"
+            return 0
+        fi
         log "✗ Migration check failed"
+        cat "$upgrade_output" 2>/dev/null || true
+        rm -f "$upgrade_output"
         return 1
     fi
+    rm -f "$upgrade_output"
     log "✓ Migrations checked and applied"
     
     return 0

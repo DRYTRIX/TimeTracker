@@ -52,6 +52,14 @@ class ClientApprovalService:
 
         # Notify client contacts
         self._notify_client_contacts(client, approval)
+        
+        # Create in-app notification
+        try:
+            from app.services.client_notification_service import ClientNotificationService
+            notification_service = ClientNotificationService()
+            notification_service.notify_time_entry_approval(approval.id, client.id)
+        except Exception as e:
+            logger.error(f"Failed to create client notification for approval {approval.id}: {e}", exc_info=True)
 
         return {"success": True, "message": "Approval requested", "approval": approval.to_dict()}
 

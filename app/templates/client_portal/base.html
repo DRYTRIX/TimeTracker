@@ -51,9 +51,50 @@
                         <i class="fas fa-clock mr-1"></i>{{ _('Time Entries') }}
                     </a>
                     {% set current_client = get_current_client() %}
+                    {% if current_client %}
+                    <a href="{{ url_for('client_portal.time_entry_approvals') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors relative">
+                        <i class="fas fa-check-circle mr-1"></i>{{ _('Approvals') }}
+                        {% set approval_service = namespace(service=None) %}
+                        {% set pending_approvals = [] %}
+                        {% if current_client %}
+                            {% from app.services.client_approval_service import ClientApprovalService %}
+                            {% set service = ClientApprovalService() %}
+                            {% set pending_approvals = service.get_pending_approvals_for_client(current_client.id) %}
+                        {% endif %}
+                        {% if pending_approvals|length > 0 %}
+                        <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{{ pending_approvals|length }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                    {% set current_client = get_current_client() %}
                     {% if current_client and current_client.portal_issues_enabled %}
                     <a href="{{ url_for('client_portal.issues') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
                         <i class="fas fa-bug mr-1"></i>{{ _('Issues') }}
+                    </a>
+                    {% endif %}
+                    {% set current_client = get_current_client() %}
+                    {% if current_client %}
+                    <a href="{{ url_for('client_portal.notifications') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors relative">
+                        <i class="fas fa-bell mr-1"></i>{{ _('Notifications') }}
+                        {% set notification_service = namespace(service=None) %}
+                        {% set unread_count = 0 %}
+                        {% if current_client %}
+                            {% from app.services.client_notification_service import ClientNotificationService %}
+                            {% set service = ClientNotificationService() %}
+                            {% set unread_count = service.get_unread_count(current_client.id) %}
+                        {% endif %}
+                        {% if unread_count > 0 %}
+                        <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{{ unread_count }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ url_for('client_portal.documents') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-file-alt mr-1"></i>{{ _('Documents') }}
+                    </a>
+                    <a href="{{ url_for('client_portal.reports') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-chart-bar mr-1"></i>{{ _('Reports') }}
+                    </a>
+                    <a href="{{ url_for('client_portal.activity_feed') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
+                        <i class="fas fa-history mr-1"></i>{{ _('Activity') }}
                     </a>
                     {% endif %}
                     <a href="{{ url_for('client_portal.logout') }}" class="text-sm text-text-light dark:text-text-dark hover:text-red-600 transition-colors">
