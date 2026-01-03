@@ -1906,7 +1906,12 @@ def reports_valuation():
             stock_item_id=item_detail["item_id"], warehouse_id=item_detail["warehouse_id"]
         ).first()
         if stock:
-            items_with_value.append({"stock": stock, "value": item_detail["value"]})
+            items_with_value.append({
+                "stock": stock, 
+                "value": item_detail["value"],
+                "quantity": item_detail.get("quantity"),
+                "cost": item_detail.get("cost")
+            })
 
     return render_template(
         "inventory/reports/valuation.html",
