@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity
 from datetime import datetime, timedelta
@@ -16,6 +16,22 @@ main_bp = Blueprint("main", __name__)
 
 
 @main_bp.route("/")
+def index():
+    """
+    Root route.
+
+    In SaaS multi-tenant mode we want '/' to be tenant-agnostic so users don't get
+    bounced to login immediately by the tenant-scoped dashboard.
+    """
+    try:
+        saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+        if saas_enabled:
+            return redirect(url_for("setup.tenants_setup"))
+    except Exception:
+        pass
+    return redirect(url_for("main.dashboard"))
+
+
 @main_bp.route("/dashboard")
 @login_required
 def dashboard():

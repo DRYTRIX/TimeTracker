@@ -12,6 +12,29 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 max-w-4xl">
+  {% if login_url %}
+    <div class="mb-6 p-4 rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+      <div class="font-semibold">{{ _('Welcome') }}</div>
+      <div class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+        {{ _('This instance runs in multi-tenant mode. Sign in to create or join a workspace.') }}
+      </div>
+      <div class="mt-4 flex flex-col sm:flex-row gap-3">
+        <a href="{{ login_url }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
+          {{ _('Sign in') }}
+        </a>
+        {% if allow_self_register %}
+          <div class="text-sm text-text-muted-light dark:text-text-muted-dark self-center">
+            {{ _('Self-registration is enabled: enter a new username to create an account.') }}
+          </div>
+        {% else %}
+          <div class="text-sm text-text-muted-light dark:text-text-muted-dark self-center">
+            {{ _('Self-registration is disabled: ask an admin to invite you.') }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
   {% if not has_any_tenant %}
     <div class="mb-4 p-4 rounded border border-primary/30 bg-primary/10 text-sm">
       <div class="font-semibold">{{ _('First time setup') }}</div>
@@ -28,9 +51,11 @@
         {{ _('In multi-tenant mode, every URL must include a tenant slug.') }}
       </div>
     </div>
-    <a href="{{ url_for('settings.create_tenant') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
-      {{ _('Create tenant') }}
-    </a>
+    {% if not login_url %}
+      <a href="{{ url_for('settings.create_tenant') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
+        {{ _('Create tenant') }}
+      </a>
+    {% endif %}
   </div>
 
   <div class="mt-6">

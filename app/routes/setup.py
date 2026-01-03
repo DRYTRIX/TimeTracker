@@ -72,11 +72,29 @@ def initial_setup():
 
 
 @setup_bp.route("/setup/tenants", methods=["GET"])
-@login_required
 def tenants_setup():
     """Tenant setup/picker page for SaaS multi-tenant deployments."""
     if not (current_app.config.get("SAAS_MODE") and current_app.config.get("TENANCY_MODE") == "multi"):
         return redirect(url_for("main.dashboard"))
+
+    # If not authenticated, show a public landing that guides users to login/self-register.
+    if not (current_user and getattr(current_user, "is_authenticated", False)):
+        try:
+            from app.config import Config
+            from app.utils.config_manager import ConfigManager
+
+            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+        except Exception:
+            allow_self_register = True
+
+        login_url = url_for("auth.login", next=url_for("setup.tenants_setup"))
+        return render_template(
+            "setup/tenants.html",
+            items=[],
+            has_any_tenant=True,
+            login_url=login_url,
+            allow_self_register=allow_self_register,
+        )
 
     prefix = (current_app.config.get("TENANT_PATH_PREFIX") or "/t").rstrip("/") or "/t"
     memberships = (
@@ -116,4 +134,4 @@ def tenants_setup():
     except Exception:
         has_any_tenant = True
 
-    return render_template("setup/tenants.html", items=items, has_any_tenant=has_any_tenant)
+    return render_template("setup/tenants.html", items=items, has_any_tenant=has_any_tenant, login_url=None, allow_self_register=None)

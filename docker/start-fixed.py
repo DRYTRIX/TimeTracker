@@ -198,7 +198,7 @@ def bootstrap_system_admin():
 
     try:
         from app import create_app, db
-        from app.models import User, Role
+        from app.models import User
 
         flask_app = create_app()
         with flask_app.app_context():
@@ -212,9 +212,15 @@ def bootstrap_system_admin():
                 user.set_password(admin_password)
                 user.password_change_required = False
 
-            role_obj = Role.query.filter_by(name="admin").first()
-            if role_obj:
-                user.roles.append(role_obj)
+            # Best-effort: attach Role('admin') if the role system is available.
+            try:
+                from app.models import Role
+
+                role_obj = Role.query.filter_by(name="admin").first()
+                if role_obj:
+                    user.roles.append(role_obj)
+            except Exception:
+                pass
 
             db.session.add(user)
             db.session.commit()
