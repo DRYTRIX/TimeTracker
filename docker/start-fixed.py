@@ -12,6 +12,40 @@ import traceback
 import psycopg2
 from urllib.parse import urlparse
 
+def _env_truthy(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.strip().lower() in ("1", "true", "yes", "y", "on")
+
+def run_flask_migrate_upgrade(timeout: int = 180) -> None:
+    """
+    Run Flask-Migrate upgrade to ensure schema exists.
+
+    This is intentionally lightweight compared to the legacy startup scripts.
+    It prevents "relation ... does not exist" errors on fresh databases,
+    especially on platforms where preDeployCommand may be skipped or misconfigured.
+    """
+    log("Running Flask-Migrate: flask db upgrade", "INFO")
+    try:
+        # Use "python -m flask" (more reliable than relying on PATH) and point
+        # explicitly to app.py so the CLI loads the app instance.
+        result = subprocess.run(
+            [sys.executable, "-m", "flask", "--app", "app.py", "db", "upgrade"],
+            check=True,
+            capture_output=False,
+            text=True,
+            timeout=timeout,
+        )
+        _ = result  # silence linter/linters that flag unused
+        log("Flask-Migrate upgrade completed", "SUCCESS")
+    except subprocess.TimeoutExpired:
+        log("Flask-Migrate upgrade timed out", "ERROR")
+        raise
+    except subprocess.CalledProcessError as e:
+        log(f"Flask-Migrate upgrade failed with exit code {e.returncode}", "ERROR")
+        raise
+
 def wait_for_database():
     """Wait for database to be ready with proper connection testing"""
     # Logging is handled by main()
@@ -160,9 +194,19 @@ def main():
     if not wait_for_database():
         log("Database is not available, exiting...", "ERROR")
         sys.exit(1)
+
+    # Ensure schema exists (very important on fresh databases).
+    # If the user disables the container init scripts (SKIP_DB_INIT=true),
+    # we still must ensure migrations are applied.
+    if _env_truthy("RUN_MIGRATIONS_ON_START", default=False) or _env_truthy("SKIP_DB_INIT", default=False):
+        try:
+            run_flask_migrate_upgrade(timeout=int(os.getenv("MIGRATIONS_TIMEOUT_SECONDS", "180")))
+        except Exception:
+            log("Database migrations failed, exiting...", "ERROR")
+            sys.exit(1)
     
     # Run enhanced database initialization and migration (optional)
-    if (os.getenv("SKIP_DB_INIT", "") or "").strip().lower() in ("1", "true", "yes", "y", "on"):
+    if _env_truthy("SKIP_DB_INIT", default=False):
         log("SKIP_DB_INIT=true set; skipping database initialization in container startup.", "WARNING")
     else:
         log("Running database initialization...", "INFO")

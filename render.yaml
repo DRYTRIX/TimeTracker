@@ -13,6 +13,10 @@ services:
       mountPath: /data
       sizeGB: 1
     envVars:
+      # Ensure `flask db ...` commands can discover the app instance.
+      # (app.py defines `app = create_app()` and CLI commands.)
+      - key: FLASK_APP
+        value: app.py
       # Minimal required env for TimeTracker SaaS on Render.
       # Everything else is optional and can be configured via the app UI / tenant settings.
       - key: FLASK_ENV
@@ -74,6 +78,9 @@ services:
       - key: SKIP_STARTUP_MIGRATIONS
         value: "true"
       - key: SKIP_DB_INIT
+        value: "true"
+      # Safety net: if preDeployCommand is skipped, run migrations at boot.
+      - key: RUN_MIGRATIONS_ON_START
         value: "true"
 
       # Redis is optional (used for scaling); keep off unless you add a Redis service.
