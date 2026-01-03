@@ -42,6 +42,14 @@ class ToastNotificationManager {
 
         // Ensure message is always a string
         let message = options.message;
+        // Prefer common object shapes before stringifying
+        if (message && typeof message === 'object') {
+            if (typeof message.message === 'string') {
+                message = message.message;
+            } else if (typeof message.error === 'string') {
+                message = message.error;
+            }
+        }
         if (typeof message !== 'string') {
             try {
                 message = JSON.stringify(message);

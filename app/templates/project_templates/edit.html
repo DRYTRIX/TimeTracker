@@ -239,7 +239,7 @@ function setupFormTasks(form) {
 // Also add immediate handler using capture phase (runs before other handlers)
 document.addEventListener('submit', function(e) {
     const form = e.target;
-    if (form && form.tagName === 'FORM' && form.method === 'POST') {
+    if (form && form.tagName === 'FORM' && String(form.method || '').toLowerCase() === 'post') {
         const action = form.getAttribute('action') || '';
         if (action.includes('edit_template') || action.includes('create_template')) {
             const tasks = collectTasks();

@@ -103,7 +103,13 @@ class SmartNotificationManager {
 
         // Show toast
         if (window.toastManager) {
-            window.toastManager.show(message, type, persistent ? 0 : 5000);
+            // toastManager.show expects an options object (not positional args)
+            window.toastManager.show({
+                message: message,
+                title: title,
+                type: type,
+                duration: persistent ? 0 : 5000
+            });
         }
 
         // Show browser notification if permitted
@@ -424,7 +430,12 @@ class SmartNotificationManager {
 
             // Auto-dismiss after 8s; no permanent sticky summary to avoid lingering toasts
             if (window.toastManager && typeof window.toastManager.show === 'function') {
-                window.toastManager.show(message, 'success', 8000);
+                window.toastManager.show({
+                    message: message,
+                    title: 'Daily Summary',
+                    type: 'success',
+                    duration: 8000
+                });
             } else {
                 this.show({
                     title: 'Daily Summary',

@@ -135,7 +135,10 @@ def run_migrations_online():
     connectable = current_app.extensions['migrate'].db.get_engine()
 
     try:
-        with connectable.connect() as connection:
+        # CRITICAL FIX: Use connection that supports explicit commits for DDL
+        # PostgreSQL requires explicit commits for DDL operations in some connection modes
+        connection = connectable.connect()
+        try:
             # Pre-flight fix: ensure alembic_version can store long revision ids
             _ensure_alembic_version_can_store_long_revision_ids(connection)
 
@@ -143,11 +146,41 @@ def run_migrations_online():
                 connection=connection,
                 target_metadata=target_metadata,
                 process_revision_directives=process_revision_directives,
+                transaction_per_migration=False,  # Single transaction for all migrations
                 **current_app.extensions['migrate'].configure_args
             )
 
+            # Run migrations - context.begin_transaction() handles the transaction
+            # But we need to ensure the connection itself commits
             with context.begin_transaction():
                 context.run_migrations()
+            
+            # CRITICAL: Explicitly commit the connection transaction
+            # context.begin_transaction() may commit its transaction, but the connection
+            # transaction might still need explicit commit to persist to database
+            if connection.in_transaction():
+                logger.info("Connection still in transaction, explicitly committing...")
+                connection.commit()
+            else:
+                logger.info("Connection transaction already committed/closed")
+            
+            # Verify commit worked by checking if tables exist
+            try:
+                from sqlalchemy import inspect
+                inspector = inspect(connection)
+                tables = inspector.get_table_names()
+                logger.info(f"Post-migration verification: Found {len(tables)} tables in database")
+                if 'alembic_version' in tables:
+                    logger.info("✓ alembic_version table exists - migrations persisted successfully")
+                else:
+                    logger.error("✗ alembic_version table missing - migrations may not have persisted")
+            except Exception as verify_error:
+                logger.warning(f"Could not verify migration persistence: {verify_error}")
+                
+        finally:
+            # Always close the connection
+            connection.close()
+                
     except Exception as e:
         # Log the full error with traceback for debugging
         import traceback
@@ -157,7 +190,17 @@ def run_migrations_online():
         raise
 
 
+try:
+    # Use print() so it always appears in container logs.
+    print(f"[alembic] offline_mode={context.is_offline_mode()}")
+except Exception:
+    pass
+
 if context.is_offline_mode():
+    try:
+        logger.info("Alembic running in OFFLINE mode (no DB writes)")
+    except Exception:
+        pass
     try:
         run_migrations_offline()
     except Exception as e:
@@ -166,6 +209,10 @@ if context.is_offline_mode():
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         raise
 else:
+    try:
+        logger.info("Alembic running in ONLINE mode (DB writes enabled)")
+    except Exception:
+        pass
     try:
         run_migrations_online()
     except Exception as e:

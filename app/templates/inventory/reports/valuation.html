@@ -78,8 +78,8 @@
                     </td>
                     <td class="p-4 font-mono text-sm">{{ item_data.stock.stock_item.sku }}</td>
                     <td class="p-4">{{ item_data.stock.stock_item.category or '—' }}</td>
-                    <td class="p-4">{{ item_data.stock.quantity_on_hand }}</td>
-                    <td class="p-4">{{ "%.2f"|format(item_data.stock.stock_item.default_cost or 0) }} EUR</td>
+                    <td class="p-4">{{ "%.2f"|format(item_data.quantity) if item_data.quantity is not none else item_data.stock.quantity_on_hand }}</td>
+                    <td class="p-4">{{ "%.2f"|format(item_data.cost) if item_data.cost is not none else (item_data.stock.stock_item.default_cost or 0) }} EUR</td>
                     <td class="p-4 font-semibold">{{ "%.2f"|format(item_data.value) }} EUR</td>
                 </tr>
                 {% else %}

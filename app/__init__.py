@@ -189,6 +189,7 @@ def create_app(config=None):
     """Application factory pattern"""
     app = Flask(__name__)
     logger = logging.getLogger(__name__)
+    bootstrap_mode = os.getenv("TT_BOOTSTRAP_MODE", "").strip().lower()
 
     # Validate environment variables on startup (non-blocking warnings in dev, errors in prod)
     try:
@@ -302,6 +303,18 @@ def create_app(config=None):
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
+
+    # Fast-path for migration/bootstrap runs:
+    # we only need config + db/migrate + models loaded. Avoid registering routes,
+    # background jobs, integrations, etc. to keep migrations as fast and reliable
+    # as possible during container startup.
+    if bootstrap_mode == "migrate":
+        try:
+            # Ensure all model tables are registered in SQLAlchemy metadata
+            from . import models as _models  # noqa: F401
+        except Exception:
+            pass
+        return app
     
     # Initialize audit logging - register event listeners AFTER db.init_app()
     # Flask-SQLAlchemy uses its own session class, so we need to register with it
@@ -337,33 +350,36 @@ def create_app(config=None):
     
     logger.info("Audit logging event listeners registered")
 
-    # Initialize Settings from environment variables on startup
-    # This ensures .env values are used as initial values, but WebUI changes take priority
-    with app.app_context():
-        try:
-            from app.models import Settings
+    # Initialize Settings from environment variables on startup.
+    # Skip during bootstrap/migration runs to avoid DB access before schema exists.
+    if bootstrap_mode != "migrate":
+        with app.app_context():
+            try:
+                from app.models import Settings
 
-            # This will create Settings if it doesn't exist and initialize from .env
-            # The get_settings() method automatically initializes new Settings from .env
-            Settings.get_settings()
-        except Exception as e:
-            # Don't fail app startup if Settings initialization fails
-            # (e.g., database not ready yet, migration not run)
-            app.logger.warning(f"Could not initialize Settings from environment: {e}")
+                # This will create Settings if it doesn't exist and initialize from .env.
+                # The get_settings() method automatically initializes new Settings from .env.
+                Settings.get_settings()
+            except Exception as e:
+                # Don't fail app startup if Settings initialization fails
+                # (e.g., database not ready yet, migration not run)
+                app.logger.warning(f"Could not initialize Settings from environment: {e}")
 
     # Initialize Flask-Mail
     from app.utils.email import init_mail
 
     init_mail(app)
 
-    # Initialize and start background scheduler (disabled in tests)
-    if (not app.config.get("TESTING")) and (not scheduler.running):
-        from app.utils.scheduled_tasks import register_scheduled_tasks
+    # Initialize and start background scheduler (disabled in tests).
+    # Skip during bootstrap/migration runs to avoid background DB work during migrations.
+    if bootstrap_mode != "migrate":
+        if (not app.config.get("TESTING")) and (not scheduler.running):
+            from app.utils.scheduled_tasks import register_scheduled_tasks
 
-        scheduler.start()
-        # Register tasks after app context is available, passing app instance
-        with app.app_context():
-            register_scheduled_tasks(scheduler, app=app)
+            scheduler.start()
+            # Register tasks after app context is available, passing app instance
+            with app.app_context():
+                register_scheduled_tasks(scheduler, app=app)
 
     # Only initialize CSRF protection if enabled
     if app.config.get("WTF_CSRF_ENABLED"):
@@ -382,7 +398,8 @@ def create_app(config=None):
     except Exception:
         limiter.init_app(app)
 
-    # Ensure translations exist and configure absolute translation directories before Babel init
+    # Configure absolute translation directories before Babel init.
+    # Do NOT run subprocess-based compilation during app creation (slow, noisy).
     try:
         translations_dirs = (app.config.get("BABEL_TRANSLATION_DIRECTORIES") or "translations").split(",")
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -394,17 +411,13 @@ def create_app(config=None):
             abs_dirs.append(d if os.path.isabs(d) else os.path.abspath(os.path.join(base_path, d)))
         if abs_dirs:
             app.config["BABEL_TRANSLATION_DIRECTORIES"] = os.pathsep.join(abs_dirs)
-        # Best-effort compile with Babel CLI if available, else Python fallback
-        try:
-            import subprocess
+        # Optional: best-effort compile missing/stale .mo files (Python-only, incremental).
+        # Disabled by default for faster startup; compile in Docker build instead.
+        if os.getenv("TT_COMPILE_TRANSLATIONS_ON_STARTUP", "false").strip().lower() in ("1", "true", "yes"):
+            from app.utils.i18n import ensure_translations_compiled
 
-            subprocess.run(["pybabel", "compile", "-d", abs_dirs[0]], check=False)
-        except Exception:
-            pass
-        from app.utils.i18n import ensure_translations_compiled
-
-        for d in abs_dirs:
-            ensure_translations_compiled(d)
+            for d in abs_dirs:
+                ensure_translations_compiled(d)
     except Exception:
         pass
 
