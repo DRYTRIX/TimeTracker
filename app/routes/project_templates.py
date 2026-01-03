@@ -14,6 +14,47 @@ import json
 project_templates_bp = Blueprint("project_templates", __name__)
 
 
+def _parse_tasks_from_request_form():
+    """
+    Best-effort fallback parser for template tasks.
+
+    The UI posts either:
+    - a hidden JSON field named "tasks" (preferred), OR
+    - parallel arrays: task_names[], task_priorities[], task_hours[]
+    """
+    names = request.form.getlist("task_names[]")
+    priorities = request.form.getlist("task_priorities[]")
+    hours = request.form.getlist("task_hours[]")
+
+    tasks = []
+    for idx, raw_name in enumerate(names):
+        name = (raw_name or "").strip()
+        if not name:
+            continue
+
+        priority = (priorities[idx] if idx < len(priorities) else "medium") or "medium"
+
+        estimated_hours = None
+        if idx < len(hours):
+            raw_hours = (hours[idx] or "").strip()
+            if raw_hours:
+                try:
+                    estimated_hours = float(raw_hours)
+                except (ValueError, TypeError):
+                    estimated_hours = None
+
+        tasks.append(
+            {
+                "name": name,
+                "priority": priority,
+                "estimated_hours": estimated_hours,
+                "status": "todo",
+            }
+        )
+
+    return tasks
+
+
 @project_templates_bp.route("/project-templates")
 @login_required
 def list_templates():
@@ -89,6 +130,10 @@ def create_template():
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
+
+        # Fallback: parse from form arrays if JS didn't serialize tasks
+        if not tasks:
+            tasks = _parse_tasks_from_request_form()
 
         # Get tags
         tags_str = request.form.get("tags", "").strip()
@@ -187,6 +232,10 @@ def edit_template(template_id):
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
+
+        # Fallback: parse from form arrays if JS didn't serialize tasks
+        if not tasks:
+            tasks = _parse_tasks_from_request_form()
 
         # Get tags
         tags_str = request.form.get("tags", "").strip()
