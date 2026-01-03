@@ -345,5 +345,5 @@ services:
 
 databases:
   - name: timetracker-db
-    plan: basic
+    plan: basic-1gb
     region: frankfurt
