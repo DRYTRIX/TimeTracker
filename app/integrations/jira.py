@@ -9,6 +9,18 @@ import requests
 import os
 
 
+def _env_if_allowed(name: str) -> str:
+    """Prevent global env fallbacks for tenant-scoped credentials in SaaS multi-tenant mode."""
+    try:
+        from flask import current_app
+
+        if bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi"):
+            return ""
+    except Exception:
+        pass
+    return os.getenv(name) or ""
+
+
 class JiraConnector(BaseConnector):
     """Jira integration connector."""
 
@@ -27,7 +39,7 @@ class JiraConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("jira")
-        client_id = creds.get("client_id") or os.getenv("JIRA_CLIENT_ID")
+        client_id = creds.get("client_id") or _env_if_allowed("JIRA_CLIENT_ID")
         if not client_id:
             raise ValueError("JIRA_CLIENT_ID not configured")
 
@@ -51,8 +63,8 @@ class JiraConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("jira")
-        client_id = creds.get("client_id") or os.getenv("JIRA_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("JIRA_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("JIRA_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("JIRA_CLIENT_SECRET")
 
         if not client_id or not client_secret:
             raise ValueError("Jira OAuth credentials not configured")
@@ -96,8 +108,8 @@ class JiraConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("jira")
-        client_id = creds.get("client_id") or os.getenv("JIRA_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("JIRA_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("JIRA_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("JIRA_CLIENT_SECRET")
 
         base_url = self.integration.config.get("jira_url", "https://your-domain.atlassian.net")
         token_url = f"{base_url}/plugins/servlet/oauth/token"

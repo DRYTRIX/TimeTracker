@@ -10,6 +10,18 @@ import requests
 import os
 
 
+def _env_if_allowed(name: str) -> str:
+    """Prevent global env fallbacks for tenant-scoped credentials in SaaS multi-tenant mode."""
+    try:
+        from flask import current_app
+
+        if bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi"):
+            return ""
+    except Exception:
+        pass
+    return os.getenv(name) or ""
+
+
 class OutlookCalendarConnector(BaseConnector):
     """Outlook Calendar integration connector using Microsoft Graph API."""
 
@@ -34,7 +46,7 @@ class OutlookCalendarConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("outlook_calendar")
-        tenant_id = creds.get("tenant_id") or os.getenv("OUTLOOK_TENANT_ID", "common")
+        tenant_id = creds.get("tenant_id") or (_env_if_allowed("OUTLOOK_TENANT_ID") or "common")
         return tenant_id
 
     def get_authorization_url(self, redirect_uri: str, state: str = None) -> str:
@@ -43,7 +55,7 @@ class OutlookCalendarConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("outlook_calendar")
-        client_id = creds.get("client_id") or os.getenv("OUTLOOK_CLIENT_ID")
+        client_id = creds.get("client_id") or _env_if_allowed("OUTLOOK_CLIENT_ID")
         tenant_id = self._get_tenant_id()
 
         if not client_id:
@@ -70,8 +82,8 @@ class OutlookCalendarConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("outlook_calendar")
-        client_id = creds.get("client_id") or os.getenv("OUTLOOK_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("OUTLOOK_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("OUTLOOK_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("OUTLOOK_CLIENT_SECRET")
         tenant_id = self._get_tenant_id()
 
         if not client_id or not client_secret:
@@ -137,8 +149,8 @@ class OutlookCalendarConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("outlook_calendar")
-        client_id = creds.get("client_id") or os.getenv("OUTLOOK_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("OUTLOOK_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("OUTLOOK_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("OUTLOOK_CLIENT_SECRET")
         tenant_id = self._get_tenant_id()
 
         if not client_id or not client_secret:

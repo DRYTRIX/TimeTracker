@@ -9,6 +9,18 @@ import requests
 import os
 
 
+def _env_if_allowed(name: str) -> str:
+    """Prevent global env fallbacks for tenant-scoped credentials in SaaS multi-tenant mode."""
+    try:
+        from flask import current_app
+
+        if bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi"):
+            return ""
+    except Exception:
+        pass
+    return os.getenv(name) or ""
+
+
 class SlackConnector(BaseConnector):
     """Slack integration connector."""
 
@@ -26,7 +38,7 @@ class SlackConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("slack")
-        client_id = creds.get("client_id") or os.getenv("SLACK_CLIENT_ID")
+        client_id = creds.get("client_id") or _env_if_allowed("SLACK_CLIENT_ID")
         if not client_id:
             raise ValueError("SLACK_CLIENT_ID not configured")
 
@@ -44,8 +56,8 @@ class SlackConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("slack")
-        client_id = creds.get("client_id") or os.getenv("SLACK_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("SLACK_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("SLACK_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("SLACK_CLIENT_SECRET")
 
         if not client_id or not client_secret:
             raise ValueError("Slack OAuth credentials not configured")
@@ -91,8 +103,8 @@ class SlackConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("slack")
-        client_id = creds.get("client_id") or os.getenv("SLACK_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("SLACK_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("SLACK_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("SLACK_CLIENT_SECRET")
 
         token_url = "https://slack.com/api/oauth.v2.access"
 

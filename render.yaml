@@ -13,19 +13,108 @@ services:
       mountPath: /data
       sizeGB: 1
     envVars:
-      # Core
+      # ======================
+      # Core / Flask / Hosting
+      # ======================
       - key: FLASK_ENV
         value: production
       - key: FLASK_DEBUG
         value: "false"
       - key: SECRET_KEY
         generateValue: true
+      - key: PORT
+        value: "8080"
       - key: DATABASE_URL
         fromDatabase:
           name: timetracker-db
           property: connectionString
 
-      # SaaS / tenancy (path-based)
+      # =========
+      # Database
+      # =========
+      # Not required when DATABASE_URL is set, but included for completeness.
+      - key: POSTGRES_DB
+        sync: false
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_HOST
+        sync: false
+
+      # ==================
+      # Cookies / sessions
+      # ==================
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SESSION_COOKIE_HTTPONLY
+        value: "true"
+      - key: SESSION_COOKIE_SAMESITE
+        value: Lax
+      - key: PERMANENT_SESSION_LIFETIME
+        value: "86400"
+      - key: REMEMBER_COOKIE_DAYS
+        value: "365"
+      - key: REMEMBER_COOKIE_SECURE
+        value: "true"
+      - key: REMEMBER_COOKIE_SAMESITE
+        value: Lax
+
+      # ============
+      # App settings
+      # ============
+      - key: TZ
+        value: Europe/Rome
+      - key: CURRENCY
+        value: EUR
+      - key: ROUNDING_MINUTES
+        value: "1"
+      - key: SINGLE_ACTIVE_TIMER
+        value: "true"
+      - key: IDLE_TIMEOUT_MINUTES
+        value: "30"
+      - key: MAX_CONTENT_LENGTH
+        value: "16777216"
+
+      # ============
+      # User / Auth
+      # ============
+      - key: ALLOW_SELF_REGISTER
+        value: "true"
+      - key: ADMIN_USERNAMES
+        value: admin
+      - key: AUTH_METHOD
+        value: local
+
+      # OIDC / SSO (optional)
+      - key: OIDC_ISSUER
+        sync: false
+      - key: OIDC_CLIENT_ID
+        sync: false
+      - key: OIDC_CLIENT_SECRET
+        sync: false
+      - key: OIDC_REDIRECT_URI
+        sync: false
+      - key: OIDC_SCOPES
+        value: openid profile email
+      - key: OIDC_USERNAME_CLAIM
+        value: preferred_username
+      - key: OIDC_FULL_NAME_CLAIM
+        value: name
+      - key: OIDC_EMAIL_CLAIM
+        value: email
+      - key: OIDC_GROUPS_CLAIM
+        value: groups
+      - key: OIDC_ADMIN_GROUP
+        sync: false
+      - key: OIDC_ADMIN_EMAILS
+        sync: false
+      - key: OIDC_POST_LOGOUT_REDIRECT_URI
+        sync: false
+
+      # =======================
+      # SaaS / Multi-tenant
+      # =======================
       - key: SAAS_MODE
         value: "true"
       - key: TENANCY_MODE
@@ -37,30 +126,224 @@ services:
       - key: DEFAULT_TENANT_SLUG
         value: default
 
+      # =======================
+      # Stripe billing (required)
+      # =======================
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_BASIC
+        sync: false
+      - key: STRIPE_PRICE_TEAM
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+
       # Billing enforcement (optional; enable when ready)
       - key: BILLING_REQUIRE_ACTIVE_SUBSCRIPTION
         value: "false"
       - key: BILLING_GRACE_DAYS
         value: "0"
 
-      # Background jobs
-      # Keep enabled for single instance; set false if you scale web instances > 1.
+      # ==========================
+      # Background jobs / scheduler
+      # ==========================
       - key: SCHEDULER_ENABLED
         value: "true"
 
-      # Uploads/logs (uses the /data disk)
+      # =======
+      # Uploads
+      # =======
       - key: UPLOAD_FOLDER
         value: /data/uploads
+
+      # ========
+      # Backups
+      # ========
+      - key: BACKUP_RETENTION_DAYS
+        value: "30"
+      - key: BACKUP_TIME
+        value: "02:00"
+      - key: BACKUP_FOLDER
+        sync: false
+      - key: BACKUP_DIR
+        sync: false
+
+      # =======
+      # CSRF
+      # =======
+      - key: WTF_CSRF_ENABLED
+        value: "true"
+      - key: WTF_CSRF_TIME_LIMIT
+        value: "3600"
+      - key: WTF_CSRF_SSL_STRICT
+        value: "true"
+      - key: WTF_CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: CSRF_COOKIE_NAME
+        value: XSRF-TOKEN
+      - key: CSRF_COOKIE_SECURE
+        value: "true"
+      - key: CSRF_COOKIE_HTTPONLY
+        value: "false"
+      - key: CSRF_COOKIE_SAMESITE
+        value: Lax
+      - key: CSRF_COOKIE_DOMAIN
+        sync: false
+      - key: CSRF_COOKIE_PATH
+        value: /
+
+      # =========
+      # Logging
+      # =========
+      - key: LOG_LEVEL
+        value: INFO
       - key: LOG_FILE
         value: /data/logs/timetracker.log
 
-      # Redis is optional in early SaaS; keep disabled unless you add a Redis service.
-      - key: REDIS_ENABLED
-        value: "false"
+      # ===========
+      # Rate limit
+      # ===========
+      - key: RATELIMIT_DEFAULT
+        sync: false
       - key: RATELIMIT_STORAGE_URI
         value: memory://
 
+      # =====
+      # Redis
+      # =====
+      - key: REDIS_ENABLED
+        value: "false"
+      - key: REDIS_URL
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_DEFAULT_TTL
+        value: "3600"
+
+      # =====================
+      # Localization / Babel
+      # =====================
+      - key: DEFAULT_LOCALE
+        value: en
+      - key: BABEL_TRANSLATION_DIRECTORIES
+        value: translations
+
+      # =======================
+      # Analytics / Monitoring
+      # =======================
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_TRACES_RATE
+        value: "0.0"
+      - key: POSTHOG_API_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        sync: false
+      - key: ENABLE_TELEMETRY
+        value: "false"
+      - key: TELE_SALT
+        sync: false
+      - key: TELEMETRY_MARKER_FILE
+        value: /data/telemetry_sent
+
+      # ======================
+      # Build/CI metadata (opt)
+      # ======================
+      - key: APP_VERSION
+        sync: false
+      - key: GITHUB_TAG
+        sync: false
+      - key: GITHUB_RUN_NUMBER
+        sync: false
+      - key: PROJECT_ROOT
+        sync: false
+      - key: APP_ROOT
+        sync: false
+
+      # =========
+      # Email
+      # =========
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USE_TLS
+        value: "true"
+      - key: MAIL_USE_SSL
+        value: "false"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: MAIL_MAX_EMAILS
+        value: "100"
+
+      # ================================
+      # Per-tenant settings (DO NOT set)
+      # ================================
+      # These exist as env vars for single-tenant OSS/back-compat, but in SaaS mode they are tenant-scoped
+      # via the per-tenant Settings row and Web UI. Leave them unset on Render.
+      - key: PEPPOL_ENABLED
+        sync: false
+      - key: PEPPOL_SENDER_ENDPOINT_ID
+        sync: false
+      - key: PEPPOL_SENDER_SCHEME_ID
+        sync: false
+      - key: PEPPOL_SENDER_COUNTRY
+        sync: false
+      - key: PEPPOL_ACCESS_POINT_URL
+        sync: false
+      - key: PEPPOL_ACCESS_POINT_TOKEN
+        sync: false
+      - key: PEPPOL_ACCESS_POINT_TIMEOUT
+        sync: false
+      - key: PEPPOL_PROVIDER
+        sync: false
+
+      - key: JIRA_CLIENT_ID
+        sync: false
+      - key: JIRA_CLIENT_SECRET
+        sync: false
+      - key: SLACK_CLIENT_ID
+        sync: false
+      - key: SLACK_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OUTLOOK_CLIENT_ID
+        sync: false
+      - key: OUTLOOK_CLIENT_SECRET
+        sync: false
+      - key: OUTLOOK_TENANT_ID
+        sync: false
+      - key: MICROSOFT_TEAMS_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_TEAMS_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_TEAMS_TENANT_ID
+        sync: false
+      - key: ASANA_CLIENT_ID
+        sync: false
+      - key: ASANA_CLIENT_SECRET
+        sync: false
+
+      # Other toggles (optional)
+      - key: DISABLE_WEASYPRINT
+        sync: false
+      - key: INVENTORY_REDUCE_ON_INVOICE_PAID
+        value: "false"
+
 databases:
   - name: timetracker-db
-    plan: starter
+    plan: basic
     region: frankfurt

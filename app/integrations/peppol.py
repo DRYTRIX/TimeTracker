@@ -54,6 +54,15 @@ def peppol_enabled() -> bool:
                 return False
     except Exception:
         pass
+    # In SaaS multi-tenant mode, Peppol enablement must be tenant-scoped.
+    # If a tenant hasn't explicitly enabled it in its Settings row, default to disabled.
+    try:
+        from flask import current_app
+
+        if bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi"):
+            return False
+    except Exception:
+        pass
     return _bool_env("PEPPOL_ENABLED", default=False)
 
 

@@ -10,6 +10,18 @@ import requests
 import os
 
 
+def _env_if_allowed(name: str) -> str:
+    """Prevent global env fallbacks for tenant-scoped credentials in SaaS multi-tenant mode."""
+    try:
+        from flask import current_app
+
+        if bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi"):
+            return ""
+    except Exception:
+        pass
+    return os.getenv(name) or ""
+
+
 class AsanaConnector(BaseConnector):
     """Asana integration connector."""
 
@@ -29,7 +41,7 @@ class AsanaConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("asana")
-        client_id = creds.get("client_id") or os.getenv("ASANA_CLIENT_ID")
+        client_id = creds.get("client_id") or _env_if_allowed("ASANA_CLIENT_ID")
 
         if not client_id:
             raise ValueError("ASANA_CLIENT_ID not configured")
@@ -47,8 +59,8 @@ class AsanaConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("asana")
-        client_id = creds.get("client_id") or os.getenv("ASANA_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("ASANA_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("ASANA_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("ASANA_CLIENT_SECRET")
 
         if not client_id or not client_secret:
             raise ValueError("Asana OAuth credentials not configured")
@@ -110,8 +122,8 @@ class AsanaConnector(BaseConnector):
 
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("asana")
-        client_id = creds.get("client_id") or os.getenv("ASANA_CLIENT_ID")
-        client_secret = creds.get("client_secret") or os.getenv("ASANA_CLIENT_SECRET")
+        client_id = creds.get("client_id") or _env_if_allowed("ASANA_CLIENT_ID")
+        client_secret = creds.get("client_secret") or _env_if_allowed("ASANA_CLIENT_SECRET")
 
         token_url = f"{self.BASE_URL}/oauth_token"
 

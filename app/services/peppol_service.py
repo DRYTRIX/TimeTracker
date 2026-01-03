@@ -27,10 +27,16 @@ class PeppolService:
     def _get_sender_party(self) -> PeppolParty:
         settings = Settings.get_settings()
 
-        sender_endpoint_id = (getattr(settings, "peppol_sender_endpoint_id", "") or os.getenv("PEPPOL_SENDER_ENDPOINT_ID") or "").strip()
-        sender_scheme_id = (getattr(settings, "peppol_sender_scheme_id", "") or os.getenv("PEPPOL_SENDER_SCHEME_ID") or "").strip()
+        # In SaaS multi-tenant mode, Peppol config must be tenant-scoped (no env fallback).
+        try:
+            saas_multi = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+        except Exception:
+            saas_multi = False
+
+        sender_endpoint_id = (getattr(settings, "peppol_sender_endpoint_id", "") or ("" if saas_multi else (os.getenv("PEPPOL_SENDER_ENDPOINT_ID") or ""))).strip()
+        sender_scheme_id = (getattr(settings, "peppol_sender_scheme_id", "") or ("" if saas_multi else (os.getenv("PEPPOL_SENDER_SCHEME_ID") or ""))).strip()
         sender_country = (
-            (getattr(settings, "peppol_sender_country", "") or os.getenv("PEPPOL_SENDER_COUNTRY") or "").strip() or None
+            (getattr(settings, "peppol_sender_country", "") or ("" if saas_multi else (os.getenv("PEPPOL_SENDER_COUNTRY") or ""))).strip() or None
         )
 
         if not sender_endpoint_id or not sender_scheme_id:
@@ -76,6 +82,12 @@ class PeppolService:
         if not peppol_enabled():
             return False, None, "Peppol is not enabled"
 
+        # In SaaS multi-tenant mode, Peppol config must be tenant-scoped (no env fallback).
+        try:
+            saas_multi = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+        except Exception:
+            saas_multi = False
+
         try:
             sender = self._get_sender_party()
             recipient_party, recipient_endpoint_id, recipient_scheme_id = self._get_recipient_party(invoice)
@@ -90,7 +102,7 @@ class PeppolService:
 
         tx = InvoicePeppolTransmission(
             invoice_id=invoice.id,
-            provider=(getattr(Settings.get_settings(), "peppol_provider", "") or os.getenv("PEPPOL_PROVIDER") or "generic").strip()
+            provider=(getattr(Settings.get_settings(), "peppol_provider", "") or ("" if saas_multi else (os.getenv("PEPPOL_PROVIDER") or "")) or "generic").strip()
             or "generic",
             status="pending",
             sender_endpoint_id=sender.endpoint_id,
@@ -107,9 +119,9 @@ class PeppolService:
 
         try:
             settings = Settings.get_settings()
-            ap_url = (getattr(settings, "peppol_access_point_url", "") or os.getenv("PEPPOL_ACCESS_POINT_URL") or "").strip()
+            ap_url = (getattr(settings, "peppol_access_point_url", "") or ("" if saas_multi else (os.getenv("PEPPOL_ACCESS_POINT_URL") or ""))).strip()
             ap_token_raw = getattr(settings, "peppol_access_point_token", None)
-            ap_token = (ap_token_raw or "").strip() if ap_token_raw is not None else (os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or "").strip()
+            ap_token = (ap_token_raw or "").strip() if ap_token_raw is not None else (("" if saas_multi else (os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or ""))).strip()
             try:
                 ap_timeout = int(getattr(settings, "peppol_access_point_timeout", 0) or 0) or None
             except Exception:
