@@ -41,6 +41,17 @@ class Settings(db.Model):
     invoice_terms = db.Column(db.Text, default="Payment is due within 30 days of invoice date.", nullable=False)
     invoice_notes = db.Column(db.Text, default="Thank you for your business!", nullable=False)
 
+    # Peppol e-invoicing (optional; can be configured via WebUI or env)
+    # peppol_enabled: None => use env var PEPPOL_ENABLED; True/False overrides env.
+    peppol_enabled = db.Column(db.Boolean, default=None, nullable=True)
+    peppol_sender_endpoint_id = db.Column(db.String(100), default="", nullable=True)
+    peppol_sender_scheme_id = db.Column(db.String(20), default="", nullable=True)
+    peppol_sender_country = db.Column(db.String(2), default="", nullable=True)
+    peppol_access_point_url = db.Column(db.String(500), default="", nullable=True)
+    peppol_access_point_token = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
+    peppol_access_point_timeout = db.Column(db.Integer, default=30, nullable=True)
+    peppol_provider = db.Column(db.String(50), default="generic", nullable=True)
+
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
 
@@ -140,6 +151,16 @@ class Settings(db.Model):
         self.invoice_start_number = kwargs.get("invoice_start_number", 1000)
         self.invoice_terms = kwargs.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         self.invoice_notes = kwargs.get("invoice_notes", "Thank you for your business!")
+
+        # Peppol defaults (None means "use env var")
+        self.peppol_enabled = kwargs.get("peppol_enabled", None)
+        self.peppol_sender_endpoint_id = kwargs.get("peppol_sender_endpoint_id", "")
+        self.peppol_sender_scheme_id = kwargs.get("peppol_sender_scheme_id", "")
+        self.peppol_sender_country = kwargs.get("peppol_sender_country", "")
+        self.peppol_access_point_url = kwargs.get("peppol_access_point_url", "")
+        self.peppol_access_point_token = kwargs.get("peppol_access_point_token", "")
+        self.peppol_access_point_timeout = kwargs.get("peppol_access_point_timeout", 30)
+        self.peppol_provider = kwargs.get("peppol_provider", "generic")
 
         # Kiosk mode defaults
         self.kiosk_mode_enabled = kwargs.get("kiosk_mode_enabled", False)
@@ -341,6 +362,14 @@ class Settings(db.Model):
             "invoice_start_number": self.invoice_start_number,
             "invoice_terms": self.invoice_terms,
             "invoice_notes": self.invoice_notes,
+            "peppol_enabled": self.peppol_enabled,
+            "peppol_sender_endpoint_id": getattr(self, "peppol_sender_endpoint_id", "") or "",
+            "peppol_sender_scheme_id": getattr(self, "peppol_sender_scheme_id", "") or "",
+            "peppol_sender_country": getattr(self, "peppol_sender_country", "") or "",
+            "peppol_access_point_url": getattr(self, "peppol_access_point_url", "") or "",
+            "peppol_access_point_token_set": bool(getattr(self, "peppol_access_point_token", "")),
+            "peppol_access_point_timeout": getattr(self, "peppol_access_point_timeout", None),
+            "peppol_provider": getattr(self, "peppol_provider", "") or "",
             "invoice_pdf_template_html": self.invoice_pdf_template_html,
             "invoice_pdf_template_css": self.invoice_pdf_template_css,
             "invoice_pdf_design_json": self.invoice_pdf_design_json,

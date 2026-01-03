@@ -215,8 +215,12 @@ def execute_check_migrations(db_url):
         # Check current migration status
         result = subprocess.run(['flask', 'db', 'current'], 
                               capture_output=True, text=True, check=True)
-        current_revision = result.stdout.strip()
-        logger.info(f"Current migration revision: {current_revision}")
+        current_output = (result.stdout or "").strip()
+        current_lines = [ln.strip() for ln in current_output.splitlines() if ln.strip()]
+        current_revisions = [ln.split()[0] for ln in current_lines if ln.split()]
+        logger.info("Current migration revision(s):")
+        for ln in current_lines:
+            logger.info(f"[CURRENT] {ln}")
 
         # If multiple heads exist and we're already at a head, avoid upgrading to "heads"
         # because Alembic can raise:
@@ -224,9 +228,14 @@ def execute_check_migrations(db_url):
         heads_result = subprocess.run(['flask', 'db', 'heads'], capture_output=True, text=True)
         heads_output = (heads_result.stdout or "").strip()
         head_lines = [ln for ln in heads_output.splitlines() if ln.strip()]
-        head_count = len(head_lines)
+        head_revisions = [ln.split()[0] for ln in head_lines if ln.split()]
+        head_count = len(head_revisions)
 
-        if "(head)" in current_revision and head_count > 1:
+        # Determine whether DB is already at any head (don't rely on "(head)" suffix;
+        # Flask-Migrate may omit it when multiple heads exist).
+        is_at_head = any(rev in set(head_revisions) for rev in current_revisions)
+
+        if is_at_head and head_count > 1:
             logger.warning(
                 f"Multiple migration heads detected ({head_count}), but database is already at a head. "
                 "Skipping migration upgrade during startup."
@@ -248,9 +257,14 @@ def execute_check_migrations(db_url):
     except subprocess.CalledProcessError as e:
         # If we're already at a head, tolerate Alembic overlap errors (multi-head history)
         combined = (e.stdout or "") + "\n" + (e.stderr or "")
-        if "(head)" in locals().get("current_revision", "") and "overlaps with other requested revisions" in combined:
+        if locals().get("is_at_head") and "overlaps with other requested revisions" in combined:
             logger.warning(
                 "Migration upgrade reported overlapping heads, but DB is already at a head. Continuing startup."
+            )
+            return True
+        if "overlaps with other requested revisions" in combined:
+            logger.warning(
+                "Migration upgrade failed due to overlapping revision targets. Continuing startup."
             )
             return True
         logger.error(f"Migration check failed: {e}")

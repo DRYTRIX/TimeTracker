@@ -53,6 +53,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 - **Invoice Status Tracking** — Monitor draft, sent, paid, and overdue invoices
 - **Recurring Invoices** — Automate regular billing cycles
 - **Email Integration** — Send invoices directly to clients from the platform
+- **Peppol e-Invoicing (BIS Billing 3.0)** — Send invoices via Peppol through your access point ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
 
 #### 📋 **Advanced Task Management**
 - **Full Task System** — Create, assign, and track tasks with priorities and due dates
@@ -170,6 +171,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Recurring Invoices** — Automate recurring billing
 - **Multi-Currency** — Support for multiple currencies with conversion
 - **Invoice Email** — Send invoices directly to clients
+- **Peppol e-Invoicing (BIS Billing 3.0)** — Send invoices electronically via Peppol (configure in **Admin → System Settings**; docs: [PEPPOL_EINVOICING.md](docs/admin/configuration/PEPPOL_EINVOICING.md))
 
 ### 💰 **Financial Management**
 - **Expense Tracking** — Track business expenses with receipts and categories
@@ -437,6 +439,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[📋 Complete Features Overview](docs/FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features (⭐ Complete reference!)
 - **[Task Management](docs/TASK_MANAGEMENT_README.md)** — Break projects into manageable tasks
 - **[Invoice System](docs/INVOICE_FEATURE_README.md)** — Generate professional invoices
+- **[Peppol e-Invoicing](docs/admin/configuration/PEPPOL_EINVOICING.md)** — Enable and configure Peppol sending
 - **[Client Management](docs/CLIENT_MANAGEMENT_README.md)** — Manage client relationships
 - **[Calendar Features](docs/CALENDAR_FEATURES_README.md)** — Calendar and bulk entry features
 - **[Bulk Time Entry](docs/BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once

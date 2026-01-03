@@ -19,6 +19,7 @@ from .user_service import UserService
 from .export_service import ExportService
 from .import_service import ImportService
 from .email_service import EmailService
+from .peppol_service import PeppolService
 from .permission_service import PermissionService
 from .backup_service import BackupService
 from .health_service import HealthService
@@ -40,6 +41,7 @@ __all__ = [
     "ExportService",
     "ImportService",
     "EmailService",
+    "PeppolService",
     "PermissionService",
     "BackupService",
     "HealthService",

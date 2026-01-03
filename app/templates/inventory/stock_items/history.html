@@ -36,6 +36,8 @@
                 <option value="sale" {% if selected_movement_type == 'sale' %}selected{% endif %}>{{ _('Sale') }}</option>
                 <option value="purchase" {% if selected_movement_type == 'purchase' %}selected{% endif %}>{{ _('Purchase') }}</option>
                 <option value="return" {% if selected_movement_type == 'return' %}selected{% endif %}>{{ _('Return') }}</option>
+                <option value="waste" {% if selected_movement_type == 'waste' %}selected{% endif %}>{{ _('Waste') }}</option>
+                <option value="devaluation" {% if selected_movement_type == 'devaluation' %}selected{% endif %}>{{ _('Devaluation') }}</option>
             </select>
         </div>
         <div>
@@ -60,6 +62,7 @@
                 <th class="p-4">{{ _('Warehouse') }}</th>
                 <th class="p-4">{{ _('Type') }}</th>
                 <th class="p-4">{{ _('Quantity') }}</th>
+                <th class="p-4">{{ _('Unit Cost') }}</th>
                 <th class="p-4">{{ _('Reference') }}</th>
                 <th class="p-4">{{ _('Reason') }}</th>
                 <th class="p-4">{{ _('User') }}</th>
@@ -75,12 +78,52 @@
                     </a>
                 </td>
                 <td class="p-4">
-                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
-                        {{ movement.movement_type }}
-                    </span>
+                    {% set ns = namespace(is_devalued=false) %}
+                    {% if movement.movement_type == 'devaluation' %}
+                        {% set ns.is_devalued = true %}
+                    {% elif movement.lot_allocations %}
+                        {% for alloc in movement.lot_allocations %}
+                            {% if alloc.stock_lot and alloc.stock_lot.lot_type == 'devalued' %}
+                                {% set ns.is_devalued = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
+                            {{ movement.movement_type }}
+                        </span>
+                        {% if ns.is_devalued %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                                {{ _('Devalued') }}
+                            </span>
+                        {% endif %}
+                    </div>
                 </td>
                 <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %} font-semibold">
                     {{ '+' if movement.quantity > 0 else '' }}{{ movement.quantity }}
+                </td>
+                <td class="p-4">
+                    {% if movement.unit_cost is not none %}
+                        {{ movement.unit_cost }}
+                    {% elif movement.lot_allocations %}
+                        {% set ns_cost = namespace(total_qty=0, total_val=0) %}
+                        {% for alloc in movement.lot_allocations %}
+                            {% set q = alloc.quantity %}
+                            {% if q < 0 %}
+                                {% set q = -q %}
+                            {% endif %}
+                            {% set ns_cost.total_qty = ns_cost.total_qty + q %}
+                            {% set ns_cost.total_val = ns_cost.total_val + (q * alloc.unit_cost) %}
+                        {% endfor %}
+                        {% if ns_cost.total_qty > 0 %}
+                            {{ (ns_cost.total_val / ns_cost.total_qty) | round(2) }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
                 </td>
                 <td class="p-4">
                     {% if movement.reference_type and movement.reference_id %}
@@ -108,7 +151,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="p-8 text-center text-gray-500">
+                <td colspan="8" class="p-8 text-center text-gray-500">
                     {{ _('No movement history found for this item.') }}
                 </td>
             </tr>

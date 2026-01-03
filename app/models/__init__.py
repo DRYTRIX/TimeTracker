@@ -38,6 +38,7 @@ from .invoice_pdf_template import InvoicePDFTemplate
 from .audit_log import AuditLog
 from .recurring_invoice import RecurringInvoice
 from .invoice_email import InvoiceEmail
+from .invoice_peppol import InvoicePeppolTransmission
 from .webhook import Webhook, WebhookDelivery
 from .push_subscription import PushSubscription
 from .quote import Quote, QuoteItem, QuotePDFTemplate
@@ -51,6 +52,7 @@ from .stock_item import StockItem
 from .warehouse_stock import WarehouseStock
 from .stock_movement import StockMovement
 from .stock_reservation import StockReservation
+from .stock_lot import StockLot, StockLotAllocation
 from .project_stock_allocation import ProjectStockAllocation
 from .supplier import Supplier
 from .supplier_stock_item import SupplierStockItem
@@ -127,6 +129,7 @@ __all__ = [
     "AuditLog",
     "RecurringInvoice",
     "InvoiceEmail",
+    "InvoicePeppolTransmission",
     "Webhook",
     "WebhookDelivery",
     "Quote",
@@ -142,6 +145,8 @@ __all__ = [
     "WarehouseStock",
     "StockMovement",
     "StockReservation",
+    "StockLot",
+    "StockLotAllocation",
     "ProjectStockAllocation",
     "Supplier",
     "SupplierStockItem",

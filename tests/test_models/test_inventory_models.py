@@ -11,6 +11,7 @@ from app.models import (
     StockMovement,
     StockReservation,
     ProjectStockAllocation,
+    StockLot,
     User,
     Project,
 )
@@ -273,6 +274,70 @@ class TestStockMovement:
         db_session.commit()
 
         assert updated_stock.quantity_on_hand == Decimal("75.00")
+
+    def test_return_can_be_devalued_into_lot(self, db_session, test_user, test_stock_item, test_warehouse):
+        """Test that returns can be recorded into a devalued valuation layer (lot)."""
+        movement, updated_stock = StockMovement.record_movement(
+            movement_type="return",
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+            quantity=Decimal("5.00"),
+            moved_by=test_user.id,
+            unit_cost=Decimal("2.50"),
+            lot_type="devalued",
+            reason="Returned damaged packaging",
+            update_stock=True,
+        )
+        db_session.commit()
+
+        assert updated_stock.quantity_on_hand == Decimal("5.00")
+        lots = StockLot.query.filter_by(stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id).all()
+        assert len(lots) >= 1
+        assert any(Decimal(str(l.quantity_on_hand)) == Decimal("5.00") and str(l.lot_type) == "devalued" for l in lots)
+
+    def test_waste_with_devaluation_flow(self, db_session, test_user, test_stock_item, test_warehouse):
+        """Test devalue-then-waste removes value layer correctly."""
+        # Inbound purchase creates a normal lot
+        StockMovement.record_movement(
+            movement_type="purchase",
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+            quantity=Decimal("10.00"),
+            moved_by=test_user.id,
+            unit_cost=Decimal("5.00"),
+            update_stock=True,
+        )
+        db_session.commit()
+
+        # Devalue 4 units into a devalued lot at 1.00
+        deval_movement, deval_lot = StockMovement.record_devaluation(
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+            quantity=Decimal("4.00"),
+            moved_by=test_user.id,
+            new_unit_cost=Decimal("1.00"),
+            reason="Impairment before waste",
+        )
+
+        # Waste those 4 units from the devalued lot
+        waste_movement, updated_stock = StockMovement.record_movement(
+            movement_type="waste",
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+            quantity=Decimal("-4.00"),
+            moved_by=test_user.id,
+            reason="Wasted impaired items",
+            consume_from_lot_id=deval_lot.id,
+            update_stock=True,
+        )
+        db_session.commit()
+
+        # Stock should now be 6
+        assert updated_stock.quantity_on_hand == Decimal("6.00")
+
+        # Devalued lot should be 0 after wasting
+        db_session.refresh(deval_lot)
+        assert Decimal(str(deval_lot.quantity_on_hand)) == Decimal("0.00")
 
 
 class TestStockReservation:

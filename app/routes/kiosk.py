@@ -378,6 +378,7 @@ def transfer_stock():
 
     # Create outbound movement
     try:
+        transfer_ref_id = int(datetime.now().timestamp() * 1000)
         out_movement, out_stock = StockMovement.record_movement(
             movement_type="transfer",
             stock_item_id=stock_item_id,
@@ -386,6 +387,8 @@ def transfer_stock():
             moved_by=current_user.id,
             reason="Transfer out",
             notes=notes,
+            reference_type="transfer",
+            reference_id=transfer_ref_id,
             update_stock=True,
         )
 
@@ -398,6 +401,8 @@ def transfer_stock():
             moved_by=current_user.id,
             reason="Transfer in",
             notes=notes,
+            reference_type="transfer",
+            reference_id=transfer_ref_id,
             update_stock=True,
         )
 

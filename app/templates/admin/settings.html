@@ -134,6 +134,59 @@
                 </div>
             </div>
 
+            <!-- Peppol e-Invoicing -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">Peppol e-Invoicing</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label for="peppol_enabled_mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Enable Peppol sending</label>
+                        <select name="peppol_enabled_mode" id="peppol_enabled_mode" class="form-input">
+                            <option value="env" {% if settings.peppol_enabled is none %}selected{% endif %}>
+                                Use environment variable (PEPPOL_ENABLED) — currently {% if peppol_env_enabled|default(false) %}enabled{% else %}disabled{% endif %}
+                            </option>
+                            <option value="true" {% if settings.peppol_enabled is true %}selected{% endif %}>Enabled</option>
+                            <option value="false" {% if settings.peppol_enabled is false %}selected{% endif %}>Disabled</option>
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            If enabled, invoices can be sent via Peppol using your configured access point.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="peppol_sender_endpoint_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Endpoint ID</label>
+                        <input type="text" name="peppol_sender_endpoint_id" id="peppol_sender_endpoint_id" value="{{ settings.peppol_sender_endpoint_id or '' }}" class="form-input" placeholder="e.g. 9915:BE0123456789">
+                    </div>
+                    <div>
+                        <label for="peppol_sender_scheme_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Scheme ID</label>
+                        <input type="text" name="peppol_sender_scheme_id" id="peppol_sender_scheme_id" value="{{ settings.peppol_sender_scheme_id or '' }}" class="form-input" placeholder="e.g. 9915">
+                    </div>
+                    <div>
+                        <label for="peppol_sender_country" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Country (optional)</label>
+                        <input type="text" name="peppol_sender_country" id="peppol_sender_country" value="{{ settings.peppol_sender_country or '' }}" class="form-input" placeholder="e.g. BE">
+                    </div>
+                    <div>
+                        <label for="peppol_provider" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Provider label</label>
+                        <input type="text" name="peppol_provider" id="peppol_provider" value="{{ settings.peppol_provider or 'generic' }}" class="form-input">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="peppol_access_point_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point URL</label>
+                        <input type="text" name="peppol_access_point_url" id="peppol_access_point_url" value="{{ settings.peppol_access_point_url or '' }}" class="form-input" placeholder="https://your-access-point-adapter.example.com/send">
+                    </div>
+                    <div>
+                        <label for="peppol_access_point_timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point Timeout (seconds)</label>
+                        <input type="number" name="peppol_access_point_timeout" id="peppol_access_point_timeout" value="{{ settings.peppol_access_point_timeout or 30 }}" class="form-input" min="1" max="300">
+                    </div>
+                    <div>
+                        <label for="peppol_access_point_token" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point Token (optional)</label>
+                        <input type="password" name="peppol_access_point_token" id="peppol_access_point_token" value="" class="form-input" placeholder="{% if settings.peppol_access_point_token %}Token is set (enter to replace){% else %}Enter token (optional){% endif %}">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            For security, the token is not shown. Leave blank to keep the current token.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Backup Settings -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Backup Settings') }}</h2>

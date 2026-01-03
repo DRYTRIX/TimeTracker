@@ -28,6 +28,7 @@
                     <option value="purchase">{{ _('Purchase') }}</option>
                     <option value="return">{{ _('Return') }}</option>
                     <option value="waste">{{ _('Waste') }}</option>
+                    <option value="devaluation">{{ _('Devaluation') }}</option>
                 </select>
             </div>
             <div>
@@ -53,6 +54,41 @@
                 <input type="number" name="quantity" id="quantity" step="0.01" class="form-input" required>
                 <p class="mt-1 text-sm text-gray-500">{{ _('Use positive values for additions, negative for removals') }}</p>
             </div>
+
+            <!-- Devaluation options (Return / Waste / Devaluation) -->
+            <div id="devaluation_section" class="hidden border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ _('Devaluation') }}</h3>
+                        <p class="text-sm text-gray-500">{{ _('Devalue items without creating a new stock item') }}</p>
+                    </div>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="devalue_enabled" id="devalue_enabled" class="rounded border-gray-300 dark:border-gray-600">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ _('Apply devaluation') }}</span>
+                    </label>
+                </div>
+
+                <div id="devaluation_fields" class="mt-4 space-y-4 hidden">
+                    <div>
+                        <label for="devalue_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Method') }}</label>
+                        <select name="devalue_method" id="devalue_method" class="form-input">
+                            <option value="percent">{{ _('Percent off default cost') }}</option>
+                            <option value="fixed">{{ _('Fixed new unit cost') }}</option>
+                        </select>
+                    </div>
+
+                    <div id="devalue_percent_row">
+                        <label for="devalue_percent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Percent') }}</label>
+                        <input type="number" name="devalue_percent" id="devalue_percent" step="0.01" min="0" max="100" class="form-input" placeholder="e.g. 30">
+                        <p class="mt-1 text-sm text-gray-500">{{ _('Example: 30 = reduce cost by 30%') }}</p>
+                    </div>
+
+                    <div id="devalue_fixed_row" class="hidden">
+                        <label for="devalue_unit_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('New Unit Cost') }}</label>
+                        <input type="number" name="devalue_unit_cost" id="devalue_unit_cost" step="0.01" min="0" class="form-input" placeholder="e.g. 2.50">
+                    </div>
+                </div>
+            </div>
             <div>
                 <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Reason') }}</label>
                 <input type="text" name="reason" id="reason" class="form-input" placeholder="{{ _('e.g., Physical count correction') }}">
@@ -72,5 +108,42 @@
         </div>
     </form>
 </div>
+
+<script>
+    (function () {
+        const movementType = document.getElementById('movement_type');
+        const section = document.getElementById('devaluation_section');
+        const enabled = document.getElementById('devalue_enabled');
+        const fields = document.getElementById('devaluation_fields');
+        const method = document.getElementById('devalue_method');
+        const percentRow = document.getElementById('devalue_percent_row');
+        const fixedRow = document.getElementById('devalue_fixed_row');
+
+        function refreshVisibility() {
+            const type = (movementType.value || '').toLowerCase();
+            const showSection = (type === 'return' || type === 'waste' || type === 'devaluation');
+            section.classList.toggle('hidden', !showSection);
+
+            if (type === 'devaluation') {
+                enabled.checked = true;
+                enabled.disabled = true;
+            } else {
+                enabled.disabled = false;
+            }
+
+            const showFields = showSection && enabled.checked;
+            fields.classList.toggle('hidden', !showFields);
+
+            const m = (method.value || 'percent');
+            percentRow.classList.toggle('hidden', m !== 'percent');
+            fixedRow.classList.toggle('hidden', m !== 'fixed');
+        }
+
+        movementType.addEventListener('change', refreshVisibility);
+        enabled.addEventListener('change', refreshVisibility);
+        method.addEventListener('change', refreshVisibility);
+        refreshVisibility();
+    })();
+</script>
 {% endblock %}
 
