@@ -462,6 +462,7 @@ def settings():
     settings_obj = Settings.get_settings()
     installation_config = get_installation_config()
     timezones = get_available_timezones()
+    peppol_env_enabled = (os.getenv("PEPPOL_ENABLED", "false") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
     # Sync analytics preference from installation config to database on load
     # (installation config is the source of truth for telemetry)
@@ -487,7 +488,13 @@ def settings():
             pytz.timezone(timezone)  # This will raise an exception if timezone is invalid
         except pytz.exceptions.UnknownTimeZoneError:
             flash(_("Invalid timezone: %(timezone)s", timezone=timezone), "error")
-            return render_template("admin/settings.html", settings=settings_obj, timezones=timezones)
+            return render_template(
+                "admin/settings.html",
+                settings=settings_obj,
+                timezones=timezones,
+                kiosk_settings=kiosk_settings,
+                peppol_env_enabled=peppol_env_enabled,
+            )
 
         # Update basic settings
         settings_obj.timezone = timezone
@@ -514,6 +521,35 @@ def settings():
         settings_obj.invoice_start_number = int(request.form.get("invoice_start_number", 1000))
         settings_obj.invoice_terms = request.form.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         settings_obj.invoice_notes = request.form.get("invoice_notes", "Thank you for your business!")
+
+        # Update Peppol e-invoicing settings (if columns exist)
+        try:
+            mode = (request.form.get("peppol_enabled_mode") or "env").strip().lower()
+            if mode == "true":
+                settings_obj.peppol_enabled = True
+            elif mode == "false":
+                settings_obj.peppol_enabled = False
+            else:
+                settings_obj.peppol_enabled = None
+
+            settings_obj.peppol_sender_endpoint_id = (request.form.get("peppol_sender_endpoint_id", "") or "").strip()
+            settings_obj.peppol_sender_scheme_id = (request.form.get("peppol_sender_scheme_id", "") or "").strip()
+            settings_obj.peppol_sender_country = (request.form.get("peppol_sender_country", "") or "").strip()
+            settings_obj.peppol_access_point_url = (request.form.get("peppol_access_point_url", "") or "").strip()
+
+            token = (request.form.get("peppol_access_point_token", "") or "").strip()
+            if token:
+                settings_obj.peppol_access_point_token = token
+
+            try:
+                settings_obj.peppol_access_point_timeout = int(request.form.get("peppol_access_point_timeout", 30))
+            except Exception:
+                settings_obj.peppol_access_point_timeout = 30
+
+            settings_obj.peppol_provider = (request.form.get("peppol_provider", "") or "").strip() or "generic"
+        except AttributeError:
+            # Peppol columns don't exist yet (migration not run)
+            pass
 
         # Update kiosk mode settings (if columns exist)
         try:
@@ -549,7 +585,11 @@ def settings():
         if not safe_commit("admin_update_settings"):
             flash(_("Could not update settings due to a database error. Please check server logs."), "error")
             return render_template(
-                "admin/settings.html", settings=settings_obj, timezones=timezones, kiosk_settings=kiosk_settings
+                "admin/settings.html",
+                settings=settings_obj,
+                timezones=timezones,
+                kiosk_settings=kiosk_settings,
+                peppol_env_enabled=peppol_env_enabled,
             )
         flash(_("Settings updated successfully"), "success")
         return redirect(url_for("admin.settings"))
@@ -564,7 +604,11 @@ def settings():
     }
 
     return render_template(
-        "admin/settings.html", settings=settings_obj, timezones=timezones, kiosk_settings=kiosk_settings
+        "admin/settings.html",
+        settings=settings_obj,
+        timezones=timezones,
+        kiosk_settings=kiosk_settings,
+        peppol_env_enabled=peppol_env_enabled,
     )
 
 

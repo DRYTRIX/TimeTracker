@@ -225,6 +225,33 @@ def view_invoice(invoice_id):
 
     email_history = InvoiceEmail.query.filter_by(invoice_id=invoice_id).order_by(InvoiceEmail.sent_at.desc()).all()
 
+    # Get Peppol history (best-effort if table exists)
+    peppol_history = []
+    peppol_enabled_flag = False
+    peppol_recipient_ready = False
+    try:
+        from app.models import InvoicePeppolTransmission
+        from app.integrations.peppol import peppol_enabled as _peppol_enabled
+
+        peppol_enabled_flag = bool(_peppol_enabled())
+        peppol_history = (
+            InvoicePeppolTransmission.query.filter_by(invoice_id=invoice_id)
+            .order_by(InvoicePeppolTransmission.created_at.desc())
+            .all()
+        )
+        try:
+            client = invoice.client
+            peppol_recipient_ready = bool(
+                client
+                and client.get_custom_field("peppol_endpoint_id")
+                and client.get_custom_field("peppol_scheme_id")
+            )
+        except Exception:
+            peppol_recipient_ready = False
+    except Exception:
+        # Migration might not be applied yet; don't block invoice view.
+        peppol_history = []
+
     # Get approval information
     from app.services.invoice_approval_service import InvoiceApprovalService
 
@@ -254,6 +281,9 @@ def view_invoice(invoice_id):
         invoice=invoice,
         email_templates=email_templates,
         email_history=email_history,
+        peppol_history=peppol_history,
+        peppol_enabled=peppol_enabled_flag,
+        peppol_recipient_ready=peppol_recipient_ready,
         approval=approval,
         link_templates_by_field=link_templates_by_field,
     )
@@ -1211,6 +1241,31 @@ def send_invoice_email_route(invoice_id):
         logger.error(f"Error sending invoice email: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
         return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/send-peppol", methods=["POST"])
+@login_required
+def send_invoice_peppol_route(invoice_id):
+    """Send invoice via Peppol (requires configured access point)."""
+    invoice = Invoice.query.get_or_404(invoice_id)
+
+    # Check access permissions
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        return jsonify({"error": "Permission denied"}), 403
+
+    try:
+        from app.services import PeppolService
+
+        service = PeppolService()
+        success, tx, message = service.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
+        if success:
+            flash(message, "success")
+            return jsonify({"success": True, "message": message, "peppol_tx_id": tx.id if tx else None})
+        return jsonify({"error": message, "peppol_tx_id": tx.id if tx else None}), 400
+    except Exception as e:
+        logger.error(f"Error sending invoice via Peppol: {type(e).__name__}: {str(e)}")
+        logger.exception("Full error traceback:")
+        return jsonify({"error": f"Failed to send via Peppol: {str(e)}"}), 500
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/email-history", methods=["GET"])

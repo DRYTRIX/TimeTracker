@@ -761,6 +761,105 @@ def new_movement():
             reason = request.form.get("reason", "").strip() or None
             notes = request.form.get("notes", "").strip() or None
 
+            # Optional devaluation for return/waste
+            devalue_enabled = request.form.get("devalue_enabled") == "on"
+            devalue_method = (request.form.get("devalue_method") or "percent").strip().lower()
+            devalue_percent_raw = request.form.get("devalue_percent")
+            devalue_unit_cost_raw = request.form.get("devalue_unit_cost")
+
+            lot_type = None
+            unit_cost_override = None
+            consume_from_lot_id = None
+
+            # Manual devaluation: revalue qty (no stock change)
+            if movement_type == "devaluation":
+                if quantity <= 0:
+                    raise ValueError("Devaluation quantity must be positive")
+
+                item = StockItem.query.get_or_404(stock_item_id)
+                base_cost = item.default_cost or Decimal("0")
+
+                if devalue_method == "percent":
+                    try:
+                        pct = Decimal(devalue_percent_raw) if devalue_percent_raw not in [None, ""] else Decimal("0")
+                    except Exception:
+                        pct = Decimal("0")
+                    if pct < 0:
+                        pct = Decimal("0")
+                    if pct > 100:
+                        pct = Decimal("100")
+                    unit_cost_override = (base_cost * (Decimal("100") - pct) / Decimal("100")).quantize(Decimal("0.01"))
+                elif devalue_method == "fixed":
+                    if devalue_unit_cost_raw in [None, ""]:
+                        unit_cost_override = base_cost
+                    else:
+                        unit_cost_override = Decimal(devalue_unit_cost_raw).quantize(Decimal("0.01"))
+                else:
+                    unit_cost_override = base_cost
+
+                if unit_cost_override < 0:
+                    unit_cost_override = Decimal("0.00")
+
+                StockMovement.record_devaluation(
+                    stock_item_id=stock_item_id,
+                    warehouse_id=warehouse_id,
+                    quantity=quantity,
+                    moved_by=current_user.id,
+                    new_unit_cost=unit_cost_override,
+                    reason=reason or "Manual devaluation",
+                    notes=notes,
+                )
+
+                safe_commit()
+                flash(_("Stock devaluation recorded successfully."), "success")
+                return redirect(url_for("inventory.list_movements"))
+
+            if movement_type in ["return", "waste"] and devalue_enabled:
+                item = StockItem.query.get_or_404(stock_item_id)
+                base_cost = item.default_cost or Decimal("0")
+
+                if devalue_method == "percent":
+                    try:
+                        pct = Decimal(devalue_percent_raw) if devalue_percent_raw not in [None, ""] else Decimal("0")
+                    except Exception:
+                        pct = Decimal("0")
+                    if pct < 0:
+                        pct = Decimal("0")
+                    if pct > 100:
+                        pct = Decimal("100")
+                    unit_cost_override = (base_cost * (Decimal("100") - pct) / Decimal("100")).quantize(Decimal("0.01"))
+                elif devalue_method == "fixed":
+                    if devalue_unit_cost_raw in [None, ""]:
+                        unit_cost_override = base_cost
+                    else:
+                        unit_cost_override = Decimal(devalue_unit_cost_raw).quantize(Decimal("0.01"))
+                else:
+                    unit_cost_override = base_cost
+
+                if unit_cost_override < 0:
+                    unit_cost_override = Decimal("0.00")
+
+                # Returns: book inbound directly into a devalued lot.
+                if movement_type == "return":
+                    lot_type = "devalued"
+
+                # Waste: if you want the waste to reflect the devalued cost, revalue that qty first
+                # (no stock change), then waste the resulting devalued lot.
+                if movement_type == "waste":
+                    if quantity >= 0:
+                        raise ValueError("Waste movements must use a negative quantity")
+                    qty_to_waste = abs(quantity)
+                    _deval_move, deval_lot = StockMovement.record_devaluation(
+                        stock_item_id=stock_item_id,
+                        warehouse_id=warehouse_id,
+                        quantity=qty_to_waste,
+                        moved_by=current_user.id,
+                        new_unit_cost=unit_cost_override,
+                        reason=reason or "Devaluation before waste",
+                        notes=notes,
+                    )
+                    consume_from_lot_id = deval_lot.id
+
             movement, updated_stock = StockMovement.record_movement(
                 movement_type=movement_type,
                 stock_item_id=stock_item_id,
@@ -769,6 +868,9 @@ def new_movement():
                 moved_by=current_user.id,
                 reason=reason,
                 notes=notes,
+                unit_cost=unit_cost_override,
+                lot_type=lot_type,
+                consume_from_lot_id=consume_from_lot_id,
                 update_stock=True,
             )
 

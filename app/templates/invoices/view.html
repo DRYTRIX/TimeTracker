@@ -19,6 +19,14 @@
         <button type="button" onclick="showSendEmailModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-envelope mr-1"></i>Send Email
         </button>
+        {% if peppol_enabled %}
+        <button type="button"
+                onclick="sendInvoicePeppol()"
+                class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 {% if not peppol_recipient_ready %}opacity-50 cursor-not-allowed{% endif %}"
+                {% if not peppol_recipient_ready %}disabled title="Client is missing Peppol endpoint details (peppol_endpoint_id / peppol_scheme_id)"{% endif %}>
+            <i class="fas fa-paper-plane mr-1"></i>Send via Peppol
+        </button>
+        {% endif %}
         {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
         <a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
@@ -428,6 +436,46 @@
 </div>
 {% endif %}
 
+<!-- Peppol History Section -->
+{% if peppol_history is defined and peppol_history|length > 0 %}
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-paper-plane mr-2"></i>Peppol History
+    </h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <th class="p-2 text-sm font-medium">Created</th>
+                    <th class="p-2 text-sm font-medium">Status</th>
+                    <th class="p-2 text-sm font-medium">Recipient</th>
+                    <th class="p-2 text-sm font-medium">Message ID</th>
+                    <th class="p-2 text-sm font-medium">Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in peppol_history %}
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <td class="p-2 text-sm">{{ tx.created_at.strftime('%Y-%m-%d %H:%M:%S') if tx.created_at else 'N/A' }}</td>
+                    <td class="p-2 text-sm">
+                        <span class="px-2 py-1 rounded text-xs font-medium
+                            {% if tx.status == 'sent' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                            {% elif tx.status == 'failed' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                            {{ tx.status|title }}
+                        </span>
+                    </td>
+                    <td class="p-2 text-sm">{{ (tx.recipient_scheme_id or '') ~ ':' ~ (tx.recipient_endpoint_id or '') }}</td>
+                    <td class="p-2 text-sm">{{ tx.message_id or '—' }}</td>
+                    <td class="p-2 text-sm text-red-600 dark:text-red-400">{{ tx.error_message or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <!-- Send Email Modal -->
 <div id="sendEmailModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
   <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-card-light dark:bg-card-dark">
@@ -647,6 +695,59 @@ function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
       };
     }
   }
+}
+
+function sendInvoicePeppol() {
+  // Hard guard if button is disabled by template state
+  {% if not peppol_recipient_ready %}
+  return;
+  {% endif %}
+
+  if (!confirm('Send this invoice via Peppol?')) {
+    return;
+  }
+
+  const body = new FormData();
+  body.append('csrf_token', "{{ csrf_token() }}");
+
+  fetch("{{ url_for('invoices.send_invoice_peppol_route', invoice_id=invoice.id) }}", {
+    method: 'POST',
+    body
+  })
+  .then(async response => {
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    const data = isJson ? await response.json() : { error: await response.text() };
+    if (!response.ok) {
+      throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+    return data;
+  })
+  .then(data => {
+    if (data.success) {
+      if (window.toastManager) {
+        window.toastManager.success(data.message || 'Sent via Peppol');
+      } else {
+        alert(data.message || 'Sent via Peppol');
+      }
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      const errorMsg = data.error || 'Failed to send via Peppol';
+      if (window.toastManager) {
+        window.toastManager.error(errorMsg);
+      } else {
+        alert('Error: ' + errorMsg);
+      }
+    }
+  })
+  .catch(err => {
+    const msg = err && err.message ? err.message : 'Failed to send via Peppol';
+    if (window.toastManager) {
+      window.toastManager.error(msg);
+    } else {
+      alert('Error: ' + msg);
+    }
+  });
 }
 </script>
 {% endblock %}

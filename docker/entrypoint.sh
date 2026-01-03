@@ -271,8 +271,12 @@ execute_check_migrations() {
     log "Checking for pending migrations..."
     
     # Check current migration status
-    local current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "unknown")
-    log "Current migration revision: $current_revision"
+    local current_output
+    current_output=$(flask db current 2>/dev/null || echo "unknown")
+    log "Current migration revision(s):"
+    echo "$current_output" | sed 's/^/[CURRENT] /'
+    local current_revisions
+    current_revisions=$(echo "$current_output" | awk 'NF{print $1}' | tr '\n' ' ')
 
     # If Alembic reports multiple heads and the DB is already at a head, attempting to
     # upgrade to all heads can fail with:
@@ -282,7 +286,16 @@ execute_check_migrations() {
     heads_output=$(flask db heads 2>/dev/null || echo "")
     local head_count
     head_count=$(echo "$heads_output" | grep -v '^$' | wc -l | tr -d ' ')
-    if [[ "$current_revision" == *"(head)"* ]] && [[ "$head_count" -gt 1 ]]; then
+    local heads_revisions
+    heads_revisions=$(echo "$heads_output" | awk 'NF{print $1}' | tr '\n' ' ')
+    local is_at_head=false
+    for rev in $current_revisions; do
+        if echo " $heads_revisions " | grep -q " $rev "; then
+            is_at_head=true
+            break
+        fi
+    done
+    if [[ "$is_at_head" == "true" ]] && [[ "$head_count" -gt 1 ]]; then
         log "⚠ Multiple migration heads detected ($head_count), but database is already at a head."
         log "⚠ Skipping migration upgrade during startup to avoid Alembic overlap error."
         log "Heads:"
@@ -306,8 +319,13 @@ execute_check_migrations() {
     local rc=$?
     set -e
     if [[ $rc -ne 0 ]]; then
-        if [[ "$current_revision" == *"(head)"* ]] && grep -q "overlaps with other requested revisions" "$upgrade_output"; then
+        if [[ "$is_at_head" == "true" ]] && grep -q "overlaps with other requested revisions" "$upgrade_output"; then
             log "⚠ Migration upgrade reported overlapping heads, but DB is already at a head. Continuing startup."
+            rm -f "$upgrade_output"
+            return 0
+        fi
+        if grep -q "overlaps with other requested revisions" "$upgrade_output"; then
+            log "⚠ Migration upgrade failed due to overlapping revision targets. Continuing startup."
             rm -f "$upgrade_output"
             return 0
         fi

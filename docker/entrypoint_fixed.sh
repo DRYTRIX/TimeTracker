@@ -666,8 +666,13 @@ execute_check_migrations() {
     log "Checking for pending migrations..."
     
     # Check current migration status
-    local current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "unknown")
-    log "Current migration revision: $current_revision"
+    local current_output
+    current_output=$(flask db current 2>/dev/null || echo "unknown")
+    log "Current migration revision(s):"
+    echo "$current_output" | sed 's/^/[CURRENT] /'
+    # Extract revision ids (first column of each non-empty line)
+    local current_revisions
+    current_revisions=$(echo "$current_output" | awk 'NF{print $1}' | tr '\n' ' ')
 
     # If Alembic reports multiple heads and the DB is already at a head, attempting to
     # upgrade to "heads" can fail with:
@@ -678,7 +683,19 @@ execute_check_migrations() {
     heads_output=$(flask db heads 2>/dev/null || echo "")
     local head_count
     head_count=$(echo "$heads_output" | grep -v '^$' | wc -l | tr -d ' ')
-    if [[ "$current_revision" == *"(head)"* ]] && [[ "$head_count" -gt 1 ]]; then
+    # Determine whether the DB is already at ANY head (don't rely on "(head)" suffix,
+    # because Flask-Migrate doesn't always include it when multiple heads exist).
+    local heads_revisions
+    heads_revisions=$(echo "$heads_output" | awk 'NF{print $1}' | tr '\n' ' ')
+    local is_at_head=false
+    for rev in $current_revisions; do
+        if echo " $heads_revisions " | grep -q " $rev "; then
+            is_at_head=true
+            break
+        fi
+    done
+
+    if [[ "$is_at_head" == "true" ]] && [[ "$head_count" -gt 1 ]]; then
         log "⚠ Multiple migration heads detected ($head_count), but database is already at a head."
         log "⚠ Skipping 'flask db upgrade heads' to avoid Alembic overlap error during startup."
         log "Heads:"
@@ -779,9 +796,19 @@ except Exception as e:
     
     if [[ $MIGRATION_EXIT_CODE -ne 0 ]]; then
         # If we're already at a head, tolerate Alembic overlap errors (multi-head history).
-        if [[ "$current_revision" == *"(head)"* ]] && [[ -s "$MIGRATION_OUTPUT" ]] && grep -q "overlaps with other requested revisions" "$MIGRATION_OUTPUT"; then
+        if [[ "$is_at_head" == "true" ]] && [[ -s "$MIGRATION_OUTPUT" ]] && grep -q "overlaps with other requested revisions" "$MIGRATION_OUTPUT"; then
             log "⚠ Migration upgrade reported overlapping heads, but DB is already at a head. Continuing startup."
             log "⚠ (You likely have multiple heads in the migration history; consider upgrading to a build with a linearized migration chain.)"
+            rm -f "$MIGRATION_OUTPUT"
+            return 0
+        fi
+        # Some databases can end up "ahead" of one branch while other branches still exist in the
+        # migration directory. In that case, upgrading to "heads" can fail with the same overlap
+        # error even when Flask-Migrate doesn't mark the current revision with "(head)".
+        # Startup should not hard-fail on this; log and continue so the app can run.
+        if [[ -s "$MIGRATION_OUTPUT" ]] && grep -q "overlaps with other requested revisions" "$MIGRATION_OUTPUT"; then
+            log "⚠ Migration upgrade failed due to overlapping revision targets. Continuing startup."
+            log "⚠ (This indicates a multi-head/branching migration history mismatch; resolve by merging heads or aligning DB + code migrations.)"
             rm -f "$MIGRATION_OUTPUT"
             return 0
         fi

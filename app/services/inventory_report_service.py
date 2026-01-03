@@ -6,7 +6,7 @@ from typing import Dict, List, Any, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta
 from app import db
-from app.models import StockItem, WarehouseStock, Warehouse, StockMovement
+from app.models import StockItem, WarehouseStock, Warehouse, StockMovement, StockLot
 from sqlalchemy import func, and_
 
 
@@ -39,71 +39,152 @@ class InventoryReportService:
             - by_category: Value breakdown by category
             - item_details: Detailed item-level valuation
         """
-        # Base query: join WarehouseStock with StockItem
-        query = (
-            db.session.query(WarehouseStock, StockItem, Warehouse)
-            .join(StockItem, WarehouseStock.stock_item_id == StockItem.id)
-            .join(Warehouse, WarehouseStock.warehouse_id == Warehouse.id)
-            .filter(StockItem.is_active == True, StockItem.is_trackable == True, WarehouseStock.quantity_on_hand > 0)
-        )
+        # Prefer lot-based valuation when lots exist; fallback to default_cost * WarehouseStock otherwise.
+        # Lots unlock devalued returns/waste without creating new stock items.
+        lots_exist = False
+        try:
+            lots_exist = db.session.query(StockLot.id).limit(1).scalar() is not None
+        except Exception:
+            lots_exist = False
 
-        # Apply filters
-        if warehouse_id:
-            query = query.filter(WarehouseStock.warehouse_id == warehouse_id)
-        if category:
-            query = query.filter(StockItem.category == category)
-        if currency_code:
-            query = query.filter(StockItem.currency_code == currency_code)
-
-        results = query.all()
-
-        # Calculate totals
         total_value = Decimal("0")
         by_warehouse = {}
         by_category = {}
         item_details = []
 
-        for stock, item, warehouse in results:
-            # Use default_cost or 0 if not set
-            cost = item.default_cost or Decimal("0")
-            quantity = stock.quantity_on_hand
-            value = cost * quantity
-
-            total_value += value
-
-            # By warehouse
-            warehouse_key = f"{warehouse.name} ({warehouse.code})"
-            if warehouse_key not in by_warehouse:
-                by_warehouse[warehouse_key] = {
-                    "warehouse_id": warehouse.id,
-                    "warehouse_name": warehouse.name,
-                    "warehouse_code": warehouse.code,
-                    "value": Decimal("0"),
-                    "currency": item.currency_code,
-                }
-            by_warehouse[warehouse_key]["value"] += value
-
-            # By category
-            cat = item.category or "Uncategorized"
-            if cat not in by_category:
-                by_category[cat] = {"category": cat, "value": Decimal("0"), "currency": item.currency_code}
-            by_category[cat]["value"] += value
-
-            # Item details
-            item_details.append(
-                {
-                    "item_id": item.id,
-                    "sku": item.sku,
-                    "name": item.name,
-                    "category": item.category,
-                    "warehouse_id": warehouse.id,
-                    "warehouse_name": warehouse.name,
-                    "quantity": float(quantity),
-                    "cost": float(cost),
-                    "value": float(value),
-                    "currency": item.currency_code,
-                }
+        if lots_exist:
+            lot_query = (
+                db.session.query(StockLot, StockItem, Warehouse)
+                .join(StockItem, StockLot.stock_item_id == StockItem.id)
+                .join(Warehouse, StockLot.warehouse_id == Warehouse.id)
+                .filter(StockItem.is_active == True, StockItem.is_trackable == True, StockLot.quantity_on_hand > 0)
             )
+
+            if warehouse_id:
+                lot_query = lot_query.filter(StockLot.warehouse_id == warehouse_id)
+            if category:
+                lot_query = lot_query.filter(StockItem.category == category)
+            if currency_code:
+                lot_query = lot_query.filter(StockItem.currency_code == currency_code)
+
+            results = lot_query.all()
+
+            # Aggregate per item+warehouse to stay compatible with templates.
+            agg = {}  # (item_id, warehouse_id) -> dict
+            for lot, item, warehouse in results:
+                qty = Decimal(str(lot.quantity_on_hand or 0))
+                cost = Decimal(str(lot.unit_cost or 0))
+                value = qty * cost
+
+                total_value += value
+
+                warehouse_key = f"{warehouse.name} ({warehouse.code})"
+                if warehouse_key not in by_warehouse:
+                    by_warehouse[warehouse_key] = {
+                        "warehouse_id": warehouse.id,
+                        "warehouse_name": warehouse.name,
+                        "warehouse_code": warehouse.code,
+                        "value": Decimal("0"),
+                        "currency": item.currency_code,
+                    }
+                by_warehouse[warehouse_key]["value"] += value
+
+                cat = item.category or "Uncategorized"
+                if cat not in by_category:
+                    by_category[cat] = {"category": cat, "value": Decimal("0"), "currency": item.currency_code}
+                by_category[cat]["value"] += value
+
+                key = (item.id, warehouse.id)
+                if key not in agg:
+                    agg[key] = {
+                        "item": item,
+                        "warehouse": warehouse,
+                        "total_qty": Decimal("0"),
+                        "total_value": Decimal("0"),
+                    }
+                agg[key]["total_qty"] += qty
+                agg[key]["total_value"] += value
+
+            for (item_id_k, warehouse_id_k), row in agg.items():
+                item = row["item"]
+                warehouse = row["warehouse"]
+                qty = row["total_qty"]
+                value = row["total_value"]
+                avg_cost = (value / qty) if qty > 0 else Decimal("0")
+                item_details.append(
+                    {
+                        "item_id": item.id,
+                        "sku": item.sku,
+                        "name": item.name,
+                        "category": item.category,
+                        "warehouse_id": warehouse.id,
+                        "warehouse_name": warehouse.name,
+                        "quantity": float(qty),
+                        "cost": float(avg_cost),
+                        "value": float(value),
+                        "currency": item.currency_code,
+                    }
+                )
+        else:
+            # Base query: join WarehouseStock with StockItem
+            query = (
+                db.session.query(WarehouseStock, StockItem, Warehouse)
+                .join(StockItem, WarehouseStock.stock_item_id == StockItem.id)
+                .join(Warehouse, WarehouseStock.warehouse_id == Warehouse.id)
+                .filter(
+                    StockItem.is_active == True,
+                    StockItem.is_trackable == True,
+                    WarehouseStock.quantity_on_hand > 0,
+                )
+            )
+
+            # Apply filters
+            if warehouse_id:
+                query = query.filter(WarehouseStock.warehouse_id == warehouse_id)
+            if category:
+                query = query.filter(StockItem.category == category)
+            if currency_code:
+                query = query.filter(StockItem.currency_code == currency_code)
+
+            results = query.all()
+
+            for stock, item, warehouse in results:
+                cost = item.default_cost or Decimal("0")
+                quantity = Decimal(str(stock.quantity_on_hand or 0))
+                value = cost * quantity
+
+                total_value += value
+
+                warehouse_key = f"{warehouse.name} ({warehouse.code})"
+                if warehouse_key not in by_warehouse:
+                    by_warehouse[warehouse_key] = {
+                        "warehouse_id": warehouse.id,
+                        "warehouse_name": warehouse.name,
+                        "warehouse_code": warehouse.code,
+                        "value": Decimal("0"),
+                        "currency": item.currency_code,
+                    }
+                by_warehouse[warehouse_key]["value"] += value
+
+                cat = item.category or "Uncategorized"
+                if cat not in by_category:
+                    by_category[cat] = {"category": cat, "value": Decimal("0"), "currency": item.currency_code}
+                by_category[cat]["value"] += value
+
+                item_details.append(
+                    {
+                        "item_id": item.id,
+                        "sku": item.sku,
+                        "name": item.name,
+                        "category": item.category,
+                        "warehouse_id": warehouse.id,
+                        "warehouse_name": warehouse.name,
+                        "quantity": float(quantity),
+                        "cost": float(cost),
+                        "value": float(value),
+                        "currency": item.currency_code,
+                    }
+                )
 
         return {
             "total_value": float(total_value),
