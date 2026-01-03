@@ -197,7 +197,7 @@ def create_tenant():
         pass
 
     prefix = (current_app.config.get("TENANT_PATH_PREFIX") or "/t").rstrip("/") or "/t"
-    return redirect(f"{prefix}/{tenant.slug}/billing")
+    return redirect(f"{prefix}/{tenant.slug}/billing/org-size")
 
 
 @settings_bp.route("/settings/tenants/<int:tenant_id>/leave", methods=["POST"])

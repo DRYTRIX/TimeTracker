@@ -1,98 +1,142 @@
-{% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
-
-{% block content %}
-{% set breadcrumbs = [{'text': _('Setup')}] %}
-
-{{ page_header(
-    icon_class='fas fa-building',
-    title_text=_('Set up your tenant'),
-    subtitle_text=_('Create a workspace or switch to an existing one'),
-    breadcrumbs=breadcrumbs
-) }}
-
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 max-w-4xl">
-  {% if login_url %}
-    <div class="mb-6 p-4 rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
-      <div class="font-semibold">{{ _('Welcome') }}</div>
-      <div class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">
-        {{ _('This instance runs in multi-tenant mode. Sign in to create or join a workspace.') }}
-      </div>
-      <div class="mt-4 flex flex-col sm:flex-row gap-3">
-        <a href="{{ login_url }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
-          {{ _('Sign in') }}
-        </a>
-        {% if allow_self_register %}
-          <div class="text-sm text-text-muted-light dark:text-text-muted-dark self-center">
-            {{ _('Self-registration is enabled: enter a new username to create an account.') }}
+<!DOCTYPE html>
+<html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ _('Tenants') }} - TimeTracker</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+  <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+  <script>
+    // Theme init to avoid FOUC
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+  <div class="min-h-screen flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-5xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
+      <div class="p-8">
+        <div class="flex items-center gap-3">
+          <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="logo" class="w-10 h-10">
+          <div>
+            <div class="text-xl font-bold">TimeTracker</div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+              {{ _('Multi-tenant workspace setup') }}
+            </div>
           </div>
-        {% else %}
-          <div class="text-sm text-text-muted-light dark:text-text-muted-dark self-center">
-            {{ _('Self-registration is disabled: ask an admin to invite you.') }}
+        </div>
+
+        <div class="mt-8">
+          <h1 class="text-2xl font-bold">{{ _('Set up your tenant') }}</h1>
+          <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Create a workspace or switch to an existing one.') }}
+          </p>
+        </div>
+
+        {% if login_url %}
+          <div class="mt-6 p-4 rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+            <div class="font-semibold">{{ _('Welcome') }}</div>
+            <div class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+              {{ _('This instance runs in multi-tenant mode. Sign in to create or join a workspace.') }}
+            </div>
+            <div class="mt-4 flex flex-col sm:flex-row gap-3">
+              <a href="{{ login_url }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block text-center">
+                {{ _('Sign in') }}
+              </a>
+              {% if allow_self_register %}
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark self-center">
+                  {{ _('Self-registration is enabled: enter a new username to create an account.') }}
+                </div>
+              {% else %}
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark self-center">
+                  {{ _('Self-registration is disabled: ask an admin to invite you.') }}
+                </div>
+              {% endif %}
+            </div>
           </div>
         {% endif %}
-      </div>
-    </div>
-  {% endif %}
 
-  {% if not has_any_tenant %}
-    <div class="mb-4 p-4 rounded border border-primary/30 bg-primary/10 text-sm">
-      <div class="font-semibold">{{ _('First time setup') }}</div>
-      <div class="mt-1 text-text-muted-light dark:text-text-muted-dark">
-        {{ _('No tenants exist yet. Create the first tenant to start using the system.') }}
-      </div>
-    </div>
-  {% endif %}
+        {% if not has_any_tenant %}
+          <div class="mt-6 p-4 rounded border border-primary/30 bg-primary/10 text-sm">
+            <div class="font-semibold">{{ _('First time setup') }}</div>
+            <div class="mt-1 text-text-muted-light dark:text-text-muted-dark">
+              {{ _('No tenants exist yet. Create the first tenant to start using the system.') }}
+            </div>
+          </div>
+        {% endif %}
 
-  <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-    <div>
-      <div class="font-semibold">{{ _('Workspaces') }}</div>
-      <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
-        {{ _('In multi-tenant mode, every URL must include a tenant slug.') }}
+        <div class="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div>
+            <div class="font-semibold">{{ _('Workspaces') }}</div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+              {{ _('In multi-tenant mode, every workspace URL includes a tenant slug.') }}
+            </div>
+          </div>
+          {% if not login_url %}
+            <a href="{{ url_for('settings.create_tenant') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block text-center">
+              {{ _('Create tenant') }}
+            </a>
+          {% endif %}
+        </div>
+
+        <div class="mt-6">
+          {% if items %}
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="text-left text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <th class="py-2 pr-4">{{ _('Tenant') }}</th>
+                    <th class="py-2 pr-4">{{ _('Role') }}</th>
+                    <th class="py-2 pr-4">{{ _('Action') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="text-sm">
+                  {% for it in items %}
+                    <tr class="border-t border-gray-200 dark:border-gray-700">
+                      <td class="py-3 pr-4">
+                        <div class="font-medium">{{ it.tenant.name if it.tenant.name else it.tenant.slug }}</div>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ it.tenant.slug }}</div>
+                      </td>
+                      <td class="py-3 pr-4">
+                        <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">{{ it.role }}</span>
+                      </td>
+                      <td class="py-3 pr-4">
+                        <a class="text-primary hover:underline" href="{{ it.switch_url }}">{{ _('Open') }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+              {{ _('You are not a member of any tenant yet. Create one to get started, or ask an admin to invite you.') }}
+            </div>
+          {% endif %}
+        </div>
       </div>
     </div>
-    {% if not login_url %}
-      <a href="{{ url_for('settings.create_tenant') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
-        {{ _('Create tenant') }}
-      </a>
-    {% endif %}
   </div>
 
-  <div class="mt-6">
-    {% if items %}
-      <div class="overflow-x-auto">
-        <table class="min-w-full">
-          <thead>
-            <tr class="text-left text-sm text-text-muted-light dark:text-text-muted-dark">
-              <th class="py-2 pr-4">{{ _('Tenant') }}</th>
-              <th class="py-2 pr-4">{{ _('Role') }}</th>
-              <th class="py-2 pr-4">{{ _('Action') }}</th>
-            </tr>
-          </thead>
-          <tbody class="text-sm">
-            {% for it in items %}
-              <tr class="border-t border-gray-200 dark:border-gray-700">
-                <td class="py-3 pr-4">
-                  <div class="font-medium">{{ it.tenant.name if it.tenant.name else it.tenant.slug }}</div>
-                  <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ it.tenant.slug }}</div>
-                </td>
-                <td class="py-3 pr-4">
-                  <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">{{ it.role }}</span>
-                </td>
-                <td class="py-3 pr-4">
-                  <a class="text-primary hover:underline" href="{{ it.switch_url }}">{{ _('Open') }}</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
-        {{ _('You are not a member of any tenant yet. Create one to get started, or ask an admin to invite you.') }}
-      </div>
-    {% endif %}
+  <!-- Flash Messages (hidden; converted to toasts) -->
+  <div id="flash-messages-container" class="hidden">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-danger{% elif category == 'warning' %}alert-warning{% else %}alert-info{% endif %}" data-toast-message="{{ message }}" data-toast-type="{{ category }}"></div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
   </div>
-</div>
-{% endblock %}
 
+  <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+  <script src="{{ url_for('static', filename='toast-manager.js') }}"></script>
+  <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
+</body>
+</html>

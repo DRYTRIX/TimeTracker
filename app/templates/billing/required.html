@@ -18,8 +18,8 @@
 
   {% if is_tenant_admin %}
     <div class="flex flex-col sm:flex-row gap-3">
-      <a href="{{ url_for('billing.billing_home') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 text-center">
-        {{ _('Choose a plan') }}
+      <a href="{{ url_for('billing.billing_org_size') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 text-center">
+        {{ _('Choose org size') }}
       </a>
       <form method="post" action="{{ url_for('billing.billing_portal') }}">
         <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto">

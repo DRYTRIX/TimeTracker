@@ -123,12 +123,52 @@ def billing_home():
     if _wants_json():
         return jsonify(payload)
 
+    # First-time onboarding: require choosing org size / plan before using billing index.
+    # (Billing status is finalized by webhooks; status None means checkout not completed yet.)
+    if not billing or not (billing.status or "").strip():
+        return render_template(
+            "billing/org_size.html",
+            tenant=g.tenant,
+            billing=billing,
+            members_count=members_count,
+            seat_limit=seat_limit,
+            mode="onboarding",
+        )
+
     return render_template(
         "billing/index.html",
         tenant=g.tenant,
         billing=billing,
         members_count=members_count,
         seat_limit=seat_limit,
+    )
+
+
+@billing_bp.route("/billing/org-size", methods=["GET"])
+@login_required
+def billing_org_size():
+    """Choose/upgrade org size (maps to plan + seat quantity)."""
+    err = _require_saas_enabled()
+    if err:
+        return err
+    err = _require_tenant_admin()
+    if err:
+        return err
+
+    from flask import g
+    from app.utils.saas_limits import get_effective_seat_limit
+
+    billing = TenantBilling.query.filter_by(tenant_id=g.tenant.id).first()
+    members_count = TenantMember.query.filter_by(tenant_id=g.tenant.id).count()
+    seat_limit = get_effective_seat_limit(g.tenant.id)
+
+    return render_template(
+        "billing/org_size.html",
+        tenant=g.tenant,
+        billing=billing,
+        members_count=members_count,
+        seat_limit=seat_limit,
+        mode="upgrade",
     )
 
 
