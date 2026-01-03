@@ -8596,6 +8596,13 @@ msgstr "Venta"
 #: app/templates/inventory/movements/list.html:27
 #: app/templates/inventory/reports/movement_history.html:45
 #: app/templates/inventory/stock_items/history.html:37
+msgid "Rent"
+msgstr "Alquiler"
+
+#: app/templates/inventory/movements/form.html:29
+#: app/templates/inventory/movements/list.html:28
+#: app/templates/inventory/reports/movement_history.html:46
+#: app/templates/inventory/stock_items/history.html:38
 msgid "Purchase"
 msgstr "Compra"
 

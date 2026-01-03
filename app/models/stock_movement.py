@@ -13,7 +13,7 @@ class StockMovement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     movement_type = db.Column(
         db.String(20), nullable=False, index=True
-    )  # 'adjustment', 'transfer', 'sale', 'purchase', 'return', 'waste'
+    )  # 'adjustment', 'transfer', 'sale', 'rent', 'purchase', 'return', 'waste'
     stock_item_id = db.Column(db.Integer, db.ForeignKey("stock_items.id"), nullable=False, index=True)
     warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=False, index=True)
     quantity = db.Column(db.Numeric(10, 2), nullable=False)  # Positive for additions, negative for removals

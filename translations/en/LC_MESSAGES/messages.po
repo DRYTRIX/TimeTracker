@@ -8406,18 +8406,25 @@ msgstr ""
 #: app/templates/inventory/movements/list.html:27
 #: app/templates/inventory/reports/movement_history.html:45
 #: app/templates/inventory/stock_items/history.html:37
-msgid "Purchase"
+msgid "Rent"
 msgstr ""
 
 #: app/templates/inventory/movements/form.html:29
 #: app/templates/inventory/movements/list.html:28
 #: app/templates/inventory/reports/movement_history.html:46
 #: app/templates/inventory/stock_items/history.html:38
-msgid "Return"
+msgid "Purchase"
 msgstr ""
 
 #: app/templates/inventory/movements/form.html:30
 #: app/templates/inventory/movements/list.html:29
+#: app/templates/inventory/reports/movement_history.html:47
+#: app/templates/inventory/stock_items/history.html:39
+msgid "Return"
+msgstr ""
+
+#: app/templates/inventory/movements/form.html:31
+#: app/templates/inventory/movements/list.html:30
 msgid "Waste"
 msgstr ""
 
