@@ -30,6 +30,7 @@ from app.utils.timezone import get_available_timezones
 import threading
 import time
 import shutil
+from sqlalchemy import func, case
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -137,6 +138,71 @@ def admin_dashboard():
         oidc_auth_method=auth_method,
         oidc_users_count=oidc_users_count,
     )
+
+
+@admin_bp.route("/admin/tenants")
+@login_required
+@admin_required
+def tenants_admin():
+    """Global admin: list all tenants (workspaces) with status and billing info."""
+    from app.models import Tenant, TenantMember, TenantBilling
+
+    q = (request.args.get("q") or "").strip()
+
+    members_sub = (
+        db.session.query(TenantMember.tenant_id.label("tenant_id"), func.count(TenantMember.id).label("members"))
+        .group_by(TenantMember.tenant_id)
+        .subquery()
+    )
+    owners_sub = (
+        db.session.query(
+            TenantMember.tenant_id.label("tenant_id"),
+            func.sum(case((TenantMember.role == "owner", 1), else_=0)).label("owners"),
+        )
+        .group_by(TenantMember.tenant_id)
+        .subquery()
+    )
+
+    query = (
+        db.session.query(
+            Tenant,
+            TenantBilling,
+            members_sub.c.members,
+            owners_sub.c.owners,
+        )
+        .outerjoin(TenantBilling, TenantBilling.tenant_id == Tenant.id)
+        .outerjoin(members_sub, members_sub.c.tenant_id == Tenant.id)
+        .outerjoin(owners_sub, owners_sub.c.tenant_id == Tenant.id)
+        .order_by(Tenant.created_at.desc())
+    )
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter((Tenant.slug.ilike(like)) | (Tenant.name.ilike(like)))
+
+    rows = query.limit(500).all()
+    prefix = (current_app.config.get("TENANT_PATH_PREFIX") or "/t").rstrip("/") or "/t"
+
+    items = []
+    for tenant, billing, members_count, owners_count in rows:
+        slug = getattr(tenant, "slug", None) or ""
+        internal_dashboard = url_for("main.dashboard")
+        open_url = f"{prefix}/{slug}{internal_dashboard}"
+        billing_url = f"{prefix}/{slug}{url_for('billing.billing_home')}"
+        org_size_url = f"{prefix}/{slug}{url_for('billing.billing_org_size')}"
+        items.append(
+            {
+                "tenant": tenant,
+                "billing": billing,
+                "members_count": int(members_count or 0),
+                "owners_count": int(owners_count or 0),
+                "open_url": open_url,
+                "billing_url": billing_url,
+                "org_size_url": org_size_url,
+            }
+        )
+
+    return render_template("admin/tenants.html", items=items, q=q)
 
 
 # Compatibility alias for code/templates that might reference 'admin.dashboard'

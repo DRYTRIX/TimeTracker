@@ -62,6 +62,11 @@
             <i class="fas fa-cog mb-2"></i>
             <div>Settings</div>
         </a>
+        <a href="{{ url_for('admin.tenants_admin') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
+            <i class="fas fa-building mb-2"></i>
+            <div>Workspaces</div>
+            <div class="text-xs mt-1 opacity-90">Tenants & status</div>
+        </a>
         <a href="{{ url_for('admin.system_info') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
             <i class="fas fa-info-circle mb-2"></i>
             <div>System Info</div>

@@ -68,6 +68,7 @@
       <form method="post" action="{{ url_for('billing.start_checkout') }}" class="mt-4">
         <input type="hidden" name="tier" value="basic">
         <input type="hidden" name="seats" value="1">
+        {% if mode == 'onboarding' %}<input type="hidden" name="success" value="members">{% endif %}
         <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 w-full">
           {{ _('Continue') }}
         </button>
@@ -80,6 +81,7 @@
       <div class="text-sm mt-2">{{ _('7 EUR / month per user') }}</div>
       <form method="post" action="{{ url_for('billing.start_checkout') }}" class="mt-4">
         <input type="hidden" name="tier" value="team">
+        {% if mode == 'onboarding' %}<input type="hidden" name="success" value="members">{% endif %}
         <label class="block text-sm mb-2">{{ _('Seats') }}</label>
         <input name="seats" type="number" min="1" max="5"
                value="{{ (billing.seat_quantity if billing and billing.tier=='team' else (members_count if members_count>0 else 2)) }}"
@@ -99,6 +101,7 @@
       <div class="text-sm mt-2">{{ _('15 EUR / month per user') }}</div>
       <form method="post" action="{{ url_for('billing.start_checkout') }}" class="mt-4">
         <input type="hidden" name="tier" value="pro">
+        {% if mode == 'onboarding' %}<input type="hidden" name="success" value="members">{% endif %}
         <label class="block text-sm mb-2">{{ _('Seats') }}</label>
         <input name="seats" type="number" min="1"
                value="{{ (billing.seat_quantity if billing and billing.tier=='pro' else (members_count if members_count>0 else 6)) }}"

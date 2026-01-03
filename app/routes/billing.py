@@ -611,8 +611,12 @@ def start_checkout():
         customer_id = customer.id
 
     # Success/cancel URLs (use tenant-prefixed URLs)
-    success_url = url_for("billing.billing_home", _external=True)
-    cancel_url = url_for("billing.billing_home", _external=True)
+    success_target = (data.get("success") or "").strip().lower()
+    if success_target == "members":
+        success_url = url_for("billing.billing_members", _external=True)
+    else:
+        success_url = url_for("billing.billing_home", _external=True)
+    cancel_url = url_for("billing.billing_org_size", _external=True)
 
     session = stripe.checkout.Session.create(
         mode="subscription",

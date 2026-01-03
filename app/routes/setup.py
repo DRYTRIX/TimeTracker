@@ -11,6 +11,8 @@ from app.utils.installation import get_installation_config
 from app import log_event, track_event, db
 from app.models import Settings, Tenant, TenantMember
 from app.utils.db import safe_commit
+import re
+from uuid import uuid4
 
 setup_bp = Blueprint("setup", __name__)
 
@@ -135,3 +137,71 @@ def tenants_setup():
         has_any_tenant = True
 
     return render_template("setup/tenants.html", items=items, has_any_tenant=has_any_tenant, login_url=None, allow_self_register=None)
+
+
+def _slugify(value: str) -> str:
+    s = (value or "").strip().lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    s = re.sub(r"-{2,}", "-", s).strip("-")
+    return s
+
+
+@setup_bp.route("/setup/workspaces/new", methods=["GET", "POST"])
+@login_required
+def create_workspace():
+    """Create a new workspace (tenant) in SaaS multi-tenant mode."""
+    if not (current_app.config.get("SAAS_MODE") and current_app.config.get("TENANCY_MODE") == "multi"):
+        return redirect(url_for("main.dashboard"))
+
+    if request.method == "GET":
+        return render_template("setup/workspace_new.html")
+
+    name = (request.form.get("name") or "").strip()
+    slug = Tenant.normalize_slug(request.form.get("slug") or "")
+    if not slug:
+        slug = _slugify(name)
+    if not name:
+        flash(_("Workspace name is required."), "error")
+        return redirect(url_for("setup.create_workspace"))
+
+    if not slug:
+        slug = f"w-{uuid4().hex[:8]}"
+    if len(slug) > 64:
+        slug = slug[:64].rstrip("-")
+    if len(slug) < 3:
+        flash(_("Workspace slug must be at least 3 characters."), "error")
+        return redirect(url_for("setup.create_workspace"))
+
+    existing = Tenant.query.filter_by(slug=slug).first()
+    if existing:
+        flash(_("That workspace slug is already taken."), "error")
+        return redirect(url_for("setup.create_workspace"))
+
+    tenant = Tenant(
+        slug=slug,
+        name=name,
+        created_by_user_id=current_user.id,
+        primary_owner_user_id=current_user.id,
+    )
+    db.session.add(tenant)
+    db.session.commit()
+
+    # Owner membership
+    if not TenantMember.query.filter_by(tenant_id=tenant.id, user_id=current_user.id).first():
+        db.session.add(TenantMember(tenant_id=tenant.id, user_id=current_user.id, role="owner"))
+
+    # Bootstrap tenant settings
+    if not Settings.query.filter_by(tenant_id=tenant.id).first():
+        db.session.add(Settings(tenant_id=tenant.id))
+
+    # Bootstrap billing row (status finalized by Stripe webhook)
+    from app.models import TenantBilling
+
+    if not TenantBilling.query.filter_by(tenant_id=tenant.id).first():
+        db.session.add(TenantBilling(tenant_id=tenant.id, tier="basic", seat_quantity=1, status=None))
+
+    db.session.commit()
+
+    prefix = (current_app.config.get("TENANT_PATH_PREFIX") or "/t").rstrip("/") or "/t"
+    # Go to org-size selection (Toggl-like onboarding step)
+    return redirect(f"{prefix}/{tenant.slug}/billing/org-size")

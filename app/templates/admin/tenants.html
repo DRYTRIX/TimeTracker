@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': _('Admin Dashboard'), 'url': url_for('admin.admin_dashboard')}, {'text': _('Workspaces')}] %}
+
+{{ page_header(
+    icon_class='fas fa-building',
+    title_text=_('Workspaces'),
+    subtitle_text=_('Global overview of all tenants and their status'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+  <form method="get" class="mb-4 flex flex-col sm:flex-row gap-3">
+    <input name="q" value="{{ q or '' }}" placeholder="{{ _('Search by name or slug') }}"
+           class="w-full sm:w-96 px-3 py-2 border rounded bg-white dark:bg-gray-800" />
+    <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600">
+      {{ _('Search') }}
+    </button>
+    {% if q %}
+      <a href="{{ url_for('admin.tenants_admin') }}" class="px-4 py-2 rounded border border-gray-200 dark:border-gray-700 text-center">
+        {{ _('Clear') }}
+      </a>
+    {% endif %}
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full">
+      <thead>
+        <tr class="text-left text-sm text-text-muted-light dark:text-text-muted-dark">
+          <th class="py-2 pr-4">{{ _('Workspace') }}</th>
+          <th class="py-2 pr-4">{{ _('Status') }}</th>
+          <th class="py-2 pr-4">{{ _('Members') }}</th>
+          <th class="py-2 pr-4">{{ _('Plan') }}</th>
+          <th class="py-2 pr-4">{{ _('Seats') }}</th>
+          <th class="py-2 pr-4">{{ _('Billing status') }}</th>
+          <th class="py-2 pr-4">{{ _('Actions') }}</th>
+        </tr>
+      </thead>
+      <tbody class="text-sm">
+        {% for it in items %}
+          {% set t = it.tenant %}
+          {% set b = it.billing %}
+          {% set st = (t.status or 'active') %}
+          <tr class="border-t border-gray-200 dark:border-gray-700">
+            <td class="py-3 pr-4">
+              <div class="font-medium">{{ t.name if t.name else t.slug }}</div>
+              <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ t.slug }}</div>
+            </td>
+            <td class="py-3 pr-4">
+              {% if st == 'active' %}
+                <span class="px-2 py-1 rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">{{ _('active') }}</span>
+              {% elif st == 'suspended' %}
+                <span class="px-2 py-1 rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs">{{ _('suspended') }}</span>
+              {% elif st == 'deleted' %}
+                <span class="px-2 py-1 rounded bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs">{{ _('deleted') }}</span>
+              {% else %}
+                <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs">{{ st }}</span>
+              {% endif %}
+            </td>
+            <td class="py-3 pr-4">
+              {{ it.members_count }} ({{ it.owners_count }} {{ _('owners') }})
+            </td>
+            <td class="py-3 pr-4">
+              {{ (b.tier if b and b.tier else '-')|upper }}
+            </td>
+            <td class="py-3 pr-4">
+              {{ b.seat_quantity if b and b.seat_quantity else '-' }}
+            </td>
+            <td class="py-3 pr-4">
+              {{ b.status if b and b.status else '-' }}
+            </td>
+            <td class="py-3 pr-4">
+              <a class="text-primary hover:underline" href="{{ it.open_url }}">{{ _('Open') }}</a>
+              <a class="ml-3 text-primary hover:underline" href="{{ it.billing_url }}">{{ _('Billing') }}</a>
+              <a class="ml-3 text-primary hover:underline" href="{{ it.org_size_url }}">{{ _('Org size') }}</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" class="py-6 text-center text-text-muted-light dark:text-text-muted-dark">
+              {{ _('No workspaces found.') }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
