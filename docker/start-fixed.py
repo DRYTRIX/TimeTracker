@@ -180,6 +180,52 @@ def log(message, level="INFO"):
     }.get(level, "•")
     print(f"[{timestamp}] {prefix} {message}")
 
+def bootstrap_system_admin():
+    """
+    Ensure a global/system admin user exists (not tied to any tenant).
+
+    This is important for SaaS multi-tenant deployments where we may skip the
+    legacy init scripts and rely on migrations only.
+    """
+    if not _env_truthy("BOOTSTRAP_SYSTEM_ADMIN", default=True):
+        return
+
+    admin_username = (os.getenv("ADMIN_USERNAMES", "admin").split(",")[0] or "admin").strip().lower()
+    if not admin_username:
+        admin_username = "admin"
+
+    admin_password = (os.getenv("SYSTEM_ADMIN_PASSWORD", "") or "").strip()
+
+    try:
+        from app import create_app, db
+        from app.models import User, Role
+
+        flask_app = create_app()
+        with flask_app.app_context():
+            existing = User.query.filter_by(username=admin_username).first()
+            if existing:
+                return
+
+            user = User(username=admin_username, role="admin")
+            # Optionally set an initial password; otherwise user can set it on first login.
+            if admin_password:
+                user.set_password(admin_password)
+                user.password_change_required = False
+
+            role_obj = Role.query.filter_by(name="admin").first()
+            if role_obj:
+                user.roles.append(role_obj)
+
+            db.session.add(user)
+            db.session.commit()
+            log(f"Bootstrapped system admin user '{admin_username}'", "SUCCESS")
+    except Exception as e:
+        # Best-effort: never block startup if bootstrap fails.
+        try:
+            log(f"Could not bootstrap system admin user: {type(e).__name__}", "WARNING")
+        except Exception:
+            pass
+
 def main():
     log("=" * 60, "INFO")
     log("Starting TimeTracker Application", "INFO")
@@ -214,23 +260,9 @@ def main():
             log("Database initialization failed, exiting...", "ERROR")
             sys.exit(1)
         log("Database initialization completed", "SUCCESS")
-    
-    # Ensure default settings and admin user exist (idempotent)
-    # Note: Database initialization is already handled by the migration system above
-    # The flask init_db command is optional and may not be available in all environments
-    try:
-        result = subprocess.run(
-            ['flask', 'init_db'],
-            check=False,  # Don't fail if command doesn't exist
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        if result.returncode != 0 and "No such command" not in (result.stderr or ""):
-            log("flask init_db returned non-zero exit code (continuing)", "WARNING")
-    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
-        # All errors are non-fatal - database is already initialized
-        pass
+
+    # Ensure a system admin exists (global, not tenant-scoped).
+    bootstrap_system_admin()
 
     log("=" * 60, "INFO")
     log("Starting application server", "INFO")

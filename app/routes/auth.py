@@ -52,6 +52,16 @@ def login():
             pass
 
     if current_user.is_authenticated:
+        # In SaaS multi-tenant mode, users may be logged in without a tenant context
+        # (no /t/<slug> in the URL). Send them to the tenant picker/setup page.
+        try:
+            from flask import g as _g
+
+            saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+            if saas_enabled and not getattr(_g, "tenant", None):
+                return redirect(url_for("setup.tenants_setup"))
+        except Exception:
+            pass
         return redirect(url_for("main.dashboard"))
 
     # Get authentication method from Flask app config (reads from environment)
@@ -296,6 +306,15 @@ def login():
             next_page = request.args.get("next")
             if not next_page or not next_page.startswith("/"):
                 next_page = url_for("main.dashboard")
+            # SaaS multi-tenant: if there's no tenant context, send user to tenant setup/picker
+            try:
+                from flask import g as _g
+
+                saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+                if saas_enabled and not getattr(_g, "tenant", None) and next_page == url_for("main.dashboard"):
+                    next_page = url_for("setup.tenants_setup")
+            except Exception:
+                pass
             current_app.logger.info("Redirecting '%s' to %s", user.username, next_page)
 
             flash(_("Welcome back, %(username)s!", username=user.username), "success")
@@ -881,6 +900,15 @@ def oidc_callback():
         next_page = session.pop("oidc_next", None) or request.args.get("next")
         if not next_page or not next_page.startswith("/"):
             next_page = url_for("main.dashboard")
+        # SaaS multi-tenant: if there's no tenant context, send user to tenant setup/picker
+        try:
+            from flask import g as _g
+
+            saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+            if saas_enabled and not getattr(_g, "tenant", None) and next_page == url_for("main.dashboard"):
+                next_page = url_for("setup.tenants_setup")
+        except Exception:
+            pass
         flash(_("Welcome back, %(username)s!", username=user.username), "success")
         return redirect(next_page)
 

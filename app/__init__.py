@@ -629,73 +629,21 @@ def create_app(config=None):
             if request.path.startswith(public_prefixes):
                 return
 
+            # Tenant slug is only present when the request is under /t/<slug>/...
+            # In SaaS multi-tenant mode, routes without a tenant slug are treated as
+            # tenant-agnostic (login, setup, tenant picker, etc.).
             slug = (request.environ.get("tt.tenant_slug") or "").strip().lower()
             if not slug:
-                slug = (app.config.get("DEFAULT_TENANT_SLUG") or "default").strip().lower()
+                return
 
             g.tenant_slug = slug
 
-            # Resolve tenant from DB; be resilient during migrations/first boot.
+            # Resolve tenant from DB (do NOT auto-create tenants here).
             from app.models import Tenant
 
             tenant = Tenant.query.filter_by(slug=slug).first()
-            if not tenant:
-                # Auto-create default tenant only (safe back-compat behavior).
-                default_slug = (app.config.get("DEFAULT_TENANT_SLUG") or "default").strip().lower()
-                if slug == default_slug:
-                    tenant = Tenant(slug=default_slug, name="Default")
-                    try:
-                        db.session.add(tenant)
-                        db.session.commit()
-                    except Exception:
-                        try:
-                            db.session.rollback()
-                        except Exception:
-                            pass
-                        tenant = Tenant.query.filter_by(slug=default_slug).first()
 
             g.tenant = tenant
-
-            # Self-serve SaaS convenience (backward-compatible only):
-            # auto-create membership ONLY for the default tenant. Other tenants should use invites.
-            try:
-                from flask_login import current_user as _cu
-                from app.models import TenantMember
-
-                if tenant and _cu and getattr(_cu, "is_authenticated", False):
-                    default_slug = (app.config.get("DEFAULT_TENANT_SLUG") or "default").strip().lower()
-                    if getattr(tenant, "slug", None) != default_slug:
-                        return
-
-                    # Enforce seat limits when auto-creating membership (SaaS mode).
-                    try:
-                        from app.utils.saas_limits import can_add_member
-
-                        existing = TenantMember.query.filter_by(tenant_id=tenant.id, user_id=_cu.id).first()
-                        if not existing and not can_add_member(tenant.id) and not getattr(_cu, "is_admin", False):
-                            try:
-                                flash(_("Seat limit reached for this tenant. Please upgrade your plan."), "error")
-                            except Exception:
-                                pass
-                            return redirect(url_for("billing.billing_home"))
-                    except Exception:
-                        pass
-
-                    membership = TenantMember.query.filter_by(tenant_id=tenant.id, user_id=_cu.id).first()
-                    if not membership:
-                        role = "member"
-                        try:
-                            has_any = TenantMember.query.filter_by(tenant_id=tenant.id).first() is not None
-                            role = "owner" if not has_any else "member"
-                        except Exception:
-                            role = "member"
-                        db.session.add(TenantMember(tenant_id=tenant.id, user_id=_cu.id, role=role))
-                        db.session.commit()
-            except Exception:
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
         except Exception:
             # Never block a request due to tenant context resolution issues.
             try:
@@ -704,6 +652,67 @@ def create_app(config=None):
                 pass
             g.tenant = None
             g.tenant_slug = None
+
+    # In SaaS multi-tenant mode, require:
+    # - a tenant context for tenant-scoped pages
+    # - membership in that tenant (unless global admin)
+    @app.before_request
+    def enforce_tenant_selected_and_member():
+        try:
+            if not (app.config.get("SAAS_MODE") and app.config.get("TENANCY_MODE") == "multi"):
+                return
+
+            # Always allow tenant-agnostic endpoints.
+            allow_prefixes = (
+                "/_health",
+                "/_ready",
+                "/metrics",
+                "/static/",
+                "/webhooks/",
+                "/login",
+                "/logout",
+                "/auth/",
+                "/setup",
+                "/admin",
+                "/settings",
+                "/settings/tenants",
+                "/invite/",  # invite acceptance link
+            )
+            if request.path.startswith(allow_prefixes):
+                return
+
+            from flask_login import current_user as _cu
+
+            tenant = getattr(g, "tenant", None)
+            if not tenant:
+                # If logged in but no tenant in URL, send user to tenant setup/picker.
+                if _cu and getattr(_cu, "is_authenticated", False):
+                    try:
+                        flash(_("Choose or create a tenant to continue."), "info")
+                    except Exception:
+                        pass
+                    return redirect(url_for("setup.tenants_setup"))
+                return
+
+            # If not authenticated, let the view decorators redirect to login.
+            if not (_cu and getattr(_cu, "is_authenticated", False)):
+                return
+
+            # Global admin can access any tenant context (support / system management).
+            if getattr(_cu, "is_admin", False):
+                return
+
+            # Enforce membership so users cannot access other tenants by guessing slugs.
+            from app.models import TenantMember
+
+            if not TenantMember.query.filter_by(tenant_id=tenant.id, user_id=_cu.id).first():
+                try:
+                    flash(_("You do not have access to that tenant."), "error")
+                except Exception:
+                    pass
+                return redirect(url_for("setup.tenants_setup"))
+        except Exception:
+            return
 
     # Block access to non-active tenants (suspended/deleted), but keep tenant switcher accessible.
     @app.before_request

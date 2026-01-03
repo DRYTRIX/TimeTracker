@@ -442,6 +442,19 @@ class Settings(db.Model):
         except Exception:
             pass
 
+        # SaaS multi-tenant safety:
+        # If we're in a request context but no tenant is selected (no /t/<slug>),
+        # never fall back to "first settings row" as it can leak another tenant's settings.
+        try:
+            from flask import has_request_context, current_app
+
+            if tenant_id is None and has_request_context():
+                saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+                if saas_enabled:
+                    return cls()
+        except Exception:
+            pass
+
         try:
             if tenant_id is not None:
                 settings = cls.query.filter_by(tenant_id=tenant_id).first()

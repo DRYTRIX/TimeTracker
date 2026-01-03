@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': _('Setup')}] %}
+
+{{ page_header(
+    icon_class='fas fa-building',
+    title_text=_('Set up your tenant'),
+    subtitle_text=_('Create a workspace or switch to an existing one'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 max-w-4xl">
+  {% if not has_any_tenant %}
+    <div class="mb-4 p-4 rounded border border-primary/30 bg-primary/10 text-sm">
+      <div class="font-semibold">{{ _('First time setup') }}</div>
+      <div class="mt-1 text-text-muted-light dark:text-text-muted-dark">
+        {{ _('No tenants exist yet. Create the first tenant to start using the system.') }}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+    <div>
+      <div class="font-semibold">{{ _('Workspaces') }}</div>
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+        {{ _('In multi-tenant mode, every URL must include a tenant slug.') }}
+      </div>
+    </div>
+    <a href="{{ url_for('settings.create_tenant') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
+      {{ _('Create tenant') }}
+    </a>
+  </div>
+
+  <div class="mt-6">
+    {% if items %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="text-left text-sm text-text-muted-light dark:text-text-muted-dark">
+              <th class="py-2 pr-4">{{ _('Tenant') }}</th>
+              <th class="py-2 pr-4">{{ _('Role') }}</th>
+              <th class="py-2 pr-4">{{ _('Action') }}</th>
+            </tr>
+          </thead>
+          <tbody class="text-sm">
+            {% for it in items %}
+              <tr class="border-t border-gray-200 dark:border-gray-700">
+                <td class="py-3 pr-4">
+                  <div class="font-medium">{{ it.tenant.name if it.tenant.name else it.tenant.slug }}</div>
+                  <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ it.tenant.slug }}</div>
+                </td>
+                <td class="py-3 pr-4">
+                  <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">{{ it.role }}</span>
+                </td>
+                <td class="py-3 pr-4">
+                  <a class="text-primary hover:underline" href="{{ it.switch_url }}">{{ _('Open') }}</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+        {{ _('You are not a member of any tenant yet. Create one to get started, or ask an admin to invite you.') }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
