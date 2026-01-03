@@ -70,15 +70,21 @@ def backup_database(db_type, db_url):
     """Create a comprehensive backup of the current database"""
     print("\n--- Creating Database Backup ---")
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_dir = os.getenv("TT_BACKUP_DIR", "/data/backups")
+    try:
+        os.makedirs(backup_dir, exist_ok=True)
+    except Exception:
+        # Fall back to CWD if /data isn't writable
+        backup_dir = os.getcwd()
     
     if db_type == 'postgresql':
-        backup_file = f"backup_postgresql_{timestamp}.dump"
-        backup_cmd = f'pg_dump --format=custom --dbname="{db_url}" --file={backup_file}'
+        backup_file = os.path.join(backup_dir, f"backup_postgresql_{timestamp}.dump")
+        backup_cmd = ["pg_dump", "--format=custom", f'--dbname={db_url}', f"--file={backup_file}"]
         print(f"PostgreSQL database detected")
-        print(f"Running: {backup_cmd}")
+        print(f"Running: {' '.join(backup_cmd)}")
         
         try:
-            subprocess.run(backup_cmd, shell=True, check=True)
+            subprocess.run(backup_cmd, check=True)
             print(f"✓ Database backed up to: {backup_file}")
             return backup_file
         except subprocess.CalledProcessError as e:
@@ -96,7 +102,7 @@ def backup_database(db_type, db_url):
             db_file = db_url.replace('sqlite:///', '')
         
         if os.path.exists(db_file):
-            backup_file = f"backup_sqlite_{timestamp}.db"
+            backup_file = os.path.join(backup_dir, f"backup_sqlite_{timestamp}.db")
             shutil.copy2(db_file, backup_file)
             print(f"✓ SQLite database backed up to: {backup_file}")
             return backup_file
@@ -323,9 +329,18 @@ def main():
     print("\n⚠️  IMPORTANT: Creating database backup before proceeding...")
     backup_file = backup_database(db_type, db_url)
     if not backup_file:
-        response = input("Failed to create backup. Continue anyway? (y/N): ")
-        if response.lower() != 'y':
-            print("Migration cancelled.")
+        # Never block in non-interactive environments (like Docker startup).
+        continue_on_fail = os.getenv("TT_MIGRATE_CONTINUE_ON_BACKUP_FAILURE", "false").strip().lower() in ("1", "true", "yes")
+        if sys.stdin.isatty() and not continue_on_fail:
+            response = input("Failed to create backup. Continue anyway? (y/N): ")
+            if response.lower() != 'y':
+                print("Migration cancelled.")
+                sys.exit(1)
+        elif continue_on_fail:
+            print("⚠ Continuing without backup (TT_MIGRATE_CONTINUE_ON_BACKUP_FAILURE enabled).")
+        else:
+            print("✗ Backup failed and input is not interactive. Aborting migration.")
+            print("  To force continue, set TT_MIGRATE_CONTINUE_ON_BACKUP_FAILURE=true")
             sys.exit(1)
     
     # Analyze existing schema
