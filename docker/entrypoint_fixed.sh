@@ -24,6 +24,14 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Render deploy optimization:
+# If migrations are handled by Render preDeployCommand, skip the heavy startup migration detection.
+if [[ "${SKIP_STARTUP_MIGRATIONS:-false}" == "true" ]] || [[ "${SKIP_STARTUP_MIGRATIONS:-false}" == "1" ]]; then
+    log "SKIP_STARTUP_MIGRATIONS=true set; skipping startup migration detection."
+    export SKIP_DB_INIT=true
+    exec python /app/start.py
+fi
+
 # Function to wait for database
 wait_for_database() {
     local db_url="$1"
@@ -874,7 +882,7 @@ try:
         FROM information_schema.tables 
         WHERE table_name = 'alembic_version'
         AND table_schema = 'public'
-    \"\"\)
+    \"\"\")
     alembic_table = cursor.fetchone()
     
     conn.close()
@@ -1206,7 +1214,7 @@ try:
         FROM information_schema.tables 
         WHERE table_name = 'alembic_version'
         AND table_schema = 'public'
-    \"\"\)
+    \"\"\")
     alembic_table = cursor.fetchone()
     
     conn.close()

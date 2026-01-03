@@ -70,6 +70,12 @@ services:
       - key: SCHEDULER_ENABLED
         value: "true"
 
+      # Render runs migrations in preDeployCommand; skip in-container migration logic.
+      - key: SKIP_STARTUP_MIGRATIONS
+        value: "true"
+      - key: SKIP_DB_INIT
+        value: "true"
+
       # Redis is optional (used for scaling); keep off unless you add a Redis service.
       - key: REDIS_ENABLED
         value: "false"

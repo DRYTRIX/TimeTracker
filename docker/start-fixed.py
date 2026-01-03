@@ -161,13 +161,15 @@ def main():
         log("Database is not available, exiting...", "ERROR")
         sys.exit(1)
     
-    # Run enhanced database initialization and migration
-    log("Running database initialization...", "INFO")
-    if not run_script('/app/docker/init-database-enhanced.py', 'Database initialization'):
-        log("Database initialization failed, exiting...", "ERROR")
-        sys.exit(1)
-    
-    log("Database initialization completed", "SUCCESS")
+    # Run enhanced database initialization and migration (optional)
+    if (os.getenv("SKIP_DB_INIT", "") or "").strip().lower() in ("1", "true", "yes", "y", "on"):
+        log("SKIP_DB_INIT=true set; skipping database initialization in container startup.", "WARNING")
+    else:
+        log("Running database initialization...", "INFO")
+        if not run_script('/app/docker/init-database-enhanced.py', 'Database initialization'):
+            log("Database initialization failed, exiting...", "ERROR")
+            sys.exit(1)
+        log("Database initialization completed", "SUCCESS")
     
     # Ensure default settings and admin user exist (idempotent)
     # Note: Database initialization is already handled by the migration system above
