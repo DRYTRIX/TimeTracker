@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': 'Billing'}] %}
+
+{{ page_header(
+    icon_class='fas fa-credit-card',
+    title_text='Billing',
+    subtitle_text='Manage your subscription and seats for this tenant',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Tenant') }}</div>
+    <div class="text-xl font-semibold mt-1">{{ tenant.slug }}</div>
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-4">{{ _('Members') }}</div>
+    <div class="text-2xl font-bold">{{ members_count }} / {{ seat_limit }}</div>
+    <div class="mt-4">
+      <a href="{{ url_for('billing.billing_members') }}" class="text-primary hover:underline">
+        {{ _('View members') }}
+      </a>
+    </div>
+  </div>
+
+  <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Current plan') }}</div>
+    <div class="text-xl font-semibold mt-1">
+      {{ (billing.tier if billing else 'basic')|upper }}
+    </div>
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-4">{{ _('Status') }}</div>
+    <div class="text-base font-medium mt-1">
+      {{ billing.status if billing and billing.status else _('not set') }}
+    </div>
+    {% if billing and billing.current_period_end %}
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+        {{ _('Renews/ends') }}: {{ billing.current_period_end.strftime('%Y-%m-%d') }}
+      </div>
+    {% endif %}
+    <form class="mt-4" method="post" action="{{ url_for('billing.billing_portal') }}">
+      <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600">
+        {{ _('Open Billing Portal') }}
+      </button>
+    </form>
+  </div>
+
+  <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Seats') }}</div>
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+      {{ _('Basic is fixed at 1 seat. Team is max 5 seats. Pro has no max (you choose seats).') }}
+    </div>
+    <form class="mt-4 flex gap-2 items-center" method="post" action="{{ url_for('billing.update_seats') }}">
+      <input name="seats" type="number" min="1" value="{{ billing.seat_quantity if billing else 1 }}"
+             class="w-28 px-3 py-2 border rounded bg-white dark:bg-gray-800">
+      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        {{ _('Update') }}
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+  <h2 class="text-lg font-semibold mb-4">{{ _('Choose a plan') }}</h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <div class="text-lg font-semibold">{{ _('Basic') }}</div>
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('5 EUR / month') }}</div>
+      <div class="text-sm mt-2">{{ _('Max 1 user') }}</div>
+      <form method="post" action="{{ url_for('billing.start_checkout') }}" class="mt-4">
+        <input type="hidden" name="tier" value="basic">
+        <input type="hidden" name="seats" value="1">
+        <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 w-full">
+          {{ _('Select Basic') }}
+        </button>
+      </form>
+    </div>
+
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <div class="text-lg font-semibold">{{ _('Team') }}</div>
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('7 EUR / month per user') }}</div>
+      <div class="text-sm mt-2">{{ _('Max 5 users') }}</div>
+      <form method="post" action="{{ url_for('billing.start_checkout') }}" class="mt-4">
+        <input type="hidden" name="tier" value="team">
+        <label class="block text-sm mb-2">{{ _('Seats') }}</label>
+        <input name="seats" type="number" min="1" max="5" value="{{ (billing.seat_quantity if billing and billing.tier=='team' else 1) }}"
+               class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800">
+        <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 w-full mt-3">
+          {{ _('Select Team') }}
+        </button>
+      </form>
+    </div>
+
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <div class="text-lg font-semibold">{{ _('Pro') }}</div>
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('15 EUR / month per user') }}</div>
+      <div class="text-sm mt-2">{{ _('No max users') }}</div>
+      <form method="post" action="{{ url_for('billing.start_checkout') }}" class="mt-4">
+        <input type="hidden" name="tier" value="pro">
+        <label class="block text-sm mb-2">{{ _('Seats') }}</label>
+        <input name="seats" type="number" min="1" value="{{ (billing.seat_quantity if billing and billing.tier=='pro' else 1) }}"
+               class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800">
+        <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 w-full mt-3">
+          {{ _('Select Pro') }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-6">
+    {{ _('Stripe webhook endpoint') }}: <code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">/webhooks/stripe/billing</code>
+  </div>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': 'Billing', 'url': url_for('billing.billing_home')}, {'text': 'Accept invite'}] %}
+
+{{ page_header(
+    icon_class='fas fa-user-plus',
+    title_text='Accept invite',
+    subtitle_text='Join this tenant',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+  <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Tenant') }}</div>
+  <div class="text-xl font-semibold mt-1">{{ tenant.slug }}</div>
+
+  <div class="mt-4 text-sm">
+    {{ _('You were invited as') }} <span class="font-semibold">{{ invite.role }}</span>.
+  </div>
+  <div class="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">
+    {{ _('Invite expires at') }}: {{ invite.expires_at.strftime('%Y-%m-%d %H:%M') if invite.expires_at else '' }} UTC
+  </div>
+
+  <form method="post" class="mt-6">
+    <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600">
+      {{ _('Join tenant') }}
+    </button>
+    <a href="{{ url_for('main.dashboard') }}" class="ml-3 text-text-muted-light dark:text-text-muted-dark hover:underline">
+      {{ _('Cancel') }}
+    </a>
+  </form>
+</div>
+
+{% endblock %}
+

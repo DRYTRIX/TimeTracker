@@ -10,6 +10,7 @@ class Expense(db.Model):
     __tablename__ = "expenses"
 
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=True, index=True)

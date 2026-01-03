@@ -3,7 +3,7 @@ import tempfile
 import logging
 import uuid
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from flask import Flask, request, session, redirect, url_for, flash, jsonify, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -236,6 +236,20 @@ def create_app(config=None):
     if config:
         app.config.update(config)
 
+    # SaaS: path-based tenancy (/t/<slug>/...) without rewriting all routes.
+    # This middleware rewrites PATH_INFO for routing and extends SCRIPT_NAME so url_for()
+    # automatically includes the tenant prefix in generated URLs.
+    try:
+        from app.utils.tenant_path_middleware import TenantPathMiddleware
+
+        app.wsgi_app = TenantPathMiddleware(
+            app.wsgi_app,
+            enabled=bool(app.config.get("SAAS_MODE")) and (app.config.get("TENANCY_MODE") == "multi"),
+            path_prefix=app.config.get("TENANT_PATH_PREFIX", "/t"),
+        )
+    except Exception as e:
+        app.logger.warning(f"Could not enable tenant path middleware: {e}")
+
     # Special handling for SQLite in-memory DB during tests:
     # ensure a single shared connection so objects don't disappear after commit.
     try:
@@ -302,6 +316,18 @@ def create_app(config=None):
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
+
+    # Register tenancy enforcement (automatic tenant filtering + tenant_id assignment).
+    # Do this after db.init_app() so SQLAlchemy Session is configured.
+    try:
+        from app.utils.tenancy import register_tenancy_listeners
+        from app.models import Client, Expense, Invoice, Project, Settings, Task, TimeEntry
+
+        register_tenancy_listeners(
+            tenant_scoped_models=(Client, Project, Task, TimeEntry, Invoice, Expense, Settings),
+        )
+    except Exception as e:
+        logger.warning(f"Could not register tenancy listeners: {e}")
     
     # Initialize audit logging - register event listeners AFTER db.init_app()
     # Flask-SQLAlchemy uses its own session class, so we need to register with it
@@ -356,8 +382,8 @@ def create_app(config=None):
 
     init_mail(app)
 
-    # Initialize and start background scheduler (disabled in tests)
-    if (not app.config.get("TESTING")) and (not scheduler.running):
+    # Initialize and start background scheduler (disabled in tests or when SCHEDULER_ENABLED=false)
+    if (not app.config.get("TESTING")) and app.config.get("SCHEDULER_ENABLED") and (not scheduler.running):
         from app.utils.scheduled_tasks import register_scheduled_tasks
 
         scheduler.start()
@@ -585,6 +611,132 @@ def create_app(config=None):
         except Exception:
             pass
 
+    # Resolve tenant for this request (SaaS multi-tenant mode).
+    # Tenant slug is provided by TenantPathMiddleware via WSGI environ.
+    @app.before_request
+    def resolve_tenant_context():
+        try:
+            # Always set these keys so downstream code can rely on them.
+            g.tenant = None
+            g.tenant_slug = None
+
+            saas_enabled = bool(app.config.get("SAAS_MODE")) and (app.config.get("TENANCY_MODE") == "multi")
+            if not saas_enabled:
+                return
+
+            # Public endpoints that must remain tenant-agnostic
+            public_prefixes = ("/_health", "/_ready", "/metrics", "/webhooks")
+            if request.path.startswith(public_prefixes):
+                return
+
+            slug = (request.environ.get("tt.tenant_slug") or "").strip().lower()
+            if not slug:
+                slug = (app.config.get("DEFAULT_TENANT_SLUG") or "default").strip().lower()
+
+            g.tenant_slug = slug
+
+            # Resolve tenant from DB; be resilient during migrations/first boot.
+            from app.models import Tenant
+
+            tenant = Tenant.query.filter_by(slug=slug).first()
+            if not tenant:
+                # Auto-create default tenant only (safe back-compat behavior).
+                default_slug = (app.config.get("DEFAULT_TENANT_SLUG") or "default").strip().lower()
+                if slug == default_slug:
+                    tenant = Tenant(slug=default_slug, name="Default")
+                    try:
+                        db.session.add(tenant)
+                        db.session.commit()
+                    except Exception:
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
+                        tenant = Tenant.query.filter_by(slug=default_slug).first()
+
+            g.tenant = tenant
+
+            # Self-serve SaaS convenience (backward-compatible only):
+            # auto-create membership ONLY for the default tenant. Other tenants should use invites.
+            try:
+                from flask_login import current_user as _cu
+                from app.models import TenantMember
+
+                if tenant and _cu and getattr(_cu, "is_authenticated", False):
+                    default_slug = (app.config.get("DEFAULT_TENANT_SLUG") or "default").strip().lower()
+                    if getattr(tenant, "slug", None) != default_slug:
+                        return
+
+                    # Enforce seat limits when auto-creating membership (SaaS mode).
+                    try:
+                        from app.utils.saas_limits import can_add_member
+
+                        existing = TenantMember.query.filter_by(tenant_id=tenant.id, user_id=_cu.id).first()
+                        if not existing and not can_add_member(tenant.id) and not getattr(_cu, "is_admin", False):
+                            try:
+                                flash(_("Seat limit reached for this tenant. Please upgrade your plan."), "error")
+                            except Exception:
+                                pass
+                            return redirect(url_for("billing.billing_home"))
+                    except Exception:
+                        pass
+
+                    membership = TenantMember.query.filter_by(tenant_id=tenant.id, user_id=_cu.id).first()
+                    if not membership:
+                        role = "member"
+                        try:
+                            has_any = TenantMember.query.filter_by(tenant_id=tenant.id).first() is not None
+                            role = "owner" if not has_any else "member"
+                        except Exception:
+                            role = "member"
+                        db.session.add(TenantMember(tenant_id=tenant.id, user_id=_cu.id, role=role))
+                        db.session.commit()
+            except Exception:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+        except Exception:
+            # Never block a request due to tenant context resolution issues.
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            g.tenant = None
+            g.tenant_slug = None
+
+    # Block access to non-active tenants (suspended/deleted), but keep tenant switcher accessible.
+    @app.before_request
+    def enforce_tenant_active():
+        try:
+            if not (app.config.get("SAAS_MODE") and app.config.get("TENANCY_MODE") == "multi"):
+                return
+            if request.path.startswith(("/_health", "/_ready", "/metrics", "/static/", "/webhooks/", "/login", "/logout", "/auth/", "/setup")):
+                return
+            # Always allow tenant switcher so users can escape a deleted/suspended tenant context
+            if request.path.startswith("/settings/tenants"):
+                return
+            from flask import g
+            tenant = getattr(g, "tenant", None)
+            if not tenant:
+                return
+            status = (getattr(tenant, "status", None) or "").lower()
+            if status and status != "active":
+                wants_json = (
+                    request.is_json
+                    or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                    or request.accept_mimetypes["application/json"] >= request.accept_mimetypes["text/html"]
+                )
+                if wants_json:
+                    return jsonify(error="tenant_inactive"), 404
+                try:
+                    flash(_("This tenant is not active."), "warning")
+                except Exception:
+                    pass
+                return redirect(url_for("settings.tenants"))
+        except Exception:
+            return
+
     # Start timer for Prometheus metrics
     @app.before_request
     def prom_start_timer():
@@ -633,6 +785,87 @@ def create_app(config=None):
         except Exception:
             pass
         return response
+
+    # SaaS billing gating (optional, off by default)
+    @app.before_request
+    def enforce_billing_if_required():
+        try:
+            if not (app.config.get("SAAS_MODE") and app.config.get("TENANCY_MODE") == "multi"):
+                return
+            if not app.config.get("BILLING_REQUIRE_ACTIVE_SUBSCRIPTION"):
+                return
+
+            # Public endpoints and billing endpoints must remain accessible
+            allow_prefixes = (
+                "/_health",
+                "/_ready",
+                "/metrics",
+                "/static/",
+                "/webhooks/",
+                "/billing",
+                "/settings/tenants",
+                "/login",
+                "/logout",
+                "/auth/",
+                "/setup",
+            )
+            if request.path.startswith(allow_prefixes):
+                return
+
+            from flask import g
+            if not getattr(g, "tenant", None):
+                return
+
+            from app.models import TenantBilling
+
+            billing = TenantBilling.query.filter_by(tenant_id=g.tenant.id).first()
+            status = (billing.status if billing else None) or ""
+            status = str(status).lower()
+            if status in ("active", "trialing"):
+                return
+
+            # Allow access until the end of a paid period (even if status is canceled/past_due)
+            try:
+                if billing and billing.current_period_end and billing.current_period_end > datetime.utcnow():
+                    return
+            except Exception:
+                pass
+
+            # Optional grace window (useful for onboarding/new tenants or failed payments)
+            try:
+                grace_days = int(app.config.get("BILLING_GRACE_DAYS") or 0)
+            except Exception:
+                grace_days = 0
+            if grace_days > 0:
+                try:
+                    now = datetime.utcnow()
+                    start_at = None
+                    if billing and getattr(billing, "updated_at", None):
+                        start_at = billing.updated_at
+                    elif billing and getattr(billing, "created_at", None):
+                        start_at = billing.created_at
+                    else:
+                        start_at = getattr(g.tenant, "created_at", None)
+                    if start_at and (now - start_at) <= timedelta(days=grace_days):
+                        return
+                except Exception:
+                    pass
+
+            # JSON/API callers get a 402; HTML browsers get redirected.
+            wants_json = (
+                request.is_json
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                or request.accept_mimetypes["application/json"] >= request.accept_mimetypes["text/html"]
+            )
+            if wants_json:
+                return jsonify(error="billing_required"), 402
+            try:
+                flash(_("Billing required to access this tenant."), "warning")
+            except Exception:
+                pass
+            return redirect(url_for("billing.billing_required"))
+        except Exception:
+            return
 
     # Configure session
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=int(os.getenv("PERMANENT_SESSION_LIFETIME", 86400)))
@@ -1002,6 +1235,7 @@ def create_app(config=None):
     from app.routes.custom_field_definitions import custom_field_definitions_bp
     from app.routes.custom_reports import custom_reports_bp
     from app.routes.salesman_reports import salesman_reports_bp
+    from app.routes.billing import billing_bp
 
     try:
         from app.routes.audit_logs import audit_logs_bp
@@ -1058,6 +1292,7 @@ def create_app(config=None):
     app.register_blueprint(custom_field_definitions_bp)
     app.register_blueprint(custom_reports_bp)
     app.register_blueprint(salesman_reports_bp)
+    app.register_blueprint(billing_bp)
     # audit_logs_bp is registered above with error handling
 
     # Register integration connectors

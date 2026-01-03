@@ -357,6 +357,52 @@ docker-compose up -d
 
 ### Option 2: Docker with Plain HTTP (Development/Testing)
 
+---
+
+## SaaS (multi-tenant) mode
+
+TimeTracker can run as a single-tenant self-hosted app (default) or as a path-based multi-tenant SaaS.
+
+### Enable SaaS mode
+
+- Set in your `.env`:
+  - `SAAS_MODE=true`
+  - `TENANCY_MODE=multi`
+  - `TENANT_ROUTING=path`
+  - `TENANT_PATH_PREFIX=/t`
+  - `DEFAULT_TENANT_SLUG=default`
+
+Then access the app under a tenant path, for example:
+- `/t/default/`
+
+### Stripe subscriptions (SaaS billing)
+
+Create 3 recurring monthly Prices in Stripe (EUR) and set:
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_BASIC`
+- `STRIPE_PRICE_TEAM`
+- `STRIPE_PRICE_PRO`
+
+Stripe webhook endpoint (configure in Stripe):
+- `/webhooks/stripe/billing`
+
+Optional enforcement:
+- `BILLING_REQUIRE_ACTIVE_SUBSCRIPTION=true` to gate access for unpaid tenants
+- `BILLING_GRACE_DAYS=7` (example) to allow a short grace window for failed payments/onboarding
+
+### Render.com deployment notes (SaaS friendly)
+
+- Create a **Docker Web Service** (this repo includes a `Dockerfile`).
+- The container binds to `0.0.0.0:$PORT` (defaults to `8080`).
+- Health checks:
+  - `GET /_health`
+  - `GET /_ready`
+- Run DB migrations as a **pre-deploy** step:
+  - `flask db upgrade`
+- Background jobs:
+  - set `SCHEDULER_ENABLED=false` on web services if you scale beyond 1 instance, and run schedules in a single worker/cron.
+
 For local development or testing without HTTPS:
 
 ```bash

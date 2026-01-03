@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': 'Billing'}] %}
+
+{{ page_header(
+    icon_class='fas fa-lock',
+    title_text='Billing required',
+    subtitle_text='This tenant requires an active subscription to continue',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+  <p class="text-text-light dark:text-text-dark mb-4">
+    {{ _('Your access is limited until billing is active for this tenant.') }}
+  </p>
+
+  {% if is_tenant_admin %}
+    <div class="flex flex-col sm:flex-row gap-3">
+      <a href="{{ url_for('billing.billing_home') }}" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 text-center">
+        {{ _('Choose a plan') }}
+      </a>
+      <form method="post" action="{{ url_for('billing.billing_portal') }}">
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto">
+          {{ _('Open Billing Portal') }}
+        </button>
+      </form>
+    </div>
+  {% else %}
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+      {{ _('Contact your tenant owner/admin to update billing.') }}
+    </div>
+  {% endif %}
+
+  <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-6">
+    {{ _('If you believe this is a mistake, contact your tenant administrator.') }}
+  </div>
+</div>
+
+{% endblock %}
+

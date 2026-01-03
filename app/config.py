@@ -79,6 +79,10 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/data/uploads")
 
+    # Background jobs / scheduler
+    # IMPORTANT: set SCHEDULER_ENABLED=false on multi-instance web services to avoid duplicate jobs.
+    SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
+
     # CSRF protection
     WTF_CSRF_ENABLED = os.getenv("WTF_CSRF_ENABLED", "true").lower() == "true"
     WTF_CSRF_TIME_LIMIT = int(os.getenv("WTF_CSRF_TIME_LIMIT", 3600))  # Default: 1 hour
@@ -147,6 +151,24 @@ class Config:
         # If no tag provided, create a dev-build identifier if available
         github_run_number = os.getenv("GITHUB_RUN_NUMBER")
         APP_VERSION = f"dev-{github_run_number}" if github_run_number else "3.1.0"
+
+    # SaaS / multi-tenant
+    SAAS_MODE = os.getenv("SAAS_MODE", "false").lower() == "true"
+    TENANCY_MODE = os.getenv("TENANCY_MODE", "single").strip().lower()  # single | multi
+    TENANT_ROUTING = os.getenv("TENANT_ROUTING", "path").strip().lower()  # path (future: subdomain)
+    TENANT_PATH_PREFIX = os.getenv("TENANT_PATH_PREFIX", "/t").strip() or "/t"
+    DEFAULT_TENANT_SLUG = os.getenv("DEFAULT_TENANT_SLUG", "default").strip().lower() or "default"
+
+    # Stripe billing (SaaS subscriptions)
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_PRICE_BASIC = os.getenv("STRIPE_PRICE_BASIC", "")
+    STRIPE_PRICE_TEAM = os.getenv("STRIPE_PRICE_TEAM", "")
+    STRIPE_PRICE_PRO = os.getenv("STRIPE_PRICE_PRO", "")
+
+    # SaaS billing enforcement
+    BILLING_REQUIRE_ACTIVE_SUBSCRIPTION = os.getenv("BILLING_REQUIRE_ACTIVE_SUBSCRIPTION", "false").lower() == "true"
+    BILLING_GRACE_DAYS = int(os.getenv("BILLING_GRACE_DAYS", "0") or "0")
 
 
 class DevelopmentConfig(Config):

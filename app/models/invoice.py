@@ -7,9 +7,13 @@ class Invoice(db.Model):
     """Invoice model for client billing"""
 
     __tablename__ = "invoices"
+    __table_args__ = (
+        db.UniqueConstraint("tenant_id", "invoice_number", name="uq_invoices_tenant_invoice_number"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    invoice_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
+    invoice_number = db.Column(db.String(50), nullable=False, index=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
     client_name = db.Column(db.String(200), nullable=False)
     client_email = db.Column(db.String(200), nullable=True)

@@ -8,8 +8,12 @@ class Settings(db.Model):
     """Settings model for system configuration"""
 
     __tablename__ = "settings"
+    __table_args__ = (
+        db.UniqueConstraint("tenant_id", name="uq_settings_tenant_id"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
     timezone = db.Column(db.String(50), default="Europe/Rome", nullable=False)
     currency = db.Column(db.String(3), default="EUR", nullable=False)
     rounding_minutes = db.Column(db.Integer, default=1, nullable=False)
@@ -412,14 +416,33 @@ class Settings(db.Model):
         }
 
     @classmethod
-    def get_settings(cls):
-        """Get the singleton settings instance, creating it if it doesn't exist.
+    def get_settings(cls, tenant_id=None):
+        """Get the tenant settings instance, creating it if it doesn't exist.
+
+        Backward compatible:
+        - If tenant_id is omitted and we're in a request context, uses g.tenant.id
+        - Otherwise falls back to the default tenant (DEFAULT_TENANT_SLUG)
 
         When creating a new Settings instance, it will be initialized from
         environment variables (.env file) as initial values.
         """
+        # Resolve tenant_id from request context if not provided
         try:
-            settings = cls.query.first()
+            if tenant_id is None:
+                from flask import has_request_context, g
+
+                if has_request_context():
+                    tenant = getattr(g, "tenant", None)
+                    tenant_id = getattr(tenant, "id", None) if tenant is not None else None
+        except Exception:
+            pass
+
+        try:
+            if tenant_id is not None:
+                settings = cls.query.filter_by(tenant_id=tenant_id).first()
+            else:
+                # Fallback for early startup/migrations when tenant table may not exist yet
+                settings = cls.query.first()
             if settings:
                 return settings
         except Exception as e:
@@ -462,8 +485,14 @@ class Settings(db.Model):
                 db.session.rollback()
             except Exception:
                 pass
-            # Return fallback instance with defaults
-            return cls()
+            # Return fallback instance with defaults (non-persisted)
+            s = cls()
+            if tenant_id is not None and hasattr(s, "tenant_id"):
+                try:
+                    s.tenant_id = tenant_id
+                except Exception:
+                    pass
+            return s
 
         # Avoid performing session writes during flush/commit phases.
         # When called from default column factories (e.g., created_at=local_now),
@@ -475,6 +504,8 @@ class Settings(db.Model):
             if not getattr(db.session, "_flushing", False):
                 # Create new settings instance initialized from environment variables
                 settings = cls()
+                if tenant_id is not None and hasattr(settings, "tenant_id"):
+                    settings.tenant_id = tenant_id
                 # Initialize from environment variables (.env file)
                 cls._initialize_from_env(settings)
                 db.session.add(settings)

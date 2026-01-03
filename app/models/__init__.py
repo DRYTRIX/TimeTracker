@@ -84,6 +84,11 @@ from .salesman_email_mapping import SalesmanEmailMapping
 from .issue import Issue
 from .donation_interaction import DonationInteraction
 from .client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
+from .tenant import Tenant
+from .tenant_member import TenantMember
+from .tenant_billing import TenantBilling
+from .stripe_event import StripeEvent
+from .tenant_invite import TenantInvite
 
 __all__ = [
     "User",
@@ -196,4 +201,9 @@ __all__ = [
     "ClientNotification",
     "ClientNotificationPreferences",
     "NotificationType",
+    "Tenant",
+    "TenantMember",
+    "TenantBilling",
+    "StripeEvent",
+    "TenantInvite",
 ]

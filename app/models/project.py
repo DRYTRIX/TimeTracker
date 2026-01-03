@@ -7,8 +7,12 @@ class Project(db.Model):
     """Project model for client projects with billing information"""
 
     __tablename__ = "projects"
+    __table_args__ = (
+        db.UniqueConstraint("tenant_id", "code", name="uq_projects_tenant_code"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
     name = db.Column(db.String(200), nullable=False, index=True)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
     quote_id = db.Column(db.Integer, db.ForeignKey("quotes.id"), nullable=True, index=True)
@@ -17,7 +21,7 @@ class Project(db.Model):
     hourly_rate = db.Column(db.Numeric(9, 2), nullable=True)
     billing_ref = db.Column(db.String(100), nullable=True)
     # Short project code for compact display (e.g., on Kanban cards)
-    code = db.Column(db.String(20), nullable=True, unique=True, index=True)
+    code = db.Column(db.String(20), nullable=True, index=True)
     status = db.Column(db.String(20), default="active", nullable=False)  # 'active', 'inactive', or 'archived'
     # Estimates & budgets
     estimated_hours = db.Column(db.Float, nullable=True)

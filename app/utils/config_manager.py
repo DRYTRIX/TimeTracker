@@ -31,6 +31,7 @@ class ConfigManager:
         """
         # Check Settings model first (WebUI changes have highest priority)
         try:
+            # Tenant-aware: Settings.get_settings() will use g.tenant in request context.
             settings = Settings.get_settings()
             if settings and hasattr(settings, key):
                 value = getattr(settings, key)

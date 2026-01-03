@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': 'Settings'}] %}
+
+{{ page_header(
+    icon_class='fas fa-sliders-h',
+    title_text='Settings',
+    subtitle_text='Your preferences and tenant settings',
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <a href="{{ url_for('settings.keyboard_shortcuts') }}" class="bg-card-light dark:bg-card-dark p-5 rounded-lg shadow hover:shadow-md transition">
+    <div class="font-semibold"><i class="fas fa-keyboard mr-2"></i>{{ _('Keyboard shortcuts') }}</div>
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Learn productivity shortcuts') }}</div>
+  </a>
+
+  {% if config.get('SAAS_MODE') and config.get('TENANCY_MODE') == 'multi' %}
+    <a href="{{ url_for('settings.tenants') }}" class="bg-card-light dark:bg-card-dark p-5 rounded-lg shadow hover:shadow-md transition">
+      <div class="font-semibold"><i class="fas fa-building mr-2"></i>{{ _('Tenants') }}</div>
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Switch between workspaces') }}</div>
+    </a>
+
+    <a href="{{ url_for('billing.billing_home') }}" class="bg-card-light dark:bg-card-dark p-5 rounded-lg shadow hover:shadow-md transition">
+      <div class="font-semibold"><i class="fas fa-credit-card mr-2"></i>{{ _('Billing') }}</div>
+      <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Manage subscription and seats') }}</div>
+    </a>
+  {% endif %}
+</div>
+
+{% endblock %}
+

@@ -11,9 +11,14 @@ class Client(db.Model):
     """Client model for managing client information and rates"""
 
     __tablename__ = "clients"
+    __table_args__ = (
+        db.UniqueConstraint("tenant_id", "name", name="uq_clients_tenant_name"),
+        db.UniqueConstraint("tenant_id", "portal_username", name="uq_clients_tenant_portal_username"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False, unique=True, index=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
+    name = db.Column(db.String(200), nullable=False, index=True)
     description = db.Column(db.Text, nullable=True)
     contact_person = db.Column(db.String(200), nullable=True)
     email = db.Column(db.String(200), nullable=True)
@@ -28,7 +33,7 @@ class Client(db.Model):
 
     # Client portal settings
     portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
-    portal_username = db.Column(db.String(80), unique=True, nullable=True, index=True)  # Portal login username
+    portal_username = db.Column(db.String(80), nullable=True, index=True)  # Portal login username
     portal_password_hash = db.Column(db.String(255), nullable=True)  # Hashed password for portal access
     password_setup_token = db.Column(db.String(100), nullable=True, index=True)  # Token for password setup/reset
     password_setup_token_expires = db.Column(db.DateTime, nullable=True)  # Token expiration time

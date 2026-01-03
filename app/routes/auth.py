@@ -104,6 +104,25 @@ def login():
                 # Check if self-registration is allowed (use ConfigManager to respect database settings)
                 allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                 if allow_self_register:
+                    # SaaS seat enforcement: block self-register if tenant is full.
+                    try:
+                        from flask import g
+                        from app.utils.saas_limits import can_add_member
+
+                        saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (
+                            current_app.config.get("TENANCY_MODE") == "multi"
+                        )
+                        if saas_enabled and getattr(g, "tenant", None) and not can_add_member(g.tenant.id):
+                            flash(_("Seat limit reached for this tenant. Please upgrade your plan."), "error")
+                            return render_template(
+                                "auth/login.html",
+                                allow_self_register=allow_self_register,
+                                auth_method=auth_method,
+                                requires_password=requires_password,
+                            )
+                    except Exception:
+                        pass
+
                     # If password auth is required, validate password during self-registration
                     if requires_password:
                         if not password:
@@ -150,6 +169,24 @@ def login():
                             requires_password=requires_password,
                         )
                     current_app.logger.info("Created new user '%s'", username)
+
+                    # SaaS: create tenant membership explicitly for the current tenant.
+                    try:
+                        from flask import g
+                        from app.models import TenantMember
+
+                        saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (
+                            current_app.config.get("TENANCY_MODE") == "multi"
+                        )
+                        if saas_enabled and getattr(g, "tenant", None):
+                            if not TenantMember.query.filter_by(tenant_id=g.tenant.id, user_id=user.id).first():
+                                db.session.add(TenantMember(tenant_id=g.tenant.id, user_id=user.id, role="member"))
+                                db.session.commit()
+                    except Exception:
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
 
                     # Track onboarding started for new user
                     track_onboarding_started(

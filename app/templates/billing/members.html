@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': 'Billing', 'url': url_for('billing.billing_home')}, {'text': 'Members'}] %}
+
+{{ page_header(
+    icon_class='fas fa-users',
+    title_text='Tenant members',
+    subtitle_text='Users consuming seats in this tenant',
+    breadcrumbs=breadcrumbs
+) }}
+
+{% if current_member_role == 'owner' and transfer_candidates %}
+  <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-2">{{ _('Transfer ownership') }}</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+      {{ _('Make another member the owner. You will become an admin.') }}
+    </p>
+    <form method="post" action="{{ url_for('billing.transfer_ownership') }}" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="w-full sm:w-auto">
+        <label class="block text-sm mb-1">{{ _('New owner') }}</label>
+        <select name="new_owner_member_id" class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800">
+          {% for c in transfer_candidates %}
+            <option value="{{ c.member_id }}">{{ c.label }} ({{ c.role }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600" onclick="return confirm('{{ _('Transfer ownership?') }}')">
+        {{ _('Transfer') }}
+      </button>
+    </form>
+  </div>
+{% endif %}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 mb-6">
+  <h2 class="text-lg font-semibold mb-4">{{ _('Invite a member') }}</h2>
+  <form method="post" action="{{ url_for('billing.create_invite') }}" class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="block text-sm mb-1">{{ _('Email') }}</label>
+      <input name="email" type="email" required class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800" />
+    </div>
+    <div>
+      <label class="block text-sm mb-1">{{ _('Role') }}</label>
+      <select name="role" class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800">
+        <option value="member">{{ _('Member') }}</option>
+        <option value="admin">{{ _('Admin') }}</option>
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-600 w-full">
+        {{ _('Create invite') }}
+      </button>
+    </div>
+  </form>
+  <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-3">
+    {{ _('Invites are shared as links for now (email sending can be added later).') }}
+  </p>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+  <div class="overflow-x-auto">
+    <table class="min-w-full">
+      <thead>
+        <tr class="text-left text-sm text-text-muted-light dark:text-text-muted-dark">
+          <th class="py-2 pr-4">{{ _('User') }}</th>
+          <th class="py-2 pr-4">{{ _('Role') }}</th>
+          <th class="py-2 pr-4">{{ _('Added') }}</th>
+          <th class="py-2 pr-4">{{ _('Actions') }}</th>
+        </tr>
+      </thead>
+      <tbody class="text-sm">
+        {% for m in members %}
+          {% set is_self = (current_user_id is not none and m.user_id == current_user_id) %}
+          {% set is_last_owner = (m.role == 'owner' and (owners_count|int) <= 1) %}
+          <tr class="border-t border-gray-200 dark:border-gray-700">
+            <td class="py-3 pr-4">
+              <div class="font-medium">{{ m.user.username if m.user else ('user_id=' ~ m.user_id) }}</div>
+              {% if m.user and m.user.email %}
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ m.user.email }}</div>
+              {% endif %}
+              {% if is_self %}
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('This is you') }}</div>
+              {% endif %}
+              {% if is_last_owner %}
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Last owner (cannot be removed/demoted)') }}</div>
+              {% endif %}
+            </td>
+            <td class="py-3 pr-4">
+              <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">{{ m.role }}</span>
+            </td>
+            <td class="py-3 pr-4">
+              {{ m.created_at.strftime('%Y-%m-%d') if m.created_at else '' }}
+            </td>
+            <td class="py-3 pr-4">
+              <div class="flex flex-col sm:flex-row gap-2">
+                <form method="post" action="{{ url_for('billing.update_member_role', member_id=m.id) }}" class="flex gap-2 items-center">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="role" class="px-2 py-1 border rounded bg-white dark:bg-gray-800" {% if is_self or is_last_owner %}disabled{% endif %}>
+                    <option value="owner" {% if m.role=='owner' %}selected{% endif %}>owner</option>
+                    <option value="admin" {% if m.role=='admin' %}selected{% endif %}>admin</option>
+                    <option value="member" {% if m.role=='member' %}selected{% endif %}>member</option>
+                  </select>
+                  <button type="submit" class="text-primary hover:underline {% if is_self or is_last_owner %}opacity-50 cursor-not-allowed{% endif %}" {% if is_self or is_last_owner %}disabled{% endif %}>{{ _('Save') }}</button>
+                </form>
+                <form method="post" action="{{ url_for('billing.remove_member', member_id=m.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="text-red-600 hover:underline {% if is_self or is_last_owner %}opacity-50 cursor-not-allowed{% endif %}" {% if is_self or is_last_owner %}disabled{% endif %}>{{ _('Remove') }}</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 mt-6">
+  <h2 class="text-lg font-semibold mb-4">{{ _('Invites') }}</h2>
+  {% if invites %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead>
+          <tr class="text-left text-sm text-text-muted-light dark:text-text-muted-dark">
+            <th class="py-2 pr-4">{{ _('Email') }}</th>
+            <th class="py-2 pr-4">{{ _('Role') }}</th>
+            <th class="py-2 pr-4">{{ _('Status') }}</th>
+            <th class="py-2 pr-4">{{ _('Link') }}</th>
+            <th class="py-2 pr-4">{{ _('Actions') }}</th>
+          </tr>
+        </thead>
+        <tbody class="text-sm">
+          {% for inv in invites %}
+            <tr class="border-t border-gray-200 dark:border-gray-700">
+              <td class="py-3 pr-4">{{ inv.email }}</td>
+              <td class="py-3 pr-4"><span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">{{ inv.role }}</span></td>
+              <td class="py-3 pr-4">
+                {% if inv.revoked_at %}
+                  {{ _('revoked') }}
+                {% elif inv.accepted_at %}
+                  {{ _('accepted') }}
+                {% elif inv.is_expired %}
+                  {{ _('expired') }}
+                {% else %}
+                  {{ _('active') }}
+                {% endif %}
+              </td>
+              <td class="py-3 pr-4">
+                {% if inv.is_active %}
+                  <a class="text-primary hover:underline" href="{{ url_for('billing.accept_invite', token=inv.token, _external=True) }}">
+                    {{ _('Invite link') }}
+                  </a>
+                {% else %}
+                  <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                {% endif %}
+              </td>
+              <td class="py-3 pr-4">
+                {% if inv.is_active %}
+                  <form method="post" action="{{ url_for('billing.revoke_invite', invite_id=inv.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="text-red-600 hover:underline">{{ _('Revoke') }}</button>
+                  </form>
+                {% else %}
+                  <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No invites yet.') }}</div>
+  {% endif %}
+</div>
+
+{% endblock %}
+

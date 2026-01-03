@@ -190,9 +190,11 @@ def main():
     log("Starting application server", "INFO")
     log("=" * 60, "INFO")
     # Start gunicorn with access logs
+    port = os.getenv("PORT", "8080")
+    bind = f"0.0.0.0:{port}"
     os.execv('/usr/local/bin/gunicorn', [
         'gunicorn',
-        '--bind', '0.0.0.0:8080',
+        '--bind', bind,
         '--worker-class', 'eventlet',
         '--workers', '1',
         '--timeout', '120',

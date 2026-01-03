@@ -192,6 +192,19 @@ def create_user():
             all_roles = Role.query.order_by(Role.name).all()
             return render_template("admin/user_form.html", user=None, all_roles=all_roles)
 
+        # SaaS seat enforcement: block creating users if tenant is full (tenant-scoped SaaS mode).
+        try:
+            from flask import g
+            from app.utils.saas_limits import can_add_member
+
+            saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+            if saas_enabled and getattr(g, "tenant", None) and not can_add_member(g.tenant.id):
+                flash(_("Seat limit reached for this tenant. Please upgrade your plan."), "error")
+                all_roles = Role.query.order_by(Role.name).all()
+                return render_template("admin/user_form.html", user=None, all_roles=all_roles)
+        except Exception:
+            pass
+
         # Get the Role object from the database
         role_obj = Role.query.filter_by(name=role_name).first()
         if not role_obj:
@@ -219,6 +232,22 @@ def create_user():
             flash(_("Could not create user due to a database error. Please check server logs."), "error")
             all_roles = Role.query.order_by(Role.name).all()
             return render_template("admin/user_form.html", user=None, all_roles=all_roles)
+
+        # SaaS: add the new user to the current tenant as a member.
+        try:
+            from flask import g
+            from app.models import TenantMember
+
+            saas_enabled = bool(current_app.config.get("SAAS_MODE")) and (current_app.config.get("TENANCY_MODE") == "multi")
+            if saas_enabled and getattr(g, "tenant", None):
+                if not TenantMember.query.filter_by(tenant_id=g.tenant.id, user_id=user.id).first():
+                    db.session.add(TenantMember(tenant_id=g.tenant.id, user_id=user.id, role="member"))
+                    db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
         flash(_('User "%(username)s" created successfully', username=username), "success")
         return redirect(url_for("admin.list_users"))

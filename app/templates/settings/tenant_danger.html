@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': 'Settings', 'url': url_for('settings.index')}, {'text': 'Tenants', 'url': url_for('settings.tenants')}, {'text': tenant.slug}] %}
+
+{{ page_header(
+    icon_class='fas fa-exclamation-triangle',
+    title_text=_('Danger zone'),
+    subtitle_text=_('Destructive actions for this tenant'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 max-w-2xl">
+  <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Tenant') }}</div>
+  <div class="text-xl font-semibold mt-1">{{ tenant.name }} <span class="text-sm text-text-muted-light dark:text-text-muted-dark">({{ tenant.slug }})</span></div>
+  <div class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+    {{ _('Status') }}: <span class="font-semibold">{{ tenant.status }}</span>
+  </div>
+
+  <div class="mt-4 text-sm">
+    <a class="text-primary hover:underline" href="{{ billing_url }}">{{ _('Open billing for this tenant') }}</a>
+  </div>
+
+  <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+    <h2 class="text-lg font-semibold">{{ _('Suspend / Reactivate') }}</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+      {{ _('Suspended tenants cannot be accessed. Reactivate to restore access.') }}
+    </p>
+
+    {% if tenant.status == 'active' %}
+      <form method="post" action="{{ url_for('settings.suspend_tenant', tenant_id=tenant.id) }}" class="mt-4 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+          <label class="block text-sm mb-1">{{ _('Type the tenant slug to confirm suspension') }}</label>
+          <input name="confirm_slug" type="text" required class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800" />
+        </div>
+        <button type="submit" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700" onclick="return confirm('{{ _('Suspend this tenant?') }}')">
+          {{ _('Suspend tenant') }}
+        </button>
+      </form>
+    {% elif tenant.status == 'suspended' %}
+      <form method="post" action="{{ url_for('settings.reactivate_tenant', tenant_id=tenant.id) }}" class="mt-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" onclick="return confirm('{{ _('Reactivate this tenant?') }}')">
+          {{ _('Reactivate tenant') }}
+        </button>
+      </form>
+    {% else %}
+      <div class="mt-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+        {{ _('This tenant is deleted.') }}
+      </div>
+      {% if is_global_admin %}
+        <form method="post" action="{{ url_for('settings.restore_tenant', tenant_id=tenant.id) }}" class="mt-4 space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div>
+            <label class="block text-sm mb-1">{{ _('Type the tenant slug to confirm restore') }}</label>
+            <input name="confirm_slug" type="text" required class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800" />
+          </div>
+          <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" onclick="return confirm('{{ _('Restore this tenant?') }}')">
+            {{ _('Restore tenant') }}
+          </button>
+        </form>
+      {% endif %}
+    {% endif %}
+
+    <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6"></div>
+
+    <h2 class="text-lg font-semibold text-red-700 dark:text-red-400">{{ _('Delete tenant') }}</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+      {{ _('This will disable access to the tenant. Data is retained in the database, but the tenant will be treated as deleted.') }}
+    </p>
+
+    {% if billing and billing.current_period_end %}
+      <div class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark">
+        {{ _('Current period end') }}: {{ billing.current_period_end.strftime('%Y-%m-%d %H:%M') }} UTC
+      </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('settings.delete_tenant', tenant_id=tenant.id) }}" class="mt-5 space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm mb-1">{{ _('Type the tenant slug to confirm') }}</label>
+        <input name="confirm_slug" type="text" required class="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800" />
+      </div>
+      <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" onclick="return confirm('{{ _('Delete this tenant? This cannot be undone.') }}')">
+        {{ _('Delete tenant') }}
+      </button>
+      <a href="{{ url_for('settings.tenants') }}" class="ml-3 text-text-muted-light dark:text-text-muted-dark hover:underline">
+        {{ _('Cancel') }}
+      </a>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
