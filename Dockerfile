@@ -9,7 +9,8 @@ COPY . .
 RUN npm run build:docker
 
 # --- Stage 2: Python Application ---
-FROM python:3.11-slim-bullseye
+# Use bookworm for newer packages and more stable mirrors.
+FROM python:3.11-slim-bookworm
 
 # Build-time version argument with safe default
 ARG APP_VERSION=dev-0
@@ -22,40 +23,38 @@ ENV FLASK_ENV=production
 ENV APP_VERSION=${APP_VERSION}
 ENV TZ=Europe/Rome
 
-# Install all system dependencies in a single layer
+# Install system dependencies (with retries for flaky networks on CI/Render).
+# Keep this list lean to reduce apt downloads and improve build reliability.
+ARG APT_RETRIES=5
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-    # Core utilities
-    curl \
-    tzdata \
-    bash \
-    dos2unix \
-    gosu \
-    # Network tools for debugging
-    iproute2 \
-    net-tools \
-    iputils-ping \
-    dnsutils \
-    # WeasyPrint dependencies
-    libgdk-pixbuf2.0-0 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libpangocairo-1.0-0 \
-    libffi-dev \
-    shared-mime-info \
-    # Fonts
-    fonts-liberation \
-    fonts-dejavu-core \
-    # PostgreSQL client dependencies
-    gnupg \
-    wget \
-    lsb-release \
-    && sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' \
-    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-16 \
-    && rm -rf /var/lib/apt/lists/*
+    set -eux; \
+    export DEBIAN_FRONTEND=noninteractive; \
+    for i in $(seq 1 "$APT_RETRIES"); do \
+      apt-get update -o Acquire::Retries=3 && break || (echo "apt-get update failed (attempt $i/$APT_RETRIES)"; sleep 3); \
+    done; \
+    for i in $(seq 1 "$APT_RETRIES"); do \
+      apt-get install -y --no-install-recommends \
+        curl \
+        tzdata \
+        bash \
+        dos2unix \
+        gosu \
+        # WeasyPrint runtime deps
+        libgdk-pixbuf-2.0-0 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libpangocairo-1.0-0 \
+        libffi-dev \
+        shared-mime-info \
+        # Fonts
+        fonts-liberation \
+        fonts-dejavu-core \
+        # Postgres client tools (pg_dump/psql for backups/debug)
+        postgresql-client \
+      && break || (echo "apt-get install failed (attempt $i/$APT_RETRIES)"; sleep 5); \
+    done; \
+    rm -rf /var/lib/apt/lists/*
 
 # Set work directory
 WORKDIR /app
