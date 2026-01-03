@@ -1,0 +1,66 @@
+services:
+  - type: web
+    name: timetracker
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /_health
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    preDeployCommand: flask db upgrade
+    disk:
+      name: timetracker-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      # Core
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: timetracker-db
+          property: connectionString
+
+      # SaaS / tenancy (path-based)
+      - key: SAAS_MODE
+        value: "true"
+      - key: TENANCY_MODE
+        value: multi
+      - key: TENANT_ROUTING
+        value: path
+      - key: TENANT_PATH_PREFIX
+        value: /t
+      - key: DEFAULT_TENANT_SLUG
+        value: default
+
+      # Billing enforcement (optional; enable when ready)
+      - key: BILLING_REQUIRE_ACTIVE_SUBSCRIPTION
+        value: "false"
+      - key: BILLING_GRACE_DAYS
+        value: "0"
+
+      # Background jobs
+      # Keep enabled for single instance; set false if you scale web instances > 1.
+      - key: SCHEDULER_ENABLED
+        value: "true"
+
+      # Uploads/logs (uses the /data disk)
+      - key: UPLOAD_FOLDER
+        value: /data/uploads
+      - key: LOG_FILE
+        value: /data/logs/timetracker.log
+
+      # Redis is optional in early SaaS; keep disabled unless you add a Redis service.
+      - key: REDIS_ENABLED
+        value: "false"
+      - key: RATELIMIT_STORAGE_URI
+        value: memory://
+
+databases:
+  - name: timetracker-db
+    plan: starter
+    region: frankfurt
