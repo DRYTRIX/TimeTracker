@@ -93,6 +93,10 @@ RUN mkdir -p \
 # Copy the startup script
 COPY --chown=timetracker:timetracker docker/start-fixed.py /app/start.py
 
+# Precompile translations at build time for faster startup (no runtime pybabel calls).
+# If Babel isn't available for some reason, don't fail the image build.
+RUN pybabel compile -d /app/translations >/dev/null 2>&1 || true
+
 # Fix line endings and set permissions in a single layer
 RUN find /app/docker -name "*.sh" -o -name "*.py" | xargs dos2unix 2>/dev/null || true \
     && dos2unix /app/start.py /scripts/generate-certs.sh 2>/dev/null || true \

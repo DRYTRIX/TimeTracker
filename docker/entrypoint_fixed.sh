@@ -1,18 +1,28 @@
 #!/bin/bash
-# TimeTracker Docker Entrypoint with Automatic Migration Detection
-# This script automatically detects database state and chooses the correct migration strategy
-
-# Don't exit on errors - let the script continue and show what's happening
-# set -e
+# Minimal TimeTracker entrypoint.
+#
+# Startup responsibilities (DB wait/migrations/seeding) are handled by /app/start.py.
+# Keeping this entrypoint tiny avoids duplicated work and reduces cold-start time.
+set -Eeuo pipefail
 
 echo "=== TimeTracker Docker Container Starting ==="
 echo "Timestamp: $(date)"
 echo "Container ID: $(hostname)"
 echo "Python version: $(python --version 2>/dev/null || echo 'Python not available')"
-echo "Flask version: $(flask --version 2>/dev/null || echo 'Flask CLI not available')"
 echo "Current directory: $(pwd)"
 echo "User: $(whoami)"
 echo
+
+# Best-effort: ensure writable dirs exist (container runs as non-root).
+mkdir -p /data /app/logs 2>/dev/null || true
+if [[ ! -w "/data" ]]; then
+  echo "[WARN] /data is not writable for $(whoami); persistence/uploads may fail."
+fi
+
+exec "$@"
+
+# Everything below is disabled legacy logic kept only for reference.
+: <<'DISABLED_LEGACY_ENTRYPOINT'
 
 # Function to log messages with timestamp
 log() {
@@ -1138,75 +1148,128 @@ verify_database_integrity() {
         # Test basic database operations
         if [[ "$db_url" == postgresql* ]]; then
             log "Checking PostgreSQL database integrity..."
-            if python -c "
+            if python3 - "$db_url" << PYTHON_SCRIPT
 import psycopg2
+import sys
+from urllib.parse import urlparse
 try:
     # Parse connection string to remove +psycopg2 if present
-    conn_str = '$db_url'.replace('+psycopg2://', '://')
-    conn = psycopg2.connect(conn_str)
+    db_url = sys.argv[1] if len(sys.argv) > 1 else ''
+    if not db_url:
+        print('Error: No database URL provided')
+        sys.exit(1)
+    
+    # Parse URL properly
+    clean_url = db_url.replace('+psycopg2://', '://')
+    parsed = urlparse(clean_url)
+    
+    # Extract connection parameters explicitly to avoid Unix socket fallback
+    host = parsed.hostname or 'db'
+    port = parsed.port or 5432
+    database = parsed.path.lstrip('/') or 'timetracker'
+    user = parsed.username or 'timetracker'
+    password = parsed.password or 'timetracker'
+    
+    # Use explicit connection parameters to force TCP/IP connection
+    conn = psycopg2.connect(
+        host=host,
+        port=port,
+        database=database,
+        user=user,
+        password=password,
+        connect_timeout=5
+    )
     cursor = conn.cursor()
     
     # Check for key tables that should exist after migration
-    cursor.execute(\"\"\"
+    cursor.execute("""
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_name IN ('clients', 'users', 'projects', 'tasks', 'time_entries', 'settings', 'invoices', 'invoice_items')
         AND table_schema = 'public'
         ORDER BY table_name
-    \"\"\")
+    """)
     key_tables = [row[0] for row in cursor.fetchall()]
     
     # Also check if alembic_version table exists
-    cursor.execute(\"\"\"
+    cursor.execute("""
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_name = 'alembic_version'
         AND table_schema = 'public'
-    \"\"\")
+    """)
     alembic_table = cursor.fetchone()
     
     conn.close()
     
     print(f'Found tables: {key_tables}')
-    print(f'Alembic version table: {alembic_table[0] if alembic_table else \"missing\"}')
+    print(f'Alembic version table: {alembic_table[0] if alembic_table else "missing"}')
     
     # Require at least the core tables and alembic_version
     if len(key_tables) >= 5 and alembic_table:
-        exit(0)
+        sys.exit(0)
     else:
         print(f'Expected at least 5 core tables, found {len(key_tables)}')
         print(f'Expected alembic_version table: {bool(alembic_table)}')
-        exit(1)
+        sys.exit(1)
 except Exception as e:
     print(f'Error during integrity check: {e}')
-    exit(1)
-"; then
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+PYTHON_SCRIPT
+then
                 log "✓ Database integrity verified (PostgreSQL via Python)"
                 return 0
             else
                 log "✗ Database integrity check failed (PostgreSQL)"
                 log "Error details:"
-                python -c "
+                python3 - "$db_url" << PYTHON_SCRIPT 2>&1 | head -20
 import psycopg2
+import sys
+from urllib.parse import urlparse
 try:
-    conn_str = '$db_url'.replace('+psycopg2://', '://')
-    conn = psycopg2.connect(conn_str)
+    db_url = sys.argv[1] if len(sys.argv) > 1 else ''
+    if not db_url:
+        print('Error: No database URL provided')
+        sys.exit(1)
+    
+    # Parse URL properly
+    clean_url = db_url.replace('+psycopg2://', '://')
+    parsed = urlparse(clean_url)
+    
+    # Extract connection parameters explicitly to avoid Unix socket fallback
+    host = parsed.hostname or 'db'
+    port = parsed.port or 5432
+    database = parsed.path.lstrip('/') or 'timetracker'
+    user = parsed.username or 'timetracker'
+    password = parsed.password or 'timetracker'
+    
+    # Use explicit connection parameters to force TCP/IP connection
+    conn = psycopg2.connect(
+        host=host,
+        port=port,
+        database=database,
+        user=user,
+        password=password,
+        connect_timeout=5
+    )
     cursor = conn.cursor()
     
-    cursor.execute(\"\"\"
+    cursor.execute("""
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public'
         ORDER BY table_name
-    \"\"\")
+    """)
     all_tables = [row[0] for row in cursor.fetchall()]
     
-    cursor.execute(\"\"\"
+    cursor.execute("""
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_name = 'alembic_version'
         AND table_schema = 'public'
-    \"\"\)
+    """)
     alembic_table = cursor.fetchone()
     
     conn.close()
@@ -1215,7 +1278,9 @@ try:
     print(f'Alembic version table exists: {bool(alembic_table)}')
 except Exception as e:
     print(f'Error getting table list: {e}')
-" 2>&1 | head -20
+    import traceback
+    traceback.print_exc()
+PYTHON_SCRIPT
                 
                 if [[ $attempt -lt $max_attempts ]]; then
                     log "Waiting 3 seconds before retry..."
@@ -1378,3 +1443,4 @@ main() {
 
 # Run main function with all arguments
 main "$@"
+DISABLED_LEGACY_ENTRYPOINT
