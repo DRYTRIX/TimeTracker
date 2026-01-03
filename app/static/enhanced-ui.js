@@ -789,7 +789,14 @@ class FilterManager {
             }
             // Optionally show an error message
             if (window.toastManager) {
-                window.toastManager.show('Failed to filter results. Please try again.', 'error');
+                if (typeof window.toastManager.error === 'function') {
+                    window.toastManager.error('Failed to filter results. Please try again.');
+                } else if (typeof window.showToast === 'function') {
+                    window.showToast('Failed to filter results. Please try again.', 'error');
+                } else if (typeof window.toastManager.show === 'function') {
+                    // Last resort: try the modern options-object shape
+                    window.toastManager.show({ message: 'Failed to filter results. Please try again.', type: 'error' });
+                }
             }
         })
         .finally(() => {
@@ -1327,7 +1334,11 @@ class DragDropManager {
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize global managers
-    window.toastManager = new ToastManager();
+    // Do not overwrite the modern toast system (toast-notifications.js).
+    // Only provide this legacy ToastManager if no modern manager is present.
+    if (!window.toastManager || typeof window.toastManager.dismiss !== 'function') {
+        window.toastManager = new ToastManager();
+    }
     window.undoManager = new UndoManager();
     window.recentlyViewed = new RecentlyViewedTracker();
     window.favoritesManager = new FavoritesManager();
