@@ -268,7 +268,9 @@ def view_task(task_id):
             joinedload(Comment.author),  # Eagerly load author for all comments
             # Load replies with their authors - selectinload loads all direct replies in one query
             # This prevents N+1 queries when accessing comment.replies in the template
-            selectinload(Comment.replies).joinedload(Comment.author)
+            selectinload(Comment.replies).joinedload(Comment.author),
+            # Eagerly load attachments to prevent N+1 queries
+            selectinload(Comment.attachments)
         )
         .order_by(Comment.created_at.asc())
         .all()
