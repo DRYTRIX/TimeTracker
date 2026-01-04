@@ -16,6 +16,7 @@ from app.models import (
     SupplierStockItem,
     PurchaseOrder,
     PurchaseOrderItem,
+    StockLot,
 )
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -257,6 +258,55 @@ def view_stock_item(item_id):
     # Get stock levels across all warehouses
     stock_levels = WarehouseStock.query.filter_by(stock_item_id=item_id).all()
 
+    # Get stock lots grouped by warehouse (for devaluation breakdown)
+    stock_lots_by_warehouse = {}
+    if item.is_trackable:
+        # Join with Warehouse to get warehouse information
+        lots_query = (
+            db.session.query(StockLot, Warehouse)
+            .join(Warehouse, StockLot.warehouse_id == Warehouse.id)
+            .filter(StockLot.stock_item_id == item_id)
+            .filter(StockLot.quantity_on_hand > 0)
+            .order_by(StockLot.warehouse_id, StockLot.created_at)
+            .all()
+        )
+        
+        default_cost = Decimal(str(item.default_cost)) if item.default_cost else Decimal("0")
+        
+        for lot, warehouse in lots_query:
+            warehouse_id = lot.warehouse_id
+            if warehouse_id not in stock_lots_by_warehouse:
+                stock_lots_by_warehouse[warehouse_id] = {
+                    "warehouse": warehouse,
+                    "lots": [],
+                    "total_quantity": float(0)
+                }
+            
+            # Calculate devaluation percentage
+            lot_cost = Decimal(str(lot.unit_cost or 0))
+            devaluation_percentage = None
+            if default_cost > 0:
+                # Calculate percentage: (1 - (lot_cost / default_cost)) * 100
+                # Positive means devaluation, negative means appreciation
+                devaluation_percentage = float((Decimal("1") - (lot_cost / default_cost)) * Decimal("100"))
+                # Round to 2 decimal places
+                devaluation_percentage = round(devaluation_percentage, 2)
+            
+            # Determine if lot is devalued (either marked as devalued or has positive devaluation %)
+            is_devalued = lot.lot_type == "devalued" or (devaluation_percentage is not None and devaluation_percentage > 0)
+            
+            quantity = Decimal(str(lot.quantity_on_hand or 0))
+            stock_lots_by_warehouse[warehouse_id]["total_quantity"] += float(quantity)
+            
+            stock_lots_by_warehouse[warehouse_id]["lots"].append({
+                "lot": lot,
+                "quantity": float(quantity),
+                "unit_cost": float(lot_cost),
+                "lot_type": lot.lot_type,
+                "devaluation_percentage": devaluation_percentage,
+                "is_devalued": is_devalued,
+            })
+
     # Get recent movements (last 20)
     recent_movements = (
         StockMovement.query.filter_by(stock_item_id=item_id).order_by(StockMovement.moved_at.desc()).limit(20).all()
@@ -271,6 +321,7 @@ def view_stock_item(item_id):
         "inventory/stock_items/view.html",
         item=item,
         stock_levels=stock_levels,
+        stock_lots_by_warehouse=stock_lots_by_warehouse,
         recent_movements=recent_movements,
         active_reservations=active_reservations,
     )
