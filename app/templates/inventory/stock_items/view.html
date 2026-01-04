@@ -157,6 +157,77 @@
         </div>
         {% endif %}
 
+        <!-- Stock Lots Breakdown (Devaluation Details) -->
+        {% if item.is_trackable and stock_lots_by_warehouse %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Stock Breakdown by Valuation') }}</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ _('Detailed breakdown showing remaining stock with different devaluation rates') }}</p>
+            
+            {% for warehouse_id, warehouse_data in stock_lots_by_warehouse.items() %}
+            {% set warehouse = warehouse_data.warehouse %}
+            {% set lots = warehouse_data.lots %}
+            <div class="mb-6 {% if not loop.last %}border-b border-gray-200 dark:border-gray-700 pb-6{% endif %}">
+                <h3 class="text-md font-semibold mb-3 text-primary">
+                    <a href="{{ url_for('inventory.view_warehouse', warehouse_id=warehouse.id) }}" class="hover:underline">
+                        {{ warehouse.code }} - {{ warehouse.name }}
+                    </a>
+                </h3>
+                <table class="table table-zebra w-full text-left text-sm">
+                    <thead>
+                        <tr>
+                            <th class="p-3">{{ _('Quantity') }}</th>
+                            <th class="p-3">{{ _('Unit Cost') }}</th>
+                            <th class="p-3">{{ _('Devaluation') }}</th>
+                            <th class="p-3">{{ _('Status') }}</th>
+                            <th class="p-3">{{ _('Created') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lot_data in lots %}
+                        {% set lot = lot_data.lot %}
+                        <tr>
+                            <td class="p-3 font-semibold">{{ lot_data.quantity }} {{ item.unit }}</td>
+                            <td class="p-3">{{ "%.2f"|format(lot_data.unit_cost) }} {{ item.currency_code }}</td>
+                            <td class="p-3">
+                                {% if lot_data.is_devalued and lot_data.devaluation_percentage is not none %}
+                                    <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                        {{ "%.2f"|format(lot_data.devaluation_percentage) }}%
+                                    </span>
+                                {% else %}
+                                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        {{ _('No devaluation') }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3">
+                                {% if lot_data.lot_type == 'devalued' %}
+                                    <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                        {{ _('Devalued') }}
+                                    </span>
+                                {% else %}
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        {{ _('Normal') }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-gray-600 dark:text-gray-400">
+                                {{ lot.created_at.strftime('%Y-%m-%d') if lot.created_at else '—' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-bold">
+                            <td class="p-3">{{ warehouse_data.total_quantity }} {{ item.unit }}</td>
+                            <td class="p-3" colspan="4">{{ _('Total') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <!-- Recent Movements -->
         {% if recent_movements %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
