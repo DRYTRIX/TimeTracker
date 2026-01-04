@@ -169,7 +169,7 @@ class Comment(db.Model):
             author_name = self.client_contact.full_name
             author_full_name = self.client_contact.full_name
         
-        return {
+        result = {
             "id": self.id,
             "content": self.content,
             "project_id": self.project_id,
@@ -189,6 +189,14 @@ class Comment(db.Model):
             "is_internal": self.is_internal,
             "is_client_comment": self.is_client_comment,
         }
+        
+        # Add attachments if relationship exists
+        if hasattr(self, 'attachments'):
+            result["attachments"] = [att.to_dict() for att in self.attachments.all()]
+        else:
+            result["attachments"] = []
+        
+        return result
 
     @classmethod
     def get_project_comments(cls, project_id, include_replies=True):
