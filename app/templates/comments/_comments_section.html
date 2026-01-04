@@ -139,6 +139,17 @@ function deleteComment(commentId) {
     new bootstrap.Modal(document.getElementById('deleteCommentModal')).show();
 }
 
+function toggleAttachmentForm(commentId) {
+    const form = document.getElementById('attachment-form-' + commentId);
+    const btn = document.getElementById('attach-btn-' + commentId);
+    if (form) {
+        form.classList.toggle('d-none');
+        if (!form.classList.contains('d-none')) {
+            form.querySelector('input[type="file"]').focus();
+        }
+    }
+}
+
 // Auto-resize textareas
 document.addEventListener('DOMContentLoaded', function() {
     const textareas = document.querySelectorAll('textarea');

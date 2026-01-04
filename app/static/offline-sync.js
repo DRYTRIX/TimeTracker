@@ -677,16 +677,29 @@ class OfflineSyncManager {
 
         // Update offline indicator
         const indicator = document.getElementById('offline-indicator');
+        const indicatorText = document.getElementById('offline-indicator-text');
+        const indicatorIcon = document.getElementById('offline-indicator-icon');
+        const syncButton = document.getElementById('offline-sync-button');
+        
         if (indicator) {
             if (!isOnline) {
                 indicator.classList.remove('hidden');
-                indicator.textContent = 'You are offline. Changes will sync when you reconnect.';
+                indicator.className = indicator.className.replace(/bg-\w+-\d+ dark:bg-\w+-\d+/, 'bg-yellow-500 dark:bg-yellow-600');
+                if (indicatorText) indicatorText.textContent = 'You are offline. Changes will sync when you reconnect.';
+                if (indicatorIcon) indicatorIcon.className = 'fas fa-wifi-slash';
+                if (syncButton) syncButton.style.display = 'none';
             } else if (hasPending && !isSyncing) {
                 indicator.classList.remove('hidden');
-                indicator.textContent = `${this.pendingSyncCount} item(s) pending sync.`;
+                indicator.className = indicator.className.replace(/bg-\w+-\d+ dark:bg-\w+-\d+/, 'bg-blue-500 dark:bg-blue-600');
+                if (indicatorText) indicatorText.textContent = `${this.pendingSyncCount} item(s) pending sync.`;
+                if (indicatorIcon) indicatorIcon.className = 'fas fa-clock';
+                if (syncButton) syncButton.style.display = 'inline-block';
             } else if (isSyncing) {
                 indicator.classList.remove('hidden');
-                indicator.textContent = 'Syncing...';
+                indicator.className = indicator.className.replace(/bg-\w+-\d+ dark:bg-\w+-\d+/, 'bg-blue-500 dark:bg-blue-600');
+                if (indicatorText) indicatorText.textContent = 'Syncing...';
+                if (indicatorIcon) indicatorIcon.className = 'fas fa-sync-alt fa-spin';
+                if (syncButton) syncButton.style.display = 'none';
             } else {
                 indicator.classList.add('hidden');
             }

@@ -1,9 +1,12 @@
-from flask import Blueprint, request, redirect, url_for, flash, jsonify, render_template
+from flask import Blueprint, request, redirect, url_for, flash, jsonify, render_template, send_file, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Comment, Project, Task, Quote
+from app.models import Comment, Project, Task, Quote, CommentAttachment
 from app.utils.db import safe_commit
+from werkzeug.utils import secure_filename
+import os
+from datetime import datetime
 
 comments_bp = Blueprint("comments", __name__)
 
@@ -255,3 +258,150 @@ def get_user_comments(user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# Comment attachment routes
+@comments_bp.route("/comments/<int:comment_id>/attachments/upload", methods=["POST"])
+@login_required
+def upload_comment_attachment(comment_id):
+    """Upload an attachment to a comment"""
+    comment = Comment.query.get_or_404(comment_id)
+    
+    # Check permissions - user must be able to edit the comment
+    if not comment.can_edit(current_user):
+        flash(_("You do not have permission to add attachments to this comment"), "error")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    # File upload configuration
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
+    UPLOAD_FOLDER = "uploads/comment_attachments"
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+    def allowed_file(filename):
+        return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+    if "file" not in request.files:
+        flash(_("No file provided"), "error")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    file = request.files["file"]
+    if file.filename == "":
+        flash(_("No file selected"), "error")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    if not allowed_file(file.filename):
+        flash(_("File type not allowed"), "error")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    if file_size > MAX_FILE_SIZE:
+        flash(_("File size exceeds maximum allowed size (10 MB)"), "error")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    # Save file
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{comment_id}_{timestamp}_{original_filename}"
+
+    # Ensure upload directory exists
+    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, filename)
+    file.save(file_path)
+
+    # Get file info
+    mime_type = file.content_type or "application/octet-stream"
+
+    # Create attachment record
+    attachment = CommentAttachment(
+        comment_id=comment_id,
+        filename=filename,
+        original_filename=original_filename,
+        file_path=os.path.join(UPLOAD_FOLDER, filename),
+        file_size=file_size,
+        uploaded_by=current_user.id,
+        mime_type=mime_type,
+    )
+
+    db.session.add(attachment)
+
+    try:
+        if not safe_commit("upload_comment_attachment", {"comment_id": comment_id, "attachment_id": attachment.id}):
+            flash(_("Could not upload attachment due to a database error. Please check server logs."), "error")
+            # Clean up uploaded file
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            return redirect(request.referrer or url_for("main.dashboard"))
+    except Exception as e:
+        # Clean up uploaded file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+        flash(_("Error uploading attachment: %(error)s", error=str(e)), "error")
+        current_app.logger.error(f"Error uploading comment attachment: {e}", exc_info=True)
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    flash(_("Attachment uploaded successfully"), "success")
+    return redirect(request.referrer or url_for("main.dashboard"))
+
+
+@comments_bp.route("/comments/attachments/<int:attachment_id>/download")
+@login_required
+def download_attachment(attachment_id):
+    """Download a comment attachment"""
+    attachment = CommentAttachment.query.get_or_404(attachment_id)
+    comment = attachment.comment
+
+    # Build file path
+    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+
+    if not os.path.exists(file_path):
+        flash(_("File not found"), "error")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    return send_file(
+        file_path, as_attachment=True, download_name=attachment.original_filename, mimetype=attachment.mime_type
+    )
+
+
+@comments_bp.route("/comments/attachments/<int:attachment_id>/delete", methods=["POST"])
+@login_required
+def delete_attachment(attachment_id):
+    """Delete a comment attachment"""
+    attachment = CommentAttachment.query.get_or_404(attachment_id)
+    comment = attachment.comment
+
+    # Check permissions - user must be able to edit the comment
+    if not comment.can_edit(current_user):
+        flash(_("You do not have permission to delete this attachment"), "error")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    # Delete file
+    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            current_app.logger.error(f"Failed to delete attachment file: {e}")
+
+    # Delete attachment record
+    db.session.delete(attachment)
+
+    try:
+        if safe_commit("delete_comment_attachment", {"attachment_id": attachment_id}):
+            flash(_("Attachment deleted successfully"), "success")
+        else:
+            flash(_("Error deleting attachment"), "error")
+    except Exception as e:
+        flash(_("Error deleting attachment: %(error)s", error=str(e)), "error")
+        current_app.logger.error(f"Error deleting comment attachment: {e}", exc_info=True)
+
+    return redirect(request.referrer or url_for("main.dashboard"))
