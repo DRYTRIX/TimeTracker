@@ -348,7 +348,6 @@ def run_migrations():
                     
             except Exception as e:
                 log(f"Post-migration verification failed: {e}", "ERROR")
-                import traceback
                 traceback.print_exc()
                 return None
 

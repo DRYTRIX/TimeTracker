@@ -107,16 +107,33 @@ def upgrade() -> None:
             print(f"[Migration 021] ✗ Error creating table: {e}")
             raise
         
-        # Create indexes
+        # Create indexes (idempotent)
         print("[Migration 021] Creating indexes...")
         try:
-            op.create_index('ix_extra_goods_project_id', 'extra_goods', ['project_id'])
-            op.create_index('ix_extra_goods_invoice_id', 'extra_goods', ['invoice_id'])
-            op.create_index('ix_extra_goods_created_by', 'extra_goods', ['created_by'])
-            print("[Migration 021] ✓ Indexes created")
+            existing_indexes = [idx['name'] for idx in inspector.get_indexes('extra_goods')]
+            indexes_to_create = [
+                ('ix_extra_goods_project_id', ['project_id']),
+                ('ix_extra_goods_invoice_id', ['invoice_id']),
+                ('ix_extra_goods_created_by', ['created_by']),
+            ]
+            for idx_name, cols in indexes_to_create:
+                if idx_name not in existing_indexes:
+                    try:
+                        op.create_index(idx_name, 'extra_goods', cols)
+                    except Exception as e:
+                        error_msg = str(e)
+                        if 'already exists' not in error_msg.lower() and 'duplicate' not in error_msg.lower():
+                            print(f"[Migration 021] ⚠ Warning creating index {idx_name}: {e}")
+            print("[Migration 021] ✓ Indexes created/verified")
         except Exception as e:
-            print(f"[Migration 021] ✗ Error creating indexes: {e}")
-            raise
+            print(f"[Migration 021] ⚠ Warning checking/creating indexes: {e}")
+            # Try to create indexes anyway (best effort)
+            try:
+                op.create_index('ix_extra_goods_project_id', 'extra_goods', ['project_id'])
+                op.create_index('ix_extra_goods_invoice_id', 'extra_goods', ['invoice_id'])
+                op.create_index('ix_extra_goods_created_by', 'extra_goods', ['created_by'])
+            except Exception:
+                pass  # Indexes might already exist
         
         print("[Migration 021] ✓ Migration completed successfully")
     else:

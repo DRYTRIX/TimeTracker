@@ -47,8 +47,20 @@ def upgrade():
             sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
             sa.PrimaryKeyConstraint('id')
         )
-        op.create_index(op.f('ix_recurring_tasks_project_id'), 'recurring_tasks', ['project_id'], unique=False)
-        op.create_index(op.f('ix_recurring_tasks_assigned_to'), 'recurring_tasks', ['assigned_to'], unique=False)
+        # Create indexes (idempotent)
+        try:
+            existing_indexes = [idx['name'] for idx in inspector.get_indexes('recurring_tasks')]
+            if op.f('ix_recurring_tasks_project_id') not in existing_indexes:
+                op.create_index(op.f('ix_recurring_tasks_project_id'), 'recurring_tasks', ['project_id'], unique=False)
+            if op.f('ix_recurring_tasks_assigned_to') not in existing_indexes:
+                op.create_index(op.f('ix_recurring_tasks_assigned_to'), 'recurring_tasks', ['assigned_to'], unique=False)
+        except Exception:
+            # If we can't check, try to create indexes anyway
+            try:
+                op.create_index(op.f('ix_recurring_tasks_project_id'), 'recurring_tasks', ['project_id'], unique=False)
+                op.create_index(op.f('ix_recurring_tasks_assigned_to'), 'recurring_tasks', ['assigned_to'], unique=False)
+            except Exception:
+                pass  # Indexes might already exist
 
 
 def downgrade():
