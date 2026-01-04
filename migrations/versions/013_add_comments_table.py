@@ -38,12 +38,32 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint('id')
         )
         
-        # Create indexes for better performance
-        op.create_index('ix_comments_project_id', 'comments', ['project_id'], unique=False)
-        op.create_index('ix_comments_task_id', 'comments', ['task_id'], unique=False)
-        op.create_index('ix_comments_user_id', 'comments', ['user_id'], unique=False)
-        op.create_index('ix_comments_parent_id', 'comments', ['parent_id'], unique=False)
-        op.create_index('ix_comments_created_at', 'comments', ['created_at'], unique=False)
+        # Create indexes for better performance (idempotent)
+        try:
+            existing_indexes = [idx['name'] for idx in inspector.get_indexes('comments')]
+            indexes_to_create = [
+                ('ix_comments_project_id', ['project_id']),
+                ('ix_comments_task_id', ['task_id']),
+                ('ix_comments_user_id', ['user_id']),
+                ('ix_comments_parent_id', ['parent_id']),
+                ('ix_comments_created_at', ['created_at']),
+            ]
+            for idx_name, cols in indexes_to_create:
+                if idx_name not in existing_indexes:
+                    try:
+                        op.create_index(idx_name, 'comments', cols, unique=False)
+                    except Exception:
+                        pass  # Index might already exist
+        except Exception:
+            # If we can't check indexes, try to create them anyway (best effort)
+            try:
+                op.create_index('ix_comments_project_id', 'comments', ['project_id'], unique=False)
+                op.create_index('ix_comments_task_id', 'comments', ['task_id'], unique=False)
+                op.create_index('ix_comments_user_id', 'comments', ['user_id'], unique=False)
+                op.create_index('ix_comments_parent_id', 'comments', ['parent_id'], unique=False)
+                op.create_index('ix_comments_created_at', 'comments', ['created_at'], unique=False)
+            except Exception:
+                pass  # Indexes might already exist
 
 
 def downgrade() -> None:
