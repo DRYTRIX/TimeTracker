@@ -980,6 +980,9 @@
                 </div>
             </header>
 
+            <!-- Offline Indicator -->
+            {% include 'components/offline_indicator.html' %}
+
             <!-- Flash Messages (hidden, converted to toasts by toast-notifications.js) -->
             <div id="flash-messages-container" class="hidden">
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -1005,7 +1008,7 @@
                             </p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <a href="{{ url_for('main.donate') }}" 
                            class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
                             {{ _('Learn More') }}
@@ -1013,9 +1016,16 @@
                         <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=banner&utm_campaign=support" 
                            target="_blank" 
                            rel="noopener noreferrer"
-                           onclick="trackDonationClick('banner')"
+                           onclick="trackDonationClick('banner_bmc')"
                            class="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-600 text-sm font-medium rounded-lg transition-colors border border-amber-600">
-                            {{ _('Donate') }}
+                            <i class="fas fa-mug-saucer mr-1"></i>{{ _('Buy Me a Coffee') }}
+                        </a>
+                        <a href="https://www.paypal.com/donate/?hosted_button_id=KZB27X5LNGU3J" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           onclick="trackDonationClick('banner_paypal')"
+                           class="px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors border border-blue-600 hover:opacity-90" style="background: linear-gradient(to right, #0070ba, #003087);">
+                            <i class="fab fa-paypal mr-1"></i>{{ _('PayPal') }}
                         </a>
                         <button onclick="dismissSupportBanner()" 
                                 class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
@@ -1932,7 +1942,7 @@
         
         // Track donation link clicks
         document.addEventListener('click', function(e) {
-            const link = e.target.closest('a[href*="buymeacoffee.com"]');
+            const link = e.target.closest('a[href*="buymeacoffee.com"], a[href*="paypal.com/donate"]');
             if (link) {
                 try {
                     localStorage.setItem('donationLinkClicked', Date.now().toString());

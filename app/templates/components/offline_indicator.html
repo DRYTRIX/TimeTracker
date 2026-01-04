@@ -1,0 +1,100 @@
+<!-- Offline Status Indicator -->
+<div id="offline-indicator" class="hidden fixed top-16 left-0 right-0 z-50 bg-yellow-500 dark:bg-yellow-600 text-white px-4 py-2 shadow-lg">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="document.getElementById('offline-sync-queue-panel')?.classList.toggle('hidden'); updateOfflineQueuePanel();">
+            <i class="fas fa-wifi-slash" id="offline-indicator-icon"></i>
+            <span class="text-sm font-medium" id="offline-indicator-text"></span>
+        </div>
+        <button onclick="window.offlineSyncManager?.forceSync()" class="ml-4 px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-sm font-medium transition-colors" id="offline-sync-button" style="display: none;">
+            <i class="fas fa-sync-alt mr-1"></i>
+            {{ _('Sync Now') }}
+        </button>
+    </div>
+</div>
+
+<!-- Offline Sync Queue Panel (optional, can be toggled) -->
+<div id="offline-sync-queue-panel" class="hidden fixed bottom-4 right-4 w-80 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl z-40 max-h-96 flex flex-col">
+    <div class="px-4 py-3 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-text-light dark:text-text-dark">{{ _('Pending Sync') }}</h3>
+        <button onclick="document.getElementById('offline-sync-queue-panel').classList.add('hidden')" class="text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div id="offline-sync-queue-content" class="flex-1 overflow-y-auto p-4">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center">{{ _('No pending items') }}</p>
+    </div>
+    <div class="px-4 py-3 border-t border-border-light dark:border-border-dark">
+        <button onclick="window.offlineSyncManager?.forceSync()" class="w-full px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-medium transition-colors">
+            <i class="fas fa-sync-alt mr-2"></i>
+            {{ _('Sync All') }}
+        </button>
+    </div>
+</div>
+
+<script>
+// Enhanced offline indicator functionality - queue panel
+(function() {
+    const queuePanel = document.getElementById('offline-sync-queue-panel');
+    
+    // Make updateOfflineQueuePanel globally available
+    window.updateOfflineQueuePanel = async function() {
+        if (!window.offlineSyncManager || !queuePanel) return;
+        
+        const content = document.getElementById('offline-sync-queue-content');
+        if (!content) return;
+        
+        try {
+            const timeEntries = await window.offlineSyncManager.getOfflineTimeEntries();
+            const tasks = await window.offlineSyncManager.getOfflineTasks();
+            const projects = await window.offlineSyncManager.getOfflineProjects();
+            
+            const unsyncedTimeEntries = timeEntries.filter(e => !e.synced);
+            const unsyncedTasks = tasks.filter(t => !t.synced);
+            const unsyncedProjects = projects.filter(p => !p.synced);
+            
+            if (unsyncedTimeEntries.length === 0 && unsyncedTasks.length === 0 && unsyncedProjects.length === 0) {
+                content.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center">{{ _("No pending items") }}</p>';
+                return;
+            }
+            
+            let html = '<div class="space-y-2">';
+            
+            if (unsyncedTimeEntries.length > 0) {
+                html += '<div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-2">{{ _("Time Entries") }}</div>';
+                unsyncedTimeEntries.slice(0, 5).forEach(entry => {
+                    html += `<div class="text-sm text-text-light dark:text-text-dark p-2 bg-background-light dark:bg-background-dark rounded">
+                        <i class="fas fa-clock mr-2"></i>${entry.description || entry.project_name || '{{ _("Time Entry") }}'}
+                    </div>`;
+                });
+                if (unsyncedTimeEntries.length > 5) {
+                    html += `<div class="text-xs text-text-muted-light dark:text-text-muted-dark">+${unsyncedTimeEntries.length - 5} more</div>`;
+                }
+            }
+            
+            if (unsyncedTasks.length > 0) {
+                html += '<div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-2 mt-4">{{ _("Tasks") }}</div>';
+                unsyncedTasks.slice(0, 3).forEach(task => {
+                    html += `<div class="text-sm text-text-light dark:text-text-dark p-2 bg-background-light dark:bg-background-dark rounded">
+                        <i class="fas fa-tasks mr-2"></i>${task.name || '{{ _("Task") }}'}
+                    </div>`;
+                });
+            }
+            
+            if (unsyncedProjects.length > 0) {
+                html += '<div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-2 mt-4">{{ _("Projects") }}</div>';
+                unsyncedProjects.slice(0, 3).forEach(project => {
+                    html += `<div class="text-sm text-text-light dark:text-text-dark p-2 bg-background-light dark:bg-background-dark rounded">
+                        <i class="fas fa-folder mr-2"></i>${project.name || '{{ _("Project") }}'}
+                    </div>`;
+                });
+            }
+            
+            html += '</div>';
+            content.innerHTML = html;
+        } catch (error) {
+            console.error('[OfflineSync] Error updating queue panel:', error);
+            content.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400 text-center">{{ _("Error loading queue") }}</p>';
+        }
+    };
+})();
+</script>
