@@ -50,6 +50,79 @@
     
     <div class="comment-content" id="comment-content-{{ comment.id }}">
         <div class="comment-text">{{ comment.content | nl2br | safe }}</div>
+        
+        <!-- Attachments -->
+        {% if comment.attachments and comment.attachments|length > 0 %}
+        <div class="comment-attachments mt-3 pt-3 border-top">
+            <div class="d-flex flex-wrap gap-2">
+                {% for attachment in comment.attachments %}
+                <div class="comment-attachment-item d-flex align-items-center gap-2 p-2 bg-light rounded border" style="max-width: 100%;">
+                    <div class="flex-shrink-0">
+                        {% if attachment.is_pdf %}
+                        <i class="fas fa-file-pdf text-danger"></i>
+                        {% elif attachment.is_image %}
+                        <i class="fas fa-file-image text-primary"></i>
+                        {% elif attachment.is_document %}
+                        <i class="fas fa-file-word text-info"></i>
+                        {% else %}
+                        <i class="fas fa-file text-secondary"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <a href="{{ url_for('comments.download_attachment', attachment_id=attachment.id) }}" 
+                           class="text-decoration-none text-primary d-block text-truncate" 
+                           title="{{ attachment.original_filename }}">
+                            {{ attachment.original_filename }}
+                        </a>
+                        <small class="text-muted">{{ attachment.file_size_display }}</small>
+                    </div>
+                    {% if comment.can_edit(current_user) %}
+                    <div class="flex-shrink-0">
+                        <form method="POST" action="{{ url_for('comments.delete_attachment', attachment_id=attachment.id) }}" 
+                              class="d-inline" 
+                              onsubmit="return confirm('{{ _('Are you sure you want to delete this attachment?') }}');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="{{ _('Delete') }}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Add Attachment Button (only if user can edit) -->
+        {% if comment.can_edit(current_user) %}
+        <div class="comment-attachment-actions mt-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                    onclick="toggleAttachmentForm({{ comment.id }})" 
+                    id="attach-btn-{{ comment.id }}">
+                <i class="fas fa-paperclip me-1"></i>{{ _('Add Attachment') }}
+            </button>
+            
+            <!-- Attachment Upload Form (initially hidden) -->
+            <div class="attachment-upload-form d-none mt-2" id="attachment-form-{{ comment.id }}">
+                <form method="POST" action="{{ url_for('comments.upload_comment_attachment', comment_id=comment.id) }}" 
+                      enctype="multipart/form-data" class="d-flex gap-2 align-items-end">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="flex-grow-1">
+                        <input type="file" name="file" class="form-control form-control-sm" required 
+                               accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt,.xls,.xlsx,.zip,.rar">
+                        <small class="text-muted">{{ _('Max 10 MB. Images, PDFs, documents, spreadsheets, archives') }}</small>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fas fa-upload me-1"></i>{{ _('Upload') }}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAttachmentForm({{ comment.id }})">
+                        {{ _('Cancel') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
     </div>
     
     <!-- Edit form (initially hidden) -->
