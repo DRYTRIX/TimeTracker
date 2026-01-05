@@ -705,7 +705,10 @@ def activate_client(client_id):
 @clients_bp.route("/clients/<int:client_id>/delete", methods=["POST"])
 @login_required
 def delete_client(client_id):
-    """Delete a client (only if no projects exist)"""
+    """Delete a client (only if no projects or invoices exist)"""
+    from app.models.invoice import Invoice
+    from app.models.client_notification import ClientNotification, ClientNotificationPreferences
+    
     client = Client.query.get_or_404(client_id)
 
     # Check permissions
@@ -715,11 +718,24 @@ def delete_client(client_id):
 
     # Check if client has projects
     if client.projects.count() > 0:
-        flash(_("Cannot delete client with existing projects"), "error")
+        flash(_("Cannot delete client with existing projects. Please delete all projects first."), "error")
+        return redirect(url_for("clients.view_client", client_id=client_id))
+
+    # Check if client has invoices
+    invoice_count = Invoice.query.filter_by(client_id=client_id).count()
+    if invoice_count > 0:
+        flash(_("Cannot delete client with existing invoices. Please delete all invoices first before deleting the client."), "error")
         return redirect(url_for("clients.view_client", client_id=client_id))
 
     client_name = client.name
     client_id_for_log = client.id
+    
+    # Manually delete notifications and preferences to avoid SQLAlchemy update issues
+    # The database CASCADE will handle this, but we delete explicitly to prevent SQLAlchemy
+    # from trying to update the foreign key to NULL
+    ClientNotification.query.filter_by(client_id=client_id).delete()
+    ClientNotificationPreferences.query.filter_by(client_id=client_id).delete()
+    
     db.session.delete(client)
     if not safe_commit("delete_client", {"client_id": client.id}):
         flash(_("Could not delete client due to a database error. Please check server logs."), "error")
@@ -737,6 +753,9 @@ def delete_client(client_id):
 @login_required
 def bulk_delete_clients():
     """Delete multiple clients at once"""
+    from app.models.invoice import Invoice
+    from app.models.client_notification import ClientNotification, ClientNotificationPreferences
+    
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission("delete_clients"):
         flash(_("You do not have permission to delete clients"), "error")
@@ -765,6 +784,17 @@ def bulk_delete_clients():
                 skipped_count += 1
                 errors.append(f"'{client.name}': Has projects")
                 continue
+
+            # Check for invoices
+            invoice_count = Invoice.query.filter_by(client_id=client_id).count()
+            if invoice_count > 0:
+                skipped_count += 1
+                errors.append(f"'{client.name}': Has {invoice_count} invoice(s). Please delete all invoices first.")
+                continue
+
+            # Manually delete notifications and preferences to avoid SQLAlchemy update issues
+            ClientNotification.query.filter_by(client_id=client_id).delete()
+            ClientNotificationPreferences.query.filter_by(client_id=client_id).delete()
 
             # Delete the client
             client_id_for_log = client.id
