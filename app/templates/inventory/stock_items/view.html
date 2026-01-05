@@ -219,7 +219,8 @@
                     <tfoot>
                         <tr class="font-bold">
                             <td class="p-3">{{ warehouse_data.total_quantity }} {{ item.unit }}</td>
-                            <td class="p-3" colspan="4">{{ _('Total') }}</td>
+                            <td class="p-3">{{ "%.2f"|format(warehouse_data.total_value) }} {{ item.currency_code }}</td>
+                            <td class="p-3" colspan="3">{{ _('Total') }}</td>
                         </tr>
                     </tfoot>
                 </table>
