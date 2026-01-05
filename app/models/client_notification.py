@@ -29,7 +29,7 @@ class ClientNotification(db.Model):
     __tablename__ = "client_notifications"
 
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # Notification details
     type = db.Column(db.String(50), nullable=False, index=True)  # NotificationType enum value
@@ -51,7 +51,7 @@ class ClientNotification(db.Model):
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False, index=True)
     
     # Relationships
-    client = db.relationship("Client", backref=db.backref("notifications", lazy="dynamic", order_by="desc(ClientNotification.created_at)"))
+    client = db.relationship("Client", backref=db.backref("notifications", lazy="dynamic", order_by="desc(ClientNotification.created_at)"), passive_deletes=True)
 
     def __repr__(self):
         return f"<ClientNotification {self.id} for client {self.client_id} - {self.type}>"
@@ -95,7 +95,7 @@ class ClientNotificationPreferences(db.Model):
     __tablename__ = "client_notification_preferences"
 
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, unique=True, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     
     # Email preferences
     email_enabled = db.Column(db.Boolean, default=True, nullable=False)
@@ -116,7 +116,7 @@ class ClientNotificationPreferences(db.Model):
     updated_at = db.Column(db.DateTime, default=now_in_app_timezone, onupdate=now_in_app_timezone, nullable=False)
     
     # Relationships
-    client = db.relationship("Client", backref=db.backref("notification_preferences", uselist=False))
+    client = db.relationship("Client", backref=db.backref("notification_preferences", uselist=False), passive_deletes=True)
 
     def __repr__(self):
         return f"<ClientNotificationPreferences client={self.client_id}>"

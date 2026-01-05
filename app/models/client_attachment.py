@@ -35,7 +35,7 @@ class ClientAttachment(db.Model):
     uploaded_at = db.Column(db.DateTime, default=local_now, nullable=False)
 
     # Relationships
-    client = db.relationship("Client", backref="attachments")
+    client = db.relationship("Client", backref="attachments", passive_deletes=True)
     uploader = db.relationship("User", backref="uploaded_client_attachments")
 
     def __init__(self, client_id, filename, original_filename, file_path, file_size, uploaded_by, **kwargs):
