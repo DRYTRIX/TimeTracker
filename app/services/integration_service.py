@@ -118,8 +118,18 @@ class IntegrationService:
 
         return {"success": True, "message": "Integration created successfully.", "integration": integration}
 
-    def get_integration(self, integration_id: int, user_id: Optional[int] = None) -> Optional[Integration]:
-        """Get integration by ID (with user check for per-user integrations)."""
+    def get_integration(self, integration_id: int, user_id: Optional[int] = None, allow_admin_override: bool = False) -> Optional[Integration]:
+        """
+        Get integration by ID (with user check for per-user integrations).
+        
+        Args:
+            integration_id: ID of the integration
+            user_id: User ID to check ownership (None for admins viewing any integration)
+            allow_admin_override: If True and user_id is None, allow access to any integration (for admins)
+        
+        Returns:
+            Integration if found and accessible, None otherwise
+        """
         integration = Integration.query.get(integration_id)
         if not integration:
             return None
@@ -129,6 +139,10 @@ class IntegrationService:
             return integration
 
         # Per-user integrations require user_id match
+        # If allow_admin_override is True and user_id is None, allow access (admin viewing any integration)
+        if allow_admin_override and user_id is None:
+            return integration
+        
         if user_id and integration.user_id == user_id:
             return integration
 

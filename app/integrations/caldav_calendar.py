@@ -14,7 +14,7 @@ Integration.config fields used:
 - server_url: optional base server URL for discovery
 - verify_ssl: bool (default True)
 - sync_direction: 'calendar_to_time_tracker' | 'time_tracker_to_calendar' | 'bidirectional'
-- default_project_id: int (required for importing as TimeEntry)
+- default_project_id: int (optional - if not provided, events imported without project)
 - lookback_days: int (default 90)
 """
 
@@ -609,8 +609,7 @@ class CalDAVCalendarConnector(BaseConnector):
         from app.models import Project, TimeEntry
         from app.models.integration_external_event_link import IntegrationExternalEventLink
         
-        if not default_project_id:
-            return {"success": False, "message": "default_project_id is required to import calendar events as time entries."}
+        # default_project_id is optional - if not provided, events will be imported without a project
 
         # Determine time window
         if sync_type == "incremental" and self.integration.last_sync_at:
@@ -671,12 +670,18 @@ class CalDAVCalendarConnector(BaseConnector):
                     skipped += 1
                     continue
 
-                project_id = int(default_project_id)
+                # Use default_project_id if provided, otherwise try to match by project name, or leave as None
+                project_id = None
+                if default_project_id:
+                    project_id = int(default_project_id)
+                
                 title = (ev.get("summary") or "").strip()
-                for p in projects:
-                    if p and p.name and p.name in title:
-                        project_id = p.id
-                        break
+                # Try to match project by name in title (only if we have projects loaded)
+                if not project_id:
+                    for p in projects:
+                        if p and p.name and p.name in title:
+                            project_id = p.id
+                            break
 
                 notes_parts = []
                 if title:
@@ -954,9 +959,9 @@ class CalDAVCalendarConnector(BaseConnector):
                     "name": "default_project_id",
                     "type": "number",
                     "label": "Default Project",
-                    "required": True,
-                    "description": "Default project to assign imported calendar events to",
-                    "help": "Required for importing calendar events as time entries",
+                    "required": False,
+                    "description": "Default project to assign imported calendar events to (optional)",
+                    "help": "If not specified, events will be imported without a project. You can also match projects by name in event titles.",
                 },
                 {
                     "name": "lookback_days",
@@ -1004,7 +1009,7 @@ class CalDAVCalendarConnector(BaseConnector):
                     "description": "How often to automatically sync data",
                 },
             ],
-            "required": ["default_project_id"],
+            "required": [],
             "sections": [
                 {
                     "title": "Connection Settings",

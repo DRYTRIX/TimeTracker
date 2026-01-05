@@ -386,6 +386,57 @@ def manage_integration(provider):
             else:
                 flash(_("Failed to update credentials."), "error")
         
+        # Check if this is a CalDAV credential update (non-OAuth)
+        elif request.form.get("action") == "update_caldav_credentials":
+            # CalDAV uses username/password, not OAuth
+            if provider != "caldav_calendar":
+                flash(_("This action is only available for CalDAV integrations."), "error")
+                return redirect(url_for("integrations.manage_integration", provider=provider))
+            
+            # Get the integration to update (should be per-user)
+            integration_to_update = integration if integration else user_integration
+            if not integration_to_update:
+                flash(_("Integration not found. Please connect the integration first."), "error")
+                return redirect(url_for("integrations.manage_integration", provider=provider))
+            
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "").strip()
+            
+            # Validate required fields
+            if not username:
+                flash(_("Username is required."), "error")
+                return redirect(url_for("integrations.manage_integration", provider=provider))
+            
+            # Check if we have existing credentials - if not, password is required
+            existing_creds = IntegrationCredential.query.filter_by(integration_id=integration_to_update.id).first()
+            if not existing_creds and not password:
+                flash(_("Password is required for new setup."), "error")
+                return redirect(url_for("integrations.manage_integration", provider=provider))
+            
+            # Use existing password if new password not provided
+            password_to_save = password if password else (existing_creds.access_token if existing_creds else "")
+            
+            if not password_to_save:
+                flash(_("Password is required."), "error")
+                return redirect(url_for("integrations.manage_integration", provider=provider))
+            
+            # Save credentials (password in access_token, username in extra_data)
+            result = service.save_credentials(
+                integration_id=integration_to_update.id,
+                access_token=password_to_save,
+                refresh_token=None,
+                expires_at=None,
+                token_type="Basic",
+                scope="caldav",
+                extra_data={"username": username},
+            )
+            
+            if result.get("success"):
+                flash(_("CalDAV credentials updated successfully."), "success")
+                return redirect(url_for("integrations.manage_integration", provider=provider))
+            else:
+                flash(_("Failed to update CalDAV credentials: %(message)s", message=result.get("message", "Unknown error")), "error")
+        
         # Check if this is an integration config update
         elif request.form.get("action") == "update_config":
             # Get the integration to update
@@ -443,7 +494,11 @@ def manage_integration(provider):
                                 flash(_("Invalid number for field %(field)s", field=field.get("label", field_name)), "error")
                                 continue
                         else:
-                            value = field.get("default")
+                            # Empty value - use None if not required, otherwise use default
+                            if field.get("required", False):
+                                flash(_("Field %(field)s is required", field=field.get("label", field_name)), "error")
+                                continue
+                            value = None
                     elif field_type == "json":
                         # JSON fields - parse if provided
                         value_str = request.form.get(field_name, "").strip()
@@ -465,12 +520,18 @@ def manage_integration(provider):
                         if not value:
                             value = field.get("default")
                     
-                    # Only update if value is provided or it's a boolean/array (always set)
-                    if value is not None and value != "":
+                    # Update config field
+                    # For optional number fields, explicitly set to None if empty
+                    if field_type == "number" and value is None and not field.get("required", False):
+                        integration_to_update.config[field_name] = None
+                    elif value is not None and value != "":
                         integration_to_update.config[field_name] = value
                     elif field_type in ("boolean", "array"):
                         # Always set boolean and array fields
                         integration_to_update.config[field_name] = value
+                    elif field_type == "number" and value is None:
+                        # Required number field that's empty - already flashed error above
+                        continue
             
             # Ensure config is marked as modified
             from sqlalchemy.orm.attributes import flag_modified
@@ -561,8 +622,8 @@ def manage_integration(provider):
 def view_integration(integration_id):
     """View integration details."""
     service = IntegrationService()
-    # Allow viewing global integrations for all users, per-user only for owner
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
+    # Allow viewing global integrations for all users, per-user only for owner (or admin)
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
 
     if not integration:
         flash(_("Integration not found."), "error")
@@ -625,7 +686,7 @@ def test_integration(integration_id):
 def delete_integration(integration_id):
     """Delete an integration."""
     service = IntegrationService()
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
     if not integration:
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
@@ -645,7 +706,7 @@ def delete_integration(integration_id):
 def sync_integration(integration_id):
     """Trigger a sync for an integration."""
     service = IntegrationService()
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
 
     if not integration:
         flash(_("Integration not found."), "error")
@@ -776,10 +837,8 @@ def caldav_setup():
             if not password and not existing_creds:
                 errors.append(_("Password is required for new setup."))
         
-        if not default_project_id:
-            errors.append(_("Default project is required."))
-        else:
-            # Validate project exists and is active
+        # Validate project if provided (optional)
+        if default_project_id:
             try:
                 project_id_int = int(default_project_id)
                 project = Project.query.filter_by(id=project_id_int, status="active").first()
@@ -815,7 +874,11 @@ def caldav_setup():
         integration.config["verify_ssl"] = verify_ssl
         integration.config["sync_direction"] = "calendar_to_time_tracker"  # MVP: import only
         integration.config["lookback_days"] = lookback_days
-        integration.config["default_project_id"] = int(default_project_id)
+        # Save default_project_id only if provided (optional)
+        if default_project_id:
+            integration.config["default_project_id"] = int(default_project_id)
+        else:
+            integration.config["default_project_id"] = None
         integration.config["auto_sync"] = auto_sync
 
         # Save credentials (only if username/password provided)
