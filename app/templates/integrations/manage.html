@@ -17,8 +17,8 @@
 ) }}
 
 <div class="space-y-6">
-    <!-- OAuth Credentials Setup Section (Admin only) -->
-    {% if current_user.is_admin %}
+    <!-- OAuth Credentials Setup Section (Admin only, not for CalDAV) -->
+    {% if current_user.is_admin and provider != 'caldav_calendar' %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
         <h2 class="text-lg font-semibold mb-4">
             <i class="fas fa-key mr-2"></i>{{ _('OAuth Credentials Setup') }}
@@ -161,6 +161,64 @@
             </div>
             {% endif %}
             {% endif %}
+            
+            <div class="mt-6 flex gap-4">
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-save mr-2"></i>{{ _('Save Credentials') }}
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- CalDAV Credentials Section (non-OAuth, uses username/password) -->
+    {% if provider == 'caldav_calendar' and active_integration %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-4">
+            <i class="fas fa-key mr-2"></i>{{ _('CalDAV Authentication') }}
+        </h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+            {{ _('CalDAV uses username and password authentication (not OAuth). Update your credentials below.') }}
+        </p>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update_caldav_credentials">
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="caldav_username" class="block text-sm font-medium mb-2">
+                        {{ _('Username') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           name="username" 
+                           id="caldav_username" 
+                           value="{{ credentials.extra_data.get('username', '') if credentials and credentials.extra_data else '' }}"
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="user@example.com"
+                           required>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Your CalDAV username (usually your email address).') }}
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="caldav_password" class="block text-sm font-medium mb-2">
+                        {{ _('Password') }} {% if not credentials %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    <input type="password" 
+                           name="password" 
+                           id="caldav_password" 
+                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                           placeholder="{{ _('Leave empty to keep current password') }}"
+                           {% if not credentials %}required{% endif %}>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Your CalDAV password or app-specific password.') }}
+                        {% if credentials %}
+                        {{ _('Leave empty to keep your current password.') }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
             
             <div class="mt-6 flex gap-4">
                 <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
