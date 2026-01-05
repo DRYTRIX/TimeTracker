@@ -273,13 +273,17 @@ def view_stock_item(item_id):
         
         default_cost = Decimal(str(item.default_cost)) if item.default_cost else Decimal("0")
         
+        # Group lots by warehouse, then by characteristics (unit_cost, lot_type, created_at date)
+        # to avoid duplicates in the display
         for lot, warehouse in lots_query:
             warehouse_id = lot.warehouse_id
             if warehouse_id not in stock_lots_by_warehouse:
                 stock_lots_by_warehouse[warehouse_id] = {
                     "warehouse": warehouse,
                     "lots": [],
-                    "total_quantity": float(0)
+                    "total_quantity": Decimal("0"),
+                    "total_value": Decimal("0"),
+                    "lots_dict": {}  # Key: (unit_cost, lot_type, created_date) -> aggregated lot data
                 }
             
             # Calculate devaluation percentage
@@ -296,16 +300,53 @@ def view_stock_item(item_id):
             is_devalued = lot.lot_type == "devalued" or (devaluation_percentage is not None and devaluation_percentage > 0)
             
             quantity = Decimal(str(lot.quantity_on_hand or 0))
-            stock_lots_by_warehouse[warehouse_id]["total_quantity"] += float(quantity)
             
-            stock_lots_by_warehouse[warehouse_id]["lots"].append({
-                "lot": lot,
-                "quantity": float(quantity),
-                "unit_cost": float(lot_cost),
-                "lot_type": lot.lot_type,
-                "devaluation_percentage": devaluation_percentage,
-                "is_devalued": is_devalued,
-            })
+            # Create a key for grouping: same unit_cost, lot_type, and created_at date (date only, not time)
+            created_date = lot.created_at.date() if lot.created_at else None
+            group_key = (float(lot_cost), lot.lot_type, created_date)
+            
+            # Aggregate lots with the same characteristics
+            if group_key not in stock_lots_by_warehouse[warehouse_id]["lots_dict"]:
+                stock_lots_by_warehouse[warehouse_id]["lots_dict"][group_key] = {
+                    "lot": lot,  # Keep reference to one lot for display purposes
+                    "quantity": Decimal("0"),
+                    "unit_cost": float(lot_cost),
+                    "lot_type": lot.lot_type,
+                    "devaluation_percentage": devaluation_percentage,
+                    "is_devalued": is_devalued,
+                    "created_at": lot.created_at,
+                }
+            
+            # Sum quantities for lots with same characteristics
+            stock_lots_by_warehouse[warehouse_id]["lots_dict"][group_key]["quantity"] += quantity
+        
+        # Convert grouped lots to list and calculate totals
+        for warehouse_id, warehouse_data in stock_lots_by_warehouse.items():
+            for group_key, lot_data in warehouse_data["lots_dict"].items():
+                quantity = lot_data["quantity"]
+                unit_cost = Decimal(str(lot_data["unit_cost"]))
+                value = quantity * unit_cost
+                
+                warehouse_data["total_quantity"] += quantity
+                warehouse_data["total_value"] += value
+                
+                # Add to lots list for template rendering
+                warehouse_data["lots"].append({
+                    "lot": lot_data["lot"],
+                    "quantity": float(quantity),
+                    "unit_cost": lot_data["unit_cost"],
+                    "lot_type": lot_data["lot_type"],
+                    "devaluation_percentage": lot_data["devaluation_percentage"],
+                    "is_devalued": lot_data["is_devalued"],
+                    "created_at": lot_data["created_at"],
+                })
+            
+            # Convert totals to float for template
+            warehouse_data["total_quantity"] = float(warehouse_data["total_quantity"])
+            warehouse_data["total_value"] = float(warehouse_data["total_value"])
+            
+            # Remove temporary dict
+            del warehouse_data["lots_dict"]
 
     # Get recent movements (last 20)
     recent_movements = (
