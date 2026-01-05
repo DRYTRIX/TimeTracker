@@ -160,8 +160,33 @@ def new_stock_item():
     """Create a new stock item"""
     if request.method == "POST":
         try:
+            from app.utils.validation import validate_string, sanitize_input
+            
             sku = request.form.get("sku", "").strip().upper()
             name = request.form.get("name", "").strip()
+
+            # Validate required fields
+            if not sku:
+                flash(_("SKU is required"), "error")
+                return render_template("inventory/stock_items/form.html", item=None)
+            
+            if not name:
+                flash(_("Name is required"), "error")
+                return render_template("inventory/stock_items/form.html", item=None)
+
+            # Validate and sanitize SKU
+            try:
+                sku = validate_string(sku, min_length=1, max_length=50)
+            except Exception as e:
+                flash(_("Invalid SKU: %(error)s", error=str(e)), "error")
+                return render_template("inventory/stock_items/form.html", item=None)
+
+            # Validate and sanitize name
+            try:
+                name = validate_string(sanitize_input(name), min_length=1, max_length=200)
+            except Exception as e:
+                flash(_("Invalid name: %(error)s", error=str(e)), "error")
+                return render_template("inventory/stock_items/form.html", item=None)
 
             # Check if SKU already exists
             existing = StockItem.query.filter_by(sku=sku).first()
@@ -169,12 +194,25 @@ def new_stock_item():
                 flash(_("SKU already exists. Please use a different SKU."), "error")
                 return render_template("inventory/stock_items/form.html", item=None, error="sku_exists")
 
+            # Sanitize optional fields
+            description = request.form.get("description", "").strip() or None
+            if description:
+                description = sanitize_input(description, max_length=5000)
+            
+            category = request.form.get("category", "").strip() or None
+            if category:
+                category = sanitize_input(category, max_length=100)
+            
+            notes = request.form.get("notes", "").strip() or None
+            if notes:
+                notes = sanitize_input(notes, max_length=5000)
+
             item = StockItem(
                 sku=sku,
                 name=name,
                 created_by=current_user.id,
-                description=request.form.get("description", "").strip() or None,
-                category=request.form.get("category", "").strip() or None,
+                description=description,
+                category=category,
                 unit=request.form.get("unit", "pcs").strip(),
                 default_cost=request.form.get("default_cost") or None,
                 default_price=request.form.get("default_price") or None,
@@ -187,7 +225,7 @@ def new_stock_item():
                 supplier=request.form.get("supplier", "").strip() or None,
                 supplier_sku=request.form.get("supplier_sku", "").strip() or None,
                 image_url=request.form.get("image_url", "").strip() or None,
-                notes=request.form.get("notes", "").strip() or None,
+                notes=notes,
             )
 
             db.session.add(item)
@@ -1007,8 +1045,8 @@ def list_transfers():
         try:
             date_from_obj = datetime.strptime(date_from, "%Y-%m-%d")
             query = query.filter(StockMovement.moved_at >= date_from_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_from format '{date_from}': {e}")
 
     if date_to:
         try:
@@ -1016,8 +1054,8 @@ def list_transfers():
             # Include the entire day
             date_to_obj = date_to_obj.replace(hour=23, minute=59, second=59)
             query = query.filter(StockMovement.moved_at <= date_to_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_to format '{date_to}': {e}")
 
     # Group transfers by reference_id (transfers have paired movements)
     transfers = query.order_by(StockMovement.moved_at.desc()).limit(100).all()
@@ -1077,6 +1115,17 @@ def new_transfer():
             stock_item = StockItem.query.get(stock_item_id)
             from_warehouse = Warehouse.query.get(from_warehouse_id)
             to_warehouse = Warehouse.query.get(to_warehouse_id)
+            
+            if not stock_item:
+                flash(_("Stock item not found."), "error")
+                return redirect(url_for("inventory.list_transfers"))
+            if not from_warehouse:
+                flash(_("Source warehouse not found."), "error")
+                return redirect(url_for("inventory.list_transfers"))
+            if not to_warehouse:
+                flash(_("Destination warehouse not found."), "error")
+                return redirect(url_for("inventory.list_transfers"))
+            
             reason = f"Transfer from {from_warehouse.code} to {to_warehouse.code}"
 
             # Create negative movement (from source warehouse)
@@ -1157,16 +1206,16 @@ def list_adjustments():
         try:
             date_from_obj = datetime.strptime(date_from, "%Y-%m-%d")
             query = query.filter(StockMovement.moved_at >= date_from_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_from format '{date_from}': {e}")
 
     if date_to:
         try:
             date_to_obj = datetime.strptime(date_to, "%Y-%m-%d")
             date_to_obj = date_to_obj.replace(hour=23, minute=59, second=59)
             query = query.filter(StockMovement.moved_at <= date_to_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_to format '{date_to}': {e}")
 
     adjustments = query.order_by(StockMovement.moved_at.desc()).limit(100).all()
 
@@ -1262,16 +1311,16 @@ def stock_item_history(item_id):
         try:
             date_from_obj = datetime.strptime(date_from, "%Y-%m-%d")
             query = query.filter(StockMovement.moved_at >= date_from_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_from format '{date_from}': {e}")
 
     if date_to:
         try:
             date_to_obj = datetime.strptime(date_to, "%Y-%m-%d")
             date_to_obj = date_to_obj.replace(hour=23, minute=59, second=59)
             query = query.filter(StockMovement.moved_at <= date_to_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_to format '{date_to}': {e}")
 
     movements = query.order_by(StockMovement.moved_at.desc()).limit(200).all()
 
@@ -1660,8 +1709,8 @@ def new_purchase_order():
                             currency_code=purchase_order.currency_code,
                         )
                         db.session.add(item)
-                    except (ValueError, InvalidOperation):
-                        pass
+                    except (ValueError, InvalidOperation) as e:
+                        current_app.logger.warning(f"Invalid quantity or cost for purchase order item: {e}")
 
             purchase_order.calculate_totals()
             safe_commit()
@@ -1777,8 +1826,8 @@ def edit_purchase_order(po_id):
                             currency_code=purchase_order.currency_code,
                         )
                         db.session.add(item)
-                    except (ValueError, InvalidOperation):
-                        pass
+                    except (ValueError, InvalidOperation) as e:
+                        current_app.logger.warning(f"Invalid quantity or cost for purchase order item: {e}")
 
             purchase_order.calculate_totals()
             safe_commit()
@@ -2036,16 +2085,16 @@ def reports_movement_history():
         try:
             date_from_obj = datetime.strptime(date_from, "%Y-%m-%d")
             query = query.filter(StockMovement.moved_at >= date_from_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_from format '{date_from}': {e}")
 
     if date_to:
         try:
             date_to_obj = datetime.strptime(date_to, "%Y-%m-%d")
             date_to_obj = date_to_obj.replace(hour=23, minute=59, second=59)
             query = query.filter(StockMovement.moved_at <= date_to_obj)
-        except ValueError:
-            pass
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date_to format '{date_to}': {e}")
 
     if warehouse_id:
         query = query.filter_by(warehouse_id=warehouse_id)

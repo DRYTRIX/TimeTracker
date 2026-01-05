@@ -128,27 +128,50 @@ def create_task():
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
         priority = request.form.get("priority", "medium")
-        estimated_hours = request.form.get("estimated_hours", "").strip()
+        estimated_hours_str = request.form.get("estimated_hours", "").strip()
         due_date_str = request.form.get("due_date", "").strip()
         assigned_to = request.form.get("assigned_to", type=int)
 
+        # Validate and sanitize input
+        from app.utils.validation import validate_string, sanitize_input
+        
         # Validate required fields
         if not project_id or not name:
             flash(_("Project and task name are required"), "error")
-            return render_template("tasks/create.html")
+            projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+            users = User.query.order_by(User.username).all()
+            return render_template("tasks/create.html", projects=projects, users=users)
+
+        # Sanitize and validate name
+        try:
+            name = validate_string(sanitize_input(name), min_length=1, max_length=200)
+        except Exception as e:
+            flash(_("Invalid task name: %(error)s", error=str(e)), "error")
+            projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+            users = User.query.order_by(User.username).all()
+            return render_template("tasks/create.html", projects=projects, users=users)
 
         # Validate project exists
         project = Project.query.get(project_id)
         if not project:
             flash(_("Selected project does not exist"), "error")
-            return render_template("tasks/create.html")
+            projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+            users = User.query.order_by(User.username).all()
+            return render_template("tasks/create.html", projects=projects, users=users)
+
+        # Validate priority
+        if priority not in ["low", "medium", "high", "urgent"]:
+            priority = "medium"
 
         # Parse estimated hours
-        try:
-            estimated_hours = float(estimated_hours) if estimated_hours else None
-        except ValueError:
-            flash(_("Invalid estimated hours format"), "error")
-            return render_template("tasks/create.html")
+        estimated_hours = None
+        if estimated_hours_str:
+            try:
+                estimated_hours = float(estimated_hours_str)
+                if estimated_hours < 0:
+                    estimated_hours = None
+            except (ValueError, TypeError):
+                estimated_hours = None
 
         # Parse due date
         due_date = None
@@ -157,7 +180,9 @@ def create_task():
                 due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
             except ValueError:
                 flash(_("Invalid due date format"), "error")
-                return render_template("tasks/create.html")
+                projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+                users = User.query.order_by(User.username).all()
+                return render_template("tasks/create.html", projects=projects, users=users)
 
         # Use service layer to create task
         from app.services import TaskService
@@ -269,8 +294,8 @@ def view_task(task_id):
             # Load replies with their authors - selectinload loads all direct replies in one query
             # This prevents N+1 queries when accessing comment.replies in the template
             selectinload(Comment.replies).joinedload(Comment.author),
-            # Eagerly load attachments to prevent N+1 queries
-            selectinload(Comment.attachments)
+            # Note: Comment.attachments is a dynamic relationship (lazy="dynamic")
+            # and cannot be eager loaded with selectinload/joinedload
         )
         .order_by(Comment.created_at.asc())
         .all()
@@ -305,14 +330,31 @@ def edit_task(task_id):
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
         priority = request.form.get("priority", "medium")
-        estimated_hours = request.form.get("estimated_hours", "").strip()
+        estimated_hours_str = request.form.get("estimated_hours", "").strip()
         due_date_str = request.form.get("due_date", "").strip()
         assigned_to = request.form.get("assigned_to", type=int)
+
+        # Validate and sanitize input
+        from app.utils.validation import validate_string, sanitize_input
 
         # Validate required fields
         if not name:
             flash(_("Task name is required"), "error")
             return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+
+        # Sanitize and validate name
+        try:
+            name = validate_string(sanitize_input(name), min_length=1, max_length=200)
+        except Exception as e:
+            flash(_("Invalid task name: %(error)s", error=str(e)), "error")
+            return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+
+        # Sanitize description
+        if description:
+            try:
+                description = sanitize_input(description, max_length=5000)
+            except Exception:
+                description = sanitize_input(description[:5000] if len(description) > 5000 else description)
 
         # Validate project selection
         if not project_id:
@@ -323,12 +365,19 @@ def edit_task(task_id):
             flash(_("Selected project does not exist or is inactive"), "error")
             return render_template("tasks/edit.html", task=task, projects=projects, users=users)
 
+        # Validate priority
+        if priority not in ["low", "medium", "high", "urgent"]:
+            priority = task.priority or "medium"
+
         # Parse estimated hours
-        try:
-            estimated_hours = float(estimated_hours) if estimated_hours else None
-        except ValueError:
-            flash(_("Invalid estimated hours format"), "error")
-            return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+        estimated_hours = None
+        if estimated_hours_str:
+            try:
+                estimated_hours = float(estimated_hours_str)
+                if estimated_hours < 0:
+                    estimated_hours = None
+            except (ValueError, TypeError):
+                estimated_hours = None
 
         # Parse due date
         due_date = None
@@ -356,9 +405,9 @@ def edit_task(task_id):
                         details=f"Project changed from {old_project_id} to {project_id}",
                     )
                 )
-            except Exception:
+            except Exception as e:
                 # If anything goes wrong here, fall back to just changing the task
-                pass
+                current_app.logger.warning(f"Failed to log task project change activity: {e}")
 
         task.name = name
         task.description = description
@@ -703,10 +752,17 @@ def bulk_delete_tasks():
     skipped_count = 0
     errors = []
 
+    # Use eager loading to prevent N+1 queries when checking time entries
+    from sqlalchemy.orm import joinedload
+    
     for task_id_str in task_ids:
         try:
             task_id = int(task_id_str)
-            task = Task.query.get(task_id)
+            # Use get_or_404 for better error handling, but catch 404 for bulk operations
+            try:
+                task = Task.query.options(joinedload(Task.project)).get(task_id)
+            except Exception:
+                task = None
 
             if not task:
                 continue
@@ -717,8 +773,13 @@ def bulk_delete_tasks():
                 errors.append(f"'{task.name}': No permission")
                 continue
 
-            # Check for time entries
-            if task.time_entries.count() > 0:
+            # Check for time entries - use exists() for better performance
+            from app.models import TimeEntry
+            from sqlalchemy import exists
+            has_time_entries = db.session.query(
+                exists().where(TimeEntry.task_id == task_id)
+            ).scalar()
+            if has_time_entries:
                 skipped_count += 1
                 errors.append(f"'{task.name}': Has time entries")
                 continue
@@ -781,6 +842,9 @@ def bulk_update_status():
         try:
             task_id = int(task_id_str)
             task = Task.query.get(task_id)
+
+            if not task:
+                continue
 
             # Validate status against configured kanban columns for this task's project
             valid_statuses = set(
