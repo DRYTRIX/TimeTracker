@@ -813,8 +813,8 @@ def upload_attachment(quote_id):
         # Clean up uploaded file
         try:
             os.remove(file_path)
-        except:
-            pass
+        except OSError as e:
+            current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {e}")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     log_event(

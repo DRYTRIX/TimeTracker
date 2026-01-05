@@ -1109,8 +1109,8 @@ def upload_client_attachment(client_id):
             # Clean up uploaded file
             try:
                 os.remove(file_path)
-            except:
-                pass
+            except OSError as e:
+                current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {e}")
             return redirect(url_for("clients.view_client", client_id=client_id))
     except Exception as e:
         # Check if it's a table doesn't exist error
@@ -1125,8 +1125,8 @@ def upload_client_attachment(client_id):
         # Clean up uploaded file
         try:
             os.remove(file_path)
-        except:
-            pass
+        except OSError as cleanup_error:
+            current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {cleanup_error}")
         return redirect(url_for("clients.view_client", client_id=client_id))
 
     log_event(

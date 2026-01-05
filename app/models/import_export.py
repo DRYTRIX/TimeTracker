@@ -63,7 +63,10 @@ class DataImport(db.Model):
             if self.error_log:
                 try:
                     errors = json.loads(self.error_log)
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError) as e:
+                    # If error_log is corrupted, start fresh
+                    import logging
+                    logging.getLogger(__name__).warning(f"Could not parse error_log: {e}")
                     pass
             errors.append({"error": error_message, "timestamp": datetime.utcnow().isoformat()})
             self.error_log = json.dumps(errors)
@@ -94,7 +97,10 @@ class DataImport(db.Model):
         if self.error_log:
             try:
                 errors = json.loads(self.error_log)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                # If error_log is corrupted, start fresh
+                import logging
+                logging.getLogger(__name__).warning(f"Could not parse error_log: {e}")
                 pass
 
         error_entry = {"error": error_message, "timestamp": datetime.utcnow().isoformat()}

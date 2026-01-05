@@ -32,7 +32,8 @@ def request_approval(invoice_id):
         approvers_json = request.form.get("approvers", "[]")
         try:
             approvers = json.loads(approvers_json)
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            current_app.logger.warning(f"Could not parse approvers JSON, using fallback: {e}")
             approvers = [int(request.form.get("approver_id", 0))]
 
         if not approvers or not any(approvers):

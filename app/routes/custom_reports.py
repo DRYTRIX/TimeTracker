@@ -38,7 +38,8 @@ def report_builder(view_id=None):
         # Parse config
         try:
             config = json.loads(saved_view.config_json)
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
             config = {}
     else:
         config = {}
@@ -176,11 +177,12 @@ def view_custom_report(view_id):
         flash(_("You do not have permission to view this report."), "error")
         return redirect(url_for("custom_reports.report_builder"))
 
-    # Parse config
-    try:
-        config = json.loads(saved_view.config_json)
-    except:
-        config = {}
+        # Parse config
+        try:
+            config = json.loads(saved_view.config_json)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
+            config = {}
 
     # Check if iterative report generation is enabled
     if saved_view.iterative_report_generation and saved_view.iterative_custom_field_name:
@@ -233,11 +235,12 @@ def get_report_data(view_id):
     if saved_view.owner_id != current_user.id and saved_view.scope == "private":
         return jsonify({"error": "Access denied"}), 403
 
-    # Parse config
-    try:
-        config = json.loads(saved_view.config_json)
-    except:
-        config = {}
+        # Parse config
+        try:
+            config = json.loads(saved_view.config_json)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
+            config = {}
 
     # Generate report data
     report_data = generate_report_data(config, current_user.id)

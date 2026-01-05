@@ -112,7 +112,8 @@ class ScheduledReportService:
                     if isinstance(saved_view.config_json, str)
                     else saved_view.config_json
                 )
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to parse saved_view config_json: {e}")
                 config = {}
 
             # Check if we should split by custom field
@@ -365,8 +366,8 @@ class ScheduledReportService:
                     except ValueError:
                         try:
                             end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
-                        except:
-                            logger.warning(f"Could not parse end_date: {end_date_str}, using current time")
+                        except (ValueError, AttributeError) as e:
+                            logger.warning(f"Could not parse end_date: {end_date_str}, using current time: {e}")
                             end_date = now_in_app_timezone()
                 else:
                     end_date = end_date_str
@@ -381,8 +382,8 @@ class ScheduledReportService:
                     except ValueError:
                         try:
                             start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-                        except:
-                            logger.warning(f"Could not parse start_date: {start_date_str}, using default")
+                        except (ValueError, AttributeError) as e:
+                            logger.warning(f"Could not parse start_date: {start_date_str}, using default: {e}")
                             start_date = end_date - timedelta(days=30)
                 else:
                     start_date = start_date_str

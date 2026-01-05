@@ -206,7 +206,8 @@ def import_from_toggl(user_id, api_token, workspace_id, start_date, end_date, im
         projects_response = requests.get(projects_url, headers=headers, timeout=30)
         projects_response.raise_for_status()
         toggl_projects = {p["id"]: p for p in projects_response.json()}
-    except:
+    except (requests.RequestException, KeyError, ValueError) as e:
+        logger.warning(f"Failed to fetch Toggl projects: {e}")
         toggl_projects = {}
 
     for idx, entry in enumerate(time_entries):
@@ -367,7 +368,8 @@ def import_from_harvest(user_id, account_id, api_token, start_date, end_date, im
         projects_response = requests.get(projects_url, headers=headers, timeout=30)
         projects_response.raise_for_status()
         harvest_projects = {p["id"]: p for p in projects_response.json().get("projects", [])}
-    except:
+    except (requests.RequestException, KeyError, ValueError) as e:
+        logger.warning(f"Failed to fetch Harvest projects: {e}")
         harvest_projects = {}
 
     # Fetch clients from Harvest
@@ -376,7 +378,8 @@ def import_from_harvest(user_id, account_id, api_token, start_date, end_date, im
         clients_response = requests.get(clients_url, headers=headers, timeout=30)
         clients_response.raise_for_status()
         harvest_clients = {c["id"]: c for c in clients_response.json().get("clients", [])}
-    except:
+    except (requests.RequestException, KeyError, ValueError) as e:
+        logger.warning(f"Failed to fetch Harvest clients: {e}")
         harvest_clients = {}
 
     for idx, entry in enumerate(time_entries):
@@ -554,7 +557,8 @@ def _parse_datetime(datetime_str):
     try:
         dt = datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
         return dt.replace(tzinfo=None)  # Convert to naive datetime
-    except:
+    except (ValueError, AttributeError) as e:
+        logger.debug(f"Could not parse datetime string '{datetime_str}' as ISO format: {e}")
         pass
 
     return None
