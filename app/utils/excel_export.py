@@ -93,7 +93,9 @@ def create_time_entries_excel(entries, filename_prefix="timetracker_export"):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except (AttributeError, TypeError) as e:
+                # Cell value may be None or not have expected attributes
+                logger.debug(f"Error reading cell value: {e}")
                 pass
         adjusted_width = min(max_length + 2, 50)  # Cap at 50
         ws.column_dimensions[column].width = adjusted_width
@@ -205,7 +207,9 @@ def create_project_report_excel(projects_data, start_date, end_date):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except (AttributeError, TypeError) as e:
+                # Cell value may be None or not have expected attributes
+                logger.debug(f"Error reading cell value: {e}")
                 pass
         adjusted_width = min(max_length + 2, 40)
         ws.column_dimensions[column].width = adjusted_width
@@ -403,7 +407,9 @@ def create_invoices_list_excel(invoices):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except (AttributeError, TypeError) as e:
+                # Cell value may be None or not have expected attributes
+                logger.debug(f"Error reading cell value: {e}")
                 pass
         adjusted_width = min(max_length + 2, 50)  # Cap at 50
         ws.column_dimensions[column].width = adjusted_width
@@ -524,7 +530,9 @@ def create_payments_list_excel(payments):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except (AttributeError, TypeError) as e:
+                # Cell value may be None or not have expected attributes
+                logger.debug(f"Error reading cell value: {e}")
                 pass
         adjusted_width = min(max_length + 2, 50)  # Cap at 50
         ws.column_dimensions[column].width = adjusted_width

@@ -112,7 +112,8 @@ def send_message(channel_id):
             attachment_filename = attachment_info.get("filename")
             attachment_size = attachment_info.get("size")
             message_type = "file"
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
+            current_app.logger.debug(f"Could not parse attachment data: {e}")
             pass
 
     # Create message

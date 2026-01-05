@@ -1592,7 +1592,9 @@ def export_unpaid_hours_excel():
                         try:
                             if cell.value and len(str(cell.value)) > max_length:
                                 max_length = len(str(cell.value))
-                        except:
+                        except (AttributeError, TypeError) as e:
+                            # Cell value may be None or not have expected attributes
+                            current_app.logger.debug(f"Error reading cell value: {e}")
                             pass
                 ws.column_dimensions[column].width = min(max_length + 2, 50)
 

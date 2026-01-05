@@ -71,8 +71,8 @@ def list_scheduled():
                         if not isinstance(config, dict):
                             logger.warning(f"Invalid config for schedule {schedule.id}, skipping")
                             continue
-                    except:
-                        logger.warning(f"Could not parse config for schedule {schedule.id}, skipping")
+                    except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
+                        logger.warning(f"Could not parse config for schedule {schedule.id}, skipping: {e}")
                         continue
                 else:
                     logger.warning(f"Schedule {schedule.id} has no saved_view, skipping")
@@ -292,8 +292,9 @@ def fix_scheduled(schedule_id):
             db.session.commit()
             flash(_("Scheduled report deactivated: invalid configuration."), "warning")
             return redirect(url_for("scheduled_reports.list_scheduled"))
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
         # Could not parse config - deactivate
+        current_app.logger.warning(f"Could not parse scheduled report config: {e}")
         schedule.active = False
         db.session.commit()
         flash(_("Scheduled report deactivated: could not parse configuration."), "warning")

@@ -336,15 +336,15 @@ def upload_comment_attachment(comment_id):
             # Clean up uploaded file
             try:
                 os.remove(file_path)
-            except:
-                pass
+            except OSError as e:
+                current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {e}")
             return redirect(request.referrer or url_for("main.dashboard"))
     except Exception as e:
         # Clean up uploaded file
         try:
             os.remove(file_path)
-        except:
-            pass
+        except OSError as cleanup_error:
+            current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {cleanup_error}")
         flash(_("Error uploading attachment: %(error)s", error=str(e)), "error")
         current_app.logger.error(f"Error uploading comment attachment: {e}", exc_info=True)
         return redirect(request.referrer or url_for("main.dashboard"))

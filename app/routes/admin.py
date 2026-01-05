@@ -930,6 +930,9 @@ def pdf_layout_preview():
     invoice = None
     if invoice_id:
         invoice = Invoice.query.get(invoice_id)
+        if invoice is None:
+            flash(_("Invoice not found"), "error")
+            return redirect(url_for("admin.settings"))
     if invoice is None:
         invoice = Invoice.query.order_by(Invoice.id.desc()).first()
     settings_obj = Settings.get_settings()
@@ -1004,12 +1007,14 @@ def pdf_layout_preview():
     # Copy relationship attributes (project, client)
     try:
         invoice_wrapper.project = invoice.project
-    except:
+    except (AttributeError, RuntimeError) as e:
+        current_app.logger.debug(f"Could not access invoice.project for invoice {invoice.id}: {e}")
         invoice_wrapper.project = SimpleNamespace(name="Sample Project", description="")
 
     try:
         invoice_wrapper.client = invoice.client
-    except:
+    except (AttributeError, RuntimeError) as e:
+        current_app.logger.debug(f"Could not access invoice.client for invoice {invoice.id}: {e}")
         invoice_wrapper.client = None
 
     # Convert items from Query to list
@@ -1196,6 +1201,9 @@ def quote_pdf_layout_preview():
     quote = None
     if quote_id:
         quote = Quote.query.get(quote_id)
+        if quote is None:
+            flash(_("Quote not found"), "error")
+            return redirect(url_for("admin.settings"))
     if quote is None:
         quote = Quote.query.order_by(Quote.id.desc()).first()
     settings_obj = Settings.get_settings()
@@ -1283,12 +1291,14 @@ def quote_pdf_layout_preview():
     # Copy relationship attributes (project, client)
     try:
         quote_wrapper.project = quote.project
-    except:
+    except (AttributeError, RuntimeError) as e:
+        current_app.logger.debug(f"Could not access quote.project for quote {quote.id}: {e}")
         quote_wrapper.project = None
 
     try:
         quote_wrapper.client = quote.client
-    except:
+    except (AttributeError, RuntimeError) as e:
+        current_app.logger.debug(f"Could not access quote.client for quote {quote.id}: {e}")
         quote_wrapper.client = SimpleNamespace(
             name="Sample Client",
             email="client@example.com",
@@ -2015,6 +2025,8 @@ def create_api_token():
 
     # Verify user exists
     user = User.query.get(data["user_id"])
+    if not user:
+        return jsonify({"error": "User not found"}), 404
     if not user:
         return jsonify({"error": "Invalid user"}), 400
 
