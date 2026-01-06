@@ -10,7 +10,8 @@
     icon_class='fas fa-bug',
     title_text='Issues',
     subtitle_text='Manage client-reported issues and bugs',
-    breadcrumbs=breadcrumbs
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("issues.new_issue") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('Create Issue') + '</a>' if (current_user.is_admin or has_permission('create_issues')) else None
 ) }}
 
 <!-- Issue Summary Cards -->

@@ -514,7 +514,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    {% if is_module_enabled('inventory') %}
+                    {% if is_module_enabled('inventory') and (current_user.is_admin or has_permission('view_inventory')) %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" class="w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-boxes w-6 text-center"></i>

@@ -13,7 +13,7 @@
     title_text='Payment Gateways',
     subtitle_text='Configure payment processing',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("payment_gateways.create_gateway") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Add Gateway</a>' if (current_user.is_admin or has_permission('admin_access')) else None
+    actions_html='<a href="' + url_for("payment_gateways.create_gateway") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Add Gateway</a>' if (current_user.is_admin or has_permission('manage_payment_gateways')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
@@ -64,7 +64,7 @@
     </div>
     {% else %}
     {% set action_html = '' %}
-    {% if current_user.is_admin or has_permission('admin_access') %}
+    {% if current_user.is_admin or has_permission('manage_payment_gateways') %}
         {% set action_html = '<a href="' + url_for('payment_gateways.create_gateway') + '" class="btn btn-primary">' + _('Add Gateway') + '</a>' %}
     {% endif %}
     {{ empty_state(
