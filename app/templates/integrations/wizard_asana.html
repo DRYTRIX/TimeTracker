@@ -1,0 +1,206 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+    <!-- Step 1: OAuth Setup -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: OAuth Setup') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Create an Asana app in Settings → Apps → Manage Developer Apps.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="asana_client_id" class="block text-sm font-medium mb-2">
+                    {{ _('Asana OAuth Client ID') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="asana_client_id" name="asana_client_id"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client ID') }}" required>
+            </div>
+            
+            <div>
+                <label for="asana_client_secret" class="block text-sm font-medium mb-2">
+                    {{ _('Asana OAuth Client Secret') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="asana_client_secret" name="asana_client_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client Secret') }}" required>
+            </div>
+            {% endif %}
+            
+            <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <h3 class="font-semibold mb-2">{{ _('OAuth Redirect URI') }}</h3>
+                <code class="block p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs break-all">
+                    {{ url_for('integrations.oauth_callback', provider='asana', _external=True) }}
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Workspace Selection -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Workspace Selection') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="workspace_gid" class="block text-sm font-medium mb-2">
+                    {{ _('Workspace GID') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="workspace_gid" name="workspace_gid"
+                       value="{{ current_config.get('workspace_gid', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="1234567890" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Find your workspace GID in Asana workspace settings or API') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Project Selection -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Project Selection') }} <span class="text-text-muted-light dark:text-text-muted-dark text-sm font-normal">({{ _('optional') }})</span></h2>
+        <div class="space-y-4">
+            <div>
+                <label for="project_gids" class="block text-sm font-medium mb-2">
+                    {{ _('Project GIDs') }}
+                </label>
+                <input type="text" id="project_gids" name="project_gids"
+                       value="{{ current_config.get('project_gids', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="1234567890, 9876543210">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Comma-separated list of specific project GIDs to sync. Leave empty to sync all projects in the workspace.') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Sync Configuration -->
+    <div class="wizard-step hidden" data-step="4">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 4: Sync Configuration') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="sync_direction" class="block text-sm font-medium mb-2">{{ _('Sync Direction') }}</label>
+                <select id="sync_direction" name="sync_direction"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="asana_to_timetracker" {% if current_config.get('sync_direction', 'asana_to_timetracker') == 'asana_to_timetracker' %}selected{% endif %}>
+                        {{ _('Asana → TimeTracker (Import only)') }}
+                    </option>
+                    <option value="timetracker_to_asana" {% if current_config.get('sync_direction') == 'timetracker_to_asana' %}selected{% endif %}>
+                        {{ _('TimeTracker → Asana (Export only)') }}
+                    </option>
+                    <option value="bidirectional" {% if current_config.get('sync_direction') == 'bidirectional' %}selected{% endif %}>
+                        {{ _('Bidirectional (Two-way sync)') }}
+                    </option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Items to Sync') }}</label>
+                <div class="space-y-2">
+                    {% set sync_items = current_config.get('sync_items', ['projects', 'tasks']) %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="projects" id="sync_projects"
+                               {% if 'projects' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_projects" class="ml-2 text-sm">{{ _('Projects') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="tasks" id="sync_tasks"
+                               {% if 'tasks' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_tasks" class="ml-2 text-sm">{{ _('Tasks') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="subtasks" id="sync_subtasks"
+                               {% if 'subtasks' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_subtasks" class="ml-2 text-sm">{{ _('Subtasks') }}</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label for="sync_interval" class="block text-sm font-medium mb-2">{{ _('Sync Schedule') }}</label>
+                <select id="sync_interval" name="sync_interval"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="manual" {% if current_config.get('sync_interval', 'manual') == 'manual' %}selected{% endif %}>{{ _('Manual only') }}</option>
+                    <option value="hourly" {% if current_config.get('sync_interval') == 'hourly' %}selected{% endif %}>{{ _('Every hour') }}</option>
+                    <option value="daily" {% if current_config.get('sync_interval') == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" name="auto_sync" id="auto_sync" value="1"
+                       {% if current_config.get('auto_sync', False) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="auto_sync" class="ml-2 text-sm">{{ _('Auto Sync') }}</label>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" name="sync_completed" id="sync_completed" value="1"
+                       {% if current_config.get('sync_completed', False) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="sync_completed" class="ml-2 text-sm">{{ _('Sync Completed Tasks') }}</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 5: Review -->
+    <div class="wizard-step hidden" data-step="5">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 5: Review & Save') }}</h2>
+        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('Review your configuration and click "Finish" to save.') }}
+            </p>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Workspace GID') }}:</span>
+                    <span id="review-workspace-gid" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Sync Direction') }}:</span>
+                    <span id="review-sync-direction" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Items to Sync') }}:</span>
+                    <span id="review-sync-items" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="wizard_final_step" value="true">
+    </div>
+{% endblock %}
+
+{% block wizard_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof IntegrationWizard !== 'undefined') {
+        const wizard = new IntegrationWizard({
+            totalSteps: 5,
+            provider: 'asana',
+            saveUrl: '{{ wizard_save_url }}',
+            finishText: '{{ _("Finish") }}',
+            onStepChange: function(step) {
+                if (step === 5) {
+                    const workspaceGid = document.getElementById('workspace_gid')?.value || '{{ _("Not set") }}';
+                    const syncDirection = document.getElementById('sync_direction')?.selectedOptions[0]?.text || '';
+                    const syncItems = Array.from(document.querySelectorAll('input[name="sync_items"]:checked'))
+                        .map(cb => cb.nextElementSibling.textContent).join(', ') || '{{ _("None") }}';
+                    
+                    document.getElementById('review-workspace-gid').textContent = workspaceGid;
+                    document.getElementById('review-sync-direction').textContent = syncDirection;
+                    document.getElementById('review-sync-items').textContent = syncItems;
+                }
+            }
+        });
+        wizard.init();
+    }
+});
+</script>
+{% endblock %}

@@ -11,6 +11,7 @@ from app.services.integration_service import IntegrationService
 from app.utils.db import safe_commit
 import secrets
 import logging
+import os
 
 # Import registry to ensure connectors are registered
 try:
@@ -23,6 +24,15 @@ logger = logging.getLogger(__name__)
 integrations_bp = Blueprint("integrations", __name__)
 
 
+def has_setup_wizard(provider):
+    """Check if a setup wizard template exists for the given provider."""
+    from flask import current_app
+    template_path = f"integrations/wizard_{provider}.html"
+    template_dir = os.path.join(current_app.root_path, "templates")
+    template_file = os.path.join(template_dir, template_path)
+    return os.path.exists(template_file)
+
+
 @integrations_bp.route("/integrations")
 @login_required
 def list_integrations():
@@ -31,11 +41,15 @@ def list_integrations():
     integrations = service.list_integrations(current_user.id)
     available_providers = service.get_available_providers()
 
+    from flask import current_app
+    
     return render_template(
         "integrations/list.html",
         integrations=integrations,
         available_providers=available_providers,
         current_user=current_user,
+        config=current_app.config,
+        has_setup_wizard=has_setup_wizard,
     )
 
 
@@ -614,6 +628,7 @@ def manage_integration(provider):
         is_global=is_global,
         config_schema=config_schema,
         current_config=current_config,
+        has_setup_wizard=has_setup_wizard,
     )
 
 
@@ -981,3 +996,252 @@ def integration_webhook(provider):
         return jsonify({"success": True, "results": results}), 200
     else:
         return jsonify({"success": False, "results": results}), 500
+
+
+@integrations_bp.route("/integrations/<provider>/wizard", methods=["GET", "POST"])
+@login_required
+def setup_wizard(provider):
+    """Setup wizard for integration configuration."""
+    # Check if wizard exists
+    if not has_setup_wizard(provider):
+        flash(_("Setup wizard not available for this integration."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+    
+    service = IntegrationService()
+    
+    # Check if provider is available
+    if provider not in service._connector_registry:
+        flash(_("Integration provider not available."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+    
+    # Get connector class
+    connector_class = service._connector_registry.get(provider)
+    if not connector_class:
+        flash(_("Connector class not found."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+    
+    # Get display info
+    display_name = getattr(connector_class, "display_name", None) or provider.replace("_", " ").title()
+    description = getattr(connector_class, "description", None) or ""
+    
+    # Get or create integration
+    is_global = provider not in ("google_calendar", "caldav_calendar")
+    integration = None
+    if is_global:
+        integration = service.get_global_integration(provider)
+        if not integration and current_user.is_admin:
+            result = service.create_integration(provider, user_id=None, is_global=True)
+            if result["success"]:
+                integration = result["integration"]
+    else:
+        integration = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
+    
+    # Check permissions
+    if is_global and not current_user.is_admin:
+        flash(_("Only administrators can configure global integrations."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+    
+    # Handle POST - save wizard data
+    if request.method == "POST":
+        wizard_step = int(request.form.get("wizard_step", 1))
+        
+        # Get current config or create new
+        if integration:
+            if not integration.config:
+                integration.config = {}
+            current_config = integration.config
+        else:
+            current_config = {}
+        
+        # Update config based on wizard step and form data
+        # This is a generic handler - specific wizards will override with their own logic
+        config_schema = {}
+        if connector_class and hasattr(connector_class, "get_config_schema"):
+            try:
+                temp_integration = integration if integration else Integration(provider=provider, config={})
+                temp_connector = connector_class(temp_integration, None)
+                config_schema = temp_connector.get_config_schema()
+            except Exception as e:
+                logger.warning(f"Could not get config schema for {provider}: {e}")
+        
+        # Process form fields based on config schema
+        if config_schema and "fields" in config_schema:
+            for field in config_schema["fields"]:
+                field_name = field.get("name")
+                if not field_name:
+                    continue
+                
+                field_type = field.get("type", "string")
+                
+                if field_type == "boolean":
+                    value = field_name in request.form
+                elif field_type == "array":
+                    values = request.form.getlist(field_name)
+                    value = values if values else field.get("default", [])
+                elif field_type in ("select", "string", "url", "text", "password", "number"):
+                    value = request.form.get(field_name, "").strip()
+                    if not value:
+                        value = field.get("default")
+                elif field_type == "json":
+                    value_str = request.form.get(field_name, "").strip()
+                    if value_str:
+                        try:
+                            import json
+                            value = json.loads(value_str)
+                        except json.JSONDecodeError:
+                            flash(_("Invalid JSON for field %(field)s", field=field.get("label", field_name)), "error")
+                            continue
+                    else:
+                        value = None
+                else:
+                    value = request.form.get(field_name, "").strip()
+                
+                if value is not None:
+                    current_config[field_name] = value
+        
+        # Save OAuth credentials if provided (admin only for global)
+        if is_global and current_user.is_admin:
+            from app.models import Settings
+            settings = Settings.get_settings()
+            
+            client_id = request.form.get(f"{provider}_client_id", "").strip()
+            client_secret = request.form.get(f"{provider}_client_secret", "").strip()
+            
+            if client_id:
+                attr_map = {
+                    "jira": ("jira_client_id", "jira_client_id"),
+                    "slack": ("slack_client_id", "slack_client_secret"),
+                    "github": ("github_client_id", "github_client_secret"),
+                    "gitlab": ("gitlab_client_id", "gitlab_client_secret"),
+                    "quickbooks": ("quickbooks_client_id", "quickbooks_client_secret"),
+                    "xero": ("xero_client_id", "xero_client_secret"),
+                    "asana": ("asana_client_id", "asana_client_secret"),
+                    "outlook_calendar": ("outlook_calendar_client_id", "outlook_calendar_client_secret"),
+                    "microsoft_teams": ("microsoft_teams_client_id", "microsoft_teams_client_secret"),
+                }
+                
+                if provider in attr_map:
+                    id_attr, secret_attr = attr_map[provider]
+                    if hasattr(settings, id_attr):
+                        setattr(settings, id_attr, client_id)
+                    if client_secret and hasattr(settings, secret_attr):
+                        setattr(settings, secret_attr, client_secret)
+        
+        # Create integration if it doesn't exist
+        if not integration:
+            result = service.create_integration(
+                provider,
+                user_id=None if is_global else current_user.id,
+                is_global=is_global
+            )
+            if result["success"]:
+                integration = result["integration"]
+            else:
+                flash(result["message"], "error")
+                return redirect(url_for("integrations.setup_wizard", provider=provider))
+        
+        # Update integration config
+        integration.config = current_config
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(integration, "config")
+        
+        # If this is the last step, save and redirect
+        # Individual wizard templates will handle determining the last step
+        if safe_commit("save_wizard_config", {"provider": provider}):
+            # Check if this was the final step (wizard template should set this)
+            if request.form.get("wizard_final_step") == "true":
+                flash(_("Integration configured successfully!"), "success")
+                return jsonify({
+                    "success": True,
+                    "redirect_url": url_for("integrations.manage_integration", provider=provider)
+                })
+            else:
+                return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "message": _("Failed to save configuration.")})
+    
+    # GET - render wizard
+    current_config = integration.config if integration and integration.config else {}
+    config_schema = {}
+    
+    if connector_class and hasattr(connector_class, "get_config_schema"):
+        try:
+            temp_integration = integration if integration else Integration(provider=provider, config={})
+            temp_connector = connector_class(temp_integration, None)
+            config_schema = temp_connector.get_config_schema()
+        except Exception as e:
+            logger.warning(f"Could not get config schema for {provider}: {e}")
+    
+    # Determine step labels based on provider
+    step_labels_map = {
+        "jira": [_("OAuth Setup"), _("Connection Test"), _("Sync Config"), _("Advanced"), _("Review")],
+        "gitlab": [_("Instance"), _("OAuth"), _("Repositories"), _("Sync Settings"), _("Review")],
+        "quickbooks": [_("OAuth"), _("Company"), _("Sync Config"), _("Mappings"), _("Review")],
+        "xero": [_("OAuth"), _("Tenant"), _("Sync Config"), _("Mappings"), _("Review")],
+        "github": [_("OAuth"), _("Repositories"), _("Sync Config"), _("Webhooks"), _("Review")],
+        "asana": [_("OAuth"), _("Workspace"), _("Projects"), _("Sync Config"), _("Review")],
+        "trello": [_("API Keys"), _("Connection Test"), _("Review")],
+        "outlook_calendar": [_("Tenant ID"), _("OAuth"), _("Review")],
+        "microsoft_teams": [_("Tenant ID"), _("OAuth"), _("Review")],
+    }
+    
+    step_labels = step_labels_map.get(provider, [])
+    total_steps = len(step_labels) if step_labels else 5  # Default to 5 if not specified
+    
+    # Get test connection URL if available
+    test_connection_url = None
+    if provider in ["jira", "gitlab", "trello"]:
+        test_connection_url = url_for("integrations.test_connection_wizard", provider=provider)
+    
+    wizard_title = _("%(name)s Setup Wizard", name=display_name)
+    wizard_subtitle = _("Guided step-by-step configuration for %(name)s", name=display_name)
+    
+    return render_template(
+        f"integrations/wizard_{provider}.html",
+        provider=provider,
+        display_name=display_name,
+        description=description,
+        connector_class=connector_class,
+        integration=integration,
+        current_config=current_config,
+        config_schema=config_schema,
+        is_global=is_global,
+        wizard_title=wizard_title,
+        wizard_subtitle=wizard_subtitle,
+        wizard_save_url=url_for("integrations.setup_wizard", provider=provider),
+        total_steps=total_steps,
+        step_labels=step_labels,
+        test_connection_url=test_connection_url,
+    )
+
+
+@integrations_bp.route("/integrations/<provider>/wizard/test-connection", methods=["POST"])
+@login_required
+def test_connection_wizard(provider):
+    """Test connection from wizard."""
+    from flask import request as flask_request
+    
+    service = IntegrationService()
+    
+    # Get integration
+    is_global = provider not in ("google_calendar", "caldav_calendar")
+    if is_global:
+        integration = service.get_global_integration(provider)
+    else:
+        integration = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
+    
+    if not integration:
+        return jsonify({"success": False, "error": _("Integration not found")}), 404
+    
+    # Get connector
+    connector = service.get_connector(integration)
+    if not connector:
+        return jsonify({"success": False, "error": _("Connector not available")}), 400
+    
+    # Test connection
+    try:
+        result = connector.test_connection()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Connection test error for {provider}: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500

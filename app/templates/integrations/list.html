@@ -21,6 +21,46 @@
     </p>
 </div>
 
+{% if current_user.is_admin or current_user.has_permission('manage_oidc') %}
+<!-- OIDC Authentication Setup -->
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden mb-6 border-2 border-primary/20">
+    <div class="p-6">
+        <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-shield-alt text-primary text-xl"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('OIDC / Single Sign-On') }}</h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {{ _('Configure OpenID Connect authentication for Single Sign-On (SSO) with your identity provider') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2 mb-4">
+            {% set auth_method = config.get('AUTH_METHOD', 'local') or 'local' %}
+            {% set oidc_enabled = auth_method.lower() in ['oidc', 'both'] %}
+            {% if oidc_enabled %}
+            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 font-medium">
+                <i class="fas fa-check-circle mr-1"></i>{{ _('Enabled') }}
+            </span>
+            {% else %}
+            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 font-medium">
+                <i class="fas fa-circle mr-1"></i>{{ _('Not Configured') }}
+            </span>
+            {% endif %}
+        </div>
+        
+        <a href="{{ url_for('admin.oidc_setup_wizard') }}" 
+           class="block w-full bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
+            <i class="fas fa-magic mr-2"></i>{{ _('Setup Wizard') }}
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
     {% for provider in available_providers %}
     {% set existing_integration = integrations|selectattr('provider', 'equalto', provider.provider)|first if integrations else none %}
@@ -68,18 +108,26 @@
                 {% endif %}
             </div>
             
-            <a href="{{ url_for('integrations.manage_integration', provider=provider.provider) }}" 
-               class="block w-full {% if existing_integration and existing_integration.is_active %}bg-gray-600 hover:bg-gray-700{% else %}bg-primary hover:bg-primary/90{% endif %} text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
-                {% if existing_integration %}
-                    {% if existing_integration.is_active %}
-                    <i class="fas fa-cog mr-2"></i>{{ _('Manage') }}
-                    {% else %}
-                    <i class="fas fa-link mr-2"></i>{{ _('Connect') }}
-                    {% endif %}
-                {% else %}
-                    <i class="fas fa-plus mr-2"></i>{{ _('Setup') }}
+            <div class="space-y-2">
+                {% if has_setup_wizard(provider.provider) %}
+                <a href="{{ url_for('integrations.setup_wizard', provider=provider.provider) }}" 
+                   class="block w-full bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
+                    <i class="fas fa-magic mr-2"></i>{{ _('Setup Wizard') }}
+                </a>
                 {% endif %}
-            </a>
+                <a href="{{ url_for('integrations.manage_integration', provider=provider.provider) }}" 
+                   class="block w-full {% if existing_integration and existing_integration.is_active %}bg-gray-600 hover:bg-gray-700{% else %}{% if has_setup_wizard(provider.provider) %}bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600{% else %}bg-primary hover:bg-primary/90{% endif %}{% endif %} text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
+                    {% if existing_integration %}
+                        {% if existing_integration.is_active %}
+                        <i class="fas fa-cog mr-2"></i>{{ _('Manage') }}
+                        {% else %}
+                        <i class="fas fa-link mr-2"></i>{{ _('Connect') }}
+                        {% endif %}
+                    {% else %}
+                        <i class="fas fa-plus mr-2"></i>{{ _('Setup') }}
+                    {% endif %}
+                </a>
+            </div>
         </div>
     </div>
     {% endfor %}

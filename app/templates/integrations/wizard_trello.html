@@ -1,0 +1,118 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+    <!-- Step 1: API Keys -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: API Keys Setup') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Get your API key and secret from') }} <a href="https://trello.com/app-key" target="_blank" class="underline">trello.com/app-key</a>
+                </p>
+            </div>
+            
+            <div>
+                <label for="trello_api_key" class="block text-sm font-medium mb-2">
+                    {{ _('Trello API Key') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="trello_api_key" name="trello_api_key"
+                       value="{{ current_config.get('api_key', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter API Key') }}" required>
+            </div>
+            
+            <div>
+                <label for="trello_api_secret" class="block text-sm font-medium mb-2">
+                    {{ _('Trello API Secret') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="trello_api_secret" name="trello_api_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter API Secret') }}" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Generate a token after creating the API key') }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Step 2: Connection Test -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Test Connection') }}</h2>
+        <div id="connection-test-results" class="mb-4">
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Click "Test Connection" to verify that your Trello API credentials are correct.') }}
+                </p>
+            </div>
+        </div>
+        <button type="button" id="test-connection-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-vial mr-2"></i>{{ _('Test Connection') }}
+        </button>
+    </div>
+
+    <!-- Step 3: Review -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Review & Save') }}</h2>
+        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('Review your configuration and click "Finish" to save.') }}
+            </p>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('API Key') }}:</span>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">••••••••</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Status') }}:</span>
+                    <span id="review-connection-status" class="text-text-muted-light dark:text-text-muted-dark">{{ _('Not tested') }}</span>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="wizard_final_step" value="true">
+    </div>
+{% endblock %}
+
+{% block wizard_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof IntegrationWizard !== 'undefined') {
+        const wizard = new IntegrationWizard({
+            totalSteps: 3,
+            provider: 'trello',
+            saveUrl: '{{ wizard_save_url }}',
+            testConnectionUrl: '{{ test_connection_url }}',
+            finishText: '{{ _("Finish") }}',
+            onStepChange: function(step) {
+                if (step === 3 && wizard.connectionTestResult) {
+                    const status = wizard.connectionTestResult.success ? '{{ _("Connected") }}' : '{{ _("Connection failed") }}';
+                    document.getElementById('review-connection-status').textContent = status;
+                }
+            }
+        });
+        
+        wizard.addValidationCallback(2, function() {
+            if (!wizard.connectionTestResult) {
+                alert('{{ _("Please test the connection before proceeding.") }}');
+                return false;
+            }
+            return true;
+        });
+        
+        const testBtn = document.getElementById('test-connection-btn');
+        if (testBtn) {
+            testBtn.addEventListener('click', async function() {
+                const result = await wizard.testConnection({});
+                wizard.displayConnectionResults(result);
+            });
+        }
+        
+        wizard.init();
+    }
+});
+</script>
+{% endblock %}

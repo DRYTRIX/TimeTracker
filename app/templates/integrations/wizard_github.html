@@ -1,0 +1,240 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+    <!-- Step 1: OAuth Setup -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: OAuth Setup') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Create a GitHub OAuth App in Settings → Developer settings → OAuth Apps.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="github_client_id" class="block text-sm font-medium mb-2">
+                    {{ _('GitHub OAuth Client ID') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="github_client_id" name="github_client_id"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client ID') }}" required>
+            </div>
+            
+            <div>
+                <label for="github_client_secret" class="block text-sm font-medium mb-2">
+                    {{ _('GitHub OAuth Client Secret') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="github_client_secret" name="github_client_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client Secret') }}" required>
+            </div>
+            {% endif %}
+            
+            <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <h3 class="font-semibold mb-2">{{ _('OAuth Redirect URI') }}</h3>
+                <code class="block p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs break-all">
+                    {{ url_for('integrations.oauth_callback', provider='github', _external=True) }}
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Repository Selection -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Repository Selection') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="repositories" class="block text-sm font-medium mb-2">
+                    {{ _('Repositories') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                </label>
+                <input type="text" id="repositories" name="repositories"
+                       value="{{ current_config.get('repositories', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="owner/repo1, owner/repo2">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Comma-separated list of repositories (e.g., "octocat/Hello-World"). Leave empty to sync all accessible repositories.') }}
+                </p>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" name="create_projects" id="create_projects" value="1"
+                       {% if current_config.get('create_projects', True) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="create_projects" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                    {{ _('Create Projects') }}
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Sync Configuration -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Sync Configuration') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="sync_direction" class="block text-sm font-medium mb-2">{{ _('Sync Direction') }}</label>
+                <select id="sync_direction" name="sync_direction"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="github_to_timetracker" {% if current_config.get('sync_direction', 'github_to_timetracker') == 'github_to_timetracker' %}selected{% endif %}>
+                        {{ _('GitHub → TimeTracker (Import only)') }}
+                    </option>
+                    <option value="timetracker_to_github" {% if current_config.get('sync_direction') == 'timetracker_to_github' %}selected{% endif %}>
+                        {{ _('TimeTracker → GitHub (Export only)') }}
+                    </option>
+                    <option value="bidirectional" {% if current_config.get('sync_direction') == 'bidirectional' %}selected{% endif %}>
+                        {{ _('Bidirectional (Two-way sync)') }}
+                    </option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Items to Sync') }}</label>
+                <div class="space-y-2">
+                    {% set sync_items = current_config.get('sync_items', ['issues']) %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="issues" id="sync_issues"
+                               {% if 'issues' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_issues" class="ml-2 text-sm">{{ _('Issues') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="pull_requests" id="sync_prs"
+                               {% if 'pull_requests' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_prs" class="ml-2 text-sm">{{ _('Pull Requests') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="projects" id="sync_projects"
+                               {% if 'projects' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_projects" class="ml-2 text-sm">{{ _('Projects (Repositories)') }}</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Issue States to Sync') }}</label>
+                <div class="space-y-2">
+                    {% set issue_states = current_config.get('issue_states', ['open']) %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="issue_states" value="open" id="state_open"
+                               {% if 'open' in issue_states %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="state_open" class="ml-2 text-sm">{{ _('Open Issues') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="issue_states" value="closed" id="state_closed"
+                               {% if 'closed' in issue_states %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="state_closed" class="ml-2 text-sm">{{ _('Closed Issues') }}</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Webhook Setup -->
+    <div class="wizard-step hidden" data-step="4">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 4: Webhook Setup') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="webhook_secret" class="block text-sm font-medium mb-2">
+                    {{ _('Webhook Secret') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                </label>
+                <input type="password" id="webhook_secret" name="webhook_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter webhook secret') }}">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Secret token for verifying webhook signatures. Configure this in your GitHub repository webhook settings.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="sync_interval" class="block text-sm font-medium mb-2">{{ _('Sync Schedule') }}</label>
+                <select id="sync_interval" name="sync_interval"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="manual" {% if current_config.get('sync_interval', 'manual') == 'manual' %}selected{% endif %}>{{ _('Manual only') }}</option>
+                    <option value="hourly" {% if current_config.get('sync_interval') == 'hourly' %}selected{% endif %}>{{ _('Every hour') }}</option>
+                    <option value="daily" {% if current_config.get('sync_interval') == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
+                    <option value="weekly" {% if current_config.get('sync_interval') == 'weekly' %}selected{% endif %}>{{ _('Weekly') }}</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" name="auto_sync" id="auto_sync" value="1"
+                       {% if current_config.get('auto_sync', False) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="auto_sync" class="ml-2 text-sm">{{ _('Auto Sync') }}</label>
+            </div>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                {{ _('Automatically sync when webhooks are received from GitHub') }}
+            </p>
+            
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h3 class="font-semibold mb-2">{{ _('Webhook URL') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
+                    {{ _('Add this URL as a webhook in your GitHub repository settings:') }}
+                </p>
+                <code class="block p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs break-all">
+                    {{ url_for('integrations.integration_webhook', provider='github', _external=True) }}
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 5: Review -->
+    <div class="wizard-step hidden" data-step="5">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 5: Review & Save') }}</h2>
+        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('Review your configuration and click "Finish" to save.') }}
+            </p>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Repositories') }}:</span>
+                    <span id="review-repositories" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Sync Direction') }}:</span>
+                    <span id="review-sync-direction" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Items to Sync') }}:</span>
+                    <span id="review-sync-items" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="wizard_final_step" value="true">
+    </div>
+{% endblock %}
+
+{% block wizard_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof IntegrationWizard !== 'undefined') {
+        const wizard = new IntegrationWizard({
+            totalSteps: 5,
+            provider: 'github',
+            saveUrl: '{{ wizard_save_url }}',
+            finishText: '{{ _("Finish") }}',
+            onStepChange: function(step) {
+                if (step === 5) {
+                    const repos = document.getElementById('repositories')?.value || '{{ _("All repositories") }}';
+                    const syncDirection = document.getElementById('sync_direction')?.selectedOptions[0]?.text || '';
+                    const syncItems = Array.from(document.querySelectorAll('input[name="sync_items"]:checked'))
+                        .map(cb => cb.nextElementSibling.textContent).join(', ') || '{{ _("None") }}';
+                    
+                    document.getElementById('review-repositories').textContent = repos;
+                    document.getElementById('review-sync-direction').textContent = syncDirection;
+                    document.getElementById('review-sync-items').textContent = syncItems;
+                }
+            }
+        });
+        wizard.init();
+    }
+});
+</script>
+{% endblock %}
