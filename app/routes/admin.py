@@ -1990,6 +1990,228 @@ def oidc_user_detail(user_id):
     return render_template("admin/oidc_user_detail.html", user=user)
 
 
+# ==================== OIDC Setup Wizard ====================
+
+
+@admin_bp.route("/admin/oidc/setup-wizard")
+@login_required
+@admin_or_permission_required("manage_oidc")
+def oidc_setup_wizard():
+    """Guided OIDC setup wizard"""
+    from app.config import Config
+    
+    # Get current configuration if any
+    current_config = {
+        "auth_method": getattr(Config, "AUTH_METHOD", "local"),
+        "issuer": getattr(Config, "OIDC_ISSUER", ""),
+        "client_id": getattr(Config, "OIDC_CLIENT_ID", ""),
+        "client_secret_set": bool(getattr(Config, "OIDC_CLIENT_SECRET", None)),
+        "redirect_uri": getattr(Config, "OIDC_REDIRECT_URI", ""),
+        "scopes": getattr(Config, "OIDC_SCOPES", "openid profile email"),
+        "username_claim": getattr(Config, "OIDC_USERNAME_CLAIM", "preferred_username"),
+        "email_claim": getattr(Config, "OIDC_EMAIL_CLAIM", "email"),
+        "full_name_claim": getattr(Config, "OIDC_FULL_NAME_CLAIM", "name"),
+        "groups_claim": getattr(Config, "OIDC_GROUPS_CLAIM", "groups"),
+        "admin_group": getattr(Config, "OIDC_ADMIN_GROUP", ""),
+        "admin_emails": ",".join(getattr(Config, "OIDC_ADMIN_EMAILS", [])),
+        "post_logout_redirect": getattr(Config, "OIDC_POST_LOGOUT_REDIRECT_URI", ""),
+    }
+    
+    # Generate redirect URI if not set
+    if not current_config["redirect_uri"]:
+        current_config["redirect_uri"] = url_for("auth.oidc_callback", _external=True)
+    
+    return render_template("admin/oidc_setup_wizard.html", current_config=current_config)
+
+
+@admin_bp.route("/admin/oidc/setup-wizard/test-connection", methods=["POST"])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required("manage_oidc")
+def oidc_wizard_test_connection():
+    """Test DNS resolution and metadata fetch for OIDC issuer"""
+    from app.utils.oidc_metadata import fetch_oidc_metadata, test_dns_resolution
+    from urllib.parse import urlparse
+    
+    data = request.get_json() or {}
+    issuer = data.get("issuer", "").strip()
+    
+    if not issuer:
+        return jsonify({"success": False, "error": "Issuer URL is required"}), 400
+    
+    # Validate URL format
+    try:
+        parsed = urlparse(issuer)
+        if not parsed.scheme or not parsed.netloc:
+            return jsonify({"success": False, "error": "Invalid URL format"}), 400
+        hostname = parsed.netloc.split(":")[0]
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Invalid URL: {str(e)}"}), 400
+    
+    result = {
+        "success": False,
+        "dns_resolved": False,
+        "metadata": None,
+        "error": None,
+        "hostname": hostname,
+    }
+    
+    # Test DNS resolution
+    dns_success, dns_error = test_dns_resolution(hostname, timeout=5)
+    result["dns_resolved"] = dns_success
+    if not dns_success:
+        result["error"] = dns_error
+        return jsonify(result), 200  # Return 200 but with success=False
+    
+    # Fetch metadata
+    metadata, metadata_error = fetch_oidc_metadata(
+        issuer,
+        max_retries=3,
+        retry_delay=2,
+        timeout=10,
+        use_dns_test=False,  # Already tested DNS
+    )
+    
+    if metadata:
+        result["success"] = True
+        result["metadata"] = metadata
+    else:
+        result["error"] = metadata_error
+    
+    return jsonify(result), 200
+
+
+@admin_bp.route("/admin/oidc/setup-wizard/validate-config", methods=["POST"])
+@limiter.limit("20 per minute")
+@login_required
+@admin_or_permission_required("manage_oidc")
+def oidc_wizard_validate_config():
+    """Validate OIDC configuration"""
+    from urllib.parse import urlparse
+    
+    data = request.get_json() or {}
+    errors = []
+    
+    # Validate issuer
+    issuer = data.get("issuer", "").strip()
+    if not issuer:
+        errors.append({"field": "issuer", "message": "Issuer URL is required"})
+    else:
+        try:
+            parsed = urlparse(issuer)
+            if not parsed.scheme or not parsed.netloc:
+                errors.append({"field": "issuer", "message": "Invalid URL format"})
+            elif parsed.scheme not in ("http", "https"):
+                errors.append({"field": "issuer", "message": "URL must use http or https"})
+        except Exception as e:
+            errors.append({"field": "issuer", "message": f"Invalid URL: {str(e)}"})
+    
+    # Validate client ID
+    if not data.get("client_id", "").strip():
+        errors.append({"field": "client_id", "message": "Client ID is required"})
+    
+    # Validate client secret
+    if not data.get("client_secret", "").strip():
+        errors.append({"field": "client_secret", "message": "Client Secret is required"})
+    
+    # Validate auth method
+    auth_method = data.get("auth_method", "").strip().lower()
+    if auth_method not in ("oidc", "both"):
+        errors.append({"field": "auth_method", "message": "Auth method must be 'oidc' or 'both'"})
+    
+    # Validate redirect URI if provided
+    redirect_uri = data.get("redirect_uri", "").strip()
+    if redirect_uri:
+        try:
+            parsed = urlparse(redirect_uri)
+            if not parsed.scheme or not parsed.netloc:
+                errors.append({"field": "redirect_uri", "message": "Invalid redirect URI format"})
+        except Exception as e:
+            errors.append({"field": "redirect_uri", "message": f"Invalid redirect URI: {str(e)}"})
+    
+    if errors:
+        return jsonify({"valid": False, "errors": errors}), 200
+    
+    return jsonify({"valid": True, "errors": []}), 200
+
+
+@admin_bp.route("/admin/oidc/setup-wizard/generate-config", methods=["POST"])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required("manage_oidc")
+def oidc_wizard_generate_config():
+    """Generate environment variable configuration from wizard data"""
+    
+    data = request.get_json() or {}
+    
+    # Get base URL for redirect URI generation
+    base_url = request.host_url.rstrip("/")
+    if not data.get("redirect_uri"):
+        redirect_uri = f"{base_url}/auth/oidc/callback"
+    else:
+        redirect_uri = data.get("redirect_uri", "").strip()
+    
+    # Build environment variables
+    env_vars = {
+        "AUTH_METHOD": data.get("auth_method", "oidc"),
+        "OIDC_ISSUER": data.get("issuer", ""),
+        "OIDC_CLIENT_ID": data.get("client_id", ""),
+        "OIDC_CLIENT_SECRET": data.get("client_secret", ""),
+        "OIDC_REDIRECT_URI": redirect_uri,
+    }
+    
+    # Optional settings
+    if data.get("scopes"):
+        env_vars["OIDC_SCOPES"] = data.get("scopes")
+    
+    if data.get("username_claim"):
+        env_vars["OIDC_USERNAME_CLAIM"] = data.get("username_claim")
+    
+    if data.get("email_claim"):
+        env_vars["OIDC_EMAIL_CLAIM"] = data.get("email_claim")
+    
+    if data.get("full_name_claim"):
+        env_vars["OIDC_FULL_NAME_CLAIM"] = data.get("full_name_claim")
+    
+    if data.get("groups_claim"):
+        env_vars["OIDC_GROUPS_CLAIM"] = data.get("groups_claim")
+    
+    if data.get("admin_group"):
+        env_vars["OIDC_ADMIN_GROUP"] = data.get("admin_group")
+    
+    if data.get("admin_emails"):
+        env_vars["OIDC_ADMIN_EMAILS"] = data.get("admin_emails")
+    
+    if data.get("post_logout_redirect"):
+        env_vars["OIDC_POST_LOGOUT_REDIRECT_URI"] = data.get("post_logout_redirect")
+    
+    # Generate .env format
+    env_lines = []
+    for key, value in env_vars.items():
+        if value:  # Only include non-empty values
+            # Escape special characters in value
+            if " " in str(value) or "#" in str(value) or "$" in str(value):
+                value = f'"{value}"'
+            env_lines.append(f"{key}={value}")
+    
+    env_content = "\n".join(env_lines)
+    
+    # Generate Docker Compose format
+    docker_compose_lines = ["      # OIDC Configuration"]
+    for key, value in env_vars.items():
+        if value:
+            docker_compose_lines.append(f'      - {key}="{value}"')
+    
+    docker_compose_content = "\n".join(docker_compose_lines)
+    
+    return jsonify({
+        "success": True,
+        "env_content": env_content,
+        "docker_compose_content": docker_compose_content,
+        "redirect_uri": redirect_uri,
+    }), 200
+
+
 # ==================== API Token Management ====================
 
 
