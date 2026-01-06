@@ -1,0 +1,290 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+    <!-- Step 1: OAuth Setup and Basic Configuration -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: OAuth Setup & Basic Configuration') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-green-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('First, configure OAuth credentials for Jira. You can get these from Atlassian Developer Console.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="jira_client_id" class="block text-sm font-medium mb-2">
+                    {{ _('Jira OAuth Client ID') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="jira_client_id" name="jira_client_id"
+                       value="{{ current_config.get('client_id', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client ID') }}" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Get this from Atlassian Developer Console') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="jira_client_secret" class="block text-sm font-medium mb-2">
+                    {{ _('Jira OAuth Client Secret') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="jira_client_secret" name="jira_client_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client Secret') }}" required>
+            </div>
+            {% endif %}
+            
+            <div>
+                <label for="jira_url" class="block text-sm font-medium mb-2">
+                    {{ _('Jira Instance URL') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="url" id="jira_url" name="jira_url"
+                       value="{{ current_config.get('jira_url', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="https://your-domain.atlassian.net" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Your Jira Cloud or Server URL (e.g., https://your-domain.atlassian.net)') }}
+                </p>
+            </div>
+            
+            <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <h3 class="font-semibold mb-2">{{ _('OAuth Redirect URI') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
+                    {{ _('Add this URL as an authorized redirect URI in your Jira OAuth app settings:') }}
+                </p>
+                <code class="block p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs break-all">
+                    {{ url_for('integrations.oauth_callback', provider='jira', _external=True) }}
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Connection Test -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Test Connection') }}</h2>
+        <div id="connection-test-results" class="mb-4">
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Click "Test Connection" to verify that Jira is accessible and OAuth credentials are correct.') }}
+                </p>
+            </div>
+        </div>
+        <button type="button" id="test-connection-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-vial mr-2"></i>{{ _('Test Connection') }}
+        </button>
+    </div>
+
+    <!-- Step 3: Sync Configuration -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Sync Configuration') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="jql" class="block text-sm font-medium mb-2">
+                    {{ _('JQL Query') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                </label>
+                <textarea id="jql" name="jql" rows="3"
+                          class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                          placeholder="assignee = currentUser() AND status != Done ORDER BY updated DESC">{{ current_config.get('jql', '') }}</textarea>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Jira Query Language query to filter issues to sync. Leave empty to sync all assigned issues.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="sync_direction" class="block text-sm font-medium mb-2">
+                    {{ _('Sync Direction') }}
+                </label>
+                <select id="sync_direction" name="sync_direction"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="jira_to_timetracker" {% if current_config.get('sync_direction', 'jira_to_timetracker') == 'jira_to_timetracker' %}selected{% endif %}>
+                        {{ _('Jira → TimeTracker (Import only)') }}
+                    </option>
+                    <option value="timetracker_to_jira" {% if current_config.get('sync_direction') == 'timetracker_to_jira' %}selected{% endif %}>
+                        {{ _('TimeTracker → Jira (Export only)') }}
+                    </option>
+                    <option value="bidirectional" {% if current_config.get('sync_direction') == 'bidirectional' %}selected{% endif %}>
+                        {{ _('Bidirectional (Two-way sync)') }}
+                    </option>
+                </select>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Choose how data flows between Jira and TimeTracker') }}
+                </p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Items to Sync') }}</label>
+                <div class="space-y-2">
+                    {% set sync_items = current_config.get('sync_items', ['issues']) %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="issues" id="sync_issues"
+                               {% if 'issues' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_issues" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                            {{ _('Issues (Tasks)') }}
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="projects" id="sync_projects"
+                               {% if 'projects' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_projects" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                            {{ _('Projects') }}
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="time_entries" id="sync_time_entries"
+                               {% if 'time_entries' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_time_entries" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                            {{ _('Time Entries') }}
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Advanced Settings -->
+    <div class="wizard-step hidden" data-step="4">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 4: Advanced Settings') }}</h2>
+        <div class="space-y-4">
+            <div class="flex items-center">
+                <input type="checkbox" name="auto_sync" id="auto_sync" value="1"
+                       {% if current_config.get('auto_sync', False) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="auto_sync" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                    {{ _('Auto Sync') }}
+                </label>
+            </div>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                {{ _('Automatically sync when webhooks are received from Jira') }}
+            </p>
+            
+            <div>
+                <label for="sync_interval" class="block text-sm font-medium mb-2">
+                    {{ _('Sync Schedule') }}
+                </label>
+                <select id="sync_interval" name="sync_interval"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="manual" {% if current_config.get('sync_interval', 'manual') == 'manual' %}selected{% endif %}>
+                        {{ _('Manual only') }}
+                    </option>
+                    <option value="hourly" {% if current_config.get('sync_interval') == 'hourly' %}selected{% endif %}>
+                        {{ _('Every hour') }}
+                    </option>
+                    <option value="daily" {% if current_config.get('sync_interval') == 'daily' %}selected{% endif %}>
+                        {{ _('Daily') }}
+                    </option>
+                    <option value="weekly" {% if current_config.get('sync_interval') == 'weekly' %}selected{% endif %}>
+                        {{ _('Weekly') }}
+                    </option>
+                </select>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" name="create_projects" id="create_projects" value="1"
+                       {% if current_config.get('create_projects', True) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="create_projects" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                    {{ _('Create Projects') }}
+                </label>
+            </div>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                {{ _('Automatically create projects in TimeTracker from Jira projects') }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Step 5: Review & Save -->
+    <div class="wizard-step hidden" data-step="5">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 5: Review & Save') }}</h2>
+        <div class="space-y-4">
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Review your configuration below. Click "Finish" to save and complete the setup.') }}
+                </p>
+                
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="font-medium">{{ _('Jira URL') }}:</span>
+                        <span id="review-jira-url" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">{{ _('Sync Direction') }}:</span>
+                        <span id="review-sync-direction" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">{{ _('Items to Sync') }}:</span>
+                        <span id="review-sync-items" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">{{ _('Auto Sync') }}:</span>
+                        <span id="review-auto-sync" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <input type="hidden" name="wizard_final_step" value="true">
+        </div>
+    </div>
+{% endblock %}
+
+{% block wizard_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof IntegrationWizard !== 'undefined') {
+        const wizard = new IntegrationWizard({
+            totalSteps: 5,
+            provider: 'jira',
+            saveUrl: '{{ wizard_save_url }}',
+            testConnectionUrl: '{{ test_connection_url }}',
+            finishText: '{{ _("Finish") }}',
+            onStepChange: function(step) {
+                if (step === 5) {
+                    // Update review section
+                    const jiraUrl = document.getElementById('jira_url')?.value || '';
+                    const syncDirection = document.getElementById('sync_direction')?.selectedOptions[0]?.text || '';
+                    const syncItems = Array.from(document.querySelectorAll('input[name="sync_items"]:checked'))
+                        .map(cb => cb.nextElementSibling.textContent).join(', ');
+                    const autoSync = document.getElementById('auto_sync')?.checked ? '{{ _("Yes") }}' : '{{ _("No") }}';
+                    
+                    document.getElementById('review-jira-url').textContent = jiraUrl || '{{ _("Not set") }}';
+                    document.getElementById('review-sync-direction').textContent = syncDirection;
+                    document.getElementById('review-sync-items').textContent = syncItems || '{{ _("None") }}';
+                    document.getElementById('review-auto-sync').textContent = autoSync;
+                }
+            }
+        });
+        
+        wizard.addValidationCallback(2, function() {
+            if (!wizard.connectionTestResult) {
+                alert('{{ _("Please test the connection before proceeding.") }}');
+                return false;
+            }
+            return true;
+        });
+        
+        // Handle connection test button
+        const testBtn = document.getElementById('test-connection-btn');
+        if (testBtn) {
+            testBtn.addEventListener('click', async function() {
+                const jiraUrl = document.getElementById('jira_url')?.value;
+                if (!jiraUrl) {
+                    alert('{{ _("Please enter Jira URL first.") }}');
+                    return;
+                }
+                
+                const result = await wizard.testConnection({ jira_url: jiraUrl });
+                wizard.displayConnectionResults(result);
+            });
+        }
+        
+        wizard.init();
+    }
+});
+</script>
+{% endblock %}

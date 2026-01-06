@@ -14,7 +14,7 @@
     title_text=_('OIDC Debug Dashboard'),
     subtitle_text=_('Inspect configuration, provider metadata and OIDC users'),
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("admin.oidc_test") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-vial mr-2"></i>' + _('Test Configuration') + '</a>'
+    actions_html='<a href="' + url_for("admin.oidc_setup_wizard") + '" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors mr-2"><i class="fas fa-magic mr-2"></i>' + _('Setup Wizard') + '</a><a href="' + url_for("admin.oidc_test") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-vial mr-2"></i>' + _('Test Configuration') + '</a>'
 ) }}
 
 <!-- Configuration and Claims -->

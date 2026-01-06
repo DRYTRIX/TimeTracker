@@ -45,6 +45,13 @@ DEFAULT_PERMISSIONS = [
     {"name": "edit_clients", "description": "Edit client details", "category": "clients"},
     {"name": "delete_clients", "description": "Delete clients", "category": "clients"},
     {"name": "manage_client_notes", "description": "Manage client notes", "category": "clients"},
+    # Issue Permissions
+    {"name": "view_all_issues", "description": "View all issues from all clients", "category": "issues"},
+    {"name": "view_own_issues", "description": "View issues for assigned clients/projects", "category": "issues"},
+    {"name": "create_issues", "description": "Create new issues", "category": "issues"},
+    {"name": "edit_all_issues", "description": "Edit all issues", "category": "issues"},
+    {"name": "edit_own_issues", "description": "Edit issues for assigned clients/projects", "category": "issues"},
+    {"name": "delete_issues", "description": "Delete issues", "category": "issues"},
     # Invoice Permissions
     {"name": "view_own_invoices", "description": "View own invoices", "category": "invoices"},
     {"name": "view_all_invoices", "description": "View all invoices", "category": "invoices"},
@@ -53,6 +60,7 @@ DEFAULT_PERMISSIONS = [
     {"name": "delete_invoices", "description": "Delete invoices", "category": "invoices"},
     {"name": "send_invoices", "description": "Send invoices to clients", "category": "invoices"},
     {"name": "manage_payments", "description": "Manage invoice payments", "category": "invoices"},
+    {"name": "manage_payment_gateways", "description": "Manage payment gateway configurations", "category": "invoices"},
     # Report Permissions
     {"name": "view_own_reports", "description": "View own reports", "category": "reports"},
     {"name": "view_all_reports", "description": "View reports for all users", "category": "reports"},
@@ -148,6 +156,7 @@ DEFAULT_ROLES = {
             "delete_invoices",
             "send_invoices",
             "manage_payments",
+            "manage_payment_gateways",
             # Reports
             "view_all_reports",
             "export_reports",
@@ -176,6 +185,10 @@ DEFAULT_ROLES = {
             "approve_stock_adjustments",
             "manage_suppliers",
             "manage_purchase_orders",
+            # Issues
+            "view_all_issues",
+            "create_issues",
+            "edit_all_issues",
         ],
     },
     "manager": {
@@ -207,12 +220,17 @@ DEFAULT_ROLES = {
             "create_invoices",
             "edit_invoices",
             "send_invoices",
+            "manage_payment_gateways",
             # Reports
             "view_all_reports",
             "export_reports",
             "create_saved_reports",
             # Users
             "view_users",
+            # Issues
+            "view_all_issues",
+            "create_issues",
+            "edit_all_issues",
             # Inventory
             "view_inventory",
             "view_stock_levels",

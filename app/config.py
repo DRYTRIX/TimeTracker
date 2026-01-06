@@ -63,6 +63,11 @@ class Config:
     OIDC_ADMIN_GROUP = os.getenv("OIDC_ADMIN_GROUP")  # optional
     OIDC_ADMIN_EMAILS = [e.strip().lower() for e in os.getenv("OIDC_ADMIN_EMAILS", "").split(",") if e.strip()]
     OIDC_POST_LOGOUT_REDIRECT_URI = os.getenv("OIDC_POST_LOGOUT_REDIRECT_URI")
+    
+    # OIDC metadata fetch configuration (for DNS resolution issues)
+    OIDC_METADATA_FETCH_TIMEOUT = int(os.getenv("OIDC_METADATA_FETCH_TIMEOUT", 10))  # seconds
+    OIDC_METADATA_RETRY_ATTEMPTS = int(os.getenv("OIDC_METADATA_RETRY_ATTEMPTS", 3))  # number of retries
+    OIDC_METADATA_RETRY_DELAY = int(os.getenv("OIDC_METADATA_RETRY_DELAY", 2))  # seconds between retries
 
     # Backup settings
     BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", 30))

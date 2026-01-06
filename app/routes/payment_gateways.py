@@ -18,7 +18,7 @@ payment_gateways_bp = Blueprint("payment_gateways", __name__)
 
 @payment_gateways_bp.route("/payment-gateways")
 @login_required
-@admin_or_permission_required("admin_access")
+@admin_or_permission_required("manage_payment_gateways")
 def list_gateways():
     """List payment gateways"""
     gateways = PaymentGateway.query.all()
@@ -27,7 +27,7 @@ def list_gateways():
 
 @payment_gateways_bp.route("/payment-gateways/create", methods=["GET", "POST"])
 @login_required
-@admin_or_permission_required("admin_access")
+@admin_or_permission_required("manage_payment_gateways")
 def create_gateway():
     """Create a payment gateway"""
     if request.method == "POST":

@@ -54,6 +54,7 @@
         </form>
         {% endif %}
         {% endif %}
+        {% if current_user.is_admin or has_permission('delete_projects') %}
         <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
                 onclick="document.getElementById('confirmDeleteProject-{{ project.id }}').classList.remove('hidden')">
             {{ _('Delete Project') }}
@@ -61,6 +62,7 @@
         <form id="confirmDeleteProject-{{ project.id }}-form" method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="hidden">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
+        {% endif %}
         {% endif %}
     </div>
 </div>

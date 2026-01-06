@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ _('OIDC Setup Wizard') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
+    {'text': _('OIDC Settings'), 'url': url_for('admin.oidc_debug')},
+    {'text': _('Setup Wizard')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-magic',
+    title_text=_('OIDC Setup Wizard'),
+    subtitle_text=_('Guided step-by-step configuration for OpenID Connect authentication'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <!-- Progress Indicator -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold step-indicator" data-step="1">1</div>
+                <span class="text-sm font-medium step-label" data-step="1">{{ _('Basic Config') }}</span>
+            </div>
+            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="1"></div>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="2">2</div>
+                <span class="text-sm font-medium step-label" data-step="2">{{ _('Test Connection') }}</span>
+            </div>
+            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="2"></div>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="3">3</div>
+                <span class="text-sm font-medium step-label" data-step="3">{{ _('Claims') }}</span>
+            </div>
+            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="3"></div>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="4">4</div>
+                <span class="text-sm font-medium step-label" data-step="4">{{ _('Advanced') }}</span>
+            </div>
+            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="4"></div>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="5">5</div>
+                <span class="text-sm font-medium step-label" data-step="5">{{ _('Finalize') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1: Basic Configuration -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: Basic Configuration') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="issuer" class="block text-sm font-medium mb-2">
+                    {{ _('OIDC Issuer URL') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="url" id="issuer" name="issuer" 
+                       value="{{ current_config.issuer }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="https://auth.example.com" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('The base URL of your OIDC provider (e.g., https://auth.example.com or https://login.microsoftonline.com/tenant-id/v2.0)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="client_id" class="block text-sm font-medium mb-2">
+                    {{ _('Client ID') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="client_id" name="client_id"
+                       value="{{ current_config.client_id }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="timetracker" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('The client ID from your OIDC provider') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="client_secret" class="block text-sm font-medium mb-2">
+                    {{ _('Client Secret') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="client_secret" name="client_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter client secret') }}" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('The client secret from your OIDC provider') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="auth_method" class="block text-sm font-medium mb-2">
+                    {{ _('Authentication Method') }} <span class="text-red-500">*</span>
+                </label>
+                <select id="auth_method" name="auth_method"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark" required>
+                    <option value="oidc" {% if current_config.auth_method == 'oidc' %}selected{% endif %}>
+                        {{ _('OIDC Only') }} - {{ _('SSO login only, no local passwords') }}
+                    </option>
+                    <option value="both" {% if current_config.auth_method == 'both' %}selected{% endif %}>
+                        {{ _('Both') }} - {{ _('SSO and local password authentication') }}
+                    </option>
+                </select>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Choose whether to allow only OIDC login or both OIDC and local password authentication') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Connection Testing -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Test Connection') }}</h2>
+        <div id="connection-test-results" class="mb-4">
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Click "Test Connection" to verify DNS resolution and metadata endpoint accessibility.') }}
+                </p>
+            </div>
+        </div>
+        <button type="button" id="test-connection-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-vial mr-2"></i>{{ _('Test Connection') }}
+        </button>
+        <div id="metadata-preview" class="mt-4 hidden">
+            <h3 class="font-semibold mb-2">{{ _('Provider Metadata') }}</h3>
+            <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg text-sm overflow-x-auto">
+                <pre id="metadata-content" class="whitespace-pre-wrap"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Claim Mapping -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Claim Mapping') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="username_claim" class="block text-sm font-medium mb-2">
+                    {{ _('Username Claim') }}
+                </label>
+                <input type="text" id="username_claim" name="username_claim"
+                       value="{{ current_config.username_claim }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="preferred_username">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Claim name containing the username (default: preferred_username)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="email_claim" class="block text-sm font-medium mb-2">
+                    {{ _('Email Claim') }}
+                </label>
+                <input type="text" id="email_claim" name="email_claim"
+                       value="{{ current_config.email_claim }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="email">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Claim name containing the email address (default: email)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="full_name_claim" class="block text-sm font-medium mb-2">
+                    {{ _('Full Name Claim') }}
+                </label>
+                <input type="text" id="full_name_claim" name="full_name_claim"
+                       value="{{ current_config.full_name_claim }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="name">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Claim name containing the full name (default: name)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="groups_claim" class="block text-sm font-medium mb-2">
+                    {{ _('Groups Claim') }}
+                </label>
+                <input type="text" id="groups_claim" name="groups_claim"
+                       value="{{ current_config.groups_claim }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="groups">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Claim name containing user groups (default: groups, optional)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="admin_group" class="block text-sm font-medium mb-2">
+                    {{ _('Admin Group') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                </label>
+                <input type="text" id="admin_group" name="admin_group"
+                       value="{{ current_config.admin_group }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="timetracker-admins">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Group name that grants admin access (optional)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="admin_emails" class="block text-sm font-medium mb-2">
+                    {{ _('Admin Emails') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                </label>
+                <input type="text" id="admin_emails" name="admin_emails"
+                       value="{{ current_config.admin_emails }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="admin@example.com,boss@example.com">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Comma-separated list of email addresses that grant admin access (optional)') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Advanced Settings -->
+    <div class="wizard-step hidden" data-step="4">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 4: Advanced Settings') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="scopes" class="block text-sm font-medium mb-2">
+                    {{ _('Scopes') }}
+                </label>
+                <input type="text" id="scopes" name="scopes"
+                       value="{{ current_config.scopes }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="openid profile email">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Space-separated list of OIDC scopes (default: openid profile email)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="redirect_uri" class="block text-sm font-medium mb-2">
+                    {{ _('Redirect URI') }}
+                </label>
+                <input type="url" id="redirect_uri" name="redirect_uri"
+                       value="{{ current_config.redirect_uri }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="https://app.example.com/auth/oidc/callback">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('OAuth callback URL (usually auto-generated, but can be customized)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="post_logout_redirect" class="block text-sm font-medium mb-2">
+                    {{ _('Post-Logout Redirect URI') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                </label>
+                <input type="url" id="post_logout_redirect" name="post_logout_redirect"
+                       value="{{ current_config.post_logout_redirect }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="https://app.example.com/">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('URL to redirect to after logout (optional, only if your provider supports end_session_endpoint)') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 5: Finalize -->
+    <div class="wizard-step hidden" data-step="5">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 5: Generate Configuration') }}</h2>
+        <div id="config-generation-results" class="mb-4">
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Click "Generate Configuration" to create environment variable configuration.') }}
+                </p>
+            </div>
+            <button type="button" id="generate-config-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors mb-4">
+                <i class="fas fa-code mr-2"></i>{{ _('Generate Configuration') }}
+            </button>
+        </div>
+        <div id="config-preview" class="hidden">
+            <div class="mb-4">
+                <h3 class="font-semibold mb-2">{{ _('Environment Variables (.env file)') }}</h3>
+                <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg relative">
+                    <button type="button" class="absolute top-2 right-2 bg-primary text-white px-3 py-1 rounded text-sm copy-btn" data-target="env-content">
+                        <i class="fas fa-copy mr-1"></i>{{ _('Copy') }}
+                    </button>
+                    <pre id="env-content" class="text-sm overflow-x-auto whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+            <div>
+                <h3 class="font-semibold mb-2">{{ _('Docker Compose') }}</h3>
+                <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg relative">
+                    <button type="button" class="absolute top-2 right-2 bg-primary text-white px-3 py-1 rounded text-sm copy-btn" data-target="docker-content">
+                        <i class="fas fa-copy mr-1"></i>{{ _('Copy') }}
+                    </button>
+                    <pre id="docker-content" class="text-sm overflow-x-auto whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+            <div class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <p class="text-sm text-green-800 dark:text-green-200">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    {{ _('Copy the configuration above and add it to your environment variables or Docker Compose file, then restart the application.') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between mt-8 pt-6 border-t border-border-light dark:border-border-dark">
+        <button type="button" id="prev-btn" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors hidden">
+            <i class="fas fa-arrow-left mr-2"></i>{{ _('Previous') }}
+        </button>
+        <div class="ml-auto">
+            <button type="button" id="next-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                {{ _('Next') }}<i class="fas fa-arrow-right ml-2"></i>
+            </button>
+            <a href="{{ url_for('admin.oidc_debug') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ml-2">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/oidc_wizard.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ wizard_title }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Integrations'), 'url': url_for('integrations.list_integrations')},
+    {'text': display_name, 'url': url_for('integrations.manage_integration', provider=provider)},
+    {'text': _('Setup Wizard')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-magic',
+    title_text=wizard_title,
+    subtitle_text=wizard_subtitle,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <!-- Progress Indicator -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            {% for step in range(1, total_steps + 1) %}
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="{{ step }}">{{ step }}</div>
+                <span class="text-sm font-medium step-label" data-step="{{ step }}">{{ step_labels[step - 1] if step_labels and step < step_labels|length + 1 else _('Step') }} {{ step }}</span>
+            </div>
+            {% if not loop.last %}
+            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="{{ step }}"></div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <form id="wizard-form" method="POST" action="{{ wizard_save_url }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="provider" value="{{ provider }}">
+        <input type="hidden" name="wizard_step" id="wizard-step-input" value="1">
+        
+        {% block wizard_steps %}
+        <!-- Steps will be defined in child templates -->
+        {% endblock %}
+        
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between mt-8 pt-6 border-t border-border-light dark:border-border-dark">
+            <button type="button" id="prev-btn" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors hidden">
+                <i class="fas fa-arrow-left mr-2"></i>{{ _('Previous') }}
+            </button>
+            <div class="ml-auto flex gap-2">
+                <button type="button" id="next-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    {{ _('Next') }}<i class="fas fa-arrow-right ml-2"></i>
+                </button>
+                <a href="{{ url_for('integrations.manage_integration', provider=provider) }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-block">
+                    {{ _('Cancel') }}
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="{{ url_for('static', filename='js/integration_wizard.js') }}"></script>
+{% block wizard_js %}
+<!-- Provider-specific JavaScript will be included here -->
+{% endblock %}
+
+<script>
+    // Initialize wizard with configuration
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof IntegrationWizard !== 'undefined') {
+            const wizard = new IntegrationWizard({
+                totalSteps: {{ total_steps }},
+                provider: '{{ provider }}',
+                saveUrl: '{{ wizard_save_url }}',
+                {% if test_connection_url %}
+                testConnectionUrl: '{{ test_connection_url }}',
+                {% endif %}
+            });
+            wizard.init();
+        }
+    });
+</script>
+{% endblock %}

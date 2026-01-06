@@ -562,6 +562,118 @@ def login_oidc():
         return redirect(url_for("auth.login"))
 
     client = oauth.create_client("oidc")
+    
+    # If client doesn't exist, try lazy loading (for DNS resolution failures at startup)
+    if not client:
+        issuer = current_app.config.get("OIDC_ISSUER_FOR_LAZY_LOAD")
+        client_id = current_app.config.get("OIDC_CLIENT_ID_FOR_LAZY_LOAD")
+        client_secret = current_app.config.get("OIDC_CLIENT_SECRET_FOR_LAZY_LOAD")
+        scopes = current_app.config.get("OIDC_SCOPES_FOR_LAZY_LOAD", "openid profile email")
+        
+        if issuer and client_id and client_secret:
+            # Try to fetch metadata and register client now
+            from app.utils.oidc_metadata import fetch_oidc_metadata
+            
+            max_retries = int(current_app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
+            retry_delay = int(current_app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
+            timeout = int(current_app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+            
+            current_app.logger.info(
+                "Attempting lazy OIDC client registration for issuer %s", issuer
+            )
+            
+            metadata, metadata_error = fetch_oidc_metadata(
+                issuer,
+                max_retries=max_retries,
+                retry_delay=retry_delay,
+                timeout=timeout,
+                use_dns_test=True,
+            )
+            
+            if metadata:
+                try:
+                    oauth.register(
+                        name="oidc",
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        server_metadata_url=f"{issuer.rstrip('/')}/.well-known/openid-configuration",
+                        client_kwargs={
+                            "scope": scopes,
+                            "code_challenge_method": "S256",
+                        },
+                    )
+                    current_app.logger.info(
+                        "Successfully registered OIDC client via lazy loading for issuer %s", issuer
+                    )
+                    # Clear lazy load config since we succeeded
+                    current_app.config.pop("OIDC_ISSUER_FOR_LAZY_LOAD", None)
+                    current_app.config.pop("OIDC_CLIENT_ID_FOR_LAZY_LOAD", None)
+                    current_app.config.pop("OIDC_CLIENT_SECRET_FOR_LAZY_LOAD", None)
+                    current_app.config.pop("OIDC_SCOPES_FOR_LAZY_LOAD", None)
+                    client = oauth.create_client("oidc")
+                except Exception as e:
+                    current_app.logger.error(
+                        "Failed to register OIDC client during lazy loading: %s", e
+                    )
+                    flash(
+                        _(
+                            "Failed to connect to Single Sign-On provider. Please contact an administrator. Error: %(error)s",
+                            error=str(e),
+                        ),
+                        "error",
+                    )
+                    return redirect(url_for("auth.login"))
+            else:
+                # Still can't fetch metadata
+                current_app.logger.error(
+                    "Lazy OIDC metadata fetch failed: %s", metadata_error
+                )
+                flash(
+                    _(
+                        "Cannot connect to Single Sign-On provider. DNS resolution may be failing. "
+                        "Please contact an administrator. Error: %(error)s",
+                        error=metadata_error or "Unknown error",
+                    ),
+                    "error",
+                )
+                return redirect(url_for("auth.login"))
+        else:
+            flash(_("Single Sign-On is not configured yet. Please contact an administrator."), "warning")
+            return redirect(url_for("auth.login"))
+    
+    # Check if client has metadata loaded (for cases where registration succeeded but metadata fetch failed)
+    if client:
+        try:
+            # Try to access metadata - if it fails, attempt to load it
+            if not hasattr(client, "metadata") or not client.metadata:
+                issuer = current_app.config.get("OIDC_ISSUER") or current_app.config.get("OIDC_ISSUER_FOR_LAZY_LOAD")
+                if issuer:
+                    from app.utils.oidc_metadata import fetch_oidc_metadata
+                    
+                    max_retries = int(current_app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
+                    retry_delay = int(current_app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
+                    timeout = int(current_app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+                    
+                    metadata, metadata_error = fetch_oidc_metadata(
+                        issuer,
+                        max_retries=max_retries,
+                        retry_delay=retry_delay,
+                        timeout=timeout,
+                        use_dns_test=True,
+                    )
+                    
+                    if metadata:
+                        try:
+                            # Load metadata into existing client
+                            client.load_server_metadata()
+                            current_app.logger.info("Successfully loaded OIDC metadata for existing client")
+                        except Exception as e:
+                            current_app.logger.warning(
+                                "Failed to load metadata into existing client: %s", e
+                            )
+        except Exception as e:
+            current_app.logger.debug("Error checking client metadata: %s", e)
+    
     if not client:
         flash(_("Single Sign-On is not configured yet. Please contact an administrator."), "warning")
         return redirect(url_for("auth.login"))

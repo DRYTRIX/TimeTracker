@@ -153,6 +153,73 @@ def list_issues():
     )
 
 
+@issues_bp.route("/issues/new", methods=["GET", "POST"])
+@login_required
+def new_issue():
+    """Create a new issue"""
+    # Check permissions
+    if not current_user.is_admin and not current_user.has_permission("create_issues"):
+        flash(_("You do not have permission to create issues."), "error")
+        return redirect(url_for("issues.list_issues"))
+    
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        client_id = request.form.get("client_id", type=int)
+        project_id = request.form.get("project_id", type=int)
+        priority = request.form.get("priority", "medium")
+        assigned_to = request.form.get("assigned_to", type=int) or None
+        
+        # Validate
+        if not title:
+            flash(_("Title is required."), "error")
+            return redirect(url_for("issues.new_issue"))
+        
+        if not client_id:
+            flash(_("Client is required."), "error")
+            return redirect(url_for("issues.new_issue"))
+        
+        # Validate project belongs to client if provided
+        if project_id:
+            project = Project.query.get(project_id)
+            if not project or project.client_id != client_id:
+                flash(_("Invalid project selected."), "error")
+                return redirect(url_for("issues.new_issue"))
+        
+        # Create issue
+        issue = Issue(
+            client_id=client_id,
+            title=title,
+            description=description if description else None,
+            project_id=project_id,
+            priority=priority,
+            status="open",
+            assigned_to=assigned_to,
+            submitted_by_client=False,
+        )
+        
+        db.session.add(issue)
+        
+        if not safe_commit("create_issue", {"client_id": client_id, "issue_id": issue.id, "user_id": current_user.id}):
+            flash(_("Could not create issue due to a database error."), "error")
+            return redirect(url_for("issues.new_issue"))
+        
+        flash(_("Issue created successfully."), "success")
+        return redirect(url_for("issues.view_issue", issue_id=issue.id))
+    
+    # GET - show create form
+    clients = Client.query.filter_by(status="active").order_by(Client.name).limit(500).all()
+    projects = Project.query.filter_by(status="active").order_by(Project.name).limit(500).all()
+    users = User.query.filter_by(is_active=True).order_by(User.username).limit(200).all()
+    
+    return render_template(
+        "issues/new.html",
+        clients=clients,
+        projects=projects,
+        users=users,
+    )
+
+
 @issues_bp.route("/issues/<int:issue_id>")
 @login_required
 def view_issue(issue_id):

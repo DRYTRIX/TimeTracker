@@ -1,0 +1,239 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+    <!-- Step 1: OAuth Connection -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: OAuth Connection') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Configure OAuth credentials from Intuit Developer Dashboard.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="quickbooks_client_id" class="block text-sm font-medium mb-2">
+                    {{ _('QuickBooks OAuth Client ID') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="quickbooks_client_id" name="quickbooks_client_id"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client ID') }}" required>
+            </div>
+            
+            <div>
+                <label for="quickbooks_client_secret" class="block text-sm font-medium mb-2">
+                    {{ _('QuickBooks OAuth Client Secret') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="quickbooks_client_secret" name="quickbooks_client_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client Secret') }}" required>
+            </div>
+            {% endif %}
+            
+            <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    {{ _('After saving OAuth credentials, you will need to connect your QuickBooks account via OAuth.') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Company Selection -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Company Selection') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="realm_id" class="block text-sm font-medium mb-2">
+                    {{ _('Company ID (Realm ID)') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="realm_id" name="realm_id"
+                       value="{{ current_config.get('realm_id', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="123456789" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Find your company ID (realm ID) in QuickBooks after connecting via OAuth.') }}
+                </p>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" name="use_sandbox" id="use_sandbox" value="1"
+                       {% if current_config.get('use_sandbox', True) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="use_sandbox" class="ml-2 text-sm">{{ _('Use Sandbox') }}</label>
+            </div>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                {{ _('Use QuickBooks sandbox environment for testing') }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Step 3: Sync Configuration -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Sync Configuration') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="sync_direction" class="block text-sm font-medium mb-2">{{ _('Sync Direction') }}</label>
+                <select id="sync_direction" name="sync_direction"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="quickbooks_to_timetracker" {% if current_config.get('sync_direction', 'timetracker_to_quickbooks') == 'quickbooks_to_timetracker' %}selected{% endif %}>
+                        {{ _('QuickBooks → TimeTracker (Import only)') }}
+                    </option>
+                    <option value="timetracker_to_quickbooks" {% if current_config.get('sync_direction', 'timetracker_to_quickbooks') == 'timetracker_to_quickbooks' %}selected{% endif %}>
+                        {{ _('TimeTracker → QuickBooks (Export only)') }}
+                    </option>
+                    <option value="bidirectional" {% if current_config.get('sync_direction') == 'bidirectional' %}selected{% endif %}>
+                        {{ _('Bidirectional (Two-way sync)') }}
+                    </option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">{{ _('Items to Sync') }}</label>
+                <div class="space-y-2">
+                    {% set sync_items = current_config.get('sync_items', ['invoices', 'expenses']) %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="invoices" id="sync_invoices"
+                               {% if 'invoices' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_invoices" class="ml-2 text-sm">{{ _('Invoices') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="expenses" id="sync_expenses"
+                               {% if 'expenses' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_expenses" class="ml-2 text-sm">{{ _('Expenses') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="payments" id="sync_payments"
+                               {% if 'payments' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_payments" class="ml-2 text-sm">{{ _('Payments') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="sync_items" value="customers" id="sync_customers"
+                               {% if 'customers' in sync_items %}checked{% endif %}
+                               class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="sync_customers" class="ml-2 text-sm">{{ _('Customers') }}</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label for="sync_interval" class="block text-sm font-medium mb-2">{{ _('Sync Schedule') }}</label>
+                <select id="sync_interval" name="sync_interval"
+                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    <option value="manual" {% if current_config.get('sync_interval', 'manual') == 'manual' %}selected{% endif %}>{{ _('Manual only') }}</option>
+                    <option value="hourly" {% if current_config.get('sync_interval') == 'hourly' %}selected{% endif %}>{{ _('Every hour') }}</option>
+                    <option value="daily" {% if current_config.get('sync_interval') == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center">
+                <input type="checkbox" name="auto_sync" id="auto_sync" value="1"
+                       {% if current_config.get('auto_sync', False) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="auto_sync" class="ml-2 text-sm">{{ _('Auto Sync') }}</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Account Mappings -->
+    <div class="wizard-step hidden" data-step="4">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 4: Account Mappings') }} <span class="text-text-muted-light dark:text-text-muted-dark text-sm font-normal">({{ _('optional') }})</span></h2>
+        <div class="space-y-4">
+            <div>
+                <label for="default_expense_account_id" class="block text-sm font-medium mb-2">
+                    {{ _('Default Expense Account ID') }}
+                </label>
+                <input type="text" id="default_expense_account_id" name="default_expense_account_id"
+                       value="{{ current_config.get('default_expense_account_id', '1') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="1">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('QuickBooks account ID to use for expenses when no mapping is configured') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="customer_mappings" class="block text-sm font-medium mb-2">
+                    {{ _('Customer Mappings') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs font-normal">({{ _('JSON') }})</span>
+                </label>
+                <textarea id="customer_mappings" name="customer_mappings" rows="4"
+                          class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark font-mono text-sm"
+                          placeholder='{"1": "qb_customer_id_123", "2": "qb_customer_id_456"}'>{{ current_config.get('customer_mappings', '')|tojson|safe if current_config.get('customer_mappings') else '' }}</textarea>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Map TimeTracker client IDs to QuickBooks customer IDs (JSON format)') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="account_mappings" class="block text-sm font-medium mb-2">
+                    {{ _('Account Mappings') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs font-normal">({{ _('JSON') }})</span>
+                </label>
+                <textarea id="account_mappings" name="account_mappings" rows="4"
+                          class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark font-mono text-sm"
+                          placeholder='{"expense_category_1": "qb_account_id_123"}'>{{ current_config.get('account_mappings', '')|tojson|safe if current_config.get('account_mappings') else '' }}</textarea>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Map TimeTracker expense category IDs to QuickBooks account IDs (JSON format)') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 5: Review -->
+    <div class="wizard-step hidden" data-step="5">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 5: Review & Save') }}</h2>
+        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('Review your configuration and click "Finish" to save.') }}
+            </p>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Company ID') }}:</span>
+                    <span id="review-realm-id" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Sync Direction') }}:</span>
+                    <span id="review-sync-direction" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Items to Sync') }}:</span>
+                    <span id="review-sync-items" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="wizard_final_step" value="true">
+    </div>
+{% endblock %}
+
+{% block wizard_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof IntegrationWizard !== 'undefined') {
+        const wizard = new IntegrationWizard({
+            totalSteps: 5,
+            provider: 'quickbooks',
+            saveUrl: '{{ wizard_save_url }}',
+            finishText: '{{ _("Finish") }}',
+            onStepChange: function(step) {
+                if (step === 5) {
+                    const realmId = document.getElementById('realm_id')?.value || '{{ _("Not set") }}';
+                    const syncDirection = document.getElementById('sync_direction')?.selectedOptions[0]?.text || '';
+                    const syncItems = Array.from(document.querySelectorAll('input[name="sync_items"]:checked'))
+                        .map(cb => cb.nextElementSibling.textContent).join(', ') || '{{ _("None") }}';
+                    
+                    document.getElementById('review-realm-id').textContent = realmId;
+                    document.getElementById('review-sync-direction').textContent = syncDirection;
+                    document.getElementById('review-sync-items').textContent = syncItems;
+                }
+            }
+        });
+        wizard.init();
+    }
+});
+</script>
+{% endblock %}

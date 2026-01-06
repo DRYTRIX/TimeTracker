@@ -1,0 +1,111 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+    <!-- Step 1: Tenant ID -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: Tenant ID Configuration') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Enter your Azure AD tenant ID. Use "common" for multi-tenant apps or leave empty for default.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="outlook_calendar_tenant_id" class="block text-sm font-medium mb-2">
+                    {{ _('Tenant ID') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                </label>
+                <input type="text" id="outlook_calendar_tenant_id" name="outlook_calendar_tenant_id"
+                       value="{{ current_config.get('tenant_id', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="common">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Leave empty to use "common" (multi-tenant). Enter your Azure AD tenant ID for single-tenant apps.') }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Step 2: OAuth Setup -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: OAuth Setup') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Configure OAuth credentials from Azure AD App Registrations.') }}
+                </p>
+            </div>
+            
+            <div>
+                <label for="outlook_calendar_client_id" class="block text-sm font-medium mb-2">
+                    {{ _('Outlook Calendar OAuth Client ID') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="outlook_calendar_client_id" name="outlook_calendar_client_id"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client ID') }}" required>
+            </div>
+            
+            <div>
+                <label for="outlook_calendar_client_secret" class="block text-sm font-medium mb-2">
+                    {{ _('Outlook Calendar OAuth Client Secret') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="outlook_calendar_client_secret" name="outlook_calendar_client_secret"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="{{ _('Enter OAuth Client Secret') }}" required>
+            </div>
+            {% endif %}
+            
+            <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <h3 class="font-semibold mb-2">{{ _('OAuth Redirect URI') }}</h3>
+                <code class="block p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs break-all">
+                    {{ url_for('integrations.oauth_callback', provider='outlook_calendar', _external=True) }}
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Review -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Review & Save') }}</h2>
+        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                <i class="fas fa-info-circle mr-2"></i>
+                {{ _('Review your configuration and click "Finish" to save. After saving, users can connect their Outlook Calendar accounts.') }}
+            </p>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="font-medium">{{ _('Tenant ID') }}:</span>
+                    <span id="review-tenant-id" class="text-text-muted-light dark:text-text-muted-dark"></span>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="wizard_final_step" value="true">
+    </div>
+{% endblock %}
+
+{% block wizard_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof IntegrationWizard !== 'undefined') {
+        const wizard = new IntegrationWizard({
+            totalSteps: 3,
+            provider: 'outlook_calendar',
+            saveUrl: '{{ wizard_save_url }}',
+            finishText: '{{ _("Finish") }}',
+            onStepChange: function(step) {
+                if (step === 3) {
+                    const tenantId = document.getElementById('outlook_calendar_tenant_id')?.value || 'common (default)';
+                    document.getElementById('review-tenant-id').textContent = tenantId;
+                }
+            }
+        });
+        wizard.init();
+    }
+});
+</script>
+{% endblock %}
