@@ -1196,36 +1196,94 @@ def create_app(config=None):
         client_secret = app.config.get("OIDC_CLIENT_SECRET")
         scopes = app.config.get("OIDC_SCOPES", "openid profile email")
         if issuer and client_id and client_secret:
-            try:
-                oauth.register(
-                    name="oidc",
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    server_metadata_url=f"{issuer.rstrip('/')}/.well-known/openid-configuration",
-                    client_kwargs={
-                        "scope": scopes,
-                        "code_challenge_method": "S256",
-                    },
-                )
-                app.logger.info("OIDC client registered with issuer %s", issuer)
-            except Exception as e:
-                error_msg = str(e)
-                # Check for DNS resolution errors
-                if "NameResolutionError" in error_msg or "Failed to resolve" in error_msg or "[Errno -2]" in error_msg:
-                    issuer_host = urlparse(issuer).netloc.split(":")[0] if issuer else "unknown"
-                    app.logger.error(
-                        "Failed to register OIDC client due to DNS resolution error: %s\n"
-                        "This typically occurs when Python's DNS resolver cannot resolve the OIDC issuer domain.\n"
-                        "Troubleshooting:\n"
-                        "1. Verify DNS resolution: docker exec -it <container> python -c \"import socket; print(socket.gethostbyname('%s'))\"\n"
-                        "2. Configure DNS servers in Docker/Portainer stack (add 'dns: [8.8.8.8, 8.8.4.4]' to service)\n"
-                        "3. If both containers are on same Docker network, use container name instead of external domain\n"
-                        "4. See docs/TROUBLESHOOTING_OIDC_DNS.md for detailed solutions",
-                        error_msg,
-                        issuer_host,
+            # Try to fetch metadata first using our utility with better DNS handling
+            from app.utils.oidc_metadata import fetch_oidc_metadata
+            
+            # Get retry configuration from environment
+            max_retries = int(app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
+            retry_delay = int(app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
+            timeout = int(app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+            
+            metadata, metadata_error = fetch_oidc_metadata(
+                issuer,
+                max_retries=max_retries,
+                retry_delay=retry_delay,
+                timeout=timeout,
+                use_dns_test=True,
+            )
+            
+            if metadata:
+                # Successfully fetched metadata - register with it
+                try:
+                    oauth.register(
+                        name="oidc",
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        server_metadata_url=f"{issuer.rstrip('/')}/.well-known/openid-configuration",
+                        client_kwargs={
+                            "scope": scopes,
+                            "code_challenge_method": "S256",
+                        },
                     )
-                else:
-                    app.logger.error("Failed to register OIDC client: %s", e)
+                    app.logger.info("OIDC client registered with issuer %s", issuer)
+                except Exception as e:
+                    app.logger.error("Failed to register OIDC client after metadata fetch: %s", e)
+            else:
+                # Metadata fetch failed - try to register anyway (Authlib will attempt fetch)
+                # If that also fails, we'll handle it gracefully and store config for lazy loading
+                app.logger.warning(
+                    "Failed to fetch OIDC metadata at startup: %s. "
+                    "Attempting to register client anyway - Authlib will retry metadata fetch.",
+                    metadata_error,
+                )
+                try:
+                    oauth.register(
+                        name="oidc",
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        server_metadata_url=f"{issuer.rstrip('/')}/.well-known/openid-configuration",
+                        client_kwargs={
+                            "scope": scopes,
+                            "code_challenge_method": "S256",
+                        },
+                    )
+                    app.logger.info(
+                        "OIDC client registered (Authlib will handle metadata fetch) for issuer %s",
+                        issuer,
+                    )
+                except Exception as e:
+                    error_msg = str(e)
+                    # Check if it's a DNS resolution error
+                    if "NameResolutionError" in error_msg or "Failed to resolve" in error_msg or "[Errno -2]" in error_msg:
+                        # Store config for lazy loading in login route
+                        app.config["OIDC_ISSUER_FOR_LAZY_LOAD"] = issuer
+                        app.config["OIDC_CLIENT_ID_FOR_LAZY_LOAD"] = client_id
+                        app.config["OIDC_CLIENT_SECRET_FOR_LAZY_LOAD"] = client_secret
+                        app.config["OIDC_SCOPES_FOR_LAZY_LOAD"] = scopes
+                        issuer_host = urlparse(issuer).netloc.split(":")[0] if issuer else "unknown"
+                        app.logger.warning(
+                            "OIDC client registration failed due to DNS resolution error: %s. "
+                            "Client will be created lazily on first login attempt. "
+                            "Troubleshooting:\n"
+                            "1. Verify DNS resolution: docker exec -it <container> python -c \"import socket; print(socket.gethostbyname('%s'))\"\n"
+                            "2. Configure DNS servers in Docker/Portainer stack (add 'dns: [8.8.8.8, 8.8.4.4]' to service)\n"
+                            "3. If both containers are on same Docker network, use container name instead of external domain\n"
+                            "4. See docs/TROUBLESHOOTING_OIDC_DNS.md for detailed solutions",
+                            error_msg,
+                            issuer_host,
+                        )
+                    else:
+                        issuer_host = urlparse(issuer).netloc.split(":")[0] if issuer else "unknown"
+                        app.logger.error(
+                            "Failed to register OIDC client: %s\n"
+                            "Troubleshooting:\n"
+                            "1. Verify DNS resolution: docker exec -it <container> python -c \"import socket; print(socket.gethostbyname('%s'))\"\n"
+                            "2. Configure DNS servers in Docker/Portainer stack (add 'dns: [8.8.8.8, 8.8.4.4]' to service)\n"
+                            "3. If both containers are on same Docker network, use container name instead of external domain\n"
+                            "4. See docs/TROUBLESHOOTING_OIDC_DNS.md for detailed solutions",
+                            error_msg,
+                            issuer_host,
+                        )
         else:
             app.logger.warning(
                 "AUTH_METHOD is %s but OIDC envs are incomplete; OIDC login will not work",
