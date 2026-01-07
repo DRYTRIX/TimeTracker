@@ -89,7 +89,8 @@ class TimeEntry(db.Model):
             self.end_time = end_time
 
         # Validate that either project_id or client_id is provided
-        if not self.project_id and not self.client_id:
+        # Exception: auto-imported entries (source="auto") can be created without project or client
+        if not self.project_id and not self.client_id and source != "auto":
             raise ValueError("Either project_id or client_id must be provided")
 
         # Validate that task_id is only provided when project_id is set

@@ -62,7 +62,9 @@ class TimeEntryCreateSchema(Schema):
         data = kwargs.get("data", {})
         client_id = data.get("client_id")
         if not value and not client_id:
-            raise ValidationError("Either project_id or client_id must be provided")
+            # Allow entries without project or client if source is "auto" (for auto-imported entries)
+            if data.get("source") != "auto":
+                raise ValidationError("Either project_id or client_id must be provided")
 
     @validates("client_id")
     def validate_client_or_project(self, value, **kwargs):
@@ -70,7 +72,9 @@ class TimeEntryCreateSchema(Schema):
         data = kwargs.get("data", {})
         project_id = data.get("project_id")
         if not value and not project_id:
-            raise ValidationError("Either project_id or client_id must be provided")
+            # Allow entries without project or client if source is "auto" (for auto-imported entries)
+            if data.get("source") != "auto":
+                raise ValidationError("Either project_id or client_id must be provided")
 
     @validates("task_id")
     def validate_task_with_project(self, value, **kwargs):
