@@ -408,7 +408,7 @@ def manage_integration(provider):
                 return redirect(url_for("integrations.manage_integration", provider=provider))
             
             # Get the integration to update (should be per-user)
-            integration_to_update = integration if integration else user_integration
+            integration_to_update = integration
             if not integration_to_update:
                 flash(_("Integration not found. Please connect the integration first."), "error")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
@@ -680,13 +680,34 @@ def view_integration(integration_id):
 def test_integration(integration_id):
     """Test integration connection."""
     service = IntegrationService()
-    # Allow testing global integrations for all users
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None)
+    # For per-user integrations, pass user_id; for admins, allow override to test any integration
+    # For global integrations, user_id should be None
+    integration = service.get_integration(
+        integration_id, 
+        current_user.id if not current_user.is_admin else None,
+        allow_admin_override=current_user.is_admin
+    )
     if not integration:
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
-    result = service.test_connection(integration_id, current_user.id if not integration.is_global else None)
+    # For test_connection, pass user_id for per-user integrations, None for global
+    # For per-user integrations, use the integration's user_id (which matches current_user for non-admins)
+    # For global integrations, pass None
+    # Admins can test any integration, so pass None with allow_admin_override=True
+    if integration.is_global:
+        test_user_id = None
+        allow_admin_override = False
+    elif current_user.is_admin:
+        # Admin testing any integration - pass None to allow override in service
+        test_user_id = None
+        allow_admin_override = True
+    else:
+        # Non-admin testing their own per-user integration
+        test_user_id = current_user.id
+        allow_admin_override = False
+    
+    result = service.test_connection(integration_id, test_user_id, allow_admin_override=allow_admin_override)
 
     if result.get("success"):
         flash(_("Connection test successful!"), "success")
