@@ -136,7 +136,7 @@ This means your application will start even if DNS isn't ready, and will automat
 
 #### Configuration Options
 
-You can configure the retry behavior using environment variables:
+You can configure the retry behavior and DNS resolution using environment variables:
 
 ```bash
 # Timeout for each metadata fetch attempt (default: 10 seconds)
@@ -147,7 +147,34 @@ OIDC_METADATA_RETRY_ATTEMPTS=3
 
 # Delay between retries in seconds (default: 2)
 OIDC_METADATA_RETRY_DELAY=2
+
+# DNS resolution strategy: "auto" (try socket then getaddrinfo), "socket", "getaddrinfo", or "both" (default: "auto")
+OIDC_DNS_RESOLUTION_STRATEGY=auto
+
+# TTL for IP address cache in seconds (default: 300 = 5 minutes)
+OIDC_IP_CACHE_TTL=300
+
+# Use IP address directly if DNS resolution succeeds via socket (default: true)
+OIDC_USE_IP_DIRECTLY=true
+
+# Try Docker internal service names if external DNS fails (default: true)
+OIDC_USE_DOCKER_INTERNAL=true
+
+# Background metadata refresh interval in seconds (default: 3600 = 1 hour, 0 to disable)
+OIDC_METADATA_REFRESH_INTERVAL=3600
 ```
+
+### Solution 5: Enhanced DNS Resolution (Automatic)
+
+TimeTracker now includes enhanced DNS resolution with multiple strategies:
+
+1. **Multiple DNS Strategies**: Automatically tries `socket.gethostbyname()` and `socket.getaddrinfo()` methods
+2. **IP Address Caching**: Caches resolved IP addresses to reduce DNS lookup overhead
+3. **Direct IP Usage**: Uses IP address directly when DNS resolution succeeds but urllib3 fails
+4. **Docker Internal Detection**: Automatically detects Docker environments and tries internal service names
+5. **Background Refresh**: Periodically refreshes metadata in the background to keep it current
+
+These features are enabled by default and work automatically. You can fine-tune them using the configuration options above.
 
 ## Verification Steps
 
@@ -245,6 +272,42 @@ If none of the above solutions work:
 
 3. **Retry Logic**: Uses exponential backoff (2s, 4s, 8s delays) with configurable attempts
 
+### Enhanced DNS Resolution Features
+
+TimeTracker includes several enhancements to work around DNS resolution issues:
+
+1. **Multiple Resolution Strategies**: 
+   - Tries `socket.gethostbyname()` first (usually faster)
+   - Falls back to `socket.getaddrinfo()` for more robust resolution
+   - Can be configured via `OIDC_DNS_RESOLUTION_STRATEGY`
+
+2. **IP Address Caching**:
+   - Caches resolved IP addresses with configurable TTL
+   - Reduces DNS lookup overhead on retries
+   - Thread-safe implementation
+
+3. **Direct IP Usage**:
+   - When socket-based DNS succeeds but urllib3 fails, uses IP directly
+   - Preserves Host header for HTTPS/SNI compatibility
+   - Can be disabled via `OIDC_USE_IP_DIRECTLY=false`
+
+4. **Docker Network Detection**:
+   - Automatically detects Docker environments
+   - Tries Docker internal service names when external DNS fails
+   - Maps common service name patterns (auth → authentik, etc.)
+   - Can be disabled via `OIDC_USE_DOCKER_INTERNAL=false`
+
+5. **Connection Pooling**:
+   - Optimized connection pooling for better reliability
+   - Configurable retry strategies
+   - Better error classification (DNS vs network vs HTTP)
+
+6. **Background Metadata Refresh**:
+   - Periodically refreshes metadata in the background
+   - Keeps metadata current even if DNS was initially unavailable
+   - Configurable interval (default: 1 hour)
+   - Graceful degradation if refresh fails
+
 ### Why requests Library Works Better
 
-The `requests` library may use different DNS resolution mechanisms than `urllib3`, and sometimes succeeds where `urllib3` fails. TimeTracker's metadata fetcher uses `requests` for better compatibility.
+The `requests` library may use different DNS resolution mechanisms than `urllib3`, and sometimes succeeds where `urllib3` fails. TimeTracker's metadata fetcher uses `requests` with enhanced DNS resolution strategies for better compatibility.

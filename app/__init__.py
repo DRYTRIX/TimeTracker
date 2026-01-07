@@ -1184,6 +1184,11 @@ def create_app(config=None):
         csrf.exempt(api_v1_bp)
         csrf.exempt(api_docs_bp)
 
+    # Initialize OIDC IP cache
+    from app.utils.oidc_metadata import initialize_ip_cache
+    ip_cache_ttl = int(app.config.get("OIDC_IP_CACHE_TTL", 300))
+    initialize_ip_cache(ip_cache_ttl)
+
     # Register OAuth OIDC client if enabled
     try:
         auth_method = (app.config.get("AUTH_METHOD") or "local").strip().lower()
@@ -1203,14 +1208,29 @@ def create_app(config=None):
             max_retries = int(app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
             retry_delay = int(app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
             timeout = int(app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+            dns_strategy = app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
+            use_ip_directly = app.config.get("OIDC_USE_IP_DIRECTLY", True)
+            use_docker_internal = app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
             
-            metadata, metadata_error = fetch_oidc_metadata(
+            metadata, metadata_error, diagnostics = fetch_oidc_metadata(
                 issuer,
                 max_retries=max_retries,
                 retry_delay=retry_delay,
                 timeout=timeout,
                 use_dns_test=True,
+                dns_strategy=dns_strategy,
+                use_ip_directly=use_ip_directly,
+                use_docker_internal=use_docker_internal,
             )
+            
+            # Log diagnostics if available
+            if diagnostics:
+                app.logger.info(
+                    "OIDC metadata fetch diagnostics: DNS strategy=%s, IP=%s, attempts=%d",
+                    diagnostics.get("dns_resolution", {}).get("strategy", "unknown"),
+                    diagnostics.get("dns_resolution", {}).get("ip_address", "none"),
+                    len(diagnostics.get("strategies_tried", [])),
+                )
             
             if metadata:
                 # Successfully fetched metadata - register with it
@@ -1289,6 +1309,63 @@ def create_app(config=None):
                 "AUTH_METHOD is %s but OIDC envs are incomplete; OIDC login will not work",
                 auth_method,
             )
+        
+        # Schedule background metadata refresh if enabled
+        refresh_interval = int(app.config.get("OIDC_METADATA_REFRESH_INTERVAL", 3600))
+        if refresh_interval > 0 and issuer and client_id and client_secret:
+            def refresh_oidc_metadata():
+                """Background task to refresh OIDC metadata"""
+                try:
+                    from app.utils.oidc_metadata import fetch_oidc_metadata
+                    
+                    max_retries = int(app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
+                    retry_delay = int(app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
+                    timeout = int(app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+                    dns_strategy = app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
+                    use_ip_directly = app.config.get("OIDC_USE_IP_DIRECTLY", True)
+                    use_docker_internal = app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
+                    
+                    app.logger.info("Background OIDC metadata refresh started for issuer %s", issuer)
+                    metadata, metadata_error, diagnostics = fetch_oidc_metadata(
+                        issuer,
+                        max_retries=max_retries,
+                        retry_delay=retry_delay,
+                        timeout=timeout,
+                        use_dns_test=True,
+                        dns_strategy=dns_strategy,
+                        use_ip_directly=use_ip_directly,
+                        use_docker_internal=use_docker_internal,
+                    )
+                    
+                    if metadata:
+                        app.logger.info(
+                            "Background OIDC metadata refresh successful (issuer: %s, strategy: %s)",
+                            metadata.get("issuer"),
+                            diagnostics.get("dns_resolution", {}).get("strategy", "unknown") if diagnostics else "unknown",
+                        )
+                    else:
+                        app.logger.warning(
+                            "Background OIDC metadata refresh failed: %s (existing connection will continue to work)",
+                            metadata_error,
+                        )
+                except Exception as e:
+                    app.logger.error("Error in background OIDC metadata refresh: %s", str(e))
+            
+            # Schedule the refresh task
+            try:
+                scheduler.add_job(
+                    func=refresh_oidc_metadata,
+                    trigger="interval",
+                    seconds=refresh_interval,
+                    id="oidc_metadata_refresh",
+                    replace_existing=True,
+                    max_instances=1,
+                )
+                app.logger.info(
+                    "Scheduled OIDC metadata refresh every %d seconds", refresh_interval
+                )
+            except Exception as e:
+                app.logger.warning("Failed to schedule OIDC metadata refresh: %s", str(e))
 
     # Prometheus metrics endpoint
     @app.route("/metrics")

@@ -54,6 +54,24 @@ OIDC_ADMIN_EMAILS=alice@company.com,bob@company.com
 # If unset, users will be logged out locally and redirected to TimeTracker's login page.
 # If set, TimeTracker will redirect to the provider's logout endpoint after local logout.
 OIDC_POST_LOGOUT_REDIRECT_URI=https://your-app.example.com/
+
+# Optional: Advanced DNS resolution and metadata fetch configuration
+# DNS resolution strategy: "auto" (try socket then getaddrinfo), "socket", "getaddrinfo", or "both" (default: "auto")
+OIDC_DNS_RESOLUTION_STRATEGY=auto
+# TTL for IP address cache in seconds (default: 300 = 5 minutes)
+OIDC_IP_CACHE_TTL=300
+# Use IP address directly if DNS resolution succeeds via socket (default: true)
+OIDC_USE_IP_DIRECTLY=true
+# Try Docker internal service names if external DNS fails (default: true)
+OIDC_USE_DOCKER_INTERNAL=true
+# Background metadata refresh interval in seconds (default: 3600 = 1 hour, 0 to disable)
+OIDC_METADATA_REFRESH_INTERVAL=3600
+# Timeout for each metadata fetch attempt (default: 10 seconds)
+OIDC_METADATA_FETCH_TIMEOUT=10
+# Number of retry attempts (default: 3)
+OIDC_METADATA_RETRY_ATTEMPTS=3
+# Delay between retries in seconds (default: 2)
+OIDC_METADATA_RETRY_DELAY=2
 ```
 
 Also ensure the standard app settings are configured (database, secret key, etc.). See `env.example` for a complete template.
@@ -190,6 +208,17 @@ The app includes a migration that adds the following to `users`:
 
 - `email` (nullable)
 - `oidc_issuer` (nullable)
+
+### Advanced Configuration: DNS Resolution
+
+If you're experiencing DNS resolution issues (especially in Docker environments), TimeTracker includes enhanced DNS resolution features:
+
+- **Multiple DNS Strategies**: Automatically tries different DNS resolution methods
+- **IP Address Caching**: Caches resolved IPs to reduce lookup overhead
+- **Docker Network Detection**: Automatically tries Docker internal service names
+- **Background Refresh**: Periodically refreshes metadata to keep it current
+
+See [TROUBLESHOOTING_OIDC_DNS.md](../../TROUBLESHOOTING_OIDC_DNS.md) for detailed information and troubleshooting steps.
 - `oidc_sub` (nullable)
 - Unique constraint on `(oidc_issuer, oidc_sub)`
 
