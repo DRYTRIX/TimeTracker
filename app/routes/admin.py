@@ -1869,10 +1869,16 @@ def oidc_debug():
 @login_required
 @admin_or_permission_required("manage_oidc")
 def oidc_test():
-    """Test OIDC configuration by fetching discovery document"""
+    """Test OIDC configuration by fetching discovery document with enhanced DNS testing"""
     from app.config import Config
     from app import oauth
-    import requests
+    from app.utils.oidc_metadata import (
+        fetch_oidc_metadata,
+        test_dns_resolution,
+        resolve_hostname_multiple_strategies,
+        detect_docker_environment,
+    )
+    from urllib.parse import urlparse
 
     auth_method = (getattr(Config, "AUTH_METHOD", "local") or "local").strip().lower()
     if auth_method not in ("oidc", "both"):
@@ -1884,26 +1890,94 @@ def oidc_test():
         flash(_("OIDC_ISSUER is not configured"), "error")
         return redirect(url_for("admin.oidc_debug"))
 
-    # Test 1: Check if discovery document is accessible
+    # Parse hostname
+    try:
+        parsed = urlparse(issuer)
+        hostname = parsed.netloc.split(":")[0]
+    except Exception as e:
+        flash(_("✗ Failed to parse issuer URL: %(error)s", error=str(e)), "error")
+        return redirect(url_for("admin.oidc_debug"))
+
+    # Test 1: Test DNS resolution with multiple strategies
+    flash(_("Testing DNS resolution with multiple strategies..."), "info")
+    dns_strategy = current_app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
+    
+    # Test all strategies
+    strategies_to_test = ["socket", "getaddrinfo"] if dns_strategy == "auto" or dns_strategy == "both" else [dns_strategy]
+    dns_results = {}
+    
+    for strategy in strategies_to_test:
+        success, ip, error, strategy_used = resolve_hostname_multiple_strategies(
+            hostname, timeout=5, strategy=strategy, use_cache=False
+        )
+        dns_results[strategy] = {
+            "success": success,
+            "ip": ip,
+            "error": error,
+            "strategy_used": strategy_used,
+        }
+        if success:
+            # Mask IP for display (show only first octet)
+            masked_ip = ip.split('.')[0] + ".xxx.xxx.xxx" if ip and '.' in ip else "N/A"
+            flash(
+                _("✓ DNS resolution successful using %(strategy)s strategy: %(ip)s", 
+                  strategy=strategy, ip=masked_ip),
+                "success",
+            )
+        else:
+            flash(
+                _("✗ DNS resolution failed using %(strategy)s strategy: %(error)s", 
+                  strategy=strategy, error=error or "Unknown error"),
+                "warning",
+            )
+    
+    # Check Docker environment
+    if detect_docker_environment():
+        flash(_("ℹ Docker environment detected - internal service names may be available"), "info")
+    
+    # Test 2: Fetch discovery document using enhanced metadata fetcher
     well_known_url = f"{issuer.rstrip('/')}/.well-known/openid-configuration"
+    use_ip_directly = current_app.config.get("OIDC_USE_IP_DIRECTLY", True)
+    use_docker_internal = current_app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
+    max_retries = int(current_app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
+    timeout = int(current_app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+    
     try:
         current_app.logger.info("OIDC Test: Fetching discovery document from %s", well_known_url)
-        response = requests.get(well_known_url, timeout=10)
-        response.raise_for_status()
-        discovery_doc = response.json()
-        flash(_("✓ Discovery document fetched successfully from %(url)s", url=well_known_url), "success")
-        current_app.logger.info("OIDC Test: Discovery document retrieved, issuer=%s", discovery_doc.get("issuer"))
-    except requests.exceptions.Timeout:
-        flash(_("✗ Timeout fetching discovery document from %(url)s", url=well_known_url), "error")
-        current_app.logger.error("OIDC Test: Timeout fetching discovery document")
-        return redirect(url_for("admin.oidc_debug"))
-    except requests.exceptions.RequestException as e:
-        flash(_("✗ Failed to fetch discovery document: %(error)s", error=str(e)), "error")
-        current_app.logger.error("OIDC Test: Failed to fetch discovery document: %s", str(e))
-        return redirect(url_for("admin.oidc_debug"))
+        metadata, metadata_error, diagnostics = fetch_oidc_metadata(
+            issuer,
+            max_retries=max_retries,
+            retry_delay=2,
+            timeout=timeout,
+            use_dns_test=True,
+            dns_strategy=dns_strategy,
+            use_ip_directly=use_ip_directly,
+            use_docker_internal=use_docker_internal,
+        )
+        
+        if metadata:
+            discovery_doc = metadata
+            flash(_("✓ Discovery document fetched successfully from %(url)s", url=well_known_url), "success")
+            if diagnostics:
+                dns_info = diagnostics.get("dns_resolution", {})
+                strategy_used = dns_info.get("strategy", "unknown")
+                flash(
+                    _("✓ DNS strategy used: %(strategy)s", strategy=strategy_used),
+                    "info",
+                )
+            current_app.logger.info("OIDC Test: Discovery document retrieved, issuer=%s", discovery_doc.get("issuer"))
+        else:
+            flash(_("✗ Failed to fetch discovery document: %(error)s", error=metadata_error or "Unknown error"), "error")
+            current_app.logger.error("OIDC Test: Failed to fetch discovery document: %s", metadata_error)
+            return redirect(url_for("admin.oidc_debug"))
     except Exception as e:
         flash(_("✗ Unexpected error: %(error)s", error=str(e)), "error")
         current_app.logger.error("OIDC Test: Unexpected error: %s", str(e))
+        return redirect(url_for("admin.oidc_debug"))
+    
+    # Ensure discovery_doc is defined
+    if 'discovery_doc' not in locals():
+        flash(_("✗ Failed to retrieve discovery document"), "error")
         return redirect(url_for("admin.oidc_debug"))
 
     # Test 2: Check if OAuth client is registered
@@ -2030,7 +2104,7 @@ def oidc_setup_wizard():
 @admin_or_permission_required("manage_oidc")
 def oidc_wizard_test_connection():
     """Test DNS resolution and metadata fetch for OIDC issuer"""
-    from app.utils.oidc_metadata import fetch_oidc_metadata, test_dns_resolution
+    from app.utils.oidc_metadata import fetch_oidc_metadata, test_dns_resolution, resolve_hostname_multiple_strategies
     from urllib.parse import urlparse
     
     data = request.get_json() or {}
@@ -2056,21 +2130,32 @@ def oidc_wizard_test_connection():
         "hostname": hostname,
     }
     
-    # Test DNS resolution
-    dns_success, dns_error = test_dns_resolution(hostname, timeout=5)
+    # Test DNS resolution with multiple strategies
+    dns_strategy = current_app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
+    dns_success, dns_ip, dns_error, dns_strategy_used = test_dns_resolution(hostname, timeout=5, strategy=dns_strategy)
     result["dns_resolved"] = dns_success
+    result["dns_strategy"] = dns_strategy_used
+    result["dns_ip"] = dns_ip  # Will be masked in response
     if not dns_success:
         result["error"] = dns_error
         return jsonify(result), 200  # Return 200 but with success=False
     
     # Fetch metadata
-    metadata, metadata_error = fetch_oidc_metadata(
+    use_ip_directly = current_app.config.get("OIDC_USE_IP_DIRECTLY", True)
+    use_docker_internal = current_app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
+    metadata, metadata_error, diagnostics = fetch_oidc_metadata(
         issuer,
         max_retries=3,
         retry_delay=2,
         timeout=10,
         use_dns_test=False,  # Already tested DNS
+        dns_strategy=dns_strategy,
+        use_ip_directly=use_ip_directly,
+        use_docker_internal=use_docker_internal,
     )
+    
+    if diagnostics:
+        result["diagnostics"] = diagnostics
     
     if metadata:
         result["success"] = True

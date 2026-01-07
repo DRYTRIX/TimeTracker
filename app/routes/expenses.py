@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app, send_from_directory
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
@@ -24,6 +24,14 @@ UPLOAD_FOLDER = "uploads/receipts"
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def get_receipt_upload_folder():
+    """Get the upload folder path for expense receipts and ensure it exists."""
+    # Store receipts in /data volume to persist between container updates
+    upload_folder = os.path.join(current_app.config.get("UPLOAD_FOLDER", "/data/uploads"), "receipts")
+    os.makedirs(upload_folder, exist_ok=True)
+    return upload_folder
 
 
 @expenses_bp.route("/expenses")
@@ -280,8 +288,7 @@ def create_expense():
                 filename = f"{timestamp}_{filename}"
 
                 # Ensure upload directory exists
-                upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
-                os.makedirs(upload_dir, exist_ok=True)
+                upload_dir = get_receipt_upload_folder()
 
                 file_path = os.path.join(upload_dir, filename)
                 file.save(file_path)
@@ -354,6 +361,43 @@ def view_expense(expense_id):
     track_page_view("expense_detail", properties={"expense_id": expense_id})
 
     return render_template("expenses/view.html", expense=expense)
+
+
+# Route to serve uploaded receipt files
+@expenses_bp.route("/uploads/receipts/<path:filename>")
+@login_required
+def serve_receipt(filename):
+    """Serve expense receipt files. Only accessible to users who can view the expense."""
+    try:
+        # Security: Extract just the filename to prevent path traversal
+        filename = os.path.basename(filename)
+        
+        # Find the expense that owns this receipt
+        # Receipt paths are stored as "uploads/receipts/filename.jpg"
+        receipt_path = os.path.join(UPLOAD_FOLDER, filename)
+        expense = Expense.query.filter_by(receipt_path=receipt_path).first()
+        
+        if not expense:
+            current_app.logger.warning(f"Receipt file not found in database: {filename}")
+            return "Receipt not found", 404
+        
+        # Check permission - user must be able to view the expense
+        if not current_user.is_admin and expense.user_id != current_user.id and expense.approved_by != current_user.id:
+            current_app.logger.warning(f"User {current_user.id} attempted to access receipt for expense {expense.id} without permission")
+            return "Permission denied", 403
+        
+        # Serve the file
+        upload_folder = get_receipt_upload_folder()
+        file_path = os.path.join(upload_folder, filename)
+        
+        if not os.path.exists(file_path):
+            current_app.logger.error(f"Receipt file not found on disk: {file_path}")
+            return "Receipt file not found", 404
+        
+        return send_from_directory(upload_folder, filename)
+    except Exception as e:
+        current_app.logger.error(f"Error serving receipt {filename}: {str(e)}")
+        return "Error serving receipt", 500
 
 
 @expenses_bp.route("/expenses/<int:expense_id>/edit", methods=["GET", "POST"])
@@ -455,15 +499,16 @@ def edit_expense(expense_id):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = f"{timestamp}_{filename}"
 
-                upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
-                os.makedirs(upload_dir, exist_ok=True)
+                upload_dir = get_receipt_upload_folder()
 
                 file_path = os.path.join(upload_dir, filename)
                 file.save(file_path)
 
                 # Delete old receipt if exists
                 if expense.receipt_path:
-                    old_file_path = os.path.join(current_app.root_path, "..", expense.receipt_path)
+                    # Extract filename from receipt_path (which is like "uploads/receipts/filename.jpg")
+                    old_filename = os.path.basename(expense.receipt_path)
+                    old_file_path = os.path.join(upload_dir, old_filename)
                     if os.path.exists(old_file_path):
                         try:
                             os.remove(old_file_path)
@@ -508,7 +553,10 @@ def delete_expense(expense_id):
     try:
         # Delete receipt file if exists
         if expense.receipt_path:
-            file_path = os.path.join(current_app.root_path, "..", expense.receipt_path)
+            # Extract filename from receipt_path (which is like "uploads/receipts/filename.jpg")
+            upload_dir = get_receipt_upload_folder()
+            filename = os.path.basename(expense.receipt_path)
+            file_path = os.path.join(upload_dir, filename)
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
@@ -567,7 +615,10 @@ def bulk_delete_expenses():
 
             # Delete receipt file if exists
             if expense.receipt_path:
-                file_path = os.path.join(current_app.root_path, "..", expense.receipt_path)
+                # Extract filename from receipt_path (which is like "uploads/receipts/filename.jpg")
+                upload_dir = get_receipt_upload_folder()
+                filename = os.path.basename(expense.receipt_path)
+                file_path = os.path.join(upload_dir, filename)
                 if os.path.exists(file_path):
                     try:
                         os.remove(file_path)
@@ -1038,7 +1089,9 @@ def api_scan_receipt():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"temp_{timestamp}_{filename}"
 
-        temp_dir = os.path.join(current_app.root_path, "..", "uploads", "temp")
+        # Use temp directory under the upload folder
+        base_upload_dir = current_app.config.get("UPLOAD_FOLDER", "/data/uploads")
+        temp_dir = os.path.join(base_upload_dir, "temp")
         os.makedirs(temp_dir, exist_ok=True)
 
         temp_path = os.path.join(temp_dir, filename)
@@ -1108,7 +1161,9 @@ def scan_receipt_page():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         temp_filename = f"temp_{timestamp}_{filename}"
 
-        temp_dir = os.path.join(current_app.root_path, "..", "uploads", "temp")
+        # Use temp directory under the upload folder
+        base_upload_dir = current_app.config.get("UPLOAD_FOLDER", "/data/uploads")
+        temp_dir = os.path.join(base_upload_dir, "temp")
         os.makedirs(temp_dir, exist_ok=True)
 
         temp_path = os.path.join(temp_dir, temp_filename)
@@ -1123,8 +1178,7 @@ def scan_receipt_page():
 
         # Save receipt permanently
         filename = f"{timestamp}_{filename}"
-        upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
-        os.makedirs(upload_dir, exist_ok=True)
+        upload_dir = get_receipt_upload_folder()
 
         permanent_path = os.path.join(upload_dir, filename)
         os.rename(temp_path, permanent_path)

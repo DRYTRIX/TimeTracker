@@ -188,11 +188,14 @@ After first startup with mkcert:
 ### Certificate Generation
 
 The `certgen` init container:
+- Uses a self-contained Docker image with the certificate generation script built-in
 - Runs before nginx starts
 - Checks for existing certificates in `nginx/ssl/`
-- If missing, generates new ones
+- If missing, generates new ones using OpenSSL
 - Exits (runs only once)
 - nginx starts after successful completion
+
+**Note**: The certgen service no longer requires host volume mounts for scripts, making it compatible with Portainer and other container orchestration tools.
 
 ### Persistence
 

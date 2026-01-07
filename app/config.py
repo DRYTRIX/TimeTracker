@@ -68,6 +68,16 @@ class Config:
     OIDC_METADATA_FETCH_TIMEOUT = int(os.getenv("OIDC_METADATA_FETCH_TIMEOUT", 10))  # seconds
     OIDC_METADATA_RETRY_ATTEMPTS = int(os.getenv("OIDC_METADATA_RETRY_ATTEMPTS", 3))  # number of retries
     OIDC_METADATA_RETRY_DELAY = int(os.getenv("OIDC_METADATA_RETRY_DELAY", 2))  # seconds between retries
+    # DNS resolution strategy: "auto" (try socket then getaddrinfo), "socket", "getaddrinfo", or "both"
+    OIDC_DNS_RESOLUTION_STRATEGY = os.getenv("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
+    # TTL for IP address cache in seconds (default: 5 minutes)
+    OIDC_IP_CACHE_TTL = int(os.getenv("OIDC_IP_CACHE_TTL", 300))
+    # Background metadata refresh interval in seconds (default: 1 hour, 0 to disable)
+    OIDC_METADATA_REFRESH_INTERVAL = int(os.getenv("OIDC_METADATA_REFRESH_INTERVAL", 3600))
+    # Use IP address directly if DNS resolution succeeds via socket (default: true)
+    OIDC_USE_IP_DIRECTLY = os.getenv("OIDC_USE_IP_DIRECTLY", "true").lower() == "true"
+    # Try Docker internal service names if external DNS fails (default: true)
+    OIDC_USE_DOCKER_INTERNAL = os.getenv("OIDC_USE_DOCKER_INTERNAL", "true").lower() == "true"
 
     # Backup settings
     BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", 30))
