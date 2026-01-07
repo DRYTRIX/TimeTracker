@@ -1,12 +1,15 @@
 services:
   # Certificate generator - runs once to create certificates
   certgen:
-    image: alpine:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.certgen
     container_name: timetracker-certgen
     volumes:
       - ./nginx/ssl:/certs
-      - ./scripts:/scripts:ro
-    command: sh /scripts/generate-certs.sh
+    environment:
+      - HOST_IP=${HOST_IP:-192.168.1.100}
+    command: /generate-certs.sh
     restart: "no"
 
   nginx:

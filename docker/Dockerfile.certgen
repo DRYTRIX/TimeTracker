@@ -1,0 +1,10 @@
+FROM alpine:latest
+
+# Install openssl for certificate generation
+RUN apk add --no-cache openssl
+
+# Copy certificate generation script
+COPY scripts/generate-certs.sh /generate-certs.sh
+RUN chmod +x /generate-certs.sh
+
+CMD ["/generate-certs.sh"]

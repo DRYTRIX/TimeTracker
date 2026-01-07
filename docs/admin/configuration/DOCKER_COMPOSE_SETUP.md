@@ -51,6 +51,7 @@ docker-compose logs app --tail=100
 
 ### 4) Optional services
 - Reverse proxy (HTTPS): See `docker-compose.yml` (services `certgen` and `nginx`).
+  - **Note**: The `certgen` service is now self-contained and works with Portainer and other container orchestration tools without requiring host filesystem mounts.
 - Monitoring stack: Prometheus, Grafana, Loki, Promtail are available in `docker-compose.yml`.
 
 ---
