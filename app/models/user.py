@@ -298,6 +298,10 @@ class User(UserMixin, db.Model):
     # Permission and role helpers
     def has_permission(self, permission_name):
         """Check if user has a specific permission through any of their roles"""
+        # Auto-assign role from legacy role field if user has no roles assigned
+        if not self.roles and self.role:
+            self._auto_assign_role_from_legacy()
+        
         # Super admin users have all permissions
         if self.role == "admin" and not self.roles:
             # Legacy admin users without roles have all permissions
@@ -307,7 +311,30 @@ class User(UserMixin, db.Model):
         for role in self.roles:
             if role.has_permission(permission_name):
                 return True
+        
+        # Fallback: Check legacy role field if no roles assigned
+        # This handles cases where role assignment failed or user is in transition
+        if not self.roles and self.role:
+            from app.models import Role
+            legacy_role = Role.query.filter_by(name=self.role).first()
+            if legacy_role and legacy_role.has_permission(permission_name):
+                return True
+        
         return False
+    
+    def _auto_assign_role_from_legacy(self):
+        """Auto-assign role from legacy role field if user has no roles assigned"""
+        if self.roles or not self.role:
+            return
+        
+        from app.models import Role
+        role_obj = Role.query.filter_by(name=self.role).first()
+        if role_obj:
+            self.roles.append(role_obj)
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
 
     def has_any_permission(self, *permission_names):
         """Check if user has any of the specified permissions"""

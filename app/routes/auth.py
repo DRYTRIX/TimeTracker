@@ -224,19 +224,30 @@ def login():
                             requires_password=requires_password,
                         )
                 else:
-                    # User doesn't have password set - prompt to set one
+                    # User doesn't have password set - deny login when password is required
                     log_event("auth.login_failed", user_id=user.id, reason="no_password_set", auth_method=auth_method)
                     flash(
-                        _("No password is set for your account. Please set a password in your profile to continue."),
+                        _("No password is set for your account. Please contact an administrator to set a password."),
                         "error",
                     )
-                    # Still log them in so they can set password in profile
-                    login_user(user, remember=True)
-                    return redirect(url_for("auth.edit_profile"))
+                    allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+                    return render_template(
+                        "auth/login.html",
+                        allow_self_register=allow_self_register,
+                        auth_method=auth_method,
+                        requires_password=requires_password,
+                    )
 
             # For 'none' mode, no password check needed - just log in
             # Log in the user
             login_user(user, remember=True)
+            
+            # Auto-migrate user from legacy role to new role system if needed
+            if not user.roles and user.role:
+                from app.utils.role_migration import migrate_single_user
+                if migrate_single_user(user.id):
+                    current_app.logger.info("Auto-migrated user '%s' from legacy role '%s' to new role system", user.username, user.role)
+            
             user.update_last_login()
             current_app.logger.info("User '%s' logged in successfully", user.username)
 
@@ -577,17 +588,23 @@ def login_oidc():
             max_retries = int(current_app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
             retry_delay = int(current_app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
             timeout = int(current_app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+            dns_strategy = current_app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
+            use_ip_directly = current_app.config.get("OIDC_USE_IP_DIRECTLY", True)
+            use_docker_internal = current_app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
             
             current_app.logger.info(
                 "Attempting lazy OIDC client registration for issuer %s", issuer
             )
             
-            metadata, metadata_error = fetch_oidc_metadata(
+            metadata, metadata_error, diagnostics = fetch_oidc_metadata(
                 issuer,
                 max_retries=max_retries,
                 retry_delay=retry_delay,
                 timeout=timeout,
                 use_dns_test=True,
+                dns_strategy=dns_strategy,
+                use_ip_directly=use_ip_directly,
+                use_docker_internal=use_docker_internal,
             )
             
             if metadata:
@@ -653,13 +670,19 @@ def login_oidc():
                     max_retries = int(current_app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
                     retry_delay = int(current_app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
                     timeout = int(current_app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
+                    dns_strategy = current_app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
+                    use_ip_directly = current_app.config.get("OIDC_USE_IP_DIRECTLY", True)
+                    use_docker_internal = current_app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
                     
-                    metadata, metadata_error = fetch_oidc_metadata(
+                    metadata, metadata_error, diagnostics = fetch_oidc_metadata(
                         issuer,
                         max_retries=max_retries,
                         retry_delay=retry_delay,
                         timeout=timeout,
                         use_dns_test=True,
+                        dns_strategy=dns_strategy,
+                        use_ip_directly=use_ip_directly,
+                        use_docker_internal=use_docker_internal,
                     )
                     
                     if metadata:
@@ -937,6 +960,13 @@ def oidc_callback():
 
         # Login
         login_user(user, remember=True)
+        
+        # Auto-migrate user from legacy role to new role system if needed
+        if not user.roles and user.role:
+            from app.utils.role_migration import migrate_single_user
+            if migrate_single_user(user.id):
+                current_app.logger.info("Auto-migrated OIDC user '%s' from legacy role '%s' to new role system", user.username, user.role)
+        
         try:
             user.update_last_login()
         except Exception:

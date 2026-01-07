@@ -126,7 +126,8 @@
             </h3>
             <div class="flex items-center gap-2">
                 <i class="fas fa-paperclip text-gray-400"></i>
-                <a href="{{ url_for('static', filename='../' + expense.receipt_path) }}" target="_blank" 
+                {% set receipt_filename = expense.receipt_path.split('/')[-1] %}
+                <a href="{{ url_for('expenses.serve_receipt', filename=receipt_filename) }}" target="_blank" 
                    class="text-primary hover:underline">
                     View Receipt
                 </a>

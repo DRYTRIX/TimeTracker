@@ -30,12 +30,17 @@ class ConfigManager:
             Setting value
         """
         # Check Settings model first (WebUI changes have highest priority)
+        # Only use values from persisted Settings instances (those with an id)
+        # to avoid using fallback instances initialized from .env file
         try:
             settings = Settings.get_settings()
             if settings and hasattr(settings, key):
-                value = getattr(settings, key)
-                if value is not None:
-                    return value
+                # Only use Settings value if instance is persisted in database (has an id)
+                # This ensures we're reading from the database, not a fallback instance
+                if hasattr(settings, "id") and settings.id is not None:
+                    value = getattr(settings, key)
+                    if value is not None:
+                        return value
         except Exception:
             pass
 
