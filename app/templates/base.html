@@ -318,7 +318,7 @@
                                     <i class="fas fa-tasks w-4 mr-2"></i>{{ _('Tasks') }}
                                 </a>
                             </li>
-                            {% if is_module_enabled('issues') %}
+                            {% if is_module_enabled('issues') and (current_user.is_admin or has_permission('view_all_issues') or has_permission('create_issues')) %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_issues %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('issues.list_issues') }}">
                                     <i class="fas fa-bug w-4 mr-2"></i>{{ _('Issues') }}
@@ -463,7 +463,7 @@
                                 </a>
                             </li>
                             {% endif %}
-                            {% if is_module_enabled('payment_gateways') %}
+                            {% if is_module_enabled('payment_gateways') and (current_user.is_admin or has_permission('manage_payment_gateways')) %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_payment_gateways %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payment_gateways.list_gateways') }}">
                                     <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payment Gateways') }}
@@ -634,7 +634,7 @@
                         </ul>
                     </li>
                     {% endif %}
-                    {% if current_user.is_admin or has_any_permission(['view_users', 'manage_settings', 'view_system_info', 'manage_backups']) %}
+                    {% if current_user.is_admin or has_any_permission('view_users', 'manage_settings', 'view_system_info', 'manage_backups') %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('adminDropdown')" data-dropdown="adminDropdown" class="w-full flex items-center p-2 rounded-lg {% if admin_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-cog w-6 text-center"></i>
