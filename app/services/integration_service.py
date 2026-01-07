@@ -237,9 +237,9 @@ class IntegrationService:
 
         return {"success": True, "message": "Credentials saved successfully.", "credentials": credentials}
 
-    def test_connection(self, integration_id: int, user_id: Optional[int] = None) -> Dict[str, Any]:
+    def test_connection(self, integration_id: int, user_id: Optional[int] = None, allow_admin_override: bool = False) -> Dict[str, Any]:
         """Test connection to integrated service."""
-        integration = self.get_integration(integration_id, user_id)
+        integration = self.get_integration(integration_id, user_id, allow_admin_override=allow_admin_override)
         if not integration:
             return {"success": False, "message": "Integration not found."}
 
