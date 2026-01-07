@@ -204,6 +204,7 @@ DEFAULT_ROLES = {
             "view_projects",
             "create_projects",
             "edit_projects",
+            "delete_projects",
             "manage_project_costs",
             # Tasks
             "view_all_tasks",

@@ -17,7 +17,7 @@
             <i class="fas fa-list"></i>
             {{ _('Entries Overview') }}
         </a>
-        {% if current_user.is_admin or has_any_permission(['edit_projects', 'archive_projects']) %}
+        {% if current_user.is_admin or has_any_permission('edit_projects', 'archive_projects') %}
         <a href="{{ url_for('projects.project_dashboard', project_id=project.id) }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition">
             <i class="fas fa-chart-line"></i>
             {{ _('Dashboard') }}

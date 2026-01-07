@@ -7,7 +7,7 @@
         <h1 class="text-2xl font-bold">{{ client.name }}</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">Client details and associated projects.</p>
     </div>
-    {% if current_user.is_admin or has_any_permission(['edit_clients', 'delete_clients']) %}
+    {% if current_user.is_admin or has_any_permission('edit_clients', 'delete_clients') %}
     <div class="flex gap-2">
         {% if current_user.is_admin or has_permission('edit_clients') %}
         <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Client') }}</a>
