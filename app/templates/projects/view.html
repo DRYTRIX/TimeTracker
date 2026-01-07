@@ -22,7 +22,8 @@
             <i class="fas fa-chart-line"></i>
             {{ _('Dashboard') }}
         </a>
-        {% if project.budget_amount %}
+        {% endif %}
+        {% if project.budget_amount and (current_user.is_admin or has_any_permission('edit_projects', 'archive_projects')) %}
         <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition shadow-lg">
             <i class="fas fa-wallet"></i>
             {{ _('Budget Analysis') }}
@@ -62,7 +63,6 @@
         <form id="confirmDeleteProject-{{ project.id }}-form" method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="hidden">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
-        {% endif %}
         {% endif %}
     </div>
 </div>

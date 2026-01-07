@@ -53,9 +53,11 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {% if current_user.is_admin or has_permission('manage_payment_gateways') %}
                         <a href="{{ url_for('payment_gateways.create_gateway') }}?edit={{ gateway.id }}" class="text-primary hover:text-primary/80 mr-4">
                             <i class="fas fa-edit"></i>
                         </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
