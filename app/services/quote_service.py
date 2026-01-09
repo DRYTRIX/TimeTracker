@@ -140,9 +140,9 @@ class QuoteService:
         Returns:
             Quote with eagerly loaded relations, or None if not found
         """
-        from sqlalchemy.orm import joinedload
+        from sqlalchemy.orm import joinedload, selectinload
 
-        query = Quote.query.options(joinedload(Quote.client), joinedload(Quote.items))
+        query = Quote.query.options(joinedload(Quote.client), selectinload(Quote.items))
 
         # Permission check
         if not is_admin and user_id:

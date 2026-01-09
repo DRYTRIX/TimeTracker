@@ -1029,57 +1029,62 @@ def export_invoice_csv(invoice_id):
 @login_required
 def export_invoice_pdf(invoice_id):
     """Export invoice as PDF with optional page size selection"""
-    logger.info(f"Invoice PDF export requested - Invoice ID: {invoice_id}, User: {current_user.username}")
-
+    current_app.logger.info(f"[PDF_EXPORT] Action: export_request, InvoiceID: {invoice_id}, User: {current_user.username}")
+    
     invoice = Invoice.query.get_or_404(invoice_id)
-    logger.debug(f"Invoice found: {invoice.invoice_number}")
+    current_app.logger.info(f"[PDF_EXPORT] Invoice found: {invoice.invoice_number}, Status: {invoice.status}")
 
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        logger.warning(f"Permission denied for invoice {invoice_id} by user {current_user.username}")
+        current_app.logger.warning(f"[PDF_EXPORT] Permission denied - InvoiceID: {invoice_id}, User: {current_user.username}")
         flash(_("You do not have permission to export this invoice"), "error")
         return redirect(request.referrer or url_for("invoices.list_invoices"))
 
     # Get page size from query parameter, default to A4
-    page_size = request.args.get("size", "A4")
-    logger.debug(f"Page size from request: '{page_size}'")
+    page_size_raw = request.args.get("size", "A4")
+    current_app.logger.info(f"[PDF_EXPORT] PageSize from query param: '{page_size_raw}', InvoiceID: {invoice_id}")
 
     # Validate page size
     valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
-    if page_size not in valid_sizes:
-        logger.warning(f"Invalid page size '{page_size}', defaulting to A4")
+    if page_size_raw not in valid_sizes:
+        current_app.logger.warning(f"[PDF_EXPORT] Invalid page size '{page_size_raw}', defaulting to A4, InvoiceID: {invoice_id}")
         page_size = "A4"
+    else:
+        page_size = page_size_raw
 
-    logger.debug(f"Final page size: '{page_size}'")
+    current_app.logger.info(f"[PDF_EXPORT] Final validated PageSize: '{page_size}', InvoiceID: {invoice_id}, InvoiceNumber: {invoice.invoice_number}")
 
     try:
         from app.utils.pdf_generator import InvoicePDFGenerator
 
         settings = Settings.get_settings()
-        logger.debug(f"Creating InvoicePDFGenerator with page_size='{page_size}'")
+        current_app.logger.info(f"[PDF_EXPORT] Creating InvoicePDFGenerator - PageSize: '{page_size}', InvoiceID: {invoice_id}")
         pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
-        logger.debug("Calling pdf_generator.generate_pdf()")
+        current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}")
         pdf_bytes = pdf_generator.generate_pdf()
-        logger.info(f"PDF generated successfully, size: {len(pdf_bytes)} bytes")
+        pdf_size_bytes = len(pdf_bytes)
+        current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
         filename = f"invoice_{invoice.invoice_number}_{page_size}.pdf"
+        current_app.logger.info(f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', InvoiceID: {invoice_id}")
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except Exception as e:
         import traceback
 
-        logger.error(f"Exception in PDF generation: {e}", exc_info=True)
+        current_app.logger.error(f"[PDF_EXPORT] Exception in PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}, Error: {str(e)}", exc_info=True)
         try:
-            logger.info("Falling back to InvoicePDFGeneratorFallback")
+            current_app.logger.warning(f"[PDF_EXPORT] Falling back to InvoicePDFGeneratorFallback - PageSize: '{page_size}', InvoiceID: {invoice_id}")
             from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
 
             settings = Settings.get_settings()
             pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
             pdf_bytes = pdf_generator.generate_pdf()
-            logger.info("Fallback PDF generated successfully")
+            pdf_size_bytes = len(pdf_bytes)
+            current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
             filename = f"invoice_{invoice.invoice_number}_{page_size}.pdf"
             return send_file(
                 io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename
             )
         except Exception as fallback_error:
-            logger.error(f"Fallback PDF generation also failed: {fallback_error}", exc_info=True)
+            current_app.logger.error(f"[PDF_EXPORT] Fallback PDF generation also failed - PageSize: '{page_size}', InvoiceID: {invoice_id}, Error: {str(fallback_error)}", exc_info=True)
             flash(
                 _("PDF generation failed: %(err)s. Fallback also failed: %(fb)s", err=str(e), fb=str(fallback_error)),
                 "error",
