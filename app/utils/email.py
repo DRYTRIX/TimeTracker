@@ -721,8 +721,13 @@ Thank you for your business!
             # Try to get from invoice creator
             sender_id = invoice.created_by
 
+        # Get invoice prefix from settings, default to "INV"
+        prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
+        if not prefix:
+            prefix = "INV"
+
         # Send email synchronously to catch errors
-        attachments = [(f"invoice_{invoice.invoice_number}.pdf", "application/pdf", pdf_bytes)]
+        attachments = [(f"{prefix}_{invoice.invoice_number}.pdf", "application/pdf", pdf_bytes)]
 
         # Create message
         msg = Message(

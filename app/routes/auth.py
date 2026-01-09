@@ -79,9 +79,23 @@ def login():
                 request.headers.get("X-Forwarded-For") or request.remote_addr,
             )
 
-            if not username:
-                log_event("auth.login_failed", reason="empty_username", auth_method=auth_method)
-                flash(_("Username is required"), "error")
+            # Validate username input
+            from app.utils.validation import sanitize_input
+            import re
+            try:
+                if not username:
+                    raise ValueError("Username is required")
+                
+                # Sanitize username to prevent injection
+                username = sanitize_input(username, max_length=100)
+                # Additional validation: only allow safe characters for usernames
+                if not re.match(r'^[a-z0-9._-]+$', username):
+                    raise ValueError("Username contains invalid characters")
+                if len(username) < 1 or len(username) > 100:
+                    raise ValueError("Username must be between 1 and 100 characters")
+            except (ValueError, Exception) as e:
+                log_event("auth.login_failed", reason="invalid_username", auth_method=auth_method)
+                flash(_("Invalid username format"), "error")
                 allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                 return render_template(
                     "auth/login.html",
@@ -224,36 +238,8 @@ def login():
                             requires_password=requires_password,
                         )
                 else:
-                    # User doesn't have password set - allow them to set one if provided
-                    if password:
-                        # Validate password length
-                        if len(password) < 8:
-                            log_event(
-                                "auth.login_failed", user_id=user.id, reason="password_too_short", auth_method=auth_method
-                            )
-                            flash(_("Password must be at least 8 characters long."), "error")
-                            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                            return render_template(
-                                "auth/login.html",
-                                allow_self_register=allow_self_register,
-                                auth_method=auth_method,
-                                requires_password=requires_password,
-                            )
-                        # Set the password and log them in
-                        user.set_password(password)
-                        if not safe_commit("set_initial_password", {"user_id": user.id, "username": user.username}):
-                            current_app.logger.error("Failed to set initial password for '%s' due to DB error", user.username)
-                            flash(_("Could not set password due to a database error. Please try again."), "error")
-                            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                            return render_template(
-                                "auth/login.html",
-                                allow_self_register=allow_self_register,
-                                auth_method=auth_method,
-                                requires_password=requires_password,
-                            )
-                        current_app.logger.info("User '%s' set initial password during login", user.username)
-                        flash(_("Password has been set. You are now logged in."), "success")
-                    else:
+                    # User doesn't have password set - require password to be provided
+                    if not password:
                         # No password provided - prompt user to set one
                         log_event("auth.login_failed", user_id=user.id, reason="no_password_set", auth_method=auth_method)
                         flash(
@@ -267,9 +253,41 @@ def login():
                             auth_method=auth_method,
                             requires_password=requires_password,
                         )
+                    
+                    # Password provided - validate and set it
+                    if len(password) < 8:
+                        log_event(
+                            "auth.login_failed", user_id=user.id, reason="password_too_short", auth_method=auth_method
+                        )
+                        flash(_("Password must be at least 8 characters long."), "error")
+                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+                        return render_template(
+                            "auth/login.html",
+                            allow_self_register=allow_self_register,
+                            auth_method=auth_method,
+                            requires_password=requires_password,
+                        )
+                    
+                    # Set the password and continue to login
+                    user.set_password(password)
+                    if not safe_commit("set_initial_password", {"user_id": user.id, "username": user.username}):
+                        current_app.logger.error("Failed to set initial password for '%s' due to DB error", user.username)
+                        flash(_("Could not set password due to a database error. Please try again."), "error")
+                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+                        return render_template(
+                            "auth/login.html",
+                            allow_self_register=allow_self_register,
+                            auth_method=auth_method,
+                            requires_password=requires_password,
+                        )
+                    current_app.logger.info("User '%s' set initial password during login", user.username)
+                    flash(_("Password has been set. You are now logged in."), "success")
+            else:
+                # requires_password=False (AUTH_METHOD='none') - allow login without password
+                # This mode is for trusted environments only
+                pass
 
-            # For 'none' mode, no password check needed - just log in
-            # Log in the user
+            # Log in the user (password validation passed or password not required)
             login_user(user, remember=True)
             
             # Auto-migrate user from legacy role to new role system if needed

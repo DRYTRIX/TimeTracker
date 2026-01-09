@@ -14,7 +14,7 @@ def validate_file_upload(
     file, allowed_extensions: Optional[set] = None, max_size: int = MAX_FILE_SIZE
 ) -> Tuple[bool, Optional[str]]:
     """
-    Validate a file upload.
+    Validate a file upload with improved error handling.
 
     Args:
         file: File object from request
@@ -27,20 +27,44 @@ def validate_file_upload(
     if not file or not file.filename:
         return False, "No file provided"
 
-    # Check file size
-    file.seek(0, os.SEEK_END)
-    file_size = file.tell()
-    file.seek(0)
+    try:
+        # Check file size with better error handling
+        try:
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)
+        except (OSError, IOError) as e:
+            current_app.logger.warning(f"Error checking file size: {e}")
+            return False, "Error reading file. File may be corrupted or inaccessible."
 
-    if file_size > max_size:
-        return False, f"File size exceeds maximum of {max_size / (1024*1024):.1f}MB"
+        if file_size > max_size:
+            return False, f"File size exceeds maximum of {max_size / (1024*1024):.1f}MB"
 
-    # Check extension
-    if allowed_extensions:
-        filename = secure_filename(file.filename)
-        ext = Path(filename).suffix.lower()
-        if ext not in allowed_extensions:
-            return False, f"File type not allowed. Allowed types: {', '.join(allowed_extensions)}"
+        if file_size == 0:
+            return False, "File is empty"
+
+        # Check extension AFTER secure_filename to ensure we validate the sanitized filename
+        if allowed_extensions:
+            # First secure the filename
+            secure_name = secure_filename(file.filename)
+            if not secure_name:
+                return False, "Invalid filename"
+            
+            # Then check extension on the secured filename
+            ext = Path(secure_name).suffix.lower()
+            # Handle extensions without leading dot
+            if not ext.startswith('.'):
+                ext = '.' + ext
+            
+            # Normalize allowed_extensions to have leading dots
+            normalized_allowed = {ext if ext.startswith('.') else '.' + ext for ext in allowed_extensions}
+            
+            if ext not in normalized_allowed:
+                return False, f"File type not allowed. Allowed types: {', '.join(sorted(allowed_extensions))}"
+
+    except Exception as e:
+        current_app.logger.error(f"Error validating file upload: {e}")
+        return False, "Error validating file. Please try again."
 
     return True, None
 

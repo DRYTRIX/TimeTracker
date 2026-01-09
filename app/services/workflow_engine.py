@@ -8,6 +8,7 @@ from datetime import datetime
 from app import db
 from app.models.workflow import WorkflowRule, WorkflowExecution
 from app.models import TimeEntry, Task, Project, User
+from app.utils.db import safe_commit
 import time
 import logging
 
@@ -121,7 +122,16 @@ class WorkflowEngine:
             rule.last_executed_at = datetime.utcnow()
             rule.execution_count += 1
 
-            db.session.commit()
+            # Use safe_commit for proper error handling
+            if not safe_commit("execute_workflow_rule", {"rule_id": rule.id, "execution_count": rule.execution_count}):
+                logger.error(f"Failed to commit workflow execution for rule {rule.id}")
+                db.session.rollback()
+                return {
+                    "success": False,
+                    "message": "Database error during workflow execution",
+                    "results": results,
+                    "execution_time_ms": execution_time_ms,
+                }
 
             return {
                 "success": success,
@@ -144,7 +154,10 @@ class WorkflowEngine:
                 execution_time_ms=execution_time_ms,
             )
             db.session.add(execution)
-            db.session.commit()
+            # Use safe_commit for proper error handling
+            if not safe_commit("execute_workflow_rule_error", {"rule_id": rule.id, "error": str(e)}):
+                logger.error(f"Failed to commit workflow execution error for rule {rule.id}")
+                db.session.rollback()
 
             return {
                 "success": False,
@@ -245,13 +258,17 @@ class WorkflowEngine:
             task = Task.query.get(entity_id)
             if task:
                 task.status = status
-                db.session.commit()
+                if not safe_commit("workflow_update_task_status", {"task_id": entity_id, "status": status}):
+                    db.session.rollback()
+                    raise ValueError(f"Failed to update task {entity_id} status")
                 return {"updated": True, "entity": "task", "id": entity_id}
         elif entity_type == "project":
             project = Project.query.get(entity_id)
             if project:
                 project.status = status
-                db.session.commit()
+                if not safe_commit("workflow_update_project_status", {"project_id": entity_id, "status": status}):
+                    db.session.rollback()
+                    raise ValueError(f"Failed to update project {entity_id} status")
                 return {"updated": True, "entity": "project", "id": entity_id}
 
         raise ValueError(f"Entity not found: {entity_type} {entity_id}")
@@ -267,7 +284,9 @@ class WorkflowEngine:
             raise ValueError(f"Task not found: {task_id}")
 
         task.assigned_to = int(user_id)
-        db.session.commit()
+        if not safe_commit("workflow_assign_task", {"task_id": task_id, "user_id": user_id}):
+            db.session.rollback()
+            raise ValueError(f"Failed to assign task {task_id} to user {user_id}")
 
         return {"assigned": True, "task_id": task_id, "user_id": user_id}
 
@@ -289,7 +308,9 @@ class WorkflowEngine:
             priority=action.get("priority", "medium"),
         )
         db.session.add(task)
-        db.session.commit()
+        if not safe_commit("workflow_create_task", {"project_id": project_id, "name": name}):
+            db.session.rollback()
+            raise ValueError(f"Failed to create task in project {project_id}")
 
         return {"created": True, "task_id": task.id}
 
@@ -308,7 +329,9 @@ class WorkflowEngine:
                 resolved_value = WorkflowEngine._resolve_template(value, context)
                 setattr(project, key, resolved_value)
 
-        db.session.commit()
+        if not safe_commit("workflow_update_project", {"project_id": project_id, "updates": list(updates.keys())}):
+            db.session.rollback()
+            raise ValueError(f"Failed to update project {project_id}")
 
         return {"updated": True, "project_id": project_id}
 

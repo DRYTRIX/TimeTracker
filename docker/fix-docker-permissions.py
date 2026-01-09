@@ -8,12 +8,29 @@ import os
 import sys
 import stat
 import subprocess
+import shlex
+import re
 
 def run_command(cmd, description):
-    """Run a shell command and return success status"""
+    """Run a shell command and return success status
+    
+    Args:
+        cmd: Command string or list of command arguments
+        description: Human-readable description
+    """
     try:
         print(f"Running: {description}")
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # If cmd is a string, split it safely
+        if isinstance(cmd, str):
+            try:
+                cmd_list = shlex.split(cmd)
+            except ValueError:
+                # Fallback to simple split
+                cmd_list = cmd.split()
+        else:
+            cmd_list = cmd
+        
+        result = subprocess.run(cmd_list, capture_output=True, text=True)
         if result.returncode == 0:
             print(f"✓ {description} - Success")
             return True
@@ -87,15 +104,20 @@ def fix_docker_permissions():
     
     # Step 3: Try to change ownership using chown
     print("\n3. Changing ownership to current user...")
+    # Sanitize user to prevent command injection
+    user = re.sub(r'[^a-zA-Z0-9_-]', '', str(user))
+    uid = str(int(uid)) if str(uid).isdigit() else '1000'
+    gid = str(int(gid)) if str(gid).isdigit() else '1000'
+    
     for upload_dir in upload_dirs:
         if os.path.exists(upload_dir):
             print(f"Changing ownership of {upload_dir} to {user}:{user}")
             
-            # Try chown with username
-            if not run_command(f"chown -R {user}:{user} {upload_dir}", 
+            # Try chown with username (use list to avoid shell)
+            if not run_command(['chown', '-R', f'{user}:{user}', upload_dir], 
                              f"Change ownership of {upload_dir}"):
                 # If that fails, try with UID
-                run_command(f"chown -R {uid}:{gid} {upload_dir}", 
+                run_command(['chown', '-R', f'{uid}:{gid}', upload_dir], 
                            f"Change ownership of {upload_dir} by UID")
     
     # Step 4: Test write permissions
@@ -143,7 +165,9 @@ def fix_docker_permissions():
             print(f"Setting 755 permissions for parent: {parent_dir}")
             try:
                 os.chmod(parent_dir, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
-                run_command(f"chown {user}:{user} {parent_dir}", f"Change ownership of {parent_dir}")
+                # Sanitize user before use
+                safe_user = re.sub(r'[^a-zA-Z0-9_-]', '', str(user))
+                run_command(['chown', safe_user + ':' + safe_user, parent_dir], f"Change ownership of {parent_dir}")
             except Exception as e:
                 print(f"  - Failed to fix {parent_dir}: {e}")
     
@@ -167,7 +191,7 @@ def fix_docker_permissions():
                 if os.path.exists(upload_dir):
                     try:
                         os.chmod(upload_dir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-                        run_command(f"chown -R 1000:1000 {upload_dir}", f"Change ownership of {upload_dir} to 1000:1000")
+                        run_command(['chown', '-R', '1000:1000', upload_dir], f"Change ownership of {upload_dir} to 1000:1000")
                     except Exception as e:
                         print(f"  - Failed to fix {upload_dir}: {e}")
         else:

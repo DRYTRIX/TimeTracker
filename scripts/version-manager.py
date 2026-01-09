@@ -10,52 +10,75 @@ import subprocess
 import argparse
 from datetime import datetime
 import re
+import shlex
 
 class VersionManager:
     def __init__(self):
         self.repo_path = os.getcwd()
         
     def run_command(self, command, capture_output=True):
-        """Run a shell command and return the result"""
+        """Run a command and return the result
+        
+        Args:
+            command: Command string or list of command arguments
+            capture_output: Whether to capture output
+        """
         try:
+            # If command is a string, split it safely
+            if isinstance(command, str):
+                # For git commands with complex quoting, use shlex
+                try:
+                    cmd_list = shlex.split(command)
+                except ValueError:
+                    # Fallback to simple split
+                    cmd_list = command.split()
+            else:
+                cmd_list = command
+            
             result = subprocess.run(
-                command, 
-                shell=True, 
+                cmd_list, 
                 capture_output=capture_output, 
                 text=True, 
                 cwd=self.repo_path
             )
             if result.returncode != 0:
-                print(f"Error running command: {command}")
-                print(f"Error: {result.stderr}")
+                print(f"Error running command: {' '.join(cmd_list)}")
+                if hasattr(result, 'stderr') and result.stderr:
+                    print(f"Error: {result.stderr}")
                 return None
-            return result.stdout.strip() if capture_output else result
+            return result.stdout.strip() if capture_output and hasattr(result, 'stdout') else result
         except Exception as e:
             print(f"Exception running command: {e}")
             return None
 
     def get_current_branch(self):
         """Get the current git branch"""
-        return self.run_command("git branch --show-current")
+        return self.run_command(['git', 'branch', '--show-current'])
 
     def get_latest_tag(self):
         """Get the latest git tag"""
-        return self.run_command("git describe --tags --abbrev=0 2>/dev/null || echo 'none'")
+        result = self.run_command(['git', 'describe', '--tags', '--abbrev=0'])
+        if result:
+            return result
+        # If command fails (no tags), return 'none'
+        return 'none'
 
     def get_commit_count(self):
         """Get the number of commits since the last tag"""
         latest_tag = self.get_latest_tag()
         if latest_tag == 'none':
-            return self.run_command("git rev-list --count HEAD")
+            return self.run_command(['git', 'rev-list', '--count', 'HEAD'])
         else:
-            return self.run_command(f"git rev-list --count {latest_tag}..HEAD")
+            # Sanitize tag name to prevent command injection
+            safe_tag = re.sub(r'[^a-zA-Z0-9._/-]', '', latest_tag)
+            return self.run_command(['git', 'rev-list', '--count', f'{safe_tag}..HEAD'])
 
     def get_commit_hash(self, short=True):
         """Get the current commit hash"""
         if short:
-            return self.run_command("git rev-parse --short HEAD")
+            return self.run_command(['git', 'rev-parse', '--short', 'HEAD'])
         else:
-            return self.run_command("git rev-parse HEAD")
+            return self.run_command(['git', 'rev-parse', 'HEAD'])
 
     def validate_version_format(self, version):
         """Validate version format"""
@@ -118,8 +141,10 @@ class VersionManager:
         print(f"Creating tag: {version}")
         print(f"Message: {message}")
         
-        # Create the tag
-        if not self.run_command(f'git tag -a "{version}" -m "{message}"', capture_output=False):
+        # Create the tag using list to avoid shell injection
+        # Version and message are already validated/sanitized
+        tag_cmd = ['git', 'tag', '-a', version, '-m', message]
+        if not self.run_command(tag_cmd, capture_output=False):
             print("Failed to create tag")
             return False
         
@@ -128,7 +153,8 @@ class VersionManager:
         # Push tag if requested
         if push:
             print("Pushing tag to remote...")
-            if not self.run_command(f'git push origin "{version}"', capture_output=False):
+            push_cmd = ['git', 'push', 'origin', version]
+            if not self.run_command(push_cmd, capture_output=False):
                 print("Failed to push tag to remote")
                 return False
             print(f"✓ Tag '{version}' pushed to remote")
@@ -149,7 +175,7 @@ class VersionManager:
 
     def list_tags(self):
         """List all tags"""
-        tags = self.run_command("git tag --sort=-version:refname")
+        tags = self.run_command(['git', 'tag', '--sort=-version:refname'])
         if tags:
             print("Available tags:")
             for tag in tags.split('\n'):
@@ -167,15 +193,18 @@ class VersionManager:
             print("No tags found")
             return
         
-        print(f"Tag: {tag}")
-        print(f"Commit: {self.run_command(f'git rev-parse {tag}')}")
-        print(f"Date: {self.run_command(f'git log -1 --format=%cd {tag}')}")
-        print(f"Message: {self.run_command(f'git log -1 --format=%s {tag}')}")
+        # Sanitize tag name to prevent command injection
+        safe_tag = re.sub(r'[^a-zA-Z0-9._/-]', '', tag)
+        
+        print(f"Tag: {safe_tag}")
+        print(f"Commit: {self.run_command(['git', 'rev-parse', safe_tag])}")
+        print(f"Date: {self.run_command(['git', 'log', '-1', '--format=%cd', safe_tag])}")
+        print(f"Message: {self.run_command(['git', 'log', '-1', '--format=%s', safe_tag])}")
         
         # Show commits since this tag
-        commits_since = self.run_command(f'git log --oneline {tag}..HEAD')
+        commits_since = self.run_command(['git', 'log', '--oneline', f'{safe_tag}..HEAD'])
         if commits_since:
-            print(f"\nCommits since {tag}:")
+            print(f"\nCommits since {safe_tag}:")
             for commit in commits_since.split('\n')[:10]:  # Show last 10 commits
                 if commit.strip():
                     print(f"  {commit}")
@@ -260,7 +289,9 @@ def main():
             # Generate changelog if requested
             if args.changelog:
                 print("📋 Generating changelog...")
-                changelog_cmd = f"python scripts/generate-changelog.py {args.version}"
+                # Sanitize version before use
+                safe_version = re.sub(r'[^a-zA-Z0-9._/-]', '', args.version)
+                changelog_cmd = ['python', 'scripts/generate-changelog.py', safe_version]
                 if vm.run_command(changelog_cmd, capture_output=False):
                     print("✅ Changelog generated successfully")
                 else:
@@ -269,13 +300,17 @@ def main():
             # Create GitHub release if requested
             if args.github_release:
                 print("🐙 Creating GitHub release...")
-                github_cmd = f"gh release create {args.version}"
+                # Sanitize version before use
+                safe_version = re.sub(r'[^a-zA-Z0-9._/-]', '', args.version)
+                github_cmd = ['gh', 'release', 'create', safe_version]
                 if args.pre_release:
-                    github_cmd += " --prerelease"
+                    github_cmd.append('--prerelease')
                 if args.changelog and os.path.exists("CHANGELOG.md"):
-                    github_cmd += " --notes-file CHANGELOG.md"
+                    github_cmd.extend(['--notes-file', 'CHANGELOG.md'])
                 elif args.message:
-                    github_cmd += f" --notes '{args.message}'"
+                    # Sanitize message to prevent command injection
+                    safe_message = args.message.replace("'", "'\"'\"'")
+                    github_cmd.extend(['--notes', safe_message])
                 
                 if vm.run_command(github_cmd, capture_output=False):
                     print("✅ GitHub release created successfully")
@@ -289,8 +324,11 @@ def main():
         current_tag = vm.get_latest_tag()
         version = args.version or vm.suggest_next_version(current_tag)
         
-        print(f"📋 Generating changelog for {version}...")
-        changelog_cmd = f"python scripts/generate-changelog.py {version}"
+        # Sanitize version before use
+        safe_version = re.sub(r'[^a-zA-Z0-9._/-]', '', version)
+        
+        print(f"📋 Generating changelog for {safe_version}...")
+        changelog_cmd = ['python', 'scripts/generate-changelog.py', safe_version]
         if vm.run_command(changelog_cmd, capture_output=False):
             print("✅ Changelog generated successfully")
         else:

@@ -1018,7 +1018,12 @@ def export_invoice_csv(invoice_id):
 
     output.seek(0)
 
-    filename = f"invoice_{invoice.invoice_number}.csv"
+    # Get invoice prefix from settings, default to "INV"
+    settings = Settings.get_settings()
+    prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
+    if not prefix:
+        prefix = "INV"
+    filename = f"{prefix}_{invoice.invoice_number}.csv"
 
     return send_file(
         io.BytesIO(output.getvalue().encode("utf-8")), mimetype="text/csv", as_attachment=True, download_name=filename
@@ -1063,7 +1068,11 @@ def export_invoice_pdf(invoice_id):
         pdf_bytes = pdf_generator.generate_pdf()
         pdf_size_bytes = len(pdf_bytes)
         current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
-        filename = f"invoice_{invoice.invoice_number}_{page_size}.pdf"
+        # Get invoice prefix from settings, default to "INV"
+        prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
+        if not prefix:
+            prefix = "INV"
+        filename = f"{prefix}_{invoice.invoice_number}_{page_size}.pdf"
         current_app.logger.info(f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', InvoiceID: {invoice_id}")
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except Exception as e:
@@ -1079,7 +1088,11 @@ def export_invoice_pdf(invoice_id):
             pdf_bytes = pdf_generator.generate_pdf()
             pdf_size_bytes = len(pdf_bytes)
             current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
-            filename = f"invoice_{invoice.invoice_number}_{page_size}.pdf"
+            # Get invoice prefix from settings, default to "INV"
+            prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
+            if not prefix:
+                prefix = "INV"
+            filename = f"{prefix}_{invoice.invoice_number}_{page_size}.pdf"
             return send_file(
                 io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename
             )

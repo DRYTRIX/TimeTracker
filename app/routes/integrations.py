@@ -737,6 +737,26 @@ def delete_integration(integration_id):
     return redirect(url_for("integrations.list_integrations"))
 
 
+@integrations_bp.route("/integrations/<int:integration_id>/reset", methods=["POST"])
+@login_required
+def reset_integration(integration_id):
+    """Reset an integration by removing credentials and clearing config."""
+    service = IntegrationService()
+    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
+    if not integration:
+        flash(_("Integration not found."), "error")
+        return redirect(url_for("integrations.list_integrations"))
+
+    result = service.reset_integration(integration_id, current_user.id)
+
+    if result["success"]:
+        flash(_("Integration reset successfully. You can now reconfigure it."), "success")
+    else:
+        flash(result["message"], "error")
+
+    return redirect(url_for("integrations.view_integration", integration_id=integration_id))
+
+
 @integrations_bp.route("/integrations/<int:integration_id>/sync", methods=["POST"])
 @login_required
 def sync_integration(integration_id):

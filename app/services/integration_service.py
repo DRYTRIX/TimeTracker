@@ -190,15 +190,63 @@ class IntegrationService:
             if not user or not user.is_admin:
                 return {"success": False, "message": "Only administrators can delete global integrations."}
 
+        # Explicitly delete associated credentials first
+        credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).all()
+        for credential in credentials:
+            db.session.delete(credential)
+        
+        # Delete associated events (for cleanup, though cascade should handle it)
+        events = IntegrationEvent.query.filter_by(integration_id=integration_id).all()
+        for event in events:
+            db.session.delete(event)
+
+        # Delete the integration
+        provider = integration.provider  # Save before deletion
         db.session.delete(integration)
+        
         if not safe_commit("delete_integration", {"integration_id": integration_id}):
             return {"success": False, "message": "Could not delete integration due to a database error."}
 
         emit_event(
-            WebhookEvent.INTEGRATION_DELETED, {"integration_id": integration_id, "provider": integration.provider}
+            WebhookEvent.INTEGRATION_DELETED, {"integration_id": integration_id, "provider": provider}
         )
 
         return {"success": True, "message": "Integration deleted successfully."}
+
+    def reset_integration(self, integration_id: int, user_id: Optional[int] = None) -> Dict[str, Any]:
+        """Reset an integration by removing credentials and clearing config."""
+        integration = self.get_integration(integration_id, user_id)
+        if not integration:
+            return {"success": False, "message": "Integration not found."}
+
+        # Only admins can reset global integrations
+        if integration.is_global:
+            from app.models import User
+
+            user = User.query.get(user_id) if user_id else None
+            if not user or not user.is_admin:
+                return {"success": False, "message": "Only administrators can reset global integrations."}
+
+        # Delete associated credentials
+        credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).all()
+        for credential in credentials:
+            db.session.delete(credential)
+
+        # Clear config, reset status fields
+        integration.config = {}
+        integration.is_active = False
+        integration.last_sync_at = None
+        integration.last_sync_status = None
+        integration.last_error = None
+
+        if not safe_commit("reset_integration", {"integration_id": integration_id}):
+            return {"success": False, "message": "Could not reset integration due to a database error."}
+
+        emit_event(
+            WebhookEvent.INTEGRATION_UPDATED, {"integration_id": integration_id, "provider": integration.provider, "action": "reset"}
+        )
+
+        return {"success": True, "message": "Integration reset successfully. You can now reconfigure it."}
 
     def save_credentials(
         self,

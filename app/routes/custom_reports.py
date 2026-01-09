@@ -259,24 +259,45 @@ def generate_report_data(config, user_id=None):
     start_date = filters.get("start_date")
     end_date = filters.get("end_date")
 
-    try:
-        if start_date and isinstance(start_date, str) and start_date.strip():
-            start_dt = datetime.strptime(start_date.strip(), "%Y-%m-%d")
-        else:
+    # Validate and parse start_date with stricter validation
+    from flask import current_app
+    from app.utils.validation import sanitize_input
+    import re
+    
+    start_dt = None
+    end_dt = None
+    
+    if start_date and isinstance(start_date, str) and start_date.strip():
+        try:
+            # Sanitize input and validate date format strictly
+            sanitized_date = sanitize_input(start_date.strip(), max_length=10)
+            # Validate date format: YYYY-MM-DD
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', sanitized_date):
+                raise ValueError(f"Invalid date format. Expected YYYY-MM-DD, got: {sanitized_date}")
+            start_dt = datetime.strptime(sanitized_date, "%Y-%m-%d")
+        except (ValueError, AttributeError, TypeError) as e:
+            current_app.logger.warning(f"Invalid start_date format: {start_date}, using default. Error: {e}")
             start_dt = datetime.utcnow() - timedelta(days=30)
-    except (ValueError, AttributeError) as e:
-        from flask import current_app
-        current_app.logger.warning(f"Invalid start_date format: {start_date}, using default")
+    else:
         start_dt = datetime.utcnow() - timedelta(days=30)
 
-    try:
-        if end_date and isinstance(end_date, str) and end_date.strip():
-            end_dt = datetime.strptime(end_date.strip(), "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
-        else:
+    # Validate and parse end_date with stricter validation
+    if end_date and isinstance(end_date, str) and end_date.strip():
+        try:
+            # Sanitize input and validate date format strictly
+            sanitized_date = sanitize_input(end_date.strip(), max_length=10)
+            # Validate date format: YYYY-MM-DD
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', sanitized_date):
+                raise ValueError(f"Invalid date format. Expected YYYY-MM-DD, got: {sanitized_date}")
+            end_dt = datetime.strptime(sanitized_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+            # Validate date range
+            if end_dt <= start_dt:
+                current_app.logger.warning(f"end_date must be after start_date, adjusting")
+                end_dt = start_dt + timedelta(days=1)
+        except (ValueError, AttributeError, TypeError) as e:
+            current_app.logger.warning(f"Invalid end_date format: {end_date}, using default. Error: {e}")
             end_dt = datetime.utcnow()
-    except (ValueError, AttributeError) as e:
-        from flask import current_app
-        current_app.logger.warning(f"Invalid end_date format: {end_date}, using default")
+    else:
         end_dt = datetime.utcnow()
 
     # Generate data based on source
@@ -307,7 +328,10 @@ def generate_report_data(config, user_id=None):
             # Filter by user if not admin or if user_id is specified
             if user_id:
                 user = User.query.get(user_id)
-                if not user or not user.is_admin:
+                if not user:
+                    # User not found, return empty results
+                    return {"success": False, "message": f"User {user_id} not found", "data": []}
+                if not user.is_admin:
                     query = query.filter(TimeEntry.user_id == user_id)
 
             project_id = filters.get("project_id")
