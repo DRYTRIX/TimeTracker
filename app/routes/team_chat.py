@@ -425,28 +425,37 @@ def upload_attachment(channel_id):
     if file.filename == "":
         return jsonify({"error": _("No file selected")}), 400
 
-    if not allowed_file(file.filename):
-        return jsonify({"error": _("File type not allowed")}), 400
+    # Use the file upload utility for proper validation
+    from app.utils.file_upload import validate_file_upload
+    # Normalize allowed extensions to include leading dots for validation
+    normalized_allowed = {ext if ext.startswith('.') else '.' + ext for ext in ALLOWED_EXTENSIONS}
+    
+    is_valid, error_msg = validate_file_upload(file, allowed_extensions=normalized_allowed, max_size=MAX_FILE_SIZE)
+    if not is_valid:
+        return jsonify({"error": _(error_msg)}), 400
 
-    # Check file size
-    file.seek(0, os.SEEK_END)
-    file_size = file.tell()
-    file.seek(0)
-
-    if file_size > MAX_FILE_SIZE:
-        return jsonify({"error": _("File size exceeds maximum allowed size (10 MB)")}), 400
-
-    # Save file
+    # Save file - secure_filename after validation
     original_filename = secure_filename(file.filename)
+    if not original_filename:
+        return jsonify({"error": _("Invalid filename")}), 400
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{channel_id}_{timestamp}_{original_filename}"
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
-    os.makedirs(upload_dir, exist_ok=True)
+    try:
+        os.makedirs(upload_dir, exist_ok=True)
+    except (OSError, IOError) as e:
+        current_app.logger.error(f"Failed to create upload directory {upload_dir}: {e}")
+        return jsonify({"error": _("Server error: Could not create upload directory")}), 500
 
     file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    try:
+        file.save(file_path)
+    except (OSError, IOError) as e:
+        current_app.logger.error(f"Failed to save file {filename}: {e}")
+        return jsonify({"error": _("Server error: Could not save file")}), 500
 
     # Return file info for message creation
     return jsonify(

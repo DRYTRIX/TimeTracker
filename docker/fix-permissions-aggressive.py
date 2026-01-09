@@ -8,12 +8,28 @@ import os
 import sys
 import stat
 import subprocess
+import shlex
 
 def run_command(cmd, description):
-    """Run a shell command and return success status"""
+    """Run a shell command and return success status
+    
+    Args:
+        cmd: Command string or list of command arguments
+        description: Human-readable description
+    """
     try:
         print(f"Running: {description}")
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # If cmd is a string, split it safely
+        if isinstance(cmd, str):
+            try:
+                cmd_list = shlex.split(cmd)
+            except ValueError:
+                # Fallback to simple split
+                cmd_list = cmd.split()
+        else:
+            cmd_list = cmd
+        
+        result = subprocess.run(cmd_list, capture_output=True, text=True)
         if result.returncode == 0:
             print(f"✓ {description} - Success")
             return True
@@ -68,14 +84,20 @@ def fix_permissions_aggressive():
         current_user = os.environ.get('USER', 'www-data')
         current_uid = os.environ.get('UID', '1000')
         
+        # Sanitize user and UID to prevent command injection
+        # Only allow alphanumeric and common safe characters
+        import re
+        current_user = re.sub(r'[^a-zA-Z0-9_-]', '', current_user)
+        current_uid = re.sub(r'[^0-9]', '', str(current_uid))
+        
         for upload_dir in upload_dirs:
             if os.path.exists(upload_dir):
-                # Try to change ownership to current user
-                run_command(f"chown -R {current_user}:{current_user} {upload_dir}", 
+                # Try to change ownership to current user (use list to avoid shell)
+                run_command(['chown', '-R', f'{current_user}:{current_user}', upload_dir], 
                           f"Change ownership of {upload_dir}")
                 
                 # Also try to change ownership by UID
-                run_command(f"chown -R {current_uid}:{current_uid} {upload_dir}", 
+                run_command(['chown', '-R', f'{current_uid}:{current_uid}', upload_dir], 
                           f"Change ownership of {upload_dir} by UID")
         
         # Step 4: Set permissions on parent directories

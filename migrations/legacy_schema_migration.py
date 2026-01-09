@@ -140,19 +140,34 @@ def create_migration_baseline():
     """Create a migration baseline for the current database state"""
     print("Creating migration baseline...")
     
+    import subprocess
+    import shlex
+    
     try:
         # Initialize Flask-Migrate if not already done
         if not Path("migrations/env.py").exists():
             print("  - Initializing Flask-Migrate")
-            os.system("flask db init")
+            try:
+                subprocess.run(['flask', 'db', 'init'], check=True)
+            except subprocess.CalledProcessError as e:
+                print(f"  - Failed to initialize Flask-Migrate: {e}")
+                return False
         
         # Create initial migration
         print("  - Creating initial migration")
-        os.system('flask db migrate -m "Baseline from legacy schema"')
+        try:
+            subprocess.run(['flask', 'db', 'migrate', '-m', 'Baseline from legacy schema'], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"  - Failed to create migration: {e}")
+            return False
         
         # Stamp database as being at this revision
         print("  - Stamping database")
-        os.system("flask db stamp head")
+        try:
+            subprocess.run(['flask', 'db', 'stamp', 'head'], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"  - Failed to stamp database: {e}")
+            return False
         
         print("✓ Migration baseline created")
         return True

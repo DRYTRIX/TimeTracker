@@ -45,7 +45,13 @@ def display_network_info():
     """Display network information for debugging"""
     print("=== Network Information ===")
     print(f"Hostname: {os.uname().nodename}")
-    print(f"IP Address: {os.popen('hostname -I').read().strip()}")
+    # Use subprocess.run instead of os.popen to avoid command injection
+    try:
+        result = subprocess.run(['hostname', '-I'], capture_output=True, text=True, check=False)
+        ip_address = result.stdout.strip() if result.returncode == 0 else "N/A"
+    except Exception:
+        ip_address = "N/A"
+    print(f"IP Address: {ip_address}")
     print(f"Environment: {os.environ.get('FLASK_APP', 'N/A')}")
     print(f"Working Directory: {os.getcwd()}")
     print("==========================")

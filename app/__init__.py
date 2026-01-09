@@ -722,6 +722,13 @@ def create_app(config=None):
         if (not secret) or (secret in placeholder_values) or (isinstance(secret, str) and len(secret) < 32):
             app.logger.error("Invalid SECRET_KEY configured in production; refusing to start")
             raise RuntimeError("Invalid SECRET_KEY in production")
+        
+        # Check for debug mode in production - this is a security risk
+        flask_debug = app.config.get("FLASK_DEBUG", False)
+        if flask_debug or app.debug:
+            app.logger.error("Debug mode is enabled in production; refusing to start")
+            app.logger.error("Debug mode can leak sensitive information and should never be enabled in production")
+            raise RuntimeError("Debug mode cannot be enabled in production")
 
     # Apply security headers and a basic CSP
     @app.after_request

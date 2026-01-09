@@ -73,11 +73,26 @@ def check_python_package(package_name):
 
 
 def run_command(command, description):
-    """Run a command and check if it succeeds"""
+    """Run a command and check if it succeeds
+    
+    Args:
+        command: Command string or list of command arguments
+        description: Human-readable description
+    """
+    import shlex
     try:
+        # If command is a string, split it safely
+        if isinstance(command, str):
+            try:
+                cmd_list = shlex.split(command)
+            except ValueError:
+                # Fallback to simple split
+                cmd_list = command.split()
+        else:
+            cmd_list = command
+        
         result = subprocess.run(
-            command,
-            shell=True,
+            cmd_list,
             capture_output=True,
             text=True,
             timeout=30
@@ -197,11 +212,11 @@ def main():
     print_header("7. Quick Test Validation")
     
     # Check if pytest can discover tests
-    if run_command('pytest --collect-only -q', 'Test discovery'):
+    if run_command(['pytest', '--collect-only', '-q'], 'Test discovery'):
         print_info("Tests can be discovered successfully")
     
     # Try to run smoke tests (if they exist)
-    if run_command('pytest -m smoke --co -q', 'Smoke test discovery'):
+    if run_command(['pytest', '-m', 'smoke', '--co', '-q'], 'Smoke test discovery'):
         print_info("Smoke tests are properly marked")
     
     # 8. Check Docker setup

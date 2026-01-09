@@ -234,7 +234,11 @@ class GoogleCalendarConnector(BaseConnector):
             sync_direction = self.integration.config.get("sync_direction", "time_tracker_to_calendar")
             calendar_id = self.integration.config.get("calendar_id", "primary")
 
-            synced_count = 0
+            # Initialize counters for both sync directions
+            time_tracker_to_calendar_count = 0
+            imported = 0
+            skipped = 0
+            skipped_reasons = {"time_tracker_created": 0, "already_imported": 0, "invalid_time": 0, "other": 0}
             errors = []
 
             # Sync TimeTracker → Google Calendar
@@ -292,14 +296,14 @@ class GoogleCalendarConnector(BaseConnector):
                                 )
                                 db.session.add(link)
 
-                        synced_count += 1
+                        time_tracker_to_calendar_count += 1
                         logger.debug(f"Synced time entry {entry.id} to Google Calendar")
                     except Exception as e:
                         error_msg = f"Error syncing entry {entry.id}: {str(e)}"
                         errors.append(error_msg)
                         logger.warning(f"{error_msg}", exc_info=True)
                 
-                logger.info(f"TimeTracker→Calendar sync completed: synced {synced_count} time entries")
+                logger.info(f"TimeTracker→Calendar sync completed: synced {time_tracker_to_calendar_count} time entries")
 
             # Sync Google Calendar → TimeTracker
             if sync_direction in ["calendar_to_time_tracker", "bidirectional"]:
@@ -326,7 +330,8 @@ class GoogleCalendarConnector(BaseConnector):
 
                 events = events_result.get("items", [])
                 logger.info(f"Fetched {len(events)} events from Google Calendar")
-
+                
+                # Reset counters for calendar-to-tracker sync (already initialized above)
                 imported = 0
                 skipped = 0
                 skipped_reasons = {"time_tracker_created": 0, "already_imported": 0, "invalid_time": 0, "other": 0}
@@ -337,13 +342,16 @@ class GoogleCalendarConnector(BaseConnector):
                         event_summary = event.get("summary", "No title")
                         
                         # Skip events we created (check description for marker)
-                        if event.get("description", "").startswith("TimeTracker:"):
+                        description = event.get("description") or ""
+                        if description.startswith("TimeTracker:"):
                             logger.debug(f"Skipping event {event_id} - created by TimeTracker")
                             skipped += 1
                             skipped_reasons["time_tracker_created"] += 1
                             continue
 
                         # Check if we already have this event using IntegrationExternalEventLink
+                        from app.models.integration_external_event_link import IntegrationExternalEventLink
+                        
                         existing_link = IntegrationExternalEventLink.query.filter_by(
                             integration_id=self.integration.id,
                             external_uid=event_id
@@ -355,19 +363,33 @@ class GoogleCalendarConnector(BaseConnector):
                             skipped_reasons["already_imported"] += 1
                             continue
 
-                        # Create time entry from calendar event
-                        start_str = event["start"].get("dateTime", event["start"].get("date"))
-                        end_str = event["end"].get("dateTime", event["end"].get("date"))
-
+                        # Get start and end times - handle both dateTime (timed events) and date (all-day events)
+                        start_data = event.get("start", {})
+                        end_data = event.get("end", {})
+                        
+                        start_str = start_data.get("dateTime")
+                        end_str = end_data.get("dateTime")
+                        
+                        # Skip all-day events (they only have "date", not "dateTime")
                         if not start_str or not end_str:
-                            logger.warning(f"Event {event_id} missing start or end time, skipping")
+                            logger.debug(f"Skipping all-day event {event_id} ({event_summary}) - only timed events are imported")
                             skipped += 1
-                            skipped_reasons["invalid_time"] += 1
+                            skipped_reasons["other"] += 1
                             continue
 
                         # Parse datetime strings (Google Calendar returns ISO format with timezone)
-                        start_time_utc = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
-                        end_time_utc = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
+                        try:
+                            # Handle Z suffix and convert to +00:00 for fromisoformat
+                            start_str_normalized = start_str.replace("Z", "+00:00")
+                            end_str_normalized = end_str.replace("Z", "+00:00")
+                            
+                            start_time_utc = datetime.fromisoformat(start_str_normalized)
+                            end_time_utc = datetime.fromisoformat(end_str_normalized)
+                        except (ValueError, AttributeError) as parse_error:
+                            logger.warning(f"Event {event_id} has invalid datetime format: start={start_str}, end={end_str}, error={parse_error}")
+                            skipped += 1
+                            skipped_reasons["invalid_time"] += 1
+                            continue
 
                         # Ensure timezone-aware (assume UTC if naive)
                         if start_time_utc.tzinfo is None:
@@ -393,25 +415,24 @@ class GoogleCalendarConnector(BaseConnector):
 
                         # Try to match project/task from event title
                         project = None
-                        task = None
                         title = event_summary
 
                         # Simple matching: look for project name in title
-                        from app.models import Project, Task
+                        from app.models import Project
 
                         projects = Project.query.filter_by(user_id=self.integration.user_id, status="active").all()
                         for p in projects:
-                            if p.name in title:
+                            if p and p.name and p.name in title:
                                 project = p
                                 break
 
                         time_entry = TimeEntry(
                             user_id=self.integration.user_id,
                             project_id=project.id if project else None,
-                            task_id=task.id if task else None,
+                            task_id=None,  # Tasks are not matched from calendar events
                             start_time=start_time_local,
                             end_time=end_time_local,
-                            notes=event.get("description", ""),
+                            notes=description,
                             billable=False,
                             source="auto",
                         )
@@ -429,12 +450,12 @@ class GoogleCalendarConnector(BaseConnector):
                         db.session.add(link)
 
                         imported += 1
-                        synced_count += 1
                         logger.info(f"Imported event {event_id} ({event_summary}) as time entry {time_entry.id}")
                     except Exception as e:
                         error_msg = f"Error syncing calendar event {event.get('id', 'unknown')}: {str(e)}"
                         errors.append(error_msg)
                         logger.warning(f"{error_msg}", exc_info=True)
+                        logger.exception(f"Full exception details for event {event.get('id', 'unknown')}")
                 
                 if imported > 0 or skipped > 0:
                     logger.info(f"Calendar→TimeTracker sync: imported={imported}, skipped={skipped} (reasons: {skipped_reasons}), total_events={len(events)}")
@@ -445,13 +466,42 @@ class GoogleCalendarConnector(BaseConnector):
             if errors:
                 self.integration.last_error = "; ".join(errors[:3])  # Store first 3 errors
 
-            db.session.commit()
+            # Commit all changes in a single transaction (time entries, links, integration status)
+            try:
+                db.session.commit()
+                logger.info(f"Committed sync results: TimeTracker→Calendar={time_tracker_to_calendar_count}, Calendar→TimeTracker imported={imported}")
+            except Exception as commit_error:
+                db.session.rollback()
+                logger.error(f"Failed to commit sync results: {commit_error}", exc_info=True)
+                errors.append(f"Failed to commit sync: {str(commit_error)}")
+                return {
+                    "success": False,
+                    "errors": errors,
+                    "message": f"Sync completed but failed to save results: {str(commit_error)}",
+                }
+
+            # Build detailed message
+            message_parts = []
+            if sync_direction in ["time_tracker_to_calendar", "bidirectional"]:
+                if time_tracker_to_calendar_count > 0:
+                    message_parts.append(f"TimeTracker→Calendar: synced {time_tracker_to_calendar_count} items")
+            if sync_direction in ["calendar_to_time_tracker", "bidirectional"]:
+                if imported > 0:
+                    message_parts.append(f"Calendar→TimeTracker: imported {imported} events")
+                if skipped > 0:
+                    skipped_summary = ", ".join([f"{k}={v}" for k, v in skipped_reasons.items() if v > 0])
+                    message_parts.append(f"({skipped} skipped: {skipped_summary})")
+            
+            total_synced = time_tracker_to_calendar_count + imported
+            message = " | ".join(message_parts) if message_parts else f"Synced {total_synced} items"
 
             return {
                 "success": True,
-                "synced_count": synced_count,
+                "synced_count": total_synced,
+                "imported": imported if sync_direction in ["calendar_to_time_tracker", "bidirectional"] else 0,
+                "skipped": skipped if sync_direction in ["calendar_to_time_tracker", "bidirectional"] else 0,
                 "errors": errors,
-                "message": f"Synced {synced_count} items",
+                "message": message,
             }
 
         except Exception as e:

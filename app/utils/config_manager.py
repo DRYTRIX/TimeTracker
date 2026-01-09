@@ -38,10 +38,20 @@ class ConfigManager:
                 # Only use Settings value if instance is persisted in database (has an id)
                 # This ensures we're reading from the database, not a fallback instance
                 if hasattr(settings, "id") and settings.id is not None:
-                    value = getattr(settings, key)
+                    value = getattr(settings, key, None)
+                    # For boolean values, explicitly check False vs None
+                    # For string values, check empty string vs None
+                    # For integer values, check 0 vs None
                     if value is not None:
+                        # If value is explicitly set (even if False, 0, or ""), use it
                         return value
-        except Exception:
+                    # If value is None, check if it's a required field that should have a default
+                    # For now, if value is None in persisted instance, fall back to env/default
+        except Exception as e:
+            # Log error but continue to fallback values
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Error retrieving setting '{key}' from Settings model: {e}")
             pass
 
         # Check environment variable second (.env file - used as initial values)

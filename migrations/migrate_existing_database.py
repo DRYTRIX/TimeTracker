@@ -7,6 +7,7 @@ This script can migrate ANY existing database to the new Flask-Migrate system
 import os
 import sys
 import subprocess
+import shlex
 import sqlite3
 import psycopg2
 from pathlib import Path
@@ -14,22 +15,35 @@ from datetime import datetime
 import shutil
 
 def run_command(command, description, capture_output=True):
-    """Run a command and handle errors"""
+    """Run a command and handle errors
+    
+    Args:
+        command: Command string to run (will be split into list)
+        description: Human-readable description of the command
+        capture_output: Whether to capture output
+    """
     print(f"\n--- {description} ---")
     print(f"Running: {command}")
     
+    # Split command into list to avoid shell injection
+    try:
+        cmd_list = shlex.split(command)
+    except ValueError:
+        # Fallback to simple split if shlex fails
+        cmd_list = command.split()
+    
     try:
         if capture_output:
-            result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+            result = subprocess.run(cmd_list, check=True, capture_output=True, text=True)
             print(f"✓ {description} completed successfully")
             if result.stdout:
                 print(result.stdout)
             return True
         else:
-            subprocess.run(command, shell=True, check=True)
+            subprocess.run(cmd_list, check=True)
             print(f"✓ {description} completed successfully")
             return True
-    except subprocess.CmdProcessError as e:
+    except subprocess.CalledProcessError as e:
         print(f"✗ {description} failed:")
         print(f"Error code: {e.returncode}")
         if e.stdout:

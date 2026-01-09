@@ -26,6 +26,15 @@ def list_clients():
     status = request.args.get("status", "active")
     search = request.args.get("search", "").strip()
 
+    # Validate search input with length limits
+    from app.utils.validation import sanitize_input
+    if search:
+        # Limit search input to prevent long queries and potential DoS
+        search = sanitize_input(search, max_length=200)
+        if len(search) > 200:
+            flash(_("Search query is too long. Maximum 200 characters."), "warning")
+            search = search[:200]
+
     query = Client.query
     if status == "active":
         query = query.filter_by(status="active")
@@ -42,7 +51,11 @@ def list_clients():
         pass
 
     if search:
-        like = f"%{search}%"
+        # Escape special LIKE characters to prevent SQL injection
+        # Note: SQLAlchemy parameterized queries already protect against SQL injection,
+        # but we still escape % and _ for LIKE patterns to get expected search behavior
+        search_escaped = search.replace('%', '\\%').replace('_', '\\_')
+        like = f"%{search_escaped}%"
         search_conditions = [
             Client.name.ilike(like),
             Client.description.ilike(like),

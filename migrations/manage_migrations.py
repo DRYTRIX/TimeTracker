@@ -7,15 +7,30 @@ This script helps manage the transition from custom migrations to Flask-Migrate
 import os
 import sys
 import subprocess
+import shlex
 from pathlib import Path
 
 def run_command(command, description):
-    """Run a command and handle errors"""
+    """Run a command and handle errors
+    
+    Args:
+        command: Command string to run (will be split into list)
+        description: Human-readable description of the command
+    """
     print(f"\n--- {description} ---")
     print(f"Running: {command}")
     
+    # Split command into list to avoid shell injection
+    # Handle quoted arguments properly
+    import shlex
     try:
-        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+        cmd_list = shlex.split(command)
+    except ValueError:
+        # Fallback to simple split if shlex fails
+        cmd_list = command.split()
+    
+    try:
+        result = subprocess.run(cmd_list, check=True, capture_output=True, text=True)
         print(f"✓ {description} completed successfully")
         if result.stdout:
             print(result.stdout)

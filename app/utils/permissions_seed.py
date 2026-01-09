@@ -234,6 +234,7 @@ DEFAULT_ROLES = {
             "edit_all_issues",
             # Inventory
             "view_inventory",
+            "manage_stock_items",
             "view_stock_levels",
             "manage_stock_movements",
             "transfer_stock",
