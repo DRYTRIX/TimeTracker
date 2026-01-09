@@ -41,6 +41,438 @@ RESTORE_PROGRESS = {}
 ALLOWED_LOGO_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
+def _convert_json_template_to_html_css(template_json, page_size="A4", invoice=None, quote=None):
+    """
+    Convert JSON template to HTML/CSS for preview purposes with full element type support.
+    
+    Args:
+        template_json: Dictionary containing template definition
+        page_size: Page size for CSS @page rule
+        invoice: Optional invoice object for table data rendering
+        quote: Optional quote object for table data rendering
+        
+    Returns:
+        tuple: (html_string, css_string)
+    """
+    from app.utils.pdf_template_schema import get_page_dimensions_points
+    import html as html_escape
+    import json as json_module
+    
+    # Get page dimensions
+    dims = get_page_dimensions_points(page_size)
+    width_pt = dims["width"]
+    height_pt = dims["height"]
+    
+    # Convert points to pixels at 96 DPI for browser (72 DPI * 96/72 = 1.333)
+    # But for accuracy, use 1pt = 1.333px conversion for browser
+    width_px = int(width_pt * 96 / 72)
+    height_px = int(height_pt * 96 / 72)
+    
+    # Font mapping: ReportLab fonts to web fonts
+    font_map = {
+        "Helvetica": "Arial, Helvetica, sans-serif",
+        "Helvetica-Bold": "Arial, Helvetica, sans-serif",
+        "Helvetica-Oblique": "Arial, Helvetica, sans-serif",
+        "Helvetica-BoldOblique": "Arial, Helvetica, sans-serif",
+        "Times-Roman": "Times New Roman, Times, serif",
+        "Times-Bold": "Times New Roman, Times, serif",
+        "Times-Italic": "Times New Roman, Times, serif",
+        "Times-BoldItalic": "Times New Roman, Times, serif",
+        "Courier": "Courier New, Courier, monospace",
+        "Courier-Bold": "Courier New, Courier, monospace",
+        "Courier-Oblique": "Courier New, Courier, monospace",
+        "Courier-BoldOblique": "Courier New, Courier, monospace",
+    }
+    
+    # Get page margins from template
+    page_config = template_json.get("page", {})
+    margin_top = page_config.get("margin", {}).get("top", 20)
+    margin_bottom = page_config.get("margin", {}).get("bottom", 20)
+    margin_left = page_config.get("margin", {}).get("left", 20)
+    margin_right = page_config.get("margin", {}).get("right", 20)
+    
+    # Build CSS with @page rule and comprehensive styles
+    css = f"""@page {{
+    size: {page_size};
+    margin: {margin_top}mm {margin_right}mm {margin_bottom}mm {margin_left}mm;
+}}
+
+* {{
+    box-sizing: border-box;
+}}
+
+body {{
+    width: {width_px}px;
+    height: {height_px}px;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    background: white;
+    overflow: hidden;
+}}
+
+.invoice-wrapper,
+.quote-wrapper {{
+    width: {width_px}px;
+    height: {height_px}px;
+    position: relative;
+    background: white;
+    margin: 0;
+    padding: 0;
+}}
+
+.element {{
+    position: absolute;
+    box-sizing: border-box;
+}}
+
+.text-element {{
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin: 0;
+    padding: 0;
+}}
+
+.image-element {{
+    object-fit: contain;
+    display: block;
+}}
+
+.rectangle-element {{
+    box-sizing: border-box;
+}}
+
+.circle-element {{
+    border-radius: 50%;
+    box-sizing: border-box;
+}}
+
+.line-element {{
+    transform-origin: left center;
+}}
+
+.table-element {{
+    border-collapse: collapse;
+    border-spacing: 0;
+    table-layout: auto;
+    margin: 0;
+    box-sizing: border-box;
+}}
+
+.table-element th,
+.table-element td {{
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+    box-sizing: border-box;
+}}
+
+.table-element th {{
+    background-color: #f8f9fa;
+    font-weight: bold;
+    border-bottom: 2px solid #333;
+}}
+
+.table-element tbody tr:nth-child(even) {{
+    background-color: #f9f9f9;
+}}
+
+.table-element tbody tr:hover {{
+    background-color: #f0f0f0;
+}}
+"""
+    
+    # Helper function to map ReportLab fonts to web fonts
+    def get_font_family(font_name):
+        if not font_name:
+            return "Arial, Helvetica, sans-serif"
+        return font_map.get(font_name, font_map.get(font_name.split("-")[0], "Arial, Helvetica, sans-serif"))
+    
+    # Helper function to get font weight from font name
+    def get_font_weight(font_name):
+        if not font_name:
+            return "normal"
+        if "Bold" in font_name:
+            return "bold"
+        return "normal"
+    
+    # Helper function to get font style from font name
+    def get_font_style(font_name):
+        if not font_name:
+            return "normal"
+        if "Oblique" in font_name or "Italic" in font_name:
+            return "italic"
+        return "normal"
+    
+    # Helper function to convert color (supports hex, rgb, named colors)
+    def format_color(color):
+        if not color:
+            return "#000000"
+        # If already hex or named color, return as-is
+        if color.startswith("#") or color in ["black", "white", "red", "blue", "green", "yellow", "cyan", "magenta"]:
+            return color
+        # If RGB tuple/list, convert to hex
+        if isinstance(color, (list, tuple)) and len(color) >= 3:
+            return f"#{int(color[0]):02x}{int(color[1]):02x}{int(color[2]):02x}"
+        return str(color)
+    
+    # Helper function to render text with Jinja2-like template variables
+    def render_text_template(text, data_obj):
+        """Render text with template variables using actual data"""
+        if not text or not data_obj:
+            return text
+        
+        # Simple template variable replacement for preview
+        # Replace {{ variable }} patterns with actual values
+        import re
+        def replace_var(match):
+            var_path = match.group(1).strip()
+            try:
+                # Handle simple attribute access (e.g., "invoice.invoice_number")
+                parts = var_path.split(".")
+                obj = data_obj
+                for part in parts:
+                    obj = getattr(obj, part, None)
+                    if obj is None:
+                        return match.group(0)  # Return original if not found
+                return str(obj) if obj is not None else ""
+            except Exception:
+                return match.group(0)  # Return original on error
+        
+        return re.sub(r'\{\{\s*([^}]+)\s*\}\}', replace_var, text)
+    
+    # Build HTML from elements
+    html_parts = ['<div class="invoice-wrapper">'] if invoice else ['<div class="quote-wrapper">']
+    
+    elements = template_json.get("elements", [])
+    for idx, element in enumerate(elements):
+        elem_type = element.get("type", "")
+        x = element.get("x", 0)
+        y = element.get("y", 0)
+        style = element.get("style", {})
+        opacity = style.get("opacity", 1.0)
+        rotation = element.get("rotation", 0)
+        
+        # Convert points to pixels at 96 DPI for browser
+        x_px = int(x * 96 / 72)
+        y_px = int(y * 96 / 72)
+        
+        # Base style string
+        base_style_parts = [
+            f"left: {x_px}px",
+            f"top: {y_px}px",
+            f"opacity: {opacity}",
+        ]
+        
+        if rotation:
+            base_style_parts.append(f"transform: rotate({rotation}deg)")
+            base_style_parts.append("transform-origin: top left")
+        
+        style_str_base = "; ".join(base_style_parts) + ";"
+        
+        if elem_type == "text":
+            text = element.get("text", "")
+            width = element.get("width", 400)
+            height = element.get("height", None)
+            width_px_elem = int(width * 96 / 72)
+            
+            font_name = style.get("font", "Helvetica")
+            font_size = style.get("size", 10)
+            color = format_color(style.get("color", "#000000"))
+            align = style.get("align", "left")
+            valign = style.get("valign", "top")
+            
+            # Build complete style string
+            style_parts = [style_str_base]
+            style_parts.append(f"width: {width_px_elem}px")
+            if height:
+                style_parts.append(f"height: {int(height * 96 / 72)}px")
+            style_parts.append(f"font-family: {get_font_family(font_name)}")
+            style_parts.append(f"font-size: {font_size}pt")
+            style_parts.append(f"font-weight: {get_font_weight(font_name)}")
+            style_parts.append(f"font-style: {get_font_style(font_name)}")
+            style_parts.append(f"color: {color}")
+            style_parts.append(f"text-align: {align}")
+            style_parts.append(f"vertical-align: {valign}")
+            
+            style_str = "; ".join(style_parts) + ";"
+            
+            # Render text with actual data if available
+            data_obj = invoice if invoice else quote
+            rendered_text = render_text_template(text, data_obj) if data_obj else text
+            
+            # Escape HTML but preserve any remaining template syntax
+            text_escaped = html_escape.escape(rendered_text)
+            # Restore template syntax if any remains (shouldn't after rendering, but just in case)
+            text_escaped = text_escaped.replace("&lt;{{", "{{").replace("}}&gt;", "}}")
+            
+            html_parts.append(f'<div class="element text-element" style="{style_str}">{text_escaped}</div>')
+        
+        elif elem_type == "image":
+            width = element.get("width", 100)
+            height = element.get("height", 100)
+            width_px_elem = int(width * 96 / 72)
+            height_px_elem = int(height * 96 / 72)
+            source = element.get("source", "")
+            
+            # Handle base64 data URLs or file paths
+            if source.startswith("data:"):
+                img_src = source
+            elif source.startswith("/") or source.startswith("http"):
+                img_src = source
+            else:
+                # Assume it's a relative path or placeholder
+                img_src = source if source else "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999'%3EImage%3C/text%3E%3C/svg%3E"
+            
+            style_parts = [style_str_base]
+            style_parts.append(f"width: {width_px_elem}px")
+            style_parts.append(f"height: {height_px_elem}px")
+            style_str = "; ".join(style_parts) + ";"
+            
+            html_parts.append(f'<img class="element image-element" src="{img_src}" style="{style_str}" alt="Image">')
+        
+        elif elem_type == "rectangle":
+            width = element.get("width", 100)
+            height = element.get("height", 100)
+            width_px_elem = int(width * 96 / 72)
+            height_px_elem = int(height * 96 / 72)
+            fill = format_color(style.get("fill", "#ffffff"))
+            stroke = format_color(style.get("stroke", "#000000"))
+            stroke_width = style.get("strokeWidth", 1)
+            
+            style_parts = [style_str_base]
+            style_parts.append(f"width: {width_px_elem}px")
+            style_parts.append(f"height: {height_px_elem}px")
+            style_parts.append(f"background-color: {fill}")
+            if stroke_width > 0:
+                style_parts.append(f"border: {stroke_width}px solid {stroke}")
+            style_str = "; ".join(style_parts) + ";"
+            
+            html_parts.append(f'<div class="element rectangle-element" style="{style_str}"></div>')
+        
+        elif elem_type == "circle":
+            radius = element.get("radius", 50)
+            radius_px = int(radius * 96 / 72)
+            fill = format_color(style.get("fill", "#ffffff"))
+            stroke = format_color(style.get("stroke", "#000000"))
+            stroke_width = style.get("strokeWidth", 1)
+            
+            style_parts = [style_str_base]
+            style_parts.append(f"width: {radius_px * 2}px")
+            style_parts.append(f"height: {radius_px * 2}px")
+            style_parts.append(f"background-color: {fill}")
+            if stroke_width > 0:
+                style_parts.append(f"border: {stroke_width}px solid {stroke}")
+            style_str = "; ".join(style_parts) + ";"
+            
+            html_parts.append(f'<div class="element circle-element" style="{style_str}"></div>')
+        
+        elif elem_type == "line":
+            width = element.get("width", 100)
+            height = element.get("height", 0)
+            # For lines, width is the length, height is the stroke width (thickness)
+            width_px_elem = int(width * 96 / 72)
+            stroke_width = height if height > 0 else style.get("strokeWidth", 1)
+            stroke_width_px = max(1, int(stroke_width * 96 / 72))
+            stroke = format_color(style.get("stroke", "#000000"))
+            
+            style_parts = [style_str_base]
+            style_parts.append(f"width: {width_px_elem}px")
+            style_parts.append(f"height: {stroke_width_px}px")
+            style_parts.append(f"background-color: {stroke}")
+            style_str = "; ".join(style_parts) + ";"
+            
+            html_parts.append(f'<div class="element line-element" style="{style_str}"></div>')
+        
+        elif elem_type == "table":
+            width = element.get("width", 500)
+            width_px_elem = int(width * 96 / 72)
+            columns = element.get("columns", [])
+            row_template = element.get("row_template", {})
+            
+            # Get table style properties
+            table_style = element.get("style", {})
+            border_color = format_color(table_style.get("borderColor", "#000000"))
+            header_bg = format_color(table_style.get("headerBackground", "#f8f9fa"))
+            
+            style_parts = [style_str_base]
+            style_parts.append(f"width: {width_px_elem}px")
+            style_parts.append(f"border: 1px solid {border_color}")
+            style_str = "; ".join(style_parts) + ";"
+            
+            table_html = f'<table class="element table-element" style="{style_str}"><thead><tr>'
+            
+            # Build header row
+            for col in columns:
+                header = col.get("header", "")
+                align = col.get("align", "left")
+                col_width = col.get("width", None)
+                width_attr = f' width="{int(col_width * 96 / 72)}px"' if col_width else ""
+                table_html += f'<th style="text-align: {align}; background-color: {header_bg};"{width_attr}>{html_escape.escape(header)}</th>'
+            table_html += '</tr></thead><tbody>'
+            
+            # Build data rows with actual invoice/quote data
+            data_obj = invoice if invoice else quote
+            items = []
+            if data_obj and hasattr(data_obj, "items"):
+                try:
+                    if hasattr(data_obj.items, "all"):
+                        items = data_obj.items.all()
+                    elif isinstance(data_obj.items, list):
+                        items = data_obj.items
+                    else:
+                        items = list(data_obj.items) if data_obj.items else []
+                except Exception:
+                    items = []
+            
+            # If no items available, create sample row from template
+            if not items and row_template:
+                items = [row_template]  # Use template as sample data
+            
+            # Render table rows with actual data
+            if items:
+                for item in items[:10]:  # Limit to 10 rows for preview
+                    table_html += '<tr>'
+                    for col in columns:
+                        field = col.get("field", "")
+                        align = col.get("align", "left")
+                        # Try to get value from item
+                        value = ""
+                        try:
+                            if hasattr(item, field):
+                                value = str(getattr(item, field, ""))
+                            elif isinstance(item, dict):
+                                value = str(item.get(field, ""))
+                            else:
+                                value = ""
+                        except Exception:
+                            value = ""
+                        
+                        value_escaped = html_escape.escape(str(value))
+                        table_html += f'<td style="text-align: {align};">{value_escaped}</td>'
+                    table_html += '</tr>'
+            else:
+                # No data available, show template placeholders
+                table_html += '<tr>'
+                for col in columns:
+                    field = col.get("field", "")
+                    align = col.get("align", "left")
+                    placeholder = f"{{{{ {field} }}}}"
+                    table_html += f'<td style="text-align: {align}; color: #999;">{html_escape.escape(placeholder)}</td>'
+                table_html += '</tr>'
+            
+            table_html += '</tbody></table>'
+            html_parts.append(table_html)
+    
+    html_parts.append('</div>')
+    html = '\n'.join(html_parts)
+    
+    return html, css
+
+
 def admin_required(f):
     """Decorator to require admin access
 
@@ -621,51 +1053,160 @@ def pdf_layout():
     from app.models import InvoicePDFTemplate
 
     # Get page size from query parameter or form, default to A4
-    page_size = request.args.get("size", request.form.get("page_size", "A4"))
+    page_size_raw = request.args.get("size", request.form.get("page_size", "A4"))
+    current_app.logger.info(f"[PDF_TEMPLATE] Action: template_editor_request, PageSize: '{page_size_raw}', Method: {request.method}, User: {current_user.username}")
 
     # Ensure valid page size
     valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
-    if page_size not in valid_sizes:
+    if page_size_raw not in valid_sizes:
+        current_app.logger.warning(f"[PDF_TEMPLATE] Invalid page size '{page_size_raw}', defaulting to A4, User: {current_user.username}")
         page_size = "A4"
+    else:
+        page_size = page_size_raw
 
-    # Get or create template for this page size
+    current_app.logger.info(f"[PDF_TEMPLATE] Final validated PageSize: '{page_size}', Method: {request.method}, User: {current_user.username}")
+
+    # Get or create template for this page size (ensures JSON exists)
+    current_app.logger.info(f"[PDF_TEMPLATE] Retrieving template from database - PageSize: '{page_size}', User: {current_user.username}")
     template = InvoicePDFTemplate.get_template(page_size)
+    current_app.logger.info(f"[PDF_TEMPLATE] Template retrieved - PageSize: '{page_size}', TemplateID: {template.id}, HasJSON: {bool(template.template_json)}, HasDesignJSON: {bool(template.design_json)}")
 
     if request.method == "POST":
+        current_app.logger.info(f"[PDF_TEMPLATE] Action: template_save, PageSize: '{page_size}', User: {current_user.username}")
         html_template = request.form.get("invoice_pdf_template_html", "")
         css_template = request.form.get("invoice_pdf_template_css", "")
         design_json = request.form.get("design_json", "")
+        template_json = request.form.get("template_json", "")  # ReportLab template JSON
 
-        # Update template
+        current_app.logger.info(f"[PDF_TEMPLATE] Form data received - PageSize: '{page_size}', HTML length: {len(html_template)}, CSS length: {len(css_template)}, DesignJSON length: {len(design_json)}, TemplateJSON length: {len(template_json)}")
+
+        # Validate and ensure template_json is present
+        import json
+        template_json_dict = None
+        if template_json and template_json.strip():
+            try:
+                current_app.logger.info(f"[PDF_TEMPLATE] Parsing template JSON - PageSize: '{page_size}', JSON length: {len(template_json)}")
+                template_json_dict = json.loads(template_json)
+                # Ensure page size matches in JSON
+                json_page_size = template_json_dict.get("page", {}).get("size")
+                current_app.logger.info(f"[PDF_TEMPLATE] Template JSON page size before update: '{json_page_size}', Target PageSize: '{page_size}'")
+                if "page" in template_json_dict and "size" in template_json_dict["page"]:
+                    template_json_dict["page"]["size"] = page_size
+                else:
+                    # Add page size if missing
+                    if "page" not in template_json_dict:
+                        template_json_dict["page"] = {}
+                    template_json_dict["page"]["size"] = page_size
+                template_json = json.dumps(template_json_dict)
+                element_count = len(template_json_dict.get("elements", []))
+                current_app.logger.info(f"[PDF_TEMPLATE] Template JSON parsed and updated - PageSize: '{page_size}', Elements: {element_count}, JSON length: {len(template_json)}")
+            except json.JSONDecodeError as e:
+                current_app.logger.error(f"[PDF_TEMPLATE] Invalid template_json provided - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}")
+                flash(_("Invalid template JSON format. Please try again."), "error")
+                return redirect(url_for("admin.pdf_layout", size=page_size))
+        else:
+            # If no template_json provided, generate default
+            current_app.logger.warning(f"[PDF_TEMPLATE] No template_json provided, generating default - PageSize: '{page_size}', User: {current_user.username}")
+            from app.utils.pdf_template_schema import get_default_template
+            template_json_dict = get_default_template(page_size)
+            template_json = json.dumps(template_json_dict)
+            element_count = len(template_json_dict.get("elements", []))
+            current_app.logger.info(f"[PDF_TEMPLATE] Generated default template JSON - PageSize: '{page_size}', Elements: {element_count}, User: {current_user.username}")
+
+        # Normalize @page size in CSS to match the selected page size before saving
+        # This ensures that saved templates always have the correct page size
+        if css_template:
+            from app.utils.pdf_generator import update_page_size_in_css, validate_page_size_in_css
+            
+            current_app.logger.info(f"[PDF_TEMPLATE] Normalizing CSS @page size - PageSize: '{page_size}', CSS length: {len(css_template)}")
+            css_template = update_page_size_in_css(css_template, page_size)
+            
+            # Validate after normalization
+            is_valid, found_sizes = validate_page_size_in_css(css_template, page_size)
+            if not is_valid:
+                current_app.logger.warning(
+                    f"[PDF_TEMPLATE] CSS @page size normalization issue - PageSize: '{page_size}', Found sizes: {found_sizes}, User: {current_user.username}"
+                )
+            else:
+                current_app.logger.info(f"[PDF_TEMPLATE] CSS @page size normalized successfully - PageSize: '{page_size}'")
+
+        # Validate template_json before saving
+        if not template_json or not template_json.strip():
+            current_app.logger.error(f"[PDF_TEMPLATE] ERROR: template_json is empty - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
+            flash(_("Error: Template JSON is empty. Please try saving again."), "error")
+            return redirect(url_for("admin.pdf_layout", size=page_size))
+        
+        # Validate that template_json is valid JSON
+        try:
+            import json
+            template_json_dict_validate = json.loads(template_json)
+            if not isinstance(template_json_dict_validate, dict) or "page" not in template_json_dict_validate:
+                current_app.logger.error(f"[PDF_TEMPLATE] ERROR: template_json is invalid (missing 'page' property) - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
+                flash(_("Error: Template JSON is invalid. Please try saving again."), "error")
+                return redirect(url_for("admin.pdf_layout", size=page_size))
+            element_count = len(template_json_dict_validate.get("elements", []))
+            current_app.logger.info(f"[PDF_TEMPLATE] Template JSON validated before save - PageSize: '{page_size}', Elements: {element_count}, JSON length: {len(template_json)}, TemplateID: {template.id}, User: {current_user.username}")
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"[PDF_TEMPLATE] ERROR: template_json is not valid JSON - PageSize: '{page_size}', TemplateID: {template.id}, Error: {str(e)}, User: {current_user.username}")
+            flash(_("Error: Template JSON is not valid JSON. Please try saving again."), "error")
+            return redirect(url_for("admin.pdf_layout", size=page_size))
+
+        # Update template (save both legacy HTML/CSS and new JSON format)
+        current_app.logger.info(f"[PDF_TEMPLATE] Updating template in database - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
         template.template_html = html_template
         template.template_css = css_template
         template.design_json = design_json
+        template.template_json = template_json  # ReportLab template JSON (always present now)
         template.updated_at = datetime.utcnow()
 
         # For backwards compatibility, also update Settings when saving A4 (default)
         if page_size == "A4":
+            current_app.logger.info(f"[PDF_TEMPLATE] Also updating Settings for A4 default - User: {current_user.username}")
             settings_obj = Settings.get_settings()
             settings_obj.invoice_pdf_template_html = html_template
             settings_obj.invoice_pdf_template_css = css_template
             settings_obj.invoice_pdf_design_json = design_json
 
+        current_app.logger.info(f"[PDF_TEMPLATE] Committing template to database - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
         if not safe_commit("admin_update_pdf_layout"):
             from flask_babel import gettext as _
-
+            current_app.logger.error(f"[PDF_TEMPLATE] Database commit failed - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
             flash(_("Could not update PDF layout due to a database error."), "error")
         else:
             from flask_babel import gettext as _
-
-            flash(_("PDF layout updated successfully"), "success")
+            # Verify that template_json was actually saved
+            db.session.refresh(template)
+            if template.template_json and template.template_json.strip() and template.template_json == template_json:
+                current_app.logger.info(f"[PDF_TEMPLATE] Template saved successfully - PageSize: '{page_size}', TemplateID: {template.id}, HasJSON: True, JSON length: {len(template.template_json)}, User: {current_user.username}")
+                flash(_("PDF layout updated successfully"), "success")
+            else:
+                current_app.logger.error(f"[PDF_TEMPLATE] WARNING: Template saved but template_json verification failed - PageSize: '{page_size}', TemplateID: {template.id}, HasJSON: {bool(template.template_json)}, User: {current_user.username}")
+                flash(_("PDF layout saved but template JSON verification failed. Please check the template."), "warning")
         return redirect(url_for("admin.pdf_layout", size=page_size))
 
     # Get all templates for dropdown
     all_templates = InvoicePDFTemplate.get_all_templates()
+    current_app.logger.info(f"[PDF_TEMPLATE] Loaded all templates for dropdown - Count: {len(all_templates)}, PageSize: '{page_size}', User: {current_user.username}")
+
+    # DON'T call ensure_template_json() here - it may overwrite saved templates
+    # Template should already have JSON if it was saved properly
+    # Only validate JSON if it exists - don't generate defaults that might overwrite saved templates
+    if template.template_json:
+        try:
+            import json
+            template_json_check = json.loads(template.template_json)
+            element_count = len(template_json_check.get("elements", []))
+            json_page_size = template_json_check.get("page", {}).get("size", "unknown")
+            current_app.logger.info(f"[PDF_TEMPLATE] Template JSON validated - PageSize: '{page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}, TemplateID: {template.id}")
+        except Exception as e:
+            current_app.logger.warning(f"[PDF_TEMPLATE] Template JSON validation check failed - PageSize: '{page_size}', Error: {str(e)}, TemplateID: {template.id}")
 
     # Provide initial defaults to the template if no custom HTML/CSS saved
     initial_html = template.template_html or ""
     initial_css = template.template_css or ""
     design_json = template.design_json or ""
+    template_json = template.template_json or ""
+    current_app.logger.info(f"[PDF_TEMPLATE] Template loaded for editor - PageSize: '{page_size}', HTML length: {len(initial_html)}, CSS length: {len(initial_css)}, DesignJSON length: {len(design_json)}, TemplateJSON length: {len(template_json)}, TemplateID: {template.id}")
 
     # Fallback to legacy Settings if template is empty
     if not initial_html and not initial_css:
@@ -700,12 +1241,19 @@ def pdf_layout():
         # Log but continue - PDF layout initialization failure is not critical
         current_app.logger.warning(f"Failed to initialize PDF layout defaults: {e}", exc_info=True)
 
+    # Normalize @page size in initial CSS to match the selected page size
+    # This ensures the editor always shows the correct page size
+    if initial_css:
+        from app.utils.pdf_generator import update_page_size_in_css
+        initial_css = update_page_size_in_css(initial_css, page_size)
+
     return render_template(
         "admin/pdf_layout.html",
         settings=Settings.get_settings(),
         initial_html=initial_html,
         initial_css=initial_css,
         design_json=design_json,
+        template_json=template_json,
         page_size=page_size,
         all_templates=all_templates,
     )
@@ -716,17 +1264,44 @@ def pdf_layout():
 @login_required
 @admin_or_permission_required("manage_settings")
 def pdf_layout_reset():
-    """Reset PDF layout to defaults (clear custom templates)."""
-    settings_obj = Settings.get_settings()
-
-    settings_obj.invoice_pdf_template_html = ""
-    settings_obj.invoice_pdf_template_css = ""
-    settings_obj.invoice_pdf_design_json = ""
+    """Reset PDF layout to defaults (clear custom templates and regenerate default JSON)."""
+    from app.models import InvoicePDFTemplate
+    from app.utils.pdf_template_schema import get_default_template
+    import json
+    
+    # Get page size from query parameter or form, default to A4
+    page_size = request.args.get("size", request.form.get("page_size", "A4"))
+    
+    # Ensure valid page size
+    valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+    if page_size not in valid_sizes:
+        page_size = "A4"
+    
+    # Get or create template for this page size
+    template = InvoicePDFTemplate.get_template(page_size)
+    
+    # Clear custom templates
+    template.template_html = ""
+    template.template_css = ""
+    template.design_json = ""
+    
+    # Regenerate default JSON template
+    default_json = get_default_template(page_size)
+    template.template_json = json.dumps(default_json)
+    template.updated_at = datetime.utcnow()
+    
+    # Also clear legacy Settings for A4
+    if page_size == "A4":
+        settings_obj = Settings.get_settings()
+        settings_obj.invoice_pdf_template_html = ""
+        settings_obj.invoice_pdf_template_css = ""
+        settings_obj.invoice_pdf_design_json = ""
+    
     if not safe_commit("admin_reset_pdf_layout"):
         flash(_("Could not reset PDF layout due to a database error."), "error")
     else:
         flash(_("PDF layout reset to defaults"), "success")
-    return redirect(url_for("admin.pdf_layout"))
+    return redirect(url_for("admin.pdf_layout", size=page_size))
 
 
 @admin_bp.route("/admin/quote-pdf-layout", methods=["GET", "POST"])
@@ -738,40 +1313,150 @@ def quote_pdf_layout():
     from app.models import QuotePDFTemplate
 
     # Get page size from query parameter or form, default to A4
-    page_size = request.args.get("size", request.form.get("page_size", "A4"))
+    page_size_raw = request.args.get("size", request.form.get("page_size", "A4"))
+    current_app.logger.info(f"[PDF_TEMPLATE] Action: quote_template_editor_request, PageSize: '{page_size_raw}', Method: {request.method}, User: {current_user.username}")
 
     # Ensure valid page size
     valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
-    if page_size not in valid_sizes:
+    if page_size_raw not in valid_sizes:
+        current_app.logger.warning(f"[PDF_TEMPLATE] Invalid page size '{page_size_raw}', defaulting to A4, User: {current_user.username}")
         page_size = "A4"
+    else:
+        page_size = page_size_raw
 
-    # Get or create template for this page size
+    current_app.logger.info(f"[PDF_TEMPLATE] Final validated PageSize: '{page_size}', Method: {request.method}, User: {current_user.username}")
+
+    # Get or create template for this page size (ensures JSON exists)
+    current_app.logger.info(f"[PDF_TEMPLATE] Retrieving quote template from database - PageSize: '{page_size}', User: {current_user.username}")
     template = QuotePDFTemplate.get_template(page_size)
+    current_app.logger.info(f"[PDF_TEMPLATE] Quote template retrieved - PageSize: '{page_size}', TemplateID: {template.id}, HasJSON: {bool(template.template_json)}, HasDesignJSON: {bool(template.design_json)}")
 
     if request.method == "POST":
+        current_app.logger.info(f"[PDF_TEMPLATE] Action: quote_template_save, PageSize: '{page_size}', User: {current_user.username}")
         html_template = request.form.get("quote_pdf_template_html", "")
         css_template = request.form.get("quote_pdf_template_css", "")
         design_json = request.form.get("design_json", "")
+        template_json = request.form.get("template_json", "")  # ReportLab template JSON
 
-        # Update template
+        current_app.logger.info(f"[PDF_TEMPLATE] Form data received - PageSize: '{page_size}', HTML length: {len(html_template)}, CSS length: {len(css_template)}, DesignJSON length: {len(design_json)}, TemplateJSON length: {len(template_json)}")
+
+        # Validate and ensure template_json is present
+        import json
+        template_json_dict = None
+        if template_json and template_json.strip():
+            try:
+                current_app.logger.info(f"[PDF_TEMPLATE] Parsing quote template JSON - PageSize: '{page_size}', JSON length: {len(template_json)}")
+                template_json_dict = json.loads(template_json)
+                # Ensure page size matches in JSON
+                json_page_size = template_json_dict.get("page", {}).get("size")
+                current_app.logger.info(f"[PDF_TEMPLATE] Quote template JSON page size before update: '{json_page_size}', Target PageSize: '{page_size}'")
+                if "page" in template_json_dict and "size" in template_json_dict["page"]:
+                    template_json_dict["page"]["size"] = page_size
+                else:
+                    # Add page size if missing
+                    if "page" not in template_json_dict:
+                        template_json_dict["page"] = {}
+                    template_json_dict["page"]["size"] = page_size
+                template_json = json.dumps(template_json_dict)
+                element_count = len(template_json_dict.get("elements", []))
+                current_app.logger.info(f"[PDF_TEMPLATE] Quote template JSON parsed and updated - PageSize: '{page_size}', Elements: {element_count}, JSON length: {len(template_json)}")
+            except json.JSONDecodeError as e:
+                current_app.logger.error(f"[PDF_TEMPLATE] Invalid quote template_json provided - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}")
+                flash(_("Invalid template JSON format. Please try again."), "error")
+                return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+        else:
+            # If no template_json provided, generate default
+            current_app.logger.warning(f"[PDF_TEMPLATE] No quote template_json provided, generating default - PageSize: '{page_size}', User: {current_user.username}")
+            from app.utils.pdf_template_schema import get_default_template
+            template_json_dict = get_default_template(page_size)
+            template_json = json.dumps(template_json_dict)
+            element_count = len(template_json_dict.get("elements", []))
+            current_app.logger.info(f"[PDF_TEMPLATE] Generated default quote template JSON - PageSize: '{page_size}', Elements: {element_count}, User: {current_user.username}")
+
+        # Normalize @page size in CSS to match the selected page size before saving
+        # This ensures that saved templates always have the correct page size
+        if css_template:
+            from app.utils.pdf_generator import update_page_size_in_css, validate_page_size_in_css
+
+            current_app.logger.info(f"[PDF_TEMPLATE] Normalizing quote CSS @page size - PageSize: '{page_size}', CSS length: {len(css_template)}")
+            css_template = update_page_size_in_css(css_template, page_size)
+
+            # Validate after normalization
+            is_valid, found_sizes = validate_page_size_in_css(css_template, page_size)
+            if not is_valid:
+                current_app.logger.warning(
+                    f"[PDF_TEMPLATE] Quote CSS @page size normalization issue - PageSize: '{page_size}', Found sizes: {found_sizes}, User: {current_user.username}"
+                )
+            else:
+                current_app.logger.info(f"[PDF_TEMPLATE] Quote CSS @page size normalized successfully - PageSize: '{page_size}'")
+
+        # Update template (save both legacy HTML/CSS and new JSON format)
+        current_app.logger.info(f"[PDF_TEMPLATE] Updating quote template in database - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
         template.template_html = html_template
         template.template_css = css_template
         template.design_json = design_json
+        # Validate template_json before saving
+        if not template_json or not template_json.strip():
+            current_app.logger.error(f"[PDF_TEMPLATE] ERROR: Quote template_json is empty - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
+            flash(_("Error: Template JSON is empty. Please try saving again."), "error")
+            return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+        
+        # Validate that template_json is valid JSON
+        try:
+            import json
+            template_json_dict_validate = json.loads(template_json)
+            if not isinstance(template_json_dict_validate, dict) or "page" not in template_json_dict_validate:
+                current_app.logger.error(f"[PDF_TEMPLATE] ERROR: Quote template_json is invalid (missing 'page' property) - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
+                flash(_("Error: Template JSON is invalid. Please try saving again."), "error")
+                return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+            element_count = len(template_json_dict_validate.get("elements", []))
+            current_app.logger.info(f"[PDF_TEMPLATE] Quote template JSON validated before save - PageSize: '{page_size}', Elements: {element_count}, JSON length: {len(template_json)}, TemplateID: {template.id}, User: {current_user.username}")
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"[PDF_TEMPLATE] ERROR: Quote template_json is not valid JSON - PageSize: '{page_size}', TemplateID: {template.id}, Error: {str(e)}, User: {current_user.username}")
+            flash(_("Error: Template JSON is not valid JSON. Please try saving again."), "error")
+            return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+        
+        template.template_json = template_json  # ReportLab template JSON (always present now)
         template.updated_at = datetime.utcnow()
 
+        current_app.logger.info(f"[PDF_TEMPLATE] Committing quote template to database - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
         if not safe_commit("admin_update_quote_pdf_layout"):
+            current_app.logger.error(f"[PDF_TEMPLATE] Quote template database commit failed - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
             flash(_("Could not update PDF layout due to a database error."), "error")
         else:
-            flash(_("PDF layout updated successfully"), "success")
+            # Verify that template_json was actually saved
+            db.session.refresh(template)
+            if template.template_json and template.template_json.strip() and template.template_json == template_json:
+                current_app.logger.info(f"[PDF_TEMPLATE] Quote template saved successfully - PageSize: '{page_size}', TemplateID: {template.id}, HasJSON: True, JSON length: {len(template.template_json)}, User: {current_user.username}")
+                flash(_("PDF layout updated successfully"), "success")
+            else:
+                current_app.logger.error(f"[PDF_TEMPLATE] WARNING: Quote template saved but template_json verification failed - PageSize: '{page_size}', TemplateID: {template.id}, HasJSON: {bool(template.template_json)}, User: {current_user.username}")
+                flash(_("PDF layout saved but template JSON verification failed. Please check the template."), "warning")
         return redirect(url_for("admin.quote_pdf_layout", size=page_size))
 
     # Get all templates for dropdown
     all_templates = QuotePDFTemplate.get_all_templates()
+    current_app.logger.info(f"[PDF_TEMPLATE] Loaded all quote templates for dropdown - Count: {len(all_templates)}, PageSize: '{page_size}', User: {current_user.username}")
+
+    # DON'T call ensure_template_json() here - it may overwrite saved templates
+    # Template should already have JSON if it was saved properly
+    # Only validate JSON if it exists - don't generate defaults that might overwrite saved templates
+    if template.template_json:
+        try:
+            import json
+            template_json_check = json.loads(template.template_json)
+            element_count = len(template_json_check.get("elements", []))
+            json_page_size = template_json_check.get("page", {}).get("size", "unknown")
+            current_app.logger.info(f"[PDF_TEMPLATE] Quote template JSON validated - PageSize: '{page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}, TemplateID: {template.id}")
+        except Exception as e:
+            current_app.logger.warning(f"[PDF_TEMPLATE] Quote template JSON validation check failed - PageSize: '{page_size}', Error: {str(e)}, TemplateID: {template.id}")
 
     # Provide initial defaults
     initial_html = template.template_html or ""
     initial_css = template.template_css or ""
     design_json = template.design_json or ""
+    template_json = template.template_json or ""
+    current_app.logger.info(f"[PDF_TEMPLATE] Quote template loaded for editor - PageSize: '{page_size}', HTML length: {len(initial_html)}, CSS length: {len(initial_css)}, DesignJSON length: {len(design_json)}, TemplateJSON length: {len(template_json)}, TemplateID: {template.id}")
 
     # Load default template if empty
     try:
@@ -792,12 +1477,19 @@ def quote_pdf_layout():
     except Exception:
         pass
 
+    # Normalize @page size in initial CSS to match the selected page size
+    # This ensures the editor always shows the correct page size
+    if initial_css:
+        from app.utils.pdf_generator import update_page_size_in_css
+        initial_css = update_page_size_in_css(initial_css, page_size)
+
     return render_template(
         "admin/quote_pdf_layout.html",
         settings=Settings.get_settings(),
         initial_html=initial_html,
         initial_css=initial_css,
         design_json=design_json,
+        template_json=template_json,
         page_size=page_size,
         all_templates=all_templates,
     )
@@ -808,8 +1500,10 @@ def quote_pdf_layout():
 @login_required
 @admin_or_permission_required("manage_settings")
 def quote_pdf_layout_reset():
-    """Reset quote PDF layout to defaults (clear custom templates)."""
+    """Reset quote PDF layout to defaults (clear custom templates and regenerate default JSON)."""
     from app.models import QuotePDFTemplate
+    from app.utils.pdf_template_schema import get_default_template
+    import json
 
     # Get page size from query parameter or form, default to A4
     page_size = request.args.get("size", request.form.get("page_size", "A4"))
@@ -822,10 +1516,14 @@ def quote_pdf_layout_reset():
     # Get or create template for this page size
     template = QuotePDFTemplate.get_template(page_size)
 
-    # Clear template
+    # Clear custom templates
     template.template_html = ""
     template.template_css = ""
     template.design_json = ""
+    
+    # Regenerate default JSON template
+    default_json = get_default_template(page_size)
+    template.template_json = json.dumps(default_json)
     template.updated_at = datetime.utcnow()
 
     if not safe_commit("admin_reset_quote_pdf_layout"):
@@ -923,10 +1621,55 @@ def pdf_layout_default():
 @login_required
 @admin_or_permission_required("manage_settings")
 def pdf_layout_preview():
-    """Render a live preview of the provided HTML/CSS using an invoice context."""
+    """Render a live preview of the provided HTML/CSS or JSON template using an invoice context."""
     html = request.form.get("html", "")
     css = request.form.get("css", "")
+    template_json_str = request.form.get("template_json", "")  # JSON template from editor
+    page_size_raw = request.form.get("page_size", "A4")  # Get page size from form
     invoice_id = request.form.get("invoice_id", type=int)
+    
+    current_app.logger.info(f"[PDF_PREVIEW] Action: invoice_preview_request, PageSize: '{page_size_raw}', HTML length: {len(html)}, CSS length: {len(css)}, TemplateJSON length: {len(template_json_str)}, InvoiceID: {invoice_id}, User: {current_user.username}")
+    
+    # Validate page size
+    valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+    if page_size_raw not in valid_sizes:
+        current_app.logger.warning(f"[PDF_PREVIEW] Invalid page size '{page_size_raw}', defaulting to A4, User: {current_user.username}")
+        page_size = "A4"
+    else:
+        page_size = page_size_raw
+    
+    current_app.logger.info(f"[PDF_PREVIEW] Final validated PageSize: '{page_size}', TemplateJSON provided: {bool(template_json_str and template_json_str.strip())}")
+    
+    # CRITICAL: Always load saved template_json from database for preview
+    # This ensures we use the ACTUAL saved template, not what's in the form (which might be empty)
+    from app.models import InvoicePDFTemplate
+    template_json_parsed = None
+    saved_template = InvoicePDFTemplate.query.filter_by(page_size=page_size).first()
+    if saved_template and saved_template.template_json and saved_template.template_json.strip():
+        import json
+        try:
+            current_app.logger.info(f"[PDF_PREVIEW] Loading saved template JSON from database - PageSize: '{page_size}', TemplateID: {saved_template.id}, JSON length: {len(saved_template.template_json)}")
+            template_json_parsed = json.loads(saved_template.template_json)
+            element_count = len(template_json_parsed.get("elements", []))
+            json_page_size = template_json_parsed.get("page", {}).get("size", "unknown")
+            current_app.logger.info(f"[PDF_PREVIEW] Saved template JSON loaded - PageSize: '{page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}")
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"[PDF_PREVIEW] Failed to parse saved template JSON - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}", exc_info=True)
+            template_json_parsed = None
+    
+    # If form provided template_json, use it (for live editing preview)
+    if not template_json_parsed and template_json_str and template_json_str.strip():
+        import json
+        try:
+            current_app.logger.info(f"[PDF_PREVIEW] Parsing form-provided JSON template - PageSize: '{page_size}', JSON length: {len(template_json_str)}")
+            template_json_parsed = json.loads(template_json_str)
+            element_count = len(template_json_parsed.get("elements", []))
+            json_page_size = template_json_parsed.get("page", {}).get("size", "unknown")
+            current_app.logger.info(f"[PDF_PREVIEW] Form JSON template parsed - PageSize: '{page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}")
+        except json.JSONDecodeError as e:
+            current_app.logger.warning(f"[PDF_PREVIEW] Invalid form template_json - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}")
+            template_json_parsed = None
+    
     invoice = None
     if invoice_id:
         invoice = Invoice.query.get(invoice_id)
@@ -1060,6 +1803,161 @@ def pdf_layout_preview():
 
     # Use the wrapper instead of the original invoice
     invoice = invoice_wrapper
+    
+    # CRITICAL: Always use template_json for preview - convert to HTML/CSS with actual invoice data
+    if template_json_parsed:
+        try:
+            # Convert JSON template to HTML/CSS with actual invoice data for better table rendering
+            html, css = _convert_json_template_to_html_css(template_json_parsed, page_size, invoice=invoice, quote=None)
+            items_count = len(invoice.items) if hasattr(invoice, 'items') and invoice.items else 0
+            current_app.logger.info(f"[PDF_PREVIEW] JSON template converted with invoice data - PageSize: '{page_size}', HTML length: {len(html)}, CSS length: {len(css)}, Items count: {items_count}")
+        except Exception as e:
+            current_app.logger.error(f"[PDF_PREVIEW] Failed to convert JSON template with invoice data - PageSize: '{page_size}', Error: {str(e)}", exc_info=True)
+            # Fall back to empty HTML/CSS
+            html = "<div class='invoice-wrapper'></div>"
+            css = ""
+    else:
+        # No template_json available - this should not happen if template was saved
+        current_app.logger.error(f"[PDF_PREVIEW] No template JSON available for preview - PageSize: '{page_size}', SavedTemplateExists: {saved_template is not None}, SavedTemplateHasJSON: {saved_template.template_json if saved_template else False}, User: {current_user.username}")
+        html = "<div class='invoice-wrapper'><p style='color:red; padding:20px;'>Error: No template found. Please save a template first.</p></div>"
+        css = ""
+
+    # Load saved template CSS if available and merge with generated CSS
+    from app.utils.pdf_generator import update_page_size_in_css, validate_page_size_in_css
+    import re
+    
+    if saved_template and saved_template.template_css and saved_template.template_css.strip():
+        current_app.logger.info(f"[PDF_PREVIEW] Retrieved saved template CSS - PageSize: '{page_size}', TemplateID: {saved_template.id}, HasCSS: {bool(saved_template.template_css)}")
+        # Use the saved template CSS as base, but normalize it first to ensure correct @page size
+        saved_css = saved_template.template_css
+        # CRITICAL: Normalize the saved template CSS to ensure it has the correct @page size
+        saved_css = update_page_size_in_css(saved_css, page_size)
+        current_app.logger.info(f"[PDF_PREVIEW] Using saved template CSS - PageSize: '{page_size}', CSS length: {len(saved_css)}, TemplateID: {saved_template.id}")
+        
+        # Merge generated CSS with saved CSS (generated CSS takes precedence for @page rules)
+        if css and css.strip():
+            # Extract @page rule from generated CSS if present
+            generated_page_match = re.search(r"@page\s*\{[^}]*\}", css, re.IGNORECASE | re.DOTALL)
+            if generated_page_match:
+                # Generated CSS has @page rule - normalize it and use it, merge with saved CSS
+                generated_page_rule = generated_page_match.group(0)
+                # Normalize generated CSS's @page rule to correct size FIRST
+                generated_page_rule = update_page_size_in_css(generated_page_rule, page_size)
+                # Remove @page from saved CSS and add normalized generated CSS's @page rule
+                saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
+                # Remove @page rule from generated CSS and merge
+                generated_css_no_page = css.replace(generated_page_rule, "").strip()
+                css = generated_page_rule + "\n" + saved_css_no_page
+                if generated_css_no_page:
+                    css = css + "\n" + generated_css_no_page
+            else:
+                # No @page in generated CSS, use saved CSS (already normalized) and add generated CSS
+                css = saved_css + "\n" + css
+        else:
+            # No generated CSS, use saved template CSS (already normalized)
+            css = saved_css
+    
+    # Ensure CSS has @page rule even if no saved template CSS
+    if not css or not css.strip() or "@page" not in css:
+        current_app.logger.warning(f"[PDF_PREVIEW] No CSS or @page rule found, creating default - PageSize: '{page_size}'")
+        css = f"@page {{\n    size: {page_size};\n    margin: 2cm;\n}}\n" + (css or "")
+
+    # Normalize @page size in CSS to match the selected page size
+    # This ensures preview matches what will be exported
+    if css:
+        # Always normalize @page size to ensure it matches the selected page size
+        css_before = css
+        css = update_page_size_in_css(css, page_size)
+        
+        # Log if normalization changed anything
+        if css != css_before:
+            current_app.logger.debug(f"PDF Preview - CSS @page size normalized from template/editor to {page_size}")
+        
+        # Validate after normalization
+        is_valid, found_sizes = validate_page_size_in_css(css, page_size)
+        if not is_valid:
+            current_app.logger.warning(
+                f"Invoice PDF preview CSS @page size normalization failed for {page_size}. "
+                f"Found sizes: {found_sizes}. Forcing correct size."
+            )
+            # Force add @page rule if validation failed
+            if "@page" not in css:
+                css = f"@page {{\n    size: {page_size};\n    margin: 2cm;\n}}\n\n" + css
+            else:
+                # Try to fix it by replacing any existing @page size
+                # Use a more robust regex that handles quotes and whitespace
+                css = re.sub(
+                    r"size\s*:\s*['\"]?[^;}\n]+['\"]?",
+                    f"size: {page_size}",
+                    css,
+                    flags=re.IGNORECASE | re.MULTILINE
+                )
+    else:
+        # No CSS provided, add default @page rule
+        css = update_page_size_in_css("", page_size)
+    
+    # Final validation and logging
+    is_valid, found_sizes = validate_page_size_in_css(css, page_size)
+    if is_valid:
+        current_app.logger.info(f"[PDF_PREVIEW] CSS validated successfully - PageSize: '{page_size}', Final CSS length: {len(css)}, Final HTML length: {len(html)}")
+    else:
+        current_app.logger.error(f"[PDF_PREVIEW] CSS validation FAILED - PageSize: '{page_size}', Found sizes: {found_sizes}, User: {current_user.username}")
+
+    # Helper: remove @page rules from HTML inline styles when separate CSS exists
+    # This matches the fix used in PDF exports to avoid conflicts with WeasyPrint
+    def remove_page_rule_from_html(html_text):
+        """Remove @page rules from HTML inline styles to avoid conflicts with separate CSS"""
+        import re
+        
+        def remove_from_style_tag(match):
+            style_content = match.group(2)
+            # Remove @page rule from style content
+            # Need to handle nested @bottom-center rules properly
+            # Match @page { ... } including any nested rules
+            brace_count = 0
+            page_pattern = r"@page\s*\{"
+            page_match = re.search(page_pattern, style_content, re.IGNORECASE)
+            
+            if page_match:
+                start = page_match.start()
+                # Find matching closing brace
+                end = len(style_content)
+                for i in range(page_match.end() - 1, len(style_content)):
+                    if style_content[i] == "{":
+                        brace_count += 1
+                    elif style_content[i] == "}":
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end = i + 1
+                            break
+                # Remove the @page rule
+                style_content = style_content[:start] + style_content[end:]
+                # Clean up any double newlines or extra whitespace
+                style_content = re.sub(r"\n\s*\n", "\n", style_content)
+            
+            return f"{match.group(1)}{style_content}{match.group(3)}"
+        
+        # Match <style> tags and remove @page rules from them
+        style_pattern = r"(<style[^>]*>)(.*?)(</style>)"
+        if re.search(style_pattern, html_text, re.IGNORECASE | re.DOTALL):
+            html_text = re.sub(style_pattern, remove_from_style_tag, html_text, flags=re.IGNORECASE | re.DOTALL)
+        
+        return html_text
+    
+    # Apply @page rule removal fix: if we have separate CSS and HTML with inline styles,
+    # remove @page rules from HTML to ensure the separate CSS @page rule is used
+    html_has_inline_styles = html and "<style>" in html
+    if html_has_inline_styles and css and css.strip():
+        # Check if HTML has @page rules
+        import re
+        html_page_rules = re.findall(r"@page\s*\{[^}]*\}", html, re.IGNORECASE | re.DOTALL)
+        if html_page_rules:
+            current_app.logger.debug(
+                f"PDF preview: Found {len(html_page_rules)} @page rule(s) in HTML inline styles - removing them"
+            )
+            # Remove @page rules from HTML inline styles (keep everything else)
+            html = remove_page_rule_from_html(html)
+            current_app.logger.debug("PDF preview: Removed @page rules from HTML inline styles")
 
     # Helper: sanitize Jinja blocks to fix entities/smart quotes inserted by editor
     def _sanitize_jinja_blocks(raw: str) -> str:
@@ -1155,6 +2053,7 @@ def pdf_layout_preview():
                 print(f"Error loading logo: {e}")
                 return None
 
+        current_app.logger.info(f"[PDF_PREVIEW] Rendering template string - PageSize: '{page_size}', InvoiceID: {invoice_id}, Sanitized HTML length: {len(sanitized)}")
         body_html = render_template_string(
             sanitized,
             invoice=invoice,
@@ -1165,27 +2064,183 @@ def pdf_layout_preview():
             get_logo_base64=_get_logo_base64,
             item=sample_item,
         )
+        current_app.logger.info(f"[PDF_PREVIEW] Template rendered successfully - PageSize: '{page_size}', Rendered HTML length: {len(body_html)}")
     except Exception as e:
         import traceback
 
         error_details = traceback.format_exc()
+        current_app.logger.error(f"[PDF_PREVIEW] Template render error - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}", exc_info=True)
         body_html = (
             f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>"
             + sanitized
         )
+    # Get page dimensions for preview styling
+    page_dimensions = InvoicePDFTemplate.PAGE_SIZES.get(page_size, InvoicePDFTemplate.PAGE_SIZES['A4'])
+    page_width_mm = page_dimensions['width']
+    page_height_mm = page_dimensions['height']
+    # Convert mm to pixels at 96 DPI (standard browser DPI for PDF preview)
+    # 1 inch = 25.4mm, 96 DPI = 96 pixels per inch
+    # Account for margins (typically 20mm = ~75px at 96 DPI)
+    margin_px = int((20 / 25.4) * 96)  # 20mm margin in pixels
+    # Don't subtract margins from page dimensions - margins are applied to content, not page size
+    # Calculate full page dimensions at 96 DPI for browser preview
+    page_width_px = int((page_width_mm / 25.4) * 96)
+    page_height_px = int((page_height_mm / 25.4) * 96)
+    
     # Build complete HTML page with embedded styles
+    # For preview, scale to fit viewport while maintaining aspect ratio
     page_html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Preview</title>
-    <style>{css}</style>
+    <title>Invoice Preview ({page_size})</title>
+    <style>{css}
+/* Preview-specific styles - only for browser preview, not for PDF */
+body {{
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    height: auto;
+    overflow: auto;
+    width: 100%;
+    box-sizing: border-box;
+}}
+.preview-wrapper {{
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    min-height: 100%;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+}}
+.preview-container {{
+    background: white;
+    width: {page_width_px}px;
+    height: {page_height_px}px;
+    max-width: {page_width_px}px;
+    max-height: {page_height_px}px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin: 20px auto;
+    padding: 0;
+    overflow: visible;
+    position: relative;
+    box-sizing: border-box;
+    display: block;
+    flex-shrink: 0;
+}}
+.preview-container .invoice-wrapper,
+.preview-container .quote-wrapper {{
+    width: {page_width_px}px !important;
+    height: {page_height_px}px !important;
+    max-width: {page_width_px}px !important;
+    max-height: {page_height_px}px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: white;
+}}
+</style>
+<script>
+// Scale container to fit viewport using JavaScript for better control
+(function() {{
+    const container = document.querySelector('.preview-container');
+    if (!container) return;
+    
+    const pageWidth = {page_width_px};
+    const pageHeight = {page_height_px};
+    
+    function scaleToFit() {{
+        // Get iframe viewport dimensions (not window - we're inside an iframe)
+        const iframeWidth = window.innerWidth || document.documentElement.clientWidth;
+        const iframeHeight = window.innerHeight || document.documentElement.clientHeight;
+        
+        // Calculate available space (accounting for body padding)
+        const availableWidth = iframeWidth - 40; // 20px padding on each side
+        const availableHeight = iframeHeight - 40; // 20px padding on top/bottom
+        
+        // Calculate scale to fit while maintaining aspect ratio
+        // Use a smaller scale factor to ensure the entire page is visible with margins
+        const scaleX = availableWidth / pageWidth;
+        const scaleY = availableHeight / pageHeight;
+        const scale = Math.min(scaleX, scaleY, 0.95); // Use 95% to ensure full page is visible with some margin
+        
+        // Set original dimensions (these stay in layout for proper scrolling)
+        container.style.width = pageWidth + 'px';
+        container.style.height = pageHeight + 'px';
+        
+        // Calculate scaled dimensions for layout
+        const scaledWidth = pageWidth * scale;
+        const scaledHeight = pageHeight * scale;
+        
+        // Apply scale with center top origin - this keeps it centered horizontally
+        container.style.transform = 'scale(' + scale + ')';
+        container.style.transformOrigin = 'center top';
+        
+        // Use margin auto for centering - works with flexbox
+        container.style.marginLeft = 'auto';
+        container.style.marginRight = 'auto';
+        
+        // Ensure positioning and allow scrolling
+        container.style.position = 'relative';
+        container.style.left = '';
+        container.style.right = '';
+        
+        // Ensure body can scroll if content is larger than viewport
+        // The body should expand to fit the scaled content
+        const body = document.body;
+        const wrapper = document.querySelector('.preview-wrapper');
+        if (wrapper) {{
+            // Ensure wrapper doesn't constrain width
+            wrapper.style.minWidth = scaledWidth + 40 + 'px'; // Add padding
+            wrapper.style.width = 'auto';
+        }}
+        
+        // Ensure body can scroll horizontally if needed
+        body.style.overflowX = scaledWidth > availableWidth ? 'auto' : 'visible';
+        body.style.overflowY = scaledHeight > availableHeight ? 'auto' : 'visible';
+    }}
+    
+    // Scale on load and resize
+    if (document.readyState === 'loading') {{
+        document.addEventListener('DOMContentLoaded', function() {{
+            setTimeout(scaleToFit, 50);
+        }});
+    }} else {{
+        setTimeout(scaleToFit, 50);
+    }}
+    
+    window.addEventListener('resize', function() {{
+        setTimeout(scaleToFit, 50);
+    }});
+    
+    // Also listen for iframe resize events
+    if (window.parent !== window) {{
+        // We're in an iframe - watch for parent resize
+        window.parent.addEventListener('resize', function() {{
+            setTimeout(scaleToFit, 50);
+        }});
+    }}
+}})();
+</script>
 </head>
 <body>
+<div class="preview-wrapper">
+    <div class="preview-container">
 {body_html}
+    </div>
+</div>
 </body>
 </html>"""
+    current_app.logger.info(f"[PDF_PREVIEW] Returning invoice preview HTML - PageSize: '{page_size}', Total HTML length: {len(page_html)}, PageWidth: {page_width_px}px, PageHeight: {page_height_px}px, User: {current_user.username}")
     return page_html
 
 
@@ -1194,10 +2249,40 @@ def pdf_layout_preview():
 @login_required
 @admin_or_permission_required("manage_settings")
 def quote_pdf_layout_preview():
-    """Render a live preview of the provided HTML/CSS using a quote context."""
+    """Render a live preview of the provided HTML/CSS or JSON template using a quote context."""
+    # Extract and validate page_size FIRST, before any other processing
+    page_size_raw = request.form.get("page_size", "A4")
     html = request.form.get("html", "")
     css = request.form.get("css", "")
+    template_json_str = request.form.get("template_json", "")  # JSON template from editor
     quote_id = request.form.get("quote_id", type=int)
+    
+    current_app.logger.info(f"[PDF_PREVIEW] Action: quote_preview_request, PageSize: '{page_size_raw}', HTML length: {len(html)}, CSS length: {len(css)}, TemplateJSON length: {len(template_json_str)}, QuoteID: {quote_id}, User: {current_user.username}")
+    
+    valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+    if page_size_raw not in valid_sizes:
+        current_app.logger.warning(f"[PDF_PREVIEW] Invalid page size '{page_size_raw}', defaulting to A4, User: {current_user.username}")
+        page_size = "A4"
+    else:
+        page_size = page_size_raw
+    
+    current_app.logger.info(f"[PDF_PREVIEW] Final validated PageSize: '{page_size}', TemplateJSON provided: {bool(template_json_str and template_json_str.strip())}")
+    
+    # Store template_json for later conversion with quote data
+    template_json_parsed = None
+    if template_json_str and template_json_str.strip():
+        import json
+        try:
+            current_app.logger.info(f"[PDF_PREVIEW] Parsing quote JSON template - PageSize: '{page_size}', JSON length: {len(template_json_str)}")
+            template_json_parsed = json.loads(template_json_str)
+            element_count = len(template_json_parsed.get("elements", []))
+            json_page_size = template_json_parsed.get("page", {}).get("size", "unknown")
+            current_app.logger.info(f"[PDF_PREVIEW] Quote JSON template parsed - PageSize: '{page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}")
+            # Will convert to HTML/CSS after quote data is loaded below
+        except json.JSONDecodeError as e:
+            current_app.logger.warning(f"[PDF_PREVIEW] Invalid quote template_json, falling back to HTML/CSS - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}")
+            template_json_parsed = None
+            # Fall through to use provided HTML/CSS
     quote = None
     if quote_id:
         quote = Quote.query.get(quote_id)
@@ -1327,6 +2412,158 @@ def quote_pdf_layout_preview():
 
     # Use the wrapper instead of the original quote
     quote = quote_wrapper
+    
+    # If we have template_json, convert it to HTML/CSS for preview with actual quote data
+    if template_json_parsed:
+        try:
+            # Convert JSON template to HTML/CSS with actual quote data for better table rendering
+            html, css = _convert_json_template_to_html_css(template_json_parsed, page_size, invoice=None, quote=quote)
+            items_count = len(quote.items) if hasattr(quote, 'items') and quote.items else 0
+            current_app.logger.info(f"[PDF_PREVIEW] Quote JSON template converted with quote data - PageSize: '{page_size}', HTML length: {len(html)}, CSS length: {len(css)}, Items count: {items_count}")
+        except Exception as e:
+            current_app.logger.error(f"[PDF_PREVIEW] Failed to convert quote JSON template with quote data - PageSize: '{page_size}', Error: {str(e)}", exc_info=True)
+            # Fall back to empty HTML/CSS
+            html = "<div class='quote-wrapper'></div>"
+            css = ""
+
+
+    # CRITICAL: Load the saved template CSS for this page size and merge with editor CSS
+    # The editor generates minimal CSS, but we need the full template CSS for proper preview
+    from app.models import QuotePDFTemplate
+    from app.utils.pdf_generator import update_page_size_in_css, validate_page_size_in_css
+    import re
+    
+    template = QuotePDFTemplate.query.filter_by(page_size=page_size).first()
+    if template:
+        current_app.logger.info(f"[PDF_PREVIEW] Retrieved saved quote template - PageSize: '{page_size}', TemplateID: {template.id}, HasCSS: {bool(template.template_css)}")
+        if template.template_css and template.template_css.strip():
+            # Use the saved template CSS as base, but normalize it first to ensure correct @page size
+            saved_css = template.template_css
+            # CRITICAL: Normalize the saved template CSS to ensure it has the correct @page size
+            saved_css = update_page_size_in_css(saved_css, page_size)
+            current_app.logger.info(f"[PDF_PREVIEW] Using saved quote template CSS - PageSize: '{page_size}', CSS length: {len(saved_css)}, TemplateID: {template.id}")
+        
+        # If editor provided CSS, merge it (editor CSS takes precedence for @page rules)
+        if css and css.strip():
+            # Extract @page rule from editor CSS if present
+            editor_page_match = re.search(r"@page\s*\{[^}]*\}", css, re.IGNORECASE | re.DOTALL)
+            if editor_page_match:
+                # Editor has @page rule - normalize it and use it, merge with saved CSS
+                editor_page_rule = editor_page_match.group(0)
+                # Normalize editor's @page rule to correct size FIRST
+                editor_page_rule = update_page_size_in_css(editor_page_rule, page_size)
+                # Remove @page from saved CSS and add normalized editor's @page rule
+                saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
+                # Remove @page rule from editor CSS and merge
+                editor_css_no_page = css.replace(editor_page_rule, "").strip()
+                css = editor_page_rule + "\n" + saved_css_no_page
+                if editor_css_no_page:
+                    css = css + "\n" + editor_css_no_page
+            else:
+                # No @page in editor CSS, use saved CSS (already normalized) and add editor CSS
+                css = saved_css + "\n" + css
+        else:
+            # No editor CSS, use saved template CSS (already normalized)
+            css = saved_css
+    elif not css or not css.strip():
+        # No template CSS and no editor CSS - create default with correct page size
+        css = f"@page {{\n    size: {page_size};\n    margin: 2cm;\n}}\n"
+
+    # Normalize @page size in CSS to match the selected page size
+    # This ensures preview matches what will be exported
+    if css:
+        # Always normalize @page size to ensure it matches the selected page size
+        css_before = css
+        css = update_page_size_in_css(css, page_size)
+        
+        # Log if normalization changed anything
+        if css != css_before:
+            current_app.logger.debug(f"Quote PDF Preview - CSS @page size normalized from template/editor to {page_size}")
+        
+        # Validate after normalization
+        is_valid, found_sizes = validate_page_size_in_css(css, page_size)
+        if not is_valid:
+            current_app.logger.warning(
+                f"[PDF_PREVIEW] Quote CSS @page size normalization failed - PageSize: '{page_size}', Found sizes: {found_sizes}, User: {current_user.username}"
+            )
+            # Force add @page rule if validation failed
+            if "@page" not in css:
+                css = f"@page {{\n    size: {page_size};\n    margin: 2cm;\n}}\n\n" + css
+            else:
+                # Try to fix it by replacing any existing @page size
+                # Use a more robust regex that handles quotes and whitespace
+                css = re.sub(
+                    r"size\s*:\s*['\"]?[^;}\n]+['\"]?",
+                    f"size: {page_size}",
+                    css,
+                    flags=re.IGNORECASE | re.MULTILINE
+                )
+    else:
+        # No CSS provided, add default @page rule
+        css = update_page_size_in_css("", page_size)
+    
+    # Final validation and logging
+    is_valid, found_sizes = validate_page_size_in_css(css, page_size)
+    if is_valid:
+        current_app.logger.info(f"[PDF_PREVIEW] Quote CSS validated successfully - PageSize: '{page_size}', Final CSS length: {len(css)}, Final HTML length: {len(html)}")
+    else:
+        current_app.logger.error(f"[PDF_PREVIEW] Quote CSS validation FAILED - PageSize: '{page_size}', Found sizes: {found_sizes}, User: {current_user.username}")
+
+    # Helper: remove @page rules from HTML inline styles when separate CSS exists
+    # This matches the fix used in PDF exports to avoid conflicts with WeasyPrint
+    def remove_page_rule_from_html(html_text):
+        """Remove @page rules from HTML inline styles to avoid conflicts with separate CSS"""
+        import re
+        
+        def remove_from_style_tag(match):
+            style_content = match.group(2)
+            # Remove @page rule from style content
+            # Need to handle nested @bottom-center rules properly
+            # Match @page { ... } including any nested rules
+            brace_count = 0
+            page_pattern = r"@page\s*\{"
+            page_match = re.search(page_pattern, style_content, re.IGNORECASE)
+            
+            if page_match:
+                start = page_match.start()
+                # Find matching closing brace
+                end = len(style_content)
+                for i in range(page_match.end() - 1, len(style_content)):
+                    if style_content[i] == "{":
+                        brace_count += 1
+                    elif style_content[i] == "}":
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end = i + 1
+                            break
+                # Remove the @page rule
+                style_content = style_content[:start] + style_content[end:]
+                # Clean up any double newlines or extra whitespace
+                style_content = re.sub(r"\n\s*\n", "\n", style_content)
+            
+            return f"{match.group(1)}{style_content}{match.group(3)}"
+        
+        # Match <style> tags and remove @page rules from them
+        style_pattern = r"(<style[^>]*>)(.*?)(</style>)"
+        if re.search(style_pattern, html_text, re.IGNORECASE | re.DOTALL):
+            html_text = re.sub(style_pattern, remove_from_style_tag, html_text, flags=re.IGNORECASE | re.DOTALL)
+        
+        return html_text
+    
+    # Apply @page rule removal fix: if we have separate CSS and HTML with inline styles,
+    # remove @page rules from HTML to ensure the separate CSS @page rule is used
+    html_has_inline_styles = html and "<style>" in html
+    if html_has_inline_styles and css and css.strip():
+        # Check if HTML has @page rules
+        import re
+        html_page_rules = re.findall(r"@page\s*\{[^}]*\}", html, re.IGNORECASE | re.DOTALL)
+        if html_page_rules:
+            current_app.logger.debug(
+                f"PDF preview: Found {len(html_page_rules)} @page rule(s) in HTML inline styles - removing them"
+            )
+            # Remove @page rules from HTML inline styles (keep everything else)
+            html = remove_page_rule_from_html(html)
+            current_app.logger.debug("PDF preview: Removed @page rules from HTML inline styles")
 
     # Helper: sanitize Jinja blocks to fix entities/smart quotes inserted by editor
     def _sanitize_jinja_blocks(raw: str) -> str:
@@ -1422,6 +2659,7 @@ def quote_pdf_layout_preview():
                 print(f"Error loading logo: {e}")
                 return None
 
+        current_app.logger.info(f"[PDF_PREVIEW] Rendering quote template string - PageSize: '{page_size}', QuoteID: {quote_id}, Sanitized HTML length: {len(sanitized)}")
         body_html = render_template_string(
             sanitized,
             quote=quote,
@@ -1432,27 +2670,185 @@ def quote_pdf_layout_preview():
             get_logo_base64=_get_logo_base64,
             item=sample_item,
         )
+        current_app.logger.info(f"[PDF_PREVIEW] Quote template rendered successfully - PageSize: '{page_size}', Rendered HTML length: {len(body_html)}")
     except Exception as e:
         import traceback
 
         error_details = traceback.format_exc()
+        current_app.logger.error(f"[PDF_PREVIEW] Quote template render error - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}", exc_info=True)
         body_html = (
             f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>"
             + sanitized
         )
+    # Get page dimensions for preview styling
+    from app.models import QuotePDFTemplate
+    page_dimensions = QuotePDFTemplate.PAGE_SIZES.get(page_size, QuotePDFTemplate.PAGE_SIZES['A4'])
+    page_width_mm = page_dimensions['width']
+    page_height_mm = page_dimensions['height']
+    # Convert mm to pixels at 96 DPI (standard browser DPI for PDF preview)
+    # 1 inch = 25.4mm, 96 DPI = 96 pixels per inch
+    # Account for margins (typically 20mm = ~75px at 96 DPI)
+    margin_px = int((20 / 25.4) * 96)  # 20mm margin in pixels
+    # Don't subtract margins from page dimensions - margins are applied to content, not page size
+    page_width_px = int((page_width_mm / 25.4) * 96)
+    page_height_px = int((page_height_mm / 25.4) * 96)
+    
     # Build complete HTML page with embedded styles
+    # For preview, scale to fit viewport while maintaining aspect ratio
     page_html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quote Preview</title>
-    <style>{css}</style>
+    <title>Quote Preview ({page_size})</title>
+    <style>{css}
+/* Preview-specific styles - only for browser preview, not for PDF */
+body {{
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}}
+.preview-wrapper {{
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    min-height: 100%;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+    position: relative;
+}}
+.preview-container {{
+    background: white;
+    width: {page_width_px}px;
+    height: {page_height_px}px;
+    max-width: {page_width_px}px;
+    max-height: {page_height_px}px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin: 20px auto;
+    padding: 0;
+    overflow: visible;
+    position: relative;
+    box-sizing: border-box;
+    display: block;
+    flex-shrink: 0;
+}}
+.preview-container .invoice-wrapper,
+.preview-container .quote-wrapper {{
+    width: {page_width_px}px !important;
+    height: {page_height_px}px !important;
+    max-width: {page_width_px}px !important;
+    max-height: {page_height_px}px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: white;
+}}
+</style>
+<script>
+// Scale container to fit viewport using JavaScript for better control
+(function() {{
+    const container = document.querySelector('.preview-container');
+    if (!container) return;
+    
+    const pageWidth = {page_width_px};
+    const pageHeight = {page_height_px};
+    
+    function scaleToFit() {{
+        // Get iframe viewport dimensions (not window - we're inside an iframe)
+        const iframeWidth = window.innerWidth || document.documentElement.clientWidth;
+        const iframeHeight = window.innerHeight || document.documentElement.clientHeight;
+        
+        // Calculate available space (accounting for body padding)
+        const availableWidth = iframeWidth - 40; // 20px padding on each side
+        const availableHeight = iframeHeight - 40; // 20px padding on top/bottom
+        
+        // Calculate scale to fit while maintaining aspect ratio
+        // Use a smaller scale factor to ensure the entire page is visible with margins
+        const scaleX = availableWidth / pageWidth;
+        const scaleY = availableHeight / pageHeight;
+        const scale = Math.min(scaleX, scaleY, 0.95); // Use 95% to ensure full page is visible with some margin
+        
+        // Set original dimensions (these stay in layout for proper scrolling)
+        container.style.width = pageWidth + 'px';
+        container.style.height = pageHeight + 'px';
+        
+        // Calculate scaled dimensions for layout
+        const scaledWidth = pageWidth * scale;
+        const scaledHeight = pageHeight * scale;
+        
+        // Apply scale with center top origin - this keeps it centered horizontally
+        container.style.transform = 'scale(' + scale + ')';
+        container.style.transformOrigin = 'center top';
+        
+        // Use margin auto for centering - works with flexbox
+        container.style.marginLeft = 'auto';
+        container.style.marginRight = 'auto';
+        
+        // Ensure positioning and allow scrolling
+        container.style.position = 'relative';
+        container.style.left = '';
+        container.style.right = '';
+        
+        // Ensure body can scroll if content is larger than viewport
+        // The body should expand to fit the scaled content
+        const body = document.body;
+        const wrapper = document.querySelector('.preview-wrapper');
+        if (wrapper) {{
+            // Ensure wrapper doesn't constrain width
+            wrapper.style.minWidth = scaledWidth + 40 + 'px'; // Add padding
+            wrapper.style.width = 'auto';
+        }}
+        
+        // Ensure body can scroll horizontally if needed
+        body.style.overflowX = scaledWidth > availableWidth ? 'auto' : 'visible';
+        body.style.overflowY = scaledHeight > availableHeight ? 'auto' : 'visible';
+    }}
+    
+    // Scale on load and resize
+    if (document.readyState === 'loading') {{
+        document.addEventListener('DOMContentLoaded', function() {{
+            setTimeout(scaleToFit, 50);
+        }});
+    }} else {{
+        setTimeout(scaleToFit, 50);
+    }}
+    
+    window.addEventListener('resize', function() {{
+        setTimeout(scaleToFit, 50);
+    }});
+    
+    // Also listen for iframe resize events
+    if (window.parent !== window) {{
+        // We're in an iframe - watch for parent resize
+        window.parent.addEventListener('resize', function() {{
+            setTimeout(scaleToFit, 50);
+        }});
+    }}
+}})();
+</script>
 </head>
 <body>
+<div class="preview-wrapper">
+    <div class="preview-container">
 {body_html}
+    </div>
+</div>
 </body>
 </html>"""
+    current_app.logger.info(f"[PDF_PREVIEW] Returning quote preview HTML - PageSize: '{page_size}', Total HTML length: {len(page_html)}, PageWidth: {page_width_px}px, PageHeight: {page_height_px}px, User: {current_user.username}")
     return page_html
 
 

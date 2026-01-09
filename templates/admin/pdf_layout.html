@@ -338,6 +338,7 @@
     margin: auto;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     background: white;
+    overflow: hidden;
 }
 
 /* Preview Modal */
@@ -430,22 +431,107 @@
 .preview-modal-body {
     flex: 1;
     position: relative;
-    padding: 1.5rem;
+    padding: 1rem;
     overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
     min-height: 600px;
     max-height: calc(90vh - 80px);
+    background: #f0f0f0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dark .preview-modal-body {
+    background: #111827;
 }
 
 #preview-frame {
     width: 100%;
+    max-width: 100%;
+    height: 100%;
     min-height: 600px;
     border: none;
     border-radius: 0.5rem;
-    background: white;
+    background: transparent;
+    overflow: auto;
+    display: block;
+    box-sizing: border-box;
 }
 
 .dark #preview-frame {
     background: #374151;
+}
+
+/* Overflow and Overlap Warning Styles */
+.element-overflow {
+    border: 2px dashed #ef4444 !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.3) !important;
+}
+
+.element-overlap {
+    border: 2px dashed #f59e0b !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3) !important;
+}
+
+.element-overflow.element-overlap {
+    border: 2px dashed #dc2626 !important;
+    box-shadow: 0 0 15px rgba(220, 38, 38, 0.4) !important;
+}
+
+.warning-indicator {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background: #ef4444;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: help;
+}
+
+.warning-indicator.overlap {
+    background: #f59e0b;
+}
+
+.warning-indicator.overflow-overlap {
+    background: #dc2626;
+}
+
+.warning-tooltip {
+    position: absolute;
+    background: #1f2937;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1001;
+    pointer-events: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 250px;
+    white-space: normal;
+}
+
+.warning-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 12px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #1f2937;
 }
 
 .preview-loading {
@@ -1172,6 +1258,21 @@
             <i class="fas fa-sliders-h"></i>
             {{ _('Properties') }}
         </h3>
+        <!-- Warning Panel -->
+        <div id="warning-panel" style="margin-bottom: 1rem; padding: 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <h4 style="margin: 0; font-size: 0.875rem; font-weight: 600; color: #991b1b;">
+                    <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>
+                    {{ _('Warnings') }}
+                </h4>
+                <button id="refresh-warnings" style="background: none; border: none; color: #991b1b; cursor: pointer; font-size: 0.75rem; padding: 2px 6px;" title="{{ _('Refresh warnings') }}">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div id="warning-list" style="max-height: 150px; overflow-y: auto; font-size: 0.75rem;">
+                <div style="padding: 8px; color: #666; text-align: center;">{{ _('No warnings') }}</div>
+            </div>
+        </div>
         <div id="properties-content">
             <p class="text-sm text-gray-500 italic">{{ _('Select an element to edit its properties') }}</p>
         </div>
@@ -1195,7 +1296,7 @@
                     <p class="text-sm text-gray-600 font-medium">{{ _('Generating...') }}</p>
                 </div>
             </div>
-            <iframe id="preview-frame" style="width: 100%; height: 100%; border: none; border-radius: 0.5rem;"></iframe>
+            <iframe id="preview-frame" style="width: 100%; height: 100%; min-height: 600px; border: none; border-radius: 0.5rem; display: block; background: transparent;"></iframe>
         </div>
     </div>
 </div>
@@ -1206,7 +1307,8 @@
     <input type="hidden" name="page_size" id="save-page-size" value="{{ page_size }}">
     <textarea id="save-html" name="invoice_pdf_template_html"></textarea>
     <textarea id="save-css" name="invoice_pdf_template_css"></textarea>
-    <textarea id="save-json" name="design_json"></textarea>
+    <textarea id="save-design-json" name="design_json"></textarea>
+    <textarea id="save-template-json" name="template_json"></textarea>
 </form>
 
 <!-- Code Modal (initially hidden) -->
@@ -1255,6 +1357,112 @@ const PAGE_SIZE_DIMENSIONS = {
     'Tabloid': { width: 792, height: 1224 }
 };
 
+// Overflow and overlap detection functions
+function getElementBoundingBox(element) {
+    // Get element's bounding box in page coordinates
+    if (!element) return null;
+    
+    const box = element.getClientRect();
+    const x = element.x();
+    const y = element.y();
+    const width = box.width || element.width() || 0;
+    const height = box.height || element.height() || 0;
+    
+    // For groups, get the actual bounding box
+    if (element.className === 'Group' || element.getType() === 'Group') {
+        const groupBox = element.getClientRect();
+        return {
+            x: groupBox.x,
+            y: groupBox.y,
+            width: groupBox.width,
+            height: groupBox.height,
+            right: groupBox.x + groupBox.width,
+            bottom: groupBox.y + groupBox.height
+        };
+    }
+    
+    return {
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+        right: x + width,
+        bottom: y + height
+    };
+}
+
+function checkPageBoundaries(element) {
+    // Get current page size dimensions
+    const pageSizeSelector = document.getElementById('page-size-selector');
+    const currentSize = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+    const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+    const pageWidth = dimensions.width;
+    const pageHeight = dimensions.height;
+    
+    const box = getElementBoundingBox(element);
+    if (!box) return { isValid: true, overflowLeft: 0, overflowRight: 0, overflowTop: 0, overflowBottom: 0 };
+    
+    const overflowLeft = Math.max(0, -box.x);
+    const overflowRight = Math.max(0, box.right - pageWidth);
+    const overflowTop = Math.max(0, -box.y);
+    const overflowBottom = Math.max(0, box.bottom - pageHeight);
+    
+    const isValid = overflowLeft === 0 && overflowRight === 0 && overflowTop === 0 && overflowBottom === 0;
+    
+    return {
+        isValid: isValid,
+        overflowLeft: overflowLeft,
+        overflowRight: overflowRight,
+        overflowTop: overflowTop,
+        overflowBottom: overflowBottom,
+        box: box
+    };
+}
+
+function checkOverlaps(element, allElements) {
+    // Check if element overlaps with other elements
+    if (!element || !allElements) return [];
+    
+    const elementBox = getElementBoundingBox(element);
+    if (!elementBox) return [];
+    
+    const overlaps = [];
+    
+    for (let i = 0; i < allElements.length; i++) {
+        const otherElement = allElements[i];
+        if (otherElement === element || otherElement === background || otherElement.className === 'Transformer') {
+            continue;
+        }
+        
+        const otherBox = getElementBoundingBox(otherElement);
+        if (!otherBox) continue;
+        
+        // Check for bounding box intersection
+        const intersects = !(
+            elementBox.right < otherBox.x ||
+            elementBox.x > otherBox.right ||
+            elementBox.bottom < otherBox.y ||
+            elementBox.y > otherBox.bottom
+        );
+        
+        if (intersects) {
+            // Calculate overlap area
+            const overlapX = Math.max(0, Math.min(elementBox.right, otherBox.right) - Math.max(elementBox.x, otherBox.x));
+            const overlapY = Math.max(0, Math.min(elementBox.bottom, otherBox.bottom) - Math.max(elementBox.y, otherBox.y));
+            const overlapArea = overlapX * overlapY;
+            
+            overlaps.push({
+                element: otherElement,
+                overlapArea: overlapArea,
+                overlapX: overlapX,
+                overlapY: overlapY
+            });
+        }
+    }
+    
+    return overlaps;
+}
+
 // Wait for Konva.js to load
 let konvaLoadAttempts = 0;
 const maxKonvaLoadAttempts = 100; // 5 seconds max wait
@@ -1295,10 +1503,15 @@ function initializePDFEditor() {
     
     // Initialize Konva Stage
     const container = document.getElementById('canvas-container');
-    const currentSize = CURRENT_PAGE_SIZE || 'A4';
+    // Get page size from selector if available, otherwise use CURRENT_PAGE_SIZE
+    // Declare pageSizeSelector once at the top level to avoid redeclaration errors
+    const pageSizeSelector = document.getElementById('page-size-selector');
+    const currentSize = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
     const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
     let width = dimensions.width;
     let height = dimensions.height;
+    
+    console.log('Initializing canvas with page size:', currentSize, 'dimensions:', width, 'x', height);
     
     let stage = new Konva.Stage({
         container: 'canvas-container',
@@ -1332,9 +1545,12 @@ function initializePDFEditor() {
         // Skip if container not ready
         if (containerWidth <= 0 || containerHeight <= 0) return;
         
-        // Get actual page dimensions
-        const pageWidth = width;
-        const pageHeight = height;
+        // Get actual page dimensions dynamically from current page size selector
+        const currentPageSizeSelector = document.getElementById('page-size-selector');
+        const currentPageSize = (currentPageSizeSelector && currentPageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+        const currentDimensions = PAGE_SIZE_DIMENSIONS[currentPageSize] || PAGE_SIZE_DIMENSIONS['A4'];
+        const pageWidth = currentDimensions.width;
+        const pageHeight = currentDimensions.height;
         
         // Calculate scale to fit within container while maintaining aspect ratio
         const scaleX = containerWidth / pageWidth;
@@ -1366,11 +1582,18 @@ function initializePDFEditor() {
     });
     
     // Add background with grid
+    // Use current page size dimensions to ensure correct size
+    const currentPageSizeSelector = document.getElementById('page-size-selector');
+    const currentPageSize = (currentPageSizeSelector && currentPageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+    const currentDimensions = PAGE_SIZE_DIMENSIONS[currentPageSize] || PAGE_SIZE_DIMENSIONS['A4'];
+    const backgroundWidth = currentDimensions.width;
+    const backgroundHeight = currentDimensions.height;
+    
     let background = new Konva.Rect({
         x: 0,
         y: 0,
-        width: width,
-        height: height,
+        width: backgroundWidth,
+        height: backgroundHeight,
         fill: 'white',
         name: 'background'
     });
@@ -1378,9 +1601,12 @@ function initializePDFEditor() {
     
     // Add grid lines
     function drawGrid() {
-        // Get current stage dimensions
-        const stageWidth = stage.width();
-        const stageHeight = stage.height();
+        // Get current page size dimensions dynamically (not scaled stage dimensions)
+        const currentPageSizeSelector = document.getElementById('page-size-selector');
+        const currentPageSize = (currentPageSizeSelector && currentPageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+        const currentDimensions = PAGE_SIZE_DIMENSIONS[currentPageSize] || PAGE_SIZE_DIMENSIONS['A4'];
+        const stageWidth = currentDimensions.width;
+        const stageHeight = currentDimensions.height;
         
         // Remove old grid if exists
         layer.find('.grid-line').forEach(line => line.destroy());
@@ -1690,6 +1916,8 @@ function initializePDFEditor() {
         layer.add(text);
         elements.push({ type: type, node: text, template: template });
         setupSelection(text);
+        checkElementWarnings(text);
+        updateWarningPanel();
         layer.draw();
     }
     
@@ -1733,6 +1961,8 @@ function initializePDFEditor() {
         setupSelection(header);
         setupSelection(line);
         setupSelection(items);
+        checkElementWarnings(tableGroup);
+        updateWarningPanel();
         layer.draw();
     }
     
@@ -1835,16 +2065,185 @@ function initializePDFEditor() {
                     y: Math.round(node.y() / gridSize) * gridSize
                 });
             }
+            // Check for overflow and overlap in real-time
+            checkElementWarnings(node);
         });
-        
+
         node.on('dragend', function() {
             // Update properties panel if visible
             const propX = document.getElementById('prop-x');
             const propY = document.getElementById('prop-y');
             if (propX) propX.value = Math.round(node.x());
             if (propY) propY.value = Math.round(node.y());
+            // Final check after drag ends
+            checkElementWarnings(node);
+            updateWarningPanel();
         });
     }
+    
+    // Warning management functions
+    const elementWarnings = new Map(); // Store warnings for each element
+    const warningIndicators = new Map(); // Store warning indicators for each element
+    
+    function checkElementWarnings(element) {
+        if (!element || element === background || element.className === 'Transformer') return;
+        
+        const boundaryCheck = checkPageBoundaries(element);
+        const overlaps = checkOverlaps(element, layer.children);
+        
+        const hasOverflow = !boundaryCheck.isValid;
+        const hasOverlap = overlaps.length > 0;
+        
+        // Store warnings
+        elementWarnings.set(element, {
+            overflow: hasOverflow,
+            overlap: hasOverlap,
+            boundaryDetails: boundaryCheck,
+            overlaps: overlaps
+        });
+        
+        // Apply visual warnings
+        applyVisualWarnings(element, hasOverflow, hasOverlap);
+        
+        return { hasOverflow, hasOverlap, boundaryCheck, overlaps };
+    }
+    
+    function applyVisualWarnings(element, hasOverflow, hasOverlap) {
+        // Remove existing warning names
+        if (element.hasName) {
+            if (element.hasName('element-overflow')) element.removeName('element-overflow');
+            if (element.hasName('element-overlap')) element.removeName('element-overlap');
+        }
+        
+        // Remove existing warning indicator
+        const existingIndicator = warningIndicators.get(element);
+        if (existingIndicator) {
+            existingIndicator.destroy();
+            warningIndicators.delete(element);
+        }
+        
+        if (hasOverflow || hasOverlap) {
+            // Add warning names for styling
+            if (hasOverflow) {
+                element.addName('element-overflow');
+            }
+            if (hasOverlap) {
+                element.addName('element-overlap');
+            }
+            
+            // Get element bounding box
+            const box = element.getClientRect();
+            
+            // Add warning indicator as a separate shape on the layer
+            const indicator = new Konva.Circle({
+                x: box.x + box.width - 10,
+                y: box.y + 10,
+                radius: 8,
+                fill: hasOverflow && hasOverlap ? '#dc2626' : (hasOverflow ? '#ef4444' : '#f59e0b'),
+                stroke: 'white',
+                strokeWidth: 2,
+                name: 'warning-indicator',
+                listening: false
+            });
+            
+            // Store indicator reference
+            warningIndicators.set(element, indicator);
+            
+            // Update indicator position when element moves
+            const updateIndicator = function() {
+                try {
+                    const newBox = element.getClientRect();
+                    indicator.position({
+                        x: newBox.x + newBox.width - 10,
+                        y: newBox.y + 10
+                    });
+                    layer.draw();
+                } catch(e) {}
+            };
+            
+            // Attach update handlers with namespaced events
+            element.off('dragmove.warning');
+            element.off('transform.warning');
+            element.on('dragmove.warning', updateIndicator);
+            element.on('transform.warning', updateIndicator);
+            
+            layer.add(indicator);
+        }
+        
+        layer.draw();
+    }
+    
+    function updateWarningPanel() {
+        const warningPanel = document.getElementById('warning-panel');
+        if (!warningPanel) return;
+        
+        const warningList = document.getElementById('warning-list');
+        if (!warningList) return;
+        
+        warningList.innerHTML = '';
+        
+        let hasWarnings = false;
+        elementWarnings.forEach((warnings, element) => {
+            if (warnings.overflow || warnings.overlap) {
+                hasWarnings = true;
+                const item = document.createElement('div');
+                item.className = 'warning-item';
+                item.style.cssText = 'padding: 8px; margin-bottom: 4px; background: #fee; border-left: 3px solid #ef4444; cursor: pointer; border-radius: 4px;';
+                
+                const elementName = element.attrs.name || element.className || 'Element';
+                let warningText = `${elementName}: `;
+                const issues = [];
+                
+                if (warnings.overflow) {
+                    const b = warnings.boundaryDetails;
+                    if (b.overflowLeft > 0) issues.push(`Overflows left by ${Math.round(b.overflowLeft)}px`);
+                    if (b.overflowRight > 0) issues.push(`Overflows right by ${Math.round(b.overflowRight)}px`);
+                    if (b.overflowTop > 0) issues.push(`Overflows top by ${Math.round(b.overflowTop)}px`);
+                    if (b.overflowBottom > 0) issues.push(`Overflows bottom by ${Math.round(b.overflowBottom)}px`);
+                }
+                
+                if (warnings.overlap) {
+                    issues.push(`Overlaps with ${warnings.overlaps.length} element(s)`);
+                }
+                
+                warningText += issues.join(', ');
+                item.textContent = warningText;
+                
+                item.addEventListener('click', function() {
+                    selectElement(element);
+                    // Scroll element into view
+                    const box = element.getClientRect();
+                    stage.position({
+                        x: -box.x + stage.width() / 2,
+                        y: -box.y + stage.height() / 2
+                    });
+                    layer.draw();
+                });
+                
+                warningList.appendChild(item);
+            }
+        });
+        
+        if (!hasWarnings) {
+            warningList.innerHTML = '<div style="padding: 8px; color: #666; text-align: center;">No warnings</div>';
+        }
+    }
+    
+    // Check all elements for warnings
+    function checkAllElementWarnings() {
+        if (!layer) return;
+        layer.children.forEach(child => {
+            if (child !== background && child.className !== 'Transformer') {
+                checkElementWarnings(child);
+            }
+        });
+        updateWarningPanel();
+    }
+    
+    // Refresh warnings button handler
+    document.getElementById('refresh-warnings')?.addEventListener('click', function() {
+        checkAllElementWarnings();
+    });
     
     // Snap to grid toggle
     document.getElementById('snap-to-grid')?.addEventListener('change', function(e) {
@@ -1860,6 +2259,12 @@ function initializePDFEditor() {
         const transformer = new Konva.Transformer({
             nodes: [node],
             enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+            borderStroke: '#667eea',
+            borderStrokeWidth: 2,
+            anchorFill: '#667eea',
+            anchorStroke: '#ffffff',
+            anchorStrokeWidth: 2,
+            anchorSize: 8,
             boundBoxFunc: function(oldBox, newBox) {
                 if (newBox.width < 20 || newBox.height < 20) {
                     return oldBox;
@@ -1924,14 +2329,32 @@ function initializePDFEditor() {
                 if (selectedElement === image) {
                     updatePropertiesPanel(image);
                 }
+                // Check warnings during transform
+                if (selectedElement) {
+                    checkElementWarnings(selectedElement);
+                }
             });
         }
         
+        // Add transformend handler for all elements
+        transformer.on('transformend', function() {
+            if (selectedElement) {
+                checkElementWarnings(selectedElement);
+                updateWarningPanel();
+            }
+        });
+
         layer.add(transformer);
         layer.draw();
-        
+
         // Update properties panel
         updatePropertiesPanel(node);
+        
+        // Check warnings for selected element
+        if (node) {
+            checkElementWarnings(node);
+            updateWarningPanel();
+        }
     }
     
     function updatePropertiesPanel(node) {
@@ -2526,19 +2949,38 @@ function initializePDFEditor() {
     });
     
     document.getElementById('btn-preview').addEventListener('click', function() {
-        const { html, css } = generateCode();
-        
         openPreviewModal();
         
         const loading = document.getElementById('preview-loading');
         const frame = document.getElementById('preview-frame');
+        const modalBody = document.querySelector('.preview-modal-body');
         
         loading.classList.add('active');
         frame.style.display = 'none';
         
+        // Set iframe to fill modal body - the preview HTML inside will handle scaling
+        frame.style.width = '100%';
+        frame.style.height = '100%';
+        frame.style.minHeight = '600px';
+        frame.style.border = 'none';
+        frame.style.overflow = 'auto';
+        frame.style.display = 'block';
+        frame.style.background = 'transparent';
+        
+        // Generate code from canvas (includes JSON)
+        const { html, css, json } = generateCode();
+        
         const fd = new FormData();
         fd.append('html', html);
         fd.append('css', css);
+        // Also send JSON template for preview
+        if (json && json.trim()) {
+            fd.append('template_json', json);
+        }
+        // Use page size from selector if available, otherwise use CURRENT_PAGE_SIZE
+        const pageSizeForPreview = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+        console.log('Preview - Sending page_size:', pageSizeForPreview, 'Selector value:', pageSizeSelector ? pageSizeSelector.value : 'N/A', 'CURRENT_PAGE_SIZE:', CURRENT_PAGE_SIZE);
+        fd.append('page_size', pageSizeForPreview);  // Pass page size to preview endpoint
         fd.append('csrf_token', CSRF_TOKEN);
         
         // Add cache-busting parameter to ensure fresh preview
@@ -2576,84 +3018,219 @@ function initializePDFEditor() {
     
     // Generate code from canvas
     function generateCode() {
-        let bodyContent = '';
-        
-        layer.children.forEach((child, index) => {
-            if (child === background || child.className === 'Transformer') return;
+        try {
+            // Get current page size and dimensions
+            const currentSize = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+            const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
             
-            const attrs = child.attrs;
-            const x = Math.round(attrs.x || 0);
-            const y = Math.round(attrs.y || 0);
-            const opacity = attrs.opacity !== undefined ? attrs.opacity : 1;
+            // Convert pixels to points (1 point = 1/72 inch, at 72 DPI: 1px = 1pt)
+            // Konva canvas uses 72 DPI, so pixels = points
+            function pxToPt(px) {
+                return Math.round(px || 0);
+            }
             
-            if (child.className === 'Text') {
-                const fontSize = attrs.fontSize || 14;
-                const fontFamily = attrs.fontFamily || 'Arial';
-                const fontStyle = attrs.fontStyle || 'normal';
-                const fontWeight = fontStyle === 'bold' ? 'bold' : 'normal';
-                const fontStyleCss = fontStyle === 'italic' ? 'italic' : 'normal';
-                const color = attrs.fill || 'black';
-                const text = (attrs.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                // Preserve text alignment (Konva Text uses 'align' attribute: 'left', 'center', 'right')
-                const textAlign = attrs.align || 'left';
-                
-                bodyContent += `  <div class="element text-element" style="position:absolute;left:${x}px;top:${y}px;font-size:${fontSize}px;font-family:'${fontFamily}';font-weight:${fontWeight};font-style:${fontStyleCss};color:${color};opacity:${opacity};width:${attrs.width || 400}px;text-align:${textAlign}">${text}</div>\n`;
-            } else if (child.className === 'Image') {
-                const w = Math.round(attrs.width || 100);
-                const h = Math.round(attrs.height || 50);
-                {% raw %}
-                bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) if settings.has_logo() and settings.get_logo_path() else '' }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
-                {% endraw %}
-            } else if (child.className === 'Rect') {
-                const w = Math.round(attrs.width || 100);
-                const h = Math.round(attrs.height || 100);
-                const fill = attrs.fill || 'transparent';
-                const stroke = attrs.stroke || 'black';
-                const strokeWidth = attrs.strokeWidth || 1;
-                
-                bodyContent += `  <div class="rectangle-element" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${fill};border:${strokeWidth}px solid ${stroke};opacity:${opacity}"></div>\n`;
-            } else if (child.className === 'Circle') {
-                const radius = Math.round(attrs.radius || 50);
-                const fill = attrs.fill || 'transparent';
-                const stroke = attrs.stroke || 'black';
-                const strokeWidth = attrs.strokeWidth || 1;
-                const adjustedX = x - radius;
-                const adjustedY = y - radius;
-                
-                bodyContent += `  <div class="circle-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${radius*2}px;height:${radius*2}px;background:${fill};border:${strokeWidth}px solid ${stroke};border-radius:50%;opacity:${opacity}"></div>\n`;
-            } else if (child.className === 'Line') {
-                const points = attrs.points || [];
-                const stroke = attrs.stroke || 'black';
-                const strokeWidth = attrs.strokeWidth || 1;
-                
-                if (points.length >= 4) {
-                    const x1 = Math.round(points[0]);
-                    const y1 = Math.round(points[1]);
-                    const x2 = Math.round(points[2]);
-                    const y2 = Math.round(points[3]);
-                    const width = Math.abs(x2 - x1);
-                    const adjustedX = x + Math.min(x1, x2);
-                    const adjustedY = y + Math.min(y1, y2);
-                    
-                    bodyContent += `  <hr class="line-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${width}px;border:none;border-top:${strokeWidth}px solid ${stroke};margin:0;opacity:${opacity}">\n`;
-                }
-            } else if (child.className === 'Group' || child.constructor.name === 'Group' || child.children) {
-                // It's a Group element (check multiple ways since className might be undefined after JSON restore)
-                // Check if this is a table by looking at the group's name
-                let isItemsTable = child.attrs.name === 'items-table';
-                let isExpensesTable = child.attrs.name === 'expenses-table';
-                
-                // Fallback: Check if group has multiple children (header, line, items) - likely a table
-                if (!isItemsTable && !isExpensesTable && child.children && child.children.length >= 3) {
-                    const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
-                    const hasLine = child.children.some(c => c.className === 'Line');
-                    if (hasTextChildren && hasLine) {
-                        console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
-                        isItemsTable = true;
+            // Build ReportLab template JSON structure
+            const templateJson = {
+                page: {
+                    size: currentSize,
+                    margin: {
+                        top: 20,  // 20mm margin
+                        right: 20,
+                        bottom: 20,
+                        left: 20
+                    }
+                },
+                elements: [],
+                styles: {
+                    default: {
+                        font: "Helvetica",
+                        size: 10,
+                        color: "#000000"
                     }
                 }
+            };
+            
+            // Legacy HTML/CSS generation for backward compatibility (preview)
+            let bodyContent = '';
+            
+            if (!layer || !layer.children) {
+                console.error('Layer or children not found');
+                return { html: '<div class="invoice-wrapper"></div>', css: '', json: JSON.stringify(templateJson, null, 2) };
+            }
+            
+            layer.children.forEach((child, index) => {
+                if (!child || child === background || child.className === 'Transformer') return;
                 
-                if (isItemsTable) {
+                // Filter out grid lines - they should not be included in the exported template
+                if (child.className === 'Line' && child.attrs.name === 'grid-line') return;
+                
+                const attrs = child.attrs;
+                const x = Math.round(attrs.x || 0);
+                const y = Math.round(attrs.y || 0);
+                const opacity = attrs.opacity !== undefined ? attrs.opacity : 1;
+                
+                if (child.className === 'Text') {
+                    const fontSize = attrs.fontSize || 14;
+                    const fontFamily = attrs.fontFamily || 'Arial';
+                    const fontStyle = attrs.fontStyle || 'normal';
+                    const fontWeight = fontStyle === 'bold' ? 'bold' : 'normal';
+                    const fontStyleCss = fontStyle === 'italic' ? 'italic' : 'normal';
+                    const color = attrs.fill || 'black';
+                    const text = attrs.text || '';
+                    const textAlign = attrs.align || 'left';
+                    
+                    // Map font family to ReportLab font names
+                    let reportLabFont = 'Helvetica';
+                    if (fontFamily.toLowerCase().includes('arial')) {
+                        reportLabFont = 'Helvetica';
+                    } else if (fontFamily.toLowerCase().includes('times')) {
+                        reportLabFont = 'Times-Roman';
+                    } else if (fontFamily.toLowerCase().includes('courier')) {
+                        reportLabFont = 'Courier';
+                    }
+                    if (fontWeight === 'bold') {
+                        reportLabFont += '-Bold';
+                    } else if (fontStyleCss === 'italic') {
+                        reportLabFont += '-Oblique';
+                    }
+                    
+                    // Add to ReportLab template JSON
+                    templateJson.elements.push({
+                        type: 'text',
+                        x: pxToPt(x),
+                        y: pxToPt(y),
+                        text: text,  // Keep Jinja2 template variables as-is
+                        width: pxToPt(attrs.width || 400),
+                        style: {
+                            font: reportLabFont,
+                            size: fontSize,
+                            color: color,
+                            align: textAlign,
+                            opacity: opacity
+                        }
+                    });
+                    
+                    // Legacy HTML for preview
+                    const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    bodyContent += `  <div class="element text-element" style="position:absolute;left:${x}px;top:${y}px;font-size:${fontSize}px;font-family:'${fontFamily}';font-weight:${fontWeight};font-style:${fontStyleCss};color:${color};opacity:${opacity};width:${attrs.width || 400}px;text-align:${textAlign}">${escapedText}</div>\n`;
+                } else if (child.className === 'Image') {
+                    const w = Math.round(attrs.width || 100);
+                    const h = Math.round(attrs.height || 50);
+                    
+                // Add to ReportLab template JSON - image source needs Jinja2 template syntax
+                {% raw %}
+                const imageSource = '{{ get_logo_base64(settings.get_logo_path()) if settings.has_logo() and settings.get_logo_path() else "" }}';
+                {% endraw %}
+                templateJson.elements.push({
+                    type: 'image',
+                    x: pxToPt(x),
+                    y: pxToPt(y),
+                    width: pxToPt(w),
+                    height: pxToPt(h),
+                    source: imageSource,
+                    opacity: opacity
+                });
+                    
+                    // Legacy HTML for preview
+                    {% raw %}
+                    bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) if settings.has_logo() and settings.get_logo_path() else '' }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
+                    {% endraw %}
+                } else if (child.className === 'Rect') {
+                    const w = Math.round(attrs.width || 100);
+                    const h = Math.round(attrs.height || 100);
+                    const fill = attrs.fill || 'transparent';
+                    const stroke = attrs.stroke || 'black';
+                    const strokeWidth = attrs.strokeWidth || 1;
+                    
+                    // Add to ReportLab template JSON
+                    templateJson.elements.push({
+                        type: 'rectangle',
+                        x: pxToPt(x),
+                        y: pxToPt(y),
+                        width: pxToPt(w),
+                        height: pxToPt(h),
+                        style: {
+                            fill: fill !== 'transparent' ? fill : null,
+                            stroke: stroke,
+                            strokeWidth: strokeWidth,
+                            opacity: opacity
+                        }
+                    });
+                    
+                    // Legacy HTML for preview
+                    bodyContent += `  <div class="rectangle-element" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${fill};border:${strokeWidth}px solid ${stroke};opacity:${opacity}"></div>\n`;
+                } else if (child.className === 'Circle') {
+                    const radius = Math.round(attrs.radius || 50);
+                    const fill = attrs.fill || 'transparent';
+                    const stroke = attrs.stroke || 'black';
+                    const strokeWidth = attrs.strokeWidth || 1;
+                    const adjustedX = x - radius;
+                    const adjustedY = y - radius;
+                    
+                    // Add to ReportLab template JSON (circles use radius)
+                    templateJson.elements.push({
+                        type: 'circle',
+                        x: pxToPt(x),  // Center x
+                        y: pxToPt(y),  // Center y
+                        width: pxToPt(radius * 2),
+                        height: pxToPt(radius * 2),
+                        style: {
+                            fill: fill !== 'transparent' ? fill : null,
+                            stroke: stroke,
+                            strokeWidth: strokeWidth,
+                            opacity: opacity
+                        }
+                    });
+                    
+                    // Legacy HTML for preview
+                    bodyContent += `  <div class="circle-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${radius*2}px;height:${radius*2}px;background:${fill};border:${strokeWidth}px solid ${stroke};border-radius:50%;opacity:${opacity}"></div>\n`;
+                } else if (child.className === 'Line') {
+                    const points = attrs.points || [];
+                    const stroke = attrs.stroke || 'black';
+                    const strokeWidth = attrs.strokeWidth || 1;
+                    
+                    if (points.length >= 4) {
+                        const x1 = Math.round(points[0]);
+                        const y1 = Math.round(points[1]);
+                        const x2 = Math.round(points[2]);
+                        const y2 = Math.round(points[3]);
+                        const width = Math.abs(x2 - x1);
+                        const adjustedX = x + Math.min(x1, x2);
+                        const adjustedY = y + Math.min(y1, y2);
+                        
+                        // Add to ReportLab template JSON
+                        templateJson.elements.push({
+                            type: 'line',
+                            x: pxToPt(adjustedX),
+                            y: pxToPt(adjustedY),
+                            width: pxToPt(width),
+                            style: {
+                                stroke: stroke,
+                                strokeWidth: strokeWidth,
+                                opacity: opacity
+                            }
+                        });
+                        
+                        // Legacy HTML for preview
+                        bodyContent += `  <hr class="line-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${width}px;border:none;border-top:${strokeWidth}px solid ${stroke};margin:0;opacity:${opacity}">\n`;
+                    }
+                    } else if (child.className === 'Group' || child.constructor.name === 'Group' || child.children) {
+                    // It's a Group element (check multiple ways since className might be undefined after JSON restore)
+                    // Check if this is a table by looking at the group's name
+                    let isItemsTable = child.attrs.name === 'items-table';
+                    let isExpensesTable = child.attrs.name === 'expenses-table';
+                    
+                    // Fallback: Check if group has multiple children (header, line, items) - likely a table
+                    if (!isItemsTable && !isExpensesTable && child.children && child.children.length >= 3) {
+                        const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
+                        const hasLine = child.children.some(c => c.className === 'Line');
+                        if (hasTextChildren && hasLine) {
+                            console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
+                            isItemsTable = true;
+                        }
+                    }
+                    
+                    if (isItemsTable) {
                     // Extract actual header text from the table group's first Text child
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
                     const textElements = children.filter(c => c.className === 'Text');
@@ -2670,7 +3247,33 @@ function initializePDFEditor() {
                         }
                     }
                     
-                    // Generate proper HTML table for invoice items
+                    // Add to ReportLab template JSON - items table
+                    {% raw %}
+                    const itemsData = '{{ invoice.items }}';
+                    const itemsRowTemplate = {
+                        description: '{{ item.description }}',
+                        quantity: '{{ item.quantity }}',
+                        unit_price: '{{ format_money(item.unit_price) }}',
+                        total_amount: '{{ format_money(item.total_amount) }}'
+                    };
+                    {% endraw %}
+                    templateJson.elements.push({
+                        type: 'table',
+                        x: pxToPt(x),
+                        y: pxToPt(y),
+                        width: pxToPt(515),
+                        opacity: opacity,
+                        columns: [
+                            {width: 250, header: headerParts[0] || 'Description', field: 'description', align: 'left'},
+                            {width: 70, header: headerParts[1] || 'Qty', field: 'quantity', align: 'center'},
+                            {width: 110, header: headerParts[2] || 'Unit Price', field: 'unit_price', align: 'right'},
+                            {width: 110, header: headerParts[3] || 'Total', field: 'total_amount', align: 'right'}
+                        ],
+                        data: itemsData,
+                        row_template: itemsRowTemplate
+                    });
+                    
+                    // Legacy HTML for preview
                     bodyContent += `  <!-- Items Table Start -->\n`;
                     bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;">\n`;
@@ -2720,7 +3323,39 @@ function initializePDFEditor() {
                         }
                     }
                     
-                    // Generate proper HTML table for project expenses
+                    // Add to ReportLab template JSON - expenses table
+                    {% raw %}
+                    const expensesData = '{{ invoice.expenses }}';
+                    const expensesRowTemplate = {
+                        title: '{{ expense.title }}',
+                        expense_date: '{{ expense.expense_date }}',
+                        category: '{{ expense.category }}',
+                        total_amount: '{{ format_money(expense.total_amount) }}'
+                    };
+                    {% endraw %}
+                    templateJson.elements.push({
+                        type: 'table',
+                        x: pxToPt(x),
+                        y: pxToPt(y),
+                        width: pxToPt(515),
+                        opacity: opacity,
+                        columns: [
+                            {width: 200, header: headerParts[0] || 'Expense', field: 'title', align: 'left'},
+                            {width: 100, header: headerParts[1] || 'Date', field: 'expense_date', align: 'center'},
+                            {width: 105, header: headerParts[2] || 'Category', field: 'category', align: 'left'},
+                            {width: 110, header: headerParts[3] || 'Amount', field: 'total_amount', align: 'right'}
+                        ],
+                        data: expensesData,
+                        row_template: expensesRowTemplate,
+                        style: {
+                            headerBackground: '#fff3cd',
+                            headerTextColor: '#856404',
+                            rowBackground: '#fffbf0',
+                            rowTextColor: '#856404'
+                        }
+                    });
+                    
+                    // Legacy HTML for preview
                     bodyContent += `  <!-- Expenses Table Start -->\n`;
                     bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fffbf0;">\n`;
@@ -2753,60 +3388,75 @@ function initializePDFEditor() {
                     bodyContent += `    </table>\n`;
                     bodyContent += `  </div>\n`;
                     bodyContent += `  <!-- Expenses Table End -->\n`;
-                } else {
-                    // Regular group (not a table)
-                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity}">\n`;
-                child.children.forEach(c => {
-                    if (c.className === 'Text') {
-                            const text = (c.attrs.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            // Preserve text alignment for text in groups
-                            const textAlign = c.attrs.align || 'left';
-                            bodyContent += `    <div style="font-size:${c.attrs.fontSize || 12}px;font-weight:${c.attrs.fontStyle === 'bold' ? 'bold' : 'normal'};text-align:${textAlign}">${text}</div>\n`;
-                        } else if (c.className === 'Line') {
-                            bodyContent += `    <hr style="border-top:${c.attrs.strokeWidth || 1}px solid ${c.attrs.stroke || 'black'};margin:${c.attrs.y || 0}px 0">\n`;
-                        }
-                    });
-                    bodyContent += `  </div>\n`;
+                    } else {
+                        // Regular group (not a table)
+                        bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity}">\n`;
+                        child.children.forEach(c => {
+                            if (c.className === 'Text') {
+                                const text = (c.attrs.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                // Preserve text alignment for text in groups
+                                const textAlign = c.attrs.align || 'left';
+                                bodyContent += `    <div style="font-size:${c.attrs.fontSize || 12}px;font-weight:${c.attrs.fontStyle === 'bold' ? 'bold' : 'normal'};text-align:${textAlign}">${text}</div>\n`;
+                            } else if (c.className === 'Line') {
+                                bodyContent += `    <hr style="border-top:${c.attrs.strokeWidth || 1}px solid ${c.attrs.stroke || 'black'};margin:${c.attrs.y || 0}px 0">\n`;
+                            }
+                        });
+                        bodyContent += `  </div>\n`;
+                    }
                 }
-            }
-        });
-        
-        // Get dimensions for current page size
-        const currentSize = CURRENT_PAGE_SIZE || 'A4';
-        const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
-        const widthPx = dimensions.width;
-        const heightPx = dimensions.height;
-        
-        // For preview, return just the body content (template HTML) wrapped in invoice-wrapper
-        // The preview endpoint will wrap it with its own HTML structure
-        const html = `<div class="invoice-wrapper">
+            });
+            
+            // Legacy HTML/CSS generation for preview (backward compatibility)
+            const widthPx = dimensions.width;
+            const heightPx = dimensions.height;
+            
+            const html = `<div class="invoice-wrapper">
 ${bodyContent}</div>`;
-        
-        const css = `@page {
+            
+            const css = `@page {
     size: ${currentSize};
     margin: 0;
 }
-body {
-    margin: 0;
-    padding: 0;
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: ${widthPx}px !important;
+    height: ${heightPx}px !important;
     font-family: Arial, sans-serif;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
 }
 .invoice-wrapper {
     position: relative;
-    width: ${widthPx}px;
-    min-height: ${heightPx}px;
+    width: ${widthPx}px !important;
+    height: ${heightPx}px !important;
+    max-width: ${widthPx}px !important;
+    max-height: ${heightPx}px !important;
+    min-width: ${widthPx}px !important;
+    min-height: ${heightPx}px !important;
     background: white;
-    padding: 20px;
-    box-sizing: border-box;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    clip-path: inset(0) !important;
+    contain: layout style paint;
+    isolation: isolate;
 }
 .element, .text-element {
     white-space: pre-wrap;
+    box-sizing: border-box;
+    max-width: 100%;
 }
 .rectangle-element, .circle-element {
     box-sizing: border-box;
+    max-width: 100%;
+    max-height: 100%;
 }
 .line-element {
     padding: 0;
+    box-sizing: border-box;
+    max-width: 100%;
 }
 table {
     width: 100%;
@@ -2827,8 +3477,27 @@ table td {
 table tr:last-child td {
     border-bottom: 2px solid #333;
 }`;
-        
-        return { html, css };
+            
+            // Return both JSON (new format) and HTML/CSS (legacy for preview)
+            return { 
+                html,  // Legacy HTML for preview
+                css,   // Legacy CSS for preview
+                json: JSON.stringify(templateJson, null, 2)  // ReportLab template JSON
+            };
+        } catch (error) {
+            console.error('Error in generateCode():', error);
+            console.error('Stack trace:', error.stack);
+            // Return minimal valid structure on error
+            const currentSize = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+            const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
+            const widthPx = dimensions.width;
+            const heightPx = dimensions.height;
+            return {
+                html: `<div class="invoice-wrapper"><p style="color: red; padding: 20px;">Error generating template: ${error.message}</p></div>`,
+                css: `@page { size: ${currentSize}; margin: 0; } html, body { margin: 0; padding: 0; width: ${widthPx}px; height: ${heightPx}px; } .invoice-wrapper { width: ${widthPx}px; height: ${heightPx}px; background: white; padding: 20px; }`,
+                json: JSON.stringify({ page: { size: currentSize, margin: { top: 20, right: 20, bottom: 20, left: 20 } }, elements: [], styles: {} }, null, 2)
+            };
+        }
     }
     
     // View code
@@ -2856,7 +3525,7 @@ table tr:last-child td {
     });
     
     // Page size selector handler
-    const pageSizeSelector = document.getElementById('page-size-selector');
+    // Reuse the pageSizeSelector declared at the top level
     if (pageSizeSelector) {
         // Set the current page size in the dropdown
         if (CURRENT_PAGE_SIZE) {
@@ -2885,27 +3554,49 @@ table tr:last-child td {
     
     // Save
     document.getElementById('btn-save').addEventListener('click', function() {
-        const { html, css } = generateCode();
-        
+        const { html, css, json } = generateCode();
+
         // Log what we're saving for debugging
         console.log('=== SAVING TO DATABASE ===');
         console.log('HTML length:', html.length);
+        console.log('CSS length:', css.length);
+        console.log('JSON template length:', json ? json.length : 0);
         console.log('Has Items Table:', html.includes('<!-- Items Table Start -->'));
         console.log('Has Jinja2 loop:', html.includes('{' + '% for item in invoice.items'));
         console.log('Number of elements:', layer.children.length);
         console.log('Page size:', CURRENT_PAGE_SIZE);
-        
+
         // Log all Groups to see if items-table is there
         layer.children.forEach((child, idx) => {
             if (child.className === 'Group') {
                 console.log(`Group ${idx}: name="${child.attrs.name || 'unnamed'}"`, child.attrs);
             }
         });
+
+        // Save both legacy HTML/CSS and new JSON template
+        // Ensure JSON is always present and valid
+        if (!json || !json.trim()) {
+            console.error('No JSON generated from template!');
+            alert('Error: Could not generate template JSON. Please try again.');
+            return;
+        }
+        
+        // Validate JSON before saving
+        try {
+            JSON.parse(json);
+        } catch (e) {
+            console.error('Invalid JSON generated:', e);
+            alert('Error: Generated template JSON is invalid. Please try again.');
+            return;
+        }
         
         document.getElementById('save-html').value = html;
         document.getElementById('save-css').value = css;
-        document.getElementById('save-json').value = JSON.stringify(stage.toJSON());
-        document.getElementById('save-page-size').value = CURRENT_PAGE_SIZE || pageSizeSelector.value;
+        document.getElementById('save-design-json').value = JSON.stringify(stage.toJSON());
+        document.getElementById('save-template-json').value = json;
+        // Use page size from selector if available, otherwise use CURRENT_PAGE_SIZE
+        const pageSizeForSave = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+        document.getElementById('save-page-size').value = pageSizeForSave;
         document.getElementById('form-save').submit();
     });
     
