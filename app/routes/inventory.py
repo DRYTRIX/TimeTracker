@@ -941,6 +941,13 @@ def new_movement():
                 else:
                     raise ValueError(_("Invalid devaluation method"))
 
+                # Validate that devaluation cost is not greater than original cost
+                if unit_cost_override > base_cost:
+                    raise ValueError(
+                        _("Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
+                          devalued=float(unit_cost_override), original=float(base_cost))
+                    )
+
                 # Check stock availability before devaluation
                 warehouse_stock = WarehouseStock.query.filter_by(
                     warehouse_id=warehouse_id, stock_item_id=stock_item_id
@@ -1009,10 +1016,23 @@ def new_movement():
                     if movement_type == "return":
                         lot_type = "devalued"
                         # unit_cost_override is already set above
+                        # Validate that devaluation cost is not greater than original cost
+                        if unit_cost_override > base_cost:
+                            raise ValueError(
+                                _("Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
+                                  devalued=float(unit_cost_override), original=float(base_cost))
+                            )
 
                     # Waste: devalue existing stock first, then waste from the devalued lot
                     elif movement_type == "waste":
                         qty_to_waste = abs(quantity)
+                        
+                        # Validate that devaluation cost is not greater than original cost
+                        if unit_cost_override > base_cost:
+                            raise ValueError(
+                                _("Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
+                                  devalued=float(unit_cost_override), original=float(base_cost))
+                            )
                         
                         # Check stock availability before devaluation
                         warehouse_stock = WarehouseStock.query.filter_by(
@@ -1026,32 +1046,50 @@ def new_movement():
                             )
 
                         # Devalue the quantity first (creates a devalued lot)
-                        _deval_move, deval_lot = StockMovement.record_devaluation(
-                            stock_item_id=stock_item_id,
-                            warehouse_id=warehouse_id,
-                            quantity=qty_to_waste,
-                            moved_by=current_user.id,
-                            new_unit_cost=unit_cost_override,
-                            reason=reason or "Devaluation before waste",
-                            notes=notes,
-                        )
-                        # Waste will consume from this devalued lot
-                        consume_from_lot_id = deval_lot.id
+                        # Both devaluation and waste movement are in the same transaction
+                        # If waste fails, the rollback will revert the devaluation
+                        try:
+                            _deval_move, deval_lot = StockMovement.record_devaluation(
+                                stock_item_id=stock_item_id,
+                                warehouse_id=warehouse_id,
+                                quantity=qty_to_waste,
+                                moved_by=current_user.id,
+                                new_unit_cost=unit_cost_override,
+                                reason=reason or "Devaluation before waste",
+                                notes=notes,
+                            )
+                            # Waste will consume from this devalued lot
+                            consume_from_lot_id = deval_lot.id
+                        except Exception as e:
+                            # If devaluation fails, rollback and re-raise
+                            db.session.rollback()
+                            raise ValueError(
+                                _("Failed to devalue stock before waste: %(error)s", error=str(e))
+                            )
 
             # Record the movement
-            movement, updated_stock = StockMovement.record_movement(
-                movement_type=movement_type,
-                stock_item_id=stock_item_id,
-                warehouse_id=warehouse_id,
-                quantity=quantity,
-                moved_by=current_user.id,
-                reason=reason,
-                notes=notes,
-                unit_cost=unit_cost_override,
-                lot_type=lot_type,
-                consume_from_lot_id=consume_from_lot_id,
-                update_stock=True,
-            )
+            # For waste with devaluation, consume_from_lot_id is already set above
+            # For returns with devaluation, lot_type and unit_cost are already set above
+            try:
+                movement, updated_stock = StockMovement.record_movement(
+                    movement_type=movement_type,
+                    stock_item_id=stock_item_id,
+                    warehouse_id=warehouse_id,
+                    quantity=quantity,
+                    moved_by=current_user.id,
+                    reason=reason,
+                    notes=notes,
+                    unit_cost=unit_cost_override,
+                    lot_type=lot_type,
+                    consume_from_lot_id=consume_from_lot_id,
+                    update_stock=True,
+                )
+            except Exception as e:
+                # If movement recording fails after devaluation, rollback the entire transaction
+                db.session.rollback()
+                raise ValueError(
+                    _("Failed to record movement: %(error)s", error=str(e))
+                )
 
             safe_commit()
 
@@ -2031,16 +2069,16 @@ def receive_purchase_order(po_id):
 @admin_or_permission_required("view_inventory_reports")
 def reports_dashboard():
     """Inventory reports dashboard"""
+    from app.services.inventory_report_service import InventoryReportService
+    
     total_items = StockItem.query.filter_by(is_active=True).count()
     total_warehouses = Warehouse.query.filter_by(is_active=True).count()
 
-    total_value = (
-        db.session.query(func.sum(WarehouseStock.quantity_on_hand * StockItem.default_cost))
-        .join(StockItem)
-        .filter(StockItem.default_cost.isnot(None))
-        .scalar()
-        or 0
-    )
+    # Use lot-based valuation to properly account for devalued stock
+    # This ensures consistency with the valuation report
+    service = InventoryReportService()
+    valuation_data = service.get_stock_valuation()
+    total_value = valuation_data.get("total_value", 0)
 
     low_stock_count = 0
     items_with_reorder = StockItem.query.filter(

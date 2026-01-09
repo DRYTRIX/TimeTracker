@@ -28,9 +28,22 @@ def allowed_file(filename):
 
 def get_receipt_upload_folder():
     """Get the upload folder path for expense receipts and ensure it exists."""
+    # Get base upload folder and normalize to absolute path
+    base_folder = current_app.config.get("UPLOAD_FOLDER", "/data/uploads")
+    base_folder = os.path.abspath(base_folder)  # Ensure absolute path
+    
     # Store receipts in /data volume to persist between container updates
-    upload_folder = os.path.join(current_app.config.get("UPLOAD_FOLDER", "/data/uploads"), "receipts")
-    os.makedirs(upload_folder, exist_ok=True)
+    upload_folder = os.path.join(base_folder, "receipts")
+    
+    try:
+        os.makedirs(upload_folder, mode=0o755, exist_ok=True)
+    except OSError as e:
+        current_app.logger.error(
+            f"Failed to create upload directory {upload_folder}: {e}. "
+            f"Please ensure the parent directory exists and has proper permissions."
+        )
+        raise
+    
     return upload_folder
 
 
@@ -282,17 +295,24 @@ def create_expense():
         if "receipt_file" in request.files:
             file = request.files["receipt_file"]
             if file and file.filename and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                # Add timestamp to filename to avoid collisions
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"{timestamp}_{filename}"
+                try:
+                    filename = secure_filename(file.filename)
+                    # Add timestamp to filename to avoid collisions
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"{timestamp}_{filename}"
 
-                # Ensure upload directory exists
-                upload_dir = get_receipt_upload_folder()
+                    # Ensure upload directory exists
+                    upload_dir = get_receipt_upload_folder()
 
-                file_path = os.path.join(upload_dir, filename)
-                file.save(file_path)
-                receipt_path = os.path.join(UPLOAD_FOLDER, filename)
+                    file_path = os.path.join(upload_dir, filename)
+                    file.save(file_path)
+                    receipt_path = os.path.join(UPLOAD_FOLDER, filename)
+                except OSError as e:
+                    current_app.logger.error(f"Error saving receipt file: {e}")
+                    flash(_("Error saving receipt file. Please check directory permissions."), "error")
+                except Exception as e:
+                    current_app.logger.error(f"Unexpected error during file upload: {e}")
+                    flash(_("Error uploading receipt file."), "error")
 
         # Create expense
         expense = Expense(
@@ -495,27 +515,34 @@ def edit_expense(expense_id):
         if "receipt_file" in request.files:
             file = request.files["receipt_file"]
             if file and file.filename and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"{timestamp}_{filename}"
+                try:
+                    filename = secure_filename(file.filename)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"{timestamp}_{filename}"
 
-                upload_dir = get_receipt_upload_folder()
+                    upload_dir = get_receipt_upload_folder()
 
-                file_path = os.path.join(upload_dir, filename)
-                file.save(file_path)
+                    file_path = os.path.join(upload_dir, filename)
+                    file.save(file_path)
 
-                # Delete old receipt if exists
-                if expense.receipt_path:
-                    # Extract filename from receipt_path (which is like "uploads/receipts/filename.jpg")
-                    old_filename = os.path.basename(expense.receipt_path)
-                    old_file_path = os.path.join(upload_dir, old_filename)
-                    if os.path.exists(old_file_path):
-                        try:
-                            os.remove(old_file_path)
-                        except Exception:
-                            pass
+                    # Delete old receipt if exists
+                    if expense.receipt_path:
+                        # Extract filename from receipt_path (which is like "uploads/receipts/filename.jpg")
+                        old_filename = os.path.basename(expense.receipt_path)
+                        old_file_path = os.path.join(upload_dir, old_filename)
+                        if os.path.exists(old_file_path):
+                            try:
+                                os.remove(old_file_path)
+                            except Exception:
+                                pass
 
-                expense.receipt_path = os.path.join(UPLOAD_FOLDER, filename)
+                    expense.receipt_path = os.path.join(UPLOAD_FOLDER, filename)
+                except OSError as e:
+                    current_app.logger.error(f"Error saving receipt file: {e}")
+                    flash(_("Error saving receipt file. Please check directory permissions."), "error")
+                except Exception as e:
+                    current_app.logger.error(f"Unexpected error during file upload: {e}")
+                    flash(_("Error uploading receipt file."), "error")
 
         expense.updated_at = datetime.utcnow()
 
