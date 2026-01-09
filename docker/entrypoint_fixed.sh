@@ -1125,6 +1125,10 @@ ensure_data_directory() {
         mkdir -p /data/uploads 2>/dev/null || true
         chmod 755 /data/uploads 2>/dev/null || true
         
+        # Create receipts subdirectory for expense attachments
+        mkdir -p /data/uploads/receipts 2>/dev/null || true
+        chmod 755 /data/uploads/receipts 2>/dev/null || true
+        
         log "✓ /data directory setup complete"
     else
         log "⚠ /data directory is not writable - this may cause issues"

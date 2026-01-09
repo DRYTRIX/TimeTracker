@@ -53,7 +53,7 @@
             <div class="flex items-center justify-between mb-4 pb-2 border-b border-border-light dark:border-border-dark">
                 <h2 class="text-xl font-semibold flex items-center">
                     <i class="fas fa-list mr-2 text-primary"></i>{{ _('Quote Items') }}
-                    <span id="items-count" class="ml-2 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">{{ quote.items.count() if quote.items else 0 }}</span>
+                    <span id="items-count" class="ml-2 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">{{ quote.items|length if quote.items else 0 }}</span>
                 </h2>
                 <button type="button" id="add-item" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition shadow-sm">
                     <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}

@@ -91,7 +91,7 @@ class Quote(db.Model):
     accepter = db.relationship("User", foreign_keys=[accepted_by], backref="accepted_quotes")
     approver = db.relationship("User", foreign_keys=[approved_by], backref="approved_quotes")
     rejecter = db.relationship("User", foreign_keys=[rejected_by], backref="rejected_quotes")
-    items = db.relationship("QuoteItem", backref="quote", lazy="dynamic", cascade="all, delete-orphan")
+    items = db.relationship("QuoteItem", backref="quote", lazy="selectin", cascade="all, delete-orphan")
     template = db.relationship("QuotePDFTemplate", backref="quotes", lazy="joined")
 
     def __init__(self, quote_number, client_id, title, created_by, **kwargs):
@@ -452,9 +452,10 @@ class QuotePDFTemplate(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     page_size = db.Column(db.String(20), nullable=False, unique=True)  # A4, Letter, A3, etc.
-    template_html = db.Column(db.Text, nullable=True)
-    template_css = db.Column(db.Text, nullable=True)
+    template_html = db.Column(db.Text, nullable=True)  # Legacy HTML template (backward compatibility)
+    template_css = db.Column(db.Text, nullable=True)  # Legacy CSS template (backward compatibility)
     design_json = db.Column(db.Text, nullable=True)  # Konva.js design state
+    template_json = db.Column(db.Text, nullable=True)  # ReportLab template JSON (new format)
     is_default = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
@@ -477,9 +478,29 @@ class QuotePDFTemplate(db.Model):
         """Get template for a specific page size, creating default if needed"""
         template = cls.query.filter_by(page_size=page_size).first()
         if not template:
-            template = cls(page_size=page_size, is_default=(page_size == "A4"))
+            # Create default template for this size with default JSON
+            from app.utils.pdf_template_schema import get_default_template
+            import json
+            
+            default_json = get_default_template(page_size)
+            template = cls(
+                page_size=page_size,
+                template_json=json.dumps(default_json),
+                is_default=(page_size == "A4")
+            )
             db.session.add(template)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                # Try to get again in case it was created concurrently
+                template = cls.query.filter_by(page_size=page_size).first()
+                if not template:
+                    raise
+        
+        # DON'T call ensure_template_json() here - it may overwrite saved templates
+        # Only validate that template exists - if it has no JSON, it will be handled during export
+        # This prevents overwriting saved custom templates with defaults
         return template
 
     @classmethod
@@ -496,3 +517,56 @@ class QuotePDFTemplate(db.Model):
             template.is_default = True
             db.session.commit()
         return template
+    
+    def get_template_json(self):
+        """Get template JSON, parsing from string if needed"""
+        if not self.template_json:
+            return None
+        import json
+        try:
+            return json.loads(self.template_json)
+        except Exception:
+            return None
+    
+    def set_template_json(self, template_dict):
+        """Set template JSON from dictionary"""
+        import json
+        self.template_json = json.dumps(template_dict) if template_dict else None
+    
+    def ensure_template_json(self):
+        """Ensure template has valid JSON, generate if missing"""
+        from flask import current_app
+        import json
+        
+        # First check if template_json exists and is not empty
+        if self.template_json and self.template_json.strip():
+            # Validate that it's valid JSON
+            try:
+                parsed_json = json.loads(self.template_json)
+                # If it's valid JSON with at least a page property, consider it valid
+                if isinstance(parsed_json, dict) and "page" in parsed_json:
+                    current_app.logger.info(f"[TEMPLATE] Quote template JSON is valid - PageSize: '{self.page_size}', TemplateID: {self.id}")
+                    return  # Template JSON is valid, don't overwrite
+                else:
+                    current_app.logger.warning(f"[TEMPLATE] Quote template JSON exists but missing 'page' property - PageSize: '{self.page_size}', TemplateID: {self.id}")
+            except json.JSONDecodeError as e:
+                current_app.logger.warning(f"[TEMPLATE] Quote template JSON exists but is invalid JSON - PageSize: '{self.page_size}', TemplateID: {self.id}, Error: {str(e)}")
+                # Invalid JSON - will generate default below
+        
+        # Only generate default if template_json is truly None or empty, or invalid
+        if not self.template_json or not self.template_json.strip():
+            current_app.logger.warning(f"[TEMPLATE] Generating default quote template JSON - PageSize: '{self.page_size}', TemplateID: {self.id}, Reason: template_json is missing or empty")
+        else:
+            current_app.logger.warning(f"[TEMPLATE] Generating default quote template JSON - PageSize: '{self.page_size}', TemplateID: {self.id}, Reason: existing JSON is invalid")
+        
+        from app.utils.pdf_template_schema import get_default_template
+        import json
+        
+        default_json = get_default_template(self.page_size)
+        self.template_json = json.dumps(default_json)
+        try:
+            db.session.commit()
+            current_app.logger.info(f"[TEMPLATE] Default quote template JSON saved - PageSize: '{self.page_size}', TemplateID: {self.id}")
+        except Exception as e:
+            current_app.logger.error(f"[TEMPLATE] Failed to save default quote template JSON - PageSize: '{self.page_size}', TemplateID: {self.id}, Error: {str(e)}", exc_info=True)
+            db.session.rollback()

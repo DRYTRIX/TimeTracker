@@ -266,9 +266,9 @@ def view_quote(quote_id):
 @admin_or_permission_required("edit_quotes")
 def edit_quote(quote_id):
     """Edit an quote"""
-    from sqlalchemy.orm import joinedload
+    from sqlalchemy.orm import joinedload, selectinload
 
-    quote = Quote.query.options(joinedload(Quote.client), joinedload(Quote.items)).filter_by(id=quote_id).first_or_404()
+    quote = Quote.query.options(joinedload(Quote.client), selectinload(Quote.items)).filter_by(id=quote_id).first_or_404()
 
     # Only allow editing draft quotes
     if quote.status != "draft":
@@ -1185,19 +1185,29 @@ def save_template_from_quote(template_id):
 @login_required
 def export_quote_pdf(quote_id):
     """Export quote as PDF"""
+    current_app.logger.info(f"[PDF_EXPORT] Action: export_request, QuoteID: {quote_id}, User: {current_user.username}")
+    
     quote = Quote.query.get_or_404(quote_id)
+    current_app.logger.info(f"[PDF_EXPORT] Quote found: {quote.quote_number}, Status: {quote.status}")
 
     if not current_user.is_admin and quote.created_by != current_user.id:
+        current_app.logger.warning(f"[PDF_EXPORT] Permission denied - QuoteID: {quote_id}, User: {current_user.username}")
         flash(_("You do not have permission to export this quote"), "error")
         return redirect(request.referrer or url_for("quotes.list_quotes"))
 
     # Get page size from query parameter, default to A4
-    page_size = request.args.get("size", "A4")
+    page_size_raw = request.args.get("size", "A4")
+    current_app.logger.info(f"[PDF_EXPORT] PageSize from query param: '{page_size_raw}', QuoteID: {quote_id}")
 
     # Validate page size
     valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
-    if page_size not in valid_sizes:
+    if page_size_raw not in valid_sizes:
+        current_app.logger.warning(f"[PDF_EXPORT] Invalid page size '{page_size_raw}', defaulting to A4, QuoteID: {quote_id}")
         page_size = "A4"
+    else:
+        page_size = page_size_raw
+
+    current_app.logger.info(f"[PDF_EXPORT] Final validated PageSize: '{page_size}', QuoteID: {quote_id}, QuoteNumber: {quote.quote_number}")
 
     try:
         from app.utils.pdf_generator import QuotePDFGenerator
@@ -1206,12 +1216,18 @@ def export_quote_pdf(quote_id):
         from flask import send_file
 
         settings = Settings.get_settings()
+        current_app.logger.info(f"[PDF_EXPORT] Creating QuotePDFGenerator - PageSize: '{page_size}', QuoteID: {quote_id}")
         pdf_generator = QuotePDFGenerator(quote, settings=settings, page_size=page_size)
+        current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', QuoteID: {quote_id}")
         pdf_bytes = pdf_generator.generate_pdf()
+        pdf_size_bytes = len(pdf_bytes)
+        current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', QuoteID: {quote_id}, PDFSize: {pdf_size_bytes} bytes")
         filename = f"quote_{quote.quote_number}_{page_size}.pdf"
+        current_app.logger.info(f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', QuoteID: {quote_id}")
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except ImportError:
         # Fallback if QuotePDFGenerator doesn't exist yet
+        current_app.logger.warning(f"[PDF_EXPORT] QuotePDFGenerator import failed, using fallback - PageSize: '{page_size}', QuoteID: {quote_id}")
         from app.utils.pdf_generator_fallback import QuotePDFGeneratorFallback
         from app.models import Settings
         import io
@@ -1220,10 +1236,12 @@ def export_quote_pdf(quote_id):
         settings = Settings.get_settings()
         pdf_generator = QuotePDFGeneratorFallback(quote, settings=settings)
         pdf_bytes = pdf_generator.generate_pdf()
+        pdf_size_bytes = len(pdf_bytes)
+        current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', QuoteID: {quote_id}, PDFSize: {pdf_size_bytes} bytes")
         filename = f"quote_{quote.quote_number}_{page_size}.pdf"
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except Exception as e:
-        current_app.logger.error(f"Error generating quote PDF: {e}", exc_info=True)
+        current_app.logger.error(f"[PDF_EXPORT] Exception in PDF generation - PageSize: '{page_size}', QuoteID: {quote_id}, Error: {str(e)}", exc_info=True)
         flash(_("Error generating PDF: %(error)s", error=str(e)), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 

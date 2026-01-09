@@ -92,6 +92,8 @@ class Config:
 
     # File upload settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    # UPLOAD_FOLDER should be an absolute path (default: /data/uploads)
+    # This path is used for storing uploaded files like receipts, avatars, logos, etc.
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/data/uploads")
 
     # CSRF protection

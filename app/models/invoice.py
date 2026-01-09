@@ -285,14 +285,25 @@ class Invoice(db.Model):
     def generate_invoice_number(cls):
         """Generate a unique invoice number"""
         from datetime import datetime
+        from app.models import Settings
 
-        # Format: INV-YYYYMMDD-XXX
+        # Get settings for invoice prefix and start number
+        settings = Settings.get_settings()
+        prefix = "INV"  # Default prefix
+        start_number = 1  # Default start number
+
+        if settings:
+            prefix = getattr(settings, "invoice_prefix", "INV") or "INV"
+            start_number = getattr(settings, "invoice_start_number", 1) or 1
+
+        # Format: {prefix}-YYYYMMDD-XXX
         today = datetime.utcnow()
         date_prefix = today.strftime("%Y%m%d")
+        search_pattern = f"{prefix}-{date_prefix}-%"
 
-        # Find the next available number for today
+        # Find the next available number for today with the custom prefix
         existing = (
-            cls.query.filter(cls.invoice_number.like(f"INV-{date_prefix}-%"))
+            cls.query.filter(cls.invoice_number.like(search_pattern))
             .order_by(cls.invoice_number.desc())
             .first()
         )
@@ -302,12 +313,14 @@ class Invoice(db.Model):
             try:
                 last_num = int(existing.invoice_number.split("-")[-1])
                 next_num = last_num + 1
+                # Ensure next_num is at least start_number
+                next_num = max(next_num, start_number)
             except (ValueError, IndexError):
-                next_num = 1
+                next_num = start_number
         else:
-            next_num = 1
+            next_num = start_number
 
-        return f"INV-{date_prefix}-{next_num:03d}"
+        return f"{prefix}-{date_prefix}-{next_num:03d}"
 
 
 class InvoiceItem(db.Model):

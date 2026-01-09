@@ -1188,17 +1188,105 @@
                 try { localStorage.setItem('sidebar-collapsed', String(nowCollapsed)); } catch(_) {}
             });
 
-            // Mobile toggle simply shows/hides sidebar via utility classes
-            mobileBtn && mobileBtn.addEventListener('click', function(){
-                // On small screens we can temporarily show sidebar as overlay
-                const showing = sidebar.classList.contains('hidden');
-                sidebar.classList.toggle('hidden', !showing);
-                // Sidebar is already fixed, just need to adjust z-index for overlay
-                if (showing) {
-                    sidebar.style.zIndex = '50';
-                } else {
-                    sidebar.style.zIndex = '10';
+            // Mobile toggle with backdrop and proper close handlers
+            let backdrop = null;
+            
+            function createBackdrop() {
+                if (!backdrop) {
+                    backdrop = document.createElement('div');
+                    backdrop.id = 'sidebarBackdrop';
+                    backdrop.className = 'fixed inset-0 bg-black/50 z-40 lg:hidden';
+                    backdrop.style.display = 'none';
+                    document.body.appendChild(backdrop);
+                    
+                    // Close sidebar when clicking backdrop
+                    backdrop.addEventListener('click', closeMobileSidebar);
                 }
+                return backdrop;
+            }
+            
+            function openMobileSidebar() {
+                const isSmallScreen = window.innerWidth < 1024; // lg breakpoint
+                if (!isSmallScreen) return;
+                
+                sidebar.classList.remove('hidden');
+                sidebar.style.zIndex = '50';
+                
+                const bd = createBackdrop();
+                bd.style.display = 'block';
+            }
+            
+            function closeMobileSidebar() {
+                sidebar.classList.add('hidden');
+                sidebar.style.zIndex = '10';
+                
+                if (backdrop) {
+                    backdrop.style.display = 'none';
+                }
+            }
+            
+            function isSmallScreen() {
+                return window.innerWidth < 1024; // lg breakpoint
+            }
+            
+            // Mobile toggle button
+            mobileBtn && mobileBtn.addEventListener('click', function(e){
+                e.stopPropagation();
+                if (sidebar.classList.contains('hidden')) {
+                    openMobileSidebar();
+                } else {
+                    closeMobileSidebar();
+                }
+            });
+            
+            // Close sidebar when clicking outside (on small screens)
+            document.addEventListener('click', function(e) {
+                if (!isSmallScreen()) return;
+                if (sidebar.classList.contains('hidden')) return;
+                
+                // Don't close if clicking inside sidebar or on mobile button
+                const clickedInside = sidebar.contains(e.target);
+                const clickedMobileBtn = mobileBtn && mobileBtn.contains(e.target);
+                
+                if (!clickedInside && !clickedMobileBtn) {
+                    closeMobileSidebar();
+                }
+            });
+            
+            // Close sidebar when clicking on menu items (on small screens)
+            if (sidebar) {
+                const menuLinks = sidebar.querySelectorAll('a, [data-dropdown]');
+                menuLinks.forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        if (isSmallScreen()) {
+                            // Small delay to allow navigation to start
+                            setTimeout(() => {
+                                closeMobileSidebar();
+                            }, 100);
+                        }
+                    });
+                });
+            }
+            
+            // Handle window resize - close sidebar if window becomes large
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    if (!isSmallScreen() && !sidebar.classList.contains('hidden')) {
+                        // Window is now large, ensure sidebar is visible (not hidden)
+                        sidebar.classList.remove('hidden');
+                        if (backdrop) {
+                            backdrop.style.display = 'none';
+                        }
+                    } else if (isSmallScreen() && !sidebar.classList.contains('hidden')) {
+                        // Still small screen, ensure backdrop is shown if sidebar is open
+                        const bd = createBackdrop();
+                        if (!sidebar.classList.contains('hidden')) {
+                            bd.style.display = 'block';
+                        }
+                    }
+                }, 150);
             });
 
             // Flyout submenu when collapsed

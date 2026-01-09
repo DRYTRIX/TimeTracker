@@ -5195,7 +5195,10 @@ def get_stock_levels_api():
 @api_v1_bp.route("/inventory/movements", methods=["POST"])
 @require_api_token("write:projects")
 def create_stock_movement_api():
-    """Create a stock movement"""
+    """Create a stock movement with optional devaluation support for return/waste movements"""
+    from app.models import StockItem, WarehouseStock
+    from decimal import Decimal, InvalidOperation
+    
     data = request.get_json() or {}
 
     movement_type = data.get("movement_type", "adjustment")
@@ -5208,40 +5211,209 @@ def create_stock_movement_api():
     reference_id = data.get("reference_id")
     unit_cost = data.get("unit_cost")
 
+    # Devaluation parameters for return/waste movements
+    devalue_enabled = data.get("devalue_enabled", False)
+    devalue_method = data.get("devalue_method", "percent").strip().lower()
+    devalue_percent = data.get("devalue_percent")
+    devalue_unit_cost = data.get("devalue_unit_cost")
+
     if not stock_item_id or not warehouse_id or quantity is None:
         return jsonify({"error": "stock_item_id, warehouse_id, and quantity are required"}), 400
 
     try:
-        from decimal import Decimal
+        quantity = Decimal(str(quantity))
+        
+        # Initialize variables
+        lot_type = None
+        unit_cost_override = None
+        consume_from_lot_id = None
 
-        movement, updated_stock = StockMovement.record_movement(
-            movement_type=movement_type,
-            stock_item_id=stock_item_id,
-            warehouse_id=warehouse_id,
-            quantity=Decimal(str(quantity)),
-            moved_by=g.api_user.id,
-            reference_type=reference_type,
-            reference_id=reference_id,
-            unit_cost=Decimal(str(unit_cost)) if unit_cost else None,
-            reason=reason,
-            notes=notes,
-            update_stock=True,
-        )
+        # Get stock item for validation
+        item = StockItem.query.get(stock_item_id)
+        if not item:
+            return jsonify({"error": "Stock item not found"}), 404
+        
+        if not item.is_trackable:
+            return jsonify({"error": "Stock item is not trackable. Devaluation requires trackable items."}), 400
+
+        # Handle manual devaluation movement type
+        if movement_type == "devaluation":
+            if quantity <= 0:
+                return jsonify({"error": "Devaluation quantity must be positive"}), 400
+
+            base_cost = item.default_cost or Decimal("0")
+            if base_cost <= 0:
+                return jsonify({"error": "Stock item must have a default cost to perform devaluation"}), 400
+
+            # Calculate devaluation cost
+            if devalue_method == "percent":
+                if devalue_percent is None:
+                    return jsonify({"error": "Devaluation percent is required when using percent method"}), 400
+                try:
+                    pct = Decimal(str(devalue_percent))
+                except (ValueError, InvalidOperation):
+                    return jsonify({"error": "Invalid devaluation percent value"}), 400
+                if pct < 0 or pct > 100:
+                    return jsonify({"error": "Devaluation percent must be between 0 and 100"}), 400
+                unit_cost_override = (base_cost * (Decimal("100") - pct) / Decimal("100")).quantize(Decimal("0.01"))
+            elif devalue_method == "fixed":
+                if devalue_unit_cost is None:
+                    return jsonify({"error": "New unit cost is required when using fixed cost method"}), 400
+                try:
+                    unit_cost_override = Decimal(str(devalue_unit_cost)).quantize(Decimal("0.01"))
+                except (ValueError, InvalidOperation):
+                    return jsonify({"error": "Invalid unit cost value"}), 400
+                if unit_cost_override < 0:
+                    return jsonify({"error": "Unit cost cannot be negative"}), 400
+            else:
+                return jsonify({"error": "Invalid devaluation method. Must be 'percent' or 'fixed'"}), 400
+
+            # Check stock availability
+            warehouse_stock = WarehouseStock.query.filter_by(
+                warehouse_id=warehouse_id, stock_item_id=stock_item_id
+            ).first()
+            available_qty = warehouse_stock.quantity_on_hand if warehouse_stock else Decimal("0")
+            if available_qty < quantity:
+                return jsonify({
+                    "error": f"Insufficient stock to devalue. Available: {float(available_qty)}, Requested: {float(quantity)}"
+                }), 400
+
+            StockMovement.record_devaluation(
+                stock_item_id=stock_item_id,
+                warehouse_id=warehouse_id,
+                quantity=quantity,
+                moved_by=g.api_user.id,
+                new_unit_cost=unit_cost_override,
+                reason=reason or "Manual devaluation via API",
+                notes=notes,
+            )
+
+            db.session.commit()
+            return jsonify({"message": "Stock devaluation recorded successfully"}), 201
+
+        # Handle return and waste movements with optional devaluation
+        if movement_type in ["return", "waste"]:
+            # Validate quantity
+            if movement_type == "return" and quantity <= 0:
+                return jsonify({"error": "Return movements must use a positive quantity"}), 400
+            if movement_type == "waste" and quantity >= 0:
+                return jsonify({"error": "Waste movements must use a negative quantity"}), 400
+
+            # Process devaluation if enabled
+            if devalue_enabled:
+                base_cost = item.default_cost or Decimal("0")
+                if base_cost <= 0:
+                    return jsonify({"error": "Stock item must have a default cost to perform devaluation"}), 400
+
+                # Calculate devaluation cost
+                if devalue_method == "percent":
+                    if devalue_percent is None:
+                        return jsonify({"error": "Devaluation percent is required when devaluation is enabled"}), 400
+                    try:
+                        pct = Decimal(str(devalue_percent))
+                    except (ValueError, InvalidOperation):
+                        return jsonify({"error": "Invalid devaluation percent value"}), 400
+                    if pct < 0 or pct > 100:
+                        return jsonify({"error": "Devaluation percent must be between 0 and 100"}), 400
+                    unit_cost_override = (base_cost * (Decimal("100") - pct) / Decimal("100")).quantize(Decimal("0.01"))
+                elif devalue_method == "fixed":
+                    if devalue_unit_cost is None:
+                        return jsonify({"error": "New unit cost is required when devaluation is enabled"}), 400
+                    try:
+                        unit_cost_override = Decimal(str(devalue_unit_cost)).quantize(Decimal("0.01"))
+                    except (ValueError, InvalidOperation):
+                        return jsonify({"error": "Invalid unit cost value"}), 400
+                    if unit_cost_override < 0:
+                        return jsonify({"error": "Unit cost cannot be negative"}), 400
+                else:
+                    return jsonify({"error": "Invalid devaluation method. Must be 'percent' or 'fixed'"}), 400
+
+                # Validate devaluation cost is not greater than original
+                if unit_cost_override > base_cost:
+                    return jsonify({
+                        "error": f"Devaluation cost ({float(unit_cost_override)}) cannot be greater than original cost ({float(base_cost)})"
+                    }), 400
+
+                # Returns: book inbound directly into a devalued lot
+                if movement_type == "return":
+                    lot_type = "devalued"
+                    # unit_cost_override is already set above
+
+                # Waste: devalue existing stock first, then waste from the devalued lot
+                elif movement_type == "waste":
+                    qty_to_waste = abs(quantity)
+                    
+                    # Check stock availability
+                    warehouse_stock = WarehouseStock.query.filter_by(
+                        warehouse_id=warehouse_id, stock_item_id=stock_item_id
+                    ).first()
+                    available_qty = warehouse_stock.quantity_on_hand if warehouse_stock else Decimal("0")
+                    if available_qty < qty_to_waste:
+                        return jsonify({
+                            "error": f"Insufficient stock to waste. Available: {float(available_qty)}, Requested: {float(qty_to_waste)}"
+                        }), 400
+
+                    # Devalue the quantity first (creates a devalued lot)
+                    try:
+                        _deval_move, deval_lot = StockMovement.record_devaluation(
+                            stock_item_id=stock_item_id,
+                            warehouse_id=warehouse_id,
+                            quantity=qty_to_waste,
+                            moved_by=g.api_user.id,
+                            new_unit_cost=unit_cost_override,
+                            reason=reason or "Devaluation before waste via API",
+                            notes=notes,
+                        )
+                        consume_from_lot_id = deval_lot.id
+                    except Exception as e:
+                        db.session.rollback()
+                        return jsonify({"error": f"Failed to devalue stock before waste: {str(e)}"}), 400
+
+        # Record the movement
+        try:
+            movement, updated_stock = StockMovement.record_movement(
+                movement_type=movement_type,
+                stock_item_id=stock_item_id,
+                warehouse_id=warehouse_id,
+                quantity=quantity,
+                moved_by=g.api_user.id,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                unit_cost=unit_cost_override if unit_cost_override is not None else (Decimal(str(unit_cost)) if unit_cost else None),
+                reason=reason,
+                notes=notes,
+                lot_type=lot_type,
+                consume_from_lot_id=consume_from_lot_id,
+                update_stock=True,
+            )
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Failed to record movement: {str(e)}"}), 400
 
         db.session.commit()
+
+        message = "Stock movement recorded successfully"
+        if movement_type == "return" and devalue_enabled:
+            message = "Return movement recorded successfully with devaluation applied"
+        elif movement_type == "waste" and devalue_enabled:
+            message = "Waste movement recorded successfully with devaluation applied"
 
         return (
             jsonify(
                 {
-                    "message": "Stock movement recorded successfully",
+                    "message": message,
                     "movement": movement.to_dict(),
                     "updated_stock": updated_stock.to_dict() if updated_stock else None,
                 }
             ),
             201,
         )
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Error recording stock movement via API: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 400
 
 

@@ -24,9 +24,19 @@
         <i class="fas fa-copy mr-2"></i>{{ _('Duplicate') }}
     </a>
     {% endif %}
-    <a href="{{ url_for('quotes.export_quote_pdf', quote_id=quote.id) }}" class="inline-block px-4 py-2 rounded-lg bg-green-600 text-white mt-4 md:mt-0 hover:bg-green-700 transition-colors">
-        <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
-    </a>
+    <div class="flex gap-2 items-center">
+        <select id="pdf-size-selector" class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+            <option value="A4">A4</option>
+            <option value="Letter">Letter</option>
+            <option value="Legal">Legal</option>
+            <option value="A3">A3</option>
+            <option value="A5">A5</option>
+            <option value="Tabloid">Tabloid</option>
+        </select>
+        <a id="export-pdf-link" href="{{ url_for('quotes.export_quote_pdf', quote_id=quote.id) }}" class="inline-block px-4 py-2 rounded-lg bg-green-600 text-white mt-4 md:mt-0 hover:bg-green-700 transition-colors">
+            <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
+        </a>
+    </div>
     <button type="button" onclick="showSendEmailModal()" class="px-4 py-2 rounded-lg bg-blue-500 text-white mt-4 md:mt-0 hover:bg-blue-600 transition-colors">
         <i class="fas fa-envelope mr-2"></i>{{ _('Send Email') }}
     </button>
@@ -466,6 +476,24 @@
 </div>
 
 <script>
+// PDF Size Selector
+document.addEventListener('DOMContentLoaded', function() {
+    const sizeSelector = document.getElementById('pdf-size-selector');
+    const exportLink = document.getElementById('export-pdf-link');
+    if (sizeSelector && exportLink) {
+        // Initialize export link with default size (A4)
+        const defaultSize = sizeSelector.value || 'A4';
+        const baseUrl = "{{ url_for('quotes.export_quote_pdf', quote_id=quote.id) }}";
+        exportLink.href = baseUrl + '?size=' + defaultSize;
+        
+        // Update export link when size changes
+        sizeSelector.addEventListener('change', function() {
+            const size = this.value;
+            exportLink.href = baseUrl + '?size=' + size;
+        });
+    }
+});
+
 function showSendEmailModal() {
   document.getElementById('sendEmailModal').classList.remove('hidden');
 }

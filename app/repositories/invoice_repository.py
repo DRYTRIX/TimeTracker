@@ -68,14 +68,24 @@ class InvoiceRepository(BaseRepository[Invoice]):
     def generate_invoice_number(self) -> str:
         """Generate a unique invoice number"""
         from datetime import datetime
+        from app.models import Settings
 
-        # Format: INV-YYYYMMDD-XXXX
-        today = datetime.now().strftime("%Y%m%d")
-        prefix = f"INV-{today}-"
+        # Get settings for invoice prefix and start number
+        settings = Settings.get_settings()
+        prefix = "INV"  # Default prefix
+        start_number = 1  # Default start number
 
-        # Find the highest number for today
+        if settings:
+            prefix = getattr(settings, "invoice_prefix", "INV") or "INV"
+            start_number = getattr(settings, "invoice_start_number", 1) or 1
+
+        # Format: {prefix}-YYYYMMDD-XXX
+        today = datetime.utcnow().strftime("%Y%m%d")
+        search_pattern = f"{prefix}-{today}-%"
+
+        # Find the highest number for today with the custom prefix
         last_invoice = (
-            self.model.query.filter(Invoice.invoice_number.like(f"{prefix}%"))
+            self.model.query.filter(Invoice.invoice_number.like(search_pattern))
             .order_by(Invoice.invoice_number.desc())
             .first()
         )
@@ -84,12 +94,14 @@ class InvoiceRepository(BaseRepository[Invoice]):
             try:
                 last_num = int(last_invoice.invoice_number.split("-")[-1])
                 next_num = last_num + 1
+                # Ensure next_num is at least start_number
+                next_num = max(next_num, start_number)
             except (ValueError, IndexError):
-                next_num = 1
+                next_num = start_number
         else:
-            next_num = 1
+            next_num = start_number
 
-        return f"{prefix}{next_num:04d}"
+        return f"{prefix}-{today}-{next_num:03d}"
 
     def mark_as_sent(self, invoice_id: int) -> Optional[Invoice]:
         """Mark an invoice as sent"""
