@@ -224,19 +224,49 @@ def login():
                             requires_password=requires_password,
                         )
                 else:
-                    # User doesn't have password set - deny login when password is required
-                    log_event("auth.login_failed", user_id=user.id, reason="no_password_set", auth_method=auth_method)
-                    flash(
-                        _("No password is set for your account. Please contact an administrator to set a password."),
-                        "error",
-                    )
-                    allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                    return render_template(
-                        "auth/login.html",
-                        allow_self_register=allow_self_register,
-                        auth_method=auth_method,
-                        requires_password=requires_password,
-                    )
+                    # User doesn't have password set - allow them to set one if provided
+                    if password:
+                        # Validate password length
+                        if len(password) < 8:
+                            log_event(
+                                "auth.login_failed", user_id=user.id, reason="password_too_short", auth_method=auth_method
+                            )
+                            flash(_("Password must be at least 8 characters long."), "error")
+                            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+                            return render_template(
+                                "auth/login.html",
+                                allow_self_register=allow_self_register,
+                                auth_method=auth_method,
+                                requires_password=requires_password,
+                            )
+                        # Set the password and log them in
+                        user.set_password(password)
+                        if not safe_commit("set_initial_password", {"user_id": user.id, "username": user.username}):
+                            current_app.logger.error("Failed to set initial password for '%s' due to DB error", user.username)
+                            flash(_("Could not set password due to a database error. Please try again."), "error")
+                            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+                            return render_template(
+                                "auth/login.html",
+                                allow_self_register=allow_self_register,
+                                auth_method=auth_method,
+                                requires_password=requires_password,
+                            )
+                        current_app.logger.info("User '%s' set initial password during login", user.username)
+                        flash(_("Password has been set. You are now logged in."), "success")
+                    else:
+                        # No password provided - prompt user to set one
+                        log_event("auth.login_failed", user_id=user.id, reason="no_password_set", auth_method=auth_method)
+                        flash(
+                            _("No password is set for your account. Please enter a password to set one and log in."),
+                            "error",
+                        )
+                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+                        return render_template(
+                            "auth/login.html",
+                            allow_self_register=allow_self_register,
+                            auth_method=auth_method,
+                            requires_password=requires_password,
+                        )
 
             # For 'none' mode, no password check needed - just log in
             # Log in the user
