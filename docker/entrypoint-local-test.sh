@@ -17,8 +17,8 @@ log() {
 
 # Ensure data directory exists and has proper permissions
 log "Setting up data directory..."
-mkdir -p /data /data/uploads /app/logs
-chmod 755 /data /data/uploads /app/logs
+mkdir -p /data /data/uploads /data/uploads/receipts /app/logs
+chmod 755 /data /data/uploads /data/uploads/receipts /app/logs
 
 # If no command was passed from CMD, default to python /app/start.py
 if [ $# -eq 0 ]; then

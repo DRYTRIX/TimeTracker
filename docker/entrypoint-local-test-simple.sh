@@ -17,8 +17,8 @@ log() {
 
 # Ensure data directory exists and has proper permissions
 log "Setting up data directory..."
-mkdir -p /data /data/uploads /app/logs
-chmod 755 /data /data/uploads /app/logs
+mkdir -p /data /data/uploads /data/uploads/receipts /app/logs
+chmod 755 /data /data/uploads /data/uploads/receipts /app/logs
 
 log "Running as root user (simplified mode)..."
 # Run the application directly as root
