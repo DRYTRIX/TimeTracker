@@ -73,7 +73,7 @@ services:
       - WTF_CSRF_TRUSTED_ORIGINS=${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
       - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
       - REDIS_URL=redis://:${REDIS_PASSWORD:-timetracker}@redis:6379/0
-      - REDIS_ENABLED=${REDIS_ENABLED:-true}
+      - REDIS_ENABLED=${REDIS_ENABLED:-false}
       - LOG_FILE=/app/logs/timetracker.log
       # Analytics & Monitoring (optional)
       # See docs/analytics.md for configuration details
