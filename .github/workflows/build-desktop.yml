@@ -1,0 +1,87 @@
+name: Build Desktop Apps
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build-desktop.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'desktop/**'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+      
+      - name: Build Windows
+        working-directory: desktop
+        run: npm run build:win
+      
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-installer
+          path: desktop/dist/*.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+      
+      - name: Build Linux
+        working-directory: desktop
+        run: npm run build:linux
+      
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-packages
+          path: desktop/dist/*.AppImage
+            desktop/dist/*.deb
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+      
+      - name: Build macOS
+        working-directory: desktop
+        run: npm run build:mac
+      
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-dmg
+          path: desktop/dist/*.dmg

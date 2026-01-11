@@ -204,63 +204,65 @@ def generate_recurring_invoices():
     """Generate invoices from active recurring invoice templates
 
     This task should be run daily to check for recurring invoices that need to be generated.
+    
+    Note: This function should be called within an app context.
+    Use generate_recurring_invoices_with_app() wrapper for scheduled tasks.
     """
-    with current_app.app_context():
-        try:
-            logger.info("Generating recurring invoices...")
+    try:
+        logger.info("Generating recurring invoices...")
 
-            # Get all active recurring invoices that should generate today
-            today = datetime.utcnow().date()
-            recurring_invoices = RecurringInvoice.query.filter(
-                RecurringInvoice.is_active == True, RecurringInvoice.next_run_date <= today
-            ).all()
+        # Get all active recurring invoices that should generate today
+        today = datetime.utcnow().date()
+        recurring_invoices = RecurringInvoice.query.filter(
+            RecurringInvoice.is_active == True, RecurringInvoice.next_run_date <= today
+        ).all()
 
-            logger.info(f"Found {len(recurring_invoices)} recurring invoices to process")
+        logger.info(f"Found {len(recurring_invoices)} recurring invoices to process")
 
-            invoices_generated = 0
-            emails_sent = 0
+        invoices_generated = 0
+        emails_sent = 0
 
-            for recurring in recurring_invoices:
-                try:
-                    # Check if we've reached the end date
-                    if recurring.end_date and today > recurring.end_date:
-                        logger.info(f"Recurring invoice {recurring.id} has reached end date, deactivating")
-                        recurring.is_active = False
-                        db.session.commit()
-                        continue
+        for recurring in recurring_invoices:
+            try:
+                # Check if we've reached the end date
+                if recurring.end_date and today > recurring.end_date:
+                    logger.info(f"Recurring invoice {recurring.id} has reached end date, deactivating")
+                    recurring.is_active = False
+                    db.session.commit()
+                    continue
 
-                    # Generate invoice
-                    invoice = recurring.generate_invoice()
-                    if invoice:
-                        db.session.commit()
-                        invoices_generated += 1
-                        logger.info(
-                            f"Generated invoice {invoice.invoice_number} from recurring template {recurring.name}"
-                        )
+                # Generate invoice
+                invoice = recurring.generate_invoice()
+                if invoice:
+                    db.session.commit()
+                    invoices_generated += 1
+                    logger.info(
+                        f"Generated invoice {invoice.invoice_number} from recurring template {recurring.name}"
+                    )
 
-                        # Auto-send if enabled
-                        if recurring.auto_send and invoice.client_email:
-                            try:
-                                from app.utils.email import send_invoice_email
+                    # Auto-send if enabled
+                    if recurring.auto_send and invoice.client_email:
+                        try:
+                            from app.utils.email import send_invoice_email
 
-                                send_invoice_email(invoice, invoice.client_email, sender_user=recurring.creator)
-                                emails_sent += 1
-                                logger.info(f"Auto-sent invoice {invoice.invoice_number} to {invoice.client_email}")
-                            except Exception as e:
-                                logger.error(f"Failed to auto-send invoice {invoice.invoice_number}: {e}")
-                    else:
-                        logger.warning(f"Failed to generate invoice from recurring template {recurring.id}")
+                            send_invoice_email(invoice, invoice.client_email, sender_user=recurring.creator)
+                            emails_sent += 1
+                            logger.info(f"Auto-sent invoice {invoice.invoice_number} to {invoice.client_email}")
+                        except Exception as e:
+                            logger.error(f"Failed to auto-send invoice {invoice.invoice_number}: {e}")
+                else:
+                    logger.warning(f"Failed to generate invoice from recurring template {recurring.id}")
 
-                except Exception as e:
-                    logger.error(f"Error processing recurring invoice {recurring.id}: {e}")
-                    db.session.rollback()
+            except Exception as e:
+                logger.error(f"Error processing recurring invoice {recurring.id}: {e}")
+                db.session.rollback()
 
-            logger.info(f"Generated {invoices_generated} invoices, sent {emails_sent} emails")
-            return invoices_generated
+        logger.info(f"Generated {invoices_generated} invoices, sent {emails_sent} emails")
+        return invoices_generated
 
-        except Exception as e:
-            logger.error(f"Error generating recurring invoices: {e}")
-            return 0
+    except Exception as e:
+        logger.error(f"Error generating recurring invoices: {e}")
+        return 0
 
 
 def send_monthly_unpaid_hours_reports():
@@ -400,8 +402,22 @@ def register_scheduled_tasks(scheduler, app=None):
         logger.info("Registered budget alerts check task")
 
         # Generate recurring invoices daily at 8 AM
+        # Create a closure that captures the app instance
+        def generate_recurring_invoices_with_app():
+            """Wrapper that uses the captured app instance"""
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for recurring invoices generation")
+                    return
+
+            with app_instance.app_context():
+                generate_recurring_invoices()
+
         scheduler.add_job(
-            func=generate_recurring_invoices,
+            func=generate_recurring_invoices_with_app,
             trigger="cron",
             hour=8,
             minute=0,
@@ -409,6 +425,7 @@ def register_scheduled_tasks(scheduler, app=None):
             name="Generate recurring invoices",
             replace_existing=True,
         )
+        logger.info("Registered recurring invoices generation task")
         logger.info("Registered recurring invoices generation task")
 
         # Send monthly unpaid hours reports by salesman (first day of month at 9 AM)

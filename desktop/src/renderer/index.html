@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+  <title>TimeTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <h1>TimeTracker</h1>
+        <p>Loading...</p>
+      </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+      <div class="login-container">
+        <div class="login-header">
+          <div class="icon-large">⏱️</div>
+          <h1>TimeTracker</h1>
+          <p>Connect to your server</p>
+        </div>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="server-url">Server URL</label>
+            <input type="url" id="server-url" required placeholder="https://your-server.com">
+          </div>
+          <div class="form-group">
+            <label for="api-token">API Token</label>
+            <input type="password" id="api-token" required placeholder="tt_...">
+            <small>Get your API token from Admin > API Tokens</small>
+          </div>
+          <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+        <div id="login-error" class="error-message"></div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-screen" class="screen">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <h1>TimeTracker</h1>
+        </div>
+        <div class="header-right">
+          <button id="minimize-btn" class="header-btn" title="Minimize">−</button>
+          <button id="maximize-btn" class="header-btn" title="Maximize">□</button>
+          <button id="close-btn" class="header-btn" title="Close">×</button>
+        </div>
+      </header>
+
+      <!-- Navigation -->
+      <nav class="app-nav">
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="projects">Projects</button>
+        <button class="nav-btn" data-view="entries">Time Entries</button>
+        <button class="nav-btn" data-view="settings">Settings</button>
+      </nav>
+
+      <!-- Content Area -->
+      <main class="app-content">
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="view active">
+          <div class="dashboard-grid">
+            <div class="dashboard-card timer-card">
+              <h2>Active Timer</h2>
+              <div class="timer-display">
+                <div class="timer-time" id="timer-display">00:00:00</div>
+                <div class="timer-project" id="timer-project">No active timer</div>
+              </div>
+              <div class="timer-controls">
+                <button id="start-timer-btn" class="btn btn-primary">Start Timer</button>
+                <button id="stop-timer-btn" class="btn btn-danger" style="display: none;">Stop Timer</button>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <h2>Today's Summary</h2>
+              <div class="summary-time" id="today-summary">0h 0m</div>
+            </div>
+
+            <div class="dashboard-card full-width">
+              <h2>Recent Entries</h2>
+              <div id="recent-entries" class="entries-list">
+                <p class="empty-state">No recent entries</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Projects View -->
+        <div id="projects-view" class="view">
+          <div class="view-header">
+            <h2>Projects</h2>
+            <input type="search" id="project-search" placeholder="Search projects...">
+          </div>
+          <div id="projects-list" class="projects-grid">
+            <p class="empty-state">No projects found</p>
+          </div>
+        </div>
+
+        <!-- Time Entries View -->
+        <div id="entries-view" class="view">
+          <div class="view-header">
+            <h2>Time Entries</h2>
+            <button id="add-entry-btn" class="btn btn-primary">Add Entry</button>
+          </div>
+          <div id="entries-list" class="entries-list">
+            <p class="empty-state">No time entries</p>
+          </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settings-view" class="view">
+          <h2>Settings</h2>
+          <div class="settings-section">
+            <h3>Server Configuration</h3>
+            <div class="form-group">
+              <label>Server URL</label>
+              <input type="url" id="settings-server-url" readonly>
+              <button class="btn btn-secondary">Change</button>
+            </div>
+            <div class="form-group">
+              <label>API Token</label>
+              <input type="password" id="settings-api-token" value="••••••••" readonly>
+              <button class="btn btn-secondary">Change</button>
+            </div>
+          </div>
+          <div class="settings-section">
+            <h3>Sync Settings</h3>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="auto-sync"> Auto Sync
+              </label>
+            </div>
+            <div class="form-group">
+              <label>Sync Interval (seconds)</label>
+              <input type="number" id="sync-interval" value="60" min="10">
+            </div>
+          </div>
+          <div class="settings-section">
+            <button id="logout-btn" class="btn btn-danger">Logout</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/api/client.js"></script>
+  <script src="js/storage/storage.js"></script>
+  <script src="js/utils/helpers.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

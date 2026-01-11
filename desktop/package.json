@@ -1,0 +1,83 @@
+{
+  "name": "timetracker-desktop",
+  "version": "1.0.0",
+  "description": "TimeTracker desktop app for Windows, Linux, and macOS",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "node scripts/build-all-platforms.js",
+    "build:win+linux": "electron-builder --win --linux",
+    "build:all-force": "electron-builder --win --mac --linux",
+    "clean:cache": "node scripts/clean-cache.js",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": [
+    "timetracker",
+    "time-tracking",
+    "electron"
+  ],
+  "author": "TimeTracker",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "electron-store": "^8.1.0",
+    "dexie": "^3.2.4"
+  },
+  "build": {
+    "appId": "com.timetracker.desktop",
+    "productName": "TimeTracker",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

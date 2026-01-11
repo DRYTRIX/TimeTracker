@@ -1,0 +1,55 @@
+name: timetracker_mobile
+description: TimeTracker mobile app for Android and iOS
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # HTTP Client
+  dio: ^5.4.0
+  
+  # Local Database
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.1
+  
+  # Secure Storage
+  flutter_secure_storage: ^9.0.0
+  
+  # Background Tasks
+  workmanager: ^0.5.2
+  
+  # Notifications
+  flutter_local_notifications: ^16.3.0
+  permission_handler: ^11.1.0
+  
+  # UI Components
+  intl: ^0.18.1
+  table_calendar: ^3.0.9
+  
+  # Utilities
+  shared_preferences: ^2.2.2
+  connectivity_plus: ^5.0.2
+  timeago: ^3.6.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.7
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/

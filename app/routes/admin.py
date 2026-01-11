@@ -891,6 +891,7 @@ def manage_modules():
 @admin_or_permission_required("manage_settings")
 def settings():
     """Manage system settings"""
+    import os  # Ensure os is available in function scope
     settings_obj = Settings.get_settings()
     installation_config = get_installation_config()
     timezones = get_available_timezones()
@@ -949,8 +950,19 @@ def settings():
         settings_obj.company_bank_info = request.form.get("company_bank_info", "")
 
         # Update invoice defaults
-        settings_obj.invoice_prefix = request.form.get("invoice_prefix", "INV")
-        settings_obj.invoice_start_number = int(request.form.get("invoice_start_number", 1000))
+        invoice_prefix_form = request.form.get("invoice_prefix", "INV")
+        invoice_start_number_form = request.form.get("invoice_start_number", 1000)
+        # #region agent log
+        try:
+            import json
+            log_data = {"location": "admin.py:952", "message": "Saving invoice prefix and start number", "data": {"invoice_prefix_form": str(invoice_prefix_form), "invoice_start_number_form": str(invoice_start_number_form), "settings_obj_id": settings_obj.id if hasattr(settings_obj, "id") else "NO_ID"}, "timestamp": int(datetime.utcnow().timestamp() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "F"}
+            log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".cursor", "debug.log")
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_data) + "\n")
+        except: pass
+        # #endregion
+        settings_obj.invoice_prefix = invoice_prefix_form
+        settings_obj.invoice_start_number = int(invoice_start_number_form)
         settings_obj.invoice_terms = request.form.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         settings_obj.invoice_notes = request.form.get("invoice_notes", "Thank you for your business!")
 
@@ -1023,6 +1035,15 @@ def settings():
                 kiosk_settings=kiosk_settings,
                 peppol_env_enabled=peppol_env_enabled,
             )
+        # #region agent log
+        try:
+            import json
+            log_data = {"location": "admin.py:1027", "message": "After commit - settings values", "data": {"invoice_prefix": str(settings_obj.invoice_prefix), "invoice_start_number": int(settings_obj.invoice_start_number), "settings_obj_id": settings_obj.id if hasattr(settings_obj, "id") else "NO_ID"}, "timestamp": int(datetime.utcnow().timestamp() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "G"}
+            log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".cursor", "debug.log")
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_data) + "\n")
+        except: pass
+        # #endregion
         flash(_("Settings updated successfully"), "success")
         return redirect(url_for("admin.settings"))
 

@@ -73,7 +73,7 @@ services:
       - WTF_CSRF_TRUSTED_ORIGINS=${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
       - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
       - REDIS_URL=redis://:${REDIS_PASSWORD:-timetracker}@redis:6379/0
-      - REDIS_ENABLED=${REDIS_ENABLED:-true}
+      - REDIS_ENABLED=${REDIS_ENABLED:-false}
       - LOG_FILE=/app/logs/timetracker.log
       # Analytics & Monitoring (optional)
       # See docs/analytics.md for configuration details
@@ -93,8 +93,6 @@ services:
       - app_uploads:/app/app/static/uploads
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -123,80 +121,85 @@ services:
     restart: unless-stopped
 
   # Redis - Caching and session storage
-  redis:
-    image: redis:7-alpine
-    container_name: timetracker-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timetracker}
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    restart: unless-stopped
+  # Disabled - comment out to re-enable
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: timetracker-redis
+  #   command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timetracker}
+  #   volumes:
+  #     - redis_data:/data
+  #   ports:
+  #     - "6379:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #   restart: unless-stopped
 
   # Analytics & Monitoring Services
   # All services start by default for complete monitoring
   # See docs/analytics.md and ANALYTICS_QUICK_START.md for details
 
   # Prometheus - Metrics collection and storage
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: timetracker-prometheus
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-    ports:
-      - "9090:9090"
-    restart: unless-stopped
+  # Disabled - comment out to re-enable
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: timetracker-prometheus
+  #   volumes:
+  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus_data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #     - '--storage.tsdb.retention.time=30d'
+  #   ports:
+  #     - "9090:9090"
+  #   restart: unless-stopped
 
   # Grafana - Metrics visualization and dashboards
-  grafana:
-    image: grafana/grafana:latest
-    container_name: timetracker-grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
-    restart: unless-stopped
+  # Disabled - comment out to re-enable
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: timetracker-grafana
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+  #     - GF_USERS_ALLOW_SIGN_UP=false
+  #     - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #     - ./grafana/provisioning:/etc/grafana/provisioning
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - prometheus
+  #   restart: unless-stopped
 
   # Loki - Log aggregation
-  loki:
-    image: grafana/loki:latest
-    container_name: timetracker-loki
-    volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
-      - loki_data:/loki
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
-    restart: unless-stopped
+  # Disabled - comment out to re-enable
+  # loki:
+  #   image: grafana/loki:latest
+  #   container_name: timetracker-loki
+  #   volumes:
+  #     - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+  #     - loki_data:/loki
+  #   ports:
+  #     - "3100:3100"
+  #   command: -config.file=/etc/loki/local-config.yaml
+  #   restart: unless-stopped
 
   # Promtail - Log shipping to Loki
-  promtail:
-    image: grafana/promtail:latest
-    container_name: timetracker-promtail
-    volumes:
-      - ./logs:/var/log/timetracker:ro
-      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      - loki
-    restart: unless-stopped
+  # Disabled - comment out to re-enable
+  # promtail:
+  #   image: grafana/promtail:latest
+  #   container_name: timetracker-promtail
+  #   volumes:
+  #     - ./logs:/var/log/timetracker:ro
+  #     - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+  #   command: -config.file=/etc/promtail/config.yml
+  #   depends_on:
+  #     - loki
+  #   restart: unless-stopped
 
 volumes:
   app_data:

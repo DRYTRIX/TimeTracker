@@ -36,7 +36,7 @@ class Settings(db.Model):
     invoice_pdf_design_json = db.Column(db.Text, default="", nullable=True)  # Konva.js design state
 
     # Invoice defaults
-    invoice_prefix = db.Column(db.String(10), default="INV", nullable=False)
+    invoice_prefix = db.Column(db.String(50), default="INV", nullable=False)
     invoice_start_number = db.Column(db.Integer, default=1000, nullable=False)
     invoice_terms = db.Column(db.Text, default="Payment is due within 30 days of invoice date.", nullable=False)
     invoice_notes = db.Column(db.Text, default="Thank you for your business!", nullable=False)
@@ -420,6 +420,15 @@ class Settings(db.Model):
         """
         try:
             settings = cls.query.first()
+            # #region agent log
+            try:
+                import json
+                log_data = {"location": "settings.py:422", "message": "Settings query result", "data": {"settings_is_none": settings is None, "settings_has_id": settings is not None and hasattr(settings, "id") and settings.id is not None, "invoice_prefix": getattr(settings, "invoice_prefix", "MISSING") if settings else "N/A", "invoice_start_number": getattr(settings, "invoice_start_number", "MISSING") if settings else "N/A"}, "timestamp": int(datetime.utcnow().timestamp() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "D"}
+                log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(log_data) + "\n")
+            except: pass
+            # #endregion
             if settings:
                 return settings
         except Exception as e:
@@ -490,6 +499,15 @@ class Settings(db.Model):
                 pass
 
         # Fallback: return a non-persisted Settings instance
+        # #region agent log
+        try:
+            import json
+            log_data = {"location": "settings.py:493", "message": "Returning fallback Settings instance", "data": {"fallback": True}, "timestamp": int(datetime.utcnow().timestamp() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "E"}
+            log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_data) + "\n")
+        except: pass
+        # #endregion
         return cls()
 
     @classmethod

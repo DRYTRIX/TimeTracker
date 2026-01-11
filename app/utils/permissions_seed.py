@@ -220,7 +220,9 @@ DEFAULT_ROLES = {
             "view_all_invoices",
             "create_invoices",
             "edit_invoices",
+            "delete_invoices",
             "send_invoices",
+            "manage_payments",
             "manage_payment_gateways",
             # Reports
             "view_all_reports",
@@ -241,6 +243,7 @@ DEFAULT_ROLES = {
             "view_stock_history",
             "manage_stock_reservations",
             "view_inventory_reports",
+            "approve_stock_adjustments",
         ],
     },
     "user": {
