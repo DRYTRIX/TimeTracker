@@ -298,9 +298,16 @@ def login():
             user.update_last_login()
             current_app.logger.info("User '%s' logged in successfully", user.username)
 
-            # Track successful login
+            # Track successful login (log_event is fast, track_event is deferred to avoid blocking)
             log_event("auth.login", user_id=user.id, auth_method=auth_method)
-            track_event(user.id, "auth.login", {"auth_method": auth_method})
+            # Defer track_event to avoid blocking redirect - PostHog calls can be slow/timeout
+            import threading
+            def track_login_async():
+                try:
+                    track_event(user.id, "auth.login", {"auth_method": auth_method})
+                except Exception:
+                    pass  # Don't let analytics errors affect login
+            threading.Thread(target=track_login_async, daemon=True).start()
 
             # Note: identify_user_with_segments and set_super_properties are deferred to dashboard
             # to avoid blocking the login redirect. The dashboard calls update_user_segments_if_needed
@@ -1017,9 +1024,16 @@ def oidc_callback():
         except Exception:
             pass
 
-        # Track successful OIDC login
+        # Track successful OIDC login (log_event is fast, track_event is deferred to avoid blocking)
         log_event("auth.login", user_id=user.id, auth_method="oidc")
-        track_event(user.id, "auth.login", {"auth_method": "oidc"})
+        # Defer track_event to avoid blocking redirect - PostHog calls can be slow/timeout
+        import threading
+        def track_login_async():
+            try:
+                track_event(user.id, "auth.login", {"auth_method": "oidc"})
+            except Exception:
+                pass  # Don't let analytics errors affect login
+        threading.Thread(target=track_login_async, daemon=True).start()
 
         # Note: identify_user_with_segments and set_super_properties are deferred to dashboard
         # to avoid blocking the OIDC redirect. The dashboard calls update_user_segments_if_needed
