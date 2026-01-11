@@ -5,17 +5,34 @@
 }
 
 :root {
-  --primary: #2196F3;
-  --primary-dark: #1976D2;
-  --secondary: #03A9F4;
+  /* Brand Colors - Unified with web app */
+  --primary: #4A90E2;
+  --primary-dark: #3b82f6;
+  --secondary: #50E3C2;
+  --secondary-dark: #06b6d4;
+  
+  /* Status Colors */
   --error: #E53935;
   --success: #4CAF50;
   --warning: #FF9800;
+  
+  /* Background Colors */
   --bg: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --text: #212121;
-  --text-secondary: #757575;
-  --border: #e0e0e0;
+  --bg-secondary: #F7F9FB;
+  --bg-dark: #1A202C;
+  --bg-dark-secondary: #2D3748;
+  
+  /* Text Colors */
+  --text: #2D3748;
+  --text-secondary: #A0AEC0;
+  --text-dark: #E2E8F0;
+  --text-dark-secondary: #718096;
+  
+  /* Border Colors */
+  --border: #E2E8F0;
+  --border-dark: #4A5568;
+  
+  /* Shadow */
   --shadow: rgba(0, 0, 0, 0.1);
 }
 
@@ -54,6 +71,24 @@ button, input, select, textarea {
   text-align: center;
 }
 
+.loading-logo {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 32px;
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.95);
+  }
+}
+
 .loading-spinner {
   width: 48px;
   height: 48px;
@@ -87,6 +122,13 @@ button, input, select, textarea {
 .login-header {
   text-align: center;
   margin-bottom: 32px;
+}
+
+.logo-image {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  display: block;
 }
 
 .icon-large {
@@ -408,4 +450,74 @@ button, input, select, textarea {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 16px;
+}
+
+.settings-section .form-group {
+  margin-bottom: 20px;
+}
+
+.settings-section .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.settings-section .form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.settings-section .form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.settings-section .form-group small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-section .form-group button {
+  margin-right: 10px;
+  margin-top: 10px;
+}
+
+#settings-message {
+  display: none;
+  padding: 12px;
+  border-radius: 4px;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+#settings-message.message-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+#settings-message.message-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+#settings-message.message-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+#settings-message.message-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
 }

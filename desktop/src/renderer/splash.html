@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TimeTracker</title>
+  <link rel="stylesheet" href="css/splash.css">
+</head>
+<body>
+  <div class="splash-container">
+    <div class="splash-content">
+      <div class="logo-container">
+        <img src="../assets/logo.svg" alt="TimeTracker Logo" class="splash-logo" id="splash-logo">
+      </div>
+      <div class="splash-text">
+        <h1 class="splash-title">TimeTracker</h1>
+        <p class="splash-subtitle">Professional Time Tracking</p>
+      </div>
+      <div class="loading-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="loading-text" id="loading-text">Initializing...</p>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Simulate loading progress
+    let progress = 0;
+    const progressFill = document.getElementById('progress-fill');
+    const loadingText = document.getElementById('loading-text');
+    const messages = [
+      'Initializing...',
+      'Loading modules...',
+      'Connecting to server...',
+      'Preparing interface...',
+      'Almost ready...'
+    ];
+    
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress > 100) progress = 100;
+      
+      progressFill.style.width = progress + '%';
+      
+      const messageIndex = Math.floor((progress / 100) * messages.length);
+      if (messageIndex < messages.length) {
+        loadingText.textContent = messages[messageIndex];
+      }
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+        loadingText.textContent = 'Ready!';
+        // Signal to main process that splash is ready to close
+        setTimeout(() => {
+          if (window.electronAPI && window.electronAPI.splashReady) {
+            window.electronAPI.splashReady();
+          }
+        }, 500);
+      }
+    }, 200);
+  </script>
+</body>
+</html>

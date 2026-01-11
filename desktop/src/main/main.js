@@ -7,9 +7,45 @@ const Store = require('electron-store');
 // Initialize store
 const store = new Store();
 
+// Parse command line arguments for server URL
+function parseCommandLineArgs() {
+  const args = process.argv.slice(1); // Skip electron/node path
+  const serverUrlIndex = args.findIndex(arg => arg === '--server-url' || arg === '--server');
+  if (serverUrlIndex !== -1 && args[serverUrlIndex + 1]) {
+    const serverUrl = args[serverUrlIndex + 1];
+    // Validate and store server URL if provided
+    try {
+      const url = new URL(serverUrl);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        store.set('server_url', serverUrl);
+        console.log(`Server URL set from command line: ${serverUrl}`);
+      }
+    } catch (e) {
+      console.warn(`Invalid server URL provided: ${serverUrl}`);
+    }
+  }
+  
+  // Also check environment variable
+  if (process.env.TIMETRACKER_SERVER_URL) {
+    try {
+      const url = new URL(process.env.TIMETRACKER_SERVER_URL);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        store.set('server_url', process.env.TIMETRACKER_SERVER_URL);
+        console.log(`Server URL set from environment: ${process.env.TIMETRACKER_SERVER_URL}`);
+      }
+    } catch (e) {
+      console.warn(`Invalid server URL in environment: ${process.env.TIMETRACKER_SERVER_URL}`);
+    }
+  }
+}
+
+// Parse command line arguments before app is ready
+parseCommandLineArgs();
+
 // Keep a global reference of window and tray
 let mainWindow = null;
 let tray = null;
+const { getSplashWindow } = require('./window');
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
@@ -134,6 +170,14 @@ ipcMain.on('window:hide', () => {
 
 ipcMain.on('window:show', () => {
   if (mainWindow) mainWindow.show();
+});
+
+// Splash screen handler
+ipcMain.on('splash:ready', () => {
+  const splash = getSplashWindow();
+  if (splash && !splash.isDestroyed()) {
+    splash.close();
+  }
 });
 
 // Prevent navigation to external URLs

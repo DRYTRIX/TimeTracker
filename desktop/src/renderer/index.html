@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
   <title>TimeTracker</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="../assets/icon.png">
+  <link rel="icon" type="image/x-icon" href="../assets/icon.ico">
+  <link rel="stylesheet" href="css/brand-colors.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -12,6 +16,7 @@
     <!-- Loading Screen -->
     <div id="loading-screen" class="screen active">
       <div class="loading-container">
+        <img src="../assets/logo.svg" alt="TimeTracker Logo" class="loading-logo" id="loading-logo">
         <div class="loading-spinner"></div>
         <h1>TimeTracker</h1>
         <p>Loading...</p>
@@ -22,7 +27,7 @@
     <div id="login-screen" class="screen">
       <div class="login-container">
         <div class="login-header">
-          <div class="icon-large">⏱️</div>
+          <img src="../assets/logo.svg" alt="TimeTracker Logo" class="logo-image" id="login-logo">
           <h1>TimeTracker</h1>
           <p>Connect to your server</p>
         </div>
@@ -123,15 +128,20 @@
           <div class="settings-section">
             <h3>Server Configuration</h3>
             <div class="form-group">
-              <label>Server URL</label>
-              <input type="url" id="settings-server-url" readonly>
-              <button class="btn btn-secondary">Change</button>
+              <label for="settings-server-url">Server URL</label>
+              <input type="url" id="settings-server-url" placeholder="https://your-server.com">
+              <small>Enter the URL of your TimeTracker server</small>
             </div>
             <div class="form-group">
-              <label>API Token</label>
-              <input type="password" id="settings-api-token" value="••••••••" readonly>
-              <button class="btn btn-secondary">Change</button>
+              <label for="settings-api-token">API Token</label>
+              <input type="password" id="settings-api-token" placeholder="tt_...">
+              <small>Get your API token from Admin > API Tokens</small>
             </div>
+            <div class="form-group">
+              <button id="save-settings-btn" class="btn btn-primary">Save Settings</button>
+              <button id="test-connection-btn" class="btn btn-secondary">Test Connection</button>
+            </div>
+            <div id="settings-message" class="message"></div>
           </div>
           <div class="settings-section">
             <h3>Sync Settings</h3>

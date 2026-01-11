@@ -1,6 +1,6 @@
 {
   "name": "timetracker-desktop",
-  "version": "1.0.0",
+  "version": "4.10.1",
   "description": "TimeTracker desktop app for Windows, Linux, and macOS",
   "main": "src/main/main.js",
   "scripts": {
@@ -21,7 +21,11 @@
     "time-tracking",
     "electron"
   ],
-  "author": "TimeTracker",
+  "author": {
+    "name": "TimeTracker",
+    "email": "support@timetracker.app"
+  },
+  "homepage": "https://github.com/DRYTRIX/TimeTracker",
   "license": "MIT",
   "devDependencies": {
     "electron": "^35.7.5",
@@ -42,38 +46,54 @@
       "src/**/*",
       "package.json"
     ],
+    "asar": true,
+    "asarUnpack": [],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "sign": null
     },
     "mac": {
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "assets/icon.icns",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "linux": {
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.png",
-      "category": "Utility"
+      "category": "Utility",
+      "maintainer": "TimeTracker <support@timetracker.app>",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
