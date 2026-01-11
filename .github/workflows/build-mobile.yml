@@ -30,6 +30,9 @@ jobs:
           flutter-version: '3.16.0'
           channel: 'stable'
       
+      - name: Disable Flutter analytics
+        run: flutter config --no-analytics
+      
       - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
@@ -58,6 +61,9 @@ jobs:
         with:
           flutter-version: '3.16.0'
           channel: 'stable'
+      
+      - name: Disable Flutter analytics
+        run: flutter config --no-analytics
       
       - name: Install dependencies
         working-directory: mobile
