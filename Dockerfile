@@ -5,7 +5,14 @@ FROM node:18-slim as frontend
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
-COPY . .
+# Copy files needed for Tailwind build
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+COPY app/static/src ./app/static/src
+COPY app/templates ./app/templates
+# Create dist directory for output
+RUN mkdir -p app/static/dist
+# Run the build (creates app/static/dist/output.css)
 RUN npm run build:docker
 
 # --- Stage 2: Python Application ---
@@ -68,16 +75,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Create non-root user early (before copying files)
 RUN useradd -m -u 1000 timetracker
 
-# Copy project files with correct ownership
-COPY --chown=timetracker:timetracker . .
-
-# Also install certificate generation script to a stable path used by docs/compose
-COPY --chown=timetracker:timetracker scripts/generate-certs.sh /scripts/generate-certs.sh
-
-# Copy compiled assets from frontend stage (overwriting the stale one from COPY .)
-COPY --chown=timetracker:timetracker --from=frontend /app/app/static/dist/output.css /app/app/static/dist/output.css
-
-# Create all directories and set permissions in a single layer
+# Create all directories before copying files to ensure proper structure
 RUN mkdir -p \
     /app/translations \
     /data \
@@ -86,9 +84,26 @@ RUN mkdir -p \
     /app/instance \
     /app/app/static/uploads/logos \
     /app/static/uploads/logos \
-    && chmod -R 775 /app/translations \
+    /app/app/static/dist
+
+# Copy project files with correct ownership
+COPY --chown=timetracker:timetracker . .
+
+# Also install certificate generation script to a stable path used by docs/compose
+COPY --chown=timetracker:timetracker scripts/generate-certs.sh /scripts/generate-certs.sh
+
+# Set permissions on directories and ensure static files are readable
+RUN chmod -R 775 /app/translations \
     && chmod 755 /data /data/uploads /app/logs /app/instance \
-    && chmod -R 755 /app/app/static/uploads /app/static/uploads
+    && chmod -R 755 /app/app/static/uploads /app/static/uploads \
+    && chmod 755 /app/app/static/dist \
+    && chmod -R 755 /app/app/static
+
+# Copy compiled assets from frontend stage (after general COPY to ensure it overwrites any local version)
+COPY --chown=timetracker:timetracker --from=frontend /app/app/static/dist/output.css /app/app/static/dist/output.css
+
+# Ensure the CSS file has correct permissions
+RUN chmod 644 /app/app/static/dist/output.css
 
 # Copy the startup script
 COPY --chown=timetracker:timetracker docker/start-fixed.py /app/start.py
