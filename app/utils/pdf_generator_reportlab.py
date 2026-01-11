@@ -270,6 +270,9 @@ class ReportLabTemplateRenderer:
             
             # Store reference to renderer in doc for access in callbacks
             self._doc = doc
+            # Store page dimensions for boundary checking
+            self.page_width = page_dimensions["width"]
+            self.page_height = page_dimensions["height"]
             
             # Build PDF with custom page callbacks for absolute positioning
             try:
@@ -763,8 +766,9 @@ class ReportLabTemplateRenderer:
     
     def _on_page(self, canv: canvas.Canvas, doc: SimpleDocTemplate):
         """Handle page rendering - draw absolutely positioned elements and page number"""
-        # Draw absolutely positioned elements
-        page_height = doc.pagesize[1]
+        # Get page dimensions
+        page_width = getattr(self, 'page_width', doc.pagesize[0])
+        page_height = getattr(self, 'page_height', doc.pagesize[1])
         
         # Get margins
         margins = self.template.get("page", {}).get("margin", {"top": 20, "right": 20, "bottom": 20, "left": 20})
@@ -778,6 +782,34 @@ class ReportLabTemplateRenderer:
             # Get position (already in points from generateCode)
             x = element.get("x", 0)
             y = element.get("y", 0)
+            width = element.get("width", 0)
+            height = element.get("height", 0)
+            
+            # Validate element position to page boundaries
+            # Elements are positioned relative to page (0,0 = top-left of page)
+            # Skip elements that are completely outside page boundaries
+            if x < 0 or y < 0 or x >= page_width or y >= page_height:
+                continue
+            
+            # For elements with explicit dimensions, constrain them to page boundaries
+            # Text elements might not have width/height, which is fine - they'll be drawn without size constraints
+            if width > 0 and height > 0:
+                # Constrain dimensions if they would extend beyond page
+                if x + width > page_width:
+                    width = max(0, page_width - x)
+                if y + height > page_height:
+                    height = max(0, page_height - y)
+                
+                # Skip if constrained to zero size
+                if width <= 0 or height <= 0:
+                    continue
+            
+            # Update element with constrained dimensions for drawing
+            element_copy = element.copy()
+            element_copy['x'] = x
+            element_copy['y'] = y
+            element_copy['width'] = width
+            element_copy['height'] = height
             
             # Elements are positioned relative to page (0,0 = top-left of page)
             # ReportLab's SimpleDocTemplate margins define the content area, but when drawing
@@ -789,15 +821,15 @@ class ReportLabTemplateRenderer:
             
             try:
                 if element_type == ElementType.TEXT:
-                    self._draw_text_on_canvas(canv, element, actual_x, actual_y, page_height)
+                    self._draw_text_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
                 elif element_type == ElementType.IMAGE:
-                    self._draw_image_on_canvas(canv, element, actual_x, actual_y, page_height)
+                    self._draw_image_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
                 elif element_type == ElementType.RECTANGLE:
-                    self._draw_rectangle_on_canvas(canv, element, actual_x, actual_y, page_height)
+                    self._draw_rectangle_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
                 elif element_type == ElementType.CIRCLE:
-                    self._draw_circle_on_canvas(canv, element, actual_x, actual_y, page_height)
+                    self._draw_circle_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
                 elif element_type == ElementType.LINE:
-                    self._draw_line_on_canvas(canv, element, actual_x, actual_y, page_height)
+                    self._draw_line_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
                 # Tables are handled as flowables, not drawn on canvas
             except Exception as e:
                 if current_app:
@@ -805,15 +837,16 @@ class ReportLabTemplateRenderer:
                 else:
                     print(f"Error drawing element {element_type} on canvas: {e}")
         
-        # Add page number
+        # Add page number (within page boundaries)
         page_num = canv.getPageNumber()
         text = f"Page {page_num}"
         canv.saveState()
         canv.setFont("Helvetica", 9)
         canv.setFillColor(colors.HexColor("#666666"))
-        x = doc.leftMargin + doc.width
-        y = doc.bottomMargin - 0.5 * cm
-        canv.drawRightString(x, y, text)
+        # Ensure page number is within page boundaries
+        page_num_x = min(doc.leftMargin + doc.width, page_width - 10)
+        page_num_y = max(doc.bottomMargin - 0.5 * cm, 10)
+        canv.drawRightString(page_num_x, page_num_y, text)
         canv.restoreState()
     
     def _draw_text_on_canvas(self, canv: canvas.Canvas, element: Dict[str, Any], x: float, y: float, page_height: float):
@@ -827,21 +860,30 @@ class ReportLabTemplateRenderer:
         color = style.get("color", "#000000")
         align = style.get("align", "left")
         
+        # Get page width for boundary checking
+        page_width = getattr(self, 'page_width', 595)  # Default A4 width
+        
         canv.saveState()
         canv.setFont(font, size)
         color_hex = _normalize_color(color)
         if color_hex:
             canv.setFillColor(colors.HexColor(color_hex))
         
-        # Handle text alignment
+        # Constrain text width to page boundaries
+        width = element.get("width", 400)
+        max_x = min(x + width, page_width)
+        constrained_width = max_x - x
+        
+        # Handle text alignment with boundary constraints
         if align == "right":
-            width = element.get("width", 400)
-            canv.drawRightString(x + width, y, text)
+            draw_x = min(x + constrained_width, page_width - 5)
+            canv.drawRightString(draw_x, y, text)
         elif align == "center":
-            width = element.get("width", 400)
-            canv.drawCentredString(x + width/2, y, text)
+            draw_x = x + constrained_width / 2
+            canv.drawCentredString(draw_x, y, text)
         else:
-            canv.drawString(x, y, text)
+            draw_x = min(x, page_width - 5)
+            canv.drawString(draw_x, y, text)
         
         canv.restoreState()
     
@@ -856,6 +898,21 @@ class ReportLabTemplateRenderer:
         width = element.get("width", 100)
         height = element.get("height", 100)
         
+        # Get page dimensions for boundary checking
+        page_width = getattr(self, 'page_width', 595)  # Default A4 width
+        
+        # Constrain image dimensions to page boundaries
+        # y is in ReportLab coordinates (bottom-left origin), so y - height is the bottom
+        # Ensure image doesn't extend beyond page
+        max_width = page_width - x
+        max_height = y  # y is the top, so y is the max height from bottom
+        width = min(width, max_width)
+        height = min(height, max_height)
+        
+        # Skip if image would be outside page boundaries
+        if width <= 0 or height <= 0 or x >= page_width or y <= 0:
+            return
+        
         try:
             # Handle base64 data URI
             if source.startswith("data:image"):
@@ -863,9 +920,9 @@ class ReportLabTemplateRenderer:
                 header, data = source.split(",", 1)
                 img_data = base64.b64decode(data)
                 img_reader = ImageReader(io.BytesIO(img_data))
-                canv.drawImage(img_reader, x, y, width=width, height=height, preserveAspectRatio=True)
+                canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=True)
             elif os.path.exists(source):
-                canv.drawImage(source, x, y, width=width, height=height, preserveAspectRatio=True)
+                canv.drawImage(source, x, y - height, width=width, height=height, preserveAspectRatio=True)
         except Exception as e:
             if current_app:
                 current_app.logger.error(f"Error drawing image on canvas: {e}")
@@ -880,6 +937,20 @@ class ReportLabTemplateRenderer:
         fill = style.get("fill", element.get("fill"))
         stroke = style.get("stroke", element.get("stroke", "black"))
         stroke_width = style.get("strokeWidth", element.get("strokeWidth", 1)) or 0
+        
+        # Get page dimensions for boundary checking
+        page_width = getattr(self, 'page_width', 595)  # Default A4 width
+        
+        # Constrain rectangle to page boundaries
+        # y is in ReportLab coordinates (bottom-left origin), so y - height is the bottom
+        max_width = page_width - x
+        max_height = y  # y is the top, so y is the max height from bottom
+        width = min(width, max_width)
+        height = min(height, max_height)
+        
+        # Skip if rectangle would be outside page boundaries
+        if width <= 0 or height <= 0 or x >= page_width or y <= 0:
+            return
         
         canv.saveState()
         if fill and fill != 'transparent':
@@ -904,6 +975,21 @@ class ReportLabTemplateRenderer:
         stroke = style.get("stroke", element.get("stroke", "black"))
         stroke_width = style.get("strokeWidth", element.get("strokeWidth", 1)) or 0
         
+        # Get page dimensions for boundary checking
+        page_width = getattr(self, 'page_width', 595)  # Default A4 width
+        
+        # Constrain circle to page boundaries
+        # Circle center will be at (x + radius, y - radius)
+        # Ensure circle doesn't extend beyond page
+        max_radius_x = min(page_width - x, x)  # Distance to nearest horizontal edge
+        max_radius_y = min(y, page_height - y)  # Distance to nearest vertical edge
+        max_radius = min(max_radius_x, max_radius_y)
+        radius = min(radius, max_radius)
+        
+        # Skip if circle would be outside page boundaries
+        if radius <= 0 or x + radius > page_width or y - radius < 0:
+            return
+        
         canv.saveState()
         if fill and fill != 'transparent':
             fill_hex = _normalize_color(fill)
@@ -915,7 +1001,7 @@ class ReportLabTemplateRenderer:
                 canv.setStrokeColor(colors.HexColor(stroke_hex))
             canv.setLineWidth(stroke_width)
         
-        # Circle center is at (x, y), radius is half width
+        # Circle center is at (x + radius, y - radius), radius is half width
         canv.circle(x + radius, y - radius, radius, fill=bool(fill and fill != 'transparent'), stroke=bool(stroke and stroke_width > 0))
         canv.restoreState()
     
@@ -925,6 +1011,18 @@ class ReportLabTemplateRenderer:
         style = element.get("style", {})
         stroke = style.get("stroke", element.get("stroke", "black"))
         stroke_width = style.get("strokeWidth", element.get("strokeWidth", 1)) or 1
+        
+        # Get page dimensions for boundary checking
+        page_width = getattr(self, 'page_width', 595)  # Default A4 width
+        
+        # Constrain line to page boundaries
+        # Ensure line doesn't extend beyond page
+        max_width = page_width - x
+        width = min(width, max_width)
+        
+        # Skip if line would be outside page boundaries
+        if width <= 0 or x >= page_width or y < 0 or y > page_height:
+            return
         
         canv.saveState()
         stroke_hex = _normalize_color(stroke)
