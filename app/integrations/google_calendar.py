@@ -71,6 +71,9 @@ class GoogleCalendarConnector(BaseConnector):
         """Exchange authorization code for tokens."""
         from app.models import Settings
 
+        # Allow scope changes (Google automatically adds openid, userinfo.email, userinfo.profile)
+        os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
+
         settings = Settings.get_settings()
         creds = settings.get_integration_credentials("google_calendar")
         client_id = creds.get("client_id") or os.getenv("GOOGLE_CLIENT_ID")
@@ -162,6 +165,9 @@ class GoogleCalendarConnector(BaseConnector):
 
     def test_connection(self) -> Dict[str, Any]:
         """Test connection to Google Calendar."""
+        if not self.credentials:
+            return {"success": False, "message": "No credentials available. Please connect the integration first."}
+        
         try:
             service = self._get_calendar_service()
             calendar_list = service.calendarList().list().execute()
@@ -187,6 +193,12 @@ class GoogleCalendarConnector(BaseConnector):
 
     def _get_calendar_service(self):
         """Get Google Calendar API service."""
+        if not self.credentials:
+            raise ValueError("No credentials available. Please connect the integration first.")
+        
+        if not self.credentials.access_token:
+            raise ValueError("No access token available. Please reconnect the integration.")
+        
         from app.models import Settings
         from app.utils.db import safe_commit
 
@@ -231,8 +243,11 @@ class GoogleCalendarConnector(BaseConnector):
             service = self._get_calendar_service()
 
             # Get sync direction from config
-            sync_direction = self.integration.config.get("sync_direction", "time_tracker_to_calendar")
+            # Default to bidirectional for better user experience (allows both directions)
+            sync_direction = self.integration.config.get("sync_direction", "bidirectional")
             calendar_id = self.integration.config.get("calendar_id", "primary")
+            
+            logger.info(f"Sync configuration: sync_direction='{sync_direction}', calendar_id='{calendar_id}', sync_type='{sync_type}'")
 
             # Initialize counters for both sync directions
             time_tracker_to_calendar_count = 0
@@ -329,12 +344,15 @@ class GoogleCalendarConnector(BaseConnector):
                 )
 
                 events = events_result.get("items", [])
-                logger.info(f"Fetched {len(events)} events from Google Calendar")
+                logger.info(f"Fetched {len(events)} events from Google Calendar (calendar_id: {calendar_id})")
+                
+                if len(events) == 0:
+                    logger.info("No events found in Google Calendar for the specified time range")
                 
                 # Reset counters for calendar-to-tracker sync (already initialized above)
                 imported = 0
                 skipped = 0
-                skipped_reasons = {"time_tracker_created": 0, "already_imported": 0, "invalid_time": 0, "other": 0}
+                skipped_reasons = {"time_tracker_created": 0, "already_imported": 0, "invalid_time": 0, "all_day": 0, "other": 0}
 
                 for event in events:
                     try:
@@ -356,7 +374,6 @@ class GoogleCalendarConnector(BaseConnector):
                             integration_id=self.integration.id,
                             external_uid=event_id
                         ).first()
-
                         if existing_link:
                             logger.debug(f"Event {event_id} ({event_summary}) already imported, skipping")
                             skipped += 1
@@ -369,12 +386,11 @@ class GoogleCalendarConnector(BaseConnector):
                         
                         start_str = start_data.get("dateTime")
                         end_str = end_data.get("dateTime")
-                        
                         # Skip all-day events (they only have "date", not "dateTime")
                         if not start_str or not end_str:
                             logger.debug(f"Skipping all-day event {event_id} ({event_summary}) - only timed events are imported")
                             skipped += 1
-                            skipped_reasons["other"] += 1
+                            skipped_reasons["all_day"] += 1
                             continue
 
                         # Parse datetime strings (Google Calendar returns ISO format with timezone)
@@ -450,15 +466,26 @@ class GoogleCalendarConnector(BaseConnector):
                         db.session.add(link)
 
                         imported += 1
-                        logger.info(f"Imported event {event_id} ({event_summary}) as time entry {time_entry.id}")
+                        logger.info(f"Imported event {event_id} ({event_summary}) as time entry {time_entry.id} (start: {start_time_local}, end: {end_time_local})")
                     except Exception as e:
                         error_msg = f"Error syncing calendar event {event.get('id', 'unknown')}: {str(e)}"
                         errors.append(error_msg)
                         logger.warning(f"{error_msg}", exc_info=True)
-                        logger.exception(f"Full exception details for event {event.get('id', 'unknown')}")
+                        skipped += 1
+                        skipped_reasons["other"] += 1
                 
-                if imported > 0 or skipped > 0:
-                    logger.info(f"Calendar→TimeTracker sync: imported={imported}, skipped={skipped} (reasons: {skipped_reasons}), total_events={len(events)}")
+                # Log detailed summary
+                logger.info(
+                    f"Calendar→TimeTracker sync completed: "
+                    f"total_events={len(events)}, imported={imported}, skipped={skipped} "
+                    f"(reasons: {dict(skipped_reasons)})"
+                )
+                
+                if imported == 0 and len(events) > 0:
+                    logger.warning(
+                        f"No events were imported despite {len(events)} events found. "
+                        f"Check skipped_reasons: {dict(skipped_reasons)}"
+                    )
 
             # Update last sync time
             self.integration.last_sync_at = now_in_app_timezone()

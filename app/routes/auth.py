@@ -17,7 +17,6 @@ from app.utils.db import safe_commit
 from app.utils.config_manager import ConfigManager
 from flask_babel import gettext as _
 from app import oauth, limiter
-from app.utils.posthog_segmentation import identify_user_with_segments, set_super_properties
 from app.utils.posthog_funnels import track_onboarding_started
 
 
@@ -303,11 +302,9 @@ def login():
             log_event("auth.login", user_id=user.id, auth_method=auth_method)
             track_event(user.id, "auth.login", {"auth_method": auth_method})
 
-            # Identify user with comprehensive segmentation properties
-            identify_user_with_segments(user.id, user)
-
-            # Set super properties (included in all events)
-            set_super_properties(user.id, user)
+            # Note: identify_user_with_segments and set_super_properties are deferred to dashboard
+            # to avoid blocking the login redirect. The dashboard calls update_user_segments_if_needed
+            # which has caching logic and will handle this efficiently.
 
             # Check if password change is required
             if user.password_change_required:
@@ -1024,11 +1021,9 @@ def oidc_callback():
         log_event("auth.login", user_id=user.id, auth_method="oidc")
         track_event(user.id, "auth.login", {"auth_method": "oidc"})
 
-        # Identify user with comprehensive segmentation properties
-        identify_user_with_segments(user.id, user)
-
-        # Set super properties (included in all events)
-        set_super_properties(user.id, user)
+        # Note: identify_user_with_segments and set_super_properties are deferred to dashboard
+        # to avoid blocking the OIDC redirect. The dashboard calls update_user_segments_if_needed
+        # which has caching logic and will handle this efficiently.
 
         # Redirect to intended page or dashboard
         next_page = session.pop("oidc_next", None) or request.args.get("next")

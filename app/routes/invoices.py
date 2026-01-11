@@ -1068,11 +1068,8 @@ def export_invoice_pdf(invoice_id):
         pdf_bytes = pdf_generator.generate_pdf()
         pdf_size_bytes = len(pdf_bytes)
         current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
-        # Get invoice prefix from settings, default to "INV"
-        prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
-        if not prefix:
-            prefix = "INV"
-        filename = f"{prefix}_{invoice.invoice_number}_{page_size}.pdf"
+        # Filename should be template+date+number (invoice number format)
+        filename = f"{invoice.invoice_number}.pdf"
         current_app.logger.info(f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', InvoiceID: {invoice_id}")
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except Exception as e:
@@ -1088,11 +1085,8 @@ def export_invoice_pdf(invoice_id):
             pdf_bytes = pdf_generator.generate_pdf()
             pdf_size_bytes = len(pdf_bytes)
             current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
-            # Get invoice prefix from settings, default to "INV"
-            prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
-            if not prefix:
-                prefix = "INV"
-            filename = f"{prefix}_{invoice.invoice_number}_{page_size}.pdf"
+            # Filename should be template+date+number (invoice number format)
+            filename = f"{invoice.invoice_number}.pdf"
             return send_file(
                 io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename
             )

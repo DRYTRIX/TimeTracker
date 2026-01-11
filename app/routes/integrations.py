@@ -111,8 +111,20 @@ def connect_integration(provider):
 
     # Generate state for CSRF protection
     state = secrets.token_urlsafe(32)
+    
+    # Store state in both session (for immediate access) and database (for persistence across redirects)
     session[f"integration_oauth_state_{integration.id}"] = state
-
+    
+    # Also store in database config field for per-user integrations to handle session expiration
+    if not is_global:
+        from datetime import datetime
+        if integration.config is None:
+            integration.config = {}
+        integration.config["oauth_state"] = state
+        integration.config["oauth_state_timestamp"] = datetime.utcnow().isoformat()
+        db.session.commit()
+        logger.debug(f"Stored OAuth state for integration {integration.id} (user {current_user.id})")
+    
     # Get authorization URL - automatically redirects to OAuth provider (Google, etc.)
     try:
         redirect_uri = url_for("integrations.oauth_callback", provider=provider, _external=True)
@@ -166,14 +178,48 @@ def oauth_callback(provider):
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
-    # Verify state
+    # Verify state - check both session and database (for per-user integrations)
     session_key = f"integration_oauth_state_{integration.id}"
     expected_state = session.get(session_key)
+    
+    # If not in session, check database config (for per-user integrations)
+    if not expected_state and not is_global and integration.config:
+        stored_state = integration.config.get("oauth_state")
+        state_timestamp_str = integration.config.get("oauth_state_timestamp")
+        
+        if stored_state and state_timestamp_str:
+            try:
+                from datetime import datetime
+                state_timestamp = datetime.fromisoformat(state_timestamp_str)
+                # State is valid for 10 minutes
+                time_diff = (datetime.utcnow() - state_timestamp).total_seconds()
+                if time_diff < 600:  # 10 minutes
+                    expected_state = stored_state
+                    logger.debug(f"Retrieved OAuth state from database for integration {integration.id}")
+                else:
+                    logger.warning(f"OAuth state expired for integration {integration.id} (age: {time_diff}s)")
+                    # Clean up expired state
+                    integration.config.pop("oauth_state", None)
+                    integration.config.pop("oauth_state_timestamp", None)
+                    db.session.commit()
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Error parsing OAuth state timestamp: {e}")
+    
     if not expected_state or state != expected_state:
-        flash(_("Invalid state parameter. Please try again."), "error")
+        logger.error(
+            f"Invalid state parameter for integration {integration.id}. "
+            f"Expected: {expected_state[:10] if expected_state else 'None'}..., "
+            f"Got: {state[:10] if state else 'None'}..."
+        )
+        flash(_("Invalid state parameter. Please try connecting again."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
+    # Clear state from both session and database
     session.pop(session_key, None)
+    if not is_global and integration.config:
+        integration.config.pop("oauth_state", None)
+        integration.config.pop("oauth_state_timestamp", None)
+        db.session.commit()
 
     # Get connector
     connector = service.get_connector(integration)
@@ -747,7 +793,10 @@ def reset_integration(integration_id):
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
-    result = service.reset_integration(integration_id, current_user.id)
+    # For per-user integrations, use the integration's user_id (not current_user.id for admins)
+    # For global integrations, use None (they're checked in reset_integration method)
+    user_id_for_reset = None if integration.is_global else integration.user_id
+    result = service.reset_integration(integration_id, user_id_for_reset)
 
     if result["success"]:
         flash(_("Integration reset successfully. You can now reconfigure it."), "success")

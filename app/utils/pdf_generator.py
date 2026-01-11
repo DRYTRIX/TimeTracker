@@ -340,28 +340,111 @@ class InvoicePDFGenerator:
         else:
             current_app.logger.warning(f"[PDF_EXPORT] Template JSON is empty or whitespace - PageSize: '{self.page_size}', TemplateID: {template.id}, TemplateJSONIsNone: {template_json_to_use is None}, TemplateJSONIsEmpty: {not template_json_to_use or not template_json_to_use.strip()}, RawQueryResult: {template_json_raw_from_db is not None if 'template_json_raw_from_db' in locals() else 'N/A'}, InvoiceID: {invoice_id}")
 
-        # If no JSON template exists, generate default JSON template for THIS export only
-        # CRITICAL: DO NOT save defaults to database - they would overwrite saved custom templates
+        # If no JSON template exists, ensure it's populated with default (will save to database if empty)
         if not template_json_dict:
-            debug_print(f"[DEBUG] No template JSON found, generating default JSON template for page size {self.page_size} (temporary, not saving to DB)")
-            current_app.logger.warning(
-                f"[PDF_EXPORT] No template JSON found, using default for THIS export only - PageSize: '{self.page_size}', "
-                f"TemplateID: {template.id}, InvoiceID: {invoice_id}. "
-                f"WARNING: This default will NOT be saved to prevent overwriting custom templates."
-            )
-            from app.utils.pdf_template_schema import get_default_template
-            
-            template_json_dict = get_default_template(self.page_size)
-            element_count = len(template_json_dict.get("elements", []))
-            debug_print(f"[DEBUG] Generated default template JSON with {element_count} elements (temporary, not persisted)")
+            debug_print(f"[DEBUG] No template JSON found, ensuring default template JSON for page size {self.page_size}")
             current_app.logger.info(
-                f"[PDF_EXPORT] Generated default template JSON (temporary) - PageSize: '{self.page_size}', "
-                f"Elements: {element_count}, InvoiceID: {invoice_id}. "
-                f"Note: Default template is used for this export only and NOT saved to database."
+                f"[PDF_EXPORT] Template JSON is empty, ensuring default template - PageSize: '{self.page_size}', "
+                f"TemplateID: {template.id}, InvoiceID: {invoice_id}"
             )
             
-            # DO NOT save default template to database - it would overwrite saved custom templates
-            # If user wants defaults, they should explicitly save a template in the editor
+            # Call ensure_template_json() which will populate with default if empty/invalid
+            # This saves the default to the database, so it's available for future exports
+            # It only saves if template_json is truly empty/invalid, not if it's a valid custom template
+            template.ensure_template_json()
+            
+            # Re-query template_json from database to get the updated value (avoid ORM caching)
+            db.session.expire(template)
+            result_updated = db.session.execute(
+                text("SELECT template_json FROM invoice_pdf_templates WHERE id = :template_id"),
+                {"template_id": template.id}
+            ).first()
+            
+            if result_updated and result_updated[0]:
+                template_json_to_use = result_updated[0]
+                try:
+                    template_json_dict = json.loads(template_json_to_use)
+                    element_count = len(template_json_dict.get("elements", []))
+                    debug_print(f"[DEBUG] Retrieved default template JSON with {element_count} elements (saved to DB)")
+                    current_app.logger.info(
+                        f"[PDF_EXPORT] Default template JSON retrieved from database - PageSize: '{self.page_size}', "
+                        f"Elements: {element_count}, InvoiceID: {invoice_id}"
+                    )
+                except Exception as e:
+                    current_app.logger.error(f"[PDF_EXPORT] Failed to parse template JSON after ensure_template_json() - PageSize: '{self.page_size}', Error: {str(e)}, InvoiceID: {invoice_id}", exc_info=True)
+                    # Fall back to generating default in memory if parsing fails
+                    from app.utils.pdf_template_schema import get_default_template
+                    template_json_dict = get_default_template(self.page_size)
+            else:
+                # Fallback: generate default in memory if ensure_template_json() didn't work
+                current_app.logger.warning(f"[PDF_EXPORT] ensure_template_json() didn't populate template_json, using in-memory default - PageSize: '{self.page_size}', TemplateID: {template.id}, InvoiceID: {invoice_id}")
+                from app.utils.pdf_template_schema import get_default_template
+                template_json_dict = get_default_template(self.page_size)
+        else:
+            # CRITICAL: Ensure template page size and dimensions match the requested page size
+            # This fixes layout issues when templates were customized but dimensions don't match
+            template_page_config = template_json_dict.get("page", {})
+            template_page_size = template_page_config.get("size", self.page_size)
+            
+            if template_page_size != self.page_size:
+                current_app.logger.warning(
+                    f"[PDF_EXPORT] Template page size mismatch - TemplatePageSize: '{template_page_size}', "
+                    f"RequestedPageSize: '{self.page_size}', InvoiceID: {invoice_id}. "
+                    f"Updating template to match requested page size."
+                )
+                # Update template page size to match requested size
+                template_page_config["size"] = self.page_size
+                template_json_dict["page"] = template_page_config
+            
+            # Ensure page dimensions are correct for the requested page size
+            from app.utils.pdf_template_schema import PAGE_SIZE_DIMENSIONS_MM
+            if self.page_size in PAGE_SIZE_DIMENSIONS_MM:
+                expected_dims = PAGE_SIZE_DIMENSIONS_MM[self.page_size]
+                current_width = template_page_config.get("width")
+                current_height = template_page_config.get("height")
+                
+                if current_width != expected_dims["width"] or current_height != expected_dims["height"]:
+                    current_app.logger.info(
+                        f"[PDF_EXPORT] Correcting template page dimensions - PageSize: '{self.page_size}', "
+                        f"Old: {current_width}x{current_height}mm, New: {expected_dims['width']}x{expected_dims['height']}mm, InvoiceID: {invoice_id}"
+                    )
+                    template_page_config["width"] = expected_dims["width"]
+                    template_page_config["height"] = expected_dims["height"]
+                    template_json_dict["page"] = template_page_config
+            
+            # Update element positions if they exceed page bounds (due to page size change)
+            # This helps fix layout issues when switching between page sizes
+            if template_page_size != self.page_size:
+                page_dims = PAGE_SIZE_DIMENSIONS_MM.get(self.page_size, {"width": 210, "height": 297})
+                page_width_pt = (page_dims["width"] / 25.4) * 72  # Convert mm to points
+                page_height_pt = (page_dims["height"] / 25.4) * 72
+                
+                elements = template_json_dict.get("elements", [])
+                adjusted_count = 0
+                for element in elements:
+                    x = element.get("x", 0)
+                    y = element.get("y", 0)
+                    width = element.get("width", 0)
+                    height = element.get("height", 0)
+                    
+                    # Check if element is outside page bounds
+                    if x + width > page_width_pt or y + height > page_height_pt:
+                        # Scale element to fit within page (proportional scaling)
+                        if x + width > page_width_pt:
+                            scale_x = (page_width_pt - 20) / (x + width)  # Leave 20pt margin
+                            element["x"] = x * scale_x
+                            element["width"] = width * scale_x
+                            adjusted_count += 1
+                        if y + height > page_height_pt:
+                            scale_y = (page_height_pt - 20) / (y + height)  # Leave 20pt margin
+                            element["y"] = y * scale_y
+                            element["height"] = height * scale_y
+                            adjusted_count += 1
+                
+                if adjusted_count > 0:
+                    current_app.logger.info(
+                        f"[PDF_EXPORT] Adjusted {adjusted_count} elements to fit page size '{self.page_size}' - InvoiceID: {invoice_id}"
+                    )
 
         # Always use ReportLab template renderer with JSON
         debug_print(f"[DEBUG] Using ReportLab template renderer for page size {self.page_size}")
@@ -1571,28 +1654,46 @@ class QuotePDFGenerator:
             reason = "template_json is None" if template_json_to_use is None else "template_json is empty or whitespace"
             current_app.logger.warning(f"[PDF_EXPORT] Quote template JSON is empty/whitespace - PageSize: '{self.page_size}', TemplateID: {template.id}, Reason: {reason}, TemplateJSONLength: {len(template_json_to_use) if template_json_to_use else 0}, QuoteID: {quote_id}")
 
-        # If no JSON template exists, generate default JSON template for THIS export only
-        # CRITICAL: DO NOT save defaults to database - they would overwrite saved custom templates
+        # If no JSON template exists, ensure it's populated with default (will save to database if empty)
         if not template_json_dict:
-            debug_print(f"[DEBUG] No template JSON found, generating default JSON template for page size {self.page_size} (temporary, not saving to DB)")
-            current_app.logger.warning(
-                f"[PDF_EXPORT] No quote template JSON found, using default for THIS export only - PageSize: '{self.page_size}', "
-                f"TemplateID: {template.id}, QuoteID: {quote_id}. "
-                f"WARNING: This default will NOT be saved to prevent overwriting custom templates."
-            )
-            from app.utils.pdf_template_schema import get_default_template
-            
-            template_json_dict = get_default_template(self.page_size)
-            element_count = len(template_json_dict.get("elements", []))
-            debug_print(f"[DEBUG] Generated default template JSON with {element_count} elements (temporary, not persisted)")
+            debug_print(f"[DEBUG] No quote template JSON found, ensuring default template JSON for page size {self.page_size}")
             current_app.logger.info(
-                f"[PDF_EXPORT] Generated default quote template JSON (temporary) - PageSize: '{self.page_size}', "
-                f"Elements: {element_count}, QuoteID: {quote_id}. "
-                f"Note: Default template is used for this export only and NOT saved to database."
+                f"[PDF_EXPORT] Quote template JSON is empty, ensuring default template - PageSize: '{self.page_size}', "
+                f"TemplateID: {template.id}, QuoteID: {quote_id}"
             )
             
-            # DO NOT save default template to database - it would overwrite saved custom templates
-            # If user wants defaults, they should explicitly save a template in the editor
+            # Call ensure_template_json() which will populate with default if empty/invalid
+            # This saves the default to the database, so it's available for future exports
+            # It only saves if template_json is truly empty/invalid, not if it's a valid custom template
+            template.ensure_template_json()
+            
+            # Re-query template_json from database to get the updated value (avoid ORM caching)
+            db.session.expire(template)
+            result_updated = db.session.execute(
+                text("SELECT template_json FROM quote_pdf_templates WHERE id = :template_id"),
+                {"template_id": template.id}
+            ).first()
+            
+            if result_updated and result_updated[0]:
+                template_json_to_use = result_updated[0]
+                try:
+                    template_json_dict = json.loads(template_json_to_use)
+                    element_count = len(template_json_dict.get("elements", []))
+                    debug_print(f"[DEBUG] Retrieved default quote template JSON with {element_count} elements (saved to DB)")
+                    current_app.logger.info(
+                        f"[PDF_EXPORT] Default quote template JSON retrieved from database - PageSize: '{self.page_size}', "
+                        f"Elements: {element_count}, QuoteID: {quote_id}"
+                    )
+                except Exception as e:
+                    current_app.logger.error(f"[PDF_EXPORT] Failed to parse quote template JSON after ensure_template_json() - PageSize: '{self.page_size}', Error: {str(e)}, QuoteID: {quote_id}", exc_info=True)
+                    # Fall back to generating default in memory if parsing fails
+                    from app.utils.pdf_template_schema import get_default_template
+                    template_json_dict = get_default_template(self.page_size)
+            else:
+                # Fallback: generate default in memory if ensure_template_json() didn't work
+                current_app.logger.warning(f"[PDF_EXPORT] ensure_template_json() didn't populate quote template_json, using in-memory default - PageSize: '{self.page_size}', TemplateID: {template.id}, QuoteID: {quote_id}")
+                from app.utils.pdf_template_schema import get_default_template
+                template_json_dict = get_default_template(self.page_size)
 
         # Always use ReportLab template renderer with JSON
         debug_print(f"[DEBUG] Using ReportLab template renderer for page size {self.page_size}")
