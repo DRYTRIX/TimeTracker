@@ -14,11 +14,15 @@
 </div>
 
 <!-- Hero -->
-<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-8 rounded-lg shadow mb-8 text-center">
-    <h2 class="text-xl font-semibold mb-2">TimeTracker</h2>
-    <p class="text-text-muted-light dark:text-text-muted-dark max-w-2xl mx-auto">
-        {{ _('A comprehensive web-based time tracking application built with Flask, featuring project management, client organization, task management, invoicing, and advanced analytics.') }}
-    </p>
+<div class="bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/5 dark:from-primary/20 dark:via-secondary/20 dark:to-primary/10 border border-border-light dark:border-border-dark p-8 rounded-lg shadow-lg mb-8 text-center relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+    <div class="absolute bottom-0 left-0 w-64 h-64 bg-secondary/5 rounded-full blur-3xl -ml-32 -mb-32"></div>
+    <div class="relative z-10">
+        <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-32 h-32 mx-auto mb-6 drop-shadow-lg">
+        <h2 class="text-3xl font-bold mb-3 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</h2>
+        <p class="text-text-muted-light dark:text-text-muted-dark max-w-2xl mx-auto text-lg">
+            {{ _('A comprehensive web-based time tracking application built with Flask, featuring project management, client organization, task management, invoicing, and advanced analytics.') }}
+        </p>
 
     <div class="flex flex-wrap gap-2 mt-4 justify-center">
         <span class="px-3 py-1 rounded-full border border-primary text-primary">

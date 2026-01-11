@@ -2792,6 +2792,8 @@ function initializePDFEditor() {
                 // Filter out grid lines and page border - they should not be included in the exported template
                 if (child.className === 'Line' && child.attrs.name === 'grid-line') return;
                 if (child.className === 'Rect' && child.attrs.name === 'page-border') return;
+                // Filter out warning indicator dots - they should not be included in the exported template
+                if (child.className === 'Circle' && child.attrs.name === 'warning-indicator') return;
                 
                 const attrs = child.attrs;
                 const x = Math.round(attrs.x || 0);

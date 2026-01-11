@@ -22,11 +22,19 @@
 <body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
     <div class="min-h-screen flex items-center justify-center px-4">
         <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-0 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
-            <div class="hidden md:flex items-center justify-center p-10 bg-background-light dark:bg-background-dark">
+            <div class="hidden md:flex items-center justify-center p-10 bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20">
                 <div class="text-center">
-                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
-                    <h1 class="text-3xl font-bold mt-4 text-primary">TimeTracker</h1>
-                    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
+                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-32 h-32 mx-auto mb-6 drop-shadow-lg animate-pulse">
+                    <h1 class="text-4xl font-bold mt-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</h1>
+                    <p class="mt-3 text-lg text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
+                    <div class="mt-6 flex flex-wrap gap-2 justify-center">
+                        <span class="px-3 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">
+                            <i class="fas fa-clock mr-1"></i>{{ _('Time Tracking') }}
+                        </span>
+                        <span class="px-3 py-1 rounded-full text-xs bg-secondary/10 text-secondary border border-secondary/20">
+                            <i class="fas fa-project-diagram mr-1"></i>{{ _('Projects') }}
+                        </span>
+                    </div>
                 </div>
             </div>
             <div class="p-8">

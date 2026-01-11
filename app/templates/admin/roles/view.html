@@ -16,7 +16,7 @@
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ role.description or _('No description') }}</p>
     </div>
     <div class="flex gap-2 mt-4 md:mt-0">
-        {% if not role.is_system_role and (current_user.is_admin or has_permission('manage_roles')) %}
+        {% if current_user.is_admin or has_permission('manage_roles') %}
         <a href="{{ url_for('permissions.edit_role', role_id=role.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Edit Role') }}</a>
         {% endif %}
     </div>

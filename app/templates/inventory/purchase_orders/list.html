@@ -12,7 +12,7 @@
     title_text='Purchase Orders',
     subtitle_text='Manage purchase orders to suppliers',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("inventory.new_purchase_order") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Purchase Order</a>' if (current_user.is_admin or has_permission('manage_inventory')) else None
+    actions_html='<a href="' + url_for("inventory.new_purchase_order") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Purchase Order</a>' if (current_user.is_admin or has_permission('manage_purchase_orders')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">

@@ -6,11 +6,29 @@
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Professional time tracking and project management">
-    <meta name="theme-color" content="#3b82f6">
+    <meta name="theme-color" content="#4A90E2">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}{{ app_name }} - Professional Time Tracking{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Professional time tracking and project management application{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='images/og-image.png', _external=True) }}{% endblock %}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:site_name" content="{{ app_name }}">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ app_name }} - Professional Time Tracking{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Professional time tracking and project management application{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ url_for('static', filename='images/og-image.png', _external=True) }}{% endblock %}">
+    
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='images/android-chrome-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='images/android-chrome-512x512.png') }}">
     <!--
     PostHog Session Replay Privacy Protection:
     Add the CSS class 'ph-no-capture' to any element containing sensitive data
@@ -28,6 +46,7 @@
     <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
     <meta name="vapid-public-key" content="{{ config.get('VAPID_PUBLIC_KEY', '') }}">
     <script src="{{ url_for('static', filename='pwa-enhancements.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-colors.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -643,11 +662,13 @@
                         </button>
                         <ul id="adminDropdown" class="{% if not admin_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             <!-- Dashboard -->
+                            {% if current_user.is_admin %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.admin_dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.admin_dashboard') }}">
                                     <i class="fas fa-tachometer-alt w-4 mr-2"></i>{{ _('Admin Dashboard') }}
                                 </a>
                             </li>
+                            {% endif %}
                             
                             <!-- User Management Submenu -->
                             {% if current_user.is_admin or has_permission('view_users') %}

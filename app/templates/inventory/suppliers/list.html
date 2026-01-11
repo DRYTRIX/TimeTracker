@@ -12,7 +12,7 @@
     title_text='Suppliers',
     subtitle_text='Manage suppliers and vendors',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("inventory.new_supplier") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Supplier</a>' if (current_user.is_admin or has_permission('manage_inventory')) else None
+    actions_html='<a href="' + url_for("inventory.new_supplier") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Supplier</a>' if (current_user.is_admin or has_permission('manage_suppliers')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
@@ -82,7 +82,7 @@
                     <a href="{{ url_for('inventory.view_supplier', supplier_id=supplier.id) }}" class="text-primary hover:underline mr-3">
                         <i class="fas fa-eye"></i>
                     </a>
-                    {% if current_user.is_admin or has_permission('manage_inventory') %}
+                    {% if current_user.is_admin or has_permission('manage_suppliers') %}
                     <a href="{{ url_for('inventory.edit_supplier', supplier_id=supplier.id) }}" class="text-primary hover:underline">
                         <i class="fas fa-edit"></i>
                     </a>

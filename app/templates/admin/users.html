@@ -12,7 +12,7 @@
     title_text='Manage Users',
     subtitle_text='Add, edit, or remove user accounts',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("admin.create_user") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create User</a>'
+    actions_html='<a href="' + url_for("admin.create_user") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create User</a>' if (current_user.is_admin or has_permission('create_users')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
@@ -73,9 +73,13 @@
                 </td>
                 <td class="p-4">
                     <div class="flex gap-2">
+                        {% if current_user.is_admin or has_permission('edit_users') %}
                         <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>
+                        {% endif %}
+                        {% if current_user.is_admin or has_permission('manage_user_roles') %}
                         <a href="{{ url_for('permissions.manage_user_roles', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('Roles') }}</a>
-                        {% if user.id != current_user.id %}
+                        {% endif %}
+                        {% if user.id != current_user.id and (current_user.is_admin or has_permission('delete_users')) %}
                         <button type="button" onclick="confirmDeleteUser('{{ user.id }}', '{{ user.username }}', {{ user.time_entries.count() }})" class="text-red-600 hover:text-red-800 text-sm">{{ _('Delete') }}</button>
                         <form id="deleteUserForm-{{ user.id }}" method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="hidden">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
