@@ -230,13 +230,21 @@ DEFAULT_ROLES = {
             "create_saved_reports",
             # Users
             "view_users",
+            "create_users",
+            "edit_users",
+            "delete_users",
+            "manage_user_roles",
             # Issues
             "view_all_issues",
+            "view_own_issues",
             "create_issues",
             "edit_all_issues",
+            "edit_own_issues",
+            "delete_issues",
             # Inventory
             "view_inventory",
             "manage_stock_items",
+            "manage_warehouses",
             "view_stock_levels",
             "manage_stock_movements",
             "transfer_stock",
@@ -244,6 +252,8 @@ DEFAULT_ROLES = {
             "manage_stock_reservations",
             "view_inventory_reports",
             "approve_stock_adjustments",
+            "manage_suppliers",
+            "manage_purchase_orders",
         ],
     },
     "user": {
@@ -326,11 +336,13 @@ def seed_permissions():
         return False
 
 
-def seed_roles():
+def seed_roles(silent=False):
     """Seed default roles with their permissions"""
-    print("Seeding roles...")
+    if not silent:
+        print("Seeding roles...")
     created_count = 0
     existing_count = 0
+    updated_count = 0
 
     for role_name, role_data in DEFAULT_ROLES.items():
         # Check if role already exists
@@ -355,14 +367,32 @@ def seed_roles():
             permission = Permission.query.filter_by(name=perm_name).first()
             if permission and not role.has_permission(perm_name):
                 role.add_permission(permission)
+                updated_count += 1
 
     try:
         db.session.commit()
-        print(f"Roles seeded: {created_count} created, {existing_count} already existed")
+        if not silent and updated_count > 0:
+            print(f"Roles seeded: {created_count} created, {existing_count} already existed, {updated_count} permissions added")
+        elif not silent:
+            print(f"Roles seeded: {created_count} created, {existing_count} already existed")
         return True
     except IntegrityError as e:
         db.session.rollback()
-        print(f"Error seeding roles: {e}")
+        if not silent:
+            print(f"Error seeding roles: {e}")
+        return False
+
+
+def sync_permissions_and_roles():
+    """Synchronize permissions and roles - ensures all permissions exist and roles have correct permissions"""
+    try:
+        # First ensure all permissions exist
+        seed_permissions()
+        # Then ensure all roles have correct permissions
+        seed_roles(silent=True)
+        return True
+    except Exception as e:
+        print(f"Error syncing permissions and roles: {e}")
         return False
 
 

@@ -7,6 +7,7 @@ from app import db, limiter
 from app.models import Permission, Role, User
 from app.routes.admin import admin_required
 from app.utils.db import safe_commit
+from app.utils.permissions_seed import sync_permissions_and_roles
 from sqlalchemy.exc import IntegrityError
 
 permissions_bp = Blueprint("permissions", __name__)
@@ -21,6 +22,9 @@ def list_roles():
     if not current_user.is_admin and not current_user.has_permission("view_permissions"):
         flash(_("You do not have permission to access this page"), "error")
         return redirect(url_for("main.dashboard"))
+
+    # Auto-sync permissions and roles to ensure they're up to date
+    sync_permissions_and_roles()
 
     roles = Role.query.order_by(Role.name).all()
     return render_template("admin/roles/list.html", roles=roles)
@@ -84,17 +88,17 @@ def edit_role(role_id):
 
     role = Role.query.get_or_404(role_id)
 
-    # Prevent editing system roles
-    if role.is_system_role:
-        flash(_("System roles cannot be edited"), "warning")
-        return redirect(url_for("permissions.view_role", role_id=role.id))
-
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
 
         if not name:
             flash(_("Role name is required"), "error")
+            return render_template("admin/roles/form.html", role=role, all_permissions=Permission.query.all())
+
+        # For system roles, don't allow name changes (name is the identifier)
+        if role.is_system_role and name != role.name:
+            flash(_("System role names cannot be changed"), "error")
             return render_template("admin/roles/form.html", role=role, all_permissions=Permission.query.all())
 
         # Check if name is taken by another role
@@ -104,7 +108,8 @@ def edit_role(role_id):
             return render_template("admin/roles/form.html", role=role, all_permissions=Permission.query.all())
 
         # Update role
-        role.name = name
+        if not role.is_system_role:
+            role.name = name
         role.description = description
 
         # Update permissions
@@ -124,7 +129,8 @@ def edit_role(role_id):
         flash(_("Role updated successfully"), "success")
         return redirect(url_for("permissions.view_role", role_id=role.id))
 
-    # GET request
+    # GET request - auto-sync before showing form
+    sync_permissions_and_roles()
     all_permissions = Permission.query.order_by(Permission.category, Permission.name).all()
     return render_template("admin/roles/form.html", role=role, all_permissions=all_permissions)
 
@@ -187,6 +193,9 @@ def list_permissions():
     if not current_user.is_admin and not current_user.has_permission("view_permissions"):
         flash(_("You do not have permission to access this page"), "error")
         return redirect(url_for("main.dashboard"))
+
+    # Auto-sync permissions and roles to ensure they're up to date
+    sync_permissions_and_roles()
 
     # Group permissions by category
     permissions = Permission.query.order_by(Permission.category, Permission.name).all()
