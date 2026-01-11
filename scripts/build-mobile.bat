@@ -6,6 +6,17 @@ set SCRIPT_DIR=%~dp0
 set PROJECT_ROOT=%SCRIPT_DIR%..
 set MOBILE_DIR=%PROJECT_ROOT%\mobile
 
+cd /d "%PROJECT_ROOT%"
+
+REM Sync version from setup.py to mobile app
+echo Syncing version from setup.py...
+python "%SCRIPT_DIR%sync-mobile-version.py"
+if errorlevel 1 (
+    echo ERROR: Failed to sync version
+    exit /b 1
+)
+echo.
+
 cd /d "%MOBILE_DIR%"
 
 echo Building TimeTracker Mobile App...

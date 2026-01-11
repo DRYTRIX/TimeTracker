@@ -29,10 +29,14 @@ jobs:
       
       - name: Build Windows
         working-directory: desktop
+        env:
+          # Code signing (optional - only signs if secrets are configured)
+          CSC_LINK: ${{ secrets.WINDOWS_CODE_SIGN_CERT }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODE_SIGN_PASSWORD }}
         run: npm run build:win
       
       - name: Upload Windows installer
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-installer
           path: desktop/dist/*.exe
@@ -56,10 +60,11 @@ jobs:
         run: npm run build:linux
       
       - name: Upload Linux packages
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-packages
-          path: desktop/dist/*.AppImage
+          path: |
+            desktop/dist/*.AppImage
             desktop/dist/*.deb
 
   build-macos:
@@ -81,7 +86,7 @@ jobs:
         run: npm run build:mac
       
       - name: Upload macOS DMG
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
           path: desktop/dist/*.dmg
