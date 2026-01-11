@@ -89,11 +89,12 @@ class RedisCache:
                 password=password,
                 db=int(parsed.path.lstrip("/")) if parsed.path else 0,
                 decode_responses=False,  # We'll handle serialization ourselves
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                retry_on_timeout=True,
+                socket_connect_timeout=1,  # Fast fail - don't block requests
+                socket_timeout=1,  # Fast timeout for operations
+                socket_keepalive=False,  # Disable keepalive to avoid delays
+                retry_on_timeout=False,  # Don't retry on timeout
             )
-            # Test connection
+            # Test connection with short timeout
             self._client.ping()
             self._connected = True
         except Exception as e:
