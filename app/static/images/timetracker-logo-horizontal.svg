@@ -1,0 +1,26 @@
+<svg width="800" height="200" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-horizontal" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4A90E2"/>
+      <stop offset="100%" stop-color="#50E3C2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon part (square) -->
+  <rect x="20" y="20" width="160" height="160" rx="40" ry="40" fill="url(#grad-horizontal)"/>
+  
+  <!-- Clock circle -->
+  <circle cx="100" cy="100" r="60" fill="none" stroke="white" stroke-width="12"/>
+  
+  <!-- Clock hour marks -->
+  <line x1="100" y1="50" x2="100" y2="60" stroke="white" stroke-width="8"/>
+  <line x1="100" y1="140" x2="100" y2="150" stroke="white" stroke-width="8"/>
+  <line x1="50" y1="100" x2="60" y2="100" stroke="white" stroke-width="8"/>
+  <line x1="140" y1="100" x2="150" y2="100" stroke="white" stroke-width="8"/>
+  
+  <!-- Checkmark -->
+  <path d="M 75 105 L 100 130 L 145 85" fill="none" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Text -->
+  <text x="200" y="120" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="url(#grad-horizontal)">TimeTracker</text>
+</svg>
