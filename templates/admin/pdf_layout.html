@@ -1235,6 +1235,9 @@
                             <option value="Tabloid" {% if page_size == 'Tabloid' %}selected{% endif %}>Tabloid</option>
                         {% endif %}
                     </select>
+                    <div class="page-size-help" style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">
+                        The blue border marks the page boundaries. Zoom changes the view, not the page size.
+                    </div>
                 </div>
                 <div class="canvas-toolbar">
                     <button type="button" id="btn-zoom-in" title="{{ _('Zoom In') }}">
@@ -1243,6 +1246,7 @@
                     <button type="button" id="btn-zoom-out" title="{{ _('Zoom Out') }}">
                         <i class="fas fa-search-minus"></i>
                     </button>
+                    <span id="zoom-display" style="margin-left: 10px; font-size: 0.875rem; color: #6b7280; align-self: center;"></span>
                     <button type="button" id="btn-delete" title="{{ _('Delete Selected') }}">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -1430,7 +1434,11 @@ function checkOverlaps(element, allElements) {
     
     for (let i = 0; i < allElements.length; i++) {
         const otherElement = allElements[i];
-        if (otherElement === element || otherElement === background || otherElement.className === 'Transformer') {
+        const elementName = otherElement.attrs && otherElement.attrs.name;
+        if (otherElement === element || 
+            elementName === 'background' || 
+            elementName === 'page-border' ||
+            otherElement.className === 'Transformer') {
             continue;
         }
         
@@ -1599,6 +1607,22 @@ function initializePDFEditor() {
     });
     layer.add(background);
     
+    // Add page border to clearly mark page boundaries
+    let pageBorder = new Konva.Rect({
+        x: 0,
+        y: 0,
+        width: backgroundWidth,
+        height: backgroundHeight,
+        stroke: '#667eea',  // Blue border matching the UI theme
+        strokeWidth: 2,
+        fill: 'transparent',
+        name: 'page-border',
+        listening: false,  // Don't interfere with interactions
+        perfectDrawEnabled: false  // Better performance
+    });
+    layer.add(pageBorder);
+    pageBorder.moveToBottom();  // Keep it behind content but visible
+    
     // Add grid lines
     function drawGrid() {
         // Get current page size dimensions dynamically (not scaled stage dimensions)
@@ -1639,6 +1663,14 @@ function initializePDFEditor() {
         
         if (background) {
             background.moveToBottom();
+        }
+        // Keep page border behind content but above background
+        const pageBorderInGrid = layer.findOne('[name="page-border"]');
+        if (pageBorderInGrid) {
+            pageBorderInGrid.moveToBottom();
+            if (background) {
+                background.moveToBottom();
+            }
         }
         layer.draw();
     }
@@ -2904,6 +2936,27 @@ function initializePDFEditor() {
         if (confirmed) {
             layer.destroyChildren();
             layer.add(background);
+            // Re-add page border after clearing
+            const pageBorderAfterClear = layer.findOne('[name="page-border"]');
+            if (!pageBorderAfterClear) {
+                const currentPageSizeSelector = document.getElementById('page-size-selector');
+                const currentPageSize = (currentPageSizeSelector && currentPageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+                const currentDimensions = PAGE_SIZE_DIMENSIONS[currentPageSize] || PAGE_SIZE_DIMENSIONS['A4'];
+                const newPageBorder = new Konva.Rect({
+                    x: 0,
+                    y: 0,
+                    width: currentDimensions.width,
+                    height: currentDimensions.height,
+                    stroke: '#667eea',
+                    strokeWidth: 2,
+                    fill: 'transparent',
+                    name: 'page-border',
+                    listening: false,
+                    perfectDrawEnabled: false
+                });
+                layer.add(newPageBorder);
+                newPageBorder.moveToBottom();
+            }
             elements.length = 0;
             selectedElement = null;
             layer.draw();
@@ -2911,16 +2964,32 @@ function initializePDFEditor() {
     });
     
     // Zoom controls (zoom scale is declared above with baseFitScale)
+    const zoomDisplay = document.getElementById('zoom-display');
+    
+    function updateZoomDisplay() {
+        if (zoomDisplay) {
+            const percentage = Math.round((baseFitScale * zoomScale) * 100);
+            zoomDisplay.textContent = `${percentage}%`;
+        }
+    }
+    
+    // Initialize zoom display after initial fit
+    setTimeout(() => {
+        updateZoomDisplay();
+    }, 150);
+    
     document.getElementById('btn-zoom-in').addEventListener('click', function() {
         zoomScale = Math.min(zoomScale + 0.1, 2);
         stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
         layer.draw();
+        updateZoomDisplay();
     });
     
     document.getElementById('btn-zoom-out').addEventListener('click', function() {
         zoomScale = Math.max(zoomScale - 0.1, 0.5);
         stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
         layer.draw();
+        updateZoomDisplay();
     });
     
     // Generate preview
@@ -3061,8 +3130,9 @@ function initializePDFEditor() {
             layer.children.forEach((child, index) => {
                 if (!child || child === background || child.className === 'Transformer') return;
                 
-                // Filter out grid lines - they should not be included in the exported template
+                // Filter out grid lines and page border - they should not be included in the exported template
                 if (child.className === 'Line' && child.attrs.name === 'grid-line') return;
+                if (child.className === 'Rect' && child.attrs.name === 'page-border') return;
                 
                 const attrs = child.attrs;
                 const x = Math.round(attrs.x || 0);
@@ -3840,6 +3910,29 @@ table tr:last-child td {
                     background.moveToBottom();
                 }
                 
+                // Update page border to match new dimensions
+                const pageBorder = layer.findOne('[name="page-border"]');
+                if (pageBorder) {
+                    pageBorder.width(dimensions.width);
+                    pageBorder.height(dimensions.height);
+                } else {
+                    // Create page border if it doesn't exist
+                    const newPageBorder = new Konva.Rect({
+                        x: 0,
+                        y: 0,
+                        width: dimensions.width,
+                        height: dimensions.height,
+                        stroke: '#667eea',
+                        strokeWidth: 2,
+                        fill: 'transparent',
+                        name: 'page-border',
+                        listening: false,
+                        perfectDrawEnabled: false
+                    });
+                    layer.add(newPageBorder);
+                    newPageBorder.moveToBottom();
+                }
+                
                 // Update width and height variables for fit function
                 width = dimensions.width;
                 height = dimensions.height;
@@ -3962,11 +4055,12 @@ table tr:last-child td {
                     });
                 }
                 
-                // Re-setup selections for all elements (skip background and grid lines)
+                // Re-setup selections for all elements (skip background, grid lines, and page border)
                 layer.children.forEach(child => {
                     if (child !== background && 
                         child.className !== 'Transformer' && 
-                        !(child.className === 'Line' && child.attrs.name === 'grid-line')) {
+                        !(child.className === 'Line' && child.attrs.name === 'grid-line') &&
+                        !(child.className === 'Rect' && child.attrs.name === 'page-border')) {
                         // Skip logo images as they're handled above
                         if (child.className === 'Image' && child.attrs.name === 'logo') {
                             return;
@@ -4113,9 +4207,12 @@ table tr:last-child td {
         totalHighlight.strokeWidth(1);
         
         addElement('totals', 395, 570);
-        const totalText = layer.children[layer.children.length - 1];
-        totalText.fill('white');
-        totalText.fontStyle('bold');
+        // Find the totals text element by name
+        const totalText = layer.findOne('[name="totals"]');
+        if (totalText && totalText.className === 'Text') {
+            totalText.fill('white');
+            totalText.fontStyle('bold');
+        }
         
         // ========== PAYMENT SECTION ==========
         const paymentLabel = new Konva.Text({
