@@ -795,12 +795,215 @@ jobs:
             k8s-deployment.yml
 
   # ============================================================================
+  # Build Desktop Applications
+  # ============================================================================
+  build-desktop-windows:
+    name: Build Desktop - Windows
+    runs-on: windows-latest
+    needs: [determine-version]
+    continue-on-error: true
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+      
+      - name: Build Windows
+        working-directory: desktop
+        run: npm run build:win
+      
+      - name: Upload Windows installer
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-${{ needs.determine-version.outputs.version }}
+          path: desktop/dist/*.exe
+          retention-days: 90
+
+  build-desktop-linux:
+    name: Build Desktop - Linux
+    runs-on: ubuntu-latest
+    needs: [determine-version]
+    continue-on-error: true
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+      
+      - name: Build Linux
+        working-directory: desktop
+        run: npm run build:linux
+      
+      - name: Upload Linux packages
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-${{ needs.determine-version.outputs.version }}
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+          retention-days: 90
+
+  build-desktop-macos:
+    name: Build Desktop - macOS
+    runs-on: macos-latest
+    needs: [determine-version]
+    continue-on-error: true
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+      
+      - name: Build macOS
+        working-directory: desktop
+        run: npm run build:mac
+      
+      - name: Upload macOS DMG
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-${{ needs.determine-version.outputs.version }}
+          path: desktop/dist/*.dmg
+          retention-days: 90
+
+  # ============================================================================
+  # Build Mobile Applications
+  # ============================================================================
+  build-mobile-android:
+    name: Build Mobile - Android
+    runs-on: ubuntu-latest
+    needs: [determine-version]
+    continue-on-error: true
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+      
+      - name: Build APK
+        working-directory: mobile
+        run: flutter build apk --release
+      
+      - name: Build App Bundle
+        working-directory: mobile
+        run: flutter build appbundle --release
+        continue-on-error: true
+      
+      - name: Upload Android APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-apk-${{ needs.determine-version.outputs.version }}
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 90
+      
+      - name: Upload Android App Bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-aab-${{ needs.determine-version.outputs.version }}
+          path: mobile/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: ignore
+          retention-days: 90
+
+  build-mobile-ios:
+    name: Build Mobile - iOS
+    runs-on: macos-latest
+    needs: [determine-version]
+    continue-on-error: true
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+      
+      - name: Build iOS (no codesign)
+        working-directory: mobile
+        run: flutter build ios --release --no-codesign
+      
+      - name: Create iOS archive
+        if: success()
+        working-directory: mobile
+        run: |
+          mkdir -p dist
+          # Package the built iOS app (IPA would require codesigning, so we'll package the .app)
+          if [ -d "build/ios/iphoneos/Runner.app" ]; then
+            cd build/ios/iphoneos
+            zip -r ../../../dist/TimeTracker-iOS-${{ needs.determine-version.outputs.version }}.zip Runner.app
+            cd ../../..
+          fi
+      
+      - name: Upload iOS build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ios-${{ needs.determine-version.outputs.version }}
+          path: mobile/dist/*.zip
+          if-no-files-found: ignore
+          retention-days: 90
+
+  # ============================================================================
   # Create GitHub Release
   # ============================================================================
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-and-push, determine-version]
+    needs: [build-and-push, determine-version, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios]
     if: github.event_name != 'release'
     permissions:
       contents: write
@@ -813,8 +1016,91 @@ jobs:
       
       - name: Download deployment manifests
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: deployment-manifests-${{ needs.determine-version.outputs.version }}
+      
+      - name: Download desktop artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: 'desktop-*'
+          merge-multiple: false
+      
+      - name: Download mobile artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: 'mobile-*'
+          merge-multiple: false
+      
+      - name: Prepare release files
+        run: |
+          VERSION="${{ needs.determine-version.outputs.version }}"
+          RELEASE_DIR="release-files"
+          mkdir -p "$RELEASE_DIR"
+          
+          # Move deployment manifests to release directory
+          if [ -f "docker-compose.production.yml" ]; then
+            cp docker-compose.production.yml "$RELEASE_DIR/" || true
+          fi
+          if [ -f "k8s-deployment.yml" ]; then
+            cp k8s-deployment.yml "$RELEASE_DIR/" || true
+          fi
+          
+          # Organize desktop files
+          DESKTOP_DIR="$RELEASE_DIR/desktop"
+          mkdir -p "$DESKTOP_DIR"
+          
+          # Windows
+          if [ -d "desktop-windows-$VERSION" ]; then
+            mkdir -p "$DESKTOP_DIR/windows"
+            cp desktop-windows-$VERSION/* "$DESKTOP_DIR/windows/" 2>/dev/null || true
+          fi
+          
+          # Linux
+          if [ -d "desktop-linux-$VERSION" ]; then
+            mkdir -p "$DESKTOP_DIR/linux"
+            cp desktop-linux-$VERSION/* "$DESKTOP_DIR/linux/" 2>/dev/null || true
+          fi
+          
+          # macOS
+          if [ -d "desktop-macos-$VERSION" ]; then
+            mkdir -p "$DESKTOP_DIR/macos"
+            cp desktop-macos-$VERSION/* "$DESKTOP_DIR/macos/" 2>/dev/null || true
+          fi
+          
+          # Organize mobile files
+          MOBILE_DIR="$RELEASE_DIR/mobile"
+          mkdir -p "$MOBILE_DIR"
+          
+          # Android APK
+          if [ -d "mobile-android-apk-$VERSION" ]; then
+            mkdir -p "$MOBILE_DIR/android"
+            cp mobile-android-apk-$VERSION/* "$MOBILE_DIR/android/" 2>/dev/null || true
+          fi
+          
+          # Android AAB
+          if [ -d "mobile-android-aab-$VERSION" ]; then
+            mkdir -p "$MOBILE_DIR/android"
+            cp mobile-android-aab-$VERSION/* "$MOBILE_DIR/android/" 2>/dev/null || true
+          fi
+          
+          # iOS
+          if [ -d "mobile-ios-$VERSION" ]; then
+            mkdir -p "$MOBILE_DIR/ios"
+            cp mobile-ios-$VERSION/* "$MOBILE_DIR/ios/" 2>/dev/null || true
+          fi
+          
+          # Create file list for release (for debugging)
+          find "$RELEASE_DIR" -type f > release-files-list.txt || true
+          echo "Files to attach to release:"
+          cat release-files-list.txt || echo "No files found"
+          
+          # Count files for summary
+          FILE_COUNT=$(find "$RELEASE_DIR" -type f | wc -l || echo "0")
+          echo "Total files to attach: $FILE_COUNT"
+          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
       
       - name: Generate changelog
         id: changelog
@@ -830,8 +1116,46 @@ jobs:
             CHANGELOG="Initial release"
           fi
           
-          # Save to file
+          # Write changelog to file first
           echo "$CHANGELOG" > CHANGELOG.md
+          
+          # Add build status to changelog
+          echo "" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## 📦 Build Status" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          # Desktop builds
+          echo "### Desktop Applications" >> CHANGELOG.md
+          if [ "${{ needs.build-desktop-windows.result }}" == "success" ]; then
+            echo "✅ Windows build: Success" >> CHANGELOG.md
+          else
+            echo "⚠️ Windows build: Failed or skipped" >> CHANGELOG.md
+          fi
+          if [ "${{ needs.build-desktop-linux.result }}" == "success" ]; then
+            echo "✅ Linux build: Success" >> CHANGELOG.md
+          else
+            echo "⚠️ Linux build: Failed or skipped" >> CHANGELOG.md
+          fi
+          if [ "${{ needs.build-desktop-macos.result }}" == "success" ]; then
+            echo "✅ macOS build: Success" >> CHANGELOG.md
+          else
+            echo "⚠️ macOS build: Failed or skipped" >> CHANGELOG.md
+          fi
+          
+          # Mobile builds
+          echo "" >> CHANGELOG.md
+          echo "### Mobile Applications" >> CHANGELOG.md
+          if [ "${{ needs.build-mobile-android.result }}" == "success" ]; then
+            echo "✅ Android build: Success" >> CHANGELOG.md
+          else
+            echo "⚠️ Android build: Failed or skipped" >> CHANGELOG.md
+          fi
+          if [ "${{ needs.build-mobile-ios.result }}" == "success" ]; then
+            echo "✅ iOS build: Success" >> CHANGELOG.md
+          else
+            echo "⚠️ iOS build: Failed or skipped" >> CHANGELOG.md
+          fi
       
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -842,10 +1166,13 @@ jobs:
           draft: false
           prerelease: ${{ needs.determine-version.outputs.is_prerelease }}
           files: |
-            docker-compose.production.yml
-            k8s-deployment.yml
+            release-files/docker-compose.production.yml
+            release-files/k8s-deployment.yml
+            release-files/desktop/**/*
+            release-files/mobile/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
 
   # ============================================================================
   # Post-Release Summary
@@ -853,7 +1180,7 @@ jobs:
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [security-audit, build-and-push, determine-version, create-release]
+    needs: [security-audit, build-and-push, determine-version, create-release, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios]
     if: always()
     
     steps:
@@ -861,12 +1188,42 @@ jobs:
         run: |
           echo "## 🚀 Release ${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "### Core Build Status" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Security: ${{ needs.security-audit.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Docker Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Desktop Applications" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.build-desktop-windows.result }}" == "success" ]; then
+            echo "- ✅ Windows: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Windows: ${{ needs.build-desktop-windows.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.build-desktop-linux.result }}" == "success" ]; then
+            echo "- ✅ Linux: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Linux: ${{ needs.build-desktop-linux.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.build-desktop-macos.result }}" == "success" ]; then
+            echo "- ✅ macOS: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ macOS: ${{ needs.build-desktop-macos.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Mobile Applications" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.build-mobile-android.result }}" == "success" ]; then
+            echo "- ✅ Android: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Android: ${{ needs.build-mobile-android.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.build-mobile-ios.result }}" == "success" ]; then
+            echo "- ✅ iOS: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ iOS: ${{ needs.build-mobile-ios.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "ℹ️ *Full test suite already ran on PR before merge*" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ *Desktop and mobile builds are optional - release continues even if they fail*" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔐 Analytics Configuration" >> $GITHUB_STEP_SUMMARY
           echo "Analytics credentials were **successfully injected** from GitHub Secret Store:" >> $GITHUB_STEP_SUMMARY
