@@ -2006,6 +2006,7 @@ function initializePDFEditor() {
         const transformer = new Konva.Transformer({
             nodes: [node],
             enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+            rotateEnabled: false,
             boundBoxFunc: function(oldBox, newBox) {
                 if (newBox.width < 20 || newBox.height < 20) {
                     return oldBox;
@@ -2042,6 +2043,19 @@ function initializePDFEditor() {
         }
         
         layer.add(transformer);
+        
+        // Explicitly hide rotation handle if it exists (backup for rotateEnabled: false)
+        transformer.forceUpdate();
+        const rotationHandle = transformer.findOne('.rotater');
+        if (rotationHandle) {
+            rotationHandle.visible(false);
+        }
+        
+        // Remove any warning indicator dots that might exist
+        layer.find('.warning-indicator').forEach(indicator => {
+            indicator.destroy();
+        });
+        
         layer.draw();
         
         // Update properties panel
@@ -2792,6 +2806,8 @@ function initializePDFEditor() {
                 // Filter out grid lines and page border - they should not be included in the exported template
                 if (child.className === 'Line' && child.attrs.name === 'grid-line') return;
                 if (child.className === 'Rect' && child.attrs.name === 'page-border') return;
+                // Filter out warning indicator dots - they should not be included in the exported template
+                if (child.className === 'Circle' && child.attrs.name === 'warning-indicator') return;
                 
                 const attrs = child.attrs;
                 const x = Math.round(attrs.x || 0);
@@ -3463,6 +3479,11 @@ table tr:last-child td {
             stage = Konva.Node.create(json, 'canvas-container');
             layer = stage.children[0];
             
+                // Remove any warning indicator dots that might have been loaded
+                layer.find('.warning-indicator').forEach(indicator => {
+                    indicator.destroy();
+                });
+                
                 // Re-setup selections for all elements
                 layer.children.forEach(child => {
                     if (child !== background && child.className !== 'Transformer') {
@@ -3590,6 +3611,11 @@ table tr:last-child td {
                 
                 // Redraw grid for new size
                 drawGrid();
+                
+                // Remove any warning indicator dots that might have been loaded
+                layer.find('.warning-indicator').forEach(indicator => {
+                    indicator.destroy();
+                });
                 
                 // Fix logo images: Konva Image nodes need to reload the image from URL
                 // When Konva Image nodes are serialized/deserialized, the image data is lost

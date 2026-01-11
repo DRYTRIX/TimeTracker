@@ -64,6 +64,18 @@ check_npm() {
 build_mobile() {
     print_header "Building Mobile App (Flutter)"
     
+    cd "$PROJECT_ROOT"
+    
+    # Sync version from setup.py to mobile app
+    print_header "Syncing version from setup.py"
+    python3 "$SCRIPT_DIR/sync-mobile-version.py"
+    if [ $? -ne 0 ]; then
+        print_error "Failed to sync version"
+        exit 1
+    fi
+    print_success "Version synced"
+    echo ""
+    
     cd "$PROJECT_ROOT/mobile"
     
     # Check if Flutter is available
@@ -127,7 +139,30 @@ build_mobile() {
 build_desktop() {
     print_header "Building Desktop App (Electron)"
     
+    cd "$PROJECT_ROOT"
+    
+    # Sync version from setup.py to package.json
+    print_header "Syncing version from setup.py"
+    python3 "$SCRIPT_DIR/sync-desktop-version.py"
+    if [ $? -ne 0 ]; then
+        print_error "Failed to sync version"
+        exit 1
+    fi
+    print_success "Version synced"
+    echo ""
+    
     cd "$PROJECT_ROOT/desktop"
+    
+    # Prepare assets (logo, icons) - only once
+    ASSETS_CHECK_FILE="$PROJECT_ROOT/desktop/.assets_prepared"
+    if [ ! -f "$ASSETS_CHECK_FILE" ]; then
+        print_header "Preparing desktop assets"
+        bash "$SCRIPT_DIR/prepare-desktop-assets.sh" || {
+            print_warning "Asset preparation had issues, continuing anyway..."
+        }
+        touch "$ASSETS_CHECK_FILE"
+        echo ""
+    fi
     
     # Check prerequisites
     check_node
@@ -135,10 +170,51 @@ build_desktop() {
     
     # Install dependencies
     print_header "Installing npm dependencies"
-    if [ ! -d "node_modules" ]; then
-        npm install --prefer-offline --no-audit --loglevel=warn
-    else
-        npm ci --prefer-offline --no-audit --loglevel=warn || npm install --prefer-offline --no-audit --loglevel=warn
+    
+    # Check if node_modules is valid
+    NODE_MODULES_VALID=false
+    if [ -d "node_modules" ] && [ -f "node_modules/.package-lock.json" ] || [ -f "package-lock.json" ]; then
+        if node -e "require('electron')" 2>/dev/null; then
+            NODE_MODULES_VALID=true
+            print_success "node_modules appears valid, skipping install"
+        fi
+    fi
+    
+    if [ "$NODE_MODULES_VALID" = false ]; then
+        # Detect Windows/OneDrive
+        IS_WINDOWS=false
+        IS_ONEDRIVE=false
+        if [[ "$(uname -s)" == MINGW* ]] || [[ "$(uname -s)" == MSYS* ]] || [[ "$(uname -s)" == CYGWIN* ]] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+            IS_WINDOWS=true
+        fi
+        if [[ "$PROJECT_ROOT" == *"OneDrive"* ]]; then
+            IS_ONEDRIVE=true
+        fi
+        
+        if [ ! -d "node_modules" ]; then
+            npm install --prefer-offline --no-audit --loglevel=warn || {
+                if [ "$IS_WINDOWS" = true ] || [ "$IS_ONEDRIVE" = true ]; then
+                    print_error "npm install failed - Windows/OneDrive issue detected"
+                    echo "  Solutions: Exclude node_modules from OneDrive, run as Admin, or move project"
+                else
+                    print_error "npm install failed"
+                fi
+                exit 1
+            }
+        else
+            npm ci --prefer-offline --no-audit --loglevel=warn || {
+                print_warning "npm ci failed, trying npm install..."
+                npm install --prefer-offline --no-audit --loglevel=warn || {
+                    if [ "$IS_WINDOWS" = true ] || [ "$IS_ONEDRIVE" = true ]; then
+                        print_error "npm install failed - Windows/OneDrive issue"
+                        echo "  Try: Exclude node_modules from OneDrive sync"
+                    else
+                        print_error "npm install failed"
+                    fi
+                    exit 1
+                }
+            }
+        fi
     fi
     
     # Run tests (if available)
@@ -154,15 +230,45 @@ build_desktop() {
     if [ "$1" = "all-platforms" ] || [ "$1" = "all-desktop" ]; then
         print_header "Building for all supported platforms"
         print_warning "Note: Will automatically build for platforms supported on your OS"
-        npm run build:all
+        npx electron-builder --win --mac --linux
         return 0
     fi
     
-    case "$PLATFORM" in
-        Linux*)
+    # Detect platform more accurately
+    detect_platform() {
+        local os=$(uname -s)
+        if [[ "$os" == MINGW* ]] || [[ "$os" == MSYS* ]] || [[ "$os" == CYGWIN* ]]; then
+            echo "win32"
+        elif [[ "$os" == Linux* ]]; then
+            echo "linux"
+        elif [[ "$os" == Darwin* ]]; then
+            echo "darwin"
+        else
+            echo "unknown"
+        fi
+    }
+    
+    DETECTED_PLATFORM=$(detect_platform)
+    
+    case "$DETECTED_PLATFORM" in
+        win32)
+            if [ "$BUILD_LINUX" = "true" ] || [ "$1" = "linux" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
+                print_header "Building Windows installer"
+                npx electron-builder --win
+                
+                if [ -d "dist" ] && [ "$(ls -A dist/*.exe dist/*.nsis 2>/dev/null)" ]; then
+                    print_success "Windows installer built successfully"
+                    echo "  Location: $PROJECT_ROOT/desktop/dist/"
+                    ls -lh dist/*.exe dist/*.nsis 2>/dev/null || true
+                else
+                    print_error "Windows build failed"
+                fi
+            fi
+            ;;
+        linux)
             if [ "$BUILD_LINUX" = "true" ] || [ "$1" = "linux" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
                 print_header "Building Linux packages"
-                npm run build:linux
+                npx electron-builder --linux
                 
                 if [ -d "dist" ] && [ "$(ls -A dist/*.AppImage dist/*.deb 2>/dev/null)" ]; then
                     print_success "Linux packages built successfully"
@@ -173,10 +279,10 @@ build_desktop() {
                 fi
             fi
             ;;
-        Darwin*)
+        darwin)
             if [ "$BUILD_MACOS" = "true" ] || [ "$1" = "macos" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
                 print_header "Building macOS DMG"
-                npm run build:mac
+                npx electron-builder --mac
                 
                 if [ -d "dist" ] && [ -f "dist"/*.dmg ]; then
                     print_success "macOS DMG built successfully"
@@ -187,11 +293,10 @@ build_desktop() {
                 fi
             fi
             ;;
-        MINGW*|MSYS*|CYGWIN*)
-            print_warning "Use build-all.bat for Windows builds"
-            ;;
         *)
             print_warning "Unknown platform: $PLATFORM"
+            print_warning "Attempting Windows build..."
+            npx electron-builder --win
             ;;
     esac
 }

@@ -32,7 +32,33 @@ function saveWindowState() {
   }
 }
 
+let splashWindow = null;
+
 function createWindow() {
+  // Create splash screen first (only if splash.html exists)
+  const splashPath = path.join(__dirname, '../renderer/splash.html');
+  const fs = require('fs');
+  
+  if (fs.existsSync(splashPath)) {
+    splashWindow = new BrowserWindow({
+      width: 500,
+      height: 400,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      backgroundColor: '#00000000',
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false,
+      },
+    });
+
+    splashWindow.loadFile(splashPath);
+    splashWindow.center();
+  }
+
   // Center window if no saved position
   if (windowState.x === undefined || windowState.y === undefined) {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -55,15 +81,35 @@ function createWindow() {
       contextIsolation: true,
       sandbox: false,
     },
-    icon: path.join(__dirname, '../../assets/icon.png'),
+    // Icon path - use .ico on Windows, .icns on macOS, .png on Linux
+    icon: (() => {
+      const iconDir = path.join(__dirname, '../../assets');
+      if (process.platform === 'win32') {
+        const icoPath = path.join(iconDir, 'icon.ico');
+        return require('fs').existsSync(icoPath) ? icoPath : path.join(iconDir, 'icon.png');
+      } else if (process.platform === 'darwin') {
+        const icnsPath = path.join(iconDir, 'icon.icns');
+        return require('fs').existsSync(icnsPath) ? icnsPath : path.join(iconDir, 'icon.png');
+      } else {
+        return path.join(iconDir, 'icon.png');
+      }
+    })(),
   });
 
-  // Show window when ready
+  // Show window when ready and close splash
   mainWindow.once('ready-to-show', () => {
     if (windowState.isMaximized) {
       mainWindow.maximize();
     }
     mainWindow.show();
+    // Close splash screen after a short delay (if it exists)
+    if (splashWindow) {
+      setTimeout(() => {
+        if (splashWindow && !splashWindow.isDestroyed()) {
+          splashWindow.close();
+        }
+      }, 500);
+    }
   });
 
   // Save window state on resize/move
@@ -108,4 +154,4 @@ function createWindow() {
   return mainWindow;
 }
 
-module.exports = { createWindow };
+module.exports = { createWindow, getSplashWindow: () => splashWindow };

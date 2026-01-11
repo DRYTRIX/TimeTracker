@@ -101,9 +101,20 @@ if "%BUILD_MOBILE%"=="1" (
     echo ========================================
     echo Building Mobile App (Flutter)
     echo ========================================
+    cd /d "%PROJECT_ROOT%"
+    
+    echo [0/6] Syncing version from setup.py...
+    python "%SCRIPT_DIR%sync-mobile-version.py"
+    if errorlevel 1 (
+        echo [ERROR] Failed to sync version
+        exit /b 1
+    )
+    echo [OK] Version synced
+    echo.
+    
     cd /d "%PROJECT_ROOT%\mobile"
     
-    echo [1/5] Installing Flutter dependencies...
+    echo [1/6] Installing Flutter dependencies...
     call flutter pub get
     if errorlevel 1 (
         echo [ERROR] Failed to install Flutter dependencies
@@ -112,14 +123,14 @@ if "%BUILD_MOBILE%"=="1" (
     echo [OK] Dependencies installed
     echo.
     
-    echo [2/5] Analyzing Flutter code...
+    echo [2/6] Analyzing Flutter code...
     call flutter analyze
     if errorlevel 1 (
         echo [WARNING] Code analysis found issues (continuing anyway)
     )
     echo.
     
-    echo [3/5] Running Flutter tests...
+    echo [3/6] Running Flutter tests...
     call flutter test
     if errorlevel 1 (
         echo [WARNING] Some tests failed (continuing anyway)
@@ -127,7 +138,7 @@ if "%BUILD_MOBILE%"=="1" (
     echo.
     
     if "%BUILD_ANDROID%"=="1" (
-        echo [4/5] Building Android APK...
+        echo [4/6] Building Android APK...
         call flutter build apk --release
         if errorlevel 1 (
             echo [ERROR] Android APK build failed
@@ -141,7 +152,7 @@ if "%BUILD_MOBILE%"=="1" (
         )
         echo.
         
-        echo [5/5] Building Android App Bundle...
+        echo [5/6] Building Android App Bundle...
         call flutter build appbundle --release
         if errorlevel 1 (
             echo [ERROR] Android App Bundle build failed
@@ -162,9 +173,20 @@ if "%BUILD_DESKTOP%"=="1" (
     echo ========================================
     echo Building Desktop App (Electron)
     echo ========================================
+    cd /d "%PROJECT_ROOT%"
+    
+    echo [0/4] Syncing version from setup.py...
+    python "%SCRIPT_DIR%sync-desktop-version.py"
+    if errorlevel 1 (
+        echo [ERROR] Failed to sync version
+        exit /b 1
+    )
+    echo [OK] Version synced
+    echo.
+    
     cd /d "%PROJECT_ROOT%\desktop"
     
-    echo [1/3] Installing npm dependencies...
+    echo [1/4] Installing npm dependencies...
     if not exist "node_modules" (
         call npm install --prefer-offline --no-audit --loglevel=warn
     ) else (
@@ -185,7 +207,7 @@ if "%BUILD_DESKTOP%"=="1" (
     if "%1"=="all-desktop" goto build_all_platforms
     
     if "%BUILD_WINDOWS%"=="1" (
-        echo [2/3] Building Windows installer...
+        echo [2/4] Building Windows installer...
         call npm run build:win
         if errorlevel 1 (
             echo [ERROR] Windows build failed
@@ -203,7 +225,7 @@ if "%BUILD_DESKTOP%"=="1" (
     goto end_desktop_build
     
     :build_all_platforms
-    echo [2/3] Building for all supported platforms...
+    echo [2/4] Building for all supported platforms...
     echo [NOTE] Will automatically build for platforms supported on your OS
     call npm run build:all
     if errorlevel 1 (

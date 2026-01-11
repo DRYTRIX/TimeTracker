@@ -34,4 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   timerStart: (projectId, taskId) => ipcRenderer.send('timer:start', { projectId, taskId }),
   timerStop: () => ipcRenderer.send('timer:stop'),
   timerGetStatus: () => ipcRenderer.invoke('timer:get-status'),
+  
+  // Splash screen
+  splashReady: () => ipcRenderer.send('splash:ready'),
 });

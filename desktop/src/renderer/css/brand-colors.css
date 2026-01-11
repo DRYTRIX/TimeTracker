@@ -1,0 +1,22 @@
+/**
+ * TimeTracker Brand Colors - Desktop App
+ * Shared brand color definitions matching web application
+ */
+
+:root {
+  /* Primary Brand Colors */
+  --brand-primary: #4A90E2;
+  --brand-primary-dark: #3b82f6;
+  --brand-secondary: #50E3C2;
+  --brand-secondary-dark: #06b6d4;
+
+  /* Gradient */
+  --brand-gradient: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%);
+  --brand-gradient-horizontal: linear-gradient(to right, #4A90E2 0%, #50E3C2 100%);
+
+  /* Status Colors */
+  --color-success: #4CAF50;
+  --color-warning: #FF9800;
+  --color-error: #E53935;
+  --color-info: #2196F3;
+}

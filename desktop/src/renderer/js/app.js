@@ -1,5 +1,5 @@
 // Main application logic
-const { storeGet, storeSet, storeClear } = window.config || {};
+const { storeGet, storeSet, storeDelete, storeClear } = window.config || {};
 const ApiClient = require('./api/client');
 const StorageService = require('./storage/storage');
 
@@ -68,6 +68,12 @@ function setupEventListeners() {
   // Logout
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+  
+  // Settings
+  const saveSettingsBtn = document.getElementById('save-settings-btn');
+  const testConnectionBtn = document.getElementById('test-connection-btn');
+  if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', handleSaveSettings);
+  if (testConnectionBtn) testConnectionBtn.addEventListener('click', handleTestConnection);
 }
 
 async function handleLogin(e) {
@@ -149,6 +155,8 @@ function switchView(view) {
     loadProjects();
   } else if (view === 'entries') {
     loadTimeEntries();
+  } else if (view === 'settings') {
+    loadSettings();
   }
 }
 
@@ -329,6 +337,138 @@ function updateTimerDisplay(timer) {
   
   document.getElementById('timer-display').textContent = formatDurationLong(seconds);
   document.getElementById('timer-project').textContent = timer.project?.name || 'Unknown Project';
+}
+
+async function loadSettings() {
+  // Load current settings
+  const serverUrl = await storeGet('server_url') || '';
+  const apiToken = await storeGet('api_token') || '';
+  
+  const serverUrlInput = document.getElementById('settings-server-url');
+  const apiTokenInput = document.getElementById('settings-api-token');
+  
+  if (serverUrlInput) {
+    serverUrlInput.value = serverUrl;
+  }
+  if (apiTokenInput) {
+    // Only show if token exists, otherwise leave empty
+    apiTokenInput.value = apiToken ? '••••••••' : '';
+    apiTokenInput.dataset.hasToken = apiToken ? 'true' : 'false';
+  }
+}
+
+async function handleSaveSettings() {
+  const serverUrlInput = document.getElementById('settings-server-url');
+  const apiTokenInput = document.getElementById('settings-api-token');
+  const messageDiv = document.getElementById('settings-message');
+  
+  if (!serverUrlInput || !apiTokenInput) return;
+  
+  const serverUrl = serverUrlInput.value.trim();
+  const apiToken = apiTokenInput.value.trim();
+  
+  // Validate server URL
+  if (!serverUrl || !isValidUrl(serverUrl)) {
+    showSettingsMessage('Please enter a valid server URL', 'error');
+    return;
+  }
+  
+  // Check if API token was changed (if it's not the masked value)
+  const hasExistingToken = apiTokenInput.dataset.hasToken === 'true';
+  let finalApiToken = apiToken;
+  
+  // If token input shows masked value and user didn't change it, keep existing token
+  if (hasExistingToken && apiToken === '••••••••') {
+    finalApiToken = await storeGet('api_token');
+  } else if (!apiToken || !apiToken.startsWith('tt_')) {
+    showSettingsMessage('Please enter a valid API token (must start with tt_)', 'error');
+    return;
+  }
+  
+  // Save settings
+  try {
+    await storeSet('server_url', serverUrl);
+    await storeSet('api_token', finalApiToken);
+    
+    // Reinitialize API client with new settings
+    apiClient = new ApiClient(serverUrl);
+    await apiClient.setAuthToken(finalApiToken);
+    
+    // Validate connection
+    const isValid = await apiClient.validateToken();
+    if (isValid) {
+      showSettingsMessage('Settings saved successfully!', 'success');
+      // Update token input to show masked value
+      apiTokenInput.value = '••••••••';
+      apiTokenInput.dataset.hasToken = 'true';
+    } else {
+      showSettingsMessage('Settings saved, but connection test failed. Please check your API token.', 'warning');
+    }
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    showSettingsMessage('Error saving settings: ' + error.message, 'error');
+  }
+}
+
+async function handleTestConnection() {
+  const serverUrlInput = document.getElementById('settings-server-url');
+  const apiTokenInput = document.getElementById('settings-api-token');
+  const messageDiv = document.getElementById('settings-message');
+  
+  if (!serverUrlInput || !apiTokenInput) return;
+  
+  const serverUrl = serverUrlInput.value.trim();
+  let apiToken = apiTokenInput.value.trim();
+  
+  // Validate server URL
+  if (!serverUrl || !isValidUrl(serverUrl)) {
+    showSettingsMessage('Please enter a valid server URL', 'error');
+    return;
+  }
+  
+  // Get actual token if masked
+  const hasExistingToken = apiTokenInput.dataset.hasToken === 'true';
+  if (hasExistingToken && apiToken === '••••••••') {
+    apiToken = await storeGet('api_token');
+  }
+  
+  if (!apiToken || !apiToken.startsWith('tt_')) {
+    showSettingsMessage('Please enter a valid API token (must start with tt_)', 'error');
+    return;
+  }
+  
+  // Test connection
+  try {
+    showSettingsMessage('Testing connection...', 'info');
+    const testClient = new ApiClient(serverUrl);
+    await testClient.setAuthToken(apiToken);
+    const isValid = await testClient.validateToken();
+    
+    if (isValid) {
+      showSettingsMessage('Connection successful!', 'success');
+    } else {
+      showSettingsMessage('Connection failed. Please check your server URL and API token.', 'error');
+    }
+  } catch (error) {
+    console.error('Error testing connection:', error);
+    showSettingsMessage('Connection error: ' + error.message, 'error');
+  }
+}
+
+function showSettingsMessage(message, type = 'info') {
+  const messageDiv = document.getElementById('settings-message');
+  if (!messageDiv) return;
+  
+  messageDiv.textContent = message;
+  messageDiv.className = `message message-${type}`;
+  messageDiv.style.display = 'block';
+  
+  // Auto-hide after 5 seconds for success/info messages
+  if (type === 'success' || type === 'info') {
+    setTimeout(() => {
+      messageDiv.style.display = 'none';
+    }, 5000);
+  }
 }
 
 async function handleLogout() {

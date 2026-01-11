@@ -7,6 +7,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MOBILE_DIR="$PROJECT_ROOT/mobile"
 
+cd "$PROJECT_ROOT"
+
+# Sync version from setup.py to mobile app
+echo "Syncing version from setup.py..."
+python3 "$SCRIPT_DIR/sync-mobile-version.py"
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to sync version"
+    exit 1
+fi
+echo ""
+
 cd "$MOBILE_DIR"
 
 echo "Building TimeTracker Mobile App..."

@@ -29,11 +29,18 @@
                        name="name" 
                        value="{{ role.name if role else '' }}" 
                        required
+                       {% if role and role.is_system_role %}readonly{% endif %}
                        autocomplete="off"
                        spellcheck="false"
                        data-form-type="other"
-                       class="form-input">
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('A unique name for this role') }}</p>
+                       class="form-input{% if role and role.is_system_role %} bg-gray-100 dark:bg-gray-800{% endif %}">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {% if role and role.is_system_role %}
+                        {{ _('System role names cannot be changed') }}
+                    {% else %}
+                        {{ _('A unique name for this role') }}
+                    {% endif %}
+                </p>
             </div>
 
             <div>

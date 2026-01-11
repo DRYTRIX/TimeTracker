@@ -1555,7 +1555,7 @@ def list_suppliers():
 
 @inventory_bp.route("/inventory/suppliers/new", methods=["GET", "POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_suppliers")
 def new_supplier():
     """Create a new supplier"""
     if request.method == "POST":
@@ -1623,7 +1623,7 @@ def view_supplier(supplier_id):
 
 @inventory_bp.route("/inventory/suppliers/<int:supplier_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_suppliers")
 def edit_supplier(supplier_id):
     """Edit supplier"""
     supplier = Supplier.query.get_or_404(supplier_id)
@@ -1669,7 +1669,7 @@ def edit_supplier(supplier_id):
 
 @inventory_bp.route("/inventory/suppliers/<int:supplier_id>/delete", methods=["POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_suppliers")
 def delete_supplier(supplier_id):
     """Delete supplier"""
     supplier = Supplier.query.get_or_404(supplier_id)
@@ -1730,7 +1730,7 @@ def list_purchase_orders():
 
 @inventory_bp.route("/inventory/purchase-orders/new", methods=["GET", "POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_purchase_orders")
 def new_purchase_order():
     """Create a new purchase order"""
     if request.method == "POST":
@@ -1852,7 +1852,7 @@ def view_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_purchase_orders")
 def edit_purchase_order(po_id):
     """Edit purchase order"""
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
@@ -1954,7 +1954,7 @@ def edit_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/send", methods=["POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_purchase_orders")
 def send_purchase_order(po_id):
     """Mark purchase order as sent to supplier"""
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
@@ -1975,7 +1975,7 @@ def send_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/cancel", methods=["POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_purchase_orders")
 def cancel_purchase_order(po_id):
     """Cancel purchase order"""
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
@@ -1996,7 +1996,7 @@ def cancel_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/delete", methods=["POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_purchase_orders")
 def delete_purchase_order(po_id):
     """Delete purchase order"""
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
@@ -2023,7 +2023,7 @@ def delete_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/receive", methods=["POST"])
 @login_required
-@admin_or_permission_required("manage_inventory")
+@admin_or_permission_required("manage_purchase_orders")
 def receive_purchase_order(po_id):
     """Mark purchase order as received and update stock"""
     purchase_order = PurchaseOrder.query.get_or_404(po_id)

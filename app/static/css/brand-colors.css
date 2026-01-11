@@ -1,0 +1,63 @@
+/**
+ * TimeTracker Brand Colors
+ * Centralized color definitions for consistency across the application
+ */
+
+:root {
+  /* Primary Brand Colors */
+  --brand-primary: #4A90E2;
+  --brand-primary-dark: #3b82f6;
+  --brand-secondary: #50E3C2;
+  --brand-secondary-dark: #06b6d4;
+
+  /* Gradient */
+  --brand-gradient: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%);
+  --brand-gradient-horizontal: linear-gradient(to right, #4A90E2 0%, #50E3C2 100%);
+
+  /* Status Colors */
+  --color-success: #4CAF50;
+  --color-warning: #FF9800;
+  --color-error: #E53935;
+  --color-info: #2196F3;
+
+  /* Light Mode Colors */
+  --color-bg-light: #F7F9FB;
+  --color-bg-light-secondary: #FFFFFF;
+  --color-text-light: #2D3748;
+  --color-text-light-secondary: #A0AEC0;
+  --color-text-light-muted: #718096;
+  --color-border-light: #E2E8F0;
+
+  /* Dark Mode Colors */
+  --color-bg-dark: #1A202C;
+  --color-bg-dark-secondary: #2D3748;
+  --color-text-dark: #E2E8F0;
+  --color-text-dark-secondary: #718096;
+  --color-text-dark-muted: #A0AEC0;
+  --color-border-dark: #4A5568;
+}
+
+/* Utility Classes */
+.bg-brand-gradient {
+  background: var(--brand-gradient);
+}
+
+.bg-brand-gradient-horizontal {
+  background: var(--brand-gradient-horizontal);
+}
+
+.text-brand-primary {
+  color: var(--brand-primary);
+}
+
+.text-brand-secondary {
+  color: var(--brand-secondary);
+}
+
+.bg-brand-primary {
+  background-color: var(--brand-primary);
+}
+
+.bg-brand-secondary {
+  background-color: var(--brand-secondary);
+}

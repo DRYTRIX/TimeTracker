@@ -180,6 +180,17 @@ nginx/ssl/*.pem
 nginx/ssl/*.key
 nginx/ssl/*.crt
 
+# Code Signing Certificates (NEVER commit these!)
+*.pfx
+*.p12
+*.spc
+*.pvk
+desktop/certs/
+desktop/*.pfx
+desktop/*.p12
+desktop/*.spc
+desktop/*.pvk
+
 # Docker Compose overrides (do not ignore auto files, only manually generated)
 # docker-compose.https.yml is now tracked
 

@@ -140,8 +140,10 @@
                 <td class="p-4">
                     <div class="flex gap-2">
                         <a href="{{ url_for('permissions.view_role', role_id=role.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
-                        {% if not role.is_system_role and (current_user.is_admin or has_permission('manage_roles')) %}
+                        {% if current_user.is_admin or has_permission('manage_roles') %}
                         <a href="{{ url_for('permissions.edit_role', role_id=role.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>
+                        {% endif %}
+                        {% if not role.is_system_role and (current_user.is_admin or has_permission('manage_roles')) %}
                         <form id="deleteRoleForm-{{ role.id }}" action="{{ url_for('permissions.delete_role', role_id=role.id) }}" method="post" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="button" onclick="confirmDeleteRole({{ role.id }}, '{{ role.name }}')" class="text-red-600 hover:underline text-sm">{{ _('Delete') }}</button>
