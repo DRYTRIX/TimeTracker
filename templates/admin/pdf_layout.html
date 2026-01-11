@@ -2163,43 +2163,7 @@ function initializePDFEditor() {
                 element.addName('element-overlap');
             }
             
-            // Get element bounding box
-            const box = element.getClientRect();
-            
-            // Add warning indicator as a separate shape on the layer
-            const indicator = new Konva.Circle({
-                x: box.x + box.width - 10,
-                y: box.y + 10,
-                radius: 8,
-                fill: hasOverflow && hasOverlap ? '#dc2626' : (hasOverflow ? '#ef4444' : '#f59e0b'),
-                stroke: 'white',
-                strokeWidth: 2,
-                name: 'warning-indicator',
-                listening: false
-            });
-            
-            // Store indicator reference
-            warningIndicators.set(element, indicator);
-            
-            // Update indicator position when element moves
-            const updateIndicator = function() {
-                try {
-                    const newBox = element.getClientRect();
-                    indicator.position({
-                        x: newBox.x + newBox.width - 10,
-                        y: newBox.y + 10
-                    });
-                    layer.draw();
-                } catch(e) {}
-            };
-            
-            // Attach update handlers with namespaced events
-            element.off('dragmove.warning');
-            element.off('transform.warning');
-            element.on('dragmove.warning', updateIndicator);
-            element.on('transform.warning', updateIndicator);
-            
-            layer.add(indicator);
+            // Warning indicator dots removed - warnings are now only shown in the warning panel
         }
         
         layer.draw();
@@ -2220,7 +2184,7 @@ function initializePDFEditor() {
                 hasWarnings = true;
                 const item = document.createElement('div');
                 item.className = 'warning-item';
-                item.style.cssText = 'padding: 8px; margin-bottom: 4px; background: #fee; border-left: 3px solid #ef4444; cursor: pointer; border-radius: 4px;';
+                item.style.cssText = 'padding: 8px; margin-bottom: 4px; background: #fee; border-left: 3px solid #ef4444; cursor: pointer; border-radius: 4px; color: #1f2937;';
                 
                 const elementName = element.attrs.name || element.className || 'Element';
                 let warningText = `${elementName}: `;
@@ -2291,6 +2255,7 @@ function initializePDFEditor() {
         const transformer = new Konva.Transformer({
             nodes: [node],
             enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+            rotateEnabled: false,
             borderStroke: '#667eea',
             borderStrokeWidth: 2,
             anchorFill: '#667eea',
@@ -2377,6 +2342,14 @@ function initializePDFEditor() {
         });
 
         layer.add(transformer);
+        
+        // Explicitly hide rotation handle if it exists (backup for rotateEnabled: false)
+        transformer.forceUpdate();
+        const rotationHandle = transformer.findOne('.rotater');
+        if (rotationHandle) {
+            rotationHandle.visible(false);
+        }
+        
         layer.draw();
 
         // Update properties panel
