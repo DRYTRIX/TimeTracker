@@ -305,14 +305,24 @@ class InvoicePDFGeneratorFallback:
         """Add page number at the bottom-right of each page."""
         page_num = canv.getPageNumber()
         text = f"Page {page_num}"
+        
+        # Get page dimensions for boundary checking
+        page_width = doc.pagesize[0]
+        page_height = doc.pagesize[1]
+        
+        canv.saveState()
         canv.setFont("Helvetica", 9)
         try:
             canv.setFillColor(colors.HexColor("#666666"))
         except Exception:
             pass
-        x = doc.leftMargin + doc.width
-        y = doc.bottomMargin - 0.5 * cm
+        
+        # Ensure page number is within page boundaries
+        x = min(doc.leftMargin + doc.width, page_width - 10)
+        y = max(doc.bottomMargin - 0.5 * cm, 10)
         canv.drawRightString(x, y, text)
+        
+        canv.restoreState()
 
     def _build_additional_info(self):
         """Build additional information section"""
@@ -590,7 +600,16 @@ class QuotePDFGeneratorFallback:
         """Add page number to PDF"""
         page_num = canv.getPageNumber()
         text = f"{_('Page')} {page_num}"
+        
+        # Get page dimensions for boundary checking
+        page_width = doc.pagesize[0]
+        page_height = doc.pagesize[1]
+        
         canv.saveState()
         canv.setFont("Helvetica", 9)
-        canv.drawRightString(doc.pagesize[0] - 2 * cm, 1 * cm, text)
+        # Ensure page number is within page boundaries
+        x = min(page_width - 2 * cm, page_width - 10)
+        y = max(1 * cm, 10)
+        canv.drawRightString(x, y, text)
+        
         canv.restoreState()
