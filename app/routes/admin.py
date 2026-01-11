@@ -1118,6 +1118,24 @@ def pdf_layout():
                     if "page" not in template_json_dict:
                         template_json_dict["page"] = {}
                     template_json_dict["page"]["size"] = page_size
+                
+                # CRITICAL: Ensure page dimensions (width/height) match the page size
+                # This fixes layout issues when templates are customized
+                from app.utils.pdf_template_schema import get_page_dimensions_mm
+                template_page_config = template_json_dict.get("page", {})
+                expected_dims = get_page_dimensions_mm(page_size)
+                current_width = template_page_config.get("width")
+                current_height = template_page_config.get("height")
+                
+                if current_width != expected_dims["width"] or current_height != expected_dims["height"]:
+                    current_app.logger.info(
+                        f"[PDF_TEMPLATE] Updating template page dimensions - PageSize: '{page_size}', "
+                        f"Old: {current_width}x{current_height}mm, New: {expected_dims['width']}x{expected_dims['height']}mm, User: {current_user.username}"
+                    )
+                    template_page_config["width"] = expected_dims["width"]
+                    template_page_config["height"] = expected_dims["height"]
+                    template_json_dict["page"] = template_page_config
+                
                 template_json = json.dumps(template_json_dict)
                 element_count = len(template_json_dict.get("elements", []))
                 current_app.logger.info(f"[PDF_TEMPLATE] Template JSON parsed and updated - PageSize: '{page_size}', Elements: {element_count}, JSON length: {len(template_json)}")
@@ -1378,6 +1396,24 @@ def quote_pdf_layout():
                     if "page" not in template_json_dict:
                         template_json_dict["page"] = {}
                     template_json_dict["page"]["size"] = page_size
+                
+                # CRITICAL: Ensure page dimensions (width/height) match the page size
+                # This fixes layout issues when templates are customized
+                from app.utils.pdf_template_schema import get_page_dimensions_mm
+                template_page_config = template_json_dict.get("page", {})
+                expected_dims = get_page_dimensions_mm(page_size)
+                current_width = template_page_config.get("width")
+                current_height = template_page_config.get("height")
+                
+                if current_width != expected_dims["width"] or current_height != expected_dims["height"]:
+                    current_app.logger.info(
+                        f"[PDF_TEMPLATE] Updating quote template page dimensions - PageSize: '{page_size}', "
+                        f"Old: {current_width}x{current_height}mm, New: {expected_dims['width']}x{expected_dims['height']}mm, User: {current_user.username}"
+                    )
+                    template_page_config["width"] = expected_dims["width"]
+                    template_page_config["height"] = expected_dims["height"]
+                    template_json_dict["page"] = template_page_config
+                
                 template_json = json.dumps(template_json_dict)
                 element_count = len(template_json_dict.get("elements", []))
                 current_app.logger.info(f"[PDF_TEMPLATE] Quote template JSON parsed and updated - PageSize: '{page_size}', Elements: {element_count}, JSON length: {len(template_json)}")
