@@ -19,49 +19,11 @@ function createTray(mainWindow) {
   tray = new Tray(iconPath);
   tray.setToolTip('TimeTracker');
 
+  let isTimerRunning = false;
+
   // Create context menu
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show Timer',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
-      },
-    },
-    {
-      label: 'Start Timer',
-      id: 'start-timer',
-      enabled: true,
-      click: () => {
-        // TODO: Start timer
-        updateTrayMenu(false);
-      },
-    },
-    {
-      label: 'Stop Timer',
-      id: 'stop-timer',
-      enabled: false,
-      click: () => {
-        // TODO: Stop timer
-        updateTrayMenu(true);
-      },
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => {
-        app.quit();
-      },
-    },
-  ]);
-
-  tray.setContextMenu(contextMenu);
-
-  // Update tray menu when timer state changes
-  function updateTrayMenu(isRunning) {
-    const menu = Menu.buildFromTemplate([
+  function buildMenu() {
+    return Menu.buildFromTemplate([
       {
         label: 'Show Timer',
         click: () => {
@@ -74,21 +36,25 @@ function createTray(mainWindow) {
       {
         label: 'Start Timer',
         id: 'start-timer',
-        enabled: !isRunning,
-        visible: !isRunning,
+        enabled: !isTimerRunning,
+        visible: !isTimerRunning,
         click: () => {
-          // TODO: Start timer
-          updateTrayMenu(false);
+          // Send message to renderer to start timer via IPC
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tray:action', 'start-timer');
+          }
         },
       },
       {
         label: 'Stop Timer',
         id: 'stop-timer',
-        enabled: isRunning,
-        visible: isRunning,
+        enabled: isTimerRunning,
+        visible: isTimerRunning,
         click: () => {
-          // TODO: Stop timer
-          updateTrayMenu(true);
+          // Send message to renderer to stop timer via IPC
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tray:action', 'stop-timer');
+          }
         },
       },
       { type: 'separator' },
@@ -99,7 +65,14 @@ function createTray(mainWindow) {
         },
       },
     ]);
-    tray.setContextMenu(menu);
+  }
+
+  tray.setContextMenu(buildMenu());
+
+  // Update tray menu when timer state changes
+  function updateTrayMenu(running) {
+    isTimerRunning = running;
+    tray.setContextMenu(buildMenu());
   }
 
   // Handle tray click
@@ -117,6 +90,32 @@ function createTray(mainWindow) {
   // Update tray tooltip with timer info
   function updateTooltip(text) {
     tray.setToolTip(`TimeTracker - ${text}`);
+  }
+
+  // Listen for timer state changes from renderer
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.on('did-finish-load', () => {
+      // Listen for timer status updates from renderer
+      mainWindow.webContents.on('timer-status-update', (event, data) => {
+        if (data && data.active) {
+          updateTrayMenu(true);
+          if (data.timer && data.timer.start_time) {
+            const startTime = new Date(data.timer.start_time);
+            const elapsed = Math.floor((new Date() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const secs = elapsed % 60;
+            const timeStr = hours > 0 
+              ? `${hours}h ${minutes}m`
+              : `${minutes}m ${secs}s`;
+            updateTooltip(`Timer running: ${timeStr}`);
+          }
+        } else {
+          updateTrayMenu(false);
+          updateTooltip('TimeTracker');
+        }
+      });
+    });
   }
 
   // Export functions for use in main.js

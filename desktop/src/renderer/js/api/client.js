@@ -30,10 +30,28 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
-          // Token expired or invalid
-          // Could trigger re-auth flow here
+        // Enhance error messages
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          if (status === 401) {
+            error.message = 'Authentication failed. Please check your API token.';
+          } else if (status === 403) {
+            error.message = 'Access denied. Your token may not have the required permissions.';
+          } else if (status === 404) {
+            error.message = data?.error || 'Resource not found.';
+          } else if (status >= 500) {
+            error.message = 'Server error. Please try again later.';
+          } else if (data?.error) {
+            error.message = data.error;
+          }
+        } else if (error.code === 'ECONNABORTED') {
+          error.message = 'Request timeout. Please check your internet connection.';
+        } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+          error.message = 'Unable to connect to server. Please check the server URL and your internet connection.';
         }
+        
         return Promise.reject(error);
       }
     );
@@ -122,6 +140,11 @@ class ApiClient {
   
   async getTask(id) {
     return await this.client.get(`/api/v1/tasks/${id}`);
+  }
+  
+  // Get time entry by ID
+  async getTimeEntry(id) {
+    return await this.client.get(`/api/v1/time-entries/${id}`);
   }
 }
 

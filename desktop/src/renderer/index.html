@@ -53,6 +53,7 @@
       <header class="app-header">
         <div class="header-left">
           <h1>TimeTracker</h1>
+          <span id="connection-status" class="connection-status" title="Connection status"></span>
         </div>
         <div class="header-right">
           <button id="minimize-btn" class="header-btn" title="Minimize">−</button>
@@ -79,6 +80,8 @@
               <div class="timer-display">
                 <div class="timer-time" id="timer-display">00:00:00</div>
                 <div class="timer-project" id="timer-project">No active timer</div>
+                <div class="timer-task" id="timer-task" style="display: none;"></div>
+                <div class="timer-notes" id="timer-notes" style="display: none;"></div>
               </div>
               <div class="timer-controls">
                 <button id="start-timer-btn" class="btn btn-primary">Start Timer</button>
@@ -115,7 +118,24 @@
         <div id="entries-view" class="view">
           <div class="view-header">
             <h2>Time Entries</h2>
-            <button id="add-entry-btn" class="btn btn-primary">Add Entry</button>
+            <div class="view-header-actions">
+              <button id="filter-entries-btn" class="btn btn-secondary">Filter</button>
+              <button id="add-entry-btn" class="btn btn-primary">Add Entry</button>
+            </div>
+          </div>
+          <div id="entries-filters" class="entries-filters" style="display: none;">
+            <div class="filter-row">
+              <label>Start Date:</label>
+              <input type="date" id="filter-start-date">
+              <label>End Date:</label>
+              <input type="date" id="filter-end-date">
+              <label>Project:</label>
+              <select id="filter-project">
+                <option value="">All Projects</option>
+              </select>
+              <button id="apply-filter-btn" class="btn btn-primary">Apply</button>
+              <button id="clear-filter-btn" class="btn btn-secondary">Clear</button>
+            </div>
           </div>
           <div id="entries-list" class="entries-list">
             <p class="empty-state">No time entries</p>

@@ -30,10 +30,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('timer:stop', (event) => callback());
   },
   
+  // Tray timer events (from main process)
+  onTrayAction: (callback) => {
+    ipcRenderer.on('tray:action', (event, action) => callback(action));
+  },
+  
   // Timer actions (to main process)
   timerStart: (projectId, taskId) => ipcRenderer.send('timer:start', { projectId, taskId }),
   timerStop: () => ipcRenderer.send('timer:stop'),
   timerGetStatus: () => ipcRenderer.invoke('timer:get-status'),
+  
+  // Send timer status to main process (for tray updates)
+  sendTimerStatus: (data) => ipcRenderer.send('timer:status-update', data),
   
   // Splash screen
   splashReady: () => ipcRenderer.send('splash:ready'),

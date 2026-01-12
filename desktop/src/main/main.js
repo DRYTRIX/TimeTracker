@@ -53,12 +53,43 @@ app.whenReady().then(() => {
   mainWindow = createWindow();
   
   // Create system tray
-  tray = createTray(mainWindow);
+  const trayResult = createTray(mainWindow);
+  if (trayResult && trayResult.updateTrayTooltip) {
+    updateTrayTooltip = trayResult.updateTrayTooltip;
+  }
+  if (trayResult && trayResult.updateTrayMenu) {
+    global.updateTrayMenu = trayResult.updateTrayMenu;
+  }
+  
+  // Listen for timer status updates from renderer (via IPC)
+  ipcMain.on('timer:status-update', (event, data) => {
+    if (global.updateTrayMenu) {
+      global.updateTrayMenu(data && data.active);
+    }
+    if (updateTrayTooltip && data && data.active && data.timer) {
+      const startTime = new Date(data.timer.start_time);
+      const elapsed = Math.floor((new Date() - startTime) / 1000);
+      const hours = Math.floor(elapsed / 3600);
+      const minutes = Math.floor((elapsed % 3600) / 60);
+      const timeStr = hours > 0 
+        ? `${hours}h ${minutes}m`
+        : `${minutes}m`;
+      updateTrayTooltip(`Timer: ${timeStr}`);
+    } else if (updateTrayTooltip) {
+      updateTrayTooltip('TimeTracker');
+    }
+  });
   
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow();
-      tray = createTray(mainWindow);
+      const trayResult = createTray(mainWindow);
+      if (trayResult && trayResult.updateTrayTooltip) {
+        updateTrayTooltip = trayResult.updateTrayTooltip;
+      }
+      if (trayResult && trayResult.updateTrayMenu) {
+        global.updateTrayMenu = trayResult.updateTrayMenu;
+      }
     }
   });
 });

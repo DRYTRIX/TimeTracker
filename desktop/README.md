@@ -81,24 +81,97 @@ npm run dev
 
 ## Configuration
 
-### Server URL
+### Getting an API Token
 
-The desktop app can receive the server URL in multiple ways:
+Before connecting the desktop app, you need to create an API token:
 
-1. **Command Line:**
-   ```bash
-   TimeTracker.exe --server-url https://your-server.com
-   ```
+1. **Log in to TimeTracker Web App** as an administrator
+2. Navigate to **Admin > API Tokens** (`/admin/api-tokens`)
+3. Click **"Create Token"**
+4. Fill in the required information:
+   - **Name**: A descriptive name (e.g., "Desktop App - Windows")
+   - **User**: Select the user this token will authenticate as
+   - **Scopes**: Select the following permissions:
+     - `read:projects` - View projects
+     - `read:tasks` - View tasks
+     - `read:time_entries` - View time entries
+     - `write:time_entries` - Create and update time entries
+   - **Expires In**: Optional expiration period (leave empty for no expiration)
+5. Click **"Create Token"**
+6. **Important**: Copy the generated token immediately - you won't be able to see it again!
+   - Token format: `tt_<32_random_characters>`
+   - Example: `tt_abc123def456ghi789jkl012mno345pq`
 
-2. **Environment Variable:**
-   ```bash
-   set TIMETRACKER_SERVER_URL=https://your-server.com
-   TimeTracker.exe
-   ```
+### Connecting the App
 
-3. **In-App Settings:**
-   - Configure in the app's settings screen
-   - Stored in secure storage
+The desktop app can be configured in multiple ways:
+
+#### Method 1: In-App Login (Recommended)
+
+1. **Launch the desktop app**
+2. On the login screen, enter:
+   - **Server URL**: Your TimeTracker server URL (e.g., `https://your-server.com`)
+     - Do not include a trailing slash
+     - Use `http://` for local development or `https://` for production
+   - **API Token**: Paste the token you copied from the web app
+3. Click **"Login"**
+4. The app will validate your connection and show the main screen if successful
+
+#### Method 2: Command Line
+
+```bash
+TimeTracker.exe --server-url https://your-server.com
+```
+
+Then enter your API token in the login screen.
+
+#### Method 3: Environment Variable
+
+```bash
+# Windows
+set TIMETRACKER_SERVER_URL=https://your-server.com
+TimeTracker.exe
+
+# Linux/macOS
+export TIMETRACKER_SERVER_URL=https://your-server.com
+./TimeTracker
+```
+
+#### Method 4: Settings Screen
+
+1. Launch the app
+2. Navigate to **Settings** tab
+3. Enter your **Server URL** and **API Token**
+4. Click **"Save Settings"** or **"Test Connection"** to verify
+
+### Connection Status
+
+The app shows a connection status indicator in the header:
+- **Green dot (●)**: Connected and authenticated
+- **Red dot (●)**: Connection error or authentication failed
+- **Gray circle (○)**: Not connected
+
+The connection is automatically checked every 30 seconds.
+
+### Troubleshooting
+
+**"Invalid API token" error:**
+- Verify the token starts with `tt_`
+- Check that the token hasn't expired
+- Ensure the token has the required scopes
+- Try creating a new token in the web app
+
+**"Connection failed" error:**
+- Verify the server URL is correct and accessible
+- Check your internet connection
+- Ensure the server is running and the API is accessible
+- For local development, use `http://localhost:5000` or your local IP address
+- Check the connection status indicator in the header
+
+**Settings not saving:**
+- Ensure you have write permissions in the app's data directory
+- Check that electron-store is working properly
+- Try clearing settings and re-entering them
 
 For more details, see [Desktop Settings Guide](../../docs/DESKTOP_SETTINGS.md).
 
