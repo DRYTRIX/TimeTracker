@@ -41,7 +41,7 @@ RESTORE_PROGRESS = {}
 ALLOWED_LOGO_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
-def _convert_json_template_to_html_css(template_json, page_size="A4", invoice=None, quote=None):
+def _convert_json_template_to_html_css(template_json, page_size="A4", invoice=None, quote=None, settings=None):
     """
     Convert JSON template to HTML/CSS for preview purposes with full element type support.
     
@@ -50,6 +50,7 @@ def _convert_json_template_to_html_css(template_json, page_size="A4", invoice=No
         page_size: Page size for CSS @page rule
         invoice: Optional invoice object for table data rendering
         quote: Optional quote object for table data rendering
+        settings: Optional settings object for company information
         
     Returns:
         tuple: (html_string, css_string)
@@ -220,9 +221,9 @@ body {{
         return str(color)
     
     # Helper function to render text with Jinja2-like template variables
-    def render_text_template(text, data_obj):
+    def render_text_template(text, data_obj, settings_obj=None):
         """Render text with template variables using actual data"""
-        if not text or not data_obj:
+        if not text:
             return text
         
         # Simple template variable replacement for preview
@@ -231,14 +232,26 @@ body {{
         def replace_var(match):
             var_path = match.group(1).strip()
             try:
-                # Handle simple attribute access (e.g., "invoice.invoice_number")
+                # Handle simple attribute access (e.g., "invoice.invoice_number" or "settings.company_name")
                 parts = var_path.split(".")
-                obj = data_obj
-                for part in parts:
-                    obj = getattr(obj, part, None)
-                    if obj is None:
-                        return match.group(0)  # Return original if not found
-                return str(obj) if obj is not None else ""
+                if parts[0] == "settings" and settings_obj:
+                    # Handle settings variables
+                    obj = settings_obj
+                    for part in parts[1:]:  # Skip "settings" part
+                        obj = getattr(obj, part, None)
+                        if obj is None:
+                            return match.group(0)  # Return original if not found
+                    return str(obj) if obj is not None else ""
+                elif data_obj:
+                    # Handle invoice/quote variables
+                    obj = data_obj
+                    for part in parts:
+                        obj = getattr(obj, part, None)
+                        if obj is None:
+                            return match.group(0)  # Return original if not found
+                    return str(obj) if obj is not None else ""
+                else:
+                    return match.group(0)  # Return original if no data object
             except Exception:
                 return match.group(0)  # Return original on error
         
@@ -302,7 +315,7 @@ body {{
             
             # Render text with actual data if available
             data_obj = invoice if invoice else quote
-            rendered_text = render_text_template(text, data_obj) if data_obj else text
+            rendered_text = render_text_template(text, data_obj, settings) if (data_obj or settings) else text
             
             # Escape HTML but preserve any remaining template syntax
             text_escaped = html_escape.escape(rendered_text)
@@ -1590,6 +1603,234 @@ def quote_pdf_layout_reset():
     return redirect(url_for("admin.quote_pdf_layout", size=page_size))
 
 
+@admin_bp.route("/admin/quote-pdf-layout/export-json/<page_size>", methods=["GET"])
+@login_required
+@admin_or_permission_required("manage_settings")
+def quote_pdf_layout_export_json(page_size):
+    """Export quote PDF template as JSON file."""
+    from app.models import QuotePDFTemplate
+    from io import BytesIO
+    
+    # Validate page size
+    valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+    if page_size not in valid_sizes:
+        flash(_("Invalid page size"), "error")
+        return redirect(url_for("admin.quote_pdf_layout", size="A4"))
+    
+    # Get template
+    template = QuotePDFTemplate.query.filter_by(page_size=page_size).first()
+    if not template:
+        flash(_("Template not found for this page size"), "error")
+        return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+    
+    # Get template JSON
+    template_json = template.template_json or "{}"
+    
+    # Create file-like object
+    output = BytesIO()
+    output.write(template_json.encode('utf-8'))
+    output.seek(0)
+    
+    # Return as downloadable file
+    filename = f"quote_pdf_template_{page_size}.json"
+    return send_file(
+        output,
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+@admin_bp.route("/admin/quote-pdf-layout/import-json", methods=["POST"])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required("manage_settings")
+def quote_pdf_layout_import_json():
+    """Import quote PDF template from JSON file."""
+    from app.models import QuotePDFTemplate
+    from app.utils.pdf_template_schema import get_page_dimensions_mm
+    import json
+    
+    # Get page size from form or detect from JSON
+    page_size = request.form.get("page_size", "A4")
+    
+    # Validate page size
+    valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+    if page_size not in valid_sizes:
+        page_size = "A4"
+    
+    # Check if file was uploaded
+    if 'json_file' not in request.files:
+        flash(_("No file uploaded"), "error")
+        return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+    
+    file = request.files['json_file']
+    if file.filename == '':
+        flash(_("No file selected"), "error")
+        return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+    
+    # Read and parse JSON
+    try:
+        file_content = file.read().decode('utf-8')
+        template_json_dict = json.loads(file_content)
+        
+        # Validate JSON structure
+        if not isinstance(template_json_dict, dict) or "page" not in template_json_dict:
+            flash(_("Invalid template JSON format. Missing 'page' property."), "error")
+            return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+        
+        # Detect page size from JSON if not provided
+        json_page_size = template_json_dict.get("page", {}).get("size")
+        if json_page_size and json_page_size in valid_sizes:
+            page_size = json_page_size
+        
+        # Update page size in JSON
+        template_json_dict["page"]["size"] = page_size
+        
+        # Ensure page dimensions match
+        expected_dims = get_page_dimensions_mm(page_size)
+        template_page_config = template_json_dict.get("page", {})
+        template_page_config["width"] = expected_dims["width"]
+        template_page_config["height"] = expected_dims["height"]
+        template_json_dict["page"] = template_page_config
+        
+        # Get or create template
+        template = QuotePDFTemplate.get_template(page_size)
+        
+        # Update template JSON
+        template.template_json = json.dumps(template_json_dict)
+        template.updated_at = datetime.utcnow()
+        
+        if not safe_commit("admin_import_quote_pdf_layout_json"):
+            flash(_("Could not import template due to a database error."), "error")
+        else:
+            flash(_("Template imported successfully"), "success")
+        
+        return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+        
+    except json.JSONDecodeError as e:
+        flash(_("Invalid JSON file: %(error)s", error=str(e)), "error")
+        return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+    except Exception as e:
+        current_app.logger.error(f"Error importing quote PDF template JSON: {e}", exc_info=True)
+        flash(_("Error importing template: %(error)s", error=str(e)), "error")
+        return redirect(url_for("admin.quote_pdf_layout", size=page_size))
+
+
+@admin_bp.route("/admin/pdf-layout/export-json/<page_size>", methods=["GET"])
+@login_required
+@admin_or_permission_required("manage_settings")
+def pdf_layout_export_json(page_size):
+    """Export invoice PDF template as JSON file."""
+    from app.models import InvoicePDFTemplate
+    from io import BytesIO
+    
+    # Validate page size
+    valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+    if page_size not in valid_sizes:
+        flash(_("Invalid page size"), "error")
+        return redirect(url_for("admin.pdf_layout", size="A4"))
+    
+    # Get template
+    template = InvoicePDFTemplate.query.filter_by(page_size=page_size).first()
+    if not template:
+        flash(_("Template not found for this page size"), "error")
+        return redirect(url_for("admin.pdf_layout", size=page_size))
+    
+    # Get template JSON
+    template_json = template.template_json or "{}"
+    
+    # Create file-like object
+    output = BytesIO()
+    output.write(template_json.encode('utf-8'))
+    output.seek(0)
+    
+    # Return as downloadable file
+    filename = f"invoice_pdf_template_{page_size}.json"
+    return send_file(
+        output,
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+@admin_bp.route("/admin/pdf-layout/import-json", methods=["POST"])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required("manage_settings")
+def pdf_layout_import_json():
+    """Import invoice PDF template from JSON file."""
+    from app.models import InvoicePDFTemplate
+    from app.utils.pdf_template_schema import get_page_dimensions_mm
+    import json
+    
+    # Get page size from form or detect from JSON
+    page_size = request.form.get("page_size", "A4")
+    
+    # Validate page size
+    valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+    if page_size not in valid_sizes:
+        page_size = "A4"
+    
+    # Check if file was uploaded
+    if 'json_file' not in request.files:
+        flash(_("No file uploaded"), "error")
+        return redirect(url_for("admin.pdf_layout", size=page_size))
+    
+    file = request.files['json_file']
+    if file.filename == '':
+        flash(_("No file selected"), "error")
+        return redirect(url_for("admin.pdf_layout", size=page_size))
+    
+    # Read and parse JSON
+    try:
+        file_content = file.read().decode('utf-8')
+        template_json_dict = json.loads(file_content)
+        
+        # Validate JSON structure
+        if not isinstance(template_json_dict, dict) or "page" not in template_json_dict:
+            flash(_("Invalid template JSON format. Missing 'page' property."), "error")
+            return redirect(url_for("admin.pdf_layout", size=page_size))
+        
+        # Detect page size from JSON if not provided
+        json_page_size = template_json_dict.get("page", {}).get("size")
+        if json_page_size and json_page_size in valid_sizes:
+            page_size = json_page_size
+        
+        # Update page size in JSON
+        template_json_dict["page"]["size"] = page_size
+        
+        # Ensure page dimensions match
+        expected_dims = get_page_dimensions_mm(page_size)
+        template_page_config = template_json_dict.get("page", {})
+        template_page_config["width"] = expected_dims["width"]
+        template_page_config["height"] = expected_dims["height"]
+        template_json_dict["page"] = template_page_config
+        
+        # Get or create template
+        template = InvoicePDFTemplate.get_template(page_size)
+        
+        # Update template JSON
+        template.template_json = json.dumps(template_json_dict)
+        template.updated_at = datetime.utcnow()
+        
+        if not safe_commit("admin_import_pdf_layout_json"):
+            flash(_("Could not import template due to a database error."), "error")
+        else:
+            flash(_("Template imported successfully"), "success")
+        
+        return redirect(url_for("admin.pdf_layout", size=page_size))
+        
+    except json.JSONDecodeError as e:
+        flash(_("Invalid JSON file: %(error)s", error=str(e)), "error")
+        return redirect(url_for("admin.pdf_layout", size=page_size))
+    except Exception as e:
+        current_app.logger.error(f"Error importing invoice PDF template JSON: {e}", exc_info=True)
+        flash(_("Error importing template: %(error)s", error=str(e)), "error")
+        return redirect(url_for("admin.pdf_layout", size=page_size))
+
+
 @admin_bp.route("/admin/pdf-layout/debug", methods=["GET"])
 @login_required
 @admin_or_permission_required("manage_settings")
@@ -1865,7 +2106,7 @@ def pdf_layout_preview():
     if template_json_parsed:
         try:
             # Convert JSON template to HTML/CSS with actual invoice data for better table rendering
-            html, css = _convert_json_template_to_html_css(template_json_parsed, page_size, invoice=invoice, quote=None)
+            html, css = _convert_json_template_to_html_css(template_json_parsed, page_size, invoice=invoice, quote=None, settings=settings_obj)
             items_count = len(invoice.items) if hasattr(invoice, 'items') and invoice.items else 0
             current_app.logger.info(f"[PDF_PREVIEW] JSON template converted with invoice data - PageSize: '{page_size}', HTML length: {len(html)}, CSS length: {len(css)}, Items count: {items_count}")
         except Exception as e:
@@ -1879,45 +2120,52 @@ def pdf_layout_preview():
         html = "<div class='invoice-wrapper'><p style='color:red; padding:20px;'>Error: No template found. Please save a template first.</p></div>"
         css = ""
 
-    # Load saved template CSS if available and merge with generated CSS
+    # CRITICAL: Load the saved template CSS for this page size and merge with editor CSS
+    # The editor generates minimal CSS, but we need the full template CSS for proper preview
     from app.utils.pdf_generator import update_page_size_in_css, validate_page_size_in_css
     import re
     
-    if saved_template and saved_template.template_css and saved_template.template_css.strip():
-        current_app.logger.info(f"[PDF_PREVIEW] Retrieved saved template CSS - PageSize: '{page_size}', TemplateID: {saved_template.id}, HasCSS: {bool(saved_template.template_css)}")
-        # Use the saved template CSS as base, but normalize it first to ensure correct @page size
-        saved_css = saved_template.template_css
-        # CRITICAL: Normalize the saved template CSS to ensure it has the correct @page size
-        saved_css = update_page_size_in_css(saved_css, page_size)
-        current_app.logger.info(f"[PDF_PREVIEW] Using saved template CSS - PageSize: '{page_size}', CSS length: {len(saved_css)}, TemplateID: {saved_template.id}")
+    saved_css = None  # Initialize saved_css to avoid UnboundLocalError
+    if saved_template:
+        current_app.logger.info(f"[PDF_PREVIEW] Retrieved saved invoice template - PageSize: '{page_size}', TemplateID: {saved_template.id}, HasCSS: {bool(saved_template.template_css)}")
+        if saved_template.template_css and saved_template.template_css.strip():
+            # Use the saved template CSS as base, but normalize it first to ensure correct @page size
+            saved_css = saved_template.template_css
+            # CRITICAL: Normalize the saved template CSS to ensure it has the correct @page size
+            saved_css = update_page_size_in_css(saved_css, page_size)
+            current_app.logger.info(f"[PDF_PREVIEW] Using saved invoice template CSS - PageSize: '{page_size}', CSS length: {len(saved_css)}, TemplateID: {saved_template.id}")
         
-        # Merge generated CSS with saved CSS (generated CSS takes precedence for @page rules)
+        # If editor provided CSS, merge it (editor CSS takes precedence for @page rules)
         if css and css.strip():
-            # Extract @page rule from generated CSS if present
-            generated_page_match = re.search(r"@page\s*\{[^}]*\}", css, re.IGNORECASE | re.DOTALL)
-            if generated_page_match:
-                # Generated CSS has @page rule - normalize it and use it, merge with saved CSS
-                generated_page_rule = generated_page_match.group(0)
-                # Normalize generated CSS's @page rule to correct size FIRST
-                generated_page_rule = update_page_size_in_css(generated_page_rule, page_size)
-                # Remove @page from saved CSS and add normalized generated CSS's @page rule
-                saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
-                # Remove @page rule from generated CSS and merge
-                generated_css_no_page = css.replace(generated_page_rule, "").strip()
-                css = generated_page_rule + "\n" + saved_css_no_page
-                if generated_css_no_page:
-                    css = css + "\n" + generated_css_no_page
+            # Extract @page rule from editor CSS if present
+            editor_page_match = re.search(r"@page\s*\{[^}]*\}", css, re.IGNORECASE | re.DOTALL)
+            if editor_page_match:
+                # Editor has @page rule - normalize it and use it, merge with saved CSS
+                editor_page_rule = editor_page_match.group(0)
+                # Normalize editor's @page rule to correct size FIRST
+                editor_page_rule = update_page_size_in_css(editor_page_rule, page_size)
+                # Remove @page from saved CSS and add normalized editor's @page rule
+                if saved_css:
+                    saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
+                else:
+                    saved_css_no_page = ""
+                # Remove @page rule from editor CSS and merge
+                editor_css_no_page = css.replace(editor_page_rule, "").strip()
+                css = editor_page_rule + "\n" + saved_css_no_page
+                if editor_css_no_page:
+                    css = css + "\n" + editor_css_no_page
             else:
-                # No @page in generated CSS, use saved CSS (already normalized) and add generated CSS
-                css = saved_css + "\n" + css
+                # No @page in editor CSS, use saved CSS (already normalized) and add editor CSS
+                if saved_css:
+                    css = saved_css + "\n" + css
+                # else: css already has the editor CSS, no need to merge
         else:
-            # No generated CSS, use saved template CSS (already normalized)
-            css = saved_css
-    
-    # Ensure CSS has @page rule even if no saved template CSS
-    if not css or not css.strip() or "@page" not in css:
-        current_app.logger.warning(f"[PDF_PREVIEW] No CSS or @page rule found, creating default - PageSize: '{page_size}'")
-        css = f"@page {{\n    size: {page_size};\n    margin: 2cm;\n}}\n" + (css or "")
+            # No editor CSS, use saved template CSS (already normalized) if available
+            if saved_css:
+                css = saved_css
+    elif not css or not css.strip():
+        # No template CSS and no editor CSS - create default with correct page size
+        css = f"@page {{\n    size: {page_size};\n    margin: 2cm;\n}}\n"
 
     # Normalize @page size in CSS to match the selected page size
     # This ensures preview matches what will be exported
@@ -2145,6 +2393,7 @@ def pdf_layout_preview():
     page_height_px = int((page_height_mm / 25.4) * 96)
     
     # Build complete HTML page with embedded styles
+    # Build complete HTML page with embedded styles
     # For preview, scale to fit viewport while maintaining aspect ratio
     page_html = f"""<!DOCTYPE html>
 <html>
@@ -2153,147 +2402,87 @@ def pdf_layout_preview():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Preview ({page_size})</title>
     <style>{css}
-/* Preview-specific styles - only for browser preview, not for PDF */
-body {{
-    margin: 0;
-    padding: 20px;
-    background-color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    height: auto;
-    overflow: auto;
-    width: 100%;
+/* Preview-specific styles - completely new approach */
+* {{
     box-sizing: border-box;
-}}
-.preview-wrapper {{
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    width: 100%;
-    min-height: 100%;
-    padding: 0;
     margin: 0;
-    flex-shrink: 0;
+    padding: 0;
+}}
+html {{
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: auto !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    background-color: #e5e7eb !important;
+}}
+body {{
+    width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    padding-top: 20px !important;
+    overflow: auto !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    background-color: #e5e7eb !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    min-height: 100vh !important;
 }}
 .preview-container {{
     background: white;
-    width: {page_width_px}px;
-    height: {page_height_px}px;
-    max-width: {page_width_px}px;
-    max-height: {page_height_px}px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    margin: 20px auto;
-    padding: 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-radius: 8px;
     overflow: visible;
     position: relative;
-    box-sizing: border-box;
-    display: block;
-    flex-shrink: 0;
+    width: {page_width_px}px;
+    min-width: {page_width_px}px;
+    max-width: {page_width_px}px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    transition: transform 0.2s ease;
+    transform-origin: top center;
+    margin-top: 20px;
 }}
 .preview-container .invoice-wrapper,
 .preview-container .quote-wrapper {{
     width: {page_width_px}px !important;
-    height: {page_height_px}px !important;
+    min-width: {page_width_px}px !important;
     max-width: {page_width_px}px !important;
+    height: {page_height_px}px !important;
+    min-height: {page_height_px}px !important;
     max-height: {page_height_px}px !important;
     box-sizing: border-box !important;
     overflow: visible !important;
-    position: relative !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 20px !important;
-    background: white;
+    background: transparent !important;
+    position: relative;
+    /* CSS zoom on container will scale this proportionally */
 }}
 </style>
+<!-- Zoom is now controlled by the parent iframe's JavaScript -->
 <script>
-// Scale container to fit viewport using JavaScript for better control
+// Minimal script - zoom is handled by parent window
 (function() {{
+    // Ensure container maintains correct dimensions
     const container = document.querySelector('.preview-container');
-    if (!container) return;
-    
-    const pageWidth = {page_width_px};
-    const pageHeight = {page_height_px};
-    
-    function scaleToFit() {{
-        // Get iframe viewport dimensions (not window - we're inside an iframe)
-        const iframeWidth = window.innerWidth || document.documentElement.clientWidth;
-        const iframeHeight = window.innerHeight || document.documentElement.clientHeight;
-        
-        // Calculate available space (accounting for body padding)
-        const availableWidth = iframeWidth - 40; // 20px padding on each side
-        const availableHeight = iframeHeight - 40; // 20px padding on top/bottom
-        
-        // Calculate scale to fit while maintaining aspect ratio
-        // Use a smaller scale factor to ensure the entire page is visible with margins
-        const scaleX = availableWidth / pageWidth;
-        const scaleY = availableHeight / pageHeight;
-        const scale = Math.min(scaleX, scaleY, 0.95); // Use 95% to ensure full page is visible with some margin
-        
-        // Set original dimensions (these stay in layout for proper scrolling)
-        container.style.width = pageWidth + 'px';
-        container.style.height = pageHeight + 'px';
-        
-        // Calculate scaled dimensions for layout
-        const scaledWidth = pageWidth * scale;
-        const scaledHeight = pageHeight * scale;
-        
-        // Apply scale with center top origin - this keeps it centered horizontally
-        container.style.transform = 'scale(' + scale + ')';
-        container.style.transformOrigin = 'center top';
-        
-        // Use margin auto for centering - works with flexbox
-        container.style.marginLeft = 'auto';
-        container.style.marginRight = 'auto';
-        
-        // Ensure positioning and allow scrolling
-        container.style.position = 'relative';
-        container.style.left = '';
-        container.style.right = '';
-        
-        // Ensure body can scroll if content is larger than viewport
-        // The body should expand to fit the scaled content
-        const body = document.body;
-        const wrapper = document.querySelector('.preview-wrapper');
-        if (wrapper) {{
-            // Ensure wrapper doesn't constrain width
-            wrapper.style.minWidth = scaledWidth + 40 + 'px'; // Add padding
-            wrapper.style.width = 'auto';
-        }}
-        
-        // Ensure body can scroll horizontally if needed
-        body.style.overflowX = scaledWidth > availableWidth ? 'auto' : 'visible';
-        body.style.overflowY = scaledHeight > availableHeight ? 'auto' : 'visible';
-    }}
-    
-    // Scale on load and resize
-    if (document.readyState === 'loading') {{
-        document.addEventListener('DOMContentLoaded', function() {{
-            setTimeout(scaleToFit, 50);
-        }});
-    }} else {{
-        setTimeout(scaleToFit, 50);
-    }}
-    
-    window.addEventListener('resize', function() {{
-        setTimeout(scaleToFit, 50);
-    }});
-    
-    // Also listen for iframe resize events
-    if (window.parent !== window) {{
-        // We're in an iframe - watch for parent resize
-        window.parent.addEventListener('resize', function() {{
-            setTimeout(scaleToFit, 50);
-        }});
+    if (container) {{
+        container.style.width = {page_width_px} + 'px';
+        container.style.minWidth = {page_width_px} + 'px';
+        container.style.maxWidth = {page_width_px} + 'px';
     }}
 }})();
 </script>
 </head>
 <body>
-<div class="preview-wrapper">
-    <div class="preview-container">
+<div class="preview-container">
 {body_html}
-    </div>
 </div>
 </body>
 </html>"""
@@ -2474,7 +2663,7 @@ def quote_pdf_layout_preview():
     if template_json_parsed:
         try:
             # Convert JSON template to HTML/CSS with actual quote data for better table rendering
-            html, css = _convert_json_template_to_html_css(template_json_parsed, page_size, invoice=None, quote=quote)
+            html, css = _convert_json_template_to_html_css(template_json_parsed, page_size, invoice=None, quote=quote, settings=settings_obj)
             items_count = len(quote.items) if hasattr(quote, 'items') and quote.items else 0
             current_app.logger.info(f"[PDF_PREVIEW] Quote JSON template converted with quote data - PageSize: '{page_size}', HTML length: {len(html)}, CSS length: {len(css)}, Items count: {items_count}")
         except Exception as e:
@@ -2491,6 +2680,7 @@ def quote_pdf_layout_preview():
     import re
     
     template = QuotePDFTemplate.query.filter_by(page_size=page_size).first()
+    saved_css = None  # Initialize saved_css to avoid UnboundLocalError
     if template:
         current_app.logger.info(f"[PDF_PREVIEW] Retrieved saved quote template - PageSize: '{page_size}', TemplateID: {template.id}, HasCSS: {bool(template.template_css)}")
         if template.template_css and template.template_css.strip():
@@ -2510,7 +2700,10 @@ def quote_pdf_layout_preview():
                 # Normalize editor's @page rule to correct size FIRST
                 editor_page_rule = update_page_size_in_css(editor_page_rule, page_size)
                 # Remove @page from saved CSS and add normalized editor's @page rule
-                saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
+                if saved_css:
+                    saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
+                else:
+                    saved_css_no_page = ""
                 # Remove @page rule from editor CSS and merge
                 editor_css_no_page = css.replace(editor_page_rule, "").strip()
                 css = editor_page_rule + "\n" + saved_css_no_page
@@ -2518,10 +2711,13 @@ def quote_pdf_layout_preview():
                     css = css + "\n" + editor_css_no_page
             else:
                 # No @page in editor CSS, use saved CSS (already normalized) and add editor CSS
-                css = saved_css + "\n" + css
+                if saved_css:
+                    css = saved_css + "\n" + css
+                # else: css already has the editor CSS, no need to merge
         else:
-            # No editor CSS, use saved template CSS (already normalized)
-            css = saved_css
+            # No editor CSS, use saved template CSS (already normalized) if available
+            if saved_css:
+                css = saved_css
     elif not css or not css.strip():
         # No template CSS and no editor CSS - create default with correct page size
         css = f"@page {{\n    size: {page_size};\n    margin: 2cm;\n}}\n"
@@ -2759,149 +2955,87 @@ def quote_pdf_layout_preview():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quote Preview ({page_size})</title>
     <style>{css}
-/* Preview-specific styles - only for browser preview, not for PDF */
-body {{
-    margin: 0;
-    padding: 20px;
-    background-color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    height: auto;
-    overflow: visible;
-    width: 100%;
+/* Preview-specific styles - completely new approach */
+* {{
     box-sizing: border-box;
-    position: relative;
-}}
-.preview-wrapper {{
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    width: 100%;
-    min-height: 100%;
-    padding: 0;
     margin: 0;
-    flex-shrink: 0;
-    position: relative;
+    padding: 0;
+}}
+html {{
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: auto !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    background-color: #e5e7eb !important;
+}}
+body {{
+    width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    padding-top: 20px !important;
+    overflow: auto !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    background-color: #e5e7eb !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    min-height: 100vh !important;
 }}
 .preview-container {{
     background: white;
-    width: {page_width_px}px;
-    height: {page_height_px}px;
-    max-width: {page_width_px}px;
-    max-height: {page_height_px}px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    margin: 20px auto;
-    padding: 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-radius: 8px;
     overflow: visible;
     position: relative;
-    box-sizing: border-box;
-    display: block;
-    flex-shrink: 0;
+    width: {page_width_px}px;
+    min-width: {page_width_px}px;
+    max-width: {page_width_px}px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    transition: transform 0.2s ease;
+    transform-origin: top center;
+    margin-top: 20px;
 }}
 .preview-container .invoice-wrapper,
 .preview-container .quote-wrapper {{
     width: {page_width_px}px !important;
-    height: {page_height_px}px !important;
+    min-width: {page_width_px}px !important;
     max-width: {page_width_px}px !important;
+    height: {page_height_px}px !important;
+    min-height: {page_height_px}px !important;
     max-height: {page_height_px}px !important;
     box-sizing: border-box !important;
     overflow: visible !important;
-    position: relative !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 20px !important;
-    background: white;
+    background: transparent !important;
+    position: relative;
+    /* CSS zoom on container will scale this proportionally */
 }}
 </style>
+<!-- Zoom is now controlled by the parent iframe's JavaScript -->
 <script>
-// Scale container to fit viewport using JavaScript for better control
+// Minimal script - zoom is handled by parent window
 (function() {{
+    // Ensure container maintains correct dimensions
     const container = document.querySelector('.preview-container');
-    if (!container) return;
-    
-    const pageWidth = {page_width_px};
-    const pageHeight = {page_height_px};
-    
-    function scaleToFit() {{
-        // Get iframe viewport dimensions (not window - we're inside an iframe)
-        const iframeWidth = window.innerWidth || document.documentElement.clientWidth;
-        const iframeHeight = window.innerHeight || document.documentElement.clientHeight;
-        
-        // Calculate available space (accounting for body padding)
-        const availableWidth = iframeWidth - 40; // 20px padding on each side
-        const availableHeight = iframeHeight - 40; // 20px padding on top/bottom
-        
-        // Calculate scale to fit while maintaining aspect ratio
-        // Use a smaller scale factor to ensure the entire page is visible with margins
-        const scaleX = availableWidth / pageWidth;
-        const scaleY = availableHeight / pageHeight;
-        const scale = Math.min(scaleX, scaleY, 0.95); // Use 95% to ensure full page is visible with some margin
-        
-        // Set original dimensions (these stay in layout for proper scrolling)
-        container.style.width = pageWidth + 'px';
-        container.style.height = pageHeight + 'px';
-        
-        // Calculate scaled dimensions for layout
-        const scaledWidth = pageWidth * scale;
-        const scaledHeight = pageHeight * scale;
-        
-        // Apply scale with center top origin - this keeps it centered horizontally
-        container.style.transform = 'scale(' + scale + ')';
-        container.style.transformOrigin = 'center top';
-        
-        // Use margin auto for centering - works with flexbox
-        container.style.marginLeft = 'auto';
-        container.style.marginRight = 'auto';
-        
-        // Ensure positioning and allow scrolling
-        container.style.position = 'relative';
-        container.style.left = '';
-        container.style.right = '';
-        
-        // Ensure body can scroll if content is larger than viewport
-        // The body should expand to fit the scaled content
-        const body = document.body;
-        const wrapper = document.querySelector('.preview-wrapper');
-        if (wrapper) {{
-            // Ensure wrapper doesn't constrain width
-            wrapper.style.minWidth = scaledWidth + 40 + 'px'; // Add padding
-            wrapper.style.width = 'auto';
-        }}
-        
-        // Ensure body can scroll horizontally if needed
-        body.style.overflowX = scaledWidth > availableWidth ? 'auto' : 'visible';
-        body.style.overflowY = scaledHeight > availableHeight ? 'auto' : 'visible';
-    }}
-    
-    // Scale on load and resize
-    if (document.readyState === 'loading') {{
-        document.addEventListener('DOMContentLoaded', function() {{
-            setTimeout(scaleToFit, 50);
-        }});
-    }} else {{
-        setTimeout(scaleToFit, 50);
-    }}
-    
-    window.addEventListener('resize', function() {{
-        setTimeout(scaleToFit, 50);
-    }});
-    
-    // Also listen for iframe resize events
-    if (window.parent !== window) {{
-        // We're in an iframe - watch for parent resize
-        window.parent.addEventListener('resize', function() {{
-            setTimeout(scaleToFit, 50);
-        }});
+    if (container) {{
+        container.style.width = {page_width_px} + 'px';
+        container.style.minWidth = {page_width_px} + 'px';
+        container.style.maxWidth = {page_width_px} + 'px';
     }}
 }})();
 </script>
 </head>
 <body>
-<div class="preview-wrapper">
-    <div class="preview-container">
+<div class="preview-container">
 {body_html}
-    </div>
 </div>
 </body>
 </html>"""

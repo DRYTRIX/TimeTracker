@@ -341,7 +341,7 @@
     overflow: hidden;
 }
 
-/* Preview Modal */
+/* Preview Modal - Modern Redesign */
 .preview-modal {
     position: fixed;
     top: 0;
@@ -349,6 +349,14 @@
     right: 0;
     bottom: 0;
     z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.preview-modal[style*="display: block"] {
+    opacity: 1;
+    visibility: visible;
 }
 
 .preview-modal-overlay {
@@ -359,6 +367,12 @@
     bottom: 0;
     background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .preview-modal-content {
@@ -366,32 +380,58 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 1200px;
-    max-height: 90vh;
+    width: 95%;
+    max-width: min(1600px, 98vw);
+    max-height: 95vh;
     background: white;
     border-radius: 1rem;
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, -45%);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
 }
 
 .dark .preview-modal-content {
     background: #1f2937;
     color: #f9fafb;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
+/* Enhanced Header */
 .preview-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.5rem;
-    border-bottom: 2px solid #e5e7eb;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    gap: 1rem;
+    flex-shrink: 0;
 }
 
 .dark .preview-modal-header {
     border-bottom-color: #4b5563;
+    background: #111827;
+}
+
+.preview-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
 }
 
 .preview-modal-header h3 {
@@ -399,25 +439,149 @@
     font-weight: 600;
     margin: 0;
     color: #1f2937;
+    white-space: nowrap;
 }
 
 .dark .preview-modal-header h3 {
     color: #f9fafb;
 }
 
-.preview-modal-close {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
+.preview-page-size-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    background: #667eea;
+    color: white;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.dark .preview-page-size-badge {
+    background: #7c3aed;
+}
+
+/* Toolbar */
+.preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.preview-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+    border-right: 1px solid #e5e7eb;
+}
+
+.dark .preview-toolbar-group {
+    border-right-color: #4b5563;
+}
+
+.preview-toolbar-group:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.preview-toolbar-select {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background: white;
+    color: #1f2937;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.preview-toolbar-select:hover {
+    border-color: #667eea;
+}
+
+.preview-toolbar-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.dark .preview-toolbar-select {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .preview-toolbar-select:hover {
+    border-color: #7c3aed;
+}
+
+.preview-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background: white;
     color: #6b7280;
     cursor: pointer;
-    padding: 0.25rem;
-    line-height: 1;
-    transition: color 0.2s;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.preview-toolbar-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #1f2937;
+}
+
+.preview-toolbar-btn:active {
+    transform: scale(0.95);
+}
+
+.dark .preview-toolbar-btn {
+    background: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
+}
+
+.dark .preview-toolbar-btn:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+    color: #f9fafb;
+}
+
+.preview-modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1.25rem;
+    flex-shrink: 0;
 }
 
 .preview-modal-close:hover {
+    background: #f3f4f6;
     color: #1f2937;
+}
+
+.preview-modal-close:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .dark .preview-modal-close {
@@ -425,45 +589,245 @@
 }
 
 .dark .preview-modal-close:hover {
+    background: #374151;
     color: #f9fafb;
 }
 
+/* Enhanced Body */
 .preview-modal-body {
     flex: 1;
-    position: relative;
-    padding: 1rem;
-    overflow: auto;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    min-height: 600px;
-    max-height: calc(90vh - 80px);
-    background: #f0f0f0;
-    width: 100%;
-    box-sizing: border-box;
+    flex-direction: column;
+    overflow: hidden;
+    background: #e5e7eb;
+    min-height: 0;
 }
 
 .dark .preview-modal-body {
+    background: #1f2937;
+}
+
+/* Controls Bar */
+.preview-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    gap: 1rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.dark .preview-controls-bar {
     background: #111827;
+    border-bottom-color: #4b5563;
+}
+
+.preview-controls-left,
+.preview-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.preview-control-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background: white;
+    color: #6b7280;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.preview-control-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #1f2937;
+}
+
+.preview-control-btn:active {
+    transform: scale(0.98);
+}
+
+.preview-control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.preview-control-btn-active {
+    background: #667eea !important;
+    border-color: #667eea !important;
+    color: white !important;
+}
+
+.preview-control-btn-active:hover {
+    background: #5568d3 !important;
+    border-color: #5568d3 !important;
+}
+
+.dark .preview-control-btn {
+    background: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
+}
+
+.dark .preview-control-btn:hover:not(:disabled) {
+    background: #4b5563;
+    border-color: #6b7280;
+    color: #f9fafb;
+}
+
+.dark .preview-control-btn-active {
+    background: #7c3aed !important;
+    border-color: #7c3aed !important;
+    color: white !important;
+}
+
+.dark .preview-control-btn-active:hover {
+    background: #6d28d9 !important;
+    border-color: #6d28d9 !important;
+}
+
+/* Zoom Slider */
+.preview-zoom-slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 200px;
+}
+
+.preview-zoom-slider {
+    flex: 1;
+    height: 0.375rem;
+    border-radius: 0.25rem;
+    background: #e5e7eb;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.preview-zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.preview-zoom-slider::-webkit-slider-thumb:hover {
+    background: #5568d3;
+    transform: scale(1.1);
+}
+
+.preview-zoom-slider::-moz-range-thumb {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.preview-zoom-slider::-moz-range-thumb:hover {
+    background: #5568d3;
+    transform: scale(1.1);
+}
+
+.dark .preview-zoom-slider {
+    background: #4b5563;
+}
+
+.dark .preview-zoom-slider::-webkit-slider-thumb {
+    background: #7c3aed;
+}
+
+.dark .preview-zoom-slider::-webkit-slider-thumb:hover {
+    background: #6d28d9;
+}
+
+.dark .preview-zoom-slider::-moz-range-thumb {
+    background: #7c3aed;
+}
+
+.dark .preview-zoom-slider::-moz-range-thumb:hover {
+    background: #6d28d9;
+}
+
+.preview-zoom-display {
+    min-width: 3.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.dark .preview-zoom-display {
+    color: #9ca3af;
+}
+
+/* Content Wrapper */
+.preview-content-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    min-height: 0;
+    background: #e5e7eb;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 0.5rem;
+}
+
+.dark .preview-content-wrapper {
+    background: #1f2937;
+}
+
+.preview-frame-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1.5rem;
+    padding-top: 1rem;
+    box-sizing: border-box;
+    overflow: auto;
+    position: relative;
 }
 
 #preview-frame {
     width: 100%;
-    max-width: 100%;
     height: 100%;
     min-height: 600px;
     border: none;
     border-radius: 0.5rem;
     background: transparent;
-    overflow: auto;
+    box-shadow: none;
     display: block;
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
 }
 
 .dark #preview-frame {
     background: #374151;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
 }
 
+/* Enhanced Loading State */
 .preview-loading {
     position: absolute;
     top: 0;
@@ -475,8 +839,9 @@
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 10;
+    z-index: 20;
     border-radius: 0.5rem;
+    animation: fadeIn 0.2s ease;
 }
 
 .dark .preview-loading {
@@ -485,6 +850,225 @@
 
 .preview-loading.active {
     display: flex;
+}
+
+.preview-loading-content {
+    text-align: center;
+    max-width: 300px;
+}
+
+.spinner-large {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.dark .spinner-large {
+    border-color: #4b5563;
+    border-top-color: #7c3aed;
+}
+
+.preview-loading-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    margin: 0 0 1rem 0;
+}
+
+.dark .preview-loading-text {
+    color: #9ca3af;
+}
+
+.preview-loading-progress {
+    width: 100%;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.dark .preview-loading-progress {
+    background: #4b5563;
+}
+
+.preview-loading-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+    width: 0%;
+    animation: progressPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes progressPulse {
+    0%, 100% { width: 0%; }
+    50% { width: 70%; }
+}
+
+.dark .preview-loading-progress-bar {
+    background: linear-gradient(90deg, #7c3aed, #9333ea);
+}
+
+/* Error State */
+.preview-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    border-radius: 0.5rem;
+    animation: fadeIn 0.2s ease;
+}
+
+.dark .preview-error {
+    background: rgba(31, 41, 55, 0.95);
+}
+
+.preview-error-content {
+    text-align: center;
+    max-width: 400px;
+    padding: 2rem;
+}
+
+.preview-error-icon {
+    font-size: 3rem;
+    color: #ef4444;
+    margin-bottom: 1rem;
+}
+
+.preview-error-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.75rem 0;
+}
+
+.dark .preview-error-title {
+    color: #f9fafb;
+}
+
+.preview-error-message {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0 0 1.5rem 0;
+    line-height: 1.5;
+}
+
+.dark .preview-error-message {
+    color: #9ca3af;
+}
+
+.preview-error-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.preview-error-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.preview-error-btn:not(.preview-error-btn-secondary) {
+    background: #667eea;
+    color: white;
+}
+
+.preview-error-btn:not(.preview-error-btn-secondary):hover {
+    background: #5568d3;
+}
+
+.preview-error-btn-secondary {
+    background: #e5e7eb;
+    color: #6b7280;
+}
+
+.preview-error-btn-secondary:hover {
+    background: #d1d5db;
+}
+
+.dark .preview-error-btn-secondary {
+    background: #374151;
+    color: #9ca3af;
+}
+
+.dark .preview-error-btn-secondary:hover {
+    background: #4b5563;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .preview-modal-content {
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+    
+    .preview-modal-header {
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .preview-toolbar {
+        order: 3;
+        width: 100%;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .dark .preview-toolbar {
+        border-top-color: #4b5563;
+    }
+    
+    .preview-controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .preview-controls-left,
+    .preview-controls-right {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .preview-zoom-slider-wrapper {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
 }
 
 .spinner {
@@ -693,6 +1277,13 @@
     <button id="btn-code" type="button" class="btn btn-secondary">
         <i class="fas fa-code mr-2"></i>{{ _('View Code') }}
     </button>
+    <a href="{{ url_for('admin.quote_pdf_layout_export_json', page_size=page_size) }}" class="btn btn-secondary" id="btn-export-json">
+        <i class="fas fa-download mr-2"></i>{{ _('Export JSON') }}
+    </a>
+    <label for="import-json-file" class="btn btn-secondary" style="cursor: pointer; margin: 0;">
+        <i class="fas fa-upload mr-2"></i>{{ _('Import JSON') }}
+    </label>
+    <input type="file" id="import-json-file" accept=".json" style="display: none;">
     <label class="inline-flex items-center ml-4">
         <input type="checkbox" id="snap-to-grid" class="mr-2" checked>
         <span>{{ _('Snap to Grid (10px)') }}</span>
@@ -1195,23 +1786,108 @@
 </div>
 
 <!-- Preview Modal -->
-<div id="preview-modal" class="preview-modal" style="display: none;">
+<div id="preview-modal" class="preview-modal" style="display: none;" role="dialog" aria-labelledby="preview-modal-title" aria-modal="true">
     <div class="preview-modal-overlay" id="preview-modal-overlay"></div>
     <div class="preview-modal-content">
+        <!-- Enhanced Header with Toolbar -->
         <div class="preview-modal-header">
-            <h3>{{ _('PDF Preview') }}</h3>
-            <button class="preview-modal-close" id="preview-modal-close" type="button">
+            <div class="preview-header-left">
+                <h3 id="preview-modal-title">{{ _('PDF Preview') }}</h3>
+                <span class="preview-page-size-badge" id="preview-page-size-badge">A4</span>
+            </div>
+            <div class="preview-toolbar">
+                <div class="preview-toolbar-group">
+                    <label for="preview-page-size-select" class="sr-only">{{ _('Page Size') }}</label>
+                    <select id="preview-page-size-select" class="preview-toolbar-select" aria-label="{{ _('Page Size') }}">
+                        <option value="A4">A4</option>
+                        <option value="Letter">Letter</option>
+                        <option value="Legal">Legal</option>
+                        <option value="A3">A3</option>
+                        <option value="A5">A5</option>
+                        <option value="Tabloid">Tabloid</option>
+                    </select>
+                </div>
+                <div class="preview-toolbar-group">
+                    <button type="button" id="preview-btn-refresh" class="preview-toolbar-btn" title="{{ _('Refresh Preview') }}" aria-label="{{ _('Refresh Preview') }}">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button type="button" id="preview-btn-fullscreen" class="preview-toolbar-btn" title="{{ _('Toggle Fullscreen') }}" aria-label="{{ _('Toggle Fullscreen') }}">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            <button class="preview-modal-close" id="preview-modal-close" type="button" aria-label="{{ _('Close Preview') }}">
                 <i class="fas fa-times"></i>
             </button>
         </div>
+        
+        <!-- Enhanced Body with Controls -->
         <div class="preview-modal-body">
-            <div class="preview-loading" id="preview-loading">
-                <div class="text-center">
-                    <div class="spinner mb-3"></div>
-                    <p class="text-sm text-gray-600 font-medium">{{ _('Generating...') }}</p>
+            <!-- Controls Bar -->
+            <div class="preview-controls-bar">
+                <div class="preview-controls-left">
+                    <button type="button" id="preview-btn-zoom-out" class="preview-control-btn" title="{{ _('Zoom Out') }}" aria-label="{{ _('Zoom Out') }}">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <div class="preview-zoom-slider-wrapper">
+                        <input type="range" id="preview-zoom-slider" class="preview-zoom-slider" min="25" max="200" value="100" step="5" aria-label="{{ _('Zoom Level') }}">
+                        <span id="preview-zoom-display" class="preview-zoom-display">100%</span>
+                    </div>
+                    <button type="button" id="preview-btn-zoom-in" class="preview-control-btn" title="{{ _('Zoom In') }}" aria-label="{{ _('Zoom In') }}">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button type="button" id="preview-btn-zoom-reset" class="preview-control-btn" title="{{ _('Reset Zoom') }}" aria-label="{{ _('Reset Zoom') }}">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                </div>
+                <div class="preview-controls-right">
+                    <button type="button" id="preview-btn-fit-width" class="preview-control-btn" title="{{ _('Fit to Width') }}" aria-label="{{ _('Fit to Width') }}">
+                        <i class="fas fa-arrows-alt-h"></i> {{ _('Fit Width') }}
+                    </button>
+                    <button type="button" id="preview-btn-fit-height" class="preview-control-btn" title="{{ _('Fit to Height') }}" aria-label="{{ _('Fit to Height') }}">
+                        <i class="fas fa-arrows-alt-v"></i> {{ _('Fit Height') }}
+                    </button>
+                    <button type="button" id="preview-btn-actual-size" class="preview-control-btn" title="{{ _('Actual Size') }}" aria-label="{{ _('Actual Size') }}">
+                        <i class="fas fa-expand-arrows-alt"></i> {{ _('Actual Size') }}
+                    </button>
                 </div>
             </div>
-            <iframe id="preview-frame" style="width: 100%; height: 100%; min-height: 600px; border: none; border-radius: 0.5rem; display: block; background: transparent;"></iframe>
+            
+            <!-- Content Wrapper -->
+            <div class="preview-content-wrapper" id="preview-content-wrapper">
+                <!-- Loading State -->
+                <div class="preview-loading" id="preview-loading">
+                    <div class="preview-loading-content">
+                        <div class="spinner-large"></div>
+                        <p class="preview-loading-text">{{ _('Generating preview...') }}</p>
+                        <div class="preview-loading-progress">
+                            <div class="preview-loading-progress-bar" id="preview-loading-progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Error State -->
+                <div class="preview-error" id="preview-error" style="display: none;">
+                    <div class="preview-error-content">
+                        <i class="fas fa-exclamation-triangle preview-error-icon"></i>
+                        <h4 class="preview-error-title">{{ _('Preview Error') }}</h4>
+                        <p class="preview-error-message" id="preview-error-message"></p>
+                        <div class="preview-error-actions">
+                            <button type="button" id="preview-btn-retry" class="preview-error-btn">
+                                <i class="fas fa-redo"></i> {{ _('Retry') }}
+                            </button>
+                            <button type="button" id="preview-btn-close-error" class="preview-error-btn preview-error-btn-secondary">
+                                {{ _('Close') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Preview Frame -->
+                <div class="preview-frame-wrapper" id="preview-frame-wrapper">
+                    <iframe id="preview-frame" style="width: 100%; height: 100%; border: none; display: block; background: transparent;" title="{{ _('PDF Preview') }}"></iframe>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -2666,98 +3342,721 @@ function initializePDFEditor() {
     });
     
     // Generate preview
+    // ============================================
+    // Enhanced PDF Preview Modal - Complete Rewrite
+    // ============================================
+    
+    try {
+    // State Management
+    const previewState = {
+        isOpen: false,
+        zoomLevel: 100,
+        pageSize: CURRENT_PAGE_SIZE || 'A4',
+        isLoading: false,
+        hasError: false,
+        errorMessage: '',
+        currentRequest: null,
+        isFullscreen: false,
+        fitMode: 'auto' // 'auto', 'width', 'height', 'actual'
+    };
+    
+    // DOM Elements - with safety checks
     const previewModal = document.getElementById('preview-modal');
     const previewModalOverlay = document.getElementById('preview-modal-overlay');
     const previewModalClose = document.getElementById('preview-modal-close');
+    const previewFrame = document.getElementById('preview-frame');
+    const previewFrameWrapper = document.getElementById('preview-frame-wrapper');
+    const previewLoading = document.getElementById('preview-loading');
+    const previewError = document.getElementById('preview-error');
+    const previewErrorMessage = document.getElementById('preview-error-message');
+    const previewPageSizeBadge = document.getElementById('preview-page-size-badge');
+    const previewPageSizeSelect = document.getElementById('preview-page-size-select');
+    const previewZoomSlider = document.getElementById('preview-zoom-slider');
+    const previewZoomDisplay = document.getElementById('preview-zoom-display');
+    const previewBtnZoomIn = document.getElementById('preview-btn-zoom-in');
+    const previewBtnZoomOut = document.getElementById('preview-btn-zoom-out');
+    const previewBtnZoomReset = document.getElementById('preview-btn-zoom-reset');
+    const previewBtnFitWidth = document.getElementById('preview-btn-fit-width');
+    const previewBtnFitHeight = document.getElementById('preview-btn-fit-height');
+    const previewBtnActualSize = document.getElementById('preview-btn-actual-size');
+    const previewBtnRefresh = document.getElementById('preview-btn-refresh');
+    const previewBtnFullscreen = document.getElementById('preview-btn-fullscreen');
+    const previewBtnRetry = document.getElementById('preview-btn-retry');
+    const previewBtnCloseError = document.getElementById('preview-btn-close-error');
+    
+    // Early return if essential elements are missing
+    if (!previewModal || !previewFrame) {
+        console.error('Preview modal essential elements not found. Modal may not work correctly.');
+    }
+    
+    // Utility Functions
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    function updateZoomDisplay() {
+        if (previewZoomDisplay) {
+            previewZoomDisplay.textContent = previewState.zoomLevel + '%';
+        }
+        if (previewZoomSlider) {
+            previewZoomSlider.value = previewState.zoomLevel;
+        }
+    }
+    
+    function applyZoom() {
+        if (!previewFrame || !previewFrame.contentDocument) return;
+        const zoom = previewState.zoomLevel / 100;
+        
+        // Apply zoom to the preview-container inside the iframe, not the wrapper
+        const container = previewFrame.contentDocument.querySelector('.preview-container');
+        if (container) {
+            container.style.transform = `scale(${zoom})`;
+            // Use top center origin so content expands from top, allowing scrolling to top
+            container.style.transformOrigin = 'top center';
+        }
+        
+        // Ensure iframe body and html allow scrolling and can expand
+        const iframeDoc = previewFrame.contentDocument;
+        const iframeBody = iframeDoc.body;
+        const iframeHtml = iframeDoc.documentElement;
+        if (iframeBody) {
+            iframeBody.style.overflow = 'auto';
+            iframeBody.style.overflowX = 'auto';
+            iframeBody.style.overflowY = 'auto';
+            // Remove height constraints to allow expansion
+            iframeBody.style.height = 'auto';
+            iframeBody.style.minHeight = '100vh';
+        }
+        if (iframeHtml) {
+            iframeHtml.style.overflow = 'auto';
+            iframeHtml.style.overflowX = 'auto';
+            iframeHtml.style.overflowY = 'auto';
+            // Remove height constraint to allow expansion
+            iframeHtml.style.height = 'auto';
+        }
+        
+        // Reset wrapper transform - we don't want to scale the iframe itself
+        if (previewFrameWrapper) {
+            previewFrameWrapper.style.transform = 'none';
+            previewFrameWrapper.style.transformOrigin = 'initial';
+        }
+    }
+    
+    function setZoom(level) {
+        previewState.zoomLevel = Math.max(25, Math.min(200, level));
+        updateZoomDisplay();
+        applyZoom();
+    }
+    
+    function zoomIn() {
+        const steps = [25, 50, 75, 100, 125, 150, 175, 200];
+        const current = previewState.zoomLevel;
+        const next = steps.find(s => s > current) || 200;
+        setZoom(next);
+    }
+    
+    function zoomOut() {
+        const steps = [25, 50, 75, 100, 125, 150, 175, 200];
+        const current = previewState.zoomLevel;
+        const next = [...steps].reverse().find(s => s < current) || 25;
+        setZoom(next);
+    }
+    
+    function resetZoom() {
+        setZoom(100);
+        previewState.fitMode = 'auto';
+        updateFitButtons();
+    }
+    
+    function fitToPage() {
+        // Fit the entire page (both width and height) to fit in viewport
+        try {
+            if (!previewFrame || !previewFrameWrapper) {
+                previewState.fitMode = 'auto';
+                updateFitButtons();
+                return;
+            }
+            if (!previewFrame.contentDocument) {
+                previewState.fitMode = 'auto';
+                updateFitButtons();
+                return;
+            }
+            const wrapper = previewFrameWrapper;
+            if (!wrapper.parentElement) return;
+            
+            // Get available dimensions accounting for padding
+            const parentPadding = 48; // 1.5rem * 2 = 48px
+            const availableWidth = wrapper.parentElement.clientWidth - parentPadding;
+            const availableHeight = wrapper.parentElement.clientHeight - parentPadding;
+            
+            const frameDoc = previewFrame.contentDocument;
+            const container = frameDoc.querySelector('.preview-container');
+            if (container) {
+                // Get base dimensions (before any zoom)
+                const containerWidth = container.offsetWidth || container.scrollWidth || container.clientWidth;
+                const containerHeight = container.offsetHeight || container.scrollHeight || container.clientHeight;
+                const currentZoom = previewState.zoomLevel / 100;
+                const baseWidth = containerWidth / (currentZoom || 1);
+                const baseHeight = containerHeight / (currentZoom || 1);
+                
+                if (baseWidth > 0 && baseHeight > 0 && availableWidth > 0 && availableHeight > 0) {
+                    // Calculate zoom to fit both dimensions with margin
+                    const margin = 40; // Margin on all sides
+                    const zoomX = ((availableWidth - margin) / baseWidth) * 100;
+                    const zoomY = ((availableHeight - margin) / baseHeight) * 100;
+                    // Use the smaller zoom to ensure everything fits
+                    const zoom = Math.min(zoomX, zoomY, 200); // Cap at 200%
+                    setZoom(Math.max(25, Math.round(zoom))); // Min 25%
+                    previewState.fitMode = 'auto';
+                    updateFitButtons();
+                }
+            }
+        } catch (error) {
+            console.warn('Error in fitToPage:', error);
+            // Fallback
+            setZoom(100);
+            previewState.fitMode = 'auto';
+            updateFitButtons();
+        }
+    }
+    
+    function fitToWidth() {
+        try {
+            if (!previewFrame || !previewFrameWrapper) {
+                previewState.fitMode = 'width';
+                updateFitButtons();
+                return;
+            }
+            if (!previewFrame.contentDocument) {
+                // If iframe not loaded yet, set mode and wait
+                previewState.fitMode = 'width';
+                updateFitButtons();
+                return;
+            }
+            const wrapper = previewFrameWrapper;
+            if (!wrapper.parentElement) return;
+            
+            // Get available width accounting for padding (1.5rem = 24px on each side = 48px total)
+            const parentPadding = 48; // 1.5rem * 2 = 48px
+            const availableWidth = wrapper.parentElement.clientWidth - parentPadding;
+            
+            const frameDoc = previewFrame.contentDocument;
+            const container = frameDoc.querySelector('.preview-container');
+            if (container) {
+                // Get the actual content width from the container (before any zoom)
+                // We need to get the base width, not the scaled width
+                const containerWidth = container.offsetWidth || container.scrollWidth || container.clientWidth;
+                // If container has a transform scale, we need to account for it
+                const currentTransform = container.style.transform;
+                const currentZoom = previewState.zoomLevel / 100;
+                const baseWidth = containerWidth / (currentZoom || 1);
+                
+                if (baseWidth > 0 && availableWidth > 0) {
+                    // Calculate zoom to fit width with a small margin for better appearance
+                    const margin = 20; // Small margin
+                    const zoom = ((availableWidth - margin) / baseWidth) * 100;
+                    setZoom(Math.min(200, Math.max(25, Math.round(zoom))));
+                    previewState.fitMode = 'width';
+                    updateFitButtons();
+                }
+            }
+        } catch (error) {
+            console.warn('Error in fitToWidth:', error);
+            // Fallback
+            setZoom(100);
+            previewState.fitMode = 'width';
+            updateFitButtons();
+        }
+    }
+    
+    function fitToHeight() {
+        try {
+            if (!previewFrame || !previewFrameWrapper) {
+                previewState.fitMode = 'height';
+                updateFitButtons();
+                return;
+            }
+            if (!previewFrame.contentDocument) {
+                // If iframe not loaded yet, set mode and wait
+                previewState.fitMode = 'height';
+                updateFitButtons();
+                return;
+            }
+            const wrapper = previewFrameWrapper;
+            if (!wrapper.parentElement) return;
+            
+            // Get available height accounting for padding
+            const parentPadding = 48; // 1.5rem * 2 = 48px
+            const availableHeight = wrapper.parentElement.clientHeight - parentPadding;
+            
+            const frameDoc = previewFrame.contentDocument;
+            const container = frameDoc.querySelector('.preview-container');
+            if (container) {
+                // Get base height before any zoom
+                const containerHeight = container.offsetHeight || container.scrollHeight || container.clientHeight;
+                const currentZoom = previewState.zoomLevel / 100;
+                const baseHeight = containerHeight / (currentZoom || 1);
+                
+                if (baseHeight > 0 && availableHeight > 0) {
+                    // Calculate zoom to fit height with a small margin
+                    const margin = 20; // Small margin
+                    const zoom = ((availableHeight - margin) / baseHeight) * 100;
+                    setZoom(Math.min(200, Math.max(25, Math.round(zoom))));
+                    previewState.fitMode = 'height';
+                    updateFitButtons();
+                }
+            }
+        } catch (error) {
+            console.warn('Error in fitToHeight:', error);
+            // Fallback
+            setZoom(100);
+            previewState.fitMode = 'height';
+            updateFitButtons();
+        }
+    }
+    
+    function actualSize() {
+        setZoom(100);
+        previewState.fitMode = 'actual';
+        updateFitButtons();
+    }
+    
+    function updateFitButtons() {
+        const activeClass = 'preview-control-btn-active';
+        [previewBtnFitWidth, previewBtnFitHeight, previewBtnActualSize].forEach(btn => {
+            btn.classList.remove(activeClass);
+        });
+        
+        if (previewState.fitMode === 'width') {
+            previewBtnFitWidth.classList.add(activeClass);
+        } else if (previewState.fitMode === 'height') {
+            previewBtnFitHeight.classList.add(activeClass);
+        } else if (previewState.fitMode === 'actual') {
+            previewBtnActualSize.classList.add(activeClass);
+        }
+    }
+    
+    function showLoading() {
+        previewState.isLoading = true;
+        previewState.hasError = false;
+        if (previewLoading) previewLoading.classList.add('active');
+        if (previewError) previewError.style.display = 'none';
+        if (previewFrame) previewFrame.style.display = 'none';
+        
+        // Simulate progress
+        const progressBar = document.getElementById('preview-loading-progress-bar');
+        if (progressBar) {
+            progressBar.style.width = '0%';
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (!previewState.isLoading) {
+                    clearInterval(interval);
+                    return;
+                }
+                progress = Math.min(90, progress + Math.random() * 10);
+                progressBar.style.width = progress + '%';
+            }, 200);
+        }
+    }
+    
+    function hideLoading() {
+        previewState.isLoading = false;
+        if (previewLoading) previewLoading.classList.remove('active');
+        if (previewFrame) previewFrame.style.display = 'block';
+    }
+    
+    function showError(message) {
+        previewState.hasError = true;
+        previewState.errorMessage = message;
+        if (previewErrorMessage) previewErrorMessage.textContent = message;
+        if (previewError) previewError.style.display = 'flex';
+        if (previewLoading) previewLoading.classList.remove('active');
+        if (previewFrame) previewFrame.style.display = 'none';
+    }
+    
+    function hideError() {
+        previewState.hasError = false;
+        if (previewError) previewError.style.display = 'none';
+    }
+    
+    function updatePageSizeBadge(size) {
+        if (previewPageSizeBadge) previewPageSizeBadge.textContent = size;
+        if (previewPageSizeSelect) {
+            previewPageSizeSelect.value = size;
+        }
+    }
     
     function openPreviewModal() {
+        if (!previewModal) {
+            console.error('Preview modal element not found');
+            return;
+        }
+        previewState.isOpen = true;
         previewModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        
+        // Sync preview page size with main page size selector
+        const mainPageSizeSelector = document.getElementById('page-size-selector');
+        if (mainPageSizeSelector) {
+            previewState.pageSize = mainPageSizeSelector.value || CURRENT_PAGE_SIZE || 'A4';
+        } else {
+            previewState.pageSize = CURRENT_PAGE_SIZE || 'A4';
+        }
+        
+        // Reset state
+        setZoom(100);
+        updatePageSizeBadge(previewState.pageSize);
+        
+        // Update preview page size selector to match
+        if (previewPageSizeSelect) {
+            previewPageSizeSelect.value = previewState.pageSize;
+        }
+        
+        // Focus management for accessibility
+        previewModal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => {
+            if (previewBtnRefresh) {
+                previewBtnRefresh.focus();
+            }
+        }, 100);
     }
     
     function closePreviewModal() {
+        if (!previewModal) return;
+        previewState.isOpen = false;
         previewModal.style.display = 'none';
         document.body.style.overflow = '';
+        previewModal.setAttribute('aria-hidden', 'true');
+        
+        // Cancel any ongoing requests
+        if (previewState.currentRequest && typeof previewState.currentRequest.abort === 'function') {
+            try {
+                previewState.currentRequest.abort();
+            } catch (e) {
+                console.warn('Error aborting request:', e);
+            }
+            previewState.currentRequest = null;
+        }
+        
+        // Reset state
+        hideError();
+        hideLoading();
+        previewState.isFullscreen = false;
+        updateFullscreenButton();
     }
     
-    previewModalOverlay.addEventListener('click', closePreviewModal);
-    previewModalClose.addEventListener('click', closePreviewModal);
-    
-    // Close on Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && previewModal.style.display === 'block') {
-            closePreviewModal();
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            const modalContent = document.querySelector('.preview-modal-content');
+            if (modalContent && modalContent.requestFullscreen) {
+                modalContent.requestFullscreen().then(() => {
+                    previewState.isFullscreen = true;
+                    updateFullscreenButton();
+                }).catch(err => {
+                    console.error('Error entering fullscreen:', err);
+                });
+            } else {
+                // Fallback: try on modal itself
+                previewModal.requestFullscreen().then(() => {
+                    previewState.isFullscreen = true;
+                    updateFullscreenButton();
+                }).catch(err => {
+                    console.error('Error entering fullscreen:', err);
+                });
+            }
+        } else {
+            document.exitFullscreen().then(() => {
+                previewState.isFullscreen = false;
+                updateFullscreenButton();
+            });
         }
-    });
+    }
     
-    document.getElementById('btn-preview').addEventListener('click', function() {
-        openPreviewModal();
+    function updateFullscreenButton() {
+        if (!previewBtnFullscreen) return;
+        const icon = previewBtnFullscreen.querySelector('i');
+        if (icon) {
+            if (previewState.isFullscreen) {
+                icon.className = 'fas fa-compress';
+                previewBtnFullscreen.setAttribute('title', '{{ _("Exit Fullscreen") }}');
+            } else {
+                icon.className = 'fas fa-expand';
+                previewBtnFullscreen.setAttribute('title', '{{ _("Toggle Fullscreen") }}');
+            }
+        }
+    }
+    
+    async function loadPreview(pageSize = null) {
+        if (pageSize) {
+            previewState.pageSize = pageSize;
+            updatePageSizeBadge(pageSize);
+            // Update preview selector to match
+            if (previewPageSizeSelect) {
+                previewPageSizeSelect.value = pageSize;
+            }
+        }
         
-        const loading = document.getElementById('preview-loading');
-        const frame = document.getElementById('preview-frame');
-        const modalBody = document.querySelector('.preview-modal-body');
+        showLoading();
+        hideError();
         
-        loading.classList.add('active');
-        frame.style.display = 'none';
-        
-        // Don't set fixed iframe size - let the preview HTML handle scaling
-        // The preview HTML will scale itself to fit within the iframe viewport
-        frame.style.width = '100%';
-        frame.style.height = '100%';
-        frame.style.maxWidth = '100%';
-        frame.style.maxHeight = '100%';
-        frame.style.border = 'none';
-        frame.style.overflow = 'visible';
-        frame.style.display = 'block';
-        frame.style.background = 'transparent';
-        
+        // For preview, we want to load the saved template for the selected page size
+        // So we send the page_size and let the backend load the correct template
+        // We still send the current canvas JSON as a fallback, but backend will use saved template if available
         const { html, css, json } = generateCode();
         
         const fd = new FormData();
         fd.append('html', html);
         fd.append('css', css);
-        // Also send JSON template for preview
-        if (json && json.trim()) {
+        // Send template_json only if we're previewing the current page size
+        // Otherwise, let backend load the template for the selected page size
+        const mainPageSizeSelector = document.getElementById('page-size-selector');
+        const currentMainPageSize = (mainPageSizeSelector && mainPageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
+        const pageSizeForPreview = previewState.pageSize;
+        
+        // Only send template_json if previewing the same size as the current editor
+        // Otherwise, backend will load the saved template for the selected page size
+        if (pageSizeForPreview === currentMainPageSize && json && json.trim()) {
             fd.append('template_json', json);
         }
-        // Use page size from selector if available, otherwise use CURRENT_PAGE_SIZE
-        const pageSizeForPreview = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
-        console.log('Quote Preview - Sending page_size:', pageSizeForPreview, 'Selector value:', pageSizeSelector ? pageSizeSelector.value : 'N/A', 'CURRENT_PAGE_SIZE:', CURRENT_PAGE_SIZE);
-        fd.append('page_size', pageSizeForPreview);  // Pass page size to preview endpoint
+        
+        fd.append('page_size', pageSizeForPreview);
         fd.append('csrf_token', CSRF_TOKEN);
         
-        // Add cache-busting parameter to ensure fresh preview
         const previewUrl = PREVIEW_URL + '?t=' + Date.now();
         
-        fetch(previewUrl, { 
-            method: 'POST', 
+        // Create abort controller for request cancellation (if supported)
+        let controller = null;
+        let signal = null;
+        if (typeof AbortController !== 'undefined' && typeof AbortSignal !== 'undefined') {
+            try {
+                controller = new AbortController();
+                if (controller && controller.signal) {
+                    // Verify signal is a proper AbortSignal instance
+                    const testSignal = controller.signal;
+                    if (testSignal instanceof AbortSignal) {
+                        signal = testSignal;
+                        previewState.currentRequest = controller;
+                    }
+                }
+            } catch (e) {
+                console.warn('AbortController not available:', e);
+            }
+        }
+        
+        // Build fetch options
+        const fetchOptions = {
+            method: 'POST',
             body: fd,
             cache: 'no-cache',
             headers: {
                 'Cache-Control': 'no-cache'
             }
-        })
-            .then(r => {
-                if (!r.ok) {
-                    throw new Error(`HTTP error! status: ${r.status}`);
+        };
+        
+        // Only add signal if it's a valid AbortSignal instance and not aborted
+        if (signal instanceof AbortSignal && !signal.aborted) {
+            fetchOptions.signal = signal;
+        }
+        
+        try {
+            const response = await fetch(previewUrl, fetchOptions);
+            
+            if (!response || !response.ok) {
+                throw new Error(`HTTP error! status: ${response ? response.status : 'unknown'}`);
+            }
+            
+            const previewHtml = await response.text();
+            
+            // Check if request was cancelled
+            if (controller && controller.signal && controller.signal.aborted) {
+                return;
+            }
+            
+            const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            doc.open();
+            doc.write(previewHtml);
+            doc.close();
+            
+            // Wait for iframe to load
+            previewFrame.onload = () => {
+                hideLoading();
+                setTimeout(() => {
+                    try {
+                        // Always fit to page on initial load to show complete quote
+                        setTimeout(() => {
+                            try {
+                                fitToPage();
+                            } catch (fitError) {
+                                console.warn('Error fitting to page:', fitError);
+                                // Fallback to 100% zoom
+                                setZoom(100);
+                            }
+                        }, 300);
+                    } catch (zoomError) {
+                        console.warn('Error applying zoom:', zoomError);
+                        hideLoading();
+                    }
+                }, 100);
+            };
+            
+            // Also handle load event if already loaded
+            if (previewFrame.contentDocument && previewFrame.contentDocument.readyState === 'complete') {
+                try {
+                    previewFrame.onload();
+                } catch (e) {
+                    console.warn('Error calling onload handler:', e);
                 }
-                return r.text();
-            })
-            .then(html => {
-                const doc = frame.contentDocument || frame.contentWindow.document;
-                doc.open();
-                doc.write(html);
-                doc.close();
-                loading.classList.remove('active');
-                frame.style.display = 'block';
-            })
-            .catch(err => {
-                loading.classList.remove('active');
-                console.error('Preview error:', err);
-                alert('Preview error: ' + err.message);
+            }
+            
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log('Preview request cancelled');
+                return;
+            }
+            console.error('Preview error:', err);
+            showError(err.message || '{{ _("Failed to load preview. Please try again.") }}');
+        } finally {
+            previewState.currentRequest = null;
+        }
+    }
+    
+    
+    // Event Listeners - with safety checks
+    if (previewModalOverlay) {
+        previewModalOverlay.addEventListener('click', closePreviewModal);
+    }
+    if (previewModalClose) {
+        previewModalClose.addEventListener('click', closePreviewModal);
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (!previewState.isOpen) return;
+        
+        // Close on Escape
+        if (e.key === 'Escape') {
+            if (previewState.isFullscreen) {
+                toggleFullscreen();
+            } else {
                 closePreviewModal();
-            });
+            }
+            return;
+        }
+        
+        // Zoom shortcuts (Ctrl/Cmd + Plus/Minus/0)
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                zoomIn();
+            } else if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                zoomOut();
+            } else if (e.key === '0') {
+                e.preventDefault();
+                resetZoom();
+            }
+        }
+        
+        // Fullscreen (F11)
+        if (e.key === 'F11') {
+            e.preventDefault();
+            toggleFullscreen();
+        }
     });
+    
+    // Zoom controls (with safety checks)
+    if (previewBtnZoomIn) previewBtnZoomIn.addEventListener('click', zoomIn);
+    if (previewBtnZoomOut) previewBtnZoomOut.addEventListener('click', zoomOut);
+    if (previewBtnZoomReset) previewBtnZoomReset.addEventListener('click', resetZoom);
+    if (previewBtnFitWidth) previewBtnFitWidth.addEventListener('click', fitToWidth);
+    if (previewBtnFitHeight) previewBtnFitHeight.addEventListener('click', fitToHeight);
+    if (previewBtnActualSize) previewBtnActualSize.addEventListener('click', actualSize);
+    
+    // Zoom slider with debounce
+    if (previewZoomSlider) {
+        const debouncedZoom = debounce((value) => {
+            setZoom(parseInt(value));
+        }, 50);
+        
+        previewZoomSlider.addEventListener('input', (e) => {
+            if (previewZoomDisplay) {
+                previewZoomDisplay.textContent = e.target.value + '%';
+            }
+            debouncedZoom(e.target.value);
+        });
+    }
+    
+    // Page size selector - syncs with main selector and loads correct template
+    if (previewPageSizeSelect) {
+        previewPageSizeSelect.addEventListener('change', (e) => {
+            const newSize = e.target.value;
+            if (confirm('{{ _("Changing page size will reload the preview with the template for that size. Continue?") }}')) {
+                // Update main page size selector to match (for consistency)
+                const mainPageSizeSelector = document.getElementById('page-size-selector');
+                if (mainPageSizeSelector) {
+                    mainPageSizeSelector.value = newSize;
+                }
+                // Load preview with new size (this will load the template for that size)
+                loadPreview(newSize);
+            } else {
+                e.target.value = previewState.pageSize;
+            }
+        });
+    }
+    
+    // Toolbar buttons
+    if (previewBtnRefresh) previewBtnRefresh.addEventListener('click', () => loadPreview());
+    if (previewBtnFullscreen) previewBtnFullscreen.addEventListener('click', toggleFullscreen);
+    
+    // Error handling
+    if (previewBtnRetry) {
+        previewBtnRetry.addEventListener('click', () => {
+            hideError();
+            loadPreview();
+        });
+    }
+    
+    if (previewBtnCloseError) {
+        previewBtnCloseError.addEventListener('click', () => {
+            hideError();
+        });
+    }
+    
+    // Fullscreen change detection
+    document.addEventListener('fullscreenchange', () => {
+        previewState.isFullscreen = !!document.fullscreenElement;
+        updateFullscreenButton();
+    });
+    
+    // Main preview button
+    const btnPreview = document.getElementById('btn-preview');
+    if (btnPreview) {
+        btnPreview.addEventListener('click', function() {
+            openPreviewModal();
+            loadPreview();
+        });
+    } else {
+        console.warn('Preview button not found');
+    }
+    
+    } catch (error) {
+        console.error('Error initializing preview modal:', error);
+        // Fallback: simple preview functionality
+        const btnPreview = document.getElementById('btn-preview');
+        if (btnPreview) {
+            btnPreview.addEventListener('click', function() {
+                alert('{{ _("Preview functionality is currently unavailable. Please check the browser console for errors.") }}');
+            });
+        }
+    }
     
     // Generate code from canvas
     function generateCode() {
@@ -3977,5 +5276,38 @@ async function confirmResetPdfLayout() {
         document.getElementById('form-reset').submit();
     }
 }
+
+// Import JSON handler
+document.getElementById('import-json-file')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('json_file', file);
+    formData.append('page_size', '{{ page_size }}');
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    fetch('{{ url_for("admin.quote_pdf_layout_import_json") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            return response.text().then(text => {
+                throw new Error(text);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Import error:', error);
+        alert('{{ _("Error importing template") }}: ' + error.message);
+    })
+    .finally(() => {
+        // Reset file input
+        e.target.value = '';
+    });
+});
 </script>
 {% endblock %}

@@ -7,6 +7,7 @@ let apiClient = null;
 let currentView = 'dashboard';
 let timerInterval = null;
 let isTimerRunning = false;
+let connectionCheckInterval = null;
 
 // Initialize app
 async function initApp() {
@@ -32,6 +33,68 @@ async function initApp() {
   }
   
   setupEventListeners();
+  startConnectionCheck();
+  setupTrayListeners();
+}
+
+function setupTrayListeners() {
+  // Listen for tray timer actions
+  if (window.electronAPI && window.electronAPI.onTrayAction) {
+    window.electronAPI.onTrayAction((action) => {
+      if (action === 'start-timer' && !isTimerRunning) {
+        // Tray wants to start timer - show the start dialog
+        handleStartTimer();
+      } else if (action === 'stop-timer' && isTimerRunning) {
+        // Tray wants to stop timer
+        handleStopTimer();
+      }
+    });
+  }
+}
+
+function startConnectionCheck() {
+  // Check connection every 30 seconds
+  connectionCheckInterval = setInterval(async () => {
+    await checkConnection();
+  }, 30000);
+  
+  // Initial check
+  checkConnection();
+}
+
+async function checkConnection() {
+  if (!apiClient) {
+    updateConnectionStatus('disconnected');
+    return;
+  }
+  
+  try {
+    const isValid = await apiClient.validateToken();
+    updateConnectionStatus(isValid ? 'connected' : 'error');
+  } catch (error) {
+    updateConnectionStatus('error');
+  }
+}
+
+function updateConnectionStatus(status) {
+  const statusEl = document.getElementById('connection-status');
+  if (!statusEl) return;
+  
+  statusEl.className = 'connection-status connection-' + status;
+  switch (status) {
+    case 'connected':
+      statusEl.textContent = '●';
+      statusEl.title = 'Connected';
+      break;
+    case 'error':
+      statusEl.textContent = '●';
+      statusEl.title = 'Connection error';
+      break;
+    case 'disconnected':
+      statusEl.textContent = '○';
+      statusEl.title = 'Disconnected';
+      break;
+  }
 }
 
 function setupEventListeners() {
@@ -74,6 +137,17 @@ function setupEventListeners() {
   const testConnectionBtn = document.getElementById('test-connection-btn');
   if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', handleSaveSettings);
   if (testConnectionBtn) testConnectionBtn.addEventListener('click', handleTestConnection);
+  
+  // Time entries
+  const addEntryBtn = document.getElementById('add-entry-btn');
+  const filterEntriesBtn = document.getElementById('filter-entries-btn');
+  const applyFilterBtn = document.getElementById('apply-filter-btn');
+  const clearFilterBtn = document.getElementById('clear-filter-btn');
+  
+  if (addEntryBtn) addEntryBtn.addEventListener('click', () => showTimeEntryForm());
+  if (filterEntriesBtn) filterEntriesBtn.addEventListener('click', toggleFilters);
+  if (applyFilterBtn) applyFilterBtn.addEventListener('click', applyFilters);
+  if (clearFilterBtn) clearFilterBtn.addEventListener('click', clearFilters);
 }
 
 async function handleLogin(e) {
@@ -102,15 +176,17 @@ async function handleLogin(e) {
   apiClient = new ApiClient(serverUrl);
   await apiClient.setAuthToken(apiToken);
   
-  // Validate token
-  const isValid = await apiClient.validateToken();
-  if (isValid) {
-    showMainScreen();
-    loadDashboard();
-  } else {
-    showError('Invalid API token. Please check your token.');
-    await storeDelete('api_token');
-  }
+    // Validate token
+    const isValid = await apiClient.validateToken();
+    if (isValid) {
+      updateConnectionStatus('connected');
+      showMainScreen();
+      loadDashboard();
+    } else {
+      updateConnectionStatus('error');
+      showError('Invalid API token. Please check your token.');
+      await storeDelete('api_token');
+    }
 }
 
 function showError(message) {
@@ -155,6 +231,7 @@ function switchView(view) {
     loadProjects();
   } else if (view === 'entries') {
     loadTimeEntries();
+    loadProjectsForFilter();
   } else if (view === 'settings') {
     loadSettings();
   }
@@ -239,11 +316,22 @@ async function loadProjects() {
   }
 }
 
+let currentFilters = {
+  startDate: null,
+  endDate: null,
+  projectId: null,
+};
+
 async function loadTimeEntries() {
   if (!apiClient) return;
   
   try {
-    const response = await apiClient.getTimeEntries({ perPage: 50 });
+    const params = { perPage: 50 };
+    if (currentFilters.startDate) params.startDate = currentFilters.startDate;
+    if (currentFilters.endDate) params.endDate = currentFilters.endDate;
+    if (currentFilters.projectId) params.projectId = currentFilters.projectId;
+    
+    const response = await apiClient.getTimeEntries(params);
     const entries = response.data.time_entries || [];
     const entriesList = document.getElementById('entries-list');
     
@@ -253,27 +341,64 @@ async function loadTimeEntries() {
     }
     
     entriesList.innerHTML = entries.map(entry => `
-      <div class="entry-item">
+      <div class="entry-item" data-entry-id="${entry.id}">
         <div class="entry-info">
           <h3>${entry.project?.name || 'Unknown Project'}</h3>
-          <p>${formatDateTime(entry.start_time)} - ${entry.end_time ? formatDateTime(entry.end_time) : 'Running'}</p>
+          ${entry.task ? `<p class="entry-task">${entry.task.name}</p>` : ''}
+          <p class="entry-time-range">
+            ${formatDateTime(entry.start_time)} - ${entry.end_time ? formatDateTime(entry.end_time) : 'Running'}
+          </p>
+          ${entry.notes ? `<p class="entry-notes">${entry.notes}</p>` : ''}
+          ${entry.tags ? `<p class="entry-tags">Tags: ${entry.tags}</p>` : ''}
+          ${entry.billable ? '<span class="badge badge-success">Billable</span>' : ''}
         </div>
-        <div class="entry-time">${formatDuration(entry.duration_seconds || 0)}</div>
+        <div class="entry-actions">
+          <div class="entry-time">${formatDuration(entry.duration_seconds || 0)}</div>
+          <button class="btn btn-sm btn-secondary" onclick="editTimeEntry(${entry.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteTimeEntry(${entry.id})">Delete</button>
+        </div>
       </div>
     `).join('');
   } catch (error) {
     console.error('Error loading time entries:', error);
+    showError('Failed to load time entries: ' + (error.response?.data?.error || error.message));
+  }
+}
+
+function editTimeEntry(entryId) {
+  showTimeEntryForm(entryId);
+}
+
+async function deleteTimeEntry(entryId) {
+  if (!confirm('Are you sure you want to delete this time entry?')) {
+    return;
+  }
+  
+  if (!apiClient) return;
+  
+  try {
+    await apiClient.deleteTimeEntry(entryId);
+    loadTimeEntries();
+    showSuccess('Time entry deleted successfully');
+  } catch (error) {
+    showError('Failed to delete time entry: ' + (error.response?.data?.error || error.message));
   }
 }
 
 async function handleStartTimer() {
   if (!apiClient) return;
   
-  // TODO: Show project selection dialog first
-  // For now, just start without project (will fail, but shows flow)
+  // Show project selection dialog
+  const result = await showStartTimerDialog();
+  if (!result) return; // User cancelled
+  
   try {
-    const response = await apiClient.startTimer({ projectId: 1 });
-    if (response.data) {
+    const response = await apiClient.startTimer({
+      projectId: result.projectId,
+      taskId: result.taskId,
+      notes: result.notes,
+    });
+    if (response.data && response.data.timer) {
       isTimerRunning = true;
       updateTimerDisplay(response.data.timer);
       startTimerPolling();
@@ -281,8 +406,112 @@ async function handleStartTimer() {
       document.getElementById('stop-timer-btn').style.display = 'block';
     }
   } catch (error) {
-    alert('Please select a project first');
+    showError('Failed to start timer: ' + (error.response?.data?.error || error.message));
   }
+}
+
+async function showStartTimerDialog() {
+  return new Promise(async (resolve) => {
+    // Load projects
+    let projects = [];
+    try {
+      const projectsResponse = await apiClient.getProjects({ status: 'active' });
+      projects = projectsResponse.data.projects || [];
+    } catch (error) {
+      showError('Failed to load projects');
+      resolve(null);
+      return;
+    }
+    
+    if (projects.length === 0) {
+      showError('No active projects found');
+      resolve(null);
+      return;
+    }
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Start Timer</h3>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="timer-project-select">Project *</label>
+            <select id="timer-project-select" class="form-control" required>
+              <option value="">Select a project...</option>
+              ${projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="timer-task-select">Task (Optional)</label>
+            <select id="timer-task-select" class="form-control">
+              <option value="">No task</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="timer-notes-input">Notes (Optional)</label>
+            <textarea id="timer-notes-input" class="form-control" rows="3" placeholder="What are you working on?"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button class="btn btn-primary" id="start-timer-confirm">Start</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const projectSelect = modal.querySelector('#timer-project-select');
+    const taskSelect = modal.querySelector('#timer-task-select');
+    const notesInput = modal.querySelector('#timer-notes-input');
+    const confirmBtn = modal.querySelector('#start-timer-confirm');
+    
+    // Load tasks when project changes
+    projectSelect.addEventListener('change', async (e) => {
+      const projectId = parseInt(e.target.value);
+      if (!projectId) {
+        taskSelect.innerHTML = '<option value="">No task</option>';
+        return;
+      }
+      
+      try {
+        const tasksResponse = await apiClient.getTasks({ projectId: projectId });
+        const tasks = tasksResponse.data.tasks || [];
+        taskSelect.innerHTML = '<option value="">No task</option>' +
+          tasks.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      }
+    });
+    
+    // Handle confirm
+    confirmBtn.addEventListener('click', () => {
+      const projectId = parseInt(projectSelect.value);
+      if (!projectId) {
+        showError('Please select a project');
+        return;
+      }
+      
+      const taskId = taskSelect.value ? parseInt(taskSelect.value) : null;
+      const notes = notesInput.value.trim() || null;
+      
+      modal.remove();
+      resolve({ projectId, taskId, notes });
+    });
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        resolve(null);
+      }
+    });
+  });
 }
 
 async function handleStopTimer() {
@@ -294,10 +523,18 @@ async function handleStopTimer() {
     stopTimerPolling();
     document.getElementById('timer-display').textContent = '00:00:00';
     document.getElementById('timer-project').textContent = 'No active timer';
+    document.getElementById('timer-task').style.display = 'none';
+    document.getElementById('timer-notes').style.display = 'none';
     document.getElementById('start-timer-btn').style.display = 'block';
     document.getElementById('stop-timer-btn').style.display = 'none';
+    // Notify tray
+    updateTimerDisplay(null);
+    // Refresh entries list
+    loadTimeEntries();
+    loadRecentEntries();
   } catch (error) {
     console.error('Error stopping timer:', error);
+    showError('Failed to stop timer: ' + (error.response?.data?.error || error.message));
   }
 }
 
@@ -329,7 +566,13 @@ function stopTimerPolling() {
 }
 
 function updateTimerDisplay(timer) {
-  if (!timer) return;
+  if (!timer) {
+    // Notify tray that timer is stopped
+    if (window.electronAPI && window.electronAPI.sendTimerStatus) {
+      window.electronAPI.sendTimerStatus({ active: false });
+    }
+    return;
+  }
   
   const startTime = new Date(timer.start_time);
   const now = new Date();
@@ -337,6 +580,29 @@ function updateTimerDisplay(timer) {
   
   document.getElementById('timer-display').textContent = formatDurationLong(seconds);
   document.getElementById('timer-project').textContent = timer.project?.name || 'Unknown Project';
+  
+  // Show task if available
+  const taskEl = document.getElementById('timer-task');
+  if (timer.task) {
+    taskEl.textContent = timer.task.name;
+    taskEl.style.display = 'block';
+  } else {
+    taskEl.style.display = 'none';
+  }
+  
+  // Show notes if available
+  const notesEl = document.getElementById('timer-notes');
+  if (timer.notes) {
+    notesEl.textContent = timer.notes;
+    notesEl.style.display = 'block';
+  } else {
+    notesEl.style.display = 'none';
+  }
+  
+  // Notify tray that timer is running
+  if (window.electronAPI && window.electronAPI.sendTimerStatus) {
+    window.electronAPI.sendTimerStatus({ active: true, timer: timer });
+  }
 }
 
 async function loadSettings() {
@@ -397,11 +663,13 @@ async function handleSaveSettings() {
     // Validate connection
     const isValid = await apiClient.validateToken();
     if (isValid) {
+      updateConnectionStatus('connected');
       showSettingsMessage('Settings saved successfully!', 'success');
       // Update token input to show masked value
       apiTokenInput.value = '••••••••';
       apiTokenInput.dataset.hasToken = 'true';
     } else {
+      updateConnectionStatus('error');
       showSettingsMessage('Settings saved, but connection test failed. Please check your API token.', 'warning');
     }
   } catch (error) {
@@ -445,8 +713,10 @@ async function handleTestConnection() {
     const isValid = await testClient.validateToken();
     
     if (isValid) {
+      updateConnectionStatus('connected');
       showSettingsMessage('Connection successful!', 'success');
     } else {
+      updateConnectionStatus('error');
       showSettingsMessage('Connection failed. Please check your server URL and API token.', 'error');
     }
   } catch (error) {
@@ -490,3 +760,281 @@ if (document.readyState === 'loading') {
 
 // Use helper functions from helpers.js
 const { formatDuration, formatDurationLong, formatDateTime, isValidUrl } = window.Helpers || {};
+
+// Filter functions
+function toggleFilters() {
+  const filtersEl = document.getElementById('entries-filters');
+  if (filtersEl) {
+    filtersEl.style.display = filtersEl.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+async function applyFilters() {
+  const startDate = document.getElementById('filter-start-date')?.value || null;
+  const endDate = document.getElementById('filter-end-date')?.value || null;
+  const projectId = document.getElementById('filter-project')?.value 
+    ? parseInt(document.getElementById('filter-project').value) 
+    : null;
+  
+  currentFilters = { startDate, endDate, projectId };
+  await loadTimeEntries();
+}
+
+function clearFilters() {
+  currentFilters = { startDate: null, endDate: null, projectId: null };
+  document.getElementById('filter-start-date').value = '';
+  document.getElementById('filter-end-date').value = '';
+  document.getElementById('filter-project').value = '';
+  loadTimeEntries();
+}
+
+// Load projects for filter dropdown
+async function loadProjectsForFilter() {
+  if (!apiClient) return;
+  
+  try {
+    const response = await apiClient.getProjects({ status: 'active' });
+    const projects = response.data.projects || [];
+    const select = document.getElementById('filter-project');
+    if (select) {
+      select.innerHTML = '<option value="">All Projects</option>' +
+        projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    }
+  } catch (error) {
+    console.error('Error loading projects for filter:', error);
+  }
+}
+
+// Time entry form
+async function showTimeEntryForm(entryId = null) {
+  // Load projects
+  let projects = [];
+  try {
+    const projectsResponse = await apiClient.getProjects({ status: 'active' });
+    projects = projectsResponse.data.projects || [];
+  } catch (error) {
+    showError('Failed to load projects');
+    return;
+  }
+  
+  // Load entry if editing
+  let entry = null;
+  if (entryId) {
+    try {
+      const entryResponse = await apiClient.getTimeEntry(entryId);
+      entry = entryResponse.data.time_entry;
+    } catch (error) {
+      showError('Failed to load time entry');
+      return;
+    }
+  }
+  
+  // Load tasks if project is selected
+  let tasks = [];
+  const projectId = entry ? entry.project_id : null;
+  if (projectId) {
+    try {
+      const tasksResponse = await apiClient.getTasks({ projectId: projectId });
+      tasks = tasksResponse.data.tasks || [];
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    }
+  }
+  
+  // Create modal
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  
+  const startDate = entry 
+    ? new Date(entry.start_time).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0];
+  const startTime = entry
+    ? new Date(entry.start_time).toTimeString().slice(0, 5)
+    : new Date().toTimeString().slice(0, 5);
+  const endDate = entry && entry.end_time
+    ? new Date(entry.end_time).toISOString().split('T')[0]
+    : '';
+  const endTime = entry && entry.end_time
+    ? new Date(entry.end_time).toTimeString().slice(0, 5)
+    : '';
+  
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>${entryId ? 'Edit' : 'Add'} Time Entry</h3>
+        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="entry-project-select">Project *</label>
+          <select id="entry-project-select" class="form-control" required>
+            <option value="">Select a project...</option>
+            ${projects.map(p => `<option value="${p.id}" ${entry && entry.project_id === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="entry-task-select">Task (Optional)</label>
+          <select id="entry-task-select" class="form-control">
+            <option value="">No task</option>
+            ${tasks.map(t => `<option value="${t.id}" ${entry && entry.task_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="entry-start-date">Start Date *</label>
+            <input type="date" id="entry-start-date" class="form-control" value="${startDate}" required>
+          </div>
+          <div class="form-group">
+            <label for="entry-start-time">Start Time *</label>
+            <input type="time" id="entry-start-time" class="form-control" value="${startTime}" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="entry-end-date">End Date (Optional)</label>
+            <input type="date" id="entry-end-date" class="form-control" value="${endDate}">
+          </div>
+          <div class="form-group">
+            <label for="entry-end-time">End Time (Optional)</label>
+            <input type="time" id="entry-end-time" class="form-control" value="${endTime}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="entry-notes">Notes</label>
+          <textarea id="entry-notes" class="form-control" rows="3">${entry?.notes || ''}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="entry-tags">Tags (comma-separated)</label>
+          <input type="text" id="entry-tags" class="form-control" value="${entry?.tags || ''}">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="entry-billable" ${entry ? (entry.billable ? 'checked' : '') : 'checked'}>
+            Billable
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+        <button class="btn btn-primary" id="save-entry-btn">${entryId ? 'Update' : 'Create'}</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const projectSelect = modal.querySelector('#entry-project-select');
+  const taskSelect = modal.querySelector('#entry-task-select');
+  const saveBtn = modal.querySelector('#save-entry-btn');
+  
+  // Load tasks when project changes
+  projectSelect.addEventListener('change', async (e) => {
+    const projectId = parseInt(e.target.value);
+    if (!projectId) {
+      taskSelect.innerHTML = '<option value="">No task</option>';
+      return;
+    }
+    
+    try {
+      const tasksResponse = await apiClient.getTasks({ projectId: projectId });
+      const tasks = tasksResponse.data.tasks || [];
+      taskSelect.innerHTML = '<option value="">No task</option>' +
+        tasks.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    }
+  });
+  
+  // Handle save
+  saveBtn.addEventListener('click', async () => {
+    const projectId = parseInt(projectSelect.value);
+    if (!projectId) {
+      showError('Please select a project');
+      return;
+    }
+    
+    const taskId = taskSelect.value ? parseInt(taskSelect.value) : null;
+    const startDate = document.getElementById('entry-start-date').value;
+    const startTime = document.getElementById('entry-start-time').value;
+    const endDate = document.getElementById('entry-end-date').value;
+    const endTime = document.getElementById('entry-end-time').value;
+    const notes = document.getElementById('entry-notes').value.trim() || null;
+    const tags = document.getElementById('entry-tags').value.trim() || null;
+    const billable = document.getElementById('entry-billable').checked;
+    
+    const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
+    const endDateTime = (endDate && endTime) 
+      ? new Date(`${endDate}T${endTime}`).toISOString()
+      : null;
+    
+    try {
+      if (entryId) {
+        await apiClient.updateTimeEntry(entryId, {
+          project_id: projectId,
+          task_id: taskId,
+          start_time: startDateTime,
+          end_time: endDateTime,
+          notes: notes,
+          tags: tags,
+          billable: billable,
+        });
+        showSuccess('Time entry updated successfully');
+      } else {
+        await apiClient.createTimeEntry({
+          project_id: projectId,
+          task_id: taskId,
+          start_time: startDateTime,
+          end_time: endDateTime,
+          notes: notes,
+          tags: tags,
+          billable: billable,
+        });
+        showSuccess('Time entry created successfully');
+      }
+      
+      modal.remove();
+      loadTimeEntries();
+    } catch (error) {
+      showError('Failed to save time entry: ' + (error.response?.data?.error || error.message));
+    }
+  });
+  
+  // Close on backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+function showError(message) {
+  // Create or update error notification
+  let errorDiv = document.getElementById('error-notification');
+  if (!errorDiv) {
+    errorDiv = document.createElement('div');
+    errorDiv.id = 'error-notification';
+    errorDiv.className = 'notification notification-error';
+    document.body.appendChild(errorDiv);
+  }
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
+  setTimeout(() => {
+    errorDiv.style.display = 'none';
+  }, 5000);
+}
+
+function showSuccess(message) {
+  // Create or update success notification
+  let successDiv = document.getElementById('success-notification');
+  if (!successDiv) {
+    successDiv = document.createElement('div');
+    successDiv.id = 'success-notification';
+    successDiv.className = 'notification notification-success';
+    document.body.appendChild(successDiv);
+  }
+  successDiv.textContent = message;
+  successDiv.style.display = 'block';
+  setTimeout(() => {
+    successDiv.style.display = 'none';
+  }, 3000);
+}

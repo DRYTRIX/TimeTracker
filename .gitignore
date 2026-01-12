@@ -159,6 +159,7 @@ test.db
 test_*.db
 junit.xml
 *.xml
+!mobile/android/app/src/main/AndroidManifest.xml
 test-results/
 .pytest_tmp*/
 bandit-report.json
