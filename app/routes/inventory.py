@@ -983,6 +983,9 @@ def new_movement():
 
                 # Process devaluation if enabled
                 if devalue_enabled:
+                    if not item.is_trackable:
+                        raise ValueError(_("Stock item is not trackable. Devaluation requires trackable items."))
+                    
                     base_cost = item.default_cost or Decimal("0")
                     if base_cost <= 0:
                         raise ValueError(_("Stock item must have a default cost to perform devaluation"))
