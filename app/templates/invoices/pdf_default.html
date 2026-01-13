@@ -6,6 +6,26 @@
 </head>
 <body>
     <div class="wrapper">
+        {# Decorative Images - positioned absolutely #}
+        {% if invoice.decorative_images %}
+            {% for image in invoice.decorative_images %}
+                {% set image_data = get_image_base64(image.file_path) %}
+                {% if image_data %}
+                    <img src="{{ image_data }}" 
+                         alt="Decorative image"
+                         style="position: absolute; 
+                                left: {{ image.position_x }}mm; 
+                                top: {{ image.position_y }}mm; 
+                                {% if image.width %}width: {{ image.width }}mm;{% endif %}
+                                {% if image.height %}height: {{ image.height }}mm;{% endif %}
+                                {% if not image.width and not image.height %}max-width: 50mm; max-height: 50mm;{% endif %}
+                                opacity: {{ image.opacity }}; 
+                                z-index: {{ image.z_index }};"
+                         class="decorative-image">
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        
         <div class="invoice-header">
             <div class="brand">
                 {% if settings.has_logo() %}

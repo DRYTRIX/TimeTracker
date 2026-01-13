@@ -1606,6 +1606,10 @@
                         <i class="fas fa-money-bill-wave"></i>
                         <span>{{ _('Currency') }}</span>
                     </div>
+                    <div class="element-item" data-type="decorative-image">
+                        <i class="fas fa-image"></i>
+                        <span>{{ _('Decorative Image') }}</span>
+                    </div>
                 </div>
             </div>
             
@@ -2626,6 +2630,62 @@ function initializePDFEditor() {
             return;
         }
         
+        if (type === 'decorative-image') {
+            // Create a placeholder for decorative images
+            const placeholder = new Konva.Group({
+                x: x,
+                y: y,
+                draggable: true,
+                name: 'decorative-image',
+                imageUrl: '' // Store image URL here
+            });
+            
+            // Ensure name is set via multiple methods for proper serialization
+            placeholder.setAttr('name', 'decorative-image');
+            placeholder.name('decorative-image');
+            
+            const rect = new Konva.Rect({
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                fill: '#f0f0f0',
+                stroke: '#999',
+                strokeWidth: 2,
+                dash: [5, 5]
+            });
+            
+            const text = new Konva.Text({
+                x: 10,
+                y: 40,
+                text: 'Decorative\nImage',
+                fontSize: 12,
+                fontFamily: 'Arial',
+                fill: '#666',
+                align: 'center',
+                width: 80
+            });
+            
+            const icon = new Konva.Text({
+                x: 35,
+                y: 15,
+                text: '🖼️',
+                fontSize: 24,
+                width: 30,
+                align: 'center'
+            });
+            
+            placeholder.add(rect);
+            placeholder.add(icon);
+            placeholder.add(text);
+            
+            layer.add(placeholder);
+            elements.push({ type: 'decorative-image', node: placeholder });
+            setupSelection(placeholder);
+            layer.draw();
+            return;
+        }
+        
         // Handle text-based elements
         if (!template) return;
         
@@ -3213,6 +3273,41 @@ function initializePDFEditor() {
             html += '</div>';
         }
         
+        // Decorative image properties
+        if (attrs.name === 'decorative-image') {
+            // Use getAttr to ensure we get the imageUrl
+            const imageUrl = node.getAttr('imageUrl') || attrs.imageUrl || '';
+            console.log('Properties panel - decorative image URL:', imageUrl);
+            html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
+            html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Decorative Image</div>';
+            
+            if (imageUrl && imageUrl.trim() !== '') {
+                html += '<div style="margin-bottom: 1rem;">';
+                html += `<img src="${imageUrl}" alt="Decorative image" style="max-width: 100%; max-height: 150px; border: 1px solid #ddd; border-radius: 4px;">`;
+                html += '</div>';
+            }
+            
+            html += '<div class="property-group">';
+            html += '<label for="decorative-image-upload" class="property-label">Upload Image</label>';
+            html += '<input type="file" id="decorative-image-upload" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style="display: none;">';
+            html += `<button type="button" id="btn-upload-decorative-image" class="property-input" style="background: #667eea; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; width: 100%;">`;
+            html += '<i class="fas fa-upload mr-2"></i>';
+            html += imageUrl ? '{{ _("Change Image") }}' : '{{ _("Upload Image") }}';
+            html += '</button>';
+            html += '</div>';
+            
+            if (imageUrl) {
+                html += '<div class="property-group">';
+                html += '<button type="button" id="btn-remove-decorative-image" class="property-input" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; width: 100%;">';
+                html += '<i class="fas fa-trash mr-2"></i>{{ _("Remove Image") }}';
+                html += '</button>';
+                html += '</div>';
+            }
+            
+            html += '<input type="hidden" id="prop-image-url" value="' + (imageUrl || '') + '">';
+            html += '</div>';
+        }
+        
         // Group-specific properties (for items-table and expenses-table)
         // Check both className and constructor name for Groups
         const isGroup = className === 'Group' || (node.constructor && node.constructor.name === 'Group');
@@ -3440,6 +3535,295 @@ function initializePDFEditor() {
                 selectedElement.opacity(parseFloat(propOpacity.value));
                 document.getElementById('opacity-value').textContent = (propOpacity.value * 100) + '%';
                 layer.draw();
+            });
+        }
+        
+        // Function to update decorative image element with uploaded image (moved outside to be accessible)
+        window.updateDecorativeImageElement = function(element, imageUrl) {
+            const elementName = element && element.attrs ? element.attrs.name : '';
+            if (!element || !elementName || !elementName.includes('decorative-image')) {
+                // Silently return if element is not a decorative image (this can happen when buttons exist but wrong element is selected)
+                return;
+            }
+            
+            console.log('updateDecorativeImageElement called with URL:', imageUrl);
+            
+            // Store image URL in element attributes - use setAttr to ensure it's saved
+            element.setAttr('imageUrl', imageUrl || '');
+            // Also ensure it's in attrs for proper serialization
+            element.attrs.imageUrl = imageUrl || '';
+            
+            // Remove existing image if any
+            const existingImage = element.findOne('Image');
+            if (existingImage) {
+                existingImage.destroy();
+            }
+            
+            // Remove all placeholder elements
+            const rect = element.findOne('Rect');
+            const allTexts = element.find('Text');
+            allTexts.forEach(textNode => {
+                const text = textNode.text();
+                if (text.includes('Decorative') || text.includes('🖼️')) {
+                    textNode.destroy();
+                }
+            });
+            
+            if (rect) {
+                rect.destroy();
+            }
+            
+            if (imageUrl && imageUrl.trim() !== '') {
+                console.log('Loading image from URL:', imageUrl);
+                
+                // Create a temporary image to check if it loads
+                const tempImg = new Image();
+                tempImg.crossOrigin = 'anonymous';
+                
+                tempImg.onload = function() {
+                    console.log('Image verified, loading into Konva. Dimensions:', tempImg.width, 'x', tempImg.height);
+                    
+                    // Load and display the actual image
+                    Konva.Image.fromURL(imageUrl, function(konvaImage) {
+                        console.log('Konva image loaded successfully, dimensions:', konvaImage.width(), 'x', konvaImage.height());
+                        
+                        // Use actual image dimensions or default to 100x100
+                        let width = konvaImage.width() || tempImg.width || 100;
+                        let height = konvaImage.height() || tempImg.height || 100;
+                        const aspectRatio = width / height;
+                        
+                        // Scale to fit within 200x200 but maintain aspect ratio
+                        const maxSize = 200;
+                        if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                                width = maxSize;
+                                height = maxSize / aspectRatio;
+                            } else {
+                                height = maxSize;
+                                width = maxSize * aspectRatio;
+                            }
+                        }
+                        
+                        // Preserve transparency - don't set fill or opacity that would override image alpha
+                        konvaImage.setAttrs({
+                            x: 0,
+                            y: 0,
+                            width: width,
+                            height: height,
+                            // Ensure transparency is preserved - Konva.Image preserves alpha by default
+                            opacity: 1.0,  // Don't override image's built-in alpha channel
+                            visible: true,  // Explicitly make it visible
+                            listening: true
+                        });
+                        
+                        // Update group size
+                        element.width(width);
+                        element.height(height);
+                        element.visible(true);  // Ensure group is visible
+                        
+                        // Add image
+                        element.add(konvaImage);
+                        layer.draw();
+                        stage.draw();
+                        console.log('Image added to element, new dimensions:', width, 'x', height);
+                        
+                        // Force a redraw of the properties panel to show the image
+                        if (selectedElement === element) {
+                            setTimeout(() => {
+                                updatePropertiesPanel(element);
+                                attachPropertyListeners();
+                            }, 100);
+                        }
+                    }, function(error) {
+                        console.error('Konva failed to load image:', error);
+                        alert('Failed to load image into canvas. The image URL is saved but may not display correctly.');
+                    });
+                };
+                
+                tempImg.onerror = function() {
+                    console.error('Failed to load image (onerror):', imageUrl);
+                    alert('Failed to load image. Please check the image URL: ' + imageUrl);
+                };
+                
+                tempImg.src = imageUrl;
+            } else {
+                // Restore placeholder if image removed
+                const newRect = new Konva.Rect({
+                    x: 0,
+                    y: 0,
+                    width: 100,
+                    height: 100,
+                    fill: '#f0f0f0',
+                    stroke: '#999',
+                    strokeWidth: 2,
+                    dash: [5, 5]
+                });
+                element.add(newRect);
+                
+                const newText = new Konva.Text({
+                    x: 10,
+                    y: 40,
+                    text: 'Decorative\nImage',
+                    fontSize: 12,
+                    fontFamily: 'Arial',
+                    fill: '#666',
+                    align: 'center',
+                    width: 80
+                });
+                element.add(newText);
+                
+                const newIcon = new Konva.Text({
+                    x: 35,
+                    y: 15,
+                    text: '🖼️',
+                    fontSize: 24,
+                    width: 30,
+                    align: 'center'
+                });
+                element.add(newIcon);
+                
+                element.width(100);
+                element.height(100);
+                element.visible(true);
+                layer.draw();
+                stage.draw();
+            }
+        };
+        
+        // Decorative image upload handler
+        const decorativeImageUpload = document.getElementById('decorative-image-upload');
+        const btnUploadDecorativeImage = document.getElementById('btn-upload-decorative-image');
+        const btnRemoveDecorativeImage = document.getElementById('btn-remove-decorative-image');
+        
+        if (btnUploadDecorativeImage) {
+            btnUploadDecorativeImage.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Upload button clicked');
+                console.log('Selected element:', selectedElement);
+                const elementName = selectedElement ? (selectedElement.attrs ? selectedElement.attrs.name : 'no attrs') : 'no element';
+                console.log('Selected element name:', elementName);
+                
+                // Only proceed if selected element is a decorative image
+                // Check if name includes 'decorative-image' (it might be 'decorative-image element-overlap' or similar)
+                if (!selectedElement || !selectedElement.attrs || !elementName || !elementName.includes('decorative-image')) {
+                    console.warn('Upload button clicked but selected element is not a decorative image. Name:', elementName);
+                    // Silently return - button might exist in DOM from previous selection
+                    return;
+                }
+                // Get fresh reference to file input in case DOM was recreated
+                const currentInput = document.getElementById('decorative-image-upload');
+                console.log('File input element:', currentInput);
+                if (currentInput) {
+                    console.log('Triggering file input click');
+                    currentInput.click();
+                } else {
+                    console.error('File input element not found');
+                }
+            });
+        }
+
+        if (decorativeImageUpload) {
+            decorativeImageUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                console.log('File input change event, file:', file);
+                console.log('Selected element:', selectedElement);
+                const elementName = selectedElement ? (selectedElement.attrs ? selectedElement.attrs.name : 'no attrs') : 'no element';
+                console.log('Selected element name:', elementName);
+                
+                // Only proceed if selected element is a decorative image
+                // Check if name includes 'decorative-image' (it might be 'decorative-image element-overlap' or similar)
+                if (!selectedElement || !selectedElement.attrs || !elementName || !elementName.includes('decorative-image')) {
+                    console.warn('File input change but selected element is not a decorative image. Name:', elementName);
+                    // Silently return - file input might be triggered when wrong element is selected
+                    return;
+                }
+                
+                // Validate file type
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('{{ _("Only image files (PNG, JPG, JPEG, GIF, WEBP) are allowed") }}');
+                    return;
+                }
+                
+                // Validate file size (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('{{ _("File size must be less than 5MB") }}');
+                    return;
+                }
+                
+                // Upload image
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('csrf_token', '{{ csrf_token() }}');
+                
+                // Get fresh references since buttons might be recreated
+                const currentBtnUpload = document.getElementById('btn-upload-decorative-image');
+                if (currentBtnUpload) {
+                    currentBtnUpload.disabled = true;
+                    currentBtnUpload.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Uploading...") }}';
+                }
+                
+                fetch('{{ url_for("admin.upload_template_image") }}', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Upload response:', data);
+                    if (data.success && data.image_url) {
+                        // Update the decorative image element with the uploaded image
+                        const elementName = selectedElement && selectedElement.attrs ? selectedElement.attrs.name : '';
+                        if (window.updateDecorativeImageElement && selectedElement && elementName && elementName.includes('decorative-image')) {
+                            window.updateDecorativeImageElement(selectedElement, data.image_url);
+                            // Refresh properties panel after image loads (wait longer for image to actually load)
+                            setTimeout(() => {
+                                updatePropertiesPanel(selectedElement);
+                                // Re-attach event listeners after properties panel refresh
+                                attachPropertyListeners();
+                            }, 1000);
+                        } else {
+                            console.error('updateDecorativeImageElement function not found or invalid element');
+                            alert('{{ _("Error: Image update function not found") }}');
+                        }
+                    } else {
+                        alert(data.error || '{{ _("Failed to upload image") }}');
+                    }
+                })
+                .catch(error => {
+                    console.error('Upload error:', error);
+                    alert('{{ _("Failed to upload image") }}');
+                })
+                .finally(() => {
+                    const currentBtnUpload = document.getElementById('btn-upload-decorative-image');
+                    if (currentBtnUpload) {
+                        currentBtnUpload.disabled = false;
+                        currentBtnUpload.innerHTML = '<i class="fas fa-upload mr-2"></i>{{ _("Change Image") }}';
+                    }
+                    const currentInput = document.getElementById('decorative-image-upload');
+                    if (currentInput) {
+                        currentInput.value = '';
+                    }
+                });
+            });
+        }
+        
+        if (btnRemoveDecorativeImage) {
+            btnRemoveDecorativeImage.addEventListener('click', () => {
+                // Only proceed if selected element is a decorative image
+                const elementName = selectedElement && selectedElement.attrs ? selectedElement.attrs.name : '';
+                if (!selectedElement || !elementName || !elementName.includes('decorative-image')) {
+                    // Silently return - button might exist in DOM from previous selection
+                    return;
+                }
+                if (confirm('{{ _("Are you sure you want to remove this image?") }}')) {
+                    if (window.updateDecorativeImageElement) {
+                        window.updateDecorativeImageElement(selectedElement, null);
+                    }
+                    updatePropertiesPanel(selectedElement);
+                }
             });
         }
         
@@ -4725,7 +5109,65 @@ function initializePDFEditor() {
                     bodyContent += `    </table>\n`;
                     bodyContent += `  </div>\n`;
                     bodyContent += `  <!-- Expenses Table End -->\n`;
+                } else if (attrs.name === 'decorative-image') {
+                    // Decorative image element
+                    // Get imageUrl from attrs - try multiple methods to ensure we get it
+                    let imageUrl = '';
+                    try {
+                        imageUrl = child.getAttr('imageUrl') || '';
+                    } catch(e) {
+                        console.warn('Could not get imageUrl via getAttr:', e);
+                    }
+                    if (!imageUrl) {
+                        imageUrl = attrs.imageUrl || '';
+                    }
+                    // Also check if stored in the node's attrs directly
+                    if (!imageUrl && child.attrs) {
+                        imageUrl = child.attrs.imageUrl || '';
+                    }
+                    
+                    console.log('Generating code for decorative image, URL:', imageUrl, 'attrs:', attrs);
+                    
+                    // Find the actual image in the group if it exists
+                    const children = child.getChildren ? child.getChildren() : (child.children || []);
+                    const imageElement = children.find(c => c.className === 'Image');
+                    
+                    let actualWidth = 100;
+                    let actualHeight = 100;
+                    
+                    if (imageElement) {
+                        actualWidth = Math.round(imageElement.width() || imageElement.attrs.width || 100);
+                        actualHeight = Math.round(imageElement.height() || imageElement.attrs.height || 100);
                     } else {
+                        // Use group dimensions if available
+                        const groupBox = child.getClientRect();
+                        if (groupBox && groupBox.width > 0 && groupBox.height > 0) {
+                            actualWidth = Math.round(groupBox.width);
+                            actualHeight = Math.round(groupBox.height);
+                        }
+                    }
+                    
+                    console.log('Decorative image dimensions:', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
+                    
+                    // Add to ReportLab template JSON
+                    templateJson.elements.push({
+                        type: 'image',
+                        x: pxToPt(x),
+                        y: pxToPt(y),
+                        width: pxToPt(actualWidth),
+                        height: pxToPt(actualHeight),
+                        source: imageUrl || '',  // Store the image URL
+                        opacity: opacity,
+                        decorative: true  // Mark as decorative image
+                    });
+                    
+                    // Legacy HTML for preview
+                    if (imageUrl && imageUrl.trim() !== '') {
+                        bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
+                    } else {
+                        bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;background:#f0f0f0;border:2px dashed #999;opacity:${opacity};display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>\n`;
+                    }
+                } else {
                         // Regular group (not a table)
                         bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity}">\n`;
                         child.children.forEach(c => {
@@ -4907,6 +5349,43 @@ table tr:last-child td {
         layer.children.forEach((child, idx) => {
             if (child.className === 'Group') {
                 console.log(`Group ${idx}: name="${child.attrs.name || 'unnamed'}"`, child.attrs);
+                // Check for decorative images
+                if (child.attrs.name === 'decorative-image') {
+                    const imageUrl = child.getAttr('imageUrl') || child.attrs.imageUrl || '';
+                    console.log(`  Decorative image ${idx}: imageUrl="${imageUrl}"`);
+                }
+            }
+        });
+        
+        // Ensure imageUrl is in attrs for all decorative images before serialization
+        layer.find('[name="decorative-image"]').forEach(decorativeImageGroup => {
+            try {
+                // Try multiple methods to get imageUrl
+                let imageUrl = decorativeImageGroup.getAttr('imageUrl');
+                if (!imageUrl) {
+                    imageUrl = decorativeImageGroup.attrs.imageUrl;
+                }
+                if (!imageUrl) {
+                    // Check if there's an Image node with the URL
+                    const imageNode = decorativeImageGroup.findOne('Image');
+                    if (imageNode) {
+                        // Try to get URL from image node's source if available
+                        const imgAttrs = imageNode.attrs || {};
+                        imageUrl = imgAttrs.src || imgAttrs.url || imgAttrs.imageUrl || '';
+                    }
+                }
+                
+                if (imageUrl) {
+                    // Use setAttr to ensure Konva properly serializes it
+                    decorativeImageGroup.setAttr('imageUrl', imageUrl);
+                    // Also set in attrs for redundancy
+                    decorativeImageGroup.attrs.imageUrl = imageUrl;
+                    console.log('Ensured imageUrl in attrs for decorative image:', imageUrl);
+                } else {
+                    console.warn('No imageUrl found for decorative image group');
+                }
+            } catch(e) {
+                console.warn('Could not get/set imageUrl for decorative image:', e);
             }
         });
 
@@ -4927,9 +5406,39 @@ table tr:last-child td {
             return;
         }
         
+        // Final check: ensure all decorative images have imageUrl properly set before serialization
+        layer.find('[name="decorative-image"]').forEach(decorativeImageGroup => {
+            try {
+                // Double-check that imageUrl is set via both methods
+                const imageUrl = decorativeImageGroup.getAttr('imageUrl') || decorativeImageGroup.attrs.imageUrl;
+                if (imageUrl) {
+                    decorativeImageGroup.setAttr('imageUrl', imageUrl);
+                    decorativeImageGroup.attrs.imageUrl = imageUrl;
+                    console.log('Final check: imageUrl set for decorative image:', imageUrl);
+                }
+            } catch(e) {
+                console.warn('Final check: Could not set imageUrl:', e);
+            }
+        });
+        
+        // Serialize the stage
+        const stageJson = stage.toJSON();
+        
+        // Debug: Log decorative image groups in the JSON
+        function logDecorativeImagesInJson(node, depth = 0) {
+            if (node.attrs && node.attrs.name === 'decorative-image') {
+                console.log('  '.repeat(depth) + 'Found decorative-image in JSON, imageUrl:', node.attrs.imageUrl || 'NOT FOUND');
+            }
+            if (node.children) {
+                node.children.forEach(child => logDecorativeImagesInJson(child, depth + 1));
+            }
+        }
+        console.log('=== Checking decorative images in serialized JSON ===');
+        logDecorativeImagesInJson(stageJson);
+        
         document.getElementById('save-html').value = html;
         document.getElementById('save-css').value = css;
-        document.getElementById('save-design-json').value = JSON.stringify(stage.toJSON());
+        document.getElementById('save-design-json').value = JSON.stringify(stageJson);
         document.getElementById('save-template-json').value = json;
         // Use page size from selector if available, otherwise use CURRENT_PAGE_SIZE
         const pageSizeForSave = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
@@ -5156,6 +5665,9 @@ table tr:last-child td {
                 stage = restoredStage;
                 layer = stage.children[0];
                 
+                // Debug: Log the saved JSON to check if imageUrl is there
+                console.log('Saved JSON structure (first 2000 chars):', JSON.stringify(savedJson).substring(0, 2000));
+                
                 // Find or create background by name and resize it
                 background = layer.findOne('[name="background"]');
                 if (background) {
@@ -5322,6 +5834,438 @@ table tr:last-child td {
                     });
                 }
                 
+                // Restore decorative images - must happen AFTER stage is created and fully deserialized
+                // Find decorative image groups and restore their images
+                console.log('🔍 Starting decorative image restoration...');
+                console.log('Layer children count:', layer.children.length);
+                console.log('Searching for decorative-image groups...');
+                console.log('Saved JSON available:', !!savedJson);
+                if (savedJson && savedJson.children) {
+                    console.log('Saved JSON has', savedJson.children.length, 'top-level children');
+                }
+                
+                setTimeout(() => {
+                    let decorativeImageGroups = layer.find('[name="decorative-image"]');
+                    console.log('Found', decorativeImageGroups.length, 'decorative image group(s) via layer.find');
+                    
+                    // Also try finding by className and checking name - check ALL children, not just Groups
+                    console.log('Checking all', layer.children.length, 'layer children...');
+                    const potentialGroups = [];
+                    layer.children.forEach((child, idx) => {
+                        // Check if it's a Group by className or getType
+                        const isGroup = child.className === 'Group' || 
+                                       (child.getType && child.getType() === 'Group') ||
+                                       (child.constructor && child.constructor.name === 'Group');
+                        
+                        if (isGroup) {
+                            const nameViaGetAttr = child.getAttr ? child.getAttr('name') : null;
+                            const nameViaName = child.name ? child.name() : null;
+                            const nameViaAttrs = child.attrs ? child.attrs.name : null;
+                            
+                            if (nameViaGetAttr === 'decorative-image' || 
+                                nameViaName === 'decorative-image' || 
+                                nameViaAttrs === 'decorative-image') {
+                                console.log(`  ✅ Found decorative-image group at index ${idx}`);
+                                potentialGroups.push(child);
+                            } else {
+                                // Check if it has Image or Rect children (might be decorative image without name)
+                                const hasImage = child.findOne ? child.findOne('Image') : null;
+                                const hasRect = child.findOne ? child.findOne('Rect') : null;
+                                if (hasImage || hasRect) {
+                                    console.log(`  ⚠️ Group ${idx} has Image/Rect but name="${nameViaGetAttr || nameViaName || nameViaAttrs || 'unnamed'}"`);
+                                }
+                            }
+                        } else {
+                            // Check if it's an Image node that might be part of a decorative image
+                            if (child.className === 'Image' || (child.getType && child.getType() === 'Image')) {
+                                const parent = child.getParent ? child.getParent() : null;
+                                if (parent && (parent.className === 'Group' || (parent.getType && parent.getType() === 'Group'))) {
+                                    const parentName = parent.getAttr ? parent.getAttr('name') : (parent.attrs ? parent.attrs.name : null);
+                                    if (parentName === 'decorative-image') {
+                                        console.log(`  ✅ Found decorative-image group via Image node's parent at index ${idx}`);
+                                        if (!potentialGroups.includes(parent)) {
+                                            potentialGroups.push(parent);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log('Total potential decorative-image groups found:', potentialGroups.length);
+                    
+                    // Also search the saved JSON directly to find decorative-image groups
+                    const jsonGroups = [];
+                    if (savedJson && savedJson.children) {
+                        function findDecorativeImageGroupsInJson(node, path = '') {
+                            if (node.attrs && node.attrs.name === 'decorative-image') {
+                                console.log(`  ✅ Found decorative-image in JSON at path: ${path}, imageUrl:`, node.attrs.imageUrl || 'NOT FOUND');
+                                jsonGroups.push({ node: node, path: path, imageUrl: node.attrs.imageUrl || '' });
+                            }
+                            if (node.children) {
+                                node.children.forEach((child, idx) => {
+                                    findDecorativeImageGroupsInJson(child, path ? `${path}.children[${idx}]` : `children[${idx}]`);
+                                });
+                            }
+                        }
+                        console.log('Searching saved JSON for decorative-image groups...');
+                        savedJson.children.forEach((child, idx) => {
+                            findDecorativeImageGroupsInJson(child, `children[${idx}]`);
+                        });
+                        console.log('Found', jsonGroups.length, 'decorative-image group(s) in saved JSON');
+                    }
+                    
+                    // Combine found groups with potential groups
+                    let groupsToProcess = decorativeImageGroups;
+                    
+                    // Add any potential groups that weren't found by layer.find
+                    potentialGroups.forEach(group => {
+                        if (!groupsToProcess.includes(group)) {
+                            console.log('Adding potential group to process list');
+                            groupsToProcess = groupsToProcess.concat([group]);
+                        }
+                    });
+                    
+                    // If we found groups in JSON but not in the layer, try to find them by matching position/attributes
+                    if (jsonGroups.length > 0 && groupsToProcess.length === 0) {
+                        console.log('⚠️ Found groups in JSON but not in layer - trying to match by attributes...');
+                        jsonGroups.forEach(jsonGroup => {
+                            // Try to find matching group in layer by checking all children
+                            layer.children.forEach(child => {
+                                const isGroup = child.className === 'Group' || 
+                                               (child.getType && child.getType() === 'Group');
+                                if (isGroup) {
+                                    // Check if attributes match (x, y, width, height)
+                                    const jsonAttrs = jsonGroup.node.attrs || {};
+                                    const childAttrs = child.attrs || {};
+                                    if (Math.abs((jsonAttrs.x || 0) - (childAttrs.x || 0)) < 1 &&
+                                        Math.abs((jsonAttrs.y || 0) - (childAttrs.y || 0)) < 1) {
+                                        console.log('  ✅ Matched group by position, setting name and imageUrl');
+                                        child.setAttr('name', 'decorative-image');
+                                        child.name('decorative-image');
+                                        if (child.attrs) {
+                                            child.attrs.name = 'decorative-image';
+                                        }
+                                        if (jsonGroup.imageUrl) {
+                                            child.setAttr('imageUrl', jsonGroup.imageUrl);
+                                            child.attrs.imageUrl = jsonGroup.imageUrl;
+                                        }
+                                        if (!groupsToProcess.includes(child)) {
+                                            groupsToProcess = groupsToProcess.concat([child]);
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                    }
+                    
+                    if (groupsToProcess.length === 0) {
+                        console.warn('⚠️ No decorative image groups found! Checking all groups for Image/Rect children...');
+                        layer.children.forEach((child, idx) => {
+                            // Check if it's a Group
+                            const isGroup = child.className === 'Group' || 
+                                           (child.getType && child.getType() === 'Group') ||
+                                           (child.constructor && child.constructor.name === 'Group');
+                            
+                            if (isGroup) {
+                                const nameViaGetAttr = child.getAttr ? child.getAttr('name') : null;
+                                const nameViaName = child.name ? child.name() : null;
+                                const nameViaAttrs = child.attrs ? child.attrs.name : null;
+                                console.log(`Group ${idx}: name via getAttr="${nameViaGetAttr}", via name()="${nameViaName}", via attrs="${nameViaAttrs}"`);
+                                
+                                // Check if this might be a decorative image group by checking children
+                                const hasImage = child.findOne ? child.findOne('Image') : null;
+                                const hasPlaceholderRect = child.findOne ? child.findOne('Rect') : null;
+                                if (hasImage || hasPlaceholderRect) {
+                                    console.log(`  ⚠️ Group ${idx} has Image or Rect - might be decorative image but name is missing!`);
+                                    // Try to fix it
+                                    if (!nameViaGetAttr && !nameViaName && !nameViaAttrs) {
+                                        console.log(`  🔧 Attempting to fix: setting name to 'decorative-image'`);
+                                        child.setAttr('name', 'decorative-image');
+                                        child.name('decorative-image');
+                                        if (child.attrs) {
+                                            child.attrs.name = 'decorative-image';
+                                        }
+                                        // Add to groups to process
+                                        if (!groupsToProcess.includes(child)) {
+                                            groupsToProcess = groupsToProcess.concat([child]);
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Try searching again after potential fixes
+                        const decorativeImageGroupsAfterFix = layer.find('[name="decorative-image"]');
+                        if (decorativeImageGroupsAfterFix.length > 0) {
+                            console.log('✅ Found', decorativeImageGroupsAfterFix.length, 'decorative image group(s) after fixing names');
+                            // Merge with existing groupsToProcess
+                            decorativeImageGroupsAfterFix.forEach(group => {
+                                if (!groupsToProcess.includes(group)) {
+                                    groupsToProcess = groupsToProcess.concat([group]);
+                                }
+                            });
+                        }
+                    }
+                    
+                    console.log('Final groupsToProcess count:', groupsToProcess.length);
+                    
+                    groupsToProcess.forEach(decorativeImageGroup => {
+                        console.log('Found decorative image group:', decorativeImageGroup);
+                        console.log('Group attrs:', decorativeImageGroup.attrs);
+                        
+                        // Check if there's an Image node already (from deserialization)
+                        const existingImage = decorativeImageGroup.findOne('Image');
+                        console.log('Existing image node:', existingImage);
+                        if (existingImage) {
+                            console.log('Existing image attrs:', existingImage.attrs);
+                            // Check if it has valid image data
+                            try {
+                                const hasImageData = existingImage.image();
+                                console.log('Existing image has data:', !!hasImageData);
+                                if (!hasImageData) {
+                                    // Image node exists but has no data - remove it
+                                    console.log('Removing image node without data');
+                                    existingImage.destroy();
+                                }
+                            } catch(e) {
+                                console.log('Could not check image data, removing node:', e);
+                                existingImage.destroy();
+                            }
+                        }
+                        
+                        // Try multiple methods to get imageUrl
+                        let imageUrl = '';
+                        try {
+                            imageUrl = decorativeImageGroup.getAttr('imageUrl') || '';
+                            console.log('Got imageUrl via getAttr:', imageUrl);
+                        } catch(e) {
+                            console.warn('Could not get imageUrl via getAttr:', e);
+                        }
+                        if (!imageUrl) {
+                            imageUrl = decorativeImageGroup.attrs.imageUrl || '';
+                            console.log('Got imageUrl from attrs.imageUrl:', imageUrl);
+                        }
+                        if (!imageUrl && decorativeImageGroup.attrs) {
+                            imageUrl = decorativeImageGroup.attrs.imageUrl || '';
+                        }
+                        
+                        // Also check the saved JSON directly if we still don't have it
+                        if (!imageUrl && savedJson && savedJson.children) {
+                            try {
+                                // Search through the JSON structure for decorative-image groups
+                                function findImageUrlInJson(node, targetName) {
+                                    if (node.attrs && node.attrs.name === targetName) {
+                                        return node.attrs.imageUrl || '';
+                                    }
+                                    if (node.children) {
+                                        for (let child of node.children) {
+                                            const url = findImageUrlInJson(child, targetName);
+                                            if (url) return url;
+                                        }
+                                    }
+                                    return '';
+                                }
+                                const jsonImageUrl = findImageUrlInJson(savedJson, 'decorative-image');
+                                if (jsonImageUrl) {
+                                    imageUrl = jsonImageUrl;
+                                    // Also set it in the group for future use
+                                    decorativeImageGroup.setAttr('imageUrl', imageUrl);
+                                    decorativeImageGroup.attrs.imageUrl = imageUrl;
+                                    console.log('Found imageUrl in saved JSON:', imageUrl);
+                                }
+                            } catch(e) {
+                                console.warn('Could not search JSON for imageUrl:', e);
+                            }
+                        }
+                        
+                        console.log('Restoring decorative image, final URL:', imageUrl);
+                        
+                        if (imageUrl && imageUrl.trim() !== '') {
+                            // Remove any existing image node (it won't have valid image data after deserialization)
+                            if (existingImage) {
+                                existingImage.destroy();
+                            }
+                            
+                            // Remove placeholder elements
+                            const rect = decorativeImageGroup.findOne('Rect');
+                            const allTexts = decorativeImageGroup.find('Text');
+                            allTexts.forEach(textNode => {
+                                const text = textNode.text();
+                                if (text.includes('Decorative') || text.includes('🖼️')) {
+                                    textNode.destroy();
+                                }
+                            });
+                            
+                            if (rect) rect.destroy();
+                            
+                            // Create a temporary image to verify it loads
+                            const tempImg = new Image();
+                            tempImg.crossOrigin = 'anonymous';
+                            
+                            tempImg.onload = function() {
+                                console.log('Decorative image verified, loading into Konva. Dimensions:', tempImg.width, 'x', tempImg.height);
+                                
+                                // Load the actual image
+                                Konva.Image.fromURL(imageUrl, function(konvaImage) {
+                                    const maxSize = 200;
+                                    let width = konvaImage.width() || tempImg.width || 100;
+                                    let height = konvaImage.height() || tempImg.height || 100;
+                                    const aspectRatio = width / height;
+                                    
+                                    if (width > maxSize || height > maxSize) {
+                                        if (width > height) {
+                                            width = maxSize;
+                                            height = maxSize / aspectRatio;
+                                        } else {
+                                            height = maxSize;
+                                            width = maxSize * aspectRatio;
+                                        }
+                                    }
+                                    
+                                    // Preserve transparency - don't set fill or opacity that would override image alpha
+                                    konvaImage.setAttrs({
+                                        x: 0,
+                                        y: 0,
+                                        width: width,
+                                        height: height,
+                                        // Ensure transparency is preserved - Konva.Image preserves alpha by default
+                                        opacity: 1.0,  // Don't override image's built-in alpha channel
+                                        visible: true,  // Explicitly make it visible
+                                        listening: true
+                                    });
+                                    
+                                    decorativeImageGroup.width(width);
+                                    decorativeImageGroup.height(height);
+                                    decorativeImageGroup.visible(true);  // Ensure group is visible
+                                    decorativeImageGroup.add(konvaImage);
+                                    
+                                    // Force a redraw and ensure the image is on top
+                                    layer.draw();
+                                    
+                                    // Also try drawing the stage to ensure everything is rendered
+                                    stage.draw();
+                                    
+                                    // Verify the image is actually in the group and visible
+                                    const imageInGroup = decorativeImageGroup.findOne('Image');
+                                    if (imageInGroup && imageInGroup === konvaImage) {
+                                        console.log('✅ Decorative image restored successfully, dimensions:', width, 'x', height);
+                                        console.log('✅ Image node is in group and visible');
+                                    } else {
+                                        console.error('❌ Image node not found in group after adding!');
+                                        console.log('Expected:', konvaImage);
+                                        console.log('Found in group:', imageInGroup);
+                                        console.log('Group children:', decorativeImageGroup.children.map(c => c.className));
+                                        // Try adding again
+                                        if (!decorativeImageGroup.children.includes(konvaImage)) {
+                                            decorativeImageGroup.add(konvaImage);
+                                            layer.draw();
+                                            stage.draw();
+                                        }
+                                    }
+                                    
+                                    console.log('Image visible:', konvaImage.visible());
+                                    console.log('Group visible:', decorativeImageGroup.visible());
+                                    console.log('Image in group:', decorativeImageGroup.children.includes(konvaImage));
+                                    
+                                    // Force another draw after a short delay to ensure rendering
+                                    setTimeout(() => {
+                                        layer.draw();
+                                        stage.draw();
+                                    }, 100);
+                                }, function(error) {
+                                    console.error('Failed to load decorative image into Konva:', error);
+                                    // Restore placeholder if image fails to load
+                                    const placeholderRect = new Konva.Rect({
+                                        x: 0,
+                                        y: 0,
+                                        width: 100,
+                                        height: 100,
+                                        fill: '#f0f0f0',
+                                        stroke: '#999',
+                                        strokeWidth: 2,
+                                        dash: [5, 5]
+                                    });
+                                    decorativeImageGroup.add(placeholderRect);
+                                    layer.draw();
+                                });
+                            };
+                            
+                            tempImg.onerror = function() {
+                                console.error('Failed to verify decorative image:', imageUrl);
+                                // Restore placeholder on error
+                                const placeholderRect = new Konva.Rect({
+                                    x: 0,
+                                    y: 0,
+                                    width: 100,
+                                    height: 100,
+                                    fill: '#f0f0f0',
+                                    stroke: '#999',
+                                    strokeWidth: 2,
+                                    dash: [5, 5]
+                                });
+                                decorativeImageGroup.add(placeholderRect);
+                                layer.draw();
+                            };
+                            
+                            // Set src after all handlers are attached
+                            tempImg.src = imageUrl;
+                            
+                            // Also try loading directly if tempImg fails silently
+                            setTimeout(() => {
+                                if (!tempImg.complete || tempImg.naturalWidth === 0) {
+                                    console.warn('Temp image did not load, trying direct Konva load');
+                                    // Try loading directly with Konva
+                                    Konva.Image.fromURL(imageUrl, function(directImage) {
+                                        if (directImage && directImage.image()) {
+                                            const maxSize = 200;
+                                            let width = directImage.width() || 100;
+                                            let height = directImage.height() || 100;
+                                            const aspectRatio = width / height;
+                                            
+                                            if (width > maxSize || height > maxSize) {
+                                                if (width > height) {
+                                                    width = maxSize;
+                                                    height = maxSize / aspectRatio;
+                                                } else {
+                                                    height = maxSize;
+                                                    width = maxSize * aspectRatio;
+                                                }
+                                            }
+                                            
+                                            directImage.setAttrs({
+                                                x: 0,
+                                                y: 0,
+                                                width: width,
+                                                height: height,
+                                                opacity: 1.0,
+                                                visible: true,
+                                                listening: true
+                                            });
+                                            
+                                            decorativeImageGroup.width(width);
+                                            decorativeImageGroup.height(height);
+                                            decorativeImageGroup.visible(true);
+                                            decorativeImageGroup.add(directImage);
+                                            layer.draw();
+                                            stage.draw();
+                                            console.log('Decorative image loaded directly via Konva');
+                                        }
+                                    }, function(error) {
+                                        console.error('Direct Konva load also failed:', error);
+                                    });
+                                }
+                            }, 2000);  // Wait 2 seconds before fallback
+                        } else {
+                            console.log('No imageUrl found for decorative image, keeping placeholder or existing elements');
+                            // Even if no imageUrl, ensure the group is visible
+                            decorativeImageGroup.visible(true);
+                            layer.draw();
+                            stage.draw();
+                        }
+                    });
+                }, 300);  // Increased delay to ensure stage is fully loaded and all elements are ready
+                
                 // Re-setup selections for all elements (skip background, grid lines, and page border)
                 layer.children.forEach(child => {
                     if (child !== background && 
@@ -5339,11 +6283,147 @@ table tr:last-child td {
                                 setupSelection(grandChild);
                             });
                         }
+                        // If it's a decorative-image Group, also setup selection on children
+                        if (child.className === 'Group' && child.attrs.name === 'decorative-image') {
+                            child.children.forEach(grandChild => {
+                                setupSelection(grandChild);
+                            });
+                        }
                         elements.push({ type: child.attrs.name || child.className, node: child });
                     }
                 });
                 
                 layer.draw();
+                
+                // After setupSelection, try to restore decorative images again if they weren't found earlier
+                // This is a fallback in case the first attempt ran too early
+                setTimeout(() => {
+                    const decorativeImageGroups = layer.find('[name="decorative-image"]');
+                    if (decorativeImageGroups.length > 0) {
+                        console.log('🔄 Fallback: Found', decorativeImageGroups.length, 'decorative image group(s) after setupSelection');
+                        decorativeImageGroups.forEach(decorativeImageGroup => {
+                            const existingImage = decorativeImageGroup.findOne('Image');
+                            
+                            // Try multiple methods to get imageUrl
+                            let imageUrl = '';
+                            try {
+                                imageUrl = decorativeImageGroup.getAttr('imageUrl') || '';
+                            } catch(e) {
+                                console.warn('Fallback: Could not get imageUrl via getAttr:', e);
+                            }
+                            if (!imageUrl) {
+                                imageUrl = decorativeImageGroup.attrs.imageUrl || '';
+                            }
+                            
+                            // Also check the saved JSON directly if we still don't have it
+                            if (!imageUrl && savedJson && savedJson.children) {
+                                try {
+                                    function findImageUrlInJson(node, targetName) {
+                                        if (node.attrs && node.attrs.name === targetName) {
+                                            return node.attrs.imageUrl || '';
+                                        }
+                                        if (node.children) {
+                                            for (let child of node.children) {
+                                                const url = findImageUrlInJson(child, targetName);
+                                                if (url) return url;
+                                            }
+                                        }
+                                        return '';
+                                    }
+                                    const jsonImageUrl = findImageUrlInJson(savedJson, 'decorative-image');
+                                    if (jsonImageUrl) {
+                                        imageUrl = jsonImageUrl;
+                                        decorativeImageGroup.setAttr('imageUrl', imageUrl);
+                                        decorativeImageGroup.attrs.imageUrl = imageUrl;
+                                        console.log('🔄 Fallback: Found imageUrl in saved JSON:', imageUrl);
+                                    }
+                                } catch(e) {
+                                    console.warn('Fallback: Could not search JSON for imageUrl:', e);
+                                }
+                            }
+                            
+                            // Only restore if we have an imageUrl but no visible image
+                            if (imageUrl && imageUrl.trim() !== '') {
+                                const hasValidImage = existingImage && existingImage.image();
+                                if (!hasValidImage) {
+                                    console.log('🔄 Fallback: Restoring image for group with URL:', imageUrl);
+                                    
+                                    // Remove existing image node if it doesn't have valid data
+                                    if (existingImage && !existingImage.image()) {
+                                        existingImage.destroy();
+                                    }
+                                    
+                                    // Remove placeholder elements
+                                    const rect = decorativeImageGroup.findOne('Rect');
+                                    const allTexts = decorativeImageGroup.find('Text');
+                                    allTexts.forEach(textNode => {
+                                        const text = textNode.text();
+                                        if (text.includes('Decorative') || text.includes('🖼️')) {
+                                            textNode.destroy();
+                                        }
+                                    });
+                                    if (rect) rect.destroy();
+                                    
+                                    Konva.Image.fromURL(imageUrl, function(konvaImage) {
+                                        const maxSize = 200;
+                                        let width = konvaImage.width() || 100;
+                                        let height = konvaImage.height() || 100;
+                                        const aspectRatio = width / height;
+                                        
+                                        if (width > maxSize || height > maxSize) {
+                                            if (width > height) {
+                                                width = maxSize;
+                                                height = maxSize / aspectRatio;
+                                            } else {
+                                                height = maxSize;
+                                                width = maxSize * aspectRatio;
+                                            }
+                                        }
+                                        
+                                        konvaImage.setAttrs({
+                                            x: 0,
+                                            y: 0,
+                                            width: width,
+                                            height: height,
+                                            opacity: 1.0,
+                                            visible: true,
+                                            listening: true
+                                        });
+                                        
+                                        decorativeImageGroup.width(width);
+                                        decorativeImageGroup.height(height);
+                                        decorativeImageGroup.visible(true);
+                                        decorativeImageGroup.add(konvaImage);
+                                        layer.draw();
+                                        stage.draw();
+                                        console.log('✅ Fallback: Decorative image restored successfully');
+                                    }, function(error) {
+                                        console.error('❌ Fallback: Failed to load image:', error);
+                                        // Restore placeholder on error
+                                        const placeholderRect = new Konva.Rect({
+                                            x: 0,
+                                            y: 0,
+                                            width: 100,
+                                            height: 100,
+                                            fill: '#f0f0f0',
+                                            stroke: '#999',
+                                            strokeWidth: 2,
+                                            dash: [5, 5]
+                                        });
+                                        decorativeImageGroup.add(placeholderRect);
+                                        decorativeImageGroup.visible(true);
+                                        layer.draw();
+                                        stage.draw();
+                                    });
+                                } else {
+                                    console.log('🔄 Fallback: Image already has valid image data, skipping restoration');
+                                }
+                            } else {
+                                console.log('🔄 Fallback: No imageUrl found for decorative image group');
+                            }
+                        });
+                    }
+                }, 500);
                 
                 // Refit canvas after loading saved design
                 setTimeout(() => {

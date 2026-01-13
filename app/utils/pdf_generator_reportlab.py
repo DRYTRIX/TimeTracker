@@ -447,11 +447,48 @@ class ReportLabTemplateRenderer:
                     print(f"Error decoding base64 image: {e}")
                 return None
         
+        # Handle template image URLs (convert to file path or base64)
+        if source.startswith("/uploads/template_images/"):
+            try:
+                from app.utils.template_filters import get_image_base64
+                # Extract filename from URL
+                filename = source.split("/uploads/template_images/")[-1]
+                # Build relative path (as get_image_base64 expects)
+                relative_path = f"app/static/uploads/template_images/{filename}"
+                # Convert to base64
+                base64_data = get_image_base64(relative_path)
+                if base64_data:
+                    # Convert base64 data URI to ImageReader
+                    import base64 as b64
+                    header, data = base64_data.split(",", 1)
+                    img_data = b64.b64decode(data)
+                    img_reader = ImageReader(io.BytesIO(img_data))
+                    width = element.get("width", 100)
+                    height = element.get("height", 100)
+                    # Image() constructor preserves transparency automatically for PNG images
+                    return Image(img_reader, width=width, height=height)
+                else:
+                    # Fallback: try direct file path
+                    if current_app:
+                        upload_folder = os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
+                        file_path = os.path.join(upload_folder, filename)
+                        if os.path.exists(file_path):
+                            width = element.get("width", 100)
+                            height = element.get("height", 100)
+                            return Image(file_path, width=width, height=height)
+            except Exception as e:
+                if current_app:
+                    current_app.logger.error(f"Error loading template image {source}: {e}")
+                else:
+                    print(f"Error loading template image {source}: {e}")
+                return None
+        
         # Handle file path
         if os.path.exists(source):
             try:
                 width = element.get("width", 100)  # Already in points from generateCode
                 height = element.get("height", 100)  # Already in points from generateCode
+                # Image() constructor preserves transparency automatically for PNG images
                 return Image(source, width=width, height=height)
             except Exception as e:
                 if current_app:
@@ -920,9 +957,42 @@ class ReportLabTemplateRenderer:
                 header, data = source.split(",", 1)
                 img_data = base64.b64decode(data)
                 img_reader = ImageReader(io.BytesIO(img_data))
-                canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=True)
+                # mask='auto' preserves transparency for PNG images
+                canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=True, mask='auto')
+            # Handle template image URLs (convert to file path or base64)
+            elif source.startswith("/uploads/template_images/"):
+                try:
+                    from app.utils.template_filters import get_image_base64
+                    # Extract filename from URL
+                    filename = source.split("/uploads/template_images/")[-1]
+                    # Build relative path (as get_image_base64 expects)
+                    relative_path = f"app/static/uploads/template_images/{filename}"
+                    # Convert to base64
+                    base64_data = get_image_base64(relative_path)
+                    if base64_data:
+                        # Convert base64 data URI to ImageReader
+                        import base64 as b64
+                        header, data = base64_data.split(",", 1)
+                        img_data = b64.b64decode(data)
+                        img_reader = ImageReader(io.BytesIO(img_data))
+                        # preserveAspectRatio=True preserves transparency
+                        canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=True, mask='auto')
+                    else:
+                        # Fallback: try direct file path
+                        if current_app:
+                            upload_folder = os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
+                            file_path = os.path.join(upload_folder, filename)
+                            if os.path.exists(file_path):
+                                # mask='auto' preserves transparency for PNG images
+                                canv.drawImage(file_path, x, y - height, width=width, height=height, preserveAspectRatio=True, mask='auto')
+                except Exception as e:
+                    if current_app:
+                        current_app.logger.error(f"Error loading template image {source}: {e}")
+                    else:
+                        print(f"Error loading template image {source}: {e}")
             elif os.path.exists(source):
-                canv.drawImage(source, x, y - height, width=width, height=height, preserveAspectRatio=True)
+                # mask='auto' preserves transparency for PNG images
+                canv.drawImage(source, x, y - height, width=width, height=height, preserveAspectRatio=True, mask='auto')
         except Exception as e:
             if current_app:
                 current_app.logger.error(f"Error drawing image on canvas: {e}")
