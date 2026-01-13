@@ -4459,16 +4459,69 @@ function initializePDFEditor() {
             layer.children.forEach((child, index) => {
                 if (!child || child === background || child.className === 'Transformer') return;
                 
+                // Filter out invisible elements
+                if (child.attrs && (child.attrs.opacity === 0 || child.attrs.visible === false)) {
+                    console.log('Skipping invisible element in code generation:', child.className, child.attrs.name || 'unnamed');
+                    return;
+                }
+                
                 // Filter out grid lines and page border - they should not be included in the exported template
                 if (child.className === 'Line' && child.attrs.name === 'grid-line') return;
                 if (child.className === 'Rect' && child.attrs.name === 'page-border') return;
                 // Filter out warning indicator dots - they should not be included in the exported template
                 if (child.className === 'Circle' && child.attrs.name === 'warning-indicator') return;
                 
+                // Filter out background rectangles - any rectangle with name="background" or matching full page dimensions
+                if (child.className === 'Rect') {
+                    const rectName = child.attrs.name || '';
+                    const rectX = child.attrs.x || 0;
+                    const rectY = child.attrs.y || 0;
+                    const rectWidth = child.attrs.width || 0;
+                    const rectHeight = child.attrs.height || 0;
+                    const rectFill = child.attrs.fill || '';
+                    const rectStroke = child.attrs.stroke || '';
+                    
+                    // Filter out if name is "background" or "page-border"
+                    if (rectName === 'background' || rectName === 'page-border') {
+                        console.log('Skipping rectangle with name:', rectName);
+                        return;
+                    }
+                    
+                    // Filter out zero-sized rectangles
+                    if (rectWidth === 0 && rectHeight === 0) {
+                        console.log('Skipping zero-sized rectangle');
+                        return;
+                    }
+                    
+                    // Filter out full-page rectangles at 0,0 with white/transparent fill and black stroke (unwanted borders)
+                    // Check if it matches page dimensions (within 5px tolerance)
+                    const pageWidth = dimensions.width;
+                    const pageHeight = dimensions.height;
+                    const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 && 
+                                      Math.abs(rectWidth - pageWidth) < 5 && 
+                                      Math.abs(rectHeight - pageHeight) < 5;
+                    
+                    if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent' || rectFill === '') && 
+                        (rectStroke === 'black' || rectStroke === '#000000')) {
+                        console.log('Filtering out unwanted full-page rectangle border:', {x: rectX, y: rectY, width: rectWidth, height: rectHeight, fill: rectFill, stroke: rectStroke, name: rectName});
+                        return;
+                    }
+                    
+                    // Filter out rectangles that are completely outside page bounds (likely artifacts)
+                    if (rectX + rectWidth < -10 || rectY + rectHeight < -10 || 
+                        rectX > pageWidth + 10 || rectY > pageHeight + 10) {
+                        console.log('Skipping rectangle outside page bounds:', {x: rectX, y: rectY, width: rectWidth, height: rectHeight});
+                        return;
+                    }
+                }
+                
                 const attrs = child.attrs;
                 const x = Math.round(attrs.x || 0);
                 const y = Math.round(attrs.y || 0);
                 const opacity = attrs.opacity !== undefined ? attrs.opacity : 1;
+                
+                // Debug logging for elements being included
+                console.log(`Including element in template JSON: type=${child.className}, name=${attrs.name || 'unnamed'}, x=${x}, y=${y}, width=${attrs.width || 'N/A'}, height=${attrs.height || 'N/A'}`);
                 
                 if (child.className === 'Text') {
                 const fontSize = attrs.fontSize || 14;
@@ -4589,6 +4642,41 @@ function initializePDFEditor() {
                 const points = attrs.points || [];
                 const stroke = attrs.stroke || 'black';
                 const strokeWidth = attrs.strokeWidth || 1;
+                const lineName = attrs.name || '';
+                const lineX = attrs.x || 0;
+                const lineY = attrs.y || 0;
+                const lineWidth = attrs.width || 0;
+                
+                // Filter out unwanted border lines at position (0,0) or very close with full page width
+                const pageWidth = dimensions.width;
+                const isAtOrigin = Math.abs(lineX) < 5 && Math.abs(lineY) < 5;
+                const isFullWidth = lineWidth > pageWidth * 0.9 || (points.length >= 4 && Math.abs(points[2] - points[0]) > pageWidth * 0.9);
+                
+                // Filter out lines at origin with full width (border lines)
+                if (isAtOrigin && isFullWidth) {
+                    console.log('Filtering out unwanted border line at origin:', {x: lineX, y: lineY, width: lineWidth, stroke: stroke, name: lineName});
+                    return;
+                }
+                
+                // Filter out unwanted separator lines (gray lines at top) that match full page width
+                if (points.length >= 4) {
+                    const x1 = Math.round(points[0]);
+                    const y1 = Math.round(points[1]);
+                    const x2 = Math.round(points[2]);
+                    const y2 = Math.round(points[3]);
+                    const calculatedWidth = Math.abs(x2 - x1);
+                    
+                    // Filter out full-width gray lines near the top (likely unwanted separators)
+                    const isFullWidthLine = calculatedWidth > pageWidth * 0.9;
+                    const isNearTop = Math.min(y1, y2) < 50; // Within 50px of top
+                    const isGray = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' || 
+                                  stroke === '#cccccc' || stroke === '#999999' || stroke === '#667eea';
+                    
+                    if (isFullWidthLine && isNearTop && isGray && lineName !== 'items-table-separator' && lineName !== 'expenses-table-separator') {
+                        console.log('Filtering out unwanted gray separator line:', {width: calculatedWidth, y: Math.min(y1, y2), stroke: stroke, name: lineName});
+                        return;
+                    }
+                }
                 
                 if (points.length >= 4) {
                     const x1 = Math.round(points[0]);
@@ -4598,6 +4686,17 @@ function initializePDFEditor() {
                     const width = Math.abs(x2 - x1);
                     const adjustedX = x + Math.min(x1, x2);
                     const adjustedY = y + Math.min(y1, y2);
+                    
+                    // Final check: filter out lines at origin (0,0) with full width - these are border lines
+                    const pageWidth = dimensions.width;
+                    const isAtOrigin = Math.abs(adjustedX) < 5 && Math.abs(adjustedY) < 5;
+                    const isFullWidth = width > pageWidth * 0.9;
+                    const isBorderLine = isAtOrigin && isFullWidth;
+                    
+                    if (isBorderLine) {
+                        console.log('Final filter: Removing border line at origin in code generation:', {adjustedX, adjustedY, width, stroke});
+                        return;
+                    }
                     
                     // Add to ReportLab template JSON
                     templateJson.elements.push({
@@ -5006,8 +5105,131 @@ table tr:last-child td {
         });
     }
     
+    // Cleanup function to remove unwanted elements before saving
+    function cleanupUnwantedElements() {
+        if (!layer) return;
+        
+        const pageWidth = dimensions.width;
+        const pageHeight = dimensions.height;
+        let removedCount = 0;
+        
+        // Get all children (create a copy since we'll be modifying the array)
+        const children = layer.children.slice();
+        
+        children.forEach((child) => {
+            if (!child || child === background || child.className === 'Transformer') return;
+            
+            // Remove invisible elements (opacity 0 or not visible)
+            if (child.attrs && (child.attrs.opacity === 0 || child.attrs.visible === false)) {
+                console.log('Removing invisible element:', child.className, child.attrs.name || 'unnamed');
+                child.destroy();
+                removedCount++;
+                return;
+            }
+            
+            // Remove zero-sized elements
+            if (child.attrs) {
+                const width = child.attrs.width || 0;
+                const height = child.attrs.height || 0;
+                if (width === 0 && height === 0 && child.className !== 'Line' && child.className !== 'Circle') {
+                    console.log('Removing zero-sized element:', child.className, child.attrs.name || 'unnamed');
+                    child.destroy();
+                    removedCount++;
+                    return;
+                }
+            }
+            
+            // Remove unwanted rectangles
+            if (child.className === 'Rect') {
+                const rectName = child.attrs.name || '';
+                const rectX = child.attrs.x || 0;
+                const rectY = child.attrs.y || 0;
+                const rectWidth = child.attrs.width || 0;
+                const rectHeight = child.attrs.height || 0;
+                const rectFill = child.attrs.fill || '';
+                const rectStroke = child.attrs.stroke || '';
+                
+                // Remove if name is "background" or "page-border" (duplicates)
+                if (rectName === 'background' || rectName === 'page-border') {
+                    console.log('Removing duplicate rectangle:', rectName);
+                    child.destroy();
+                    removedCount++;
+                    return;
+                }
+                
+                // Remove full-page rectangles at 0,0 with white/transparent fill and black stroke
+                const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 && 
+                                  Math.abs(rectWidth - pageWidth) < 5 && 
+                                  Math.abs(rectHeight - pageHeight) < 5;
+                
+                if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent' || rectFill === '') && 
+                    (rectStroke === 'black' || rectStroke === '#000000')) {
+                    console.log('Removing unwanted full-page rectangle border before save');
+                    child.destroy();
+                    removedCount++;
+                    return;
+                }
+            }
+            
+            // Remove unwanted lines (border lines and separator lines)
+            if (child.className === 'Line') {
+                const lineName = child.attrs.name || '';
+                const lineX = child.attrs.x || 0;
+                const lineY = child.attrs.y || 0;
+                const lineWidth = child.attrs.width || 0;
+                const points = child.attrs.points || [];
+                
+                // Skip grid lines
+                if (lineName === 'grid-line') return;
+                
+                // Remove border lines at origin (0,0) with full page width
+                const isAtOrigin = Math.abs(lineX) < 5 && Math.abs(lineY) < 5;
+                const isFullWidthBorder = lineWidth > pageWidth * 0.9 || 
+                                        (points.length >= 4 && Math.abs(points[2] - points[0]) > pageWidth * 0.9);
+                
+                if (isAtOrigin && isFullWidthBorder) {
+                    console.log('Removing unwanted border line at origin before save');
+                    child.destroy();
+                    removedCount++;
+                    return;
+                }
+                
+                // Remove unwanted gray separator lines
+                if (points.length >= 4) {
+                    const x1 = points[0];
+                    const y1 = points[1];
+                    const x2 = points[2];
+                    const y2 = points[3];
+                    const calculatedWidth = Math.abs(x2 - x1);
+                    const stroke = child.attrs.stroke || '';
+                    
+                    // Remove full-width gray/blue lines near top or anywhere
+                    const isFullWidth = calculatedWidth > pageWidth * 0.9;
+                    const isNearTop = Math.min(y1, y2) < 50;
+                    const isGrayOrBlue = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' || 
+                                        stroke === '#cccccc' || stroke === '#999999' || stroke === '#667eea';
+                    
+                    if (isFullWidth && (isNearTop || isAtOrigin) && isGrayOrBlue && lineName !== 'items-table-separator' && lineName !== 'expenses-table-separator') {
+                        console.log('Removing unwanted separator line before save');
+                        child.destroy();
+                        removedCount++;
+                        return;
+                    }
+                }
+            }
+        });
+        
+        if (removedCount > 0) {
+            console.log(`Cleaned up ${removedCount} unwanted elements before saving`);
+            layer.draw();
+        }
+    }
+    
     // Save
     document.getElementById('btn-save').addEventListener('click', function() {
+        // Clean up unwanted elements before generating code
+        cleanupUnwantedElements();
+        
         const { html, css, json } = generateCode();
 
         // Log what we're saving for debugging
@@ -5388,6 +5610,101 @@ table tr:last-child td {
                     layer.add(newPageBorder);
                     newPageBorder.moveToBottom();
                 }
+                
+                // Clean up unwanted elements that might have been saved
+                // Remove unwanted full-page rectangle borders
+                layer.children.forEach((child) => {
+                    if (child.className === 'Rect' && child !== background && child !== pageBorder) {
+                        const rectName = child.attrs.name || '';
+                        const rectX = child.attrs.x || 0;
+                        const rectY = child.attrs.y || 0;
+                        const rectWidth = child.attrs.width || 0;
+                        const rectHeight = child.attrs.height || 0;
+                        const rectFill = child.attrs.fill || '';
+                        const rectStroke = child.attrs.stroke || '';
+                        
+                        // Remove if name is "background" (duplicate)
+                        if (rectName === 'background') {
+                            console.log('Removing duplicate background rectangle');
+                            child.destroy();
+                            return;
+                        }
+                        
+                        // Remove full-page rectangles at 0,0 with white fill and black stroke (unwanted borders)
+                        const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 && 
+                                          Math.abs(rectWidth - dimensions.width) < 5 && 
+                                          Math.abs(rectHeight - dimensions.height) < 5;
+                        
+                        if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent') && 
+                            (rectStroke === 'black' || rectStroke === '#000000')) {
+                            console.log('Removing unwanted full-page rectangle border on load');
+                            child.destroy();
+                            return;
+                        }
+                    }
+                    
+                    // Remove unwanted lines (border lines and separator lines)
+                    if (child.className === 'Line') {
+                        const lineX = child.attrs.x || 0;
+                        const lineY = child.attrs.y || 0;
+                        const points = child.attrs.points || [];
+                        const stroke = child.attrs.stroke || '';
+                        const lineName = child.attrs.name || '';
+                        
+                        // Skip grid lines
+                        if (lineName === 'grid-line') {
+                            return;
+                        }
+                        
+                        // Calculate actual line position and width from points
+                        let actualX = lineX;
+                        let actualY = lineY;
+                        let lineWidth = 0;
+                        
+                        if (points.length >= 4) {
+                            const x1 = points[0];
+                            const y1 = points[1];
+                            const x2 = points[2];
+                            const y2 = points[3];
+                            lineWidth = Math.abs(x2 - x1);
+                            actualX = lineX + Math.min(x1, x2);
+                            actualY = lineY + Math.min(y1, y2);
+                        } else {
+                            // If no points, check width attribute
+                            lineWidth = child.attrs.width || 0;
+                            actualX = lineX;
+                            actualY = lineY;
+                        }
+                        
+                        // Remove border lines at origin (0,0) with full page width
+                        const isAtOrigin = Math.abs(actualX) < 5 && Math.abs(actualY) < 5;
+                        const isFullWidth = lineWidth > dimensions.width * 0.9;
+                        const isGrayOrBlue = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' || 
+                                            stroke === '#cccccc' || stroke === '#999999' || stroke === '#667eea';
+                        
+                        // Remove any line at origin with full width (border lines)
+                        if (isAtOrigin && isFullWidth) {
+                            console.log('Removing unwanted border line at origin on load:', {actualX, actualY, lineWidth, stroke, name: lineName});
+                            child.destroy();
+                            return;
+                        }
+                        
+                        // Remove unwanted gray/blue separator lines near top
+                        if (points.length >= 4) {
+                            const y1 = points[1];
+                            const y2 = points[3];
+                            const isNearTop = Math.min(y1, y2) < 50 || actualY < 50;
+                            
+                            if (isFullWidth && isNearTop && isGrayOrBlue && lineName !== 'items-table-separator' && lineName !== 'expenses-table-separator') {
+                                console.log('Removing unwanted separator line on load:', {actualX, actualY, lineWidth, stroke, name: lineName});
+                                child.destroy();
+                                return;
+                            }
+                        }
+                    }
+                });
+                
+                layer.draw();
                 
                 // Update width and height variables for fit function
                 width = dimensions.width;
@@ -6158,13 +6475,6 @@ table tr:last-child td {
         addElement('due-date', 395, 145);
         addElement('invoice-status', 395, 170);
         
-        // Separator Line
-        addElement('line', 40, 210);
-        const line1 = layer.children[layer.children.length - 1];
-        line1.points([0, 0, 515, 0]);
-        line1.strokeWidth(2);
-        line1.stroke('#667eea');
-        
         // ========== CLIENT & PROJECT SECTION ==========
         // Bill To Section (left)
         const billToLabel = new Konva.Text({
@@ -6204,13 +6514,6 @@ table tr:last-child td {
         
         addElement('project-name', 320, 250);
         addElement('currency', 320, 275);
-        
-        // Separator Line
-        addElement('line', 40, 335);
-        const line2 = layer.children[layer.children.length - 1];
-        line2.points([0, 0, 515, 0]);
-        line2.strokeWidth(1);
-        line2.stroke('#dee2e6');
         
         // ========== QUOTE ITEMS TABLE ==========
         addElement('quote-items-table', 40, 350);
@@ -6268,25 +6571,11 @@ table tr:last-child td {
         // Bank Info (right side)
         addElement('bank-info', 320, 635);
         
-        // Separator Line
-        addElement('line', 40, 720);
-        const line3 = layer.children[layer.children.length - 1];
-        line3.points([0, 0, 515, 0]);
-        line3.strokeWidth(1);
-        line3.stroke('#dee2e6');
-        
         // ========== NOTES & TERMS ==========
         addElement('notes', 40, 738);
         addElement('terms', 40, 768);
         
         // ========== FOOTER ==========
-        // Footer separator
-        addElement('line', 40, 810);
-        const line4 = layer.children[layer.children.length - 1];
-        line4.points([0, 0, 515, 0]);
-        line4.strokeWidth(1);
-        line4.stroke('#dee2e6');
-        
         // Footer text (centered)
         const footerText = new Konva.Text({
             x: 40,
