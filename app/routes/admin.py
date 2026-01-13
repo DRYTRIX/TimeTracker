@@ -2484,7 +2484,7 @@ body {{
     box-sizing: border-box !important;
     overflow: visible !important;
     margin: 0 auto !important;
-    padding: 20px !important;
+    padding: 0 !important;
     background: transparent !important;
     position: relative;
     /* CSS zoom on container will scale this proportionally */
@@ -3037,7 +3037,7 @@ body {{
     box-sizing: border-box !important;
     overflow: visible !important;
     margin: 0 auto !important;
-    padding: 20px !important;
+    padding: 0 !important;
     background: transparent !important;
     position: relative;
     /* CSS zoom on container will scale this proportionally */

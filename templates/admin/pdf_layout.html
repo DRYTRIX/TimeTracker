@@ -5214,7 +5214,7 @@ html, body {
     min-width: ${widthPx}px !important;
     min-height: ${heightPx}px !important;
     background: white;
-    padding: 20px !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
     margin: 0 !important;
     overflow: hidden !important;
@@ -5273,7 +5273,7 @@ table tr:last-child td {
             const heightPx = dimensions.height;
             return {
                 html: `<div class="invoice-wrapper"><p style="color: red; padding: 20px;">Error generating template: ${error.message}</p></div>`,
-                css: `@page { size: ${currentSize}; margin: 0; } html, body { margin: 0; padding: 0; width: ${widthPx}px; height: ${heightPx}px; } .invoice-wrapper { width: ${widthPx}px; height: ${heightPx}px; background: white; padding: 20px; }`,
+                css: `@page { size: ${currentSize}; margin: 0; } html, body { margin: 0; padding: 0; width: ${widthPx}px; height: ${heightPx}px; } .invoice-wrapper { width: ${widthPx}px; height: ${heightPx}px; background: white; padding: 0; }`,
                 json: JSON.stringify({ page: { size: currentSize, margin: { top: 20, right: 20, bottom: 20, left: 20 } }, elements: [], styles: {} }, null, 2)
             };
         }
