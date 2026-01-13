@@ -113,13 +113,13 @@ def validate_template_json(template_json: Dict[str, Any]) -> tuple[bool, Optiona
 
 def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
     """
-    Get a default professional invoice template structure for a given page size.
+    Get a default clean and simple template structure for invoices/quotes.
     
     Args:
         page_size: Page size identifier (A4, A5, Letter, etc.)
         
     Returns:
-        Dictionary containing default template structure with professional layout
+        Dictionary containing default template structure with clean layout
     """
     # Get page dimensions in points for positioning
     dims_pt = get_page_dimensions_points(page_size)
@@ -132,51 +132,37 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
     
     # Calculate usable area
     usable_width = page_width_pt - (margin_pt * 2)
-    usable_height = page_height_pt - (margin_pt * 2)
     
     # Layout positions (relative to top-left, accounting for margins)
-    # Header section
     header_y = margin_pt
-    header_height = 80
-    
-    # Invoice details box (right side)
-    details_box_x = page_width_pt - margin_pt - 200  # 200pt wide box
-    details_box_y = header_y + 20
-    details_box_width = 200
-    details_box_height = 120
-    
-    # Items table
-    table_y = details_box_y + details_box_height + 30
-    table_width = usable_width
-    table_height = 300
-    
-    # Footer section
-    footer_y = table_y + table_height + 30
-    footer_height = 100
+    client_y = header_y + 80
+    table_y = client_y + 60
+    totals_y = table_y + 200
+    footer_y = totals_y + 60
     
     # Build elements list
     elements = []
     
-    # Header: Invoice title
+    # Header: Title (works for both invoice and quote)
     elements.append({
         "type": "text",
         "x": margin_pt,
-        "y": header_y + 20,
+        "y": header_y + 10,
         "text": "INVOICE",
         "width": 300,
         "style": {
             "font": "Helvetica-Bold",
-            "size": 24,
+            "size": 28,
             "color": "#000000",
             "align": "left"
         }
     })
     
-    # Company info section (left side, below title)
+    # Company info section (left side)
     elements.append({
         "type": "text",
         "x": margin_pt,
-        "y": header_y + 60,
+        "y": header_y + 50,
         "text": "{{ settings.company_name if settings.company_name else 'Your Company Name' }}",
         "width": 300,
         "style": {
@@ -190,7 +176,7 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
     elements.append({
         "type": "text",
         "x": margin_pt,
-        "y": header_y + 80,
+        "y": header_y + 70,
         "text": "{{ settings.company_address if settings.company_address else 'Company Address' }}",
         "width": 300,
         "style": {
@@ -201,50 +187,36 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
         }
     })
     
-    # Invoice details box (right side)
-    elements.append({
-        "type": "rectangle",
-        "x": details_box_x,
-        "y": details_box_y,
-        "width": details_box_width,
-        "height": details_box_height,
-        "style": {
-            "fill": "#f8f9fa",
-            "stroke": "#dee2e6",
-            "strokeWidth": 1
-        }
-    })
-    
-    # Invoice details labels and values
+    # Invoice/Quote details (right side, no box - cleaner)
+    details_x = page_width_pt - margin_pt - 200
     detail_items = [
-        ("Invoice #:", "{{ invoice.invoice_number }}", details_box_y + 15),
-        ("Date:", "{{ invoice.date.strftime('%b %d, %Y') if invoice.date else 'N/A' }}", details_box_y + 35),
-        ("Due Date:", "{{ invoice.due_date.strftime('%b %d, %Y') if invoice.due_date else 'N/A' }}", details_box_y + 55),
-        ("Status:", "{{ invoice.status.upper() if invoice.status else 'DRAFT' }}", details_box_y + 75),
+        ("Invoice #:", "{{ invoice.invoice_number }}", header_y + 30),
+        ("Date:", "{{ format_date(invoice.issue_date) if invoice.issue_date else 'N/A' }}", header_y + 50),
+        ("Due Date:", "{{ format_date(invoice.due_date) if invoice.due_date else 'N/A' }}", header_y + 70),
     ]
     
     for label, value, y_pos in detail_items:
         # Label
         elements.append({
             "type": "text",
-            "x": details_box_x + 10,
+            "x": details_x,
             "y": y_pos,
             "text": label,
             "width": 80,
             "style": {
                 "font": "Helvetica-Bold",
                 "size": 9,
-                "color": "#666666",
-                "align": "left"
+                "color": "#000000",
+                "align": "right"
             }
         })
         # Value
         elements.append({
             "type": "text",
-            "x": details_box_x + 90,
+            "x": details_x + 90,
             "y": y_pos,
             "text": value,
-            "width": 100,
+            "width": 110,
             "style": {
                 "font": "Helvetica",
                 "size": 9,
@@ -253,8 +225,7 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
             }
         })
     
-    # Client info section (below company info)
-    client_y = header_y + 120
+    # Client info section
     elements.append({
         "type": "text",
         "x": margin_pt,
@@ -273,7 +244,7 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
         "type": "text",
         "x": margin_pt,
         "y": client_y + 20,
-        "text": "{{ invoice.client.name if invoice.client else 'Client Name' }}",
+        "text": "{{ invoice.client_name if invoice.client_name else 'Client Name' }}",
         "width": 300,
         "style": {
             "font": "Helvetica",
@@ -287,7 +258,7 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
         "type": "text",
         "x": margin_pt,
         "y": client_y + 40,
-        "text": "{{ invoice.client.address if invoice.client and invoice.client.address else 'Client Address' }}",
+        "text": "{{ invoice.client_address if invoice.client_address else 'Client Address' }}",
         "width": 300,
         "style": {
             "font": "Helvetica",
@@ -297,24 +268,12 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
         }
     })
     
-    # Separator line before table
-    elements.append({
-        "type": "line",
-        "x": margin_pt,
-        "y": table_y - 10,
-        "width": table_width,
-        "style": {
-            "stroke": "#dee2e6",
-            "strokeWidth": 1
-        }
-    })
-    
-    # Items table
+    # Items table (no separator lines - cleaner)
     elements.append({
         "type": "table",
         "x": margin_pt,
         "y": table_y,
-        "width": table_width,
+        "width": usable_width,
         "columns": [
             {"header": "Description", "width": 250, "field": "description", "align": "left"},
             {"header": "Qty", "width": 70, "field": "quantity", "align": "center"},
@@ -336,26 +295,13 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
         }
     })
     
-    # Separator line after table
-    elements.append({
-        "type": "line",
-        "x": margin_pt,
-        "y": table_y + table_height + 10,
-        "width": table_width,
-        "style": {
-            "stroke": "#dee2e6",
-            "strokeWidth": 1
-        }
-    })
-    
-    # Totals section (right-aligned)
+    # Totals section (right-aligned, no separator lines)
     totals_x = page_width_pt - margin_pt - 200
-    totals_start_y = footer_y
     
     total_items = [
-        ("Subtotal:", "{{ format_money(invoice.subtotal, invoice.currency_code) if invoice.subtotal else '0.00' }}", totals_start_y),
-        ("Tax:", "{{ format_money(invoice.tax_amount, invoice.currency_code) if invoice.tax_amount else '0.00' }}", totals_start_y + 20),
-        ("Total:", "{{ format_money(invoice.total_amount, invoice.currency_code) if invoice.total_amount else '0.00' }}", totals_start_y + 45),
+        ("Subtotal:", "{{ format_money(invoice.subtotal) if invoice.subtotal else '0.00' }}", totals_y),
+        ("Tax:", "{{ format_money(invoice.tax_amount) if invoice.tax_amount else '0.00' }}", totals_y + 20),
+        ("Total:", "{{ format_money(invoice.total_amount) if invoice.total_amount else '0.00' }}", totals_y + 45),
     ]
     
     for label, value, y_pos in total_items:
@@ -368,7 +314,7 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
             "width": 100,
             "style": {
                 "font": "Helvetica-Bold" if "Total:" in label else "Helvetica",
-                "size": 10 if "Total:" in label else 9,
+                "size": 11 if "Total:" in label else 10,
                 "color": "#000000",
                 "align": "right"
             }
@@ -382,18 +328,18 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
             "width": 90,
             "style": {
                 "font": "Helvetica-Bold" if "Total:" in label else "Helvetica",
-                "size": 10 if "Total:" in label else 9,
+                "size": 11 if "Total:" in label else 10,
                 "color": "#000000",
                 "align": "right"
             }
         })
     
-    # Footer notes section (if needed)
-    if footer_y + 60 < page_height_pt - margin_pt:
+    # Footer notes section
+    if footer_y + 40 < page_height_pt - margin_pt:
         elements.append({
             "type": "text",
             "x": margin_pt,
-            "y": footer_y + 60,
+            "y": footer_y,
             "text": "{{ invoice.notes if invoice.notes else 'Thank you for your business!' }}",
             "width": usable_width,
             "style": {
