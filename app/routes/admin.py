@@ -330,22 +330,46 @@ body {{
             width_px_elem = int(width * 96 / 72)
             height_px_elem = int(height * 96 / 72)
             source = element.get("source", "")
+            is_decorative = element.get("decorative", False)
             
             # Handle base64 data URLs or file paths
+            img_src = ""
             if source.startswith("data:"):
                 img_src = source
+            elif source.startswith("/uploads/template_images/"):
+                # Template image - convert to base64 for PDF generation
+                try:
+                    from app.utils.template_filters import get_image_base64
+                    # Extract filename from URL
+                    filename = source.split("/uploads/template_images/")[-1]
+                    # Build file path relative to app root (as get_image_base64 expects)
+                    relative_path = f"app/static/uploads/template_images/{filename}"
+                    # Convert to base64
+                    img_src = get_image_base64(relative_path) or source  # Fallback to URL if conversion fails
+                except Exception as e:
+                    # If conversion fails, use the URL directly
+                    current_app.logger.warning(f"Failed to convert template image to base64: {e}")
+                    img_src = source
             elif source.startswith("/") or source.startswith("http"):
                 img_src = source
             else:
                 # Assume it's a relative path or placeholder
-                img_src = source if source else "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999'%3EImage%3C/text%3E%3C/svg%3E"
+                if source:
+                    img_src = source
+                else:
+                    # Placeholder for decorative images without source
+                    img_src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999'%3EImage%3C/text%3E%3C/svg%3E"
             
             style_parts = [style_str_base]
             style_parts.append(f"width: {width_px_elem}px")
             style_parts.append(f"height: {height_px_elem}px")
             style_str = "; ".join(style_parts) + ";"
             
-            html_parts.append(f'<img class="element image-element" src="{img_src}" style="{style_str}" alt="Image">')
+            if img_src and not img_src.startswith("data:image/svg+xml"):
+                html_parts.append(f'<img class="element image-element" src="{img_src}" style="{style_str}" alt="Decorative image">')
+            else:
+                # Show placeholder for decorative images without source
+                html_parts.append(f'<div class="element" style="{style_str}background:#f0f0f0;border:2px dashed #999;display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>')
         
         elif elem_type == "rectangle":
             width = element.get("width", 100)
@@ -2460,7 +2484,7 @@ body {{
     box-sizing: border-box !important;
     overflow: visible !important;
     margin: 0 auto !important;
-    padding: 20px !important;
+    padding: 0 !important;
     background: transparent !important;
     position: relative;
     /* CSS zoom on container will scale this proportionally */
@@ -3013,7 +3037,7 @@ body {{
     box-sizing: border-box !important;
     overflow: visible !important;
     margin: 0 auto !important;
-    padding: 20px !important;
+    padding: 0 !important;
     background: transparent !important;
     position: relative;
     /* CSS zoom on container will scale this proportionally */
@@ -3142,6 +3166,75 @@ def remove_logo():
         flash(_("No logo to remove"), "info")
 
     return redirect(url_for("admin.settings"))
+
+
+@admin_bp.route("/admin/template-image/upload", methods=["POST"])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required("manage_settings")
+def upload_template_image():
+    """Upload an image for use in PDF templates"""
+    from werkzeug.utils import secure_filename
+    import os
+    from datetime import datetime
+    from flask import url_for
+
+    # File upload configuration - only images
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    UPLOAD_FOLDER = "app/static/uploads/template_images"
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+    def allowed_file(filename):
+        return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "File type not allowed. Only images (PNG, JPG, JPEG, GIF, WEBP) are allowed"}), 400
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}), 400
+
+    # Save file
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"template_{timestamp}_{original_filename}"
+
+    # Ensure upload directory exists
+    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, filename)
+    file.save(file_path)
+
+    # Return URL for the image
+    image_url = url_for("admin.serve_template_image", filename=filename)
+    
+    return jsonify({
+        "success": True,
+        "image_url": image_url,
+        "filename": filename
+    })
+
+
+@admin_bp.route("/uploads/template_images/<path:filename>")
+def serve_template_image(filename):
+    """Serve uploaded template images (public route so images can be embedded in PDFs)"""
+    from flask import send_from_directory
+    import os
+    
+    upload_folder = os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
+    return send_from_directory(upload_folder, filename)
 
 
 # Public route to serve uploaded logos from the static uploads directory

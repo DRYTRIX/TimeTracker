@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Quote, QuoteItem, QuoteAttachment, Client, Project, Invoice, QuoteTemplate
+from app.models import Quote, QuoteItem, QuoteAttachment, QuoteImage, Client, Project, Invoice, QuoteTemplate
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
@@ -1529,3 +1529,274 @@ def bulk_action():
         flash(_("Invalid action"), "error")
 
     return redirect(url_for("quotes.list_quotes"))
+
+
+@quotes_bp.route("/quotes/<int:quote_id>/images/upload", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_quotes")
+def upload_quote_image(quote_id):
+    """Upload a decorative image to a quote"""
+    from werkzeug.utils import secure_filename
+    import os
+    from datetime import datetime
+    from decimal import Decimal
+
+    quote = Quote.query.get_or_404(quote_id)
+
+    # Check permissions
+    if not current_user.is_admin and quote.created_by != current_user.id:
+        if request.is_json:
+            return jsonify({"error": "Permission denied"}), 403
+        flash(_("You do not have permission to upload images to this quote"), "error")
+        return redirect(url_for("quotes.view_quote", quote_id=quote_id))
+
+    # File upload configuration - only images
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    UPLOAD_FOLDER = "app/static/uploads/quote_images"
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+    def allowed_file(filename):
+        return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+    if "file" not in request.files:
+        if request.is_json:
+            return jsonify({"error": "No file provided"}), 400
+        flash(_("No file provided"), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+    file = request.files["file"]
+    if file.filename == "":
+        if request.is_json:
+            return jsonify({"error": "No file selected"}), 400
+        flash(_("No file selected"), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+    if not allowed_file(file.filename):
+        if request.is_json:
+            return jsonify({"error": "File type not allowed. Only images (PNG, JPG, JPEG, GIF, WEBP) are allowed"}), 400
+        flash(_("File type not allowed. Only images are allowed"), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    if file_size > MAX_FILE_SIZE:
+        if request.is_json:
+            return jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}), 400
+        flash(_("File size exceeds maximum allowed size (5 MB)"), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+    # Save file
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{quote_id}_{timestamp}_{original_filename}"
+
+    # Ensure upload directory exists
+    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, filename)
+    file.save(file_path)
+
+    # Get file info
+    mime_type = file.content_type or "image/png"
+    
+    # Get position from form (default to 0,0)
+    position_x = Decimal(str(request.form.get("position_x", 0)))
+    position_y = Decimal(str(request.form.get("position_y", 0)))
+    width = Decimal(str(request.form.get("width", 0))) if request.form.get("width") else None
+    height = Decimal(str(request.form.get("height", 0))) if request.form.get("height") else None
+    opacity = Decimal(str(request.form.get("opacity", 1.0)))
+    z_index = int(request.form.get("z_index", 0))
+
+    # Create image record
+    image = QuoteImage(
+        quote_id=quote_id,
+        filename=filename,
+        original_filename=original_filename,
+        file_path=os.path.join(UPLOAD_FOLDER, filename),
+        file_size=file_size,
+        uploaded_by=current_user.id,
+        mime_type=mime_type,
+        position_x=position_x,
+        position_y=position_y,
+        width=width,
+        height=height,
+        opacity=opacity,
+        z_index=z_index,
+    )
+
+    db.session.add(image)
+
+    if not safe_commit("upload_quote_image", {"quote_id": quote_id, "image_id": image.id}):
+        if request.is_json:
+            return jsonify({"error": "Database error"}), 500
+        flash(_("Could not upload image due to a database error. Please check server logs."), "error")
+        # Clean up uploaded file
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+    log_event(
+        "quote.image.uploaded",
+        user_id=current_user.id,
+        quote_id=quote_id,
+        image_id=image.id,
+        filename=original_filename,
+    )
+    track_event(
+        current_user.id,
+        "quote.image.uploaded",
+        {"quote_id": quote_id, "image_id": image.id, "filename": original_filename},
+    )
+
+    if request.is_json:
+        return jsonify({"success": True, "image": image.to_dict()})
+    
+    flash(_("Image uploaded successfully"), "success")
+    return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+
+@quotes_bp.route("/quotes/<int:quote_id>/images/<int:image_id>/position", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_quotes")
+def update_quote_image_position(quote_id, image_id):
+    """Update the position and properties of a decorative image"""
+    from decimal import Decimal
+
+    quote = Quote.query.get_or_404(quote_id)
+    image = QuoteImage.query.filter_by(id=image_id, quote_id=quote_id).first_or_404()
+
+    # Check permissions
+    if not current_user.is_admin and quote.created_by != current_user.id:
+        return jsonify({"error": "Permission denied"}), 403
+
+    # Get position data from request
+    data = request.get_json() if request.is_json else request.form
+    
+    if "position_x" in data:
+        image.position_x = Decimal(str(data["position_x"]))
+    if "position_y" in data:
+        image.position_y = Decimal(str(data["position_y"]))
+    if "width" in data:
+        image.width = Decimal(str(data["width"])) if data["width"] else None
+    if "height" in data:
+        image.height = Decimal(str(data["height"])) if data["height"] else None
+    if "opacity" in data:
+        image.opacity = Decimal(str(data["opacity"]))
+    if "z_index" in data:
+        image.z_index = int(data["z_index"])
+
+    if not safe_commit("update_quote_image_position", {"quote_id": quote_id, "image_id": image_id}):
+        return jsonify({"error": "Database error"}), 500
+
+    return jsonify({"success": True, "image": image.to_dict()})
+
+
+@quotes_bp.route("/quotes/<int:quote_id>/images/<int:image_id>/delete", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_quotes")
+def delete_quote_image(quote_id, image_id):
+    """Delete a decorative image from a quote"""
+    import os
+
+    quote = Quote.query.get_or_404(quote_id)
+    image = QuoteImage.query.filter_by(id=image_id, quote_id=quote_id).first_or_404()
+
+    # Check permissions
+    if not current_user.is_admin and quote.created_by != current_user.id:
+        if request.is_json:
+            return jsonify({"error": "Permission denied"}), 403
+        flash(_("You do not have permission to delete images from this quote"), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+    # Delete file from disk
+    file_path = os.path.join(current_app.root_path, "..", image.file_path)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except OSError as e:
+            current_app.logger.warning(f"Failed to delete image file {file_path}: {e}")
+
+    image_id_for_log = image.id
+    db.session.delete(image)
+
+    if not safe_commit("delete_quote_image", {"quote_id": quote_id, "image_id": image_id_for_log}):
+        if request.is_json:
+            return jsonify({"error": "Database error"}), 500
+        flash(_("Could not delete image due to a database error. Please check server logs."), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+    log_event(
+        "quote.image.deleted",
+        user_id=current_user.id,
+        quote_id=quote_id,
+        image_id=image_id_for_log,
+    )
+    track_event(
+        current_user.id,
+        "quote.image.deleted",
+        {"quote_id": quote_id, "image_id": image_id_for_log},
+    )
+
+    if request.is_json:
+        return jsonify({"success": True})
+    
+    flash(_("Image deleted successfully"), "success")
+    return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
+
+
+@quotes_bp.route("/quotes/<int:quote_id>/images/<int:image_id>/base64", methods=["GET"])
+@login_required
+def get_quote_image_base64(quote_id, image_id):
+    """Get base64-encoded image for PDF embedding or serve image directly"""
+    import os
+    import base64
+    import mimetypes
+    from flask import send_file
+
+    quote = Quote.query.get_or_404(quote_id)
+    image = QuoteImage.query.filter_by(id=image_id, quote_id=quote_id).first_or_404()
+
+    # Check permissions
+    if not current_user.is_admin and quote.created_by != current_user.id:
+        return jsonify({"error": "Permission denied"}), 403
+
+    file_path = os.path.join(current_app.root_path, "..", image.file_path)
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File not found"}), 404
+
+    # If request wants JSON (for API), return base64 data URI
+    if request.args.get("format") == "json" or request.headers.get("Accept") == "application/json":
+        try:
+            with open(file_path, "rb") as img_file:
+                image_data = base64.b64encode(img_file.read()).decode("utf-8")
+
+            # Detect MIME type
+            mime_type, _ = mimetypes.guess_type(file_path)
+            if not mime_type:
+                mime_type = image.mime_type or "image/png"
+
+            return jsonify({
+                "success": True,
+                "data_uri": f"data:{mime_type};base64,{image_data}",
+                "mime_type": mime_type,
+            })
+        except Exception as e:
+            current_app.logger.error(f"Error reading image file: {e}")
+            return jsonify({"error": "Error reading image file"}), 500
+    
+    # Otherwise, serve the image directly (for img src tags)
+    try:
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if not mime_type:
+            mime_type = image.mime_type or "image/png"
+        
+        return send_file(file_path, mimetype=mime_type)
+    except Exception as e:
+        current_app.logger.error(f"Error serving image file: {e}")
+        return jsonify({"error": "Error serving image file"}), 500

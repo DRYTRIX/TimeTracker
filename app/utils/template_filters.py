@@ -444,3 +444,47 @@ def get_logo_base64(logo_path):
     except Exception as e:
         print(f"Error converting logo to base64: {e}")
         return ""
+
+
+def get_image_base64(image_path):
+    """Convert image file to base64 data URI for PDF embedding
+    
+    Args:
+        image_path: Relative path to image file (e.g., 'app/static/uploads/invoice_images/file.png')
+                    or absolute path
+    
+    Returns:
+        Base64 data URI string or empty string on error
+    """
+    if not image_path:
+        return ""
+
+    import os
+    from flask import current_app
+
+    # Handle relative paths (from app root)
+    if not os.path.isabs(image_path):
+        full_path = os.path.join(current_app.root_path, "..", image_path)
+    else:
+        full_path = image_path
+
+    if not os.path.exists(full_path):
+        return ""
+
+    try:
+        import base64
+        import mimetypes
+
+        with open(full_path, "rb") as img_file:
+            image_data = base64.b64encode(img_file.read()).decode("utf-8")
+
+        # Detect MIME type
+        mime_type, _ = mimetypes.guess_type(full_path)
+        if not mime_type:
+            # Default to PNG if can't detect
+            mime_type = "image/png"
+
+        return f"data:{mime_type};base64,{image_data}"
+    except Exception as e:
+        print(f"Error converting image to base64: {e}")
+        return ""

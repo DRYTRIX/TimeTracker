@@ -46,6 +46,8 @@ from .quote_attachment import QuoteAttachment
 from .project_attachment import ProjectAttachment
 from .client_attachment import ClientAttachment
 from .comment_attachment import CommentAttachment
+from .invoice_image import InvoiceImage
+from .quote_image import QuoteImage
 from .quote_template import QuoteTemplate
 from .quote_version import QuoteVersion
 from .warehouse import Warehouse
@@ -140,6 +142,8 @@ __all__ = [
     "ProjectAttachment",
     "ClientAttachment",
     "CommentAttachment",
+    "InvoiceImage",
+    "QuoteImage",
     "QuoteTemplate",
     "QuoteVersion",
     "Warehouse",

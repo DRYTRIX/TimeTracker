@@ -547,7 +547,7 @@ class InvoicePDFGenerator:
         settings_wrapper.get_logo_path = get_logo_path
         
         # Helper functions for templates
-        from app.utils.template_filters import get_logo_base64
+        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
         
         def format_date(value, format="medium"):
@@ -736,7 +736,7 @@ class InvoicePDFGenerator:
         css = css + "\n" + overflow_css
         
         # Import helper functions for template
-        from app.utils.template_filters import get_logo_base64
+        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
 
         def format_date(value, format="medium"):
@@ -799,6 +799,14 @@ class InvoicePDFGenerator:
             invoice_expenses = []
         invoice_data.expenses = invoice_expenses
 
+        # Load decorative images
+        try:
+            from app.models import InvoiceImage
+            decorative_images = InvoiceImage.get_invoice_images(self.invoice.id)
+        except Exception:
+            decorative_images = []
+        invoice_data.decorative_images = decorative_images
+
         try:
             # Render using Flask's Jinja environment to include app filters and _()
             if html_template:
@@ -835,6 +843,7 @@ class InvoicePDFGenerator:
                     settings=self.settings,
                     Path=Path,
                     get_logo_base64=get_logo_base64,
+                    get_image_base64=get_image_base64,
                     format_date=format_date,
                     format_money=format_money,
                     now=datetime.now(),
@@ -855,6 +864,7 @@ class InvoicePDFGenerator:
                     settings=self.settings,
                     Path=Path,
                     get_logo_base64=get_logo_base64,
+                    get_image_base64=get_image_base64,
                     format_date=format_date,
                     format_money=format_money,
                     now=datetime.now(),
@@ -1785,7 +1795,7 @@ class QuotePDFGenerator:
         settings_wrapper.get_logo_path = get_logo_path
         
         # Helper functions for templates
-        from app.utils.template_filters import get_logo_base64
+        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
         
         def format_date(value, format="medium"):
@@ -1932,7 +1942,7 @@ class QuotePDFGenerator:
         css = css + "\n" + overflow_css
         
         # Import helper functions for template
-        from app.utils.template_filters import get_logo_base64
+        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
 
         def format_date(value, format="medium"):
@@ -1971,6 +1981,14 @@ class QuotePDFGenerator:
         # Override with converted lists
         quote_data.items = quote_items
 
+        # Load decorative images
+        try:
+            from app.models import QuoteImage
+            decorative_images = QuoteImage.get_quote_images(self.quote.id)
+        except Exception:
+            decorative_images = []
+        quote_data.decorative_images = decorative_images
+
         try:
             # Render using Flask's Jinja environment
             if html_template:
@@ -1994,6 +2012,7 @@ class QuotePDFGenerator:
                     settings=self.settings,
                     Path=Path,
                     get_logo_base64=get_logo_base64,
+                    get_image_base64=get_image_base64,
                     format_date=format_date,
                     format_money=format_money,
                     now=datetime.now(),
@@ -2012,6 +2031,7 @@ class QuotePDFGenerator:
                     settings=self.settings,
                     Path=Path,
                     get_logo_base64=get_logo_base64,
+                    get_image_base64=get_image_base64,
                     format_date=format_date,
                     format_money=format_money,
                     now=datetime.now(),
