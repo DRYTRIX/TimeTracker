@@ -904,11 +904,12 @@ def new_movement():
 
             # Get stock item for validation
             item = StockItem.query.get_or_404(stock_item_id)
-            if not item.is_trackable:
-                raise ValueError(_("Stock item is not trackable. Devaluation requires trackable items."))
 
             # Manual devaluation: revalue qty (no stock change)
             if movement_type == "devaluation":
+                # Devaluation requires trackable items
+                if not item.is_trackable:
+                    raise ValueError(_("Stock item is not trackable. Devaluation requires trackable items."))
                 if quantity <= 0:
                     raise ValueError(_("Devaluation quantity must be positive"))
 
@@ -1123,7 +1124,8 @@ def new_movement():
             flash(_("Error recording stock movement: %(error)s", error=str(e)), "error")
 
     # Get items and warehouses for form
-    stock_items = StockItem.query.filter_by(is_active=True, is_trackable=True).order_by(StockItem.name).all()
+    # Show all active items (trackability is only required when devaluation is enabled)
+    stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
     warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
 
     return render_template("inventory/movements/form.html", stock_items=stock_items, warehouses=warehouses)

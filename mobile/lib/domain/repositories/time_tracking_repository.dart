@@ -101,8 +101,11 @@ class TimeTrackingRepository {
 
   /// Stop the active timer
   Future<TimeEntry> stopTimer() async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.stopTimer();
+      final response = await apiClient!.stopTimer();
       return TimeEntry.fromJson(response['time_entry'] as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to stop timer: $e');
@@ -175,8 +178,11 @@ class TimeTrackingRepository {
 
   /// Get a specific time entry
   Future<TimeEntry> getTimeEntry(int entryId) async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.getTimeEntry(entryId);
+      final response = await apiClient!.getTimeEntry(entryId);
       return TimeEntry.fromJson(response['time_entry'] as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to get time entry: $e');
@@ -258,8 +264,11 @@ class TimeTrackingRepository {
     String? tags,
     bool? billable,
   }) async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.updateTimeEntry(
+      final response = await apiClient!.updateTimeEntry(
         entryId,
         projectId: projectId,
         taskId: taskId,
@@ -312,8 +321,11 @@ class TimeTrackingRepository {
     int? page,
     int? perPage,
   }) async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.getProjects(
+      final response = await apiClient!.getProjects(
         status: status,
         clientId: clientId,
         page: page,
@@ -330,8 +342,11 @@ class TimeTrackingRepository {
 
   /// Get a specific project
   Future<Project> getProject(int projectId) async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.getProject(projectId);
+      final response = await apiClient!.getProject(projectId);
       return Project.fromJson(response['project'] as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to get project: $e');
@@ -347,8 +362,11 @@ class TimeTrackingRepository {
     int? page,
     int? perPage,
   }) async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.getTasks(
+      final response = await apiClient!.getTasks(
         projectId: projectId,
         status: status,
         page: page,
@@ -365,8 +383,11 @@ class TimeTrackingRepository {
 
   /// Get a specific task
   Future<Task> getTask(int taskId) async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.getTask(taskId);
+      final response = await apiClient!.getTask(taskId);
       return Task.fromJson(response['task'] as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to get task: $e');

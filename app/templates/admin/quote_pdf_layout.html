@@ -1113,6 +1113,29 @@
     color: #1f2937;
 }
 
+/* Template Settings Panel */
+.template-settings-panel {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+.dark .template-settings-panel {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+.dark .template-settings-panel h4 {
+    color: #f9fafb;
+}
+
+.dark .template-settings-panel label {
+    color: #e2e8f0;
+}
+
+.dark .template-settings-panel p {
+    color: #a0aec0;
+}
+
 .property-group {
     margin-bottom: 1.5rem;
 }
@@ -1783,6 +1806,42 @@
             <i class="fas fa-sliders-h"></i>
             {{ _('Properties') }}
         </h3>
+        <!-- Template Settings -->
+        <div class="template-settings-panel" style="margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #374151;">
+                <i class="fas fa-cog" style="margin-right: 0.5rem;"></i>
+                {{ _('Template Settings') }}
+            </h4>
+            <div style="margin-bottom: 0.75rem;">
+                <label for="template-date-format" style="display: block; font-size: 0.813rem; font-weight: 500; margin-bottom: 0.25rem; color: #4b5563;">
+                    {{ _('Date Format') }}
+                </label>
+                <input type="text" id="template-date-format" class="form-input" value="{{ date_format if date_format else '%d.%m.%Y' }}" 
+                       style="font-size: 0.813rem; font-family: monospace;"
+                       placeholder="%d.%m.%Y">
+                <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">
+                    {{ _('Use strftime format (e.g., %d.%m.%Y for 12.09.2025)') }}
+                </p>
+            </div>
+        </div>
+        <!-- Template Settings -->
+        <div class="template-settings-panel" style="margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #374151;">
+                <i class="fas fa-cog" style="margin-right: 0.5rem;"></i>
+                {{ _('Template Settings') }}
+            </h4>
+            <div style="margin-bottom: 0.75rem;">
+                <label for="template-date-format" style="display: block; font-size: 0.813rem; font-weight: 500; margin-bottom: 0.25rem; color: #4b5563;">
+                    {{ _('Date Format') }}
+                </label>
+                <input type="text" id="template-date-format" class="form-input" value="{{ date_format if date_format else '%d.%m.%Y' }}" 
+                       style="font-size: 0.813rem; font-family: monospace;"
+                       placeholder="%d.%m.%Y">
+                <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">
+                    {{ _('Use strftime format (e.g., %d.%m.%Y for 12.09.2025)') }}
+                </p>
+            </div>
+        </div>
         <div id="properties-content">
             <p class="text-sm text-gray-500 italic">{{ _('Select an element to edit its properties') }}</p>
         </div>
@@ -1904,6 +1963,7 @@
     <textarea id="save-css" name="quote_pdf_template_css"></textarea>
     <textarea id="save-design-json" name="design_json"></textarea>
     <textarea id="save-template-json" name="template_json"></textarea>
+    <input type="text" id="save-date-format" name="date_format" value="{{ date_format or '%d.%m.%Y' }}">
 </form>
 
 <!-- Code Modal (initially hidden) -->
@@ -5299,8 +5359,69 @@ table tr:last-child td {
             }
         });
         
+        // CRITICAL FIX: Get imageUrl from actual nodes before serialization and store in a map
+        // This ensures we can inject imageUrl into JSON after serialization
+        const decorativeImageUrlMap = new Map();
+        layer.find('[name="decorative-image"]').forEach((decorativeImageGroup, index) => {
+            let imageUrl = decorativeImageGroup.getAttr('imageUrl') || decorativeImageGroup.attrs.imageUrl || '';
+            // Use position as key to match nodes after serialization
+            const key = `${decorativeImageGroup.x()}_${decorativeImageGroup.y()}_${index}`;
+            decorativeImageUrlMap.set(key, imageUrl);
+            // Also store by index as fallback
+            decorativeImageUrlMap.set(`index_${index}`, imageUrl);
+            console.log(`Stored imageUrl for decorative image ${index}:`, imageUrl, 'key:', key);
+        });
+        
         // Serialize the stage
         const stageJson = stage.toJSON();
+        
+        // CRITICAL FIX: Manually inject imageUrl into serialized JSON for decorative images
+        // Konva's toJSON() might not include custom attributes, so we need to add them manually
+        let decorativeImageIndex = 0;
+        function ensureImageUrlInJson(node, parentKey = '') {
+            if (node.attrs && node.attrs.name === 'decorative-image') {
+                // Try to match by position
+                const x = node.attrs.x || 0;
+                const y = node.attrs.y || 0;
+                const positionKey = `${x}_${y}_${decorativeImageIndex}`;
+                const indexKey = `index_${decorativeImageIndex}`;
+                
+                // Get imageUrl from map
+                let imageUrl = decorativeImageUrlMap.get(positionKey) || 
+                              decorativeImageUrlMap.get(indexKey) || '';
+                
+                // If still not found, try to find by matching all keys
+                if (!imageUrl) {
+                    for (const [key, url] of decorativeImageUrlMap.entries()) {
+                        if (url) {
+                            imageUrl = url;
+                            break;
+                        }
+                    }
+                }
+                
+                if (imageUrl) {
+                    // Ensure imageUrl is in the JSON attrs
+                    if (!node.attrs) {
+                        node.attrs = {};
+                    }
+                    node.attrs.imageUrl = imageUrl;
+                    console.log(`Injected imageUrl into JSON for decorative image ${decorativeImageIndex}:`, imageUrl);
+                } else {
+                    console.warn(`No imageUrl found for decorative image ${decorativeImageIndex} at position (${x}, ${y})`);
+                }
+                
+                decorativeImageIndex++;
+            }
+            if (node.children) {
+                node.children.forEach((child, idx) => ensureImageUrlInJson(child, `${parentKey}.children[${idx}]`));
+            }
+        }
+        
+        // Ensure imageUrl is in JSON for all decorative images
+        if (stageJson.children) {
+            stageJson.children.forEach((child, idx) => ensureImageUrlInJson(child, `children[${idx}]`));
+        }
         
         // Debug: Log decorative image groups in the JSON
         function logDecorativeImagesInJson(node, depth = 0) {
@@ -5337,6 +5458,11 @@ table tr:last-child td {
         // Use page size from selector if available, otherwise use CURRENT_PAGE_SIZE
         const pageSizeForSave = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
         document.getElementById('save-page-size').value = pageSizeForSave;
+        // Save date format
+        const dateFormatInput = document.getElementById('template-date-format');
+        if (dateFormatInput) {
+            document.getElementById('save-date-format').value = dateFormatInput.value;
+        }
         document.getElementById('form-save').submit();
     });
     
@@ -6080,6 +6206,9 @@ table tr:last-child td {
                         
                         console.log('Restoring decorative image, final URL:', imageUrl);
                         
+                        // CRITICAL FIX: Ensure decorative image group is always visible, even without imageUrl
+                        decorativeImageGroup.visible(true);
+                        
                         if (imageUrl && imageUrl.trim() !== '') {
                             // Remove any existing image node (it won't have valid image data after deserialization)
                             if (existingImage) {
@@ -6258,9 +6387,70 @@ table tr:last-child td {
                                 }
                             }, 2000);  // Wait 2 seconds before fallback
                         } else {
-                            console.log('No imageUrl found for decorative image, keeping placeholder or existing elements');
-                            // Even if no imageUrl, ensure the group is visible
+                            console.log('No imageUrl found for decorative image, ensuring placeholder is visible');
+                            // Even if no imageUrl, ensure the group is visible and has placeholder elements
                             decorativeImageGroup.visible(true);
+                            
+                            // Check if placeholder elements exist, if not create them
+                            const hasRect = decorativeImageGroup.findOne('Rect');
+                            const hasPlaceholderText = decorativeImageGroup.find('Text').some(textNode => {
+                                const text = textNode.text();
+                                return text.includes('Decorative') || text.includes('🖼️');
+                            });
+                            
+                            if (!hasRect || !hasPlaceholderText) {
+                                console.log('Creating placeholder elements for decorative image without imageUrl');
+                                
+                                // Remove any existing image that might be there
+                                const existingImage = decorativeImageGroup.findOne('Image');
+                                if (existingImage) {
+                                    existingImage.destroy();
+                                }
+                                
+                                // Create placeholder rect if missing
+                                if (!hasRect) {
+                                    const placeholderRect = new Konva.Rect({
+                                        x: 0,
+                                        y: 0,
+                                        width: 100,
+                                        height: 100,
+                                        fill: '#f0f0f0',
+                                        stroke: '#999',
+                                        strokeWidth: 2,
+                                        dash: [5, 5]
+                                    });
+                                    decorativeImageGroup.add(placeholderRect);
+                                }
+                                
+                                // Create placeholder text/icon if missing
+                                if (!hasPlaceholderText) {
+                                    const placeholderText = new Konva.Text({
+                                        x: 10,
+                                        y: 40,
+                                        text: 'Decorative\nImage',
+                                        fontSize: 12,
+                                        fontFamily: 'Arial',
+                                        fill: '#666',
+                                        align: 'center',
+                                        width: 80
+                                    });
+                                    decorativeImageGroup.add(placeholderText);
+                                    
+                                    const placeholderIcon = new Konva.Text({
+                                        x: 35,
+                                        y: 15,
+                                        text: '🖼️',
+                                        fontSize: 24,
+                                        width: 30,
+                                        align: 'center'
+                                    });
+                                    decorativeImageGroup.add(placeholderIcon);
+                                }
+                                
+                                decorativeImageGroup.width(100);
+                                decorativeImageGroup.height(100);
+                            }
+                            
                             layer.draw();
                             stage.draw();
                         }

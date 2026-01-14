@@ -70,6 +70,22 @@ jobs:
         working-directory: mobile
         run: flutter pub get
       
+      - name: Generate iOS platform files
+        working-directory: mobile
+        run: flutter create --platforms=ios .
+      
+      - name: Configure iOS project for device build without code signing
+        working-directory: mobile
+        run: |
+          # Disable code signing requirements in Xcode project
+          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = .*;/CODE_SIGN_IDENTITY[sdk=iphoneos*] = "";/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGNING_REQUIRED = .*;/CODE_SIGNING_REQUIRED = NO;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGNING_ALLOWED = .*;/CODE_SIGNING_ALLOWED = NO;/g' ios/Runner.xcodeproj/project.pbxproj
+          # Also set for all configurations
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+      
       # Skip tests for now - mobile app is incomplete (tests exist but lib/ source code is missing)
       # - name: Run tests
       #   working-directory: mobile
@@ -78,3 +94,29 @@ jobs:
       - name: Build iOS
         working-directory: mobile
         run: flutter build ios --release --no-codesign
+      
+      - name: Create iOS archive
+        if: success()
+        working-directory: mobile
+        run: |
+          mkdir -p dist
+          # Package the built iOS app (IPA would require codesigning, so we'll package the .app)
+          if [ -d "build/ios/iphoneos/Runner.app" ]; then
+            cd build/ios/iphoneos
+            zip -r ../../../dist/TimeTracker-iOS.zip Runner.app
+            cd ../../..
+          else
+            echo "Warning: Runner.app not found at build/ios/iphoneos/Runner.app"
+            echo "Listing build/ios directory:"
+            ls -la build/ios/ || echo "build/ios directory does not exist"
+            echo "Listing build directory:"
+            ls -la build/ || echo "build directory does not exist"
+          fi
+      
+      - name: Upload iOS build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: mobile/dist/*.zip
+          if-no-files-found: warn

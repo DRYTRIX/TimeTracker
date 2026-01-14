@@ -456,6 +456,7 @@ class QuotePDFTemplate(db.Model):
     template_css = db.Column(db.Text, nullable=True)  # Legacy CSS template (backward compatibility)
     design_json = db.Column(db.Text, nullable=True)  # Konva.js design state
     template_json = db.Column(db.Text, nullable=True)  # ReportLab template JSON (new format)
+    date_format = db.Column(db.String(50), default="%d.%m.%Y", nullable=False)  # Date format for quotes (strftime format)
     is_default = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
@@ -486,6 +487,7 @@ class QuotePDFTemplate(db.Model):
             template = cls(
                 page_size=page_size,
                 template_json=json.dumps(default_json),
+                date_format="%d.%m.%Y",
                 is_default=(page_size == "A4")
             )
             db.session.add(template)

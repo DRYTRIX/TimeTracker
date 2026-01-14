@@ -1135,6 +1135,7 @@ def pdf_layout():
         css_template = request.form.get("invoice_pdf_template_css", "")
         design_json = request.form.get("design_json", "")
         template_json = request.form.get("template_json", "")  # ReportLab template JSON
+        date_format = request.form.get("date_format", "%d.%m.%Y")  # Date format for this template
 
         current_app.logger.info(f"[PDF_TEMPLATE] Form data received - PageSize: '{page_size}', HTML length: {len(html_template)}, CSS length: {len(css_template)}, DesignJSON length: {len(design_json)}, TemplateJSON length: {len(template_json)}")
 
@@ -1233,6 +1234,7 @@ def pdf_layout():
         template.template_css = css_template
         template.design_json = design_json
         template.template_json = template_json  # ReportLab template JSON (always present now)
+        template.date_format = date_format  # Date format for this template
         template.updated_at = datetime.utcnow()
 
         # For backwards compatibility, also update Settings when saving A4 (default)
@@ -1332,6 +1334,7 @@ def pdf_layout():
         template_json=template_json,
         page_size=page_size,
         all_templates=all_templates,
+        date_format=getattr(template, 'date_format', None) or '%d.%m.%Y',
     )
 
 
@@ -1413,6 +1416,7 @@ def quote_pdf_layout():
         css_template = request.form.get("quote_pdf_template_css", "")
         design_json = request.form.get("design_json", "")
         template_json = request.form.get("template_json", "")  # ReportLab template JSON
+        date_format = request.form.get("date_format", "%d.%m.%Y")  # Date format for this template
 
         current_app.logger.info(f"[PDF_TEMPLATE] Form data received - PageSize: '{page_size}', HTML length: {len(html_template)}, CSS length: {len(css_template)}, DesignJSON length: {len(design_json)}, TemplateJSON length: {len(template_json)}")
 
@@ -1511,6 +1515,7 @@ def quote_pdf_layout():
             return redirect(url_for("admin.quote_pdf_layout", size=page_size))
         
         template.template_json = template_json  # ReportLab template JSON (always present now)
+        template.date_format = date_format  # Date format for this template
         template.updated_at = datetime.utcnow()
 
         current_app.logger.info(f"[PDF_TEMPLATE] Committing quote template to database - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}")
@@ -1586,6 +1591,7 @@ def quote_pdf_layout():
         template_json=template_json,
         page_size=page_size,
         all_templates=all_templates,
+        date_format=getattr(template, 'date_format', None) or '%d.%m.%Y',
     )
 
 
@@ -2346,17 +2352,10 @@ def pdf_layout_preview():
 
         def _format_date(value, format="medium"):
             try:
-                if _babel_format_date:
-                    if format == "full":
-                        return _babel_format_date(value, format="full")
-                    if format == "long":
-                        return _babel_format_date(value, format="long")
-                    if format == "short":
-                        return _babel_format_date(value, format="short")
-                    return _babel_format_date(value, format="medium")
-                return value.strftime("%Y-%m-%d")
+                # Use DD.MM.YYYY format for invoices and quotes
+                return value.strftime("%d.%m.%Y") if value else ""
             except Exception:
-                return str(value)
+                return str(value) if value else ""
 
         def _format_money(value):
             try:
@@ -2900,17 +2899,10 @@ def quote_pdf_layout_preview():
 
         def _format_date(value, format="medium"):
             try:
-                if _babel_format_date:
-                    if format == "full":
-                        return _babel_format_date(value, format="full")
-                    if format == "long":
-                        return _babel_format_date(value, format="long")
-                    if format == "short":
-                        return _babel_format_date(value, format="short")
-                    return _babel_format_date(value, format="medium")
-                return value.strftime("%Y-%m-%d")
+                # Use DD.MM.YYYY format for invoices and quotes
+                return value.strftime("%d.%m.%Y") if value else ""
             except Exception:
-                return str(value)
+                return str(value) if value else ""
 
         def _format_money(value):
             try:

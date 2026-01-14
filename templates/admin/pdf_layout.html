@@ -1205,6 +1205,29 @@
     color: #1f2937;
 }
 
+/* Template Settings Panel */
+.template-settings-panel {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+.dark .template-settings-panel {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+.dark .template-settings-panel h4 {
+    color: #f9fafb;
+}
+
+.dark .template-settings-panel label {
+    color: #e2e8f0;
+}
+
+.dark .template-settings-panel p {
+    color: #a0aec0;
+}
+
 .property-group {
     margin-bottom: 1.5rem;
 }
@@ -1894,6 +1917,24 @@
                 <div style="padding: 8px; color: #666; text-align: center;">{{ _('No warnings') }}</div>
             </div>
         </div>
+        <!-- Template Settings -->
+        <div class="template-settings-panel" style="margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #374151;">
+                <i class="fas fa-cog" style="margin-right: 0.5rem;"></i>
+                {{ _('Template Settings') }}
+            </h4>
+            <div style="margin-bottom: 0.75rem;">
+                <label for="template-date-format" style="display: block; font-size: 0.813rem; font-weight: 500; margin-bottom: 0.25rem; color: #4b5563;">
+                    {{ _('Date Format') }}
+                </label>
+                <input type="text" id="template-date-format" class="form-input" value="{{ date_format if date_format else '%d.%m.%Y' }}" 
+                       style="font-size: 0.813rem; font-family: monospace;"
+                       placeholder="%d.%m.%Y">
+                <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">
+                    {{ _('Use strftime format (e.g., %d.%m.%Y for 12.09.2025)') }}
+                </p>
+            </div>
+        </div>
         <div id="properties-content">
             <p class="text-sm text-gray-500 italic">{{ _('Select an element to edit its properties') }}</p>
         </div>
@@ -2015,6 +2056,7 @@
     <textarea id="save-css" name="invoice_pdf_template_css"></textarea>
     <textarea id="save-design-json" name="design_json"></textarea>
     <textarea id="save-template-json" name="template_json"></textarea>
+    <input type="text" id="save-date-format" name="date_format" value="{{ date_format or '%d.%m.%Y' }}">
 </form>
 
 <!-- Code Modal (initially hidden) -->
@@ -3546,12 +3588,16 @@ function initializePDFEditor() {
                 return;
             }
             
-            console.log('updateDecorativeImageElement called with URL:', imageUrl);
+            console.log('[INVOICE] updateDecorativeImageElement called with URL:', imageUrl);
             
             // Store image URL in element attributes - use setAttr to ensure it's saved
             element.setAttr('imageUrl', imageUrl || '');
             // Also ensure it's in attrs for proper serialization
             element.attrs.imageUrl = imageUrl || '';
+            
+            // Verify it was set correctly
+            const verifyUrl = element.getAttr('imageUrl') || element.attrs.imageUrl || '';
+            console.log('[INVOICE] ✅ imageUrl set and verified:', verifyUrl, 'matches:', verifyUrl === imageUrl);
             
             // Remove existing image if any
             const existingImage = element.findOne('Image');
@@ -5580,12 +5626,14 @@ table tr:last-child td {
         });
         
         // Ensure imageUrl is in attrs for all decorative images before serialization
-        layer.find('[name="decorative-image"]').forEach(decorativeImageGroup => {
+        layer.find('[name="decorative-image"]').forEach((decorativeImageGroup, idx) => {
             try {
                 // Try multiple methods to get imageUrl
                 let imageUrl = decorativeImageGroup.getAttr('imageUrl');
+                console.log(`[INVOICE] [SAVE] Decorative image ${idx}: getAttr('imageUrl') =`, imageUrl);
                 if (!imageUrl) {
                     imageUrl = decorativeImageGroup.attrs.imageUrl;
+                    console.log(`[INVOICE] [SAVE] Decorative image ${idx}: attrs.imageUrl =`, imageUrl);
                 }
                 if (!imageUrl) {
                     // Check if there's an Image node with the URL
@@ -5594,6 +5642,7 @@ table tr:last-child td {
                         // Try to get URL from image node's source if available
                         const imgAttrs = imageNode.attrs || {};
                         imageUrl = imgAttrs.src || imgAttrs.url || imgAttrs.imageUrl || '';
+                        console.log(`[INVOICE] [SAVE] Decorative image ${idx}: Found imageUrl in Image node:`, imageUrl);
                     }
                 }
                 
@@ -5602,12 +5651,12 @@ table tr:last-child td {
                     decorativeImageGroup.setAttr('imageUrl', imageUrl);
                     // Also set in attrs for redundancy
                     decorativeImageGroup.attrs.imageUrl = imageUrl;
-                    console.log('Ensured imageUrl in attrs for decorative image:', imageUrl);
+                    console.log(`[INVOICE] [SAVE] ✅ Ensured imageUrl in attrs for decorative image ${idx}:`, imageUrl);
                 } else {
-                    console.warn('No imageUrl found for decorative image group');
+                    console.warn(`[INVOICE] [SAVE] ⚠️ No imageUrl found for decorative image group ${idx}`);
                 }
             } catch(e) {
-                console.warn('Could not get/set imageUrl for decorative image:', e);
+                console.warn(`[INVOICE] [SAVE] Could not get/set imageUrl for decorative image ${idx}:`, e);
             }
         });
 
@@ -5629,27 +5678,159 @@ table tr:last-child td {
         }
         
         // Final check: ensure all decorative images have imageUrl properly set before serialization
-        layer.find('[name="decorative-image"]').forEach(decorativeImageGroup => {
+        // Also ensure base name "decorative-image" is preserved (even if "element-overlap" is added)
+        let allDecorativeGroups = layer.find('[name="decorative-image"]');
+        const allGroupsForCheck = layer.find('Group');
+        allGroupsForCheck.forEach(group => {
+            const name = group.name() || group.getAttr('name') || '';
+            if (name.includes('decorative-image') && !allDecorativeGroups.includes(group)) {
+                allDecorativeGroups = allDecorativeGroups.concat([group]);
+            }
+        });
+        
+        allDecorativeGroups.forEach((decorativeImageGroup, idx) => {
             try {
+                // Ensure base name is set (preserve "decorative-image" even if "element-overlap" exists)
+                const currentName = decorativeImageGroup.name() || decorativeImageGroup.getAttr('name') || '';
+                if (!currentName.includes('decorative-image')) {
+                    decorativeImageGroup.setAttr('name', 'decorative-image');
+                    decorativeImageGroup.name('decorative-image');
+                    if (decorativeImageGroup.attrs) {
+                        decorativeImageGroup.attrs.name = 'decorative-image';
+                    }
+                    console.log(`[INVOICE] [SAVE] Fixed name for decorative image ${idx}: was "${currentName}", now "decorative-image"`);
+                }
+                
                 // Double-check that imageUrl is set via both methods
                 const imageUrl = decorativeImageGroup.getAttr('imageUrl') || decorativeImageGroup.attrs.imageUrl;
                 if (imageUrl) {
                     decorativeImageGroup.setAttr('imageUrl', imageUrl);
                     decorativeImageGroup.attrs.imageUrl = imageUrl;
-                    console.log('Final check: imageUrl set for decorative image:', imageUrl);
+                    console.log(`[INVOICE] [SAVE] Final check: imageUrl set for decorative image ${idx}:`, imageUrl);
+                } else {
+                    console.warn(`[INVOICE] [SAVE] ⚠️ Final check: No imageUrl found for decorative image ${idx}`);
                 }
             } catch(e) {
-                console.warn('Final check: Could not set imageUrl:', e);
+                console.warn(`[INVOICE] [SAVE] Final check: Could not set imageUrl for decorative image ${idx}:`, e);
+            }
+        });
+        
+        // CRITICAL FIX: Get imageUrl from actual nodes before serialization and store in a map
+        // This ensures we can inject imageUrl into JSON after serialization
+        const decorativeImageUrlMap = new Map();
+        // Find all decorative-image groups, including those with modified names like "decorative-image element-overlap"
+        let decorativeImageGroups = layer.find('[name="decorative-image"]');
+        const allGroups = layer.find('Group');
+        allGroups.forEach(group => {
+            const name = group.name() || group.getAttr('name') || '';
+            if (name.includes('decorative-image') && !decorativeImageGroups.includes(group)) {
+                decorativeImageGroups = decorativeImageGroups.concat([group]);
+            }
+        });
+        console.log('[INVOICE] [SAVE] Found', decorativeImageGroups.length, 'decorative image group(s) before serialization (including modified names)');
+        decorativeImageGroups.forEach((decorativeImageGroup, index) => {
+            // CRITICAL: Ensure primary name is "decorative-image" before serialization
+            // Konva's toJSON() uses the primary name() method, not additional names from addName()
+            const currentPrimaryName = decorativeImageGroup.name();
+            if (currentPrimaryName !== 'decorative-image') {
+                decorativeImageGroup.name('decorative-image');
+                decorativeImageGroup.setAttr('name', 'decorative-image');
+                if (decorativeImageGroup.attrs) {
+                    decorativeImageGroup.attrs.name = 'decorative-image';
+                }
+                console.log(`[INVOICE] [SAVE] Fixed primary name for decorative image ${index}: was "${currentPrimaryName}", now "decorative-image"`);
+            }
+            
+            // Try multiple methods to get imageUrl
+            let imageUrl = decorativeImageGroup.getAttr('imageUrl') || '';
+            if (!imageUrl) {
+                imageUrl = decorativeImageGroup.attrs.imageUrl || '';
+            }
+            // Also check if there's an Image node with the URL stored in it
+            if (!imageUrl) {
+                const imageNode = decorativeImageGroup.findOne('Image');
+                if (imageNode) {
+                    // Try to get URL from image node's source if available
+                    const imgAttrs = imageNode.attrs || {};
+                    imageUrl = imgAttrs.src || imgAttrs.url || imgAttrs.imageUrl || '';
+                }
+            }
+            
+            const x = decorativeImageGroup.x() || 0;
+            const y = decorativeImageGroup.y() || 0;
+            // Use position as key to match nodes after serialization
+            const key = `${x}_${y}_${index}`;
+            decorativeImageUrlMap.set(key, imageUrl);
+            // Also store by index as fallback
+            decorativeImageUrlMap.set(`index_${index}`, imageUrl);
+            console.log(`[INVOICE] [SAVE] Stored imageUrl for decorative image ${index} at (${x}, ${y}):`, imageUrl, 'key:', key);
+            
+            if (!imageUrl) {
+                console.warn(`[INVOICE] [SAVE] ⚠️ No imageUrl found for decorative image ${index} at (${x}, ${y})`);
             }
         });
         
         // Serialize the stage
         const stageJson = stage.toJSON();
         
+        // CRITICAL FIX: Manually inject imageUrl into serialized JSON for decorative images
+        // Konva's toJSON() might not include custom attributes, so we need to add them manually
+        let decorativeImageIndex = 0;
+        function ensureImageUrlInJson(node, parentKey = '') {
+            // CRITICAL FIX: Check if name includes 'decorative-image' (handles "decorative-image element-overlap")
+            const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
+            if (nodeName && nodeName.includes('decorative-image')) {
+                // Try to match by position
+                const x = node.attrs.x || 0;
+                const y = node.attrs.y || 0;
+                const positionKey = `${x}_${y}_${decorativeImageIndex}`;
+                const indexKey = `index_${decorativeImageIndex}`;
+                
+                // Get imageUrl from map
+                let imageUrl = decorativeImageUrlMap.get(positionKey) || 
+                              decorativeImageUrlMap.get(indexKey) || '';
+                
+                // If still not found, try to find by matching all keys
+                if (!imageUrl) {
+                    for (const [key, url] of decorativeImageUrlMap.entries()) {
+                        if (url) {
+                            imageUrl = url;
+                            break;
+                        }
+                    }
+                }
+                
+                if (imageUrl) {
+                    // Ensure imageUrl is in the JSON attrs
+                    if (!node.attrs) {
+                        node.attrs = {};
+                    }
+                    node.attrs.imageUrl = imageUrl;
+                    console.log(`[INVOICE] [SAVE] ✅ Injected imageUrl into JSON for decorative image ${decorativeImageIndex} at (${x}, ${y}):`, imageUrl);
+                } else {
+                    console.warn(`[INVOICE] [SAVE] ⚠️ No imageUrl found for decorative image ${decorativeImageIndex} at position (${x}, ${y})`);
+                    // Debug: show what's in the map
+                    console.log(`[INVOICE] [SAVE] Map contents:`, Array.from(decorativeImageUrlMap.entries()));
+                }
+                
+                decorativeImageIndex++;
+            }
+            if (node.children) {
+                node.children.forEach((child, idx) => ensureImageUrlInJson(child, `${parentKey}.children[${idx}]`));
+            }
+        }
+        
+        // Ensure imageUrl is in JSON for all decorative images
+        if (stageJson.children) {
+            stageJson.children.forEach((child, idx) => ensureImageUrlInJson(child, `children[${idx}]`));
+        }
+        
         // Debug: Log decorative image groups in the JSON
         function logDecorativeImagesInJson(node, depth = 0) {
-            if (node.attrs && node.attrs.name === 'decorative-image') {
-                console.log('  '.repeat(depth) + 'Found decorative-image in JSON, imageUrl:', node.attrs.imageUrl || 'NOT FOUND');
+            const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
+            if (nodeName && nodeName.includes('decorative-image')) {
+                const imageUrl = node.attrs.imageUrl || 'NOT FOUND';
+                console.log('[INVOICE] [SAVE] ' + '  '.repeat(depth) + 'Found decorative-image in JSON at (' + (node.attrs.x || 0) + ',' + (node.attrs.y || 0) + '), imageUrl:', imageUrl);
             }
             if (node.children) {
                 node.children.forEach(child => logDecorativeImagesInJson(child, depth + 1));
@@ -5665,6 +5846,11 @@ table tr:last-child td {
         // Use page size from selector if available, otherwise use CURRENT_PAGE_SIZE
         const pageSizeForSave = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
         document.getElementById('save-page-size').value = pageSizeForSave;
+        // Save date format
+        const dateFormatInput = document.getElementById('template-date-format');
+        if (dateFormatInput) {
+            document.getElementById('save-date-format').value = dateFormatInput.value;
+        }
         document.getElementById('form-save').submit();
     });
     
@@ -5888,7 +6074,17 @@ table tr:last-child td {
                 layer = stage.children[0];
                 
                 // Debug: Log the saved JSON to check if imageUrl is there
-                console.log('Saved JSON structure (first 2000 chars):', JSON.stringify(savedJson).substring(0, 2000));
+                const savedJsonString = JSON.stringify(savedJson);
+                console.log('[INVOICE] [LOAD] Saved JSON structure (first 2000 chars):', savedJsonString.substring(0, 2000));
+                
+                // Check if imageUrl is in the saved JSON
+                const decorativeImageCountInSaved = (savedJsonString.match(/"name":"decorative-image"/g) || []).length;
+                const imageUrlCountInSaved = (savedJsonString.match(/"imageUrl":"[^"]+"/g) || []).length;
+                console.log('[INVOICE] [LOAD] Saved JSON check - Decorative images:', decorativeImageCountInSaved, 'imageUrl attributes:', imageUrlCountInSaved);
+                
+                if (decorativeImageCountInSaved > 0 && imageUrlCountInSaved === 0) {
+                    console.error('[INVOICE] [LOAD] ⚠️ WARNING: Found decorative images in saved JSON but NO imageUrl attributes!');
+                }
                 
                 // Find or create background by name and resize it
                 background = layer.findOne('[name="background"]');
@@ -6161,9 +6357,22 @@ table tr:last-child td {
                     console.log('Saved JSON has', savedJson.children.length, 'top-level children');
                 }
                 
+                // CRITICAL: Ensure decorative image restoration runs even if there's a delay
+                // Use a longer timeout to ensure stage is fully ready
                 setTimeout(() => {
+                    console.log('🔍 [INVOICE] Decorative image restoration setTimeout callback executing...');
+                    // CRITICAL FIX: Search for decorative-image groups, handling names with additional suffixes like "element-overlap"
                     let decorativeImageGroups = layer.find('[name="decorative-image"]');
-                    console.log('Found', decorativeImageGroups.length, 'decorative image group(s) via layer.find');
+                    // Also find groups whose name includes "decorative-image" (handles "decorative-image element-overlap")
+                    const allGroups = layer.find('Group');
+                    allGroups.forEach(group => {
+                        const name = group.name() || group.getAttr('name') || '';
+                        if (name.includes('decorative-image') && !decorativeImageGroups.includes(group)) {
+                            decorativeImageGroups = decorativeImageGroups.concat([group]);
+                            console.log('[INVOICE] Found decorative-image group with modified name:', name);
+                        }
+                    });
+                    console.log('[INVOICE] Found', decorativeImageGroups.length, 'decorative image group(s) via layer.find (including modified names)');
                     
                     // Also try finding by className and checking name - check ALL children, not just Groups
                     console.log('Checking all', layer.children.length, 'layer children...');
@@ -6179,10 +6388,11 @@ table tr:last-child td {
                             const nameViaName = child.name ? child.name() : null;
                             const nameViaAttrs = child.attrs ? child.attrs.name : null;
                             
-                            if (nameViaGetAttr === 'decorative-image' || 
-                                nameViaName === 'decorative-image' || 
-                                nameViaAttrs === 'decorative-image') {
-                                console.log(`  ✅ Found decorative-image group at index ${idx}`);
+                            // CRITICAL FIX: Check if name includes 'decorative-image' (handles "decorative-image element-overlap")
+                            if ((nameViaGetAttr && nameViaGetAttr.includes('decorative-image')) ||
+                                (nameViaName && nameViaName.includes('decorative-image')) ||
+                                (nameViaAttrs && nameViaAttrs.includes('decorative-image'))) {
+                                console.log(`[INVOICE]   ✅ Found decorative-image group at index ${idx} with name: "${nameViaGetAttr || nameViaName || nameViaAttrs}"`);
                                 potentialGroups.push(child);
                             } else {
                                 // Check if it has Image or Rect children (might be decorative image without name)
@@ -6215,8 +6425,10 @@ table tr:last-child td {
                     const jsonGroups = [];
                     if (savedJson && savedJson.children) {
                         function findDecorativeImageGroupsInJson(node, path = '') {
-                            if (node.attrs && node.attrs.name === 'decorative-image') {
-                                console.log(`  ✅ Found decorative-image in JSON at path: ${path}, imageUrl:`, node.attrs.imageUrl || 'NOT FOUND');
+                            const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
+                            // Check if name includes 'decorative-image' (handles "decorative-image element-overlap")
+                            if (nodeName && nodeName.includes('decorative-image')) {
+                                console.log(`[INVOICE]   ✅ Found decorative-image in JSON at path: ${path}, name: "${nodeName}", imageUrl:`, node.attrs.imageUrl || 'NOT FOUND');
                                 jsonGroups.push({ node: node, path: path, imageUrl: node.attrs.imageUrl || '' });
                             }
                             if (node.children) {
@@ -6355,13 +6567,13 @@ table tr:last-child td {
                         let imageUrl = '';
                         try {
                             imageUrl = decorativeImageGroup.getAttr('imageUrl') || '';
-                            console.log('Got imageUrl via getAttr:', imageUrl);
+                            console.log('[INVOICE] Got imageUrl via getAttr:', imageUrl);
                         } catch(e) {
-                            console.warn('Could not get imageUrl via getAttr:', e);
+                            console.warn('[INVOICE] Could not get imageUrl via getAttr:', e);
                         }
                         if (!imageUrl) {
                             imageUrl = decorativeImageGroup.attrs.imageUrl || '';
-                            console.log('Got imageUrl from attrs.imageUrl:', imageUrl);
+                            console.log('[INVOICE] Got imageUrl from attrs.imageUrl:', imageUrl);
                         }
                         if (!imageUrl && decorativeImageGroup.attrs) {
                             imageUrl = decorativeImageGroup.attrs.imageUrl || '';
@@ -6371,32 +6583,85 @@ table tr:last-child td {
                         if (!imageUrl && savedJson && savedJson.children) {
                             try {
                                 // Search through the JSON structure for decorative-image groups
-                                function findImageUrlInJson(node, targetName) {
-                                    if (node.attrs && node.attrs.name === targetName) {
-                                        return node.attrs.imageUrl || '';
+                                // Match by position to get the correct imageUrl for this specific group
+                                const groupX = decorativeImageGroup.x() || 0;
+                                const groupY = decorativeImageGroup.y() || 0;
+                                
+                                function findImageUrlInJsonByPosition(node, targetName, targetX, targetY) {
+                                    const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
+                                    // Check if name includes targetName (handles "decorative-image element-overlap")
+                                    if (nodeName && nodeName.includes(targetName)) {
+                                        // Match by position (within 5px tolerance)
+                                        const nodeX = node.attrs.x || 0;
+                                        const nodeY = node.attrs.y || 0;
+                                        if (Math.abs(nodeX - targetX) < 5 && Math.abs(nodeY - targetY) < 5) {
+                                            const url = node.attrs.imageUrl || '';
+                                            console.log('[INVOICE] Found matching decorative-image in JSON at position (', nodeX, ',', nodeY, '), imageUrl:', url);
+                                            return url;
+                                        }
                                     }
                                     if (node.children) {
                                         for (let child of node.children) {
-                                            const url = findImageUrlInJson(child, targetName);
+                                            const url = findImageUrlInJsonByPosition(child, targetName, targetX, targetY);
                                             if (url) return url;
                                         }
                                     }
                                     return '';
                                 }
-                                const jsonImageUrl = findImageUrlInJson(savedJson, 'decorative-image');
+                                
+                                // First try to find by position
+                                let jsonImageUrl = findImageUrlInJsonByPosition(savedJson, 'decorative-image', groupX, groupY);
+                                
+                                // If not found by position, try to find any decorative-image (fallback)
+                                if (!jsonImageUrl) {
+                                    console.log('[INVOICE] No match by position, trying to find any decorative-image in JSON...');
+                                    function findImageUrlInJson(node, targetName) {
+                                        if (node.attrs && node.attrs.name === targetName) {
+                                            const url = node.attrs.imageUrl || '';
+                                            console.log('[INVOICE] Found decorative-image in JSON (no position match), imageUrl:', url);
+                                            return url;
+                                        }
+                                        if (node.children) {
+                                            for (let child of node.children) {
+                                                const url = findImageUrlInJson(child, targetName);
+                                                if (url) return url;
+                                            }
+                                        }
+                                        return '';
+                                    }
+                                    jsonImageUrl = findImageUrlInJson(savedJson, 'decorative-image');
+                                }
+                                
                                 if (jsonImageUrl) {
                                     imageUrl = jsonImageUrl;
                                     // Also set it in the group for future use
                                     decorativeImageGroup.setAttr('imageUrl', imageUrl);
                                     decorativeImageGroup.attrs.imageUrl = imageUrl;
-                                    console.log('Found imageUrl in saved JSON:', imageUrl);
+                                    console.log('[INVOICE] ✅ Found imageUrl in saved JSON and set it:', imageUrl);
+                                } else {
+                                    console.warn('[INVOICE] ⚠️ No imageUrl found in saved JSON for decorative image at position (', groupX, ',', groupY, ')');
+                                    // Debug: log all decorative-image groups in JSON
+                                    function logAllDecorativeImages(node, depth = 0) {
+                                        const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
+                                        if (nodeName && nodeName.includes('decorative-image')) {
+                                            console.log('[INVOICE]   '.repeat(depth) + 'Found decorative-image in JSON: x=' + (node.attrs.x || 0) + ', y=' + (node.attrs.y || 0) + ', imageUrl=' + (node.attrs.imageUrl || 'NOT FOUND'));
+                                        }
+                                        if (node.children) {
+                                            node.children.forEach(child => logAllDecorativeImages(child, depth + 1));
+                                        }
+                                    }
+                                    console.log('[INVOICE] All decorative-image groups in saved JSON:');
+                                    logAllDecorativeImages(savedJson);
                                 }
                             } catch(e) {
-                                console.warn('Could not search JSON for imageUrl:', e);
+                                console.warn('[INVOICE] Could not search JSON for imageUrl:', e);
                             }
                         }
                         
-                        console.log('Restoring decorative image, final URL:', imageUrl);
+                        console.log('[INVOICE] Restoring decorative image, final URL:', imageUrl);
+                        
+                        // CRITICAL FIX: Ensure decorative image group is always visible, even without imageUrl
+                        decorativeImageGroup.visible(true);
                         
                         if (imageUrl && imageUrl.trim() !== '') {
                             // Remove any existing image node (it won't have valid image data after deserialization)
@@ -6421,7 +6686,7 @@ table tr:last-child td {
                             tempImg.crossOrigin = 'anonymous';
                             
                             tempImg.onload = function() {
-                                console.log('Decorative image verified, loading into Konva. Dimensions:', tempImg.width, 'x', tempImg.height);
+                                console.log('[INVOICE] Decorative image verified, loading into Konva. Dimensions:', tempImg.width, 'x', tempImg.height);
                                 
                                 // Load the actual image
                                 Konva.Image.fromURL(imageUrl, function(konvaImage) {
@@ -6466,8 +6731,8 @@ table tr:last-child td {
                                     // Verify the image is actually in the group and visible
                                     const imageInGroup = decorativeImageGroup.findOne('Image');
                                     if (imageInGroup && imageInGroup === konvaImage) {
-                                        console.log('✅ Decorative image restored successfully, dimensions:', width, 'x', height);
-                                        console.log('✅ Image node is in group and visible');
+                                        console.log('[INVOICE] ✅ Decorative image restored successfully, dimensions:', width, 'x', height);
+                                        console.log('[INVOICE] ✅ Image node is in group and visible');
                                     } else {
                                         console.error('❌ Image node not found in group after adding!');
                                         console.log('Expected:', konvaImage);
@@ -6574,9 +6839,70 @@ table tr:last-child td {
                                 }
                             }, 2000);  // Wait 2 seconds before fallback
                         } else {
-                            console.log('No imageUrl found for decorative image, keeping placeholder or existing elements');
-                            // Even if no imageUrl, ensure the group is visible
+                            console.log('No imageUrl found for decorative image, ensuring placeholder is visible');
+                            // Even if no imageUrl, ensure the group is visible and has placeholder elements
                             decorativeImageGroup.visible(true);
+                            
+                            // Check if placeholder elements exist, if not create them
+                            const hasRect = decorativeImageGroup.findOne('Rect');
+                            const hasPlaceholderText = decorativeImageGroup.find('Text').some(textNode => {
+                                const text = textNode.text();
+                                return text.includes('Decorative') || text.includes('🖼️');
+                            });
+                            
+                            if (!hasRect || !hasPlaceholderText) {
+                                console.log('Creating placeholder elements for decorative image without imageUrl');
+                                
+                                // Remove any existing image that might be there
+                                const existingImage = decorativeImageGroup.findOne('Image');
+                                if (existingImage) {
+                                    existingImage.destroy();
+                                }
+                                
+                                // Create placeholder rect if missing
+                                if (!hasRect) {
+                                    const placeholderRect = new Konva.Rect({
+                                        x: 0,
+                                        y: 0,
+                                        width: 100,
+                                        height: 100,
+                                        fill: '#f0f0f0',
+                                        stroke: '#999',
+                                        strokeWidth: 2,
+                                        dash: [5, 5]
+                                    });
+                                    decorativeImageGroup.add(placeholderRect);
+                                }
+                                
+                                // Create placeholder text/icon if missing
+                                if (!hasPlaceholderText) {
+                                    const placeholderText = new Konva.Text({
+                                        x: 10,
+                                        y: 40,
+                                        text: 'Decorative\nImage',
+                                        fontSize: 12,
+                                        fontFamily: 'Arial',
+                                        fill: '#666',
+                                        align: 'center',
+                                        width: 80
+                                    });
+                                    decorativeImageGroup.add(placeholderText);
+                                    
+                                    const placeholderIcon = new Konva.Text({
+                                        x: 35,
+                                        y: 15,
+                                        text: '🖼️',
+                                        fontSize: 24,
+                                        width: 30,
+                                        align: 'center'
+                                    });
+                                    decorativeImageGroup.add(placeholderIcon);
+                                }
+                                
+                                decorativeImageGroup.width(100);
+                                decorativeImageGroup.height(100);
+                            }
+                            
                             layer.draw();
                             stage.draw();
                         }

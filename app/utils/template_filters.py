@@ -283,17 +283,10 @@ def register_template_filters(app):
             return ""
         if isinstance(value, (datetime.date, datetime.datetime)):
             try:
-                if babel_format_date:
-                    if format == "full":
-                        return babel_format_date(value, format="full")
-                    if format == "long":
-                        return babel_format_date(value, format="long")
-                    if format == "short":
-                        return babel_format_date(value, format="short")
-                    return babel_format_date(value, format="medium")
-                return value.strftime("%Y-%m-%d")
+                # Use DD.MM.YYYY format for invoices and quotes
+                return value.strftime("%d.%m.%Y")
             except Exception:
-                return value.strftime("%Y-%m-%d")
+                return value.strftime("%d.%m.%Y")
         return str(value)
 
     @app.template_filter("format_money")

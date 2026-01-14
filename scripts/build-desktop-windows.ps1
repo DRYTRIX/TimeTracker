@@ -35,7 +35,88 @@ Write-Host ""
 
 # Prepare assets
 Write-Host "Preparing desktop assets..." -ForegroundColor Cyan
-& bash "$ScriptDir\prepare-desktop-assets.sh" 2>&1 | Out-String
+
+# Skip if already prepared (avoid duplicate output)
+if (-not $env:ASSETS_PREPARED) {
+    $DesktopAssets = Join-Path $DesktopDir "assets"
+    $MainLogo = Join-Path $ProjectRoot "app\static\images\timetracker-logo.svg"
+    
+    # Ensure assets directory exists
+    if (-not (Test-Path $DesktopAssets)) {
+        New-Item -ItemType Directory -Path $DesktopAssets -Force | Out-Null
+    }
+    
+    # Copy logo if missing
+    $LogoPath = Join-Path $DesktopAssets "logo.svg"
+    if (-not (Test-Path $LogoPath)) {
+        if (Test-Path $MainLogo) {
+            Write-Host "Copying logo to desktop/assets/logo.svg..."
+            Copy-Item $MainLogo $LogoPath -Force
+            Write-Host "  [OK] Logo copied" -ForegroundColor Green
+        } else {
+            Write-Host "ERROR: Main logo not found at $MainLogo" -ForegroundColor Red
+            exit 1
+        }
+    } else {
+        Write-Host "  [OK] Logo already exists" -ForegroundColor Green
+    }
+    
+    # Check for icon files
+    $MissingIcons = $false
+    $IconPng = Join-Path $DesktopAssets "icon.png"
+    $IconIco = Join-Path $DesktopAssets "icon.ico"
+    $IconIcns = Join-Path $DesktopAssets "icon.icns"
+    
+    if (-not (Test-Path $IconPng)) {
+        Write-Host "  [WARN] icon.png not found (will be generated if possible)" -ForegroundColor Yellow
+        $MissingIcons = $true
+    }
+    if (-not (Test-Path $IconIco)) {
+        Write-Host "  [WARN] icon.ico not found (required for Windows builds)" -ForegroundColor Yellow
+        $MissingIcons = $true
+    }
+    if (-not (Test-Path $IconIcns)) {
+        Write-Host "  [WARN] icon.icns not found (required for macOS builds)" -ForegroundColor Yellow
+        $MissingIcons = $true
+    }
+    
+    # Try to generate PNG icon if node is available
+    if (-not (Test-Path $IconPng) -and (Get-Command node -ErrorAction SilentlyContinue)) {
+        $GenerateIconsScript = Join-Path $ProjectRoot "scripts\generate-icons.js"
+        if (Test-Path $GenerateIconsScript) {
+            Write-Host "Attempting to generate icon.png..."
+            Push-Location $ProjectRoot
+            $ErrorActionPreferenceBackup = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            $output = & node scripts\generate-icons.js 2>&1
+            $exitCode = $LASTEXITCODE
+            $ErrorActionPreference = $ErrorActionPreferenceBackup
+            if ($exitCode -eq 0) {
+                Write-Host "  [OK] Icon generation attempted" -ForegroundColor Green
+            } else {
+                Write-Host "  [WARN] Icon generation failed (sharp may not be installed)" -ForegroundColor Yellow
+            }
+            Pop-Location
+        }
+    }
+    
+    if ($MissingIcons) {
+        Write-Host ""
+        Write-Host "NOTE: Some icon files are missing. The build will continue, but:" -ForegroundColor Yellow
+        Write-Host "  - Windows builds require icon.ico (convert from PNG)" -ForegroundColor Yellow
+        Write-Host "  - macOS builds require icon.icns (convert from PNG)" -ForegroundColor Yellow
+        Write-Host "  - Linux builds require icon.png" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "To generate icons:" -ForegroundColor Cyan
+        Write-Host "  1. Install sharp: npm install sharp" -ForegroundColor Cyan
+        Write-Host "  2. Run: node scripts\generate-icons.js" -ForegroundColor Cyan
+        Write-Host "  3. Convert PNG to .ico/.icns using online tools or ImageMagick" -ForegroundColor Cyan
+        Write-Host ""
+    }
+    
+    Write-Host "Asset preparation complete!" -ForegroundColor Green
+    $env:ASSETS_PREPARED = "1"
+}
 Write-Host ""
 
 # Check if node_modules exists and is valid
@@ -89,7 +170,7 @@ if (-not $NodeModulesValid) {
                 Write-Host ""
                 Write-Host "Windows/OneDrive specific solutions:" -ForegroundColor Yellow
                 Write-Host "  1. Close all programs that might be using node_modules"
-                Write-Host "  2. Exclude desktop\node_modules from OneDrive sync"
+                Write-Host "  2. Exclude desktop/node_modules from OneDrive sync"
                 Write-Host "  3. Run PowerShell as Administrator and try again"
                 Write-Host "  4. Delete node_modules and try: npm install"
                 Write-Host "  5. Move project outside OneDrive"
@@ -130,5 +211,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "Build complete!" -ForegroundColor Green
-Write-Host "Outputs: $DesktopDir\dist\" -ForegroundColor Cyan
+$DistPath = Join-Path $DesktopDir "dist"
+Write-Host ("Outputs: " + $DistPath) -ForegroundColor Cyan
 Write-Host ""

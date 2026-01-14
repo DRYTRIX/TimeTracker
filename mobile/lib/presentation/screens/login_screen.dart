@@ -138,7 +138,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter server URL';
                       }
-                      if (!Uri.tryParse(value)?.hasAbsolutePath ?? true) {
+                      final uri = Uri.tryParse(value);
+                      if (uri == null || !uri.hasAbsolutePath) {
                         return 'Please enter a valid URL';
                       }
                       return null;
