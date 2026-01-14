@@ -362,8 +362,11 @@ class TimeTrackingRepository {
     int? page,
     int? perPage,
   }) async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
     try {
-      final response = await apiClient.getTasks(
+      final response = await apiClient!.getTasks(
         projectId: projectId,
         status: status,
         page: page,
