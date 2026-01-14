@@ -5232,12 +5232,12 @@ def create_stock_movement_api():
         item = StockItem.query.get(stock_item_id)
         if not item:
             return jsonify({"error": "Stock item not found"}), 404
-        
-        if not item.is_trackable:
-            return jsonify({"error": "Stock item is not trackable. Devaluation requires trackable items."}), 400
 
         # Handle manual devaluation movement type
         if movement_type == "devaluation":
+            # Devaluation requires trackable items
+            if not item.is_trackable:
+                return jsonify({"error": "Stock item is not trackable. Devaluation requires trackable items."}), 400
             if quantity <= 0:
                 return jsonify({"error": "Devaluation quantity must be positive"}), 400
 
@@ -5301,6 +5301,9 @@ def create_stock_movement_api():
 
             # Process devaluation if enabled
             if devalue_enabled:
+                if not item.is_trackable:
+                    return jsonify({"error": "Stock item is not trackable. Devaluation requires trackable items."}), 400
+                
                 base_cost = item.default_cost or Decimal("0")
                 if base_cost <= 0:
                     return jsonify({"error": "Stock item must have a default cost to perform devaluation"}), 400
