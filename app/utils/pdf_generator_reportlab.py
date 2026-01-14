@@ -410,6 +410,10 @@ class ReportLabTemplateRenderer:
         # Process template variables (Jinja2-style)
         text = self._process_template_variables(text)
         
+        # Convert newlines to <br/> tags for Paragraph (which expects HTML-like markup)
+        # Handle different line ending formats (\n, \r\n, \r)
+        text = text.replace('\r\n', '<br/>').replace('\r', '<br/>').replace('\n', '<br/>')
+        
         # Get style
         style_name = element.get("style_name", "NormalText")
         style = self._get_style(element, style_name)
@@ -424,7 +428,15 @@ class ReportLabTemplateRenderer:
         # Process template variables for source
         source = self._process_template_variables(source)
         
-        if not source:
+        # CRITICAL FIX: Skip decorative images with empty or invalid source
+        # Decorative images are optional and should not break PDF generation if missing
+        if not source or not source.strip():
+            # For decorative images, silently skip if source is empty
+            if element.get("decorative", False):
+                if current_app:
+                    current_app.logger.warning(f"Skipping decorative image flowable with empty source")
+                return None
+            # For non-decorative images, also return None
             return None
         
         # Handle base64 data URI
@@ -607,7 +619,11 @@ class ReportLabTemplateRenderer:
         for col in columns:
             header_text = col.get("header", "")
             header_text = self._process_template_variables(header_text)
-            headers.append(header_text)
+            # Convert newlines to <br/> tags for Paragraph
+            header_text = header_text.replace('\r\n', '<br/>').replace('\r', '<br/>').replace('\n', '<br/>')
+            # Use Paragraph for headers to handle line breaks
+            header_style = self._get_style({"style": {}}, "NormalText")
+            headers.append(Paragraph(header_text, header_style))
         table_data = [headers]
 
         # Get data source
@@ -624,13 +640,18 @@ class ReportLabTemplateRenderer:
                         field = col.get("field", "")
                         # Process row template with item context
                         value = self._process_row_template(field, row_template.get(field, ""), item)
-                        row.append(str(value) if value is not None else "")
+                        cell_text = str(value) if value is not None else ""
+                        # Convert newlines to <br/> tags for Paragraph
+                        cell_text = cell_text.replace('\r\n', '<br/>').replace('\r', '<br/>').replace('\n', '<br/>')
+                        # Use Paragraph for cells to handle line breaks
+                        cell_style = self._get_style({"style": {}}, "NormalText")
+                        row.append(Paragraph(cell_text, cell_style))
                     table_data.append(row)
             else:
                 # No data - add empty row message
                 num_cols = len(columns)
-                empty_row = [""] * num_cols
-                empty_row[0] = "No data"
+                empty_row = [Paragraph("No data", self._get_style({"style": {}}, "NormalText"))]
+                empty_row.extend([Paragraph("", self._get_style({"style": {}}, "NormalText"))] * (num_cols - 1))
                 table_data.append(empty_row)
 
         # Calculate column widths (convert from points to ReportLab units)
@@ -911,16 +932,34 @@ class ReportLabTemplateRenderer:
         max_x = min(x + width, page_width)
         constrained_width = max_x - x
         
-        # Handle text alignment with boundary constraints
-        if align == "right":
-            draw_x = min(x + constrained_width, page_width - 5)
-            canv.drawRightString(draw_x, y, text)
-        elif align == "center":
-            draw_x = x + constrained_width / 2
-            canv.drawCentredString(draw_x, y, text)
-        else:
-            draw_x = min(x, page_width - 5)
-            canv.drawString(draw_x, y, text)
+        # Split text by newlines to handle line breaks properly
+        # Also handle \r\n (Windows) and \r (old Mac) line endings
+        lines = text.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+        
+        # Calculate line height (font size * 1.2 for spacing)
+        line_height = size * 1.2
+        
+        # Draw each line separately
+        current_y = y
+        for line in lines:
+            # Skip empty lines but still advance y position
+            if not line.strip() and len(lines) > 1:
+                current_y -= line_height
+                continue
+            
+            # Handle text alignment with boundary constraints for each line
+            if align == "right":
+                draw_x = min(x + constrained_width, page_width - 5)
+                canv.drawRightString(draw_x, current_y, line)
+            elif align == "center":
+                draw_x = x + constrained_width / 2
+                canv.drawCentredString(draw_x, current_y, line)
+            else:
+                draw_x = min(x, page_width - 5)
+                canv.drawString(draw_x, current_y, line)
+            
+            # Move to next line (decrease y since ReportLab uses bottom-left origin)
+            current_y -= line_height
         
         canv.restoreState()
     
@@ -929,7 +968,17 @@ class ReportLabTemplateRenderer:
         source = element.get("source", "")
         source = self._process_template_variables(source)
         
-        if not source:
+        # CRITICAL FIX: Skip decorative images with empty or invalid source to prevent black screen
+        # Decorative images are optional and should not break PDF generation if missing
+        if not source or not source.strip():
+            # For decorative images, silently skip if source is empty
+            if element.get("decorative", False):
+                if current_app:
+                    current_app.logger.warning(f"Skipping decorative image with empty source at position ({x}, {y})")
+                return
+            # For non-decorative images, also skip but log warning
+            if current_app:
+                current_app.logger.warning(f"Skipping image with empty source at position ({x}, {y})")
             return
         
         width = element.get("width", 100)
