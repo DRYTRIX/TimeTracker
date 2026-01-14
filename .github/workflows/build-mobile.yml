@@ -94,3 +94,29 @@ jobs:
       - name: Build iOS
         working-directory: mobile
         run: flutter build ios --release --no-codesign
+      
+      - name: Create iOS archive
+        if: success()
+        working-directory: mobile
+        run: |
+          mkdir -p dist
+          # Package the built iOS app (IPA would require codesigning, so we'll package the .app)
+          if [ -d "build/ios/iphoneos/Runner.app" ]; then
+            cd build/ios/iphoneos
+            zip -r ../../../dist/TimeTracker-iOS.zip Runner.app
+            cd ../../..
+          else
+            echo "Warning: Runner.app not found at build/ios/iphoneos/Runner.app"
+            echo "Listing build/ios directory:"
+            ls -la build/ios/ || echo "build/ios directory does not exist"
+            echo "Listing build directory:"
+            ls -la build/ || echo "build directory does not exist"
+          fi
+      
+      - name: Upload iOS build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: mobile/dist/*.zip
+          if-no-files-found: warn

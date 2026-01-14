@@ -1002,6 +1002,17 @@ jobs:
             cd build/ios/iphoneos
             zip -r ../../../dist/TimeTracker-iOS-${{ needs.determine-version.outputs.version }}.zip Runner.app
             cd ../../..
+            echo "✅ iOS archive created successfully"
+            ls -lh dist/
+          else
+            echo "❌ ERROR: Runner.app not found at build/ios/iphoneos/Runner.app"
+            echo "Listing build/ios directory:"
+            ls -la build/ios/ || echo "build/ios directory does not exist"
+            echo "Listing build directory:"
+            ls -la build/ || echo "build directory does not exist"
+            echo "Searching for Runner.app:"
+            find build -name "Runner.app" -type d 2>/dev/null || echo "Runner.app not found anywhere"
+            exit 1
           fi
       
       - name: Upload iOS build
@@ -1010,7 +1021,7 @@ jobs:
         with:
           name: mobile-ios-${{ needs.determine-version.outputs.version }}
           path: mobile/dist/*.zip
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 90
 
   # ============================================================================
