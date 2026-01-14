@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/time_entry.dart';
+import 'package:timetracker_mobile/data/models/project.dart';
+import 'package:timetracker_mobile/data/models/task.dart';
+import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 
-class TimeEntryCard extends StatelessWidget {
+class TimeEntryCard extends ConsumerWidget {
   final TimeEntry entry;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
@@ -16,7 +21,32 @@ class TimeEntryCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Find project and task by ID
+    final projectsState = ref.watch(projectsProvider);
+    final tasksState = ref.watch(tasksProvider);
+    
+    Project? project;
+    Task? task;
+    if (entry.projectId != null) {
+      try {
+        project = projectsState.projects.firstWhere(
+          (p) => p.id == entry.projectId,
+        );
+      } catch (e) {
+        project = null;
+      }
+    }
+    if (entry.taskId != null) {
+      try {
+        task = tasksState.tasks.firstWhere(
+          (t) => t.id == entry.taskId,
+        );
+      } catch (e) {
+        task = null;
+      }
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       child: InkWell(
@@ -33,13 +63,13 @@ class TimeEntryCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          entry.project?.name ?? 'Unknown Project',
+                          project?.name ?? 'Unknown Project',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        if (entry.task != null) ...[
+                        if (task != null) ...[
                           const SizedBox(height: 4),
                           Text(
-                            entry.task!.name,
+                            task.name,
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],

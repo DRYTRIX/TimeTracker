@@ -70,6 +70,10 @@ jobs:
         working-directory: mobile
         run: flutter pub get
       
+      - name: Generate iOS platform files
+        working-directory: mobile
+        run: flutter create --platforms=ios .
+      
       # Skip tests for now - mobile app is incomplete (tests exist but lib/ source code is missing)
       # - name: Run tests
       #   working-directory: mobile

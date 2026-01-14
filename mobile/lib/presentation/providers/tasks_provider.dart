@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/task.dart';
 import 'package:timetracker_mobile/domain/repositories/time_tracking_repository.dart';
-import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/timer_provider.dart';
 
 /// Tasks state
 class TasksState {

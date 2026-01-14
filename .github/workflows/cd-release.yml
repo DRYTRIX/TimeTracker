@@ -972,6 +972,10 @@ jobs:
         working-directory: mobile
         run: flutter pub get
       
+      - name: Generate iOS platform files
+        working-directory: mobile
+        run: flutter create --platforms=ios .
+      
       - name: Build iOS (no codesign)
         working-directory: mobile
         run: flutter build ios --release --no-codesign

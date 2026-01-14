@@ -195,7 +195,7 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
                   title: const Text('Start Date'),
                   subtitle: Text(
                     startDate != null
-                        ? DateFormat('yyyy-MM-dd').format(startDate)
+                        ? DateFormat('yyyy-MM-dd').format(startDate!)
                         : 'No date selected',
                   ),
                   trailing: const Icon(Icons.calendar_today),
@@ -217,7 +217,7 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
                   title: const Text('End Date'),
                   subtitle: Text(
                     endDate != null
-                        ? DateFormat('yyyy-MM-dd').format(endDate)
+                        ? DateFormat('yyyy-MM-dd').format(endDate!)
                         : 'No date selected',
                   ),
                   trailing: const Icon(Icons.calendar_today),
@@ -255,10 +255,10 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
               ref.read(timeEntriesProvider.notifier).setFilter(
                     currentFilter.copyWith(
                       startDate: startDate != null
-                          ? DateFormat('yyyy-MM-dd').format(startDate)
+                          ? DateFormat('yyyy-MM-dd').format(startDate!)
                           : null,
                       endDate: endDate != null
-                          ? DateFormat('yyyy-MM-dd').format(endDate)
+                          ? DateFormat('yyyy-MM-dd').format(endDate!)
                           : null,
                     ),
                   );

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timetracker_mobile/data/models/project.dart';
+import 'package:timetracker_mobile/data/models/task.dart';
 import 'package:timetracker_mobile/presentation/providers/timer_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 
 class TimerWidget extends ConsumerStatefulWidget {
   const TimerWidget({super.key});
@@ -34,6 +38,30 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
   @override
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
+    final projectsState = ref.watch(projectsProvider);
+    final tasksState = ref.watch(tasksProvider);
+
+    // Find project and task by ID
+    Project? project;
+    Task? task;
+    if (timerState.timer != null) {
+      try {
+        project = projectsState.projects.firstWhere(
+          (p) => p.id == timerState.timer!.projectId,
+        );
+      } catch (e) {
+        project = null;
+      }
+      if (timerState.timer!.taskId != null) {
+        try {
+          task = tasksState.tasks.firstWhere(
+            (t) => t.id == timerState.timer!.taskId,
+          );
+        } catch (e) {
+          task = null;
+        }
+      }
+    }
 
     return Card(
       child: Padding(
@@ -57,13 +85,13 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    timerState.timer!.project?.name ?? 'Unknown Project',
+                    project?.name ?? 'Unknown Project',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  if (timerState.timer!.task != null) ...[
+                  if (task != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      timerState.timer!.task!.name,
+                      task.name,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
