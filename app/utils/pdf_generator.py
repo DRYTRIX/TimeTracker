@@ -308,6 +308,9 @@ class InvoicePDFGenerator:
             template = InvoicePDFTemplate.get_template(self.page_size)
             template_json_raw_from_db = template.template_json
         
+        # Store template as instance variable for use in format_date
+        self.template = template
+        
         debug_print(f"[DEBUG] Retrieved template: page_size={template.page_size}, id={template.id}")
         template_json_to_use = template_json_raw_from_db if template_json_raw_from_db else template.template_json
         template_json_length = len(template_json_to_use) if template_json_to_use else 0
@@ -552,9 +555,8 @@ class InvoicePDFGenerator:
         
         def format_date(value, format="medium"):
             try:
-                if babel_format_date:
-                    return babel_format_date(value, format=format)
-                return value.strftime("%Y-%m-%d") if value else ""
+                # Use DD.MM.YYYY format for invoices and quotes
+                return value.strftime("%d.%m.%Y") if value else ""
             except Exception:
                 return str(value) if value else ""
         
@@ -739,11 +741,13 @@ class InvoicePDFGenerator:
         from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
 
+        # Get date format from template, default to %d.%m.%Y
+        date_format_str = getattr(self.template, 'date_format', '%d.%m.%Y') if hasattr(self, 'template') and self.template else '%d.%m.%Y'
+        
         def format_date(value, format="medium"):
             """Format date for template"""
-            if babel_format_date:
-                return babel_format_date(value, format=format)
-            return value.strftime("%Y-%m-%d") if value else ""
+            # Use date format from template settings
+            return value.strftime(date_format_str) if value else ""
 
         def format_money(value):
             """Format money for template"""
@@ -1629,6 +1633,9 @@ class QuotePDFGenerator:
             current_app.logger.warning(f"[PDF_EXPORT] Quote template not found for PageSize: '{self.page_size}', creating default - QuoteID: {quote_id}")
             template = QuotePDFTemplate.get_template(self.page_size)
             template_json_raw_from_db = template.template_json
+        
+        # Store template as instance variable for use in format_date
+        self.template = template
 
         debug_print(f"[DEBUG] Retrieved quote template: page_size={template.page_size}, id={template.id}")
         template_json_to_use = template_json_raw_from_db if template_json_raw_from_db else template.template_json
@@ -1798,11 +1805,13 @@ class QuotePDFGenerator:
         from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
         
+        # Get date format from template, default to %d.%m.%Y
+        date_format_str = getattr(self.template, 'date_format', '%d.%m.%Y') if hasattr(self, 'template') and self.template else '%d.%m.%Y'
+        
         def format_date(value, format="medium"):
             try:
-                if babel_format_date:
-                    return babel_format_date(value, format=format)
-                return value.strftime("%Y-%m-%d") if value else ""
+                # Use date format from template settings
+                return value.strftime(date_format_str) if value else ""
             except Exception:
                 return str(value) if value else ""
         
@@ -1945,11 +1954,13 @@ class QuotePDFGenerator:
         from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
 
+        # Get date format from template, default to %d.%m.%Y
+        date_format_str = getattr(self.template, 'date_format', '%d.%m.%Y') if hasattr(self, 'template') and self.template else '%d.%m.%Y'
+        
         def format_date(value, format="medium"):
             """Format date for template"""
-            if babel_format_date:
-                return babel_format_date(value, format=format)
-            return value.strftime("%Y-%m-%d") if value else ""
+            # Use date format from template settings
+            return value.strftime(date_format_str) if value else ""
 
         def format_money(value):
             """Format money for template"""

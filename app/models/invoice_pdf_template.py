@@ -18,6 +18,7 @@ class InvoicePDFTemplate(db.Model):
     template_css = db.Column(db.Text, nullable=True)  # Legacy CSS template (backward compatibility)
     design_json = db.Column(db.Text, nullable=True)  # Konva.js design state
     template_json = db.Column(db.Text, nullable=True)  # ReportLab template JSON (new format)
+    date_format = db.Column(db.String(50), default="%d.%m.%Y", nullable=False)  # Date format for invoices (strftime format)
     is_default = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -51,6 +52,7 @@ class InvoicePDFTemplate(db.Model):
                 template_css="",
                 design_json="",
                 template_json=json.dumps(default_json),
+                date_format="%d.%m.%Y",
                 is_default=True
             )
             db.session.add(template)

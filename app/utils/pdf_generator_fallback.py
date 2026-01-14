@@ -161,13 +161,12 @@ class InvoicePDFGeneratorFallback:
             Paragraph(_("Invoice #: %(num)s", num=self.invoice.invoice_number), self.styles["NormalText"])
         )
         try:
-            from babel.dates import format_date as babel_format_date
-
-            issue_label = _("Issue Date: %(date)s", date=babel_format_date(self.invoice.issue_date))
-            due_label = _("Due Date: %(date)s", date=babel_format_date(self.invoice.due_date))
+            # Use DD.MM.YYYY format for invoices and quotes
+            issue_label = _("Issue Date: %(date)s", date=self.invoice.issue_date.strftime("%d.%m.%Y"))
+            due_label = _("Due Date: %(date)s", date=self.invoice.due_date.strftime("%d.%m.%Y"))
         except Exception:
-            issue_label = _("Issue Date: %(date)s", date=self.invoice.issue_date.strftime("%Y-%m-%d"))
-            due_label = _("Due Date: %(date)s", date=self.invoice.due_date.strftime("%Y-%m-%d"))
+            issue_label = _("Issue Date: %(date)s", date=self.invoice.issue_date.strftime("%d.%m.%Y"))
+            due_label = _("Due Date: %(date)s", date=self.invoice.due_date.strftime("%d.%m.%Y"))
         invoice_info.append(Paragraph(issue_label, self.styles["NormalText"]))
         invoice_info.append(Paragraph(due_label, self.styles["NormalText"]))
         invoice_info.append(Paragraph(f"Status: {self.invoice.status.title()}", self.styles["NormalText"]))
