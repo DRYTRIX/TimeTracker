@@ -16,106 +16,178 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<!-- Summary Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<!-- Enhanced Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}</p>
-                <p class="text-2xl font-bold text-text-light dark:text-text-dark">{{ total_hours }}</p>
+                <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-1">{{ _('Total Hours') }}</p>
+                <p class="text-3xl font-bold text-green-900 dark:text-green-100">{{ "%.1f"|format(total_hours) }}</p>
+                <p class="text-xs text-green-600/70 dark:text-green-400/70 mt-1">{{ _('Hours tracked') }}</p>
             </div>
-            <i class="fas fa-clock text-green-600 text-3xl"></i>
+            <div class="bg-green-500/10 dark:bg-green-400/10 p-4 rounded-full">
+                <i class="fas fa-clock text-green-600 dark:text-green-400 text-3xl"></i>
+            </div>
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total Invoiced') }}</p>
-                <p class="text-2xl font-bold text-text-light dark:text-text-dark">{{ "%.2f"|format(invoice_summary.total) }} EUR</p>
+                <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{{ _('Total Invoiced') }}</p>
+                <p class="text-3xl font-bold text-blue-900 dark:text-blue-100">{{ "%.2f"|format(invoice_summary.total) }}</p>
+                <p class="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">EUR</p>
             </div>
-            <i class="fas fa-file-invoice text-blue-600 text-3xl"></i>
+            <div class="bg-blue-500/10 dark:bg-blue-400/10 p-4 rounded-full">
+                <i class="fas fa-file-invoice text-blue-600 dark:text-blue-400 text-3xl"></i>
+            </div>
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 border border-emerald-200 dark:border-emerald-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Paid') }}</p>
-                <p class="text-2xl font-bold text-green-600">{{ "%.2f"|format(invoice_summary.paid) }} EUR</p>
+                <p class="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">{{ _('Paid') }}</p>
+                <p class="text-3xl font-bold text-emerald-900 dark:text-emerald-100">{{ "%.2f"|format(invoice_summary.paid) }}</p>
+                <p class="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">EUR</p>
             </div>
-            <i class="fas fa-check-circle text-green-600 text-3xl"></i>
+            <div class="bg-emerald-500/10 dark:bg-emerald-400/10 p-4 rounded-full">
+                <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-400 text-3xl"></i>
+            </div>
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border border-amber-200 dark:border-amber-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Outstanding') }}</p>
-                <p class="text-2xl font-bold text-yellow-600">{{ "%.2f"|format(invoice_summary.unpaid) }} EUR</p>
+                <p class="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">{{ _('Outstanding') }}</p>
+                <p class="text-3xl font-bold text-amber-900 dark:text-amber-100">{{ "%.2f"|format(invoice_summary.unpaid) }}</p>
+                <p class="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">EUR</p>
             </div>
-            <i class="fas fa-exclamation-triangle text-yellow-600 text-3xl"></i>
+            <div class="bg-amber-500/10 dark:bg-amber-400/10 p-4 rounded-full">
+                <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400 text-3xl"></i>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Project Hours Breakdown -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">{{ _('Hours by Project') }}</h2>
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg mb-6 overflow-hidden">
+    <div class="p-6 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                <i class="fas fa-chart-pie text-blue-600 dark:text-blue-400"></i>
+            </div>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Hours by Project') }}</h2>
+        </div>
+    </div>
     {% if project_hours %}
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="w-full">
+            <thead class="bg-background-light dark:bg-background-dark border-b-2 border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="p-3">{{ _('Project') }}</th>
-                    <th class="p-3">{{ _('Total Hours') }}</th>
-                    <th class="p-3">{{ _('Billable Hours') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Billable Hours') }}</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-border-light dark:divide-border-dark">
                 {% for ph in project_hours %}
-                <tr class="border-b border-border-light dark:border-border-dark">
-                    <td class="p-3 font-medium">{{ ph.project.name if ph.project else _('N/A') }}</td>
-                    <td class="p-3">{{ "%.2f"|format(ph.hours) }}</td>
-                    <td class="p-3">{{ "%.2f"|format(ph.billable_hours) }}</td>
+                <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-folder text-primary"></i>
+                            <span class="font-medium text-text-light dark:text-text-dark">{{ ph.project.name if ph.project else _('N/A') }}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <i class="fas fa-clock mr-1.5 text-xs"></i>
+                            {{ "%.2f"|format(ph.hours) }}h
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            <i class="fas fa-euro-sign mr-1.5 text-xs"></i>
+                            {{ "%.2f"|format(ph.billable_hours) }}h
+                        </span>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No project hours data available.') }}</p>
+    <div class="p-12 text-center">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <i class="fas fa-chart-pie text-3xl text-gray-400"></i>
+        </div>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No project hours data available.') }}</p>
+    </div>
     {% endif %}
 </div>
 
 <!-- Recent Activity -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <h2 class="text-lg font-semibold mb-4">{{ _('Recent Time Entries (Last 30 Days)') }}</h2>
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
+    <div class="p-6 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+        <div class="flex items-center space-x-3">
+            <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                <i class="fas fa-history text-green-600 dark:text-green-400"></i>
+            </div>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Recent Time Entries (Last 30 Days)') }}</h2>
+        </div>
+    </div>
     {% if recent_entries %}
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="w-full">
+            <thead class="bg-background-light dark:bg-background-dark border-b-2 border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="p-3">{{ _('Date') }}</th>
-                    <th class="p-3">{{ _('Project') }}</th>
-                    <th class="p-3">{{ _('Duration') }}</th>
-                    <th class="p-3">{{ _('User') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('User') }}</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-border-light dark:divide-border-dark">
                 {% for entry in recent_entries[:20] %}
-                <tr class="border-b border-border-light dark:border-border-dark">
-                    <td class="p-3">{{ entry.start_time.strftime('%Y-%m-%d') if entry.start_time else _('N/A') }}</td>
-                    <td class="p-3">{{ entry.project.name if entry.project else _('N/A') }}</td>
-                    <td class="p-3">{{ "%.2f"|format(entry.duration_hours) }}h</td>
-                    <td class="p-3">{{ entry.user.display_name if entry.user else _('N/A') }}</td>
+                <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <td class="py-4 px-6">
+                        <div class="text-sm font-medium text-text-light dark:text-text-dark">
+                            {{ entry.start_time.strftime('%b %d, %Y') if entry.start_time else _('N/A') }}
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-folder text-primary text-xs"></i>
+                            <span class="text-sm text-text-light dark:text-text-dark">{{ entry.project.name if entry.project else _('N/A') }}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <i class="fas fa-clock mr-1.5 text-xs"></i>
+                            {{ "%.2f"|format(entry.duration_hours) }}h
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-primary text-xs"></i>
+                            </div>
+                            <span class="text-sm text-text-light dark:text-text-dark">{{ entry.user.display_name if entry.user else _('N/A') }}</span>
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No recent time entries.') }}</p>
+    <div class="p-12 text-center">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <i class="fas fa-history text-3xl text-gray-400"></i>
+        </div>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No recent time entries.') }}</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

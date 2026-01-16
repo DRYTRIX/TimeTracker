@@ -16,12 +16,14 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<!-- Filters -->
-<div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow mb-6">
+<!-- Enhanced Filters -->
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-xl shadow-lg mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-            <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
-            <select name="project_id" id="project_id" class="form-input">
+            <label for="project_id" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                <i class="fas fa-folder-open mr-1 text-primary"></i>{{ _('Project') }}
+            </label>
+            <select name="project_id" id="project_id" class="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                 <option value="">{{ _('All Projects') }}</option>
                 {% for project in projects %}
                 <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
@@ -29,67 +31,155 @@
             </select>
         </div>
         <div>
-            <label for="date_from" class="block text-sm font-medium mb-1">{{ _('From Date') }}</label>
-            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
+            <label for="date_from" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                <i class="fas fa-calendar-alt mr-1 text-primary"></i>{{ _('From Date') }}
+            </label>
+            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" 
+                   class="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-primary transition-all">
         </div>
         <div>
-            <label for="date_to" class="block text-sm font-medium mb-1">{{ _('To Date') }}</label>
-            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
+            <label for="date_to" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                <i class="fas fa-calendar-check mr-1 text-primary"></i>{{ _('To Date') }}
+            </label>
+            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" 
+                   class="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-primary transition-all">
         </div>
         <div class="flex items-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 w-full">{{ _('Filter') }}</button>
+            <button type="submit" class="w-full px-5 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2 shadow-md hover:shadow-lg">
+                <i class="fas fa-filter"></i>
+                <span>{{ _('Filter') }}</span>
+            </button>
         </div>
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    {% if time_entries %}
+{% if time_entries %}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="w-full">
+            <thead class="bg-background-light dark:bg-background-dark border-b-2 border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="p-3">{{ _('Date') }}</th>
-                    <th class="p-3">{{ _('Project') }}</th>
-                    <th class="p-3">{{ _('User') }}</th>
-                    <th class="p-3">{{ _('Start Time') }}</th>
-                    <th class="p-3">{{ _('End Time') }}</th>
-                    <th class="p-3">{{ _('Duration') }}</th>
-                    <th class="p-3">{{ _('Description') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('User') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Time') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Description') }}</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-border-light dark:divide-border-dark">
                 {% for entry in time_entries %}
-                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
-                    <td class="p-3">{{ entry.start_time.strftime('%Y-%m-%d') }}</td>
-                    <td class="p-3">
-                        {% if entry.project %}
-                            {{ entry.project.name }}
-                        {% elif entry.client %}
-                            {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
-                        {% else %}
-                            {{ _('N/A') }}
-                        {% endif %}
+                <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <td class="py-4 px-6">
+                        <div class="text-sm font-medium text-text-light dark:text-text-dark">
+                            {{ entry.start_time.strftime('%b %d, %Y') }}
+                        </div>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ entry.start_time.strftime('%A') }}
+                        </div>
                     </td>
-                    <td class="p-3">{{ entry.user.display_name if entry.user else _('N/A') }}</td>
-                    <td class="p-3">{{ entry.start_time.strftime('%H:%M') }}</td>
-                    <td class="p-3">{{ entry.end_time.strftime('%H:%M') if entry.end_time else '-' }}</td>
-                    <td class="p-3 font-medium">{{ "%.2f"|format(entry.duration_hours) }}h</td>
-                    <td class="p-3">{{ entry.description[:100] if entry.description else '-' }}{% if entry.description and entry.description|length > 100 %}...{% endif %}</td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-folder text-primary text-sm"></i>
+                            <span class="text-sm text-text-light dark:text-text-dark">
+                                {% if entry.project %}
+                                    {{ entry.project.name }}
+                                {% elif entry.client %}
+                                    {{ entry.client.name }} <span class="text-xs text-text-muted-light dark:text-text-muted-dark">({{ _('Direct') }})</span>
+                                {% else %}
+                                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-primary text-xs"></i>
+                            </div>
+                            <span class="text-sm text-text-light dark:text-text-dark">
+                                {{ entry.user.display_name if entry.user else _('N/A') }}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-3 text-sm">
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-play-circle text-green-500 text-xs"></i>
+                                <span class="text-text-light dark:text-text-dark font-medium">{{ entry.start_time.strftime('%H:%M') }}</span>
+                            </div>
+                            {% if entry.end_time %}
+                            <span class="text-text-muted-light dark:text-text-muted-dark">→</span>
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-stop-circle text-red-500 text-xs"></i>
+                                <span class="text-text-light dark:text-text-dark font-medium">{{ entry.end_time.strftime('%H:%M') }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <i class="fas fa-clock mr-1.5 text-xs"></i>
+                            {{ "%.2f"|format(entry.duration_hours) }}h
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <p class="text-sm text-text-light dark:text-text-dark max-w-md line-clamp-2" title="{{ entry.description or '-' }}">
+                            {% if entry.description %}
+                                {{ entry.description }}
+                            {% else %}
+                                <span class="text-text-muted-light dark:text-text-muted-dark italic">-</span>
+                            {% endif %}
+                        </p>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     
-    <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-            {{ _('Total entries') }}: {{ time_entries|length }} | 
-            {{ _('Total hours') }}: {{ "%.2f"|format(time_entries|sum(attribute='duration_hours')) }}h
-        </p>
+    <!-- Summary Footer -->
+    <div class="bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark px-6 py-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-list text-primary"></i>
+                    <span class="text-sm font-medium text-text-light dark:text-text-dark">
+                        {{ _('Total entries') }}: <span class="font-bold">{{ time_entries|length }}</span>
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-clock text-green-500"></i>
+                    <span class="text-sm font-medium text-text-light dark:text-text-dark">
+                        {{ _('Total hours') }}: <span class="font-bold text-green-600 dark:text-green-400">{{ "%.2f"|format(time_entries|sum(attribute='duration_hours')) }}h</span>
+                    </span>
+                </div>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No time entries found.') }}</p>
-    {% endif %}
 </div>
+{% else %}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-12">
+    <div class="text-center">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-8 w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+            <i class="fas fa-clock text-5xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">{{ _('No time entries found') }}</h3>
+        <p class="text-text-muted-light dark:text-text-muted-dark max-w-md mx-auto mb-4">
+            {% if selected_project_id or date_from or date_to %}
+            {{ _('No time entries match your current filters. Try adjusting your filter criteria.') }}
+            {% else %}
+            {{ _('There are no time entries available at this time. Time entries will appear here once they are logged for your projects.') }}
+            {% endif %}
+        </p>
+        {% if selected_project_id or date_from or date_to %}
+        <a href="{{ url_for('client_portal.time_entries') }}" 
+           class="inline-flex items-center px-5 py-2.5 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors">
+            <i class="fas fa-times mr-2"></i>
+            {{ _('Clear Filters') }}
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 {% endblock %}
-

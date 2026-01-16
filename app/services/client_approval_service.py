@@ -92,12 +92,22 @@ class ClientApprovalService:
         return {"success": True, "message": "Time entry rejected", "approval": approval.to_dict()}
 
     def get_pending_approvals_for_client(self, client_id: int) -> List[ClientTimeApproval]:
-        """Get pending approvals for a client"""
-        return (
-            ClientTimeApproval.query.filter_by(client_id=client_id, status=ClientApprovalStatus.PENDING)
-            .order_by(ClientTimeApproval.requested_at.desc())
-            .all()
-        )
+        """Get pending approvals for a client with error handling"""
+        try:
+            return (
+                ClientTimeApproval.query.filter_by(client_id=client_id, status=ClientApprovalStatus.PENDING)
+                .order_by(ClientTimeApproval.requested_at.desc())
+                .all()
+            )
+        except Exception as e:
+            logger.error(f"Error getting pending approvals for client {client_id}: {e}", exc_info=True)
+            # Rollback any failed transaction
+            try:
+                db.session.rollback()
+            except Exception as rollback_error:
+                logger.error(f"Error during rollback: {rollback_error}", exc_info=True)
+            # Return empty list on error to prevent cascading failures
+            return []
 
     def _notify_client_contacts(self, client: Client, approval: ClientTimeApproval):
         """Send notifications to client contacts"""

@@ -139,6 +139,7 @@
     <div class="space-y-4">
         <!-- Approve Form -->
         <form method="POST" action="{{ url_for('client_portal.approve_time_entry', approval_id=approval.id) }}" class="border-b border-border-light dark:border-border-dark pb-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label for="approval_comment" class="block text-sm font-medium mb-2">{{ _('Comment (optional)') }}</label>
                 <textarea id="approval_comment" name="comment" rows="3" 
@@ -154,6 +155,7 @@
         
         <!-- Reject Form -->
         <form method="POST" action="{{ url_for('client_portal.reject_time_entry', approval_id=approval.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label for="rejection_reason" class="block text-sm font-medium mb-2">{{ _('Rejection Reason') }} <span class="text-red-600">*</span></label>
                 <textarea id="rejection_reason" name="reason" rows="3" required

@@ -29,14 +29,22 @@
 
 /* Sidebar - Elements */
 .sidebar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
     border-radius: 0.75rem;
     padding: 1.5rem;
-    color: white;
+    color: #1F2937;
     overflow-y: auto;
     max-height: 700px;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.dark .sidebar {
+    background: #1F2937;
+    border-color: #4A5568;
+    color: #E2E8F0;
 }
 
 .sidebar h3 {
@@ -46,6 +54,11 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    color: #1F2937;
+}
+
+.dark .sidebar h3 {
+    color: #E2E8F0;
 }
 
 /* Search Box */
@@ -57,20 +70,36 @@
     width: 100%;
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+    color: #1F2937;
     font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.dark .search-box input {
+    background: #2D3748;
+    border-color: #4A5568;
+    color: #E2E8F0;
 }
 
 .search-box input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
+    color: #A0AEC0;
+}
+
+.dark .search-box input::placeholder {
+    color: #718096;
 }
 
 .search-box input:focus {
     outline: none;
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .search-box input:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 /* Tabs */
@@ -78,7 +107,11 @@
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.dark .sidebar-tabs {
+    border-bottom-color: #4A5568;
 }
 
 .sidebar-tab {
@@ -89,16 +122,29 @@
     font-size: 0.875rem;
     font-weight: 500;
     transition: all 0.2s;
-    opacity: 0.7;
+    color: #6B7280;
+}
+
+.dark .sidebar-tab {
+    color: #9CA3AF;
 }
 
 .sidebar-tab:hover {
-    opacity: 1;
+    color: #1F2937;
+}
+
+.dark .sidebar-tab:hover {
+    color: #E2E8F0;
 }
 
 .sidebar-tab.active {
-    opacity: 1;
-    border-bottom-color: white;
+    color: #3B82F6;
+    border-bottom-color: #3B82F6;
+}
+
+.dark .sidebar-tab.active {
+    color: #60A5FA;
+    border-bottom-color: #60A5FA;
 }
 
 .sidebar-content {
@@ -122,15 +168,18 @@
     font-size: 0.75rem;
     text-transform: uppercase;
     font-weight: 600;
-    opacity: 0.8;
+    color: #6B7280;
     margin-bottom: 0.5rem;
     letter-spacing: 0.05em;
 }
 
+.dark .element-group-title {
+    color: #9CA3AF;
+}
+
 .element-item {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #F7F9FB;
+    border: 1px solid #E2E8F0;
     border-radius: 0.5rem;
     padding: 0.75rem;
     margin-bottom: 0.5rem;
@@ -139,15 +188,34 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    color: #1F2937;
+}
+
+.dark .element-item {
+    background: #2D3748;
+    border-color: #4A5568;
+    color: #E2E8F0;
 }
 
 .element-item:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: translateX(5px);
+    background: #EDF2F7;
+    border-color: #3B82F6;
+    transform: translateX(3px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dark .element-item:hover {
+    background: #374151;
+    border-color: #60A5FA;
 }
 
 .element-item i {
     font-size: 1.25rem;
+    color: #3B82F6;
+}
+
+.dark .element-item i {
+    color: #60A5FA;
 }
 
 .element-item span {
@@ -157,8 +225,8 @@
 
 /* Variable Items */
 .variable-item {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #F7F9FB;
+    border: 1px solid #E2E8F0;
     border-radius: 0.375rem;
     padding: 0.5rem;
     margin-bottom: 0.5rem;
@@ -166,20 +234,40 @@
     transition: all 0.2s;
 }
 
+.dark .variable-item {
+    background: #2D3748;
+    border-color: #4A5568;
+}
+
 .variable-item:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #EDF2F7;
+    border-color: #3B82F6;
+}
+
+.dark .variable-item:hover {
+    background: #374151;
+    border-color: #60A5FA;
 }
 
 .variable-name {
     font-family: 'Courier New', monospace;
     font-size: 0.813rem;
-    color: #fbbf24;
+    color: #3B82F6;
     margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.dark .variable-name {
+    color: #60A5FA;
 }
 
 .variable-desc {
     font-size: 0.75rem;
-    opacity: 0.8;
+    color: #6B7280;
+}
+
+.dark .variable-desc {
+    color: #9CA3AF;
 }
 
 /* Canvas Area */
@@ -196,13 +284,26 @@
 .canvas-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 1rem;
     padding: 1rem;
     padding-bottom: 1rem;
     border-bottom: 2px solid #e5e7eb;
     background: #f9fafb;
     border-radius: 0.5rem 0.5rem 0 0;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .canvas-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .canvas-header h3 {
+        margin-bottom: 0.5rem;
+    }
 }
 
 .dark .canvas-header {
@@ -227,13 +328,36 @@
 .canvas-header-controls {
     display: flex;
     gap: 1rem;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .canvas-header-controls {
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+    }
 }
 
 .page-size-selector-group {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .page-size-selector-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        width: 100%;
+    }
+    
+    .page-size-help {
+        display: none;
+    }
 }
 
 .page-size-label {
@@ -291,6 +415,25 @@
 .canvas-toolbar {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .canvas-toolbar {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .canvas-toolbar button {
+        min-width: 36px;
+        padding: 0.5rem;
+    }
+    
+    .canvas-toolbar #zoom-display {
+        margin-left: 0.5rem !important;
+        font-size: 0.813rem !important;
+    }
 }
 
 .canvas-toolbar button {
@@ -1115,7 +1258,10 @@
 
 /* Template Settings Panel */
 .template-settings-panel {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
     background: #f9fafb;
+    border-radius: 0.5rem;
     border: 1px solid #e5e7eb;
 }
 
@@ -1124,12 +1270,39 @@
     border-color: #4a5568;
 }
 
+.template-settings-panel h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+}
+
 .dark .template-settings-panel h4 {
     color: #f9fafb;
 }
 
+.template-settings-panel h4 i {
+    margin-right: 0.5rem;
+}
+
+.template-settings-panel label {
+    display: block;
+    font-size: 0.813rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: #4b5563;
+}
+
 .dark .template-settings-panel label {
     color: #e2e8f0;
+}
+
+.template-settings-panel p {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #6b7280;
 }
 
 .dark .template-settings-panel p {
@@ -1195,6 +1368,27 @@
     gap: 0.75rem;
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .action-bar {
+        gap: 0.5rem;
+    }
+    
+    .action-bar .btn {
+        font-size: 0.813rem;
+        padding: 0.5rem 0.625rem;
+    }
+    
+    .action-bar .btn i {
+        margin-right: 0.25rem !important;
+    }
+    
+    .action-bar label.inline-flex {
+        font-size: 0.813rem;
+        margin-left: 0 !important;
+    }
 }
 
 /* Button dark mode support */
@@ -1807,37 +2001,19 @@
             {{ _('Properties') }}
         </h3>
         <!-- Template Settings -->
-        <div class="template-settings-panel" style="margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
-            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #374151;">
-                <i class="fas fa-cog" style="margin-right: 0.5rem;"></i>
+        <div class="template-settings-panel">
+            <h4>
+                <i class="fas fa-cog"></i>
                 {{ _('Template Settings') }}
             </h4>
             <div style="margin-bottom: 0.75rem;">
-                <label for="template-date-format" style="display: block; font-size: 0.813rem; font-weight: 500; margin-bottom: 0.25rem; color: #4b5563;">
+                <label for="template-date-format">
                     {{ _('Date Format') }}
                 </label>
                 <input type="text" id="template-date-format" class="form-input" value="{{ date_format if date_format else '%d.%m.%Y' }}" 
                        style="font-size: 0.813rem; font-family: monospace;"
                        placeholder="%d.%m.%Y">
-                <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">
-                    {{ _('Use strftime format (e.g., %d.%m.%Y for 12.09.2025)') }}
-                </p>
-            </div>
-        </div>
-        <!-- Template Settings -->
-        <div class="template-settings-panel" style="margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
-            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #374151;">
-                <i class="fas fa-cog" style="margin-right: 0.5rem;"></i>
-                {{ _('Template Settings') }}
-            </h4>
-            <div style="margin-bottom: 0.75rem;">
-                <label for="template-date-format" style="display: block; font-size: 0.813rem; font-weight: 500; margin-bottom: 0.25rem; color: #4b5563;">
-                    {{ _('Date Format') }}
-                </label>
-                <input type="text" id="template-date-format" class="form-input" value="{{ date_format if date_format else '%d.%m.%Y' }}" 
-                       style="font-size: 0.813rem; font-family: monospace;"
-                       placeholder="%d.%m.%Y">
-                <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">
+                <p>
                     {{ _('Use strftime format (e.g., %d.%m.%Y for 12.09.2025)') }}
                 </p>
             </div>

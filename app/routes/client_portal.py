@@ -20,6 +20,75 @@ from functools import wraps
 client_portal_bp = Blueprint("client_portal", __name__)
 
 
+# Custom error handlers for client portal
+@client_portal_bp.errorhandler(403)
+def handle_forbidden(error):
+    """Handle 403 Forbidden errors in client portal with nice error page"""
+    # Check if user is logged in as regular user (not client portal)
+    from flask_login import current_user
+    if current_user.is_authenticated:
+        # User is logged in but accessing client portal - redirect to login
+        # This clears their session and lets them log in as client portal user
+        flash(_("Please log in to access the client portal."), "error")
+        return redirect(url_for("client_portal.login", next=request.url))
+    
+    current_client = get_current_client()
+    
+    # If not authenticated, redirect to login instead of showing error
+    if not current_client:
+        flash(_("Please log in to access the client portal."), "error")
+        return redirect(url_for("client_portal.login", next=request.url))
+    
+    # User is authenticated but doesn't have access - show error page
+    return render_template(
+        "client_portal/error.html",
+        error_info={
+            "title": _("Access Denied"),
+            "subtitle": _("403 Forbidden"),
+            "message": _("You don't have permission to access this resource. Client portal access may not be enabled for your account."),
+            "details": [
+                _("Your account may not have client portal access enabled"),
+                _("Your account may be inactive"),
+                _("You may not be assigned to a client")
+            ],
+            "show_back": True
+        }
+    ), 403
+
+
+@client_portal_bp.errorhandler(404)
+def handle_not_found(error):
+    """Handle 404 Not Found errors in client portal with nice error page"""
+    current_client = get_current_client()
+    
+    return render_template(
+        "client_portal/error.html",
+        error_info={
+            "title": _("Page Not Found"),
+            "subtitle": _("404 Not Found"),
+            "message": _("The page you're looking for doesn't exist or has been moved."),
+            "show_back": True
+        }
+    ), 404
+
+
+@client_portal_bp.errorhandler(500)
+def handle_internal_error(error):
+    """Handle 500 Internal Server errors in client portal with nice error page"""
+    current_app.logger.exception("Internal server error in client portal")
+    current_client = get_current_client()
+    
+    return render_template(
+        "client_portal/error.html",
+        error_info={
+            "title": _("Server Error"),
+            "subtitle": _("500 Internal Server Error"),
+            "message": _("An unexpected error occurred. Please try again later or contact support if the problem persists."),
+            "show_back": True
+        }
+    ), 500
+
+
 def get_current_client():
     """Get the currently logged-in client from session (either Client or User portal access)"""
     # Check for Client portal authentication
@@ -40,8 +109,34 @@ def get_current_client():
 # Make get_current_client available to templates
 @client_portal_bp.app_context_processor
 def inject_get_current_client():
-    """Make get_current_client available in templates"""
-    return dict(get_current_client=get_current_client)
+    """Make get_current_client available in templates and inject portal data"""
+    client = get_current_client()
+    pending_approvals_count = 0
+    unread_notifications_count = 0
+    
+    if client:
+        try:
+            # Get pending approvals count with error handling
+            approval_service = ClientApprovalService()
+            pending_approvals = approval_service.get_pending_approvals_for_client(client.id)
+            pending_approvals_count = len(pending_approvals) if pending_approvals else 0
+        except Exception as e:
+            current_app.logger.error(f"Error getting pending approvals count: {e}", exc_info=True)
+            pending_approvals_count = 0
+        
+        try:
+            # Get unread notifications count with error handling
+            notification_service = ClientNotificationService()
+            unread_notifications_count = notification_service.get_unread_count(client.id)
+        except Exception as e:
+            current_app.logger.error(f"Error getting unread notifications count: {e}", exc_info=True)
+            unread_notifications_count = 0
+    
+    return dict(
+        get_current_client=get_current_client,
+        pending_approvals_count=pending_approvals_count,
+        unread_notifications_count=unread_notifications_count
+    )
 
 
 def check_client_portal_access():
@@ -240,6 +335,15 @@ def set_password():
         return redirect(url_for("client_portal.login"))
 
     return render_template("client_portal/set_password.html", client=client, token=token)
+
+
+@client_portal_bp.route("/client-portal/")
+def client_portal_base():
+    """Handle base client portal URL with trailing slash"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):  # It's a redirect response
+        return result
+    return redirect(url_for("client_portal.dashboard"))
 
 
 @client_portal_bp.route("/client-portal")
@@ -1011,7 +1115,7 @@ def documents():
     # Get client attachments
     attachments = ClientAttachment.query.filter_by(
         client_id=client.id,
-        visible_to_client=True
+        is_visible_to_client=True
     ).order_by(ClientAttachment.uploaded_at.desc()).all()
     
     # Get project attachments
@@ -1154,7 +1258,8 @@ def activity_feed():
     activities = []
     if project_ids:
         activities = Activity.query.filter(
-            Activity.project_id.in_(project_ids)
+            Activity.entity_type == 'project',
+            Activity.entity_id.in_(project_ids)
         ).order_by(Activity.created_at.desc()).limit(50).all()
     
     return render_template("client_portal/activity_feed.html", client=client, activities=activities)
