@@ -19,47 +19,69 @@
 {% if attachments %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {% for attachment in attachments %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
-        <div class="flex items-start justify-between mb-4">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
-                    <i class="fas fa-file text-primary-600 dark:text-primary-400 text-xl"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <h3 class="font-semibold truncate" title="{{ attachment.original_filename if attachment.original_filename else attachment.filename }}">{{ attachment.original_filename if attachment.original_filename else attachment.filename }}</h3>
-                    {% if hasattr(attachment, 'project') and attachment.project %}
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ attachment.project.name }}</p>
-                    {% elif hasattr(attachment, 'client') and attachment.client %}
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Client Document') }}</p>
-                    {% endif %}
+    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0 shadow-md">
+                        <i class="fas fa-file text-white text-xl"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-text-light dark:text-text-dark truncate" title="{{ attachment.original_filename if attachment.original_filename else attachment.filename }}">
+                            {{ attachment.original_filename if attachment.original_filename else attachment.filename }}
+                        </h3>
+                        {% if hasattr(attachment, 'project') and attachment.project %}
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1 flex items-center">
+                            <i class="fas fa-folder text-primary mr-1 text-xs"></i>
+                            {{ attachment.project.name }}
+                        </p>
+                        {% elif hasattr(attachment, 'client') and attachment.client %}
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1 flex items-center">
+                            <i class="fas fa-building text-primary mr-1 text-xs"></i>
+                            {{ _('Client Document') }}
+                        </p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="space-y-2 text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-            {% if attachment.uploaded_at %}
-            <p><i class="fas fa-calendar mr-2"></i>{{ attachment.uploaded_at.strftime('%Y-%m-%d') }}</p>
-            {% endif %}
-            {% if attachment.file_size %}
-            <p><i class="fas fa-hdd mr-2"></i>{{ attachment.file_size_display if hasattr(attachment, 'file_size_display') else ("%.2f"|format(attachment.file_size / 1024) + " KB") }}</p>
-            {% endif %}
-        </div>
-        
-        <div class="flex gap-2">
+            
+            <div class="space-y-2 mb-4">
+                {% if attachment.uploaded_at %}
+                <div class="flex items-center text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <i class="fas fa-calendar text-primary mr-2 w-4"></i>
+                    <span>{{ attachment.uploaded_at.strftime('%B %d, %Y') }}</span>
+                </div>
+                {% endif %}
+                {% if attachment.file_size %}
+                <div class="flex items-center text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <i class="fas fa-hdd text-primary mr-2 w-4"></i>
+                    <span>{{ attachment.file_size_display if hasattr(attachment, 'file_size_display') else ("%.2f"|format(attachment.file_size / 1024) + " KB") }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
             <a href="{{ url_for('client_portal.download_attachment', attachment_id=attachment.id) }}" 
                target="_blank"
-               class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
-                <i class="fas fa-download mr-2"></i>{{ _('Download') }}
+               class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg group">
+                <i class="fas fa-download mr-2"></i>
+                <span>{{ _('Download') }}</span>
+                <i class="fas fa-external-link-alt ml-2 text-xs group-hover:translate-x-0.5 transition-transform"></i>
             </a>
         </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
-<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
-    <i class="fas fa-folder-open text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
-    <h3 class="text-xl font-semibold mb-2">{{ _('No Documents') }}</h3>
-    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No documents have been shared with you yet.') }}</p>
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-12">
+    <div class="text-center">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-8 w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+            <i class="fas fa-folder-open text-5xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">{{ _('No Documents') }}</h3>
+        <p class="text-text-muted-light dark:text-text-muted-dark max-w-md mx-auto">
+            {{ _('No documents have been shared with you yet. Documents will appear here once they are uploaded and made visible to clients.') }}
+        </p>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

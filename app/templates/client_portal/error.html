@@ -1,0 +1,76 @@
+{% extends "client_portal/base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ error_info.title }} - {{ _('Client Portal') }}{% endblock %}
+
+{% block content %}
+{% set current_client = get_current_client() %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden">
+        <!-- Error Header -->
+        <div class="bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 px-8 py-6 text-white">
+            <div class="flex items-center space-x-4">
+                <div class="bg-white/20 rounded-full p-4">
+                    <i class="fas fa-exclamation-triangle text-3xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold">{{ error_info.title }}</h1>
+                    <p class="text-red-100 mt-1">{{ error_info.subtitle or _('An error occurred') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Content -->
+        <div class="p-8">
+            <div class="text-center mb-6">
+                <p class="text-lg text-text-light dark:text-text-dark mb-4">
+                    {{ error_info.message }}
+                </p>
+                
+                {% if error_info.details %}
+                <div class="bg-background-light dark:bg-background-dark rounded-lg p-4 mb-6 text-left">
+                    <h3 class="font-semibold mb-2 text-text-light dark:text-text-dark">{{ _('Details') }}:</h3>
+                    <ul class="list-disc list-inside space-y-1 text-text-muted-light dark:text-text-muted-dark">
+                        {% for detail in error_info.details %}
+                        <li>{{ detail }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                {% if current_client %}
+                <a href="{{ url_for('client_portal.dashboard') }}" 
+                   class="inline-flex items-center justify-center px-6 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg">
+                    <i class="fas fa-home mr-2"></i>{{ _('Go to Dashboard') }}
+                </a>
+                {% else %}
+                <a href="{{ url_for('client_portal.login') }}" 
+                   class="inline-flex items-center justify-center px-6 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i>{{ _('Login to Client Portal') }}
+                </a>
+                {% endif %}
+                
+                {% if error_info.show_back %}
+                <button onclick="window.history.back()" 
+                        class="inline-flex items-center justify-center px-6 py-3 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>{{ _('Go Back') }}
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Help Text -->
+            {% if not current_client %}
+            <div class="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('If you believe you should have access to the client portal, please contact your administrator or use the login link above.') }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

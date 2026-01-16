@@ -21,6 +21,7 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <h3 class="text-lg font-semibold mb-4">{{ _('Add Comment') }}</h3>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-4">
             <label for="comment" class="block text-sm font-medium mb-2">{{ _('Your Comment') }}</label>
             <textarea id="comment" name="comment" rows="4" required

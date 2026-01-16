@@ -16,38 +16,91 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    {% if project_stats %}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for stat in project_stats %}
-        <div class="border border-border-light dark:border-border-dark rounded-lg p-4 hover:shadow-md transition-shadow">
+{% if project_stats %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for stat in project_stats %}
+    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group">
+        <!-- Project Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 text-white">
             <div class="flex items-start justify-between mb-2">
-                <h3 class="text-lg font-semibold">{{ stat.project.name }}</h3>
-                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ stat.project.status|capitalize }}</span>
+                <h3 class="text-xl font-bold line-clamp-2 flex-1">{{ stat.project.name }}</h3>
+                <span class="ml-2 px-2.5 py-1 text-xs font-semibold rounded-full bg-white/20 backdrop-blur-sm">
+                    {{ stat.project.status|capitalize }}
+                </span>
             </div>
             {% if stat.project.description %}
-            <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3 prose prose-sm dark:prose-invert max-w-none">{{ stat.project.description | markdown | safe }}</div>
-            {% endif %}
-            <div class="flex items-center justify-between text-sm">
-                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}:</span>
-                <span class="font-medium">{{ "%.2f"|format(stat.total_hours) }}h</span>
-            </div>
-            <div class="flex items-center justify-between text-sm mt-1">
-                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Time Entries') }}:</span>
-                <span class="font-medium">{{ stat.entry_count }}</span>
-            </div>
-            {% if stat.project.hourly_rate %}
-            <div class="flex items-center justify-between text-sm mt-1">
-                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Hourly Rate') }}:</span>
-                <span class="font-medium">{{ "%.2f"|format(stat.project.hourly_rate) }} {{ stat.project.client_obj.default_hourly_rate and 'EUR' or '' }}</span>
-            </div>
+            <p class="text-sm text-blue-100 line-clamp-2 mt-2">{{ stat.project.description }}</p>
             {% endif %}
         </div>
-        {% endfor %}
+        
+        <!-- Project Stats -->
+        <div class="p-6">
+            <div class="space-y-4">
+                <!-- Total Hours -->
+                <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                            <i class="fas fa-clock text-green-600 dark:text-green-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}</p>
+                            <p class="text-lg font-bold text-text-light dark:text-text-dark">{{ "%.2f"|format(stat.total_hours) }}h</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Time Entries Count -->
+                <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                            <i class="fas fa-list text-blue-600 dark:text-blue-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Time Entries') }}</p>
+                            <p class="text-lg font-bold text-text-light dark:text-text-dark">{{ stat.entry_count }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hourly Rate (if available) -->
+                {% if stat.project.hourly_rate %}
+                <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                            <i class="fas fa-euro-sign text-purple-600 dark:text-purple-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Hourly Rate') }}</p>
+                            <p class="text-lg font-bold text-text-light dark:text-text-dark">{{ "%.2f"|format(stat.project.hourly_rate) }} {{ stat.project.client_obj.default_hourly_rate and 'EUR' or '' }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- View Details Link -->
+            <div class="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
+                <a href="{{ url_for('client_portal.time_entries', project_id=stat.project.id) }}" 
+                   class="w-full inline-flex items-center justify-center px-4 py-2 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors group">
+                    <span>{{ _('View Time Entries') }}</span>
+                    <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No projects found.') }}</p>
-    {% endif %}
+    {% endfor %}
 </div>
+{% else %}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-12">
+    <div class="text-center">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-8 w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+            <i class="fas fa-folder-open text-5xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">{{ _('No projects found') }}</h3>
+        <p class="text-text-muted-light dark:text-text-muted-dark max-w-md mx-auto">
+            {{ _('There are no projects available at this time. Projects will appear here once they are created and assigned to your account.') }}
+        </p>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
-

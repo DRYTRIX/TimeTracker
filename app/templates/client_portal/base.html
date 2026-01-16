@@ -32,6 +32,165 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+    <style>
+        /* Prevent main app sidebar from appearing */
+        #sidebar,
+        #appShell,
+        aside#sidebar,
+        .sidebar-collapsed,
+        #mainContent {
+            display: none !important;
+        }
+        
+        /* Client portal specific styles */
+        .client-portal-nav {
+            transition: all 0.3s ease;
+        }
+        
+        .client-portal-nav-item {
+            position: relative;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            margin: 0 0.125rem;
+            font-size: 0.9375rem;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .client-portal-nav-item:hover {
+            background-color: rgba(74, 144, 226, 0.12);
+            transform: translateY(-1px);
+        }
+        
+        .client-portal-nav-item.active {
+            background-color: rgba(74, 144, 226, 0.2);
+            color: #4A90E2;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2);
+        }
+        
+        .client-portal-nav-item.active::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 2px;
+            background-color: #4A90E2;
+            border-radius: 2px 2px 0 0;
+        }
+        
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        
+        .mobile-menu-overlay.active {
+            display: block;
+        }
+        
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100vh;
+            width: 20rem;
+            background-color: var(--card-bg, #ffffff);
+            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+            overflow-y: auto;
+        }
+        
+        .dark .mobile-menu {
+            background-color: var(--card-bg-dark, #1f2937);
+        }
+        
+        .mobile-menu.active {
+            transform: translateX(0);
+        }
+        
+        .badge-count {
+            position: absolute;
+            top: -0.375rem;
+            right: -0.375rem;
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            border-radius: 9999px;
+            min-width: 1.375rem;
+            height: 1.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0.5rem;
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .8;
+            }
+        }
+        
+        /* Smooth transitions for all interactive elements */
+        * {
+            transition-property: color, background-color, border-color, transform, opacity;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+        
+        /* Enhanced card hover effects */
+        .hover-lift {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        /* Loading skeleton animation */
+        @keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+        
+        .skeleton {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(to right, #f0f0f0 8%, #e0e0e0 18%, #f0f0f0 33%);
+            background-size: 1000px 100%;
+        }
+        
+        .dark .skeleton {
+            background: linear-gradient(to right, #374151 8%, #4b5563 18%, #374151 33%);
+            background-size: 1000px 100%;
+        }
+    </style>
     <script>
         // Theme init
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -39,90 +198,186 @@
         } else {
             document.documentElement.classList.remove('dark');
         }
+        
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const menu = document.getElementById('mobile-menu');
+            overlay.classList.toggle('active');
+            menu.classList.toggle('active');
+        }
+        
+        function closeMobileMenu() {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const menu = document.getElementById('mobile-menu');
+            overlay.classList.remove('active');
+            menu.classList.remove('active');
+        }
+        
+        // Close mobile menu when clicking overlay
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', closeMobileMenu);
+            }
+        });
     </script>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-    <!-- Simple header for client portal -->
-    <header class="bg-card-light dark:bg-card-dark border-b border-border-light dark:border-border-dark shadow-sm">
+    {% set current_client = get_current_client() %}
+    {% set current_endpoint = request.endpoint or '' %}
+    
+    <!-- Enhanced header for client portal -->
+    <header class="bg-card-light/95 dark:bg-card-dark/95 backdrop-blur-md border-b border-border-light dark:border-border-dark shadow-lg sticky top-0 z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <h1 class="text-xl font-bold text-primary">{{ _('Client Portal') }}</h1>
-                    {% set current_client = get_current_client() %}
+                <!-- Logo and Client Name -->
+                <div class="flex items-center space-x-4">
+                    <a href="{{ url_for('client_portal.dashboard') }}" class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                        <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-8 w-8">
+                        <h1 class="text-xl font-bold text-primary hidden sm:block">{{ _('Client Portal') }}</h1>
+                    </a>
                     {% if current_client %}
-                    <span class="ml-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ current_client.name }}</span>
+                    <div class="hidden md:flex items-center space-x-2 pl-4 border-l border-border-light dark:border-border-dark">
+                        <i class="fas fa-building text-text-muted-light dark:text-text-muted-dark"></i>
+                        <span class="text-sm font-medium text-text-light dark:text-text-dark">{{ current_client.name }}</span>
+                    </div>
                     {% endif %}
                 </div>
-                {% set current_client = get_current_client() %}
+                
+                <!-- Desktop Navigation -->
                 {% if current_client %}
-                <nav class="flex items-center space-x-4">
-                    <a href="{{ url_for('client_portal.dashboard') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-home mr-1"></i>{{ _('Dashboard') }}
+                <nav class="hidden lg:flex items-center space-x-0.5">
+                    <a href="{{ url_for('client_portal.dashboard') }}" class="client-portal-nav-item {% if current_endpoint == 'client_portal.dashboard' %}active{% endif %}">
+                        <i class="fas fa-home mr-2"></i>{{ _('Dashboard') }}
                     </a>
-                    <a href="{{ url_for('client_portal.projects') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-folder-open mr-1"></i>{{ _('Projects') }}
+                    <a href="{{ url_for('client_portal.projects') }}" class="client-portal-nav-item {% if current_endpoint == 'client_portal.projects' %}active{% endif %}">
+                        <i class="fas fa-folder-open mr-2"></i>{{ _('Projects') }}
                     </a>
-                    <a href="{{ url_for('client_portal.invoices') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-file-invoice mr-1"></i>{{ _('Invoices') }}
+                    <a href="{{ url_for('client_portal.invoices') }}" class="client-portal-nav-item {% if current_endpoint == 'client_portal.invoices' or current_endpoint == 'client_portal.view_invoice' %}active{% endif %}">
+                        <i class="fas fa-file-invoice mr-2"></i>{{ _('Invoices') }}
                     </a>
-                    <a href="{{ url_for('client_portal.time_entries') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-clock mr-1"></i>{{ _('Time Entries') }}
+                    <a href="{{ url_for('client_portal.time_entries') }}" class="client-portal-nav-item {% if current_endpoint == 'client_portal.time_entries' %}active{% endif %}">
+                        <i class="fas fa-clock mr-2"></i>{{ _('Time Entries') }}
                     </a>
-                    {% set current_client = get_current_client() %}
-                    {% if current_client %}
-                    <a href="{{ url_for('client_portal.time_entry_approvals') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors relative">
-                        <i class="fas fa-check-circle mr-1"></i>{{ _('Approvals') }}
-                        {% set approval_service = namespace(service=None) %}
-                        {% set pending_approvals = [] %}
-                        {% if current_client %}
-                            {% from app.services.client_approval_service import ClientApprovalService %}
-                            {% set service = ClientApprovalService() %}
-                            {% set pending_approvals = service.get_pending_approvals_for_client(current_client.id) %}
+                    <a href="{{ url_for('client_portal.time_entry_approvals') }}" class="client-portal-nav-item relative {% if current_endpoint == 'client_portal.time_entry_approvals' or current_endpoint == 'client_portal.view_approval' %}active{% endif %}">
+                        <i class="fas fa-check-circle mr-2"></i>{{ _('Approvals') }}
+                        {% if pending_approvals_count > 0 %}
+                        <span class="badge-count">{{ pending_approvals_count }}</span>
                         {% endif %}
-                        {% if pending_approvals|length > 0 %}
-                        <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{{ pending_approvals|length }}</span>
-                        {% endif %}
+                    </a>
+                    {% if current_client.portal_issues_enabled %}
+                    <a href="{{ url_for('client_portal.issues') }}" class="client-portal-nav-item {% if current_endpoint.startswith('client_portal.issues') %}active{% endif %}">
+                        <i class="fas fa-bug mr-2"></i>{{ _('Issues') }}
                     </a>
                     {% endif %}
-                    {% set current_client = get_current_client() %}
-                    {% if current_client and current_client.portal_issues_enabled %}
-                    <a href="{{ url_for('client_portal.issues') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-bug mr-1"></i>{{ _('Issues') }}
-                    </a>
-                    {% endif %}
-                    {% set current_client = get_current_client() %}
-                    {% if current_client %}
-                    <a href="{{ url_for('client_portal.notifications') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors relative">
-                        <i class="fas fa-bell mr-1"></i>{{ _('Notifications') }}
-                        {% set notification_service = namespace(service=None) %}
-                        {% set unread_count = 0 %}
-                        {% if current_client %}
-                            {% from app.services.client_notification_service import ClientNotificationService %}
-                            {% set service = ClientNotificationService() %}
-                            {% set unread_count = service.get_unread_count(current_client.id) %}
-                        {% endif %}
-                        {% if unread_count > 0 %}
-                        <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{{ unread_count }}</span>
+                    <a href="{{ url_for('client_portal.notifications') }}" class="client-portal-nav-item relative {% if current_endpoint == 'client_portal.notifications' %}active{% endif %}">
+                        <i class="fas fa-bell mr-2"></i>{{ _('Notifications') }}
+                        {% if unread_notifications_count > 0 %}
+                        <span class="badge-count">{{ unread_notifications_count }}</span>
                         {% endif %}
                     </a>
-                    <a href="{{ url_for('client_portal.documents') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-file-alt mr-1"></i>{{ _('Documents') }}
-                    </a>
-                    <a href="{{ url_for('client_portal.reports') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-chart-bar mr-1"></i>{{ _('Reports') }}
-                    </a>
-                    <a href="{{ url_for('client_portal.activity_feed') }}" class="text-sm text-text-light dark:text-text-dark hover:text-primary transition-colors">
-                        <i class="fas fa-history mr-1"></i>{{ _('Activity') }}
-                    </a>
-                    {% endif %}
-                    <a href="{{ url_for('client_portal.logout') }}" class="text-sm text-text-light dark:text-text-dark hover:text-red-600 transition-colors">
-                        <i class="fas fa-sign-out-alt mr-1"></i>{{ _('Logout') }}
+                    <div class="relative group">
+                        <button class="client-portal-nav-item">
+                            <i class="fas fa-ellipsis-h mr-2"></i>{{ _('More') }}
+                            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark rounded-lg shadow-lg border border-border-light dark:border-border-dark opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            <div class="py-1">
+                                <a href="{{ url_for('client_portal.documents') }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark {% if current_endpoint == 'client_portal.documents' %}text-primary font-semibold{% endif %}">
+                                    <i class="fas fa-file-alt mr-2"></i>{{ _('Documents') }}
+                                </a>
+                                <a href="{{ url_for('client_portal.reports') }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark {% if current_endpoint == 'client_portal.reports' %}text-primary font-semibold{% endif %}">
+                                    <i class="fas fa-chart-bar mr-2"></i>{{ _('Reports') }}
+                                </a>
+                                <a href="{{ url_for('client_portal.activity_feed') }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark {% if current_endpoint == 'client_portal.activity_feed' %}text-primary font-semibold{% endif %}">
+                                    <i class="fas fa-history mr-2"></i>{{ _('Activity') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('client_portal.logout') }}" class="client-portal-nav-item text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 ml-3">
+                        <i class="fas fa-sign-out-alt mr-2"></i>{{ _('Logout') }}
                     </a>
                 </nav>
+                
+                <!-- Mobile Menu Button -->
+                <button onclick="toggleMobileMenu()" class="lg:hidden p-2.5 rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:scale-105 active:scale-95" aria-label="{{ _('Toggle menu') }}">
+                    <i class="fas fa-bars text-xl text-text-light dark:text-text-dark"></i>
+                </button>
                 {% endif %}
             </div>
         </div>
     </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu-overlay" class="mobile-menu-overlay"></div>
+    
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="mobile-menu">
+        <div class="p-5 border-b border-border-light dark:border-border-dark bg-gradient-to-r from-primary/5 to-transparent">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-7 w-7">
+                    <span class="font-bold text-primary text-lg">{{ _('Client Portal') }}</span>
+                </div>
+                <button onclick="closeMobileMenu()" class="p-2.5 rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            {% if current_client %}
+            <div class="flex items-center space-x-2 text-sm">
+                <i class="fas fa-building text-text-muted-light dark:text-text-muted-dark"></i>
+                <span class="font-medium text-text-light dark:text-text-dark">{{ current_client.name }}</span>
+            </div>
+            {% endif %}
+        </div>
+        <nav class="p-4 space-y-1">
+            <a href="{{ url_for('client_portal.dashboard') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint == 'client_portal.dashboard' %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-home w-5 mr-3"></i>{{ _('Dashboard') }}
+            </a>
+            <a href="{{ url_for('client_portal.projects') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint == 'client_portal.projects' %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-folder-open w-5 mr-3"></i>{{ _('Projects') }}
+            </a>
+            <a href="{{ url_for('client_portal.invoices') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint == 'client_portal.invoices' or current_endpoint == 'client_portal.view_invoice' %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-file-invoice w-5 mr-3"></i>{{ _('Invoices') }}
+            </a>
+            <a href="{{ url_for('client_portal.time_entries') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint == 'client_portal.time_entries' %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-clock w-5 mr-3"></i>{{ _('Time Entries') }}
+            </a>
+            <a href="{{ url_for('client_portal.time_entry_approvals') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg relative transition-all duration-200 {% if current_endpoint == 'client_portal.time_entry_approvals' or current_endpoint == 'client_portal.view_approval' %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-check-circle w-5 mr-3"></i>{{ _('Approvals') }}
+                {% if pending_approvals_count > 0 %}
+                <span class="badge-count ml-auto">{{ pending_approvals_count }}</span>
+                {% endif %}
+            </a>
+            {% if current_client and current_client.portal_issues_enabled %}
+            <a href="{{ url_for('client_portal.issues') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint.startswith('client_portal.issues') %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-bug w-5 mr-3"></i>{{ _('Issues') }}
+            </a>
+            {% endif %}
+            <a href="{{ url_for('client_portal.notifications') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg relative transition-all duration-200 {% if current_endpoint == 'client_portal.notifications' %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-bell w-5 mr-3"></i>{{ _('Notifications') }}
+                {% if unread_notifications_count > 0 %}
+                <span class="badge-count ml-auto">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+            <div class="border-t border-border-light dark:border-border-dark my-3"></div>
+            <a href="{{ url_for('client_portal.documents') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:translate-x-1">
+                <i class="fas fa-file-alt w-5 mr-3"></i>{{ _('Documents') }}
+            </a>
+            <a href="{{ url_for('client_portal.reports') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:translate-x-1">
+                <i class="fas fa-chart-bar w-5 mr-3"></i>{{ _('Reports') }}
+            </a>
+            <a href="{{ url_for('client_portal.activity_feed') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:translate-x-1">
+                <i class="fas fa-history w-5 mr-3"></i>{{ _('Activity') }}
+            </a>
+            <div class="border-t border-border-light dark:border-border-dark my-3"></div>
+            <a href="{{ url_for('client_portal.logout') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 hover:translate-x-1">
+                <i class="fas fa-sign-out-alt w-5 mr-3"></i>{{ _('Logout') }}
+            </a>
+        </nav>
+    </div>
 
     <!-- Main content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -145,4 +400,3 @@
     <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
 </body>
 </html>
-

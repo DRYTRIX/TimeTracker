@@ -16,24 +16,51 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<!-- Status Filter -->
-<div class="mb-6">
-    <div class="flex gap-2">
+<!-- Enhanced Status Filter -->
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-4 mb-6">
+    <div class="flex flex-wrap gap-2">
         <a href="{{ url_for('client_portal.time_entry_approvals', status='pending') }}" 
-           class="px-4 py-2 rounded-lg {% if status_filter == 'pending' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
-            {{ _('Pending') }} {% if status_filter == 'pending' %}({{ pending_count }}){% endif %}
+           class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
+           {% if status_filter == 'pending' %}
+           bg-yellow-600 text-white shadow-md
+           {% else %}
+           bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700
+           {% endif %}">
+            <i class="fas fa-clock"></i>
+            <span>{{ _('Pending') }}</span>
+            {% if status_filter == 'pending' and pending_count > 0 %}
+            <span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-bold">{{ pending_count }}</span>
+            {% endif %}
         </a>
         <a href="{{ url_for('client_portal.time_entry_approvals', status='approved') }}" 
-           class="px-4 py-2 rounded-lg {% if status_filter == 'approved' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
-            {{ _('Approved') }}
+           class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
+           {% if status_filter == 'approved' %}
+           bg-green-600 text-white shadow-md
+           {% else %}
+           bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700
+           {% endif %}">
+            <i class="fas fa-check-circle"></i>
+            <span>{{ _('Approved') }}</span>
         </a>
         <a href="{{ url_for('client_portal.time_entry_approvals', status='rejected') }}" 
-           class="px-4 py-2 rounded-lg {% if status_filter == 'rejected' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
-            {{ _('Rejected') }}
+           class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
+           {% if status_filter == 'rejected' %}
+           bg-red-600 text-white shadow-md
+           {% else %}
+           bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700
+           {% endif %}">
+            <i class="fas fa-times-circle"></i>
+            <span>{{ _('Rejected') }}</span>
         </a>
         <a href="{{ url_for('client_portal.time_entry_approvals', status='all') }}" 
-           class="px-4 py-2 rounded-lg {% if status_filter == 'all' %}bg-primary-600 text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-secondary-200 dark:hover:bg-secondary-700{% endif %} transition-colors">
-            {{ _('All') }}
+           class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
+           {% if status_filter == 'all' %}
+           bg-primary text-white shadow-md
+           {% else %}
+           bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700
+           {% endif %}">
+            <i class="fas fa-list"></i>
+            <span>{{ _('All') }}</span>
         </a>
     </div>
 </div>
@@ -41,64 +68,109 @@
 {% if approvals %}
 <div class="space-y-4">
     {% for approval in approvals %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <div class="flex items-center gap-4 mb-2">
-                    <h3 class="text-lg font-semibold">
-                        <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}" class="text-primary hover:underline">
-                            {{ _('Time Entry') }} #{{ approval.time_entry_id }}
-                        </a>
-                    </h3>
-                    <span class="px-3 py-1 text-xs rounded-full 
-                        {% if approval.status.value == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                        {% elif approval.status.value == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                        {% elif approval.status.value == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
-                        {{ approval.status.value|title }}
-                    </span>
-                </div>
-                
-                {% if approval.time_entry %}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}:</span>
-                        <span class="font-medium">{{ approval.time_entry.project.name if approval.time_entry.project else _('N/A') }}</span>
+    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden
+        {% if approval.status.value == 'pending' %}border-l-4 border-l-yellow-500
+        {% elif approval.status.value == 'approved' %}border-l-4 border-l-green-500
+        {% elif approval.status.value == 'rejected' %}border-l-4 border-l-red-500{% endif %}">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-primary/10 p-2 rounded-lg">
+                            <i class="fas fa-file-invoice text-primary text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-text-light dark:text-text-dark">
+                                <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}" 
+                                   class="text-primary hover:text-primary/80 hover:underline">
+                                    {{ _('Time Entry') }} #{{ approval.time_entry_id }}
+                                </a>
+                            </h3>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                {{ _('Requested on') }} {{ approval.requested_at.strftime('%B %d, %Y at %H:%M') if approval.requested_at else _('N/A') }}
+                            </p>
+                        </div>
+                        <span class="ml-auto px-3 py-1.5 text-xs font-semibold rounded-full
+                            {% if approval.status.value == 'pending' %}
+                            bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
+                            {% elif approval.status.value == 'approved' %}
+                            bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                            {% elif approval.status.value == 'rejected' %}
+                            bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                            {% else %}
+                            bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300
+                            {% endif %}">
+                            <i class="fas 
+                                {% if approval.status.value == 'pending' %}fa-clock
+                                {% elif approval.status.value == 'approved' %}fa-check-circle
+                                {% elif approval.status.value == 'rejected' %}fa-times-circle
+                                {% else %}fa-question{% endif %} mr-1"></i>
+                            {{ approval.status.value|title }}
+                        </span>
                     </div>
-                    <div>
-                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}:</span>
-                        <span class="font-medium">{{ "%.2f"|format(approval.time_entry.duration_hours) }} {{ _('hours') }}</span>
+                    
+                    {% if approval.time_entry %}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="flex items-center space-x-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
+                            <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                                <i class="fas fa-folder text-blue-600 dark:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</p>
+                                <p class="font-semibold text-text-light dark:text-text-dark">
+                                    {{ approval.time_entry.project.name if approval.time_entry.project else _('N/A') }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
+                            <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                                <i class="fas fa-clock text-green-600 dark:text-green-400"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</p>
+                                <p class="font-semibold text-text-light dark:text-text-dark">
+                                    {{ "%.2f"|format(approval.time_entry.duration_hours) }} {{ _('hours') }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
+                            <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                                <i class="fas fa-calendar text-purple-600 dark:text-purple-400"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</p>
+                                <p class="font-semibold text-text-light dark:text-text-dark">
+                                    {{ approval.time_entry.start_time.strftime('%b %d, %Y') if approval.time_entry.start_time else _('N/A') }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}:</span>
-                        <span class="font-medium">{{ approval.time_entry.start_time.strftime('%Y-%m-%d') if approval.time_entry.start_time else _('N/A') }}</span>
+                    
+                    {% if approval.time_entry.description %}
+                    <div class="mb-4 p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
+                        <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Description') }}</p>
+                        <p class="text-sm text-text-light dark:text-text-dark">{{ approval.time_entry.description }}</p>
                     </div>
-                </div>
-                
-                {% if approval.time_entry.notes %}
-                <div class="mt-3">
-                    <span class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Notes') }}:</span>
-                    <p class="text-sm mt-1">{{ approval.time_entry.notes[:100] }}{% if approval.time_entry.notes|length > 100 %}...{% endif %}</p>
-                </div>
-                {% endif %}
-                {% endif %}
-                
-                {% if approval.request_comment %}
-                <div class="mt-3 p-3 bg-background-light dark:bg-background-dark rounded">
-                    <span class="text-text-muted-light dark:text-text-muted-dark text-sm font-medium">{{ _('Request Comment') }}:</span>
-                    <p class="text-sm mt-1">{{ approval.request_comment }}</p>
-                </div>
-                {% endif %}
-                
-                <div class="mt-3 text-sm text-text-muted-light dark:text-text-muted-dark">
-                    {{ _('Requested on') }} {{ approval.requested_at.strftime('%Y-%m-%d %H:%M') if approval.requested_at else _('N/A') }}
+                    {% endif %}
+                    {% endif %}
+                    
+                    {% if approval.request_comment %}
+                    <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p class="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1">
+                            <i class="fas fa-comment mr-1"></i>{{ _('Request Comment') }}
+                        </p>
+                        <p class="text-sm text-blue-900 dark:text-blue-100">{{ approval.request_comment }}</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             
-            <div class="ml-4">
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-border-light dark:border-border-dark">
                 <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}" 
-                   class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
-                    <i class="fas fa-eye mr-2"></i>{{ _('View Details') }}
+                   class="inline-flex items-center px-5 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg group">
+                    <i class="fas fa-eye mr-2"></i>
+                    <span>{{ _('View Details') }}</span>
+                    <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
                 </a>
             </div>
         </div>
@@ -106,16 +178,20 @@
     {% endfor %}
 </div>
 {% else %}
-<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
-    <i class="fas fa-check-circle text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
-    <h3 class="text-xl font-semibold mb-2">{{ _('No Approvals') }}</h3>
-    <p class="text-text-muted-light dark:text-text-muted-dark">
-        {% if status_filter == 'pending' %}
-        {{ _('You have no pending time entry approvals.') }}
-        {% else %}
-        {{ _('No approvals found for this status.') }}
-        {% endif %}
-    </p>
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-12">
+    <div class="text-center">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-8 w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+            <i class="fas fa-check-circle text-5xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">{{ _('No Approvals') }}</h3>
+        <p class="text-text-muted-light dark:text-text-muted-dark max-w-md mx-auto">
+            {% if status_filter == 'pending' %}
+            {{ _('You have no pending time entry approvals. All caught up!') }}
+            {% else %}
+            {{ _('No approvals found for this status.') }}
+            {% endif %}
+        </p>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

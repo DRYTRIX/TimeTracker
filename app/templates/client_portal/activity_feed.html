@@ -19,38 +19,69 @@
 {% if activities %}
 <div class="space-y-4">
     {% for activity in activities %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <div class="flex items-start gap-4">
-            <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-{{ activity.action_type|lower|replace('_', '-') }} text-primary-600 dark:text-primary-400"></i>
-            </div>
-            <div class="flex-1">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-semibold">{{ activity.description or activity.action_type|replace('_', ' ')|title }}</h3>
-                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {{ activity.created_at.strftime('%Y-%m-%d %H:%M') if activity.created_at else _('N/A') }}
-                    </span>
+    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+        <div class="p-6">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <i class="fas 
+                        {% if 'time' in activity.action_type|lower %}fa-clock
+                        {% elif 'invoice' in activity.action_type|lower %}fa-file-invoice
+                        {% elif 'project' in activity.action_type|lower %}fa-folder-open
+                        {% elif 'comment' in activity.action_type|lower %}fa-comment
+                        {% elif 'update' in activity.action_type|lower %}fa-edit
+                        {% elif 'create' in activity.action_type|lower %}fa-plus-circle
+                        {% elif 'delete' in activity.action_type|lower %}fa-trash
+                        {% else %}fa-circle{% endif %} 
+                        text-white"></i>
                 </div>
-                {% if activity.project %}
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                    <i class="fas fa-folder-open mr-1"></i>{{ activity.project.name }}
-                </p>
-                {% endif %}
-                {% if activity.user %}
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
-                    <i class="fas fa-user mr-1"></i>{{ activity.user.display_name if activity.user.display_name else activity.user.username }}
-                </p>
-                {% endif %}
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-text-light dark:text-text-dark mb-1">
+                                {{ activity.description or activity.action_type|replace('_', ' ')|title }}
+                            </h3>
+                            <div class="flex flex-wrap items-center gap-3 text-sm">
+                                {% if activity.project %}
+                                <div class="flex items-center space-x-1 text-text-muted-light dark:text-text-muted-dark">
+                                    <i class="fas fa-folder text-primary"></i>
+                                    <span>{{ activity.project.name }}</span>
+                                </div>
+                                {% endif %}
+                                {% if activity.user %}
+                                <div class="flex items-center space-x-1 text-text-muted-light dark:text-text-muted-dark">
+                                    <div class="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-user text-primary text-xs"></i>
+                                    </div>
+                                    <span>{{ activity.user.display_name if activity.user.display_name else activity.user.username }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="flex items-center space-x-1 text-text-muted-light dark:text-text-muted-dark">
+                                    <i class="fas fa-clock"></i>
+                                    <span>{{ activity.created_at.strftime('%b %d, %Y at %H:%M') if activity.created_at else _('N/A') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="ml-4 px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                            {{ activity.action_type|replace('_', ' ')|title }}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
-<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
-    <i class="fas fa-history text-6xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
-    <h3 class="text-xl font-semibold mb-2">{{ _('No Activity') }}</h3>
-    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No recent activity to display.') }}</p>
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-12">
+    <div class="text-center">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-8 w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+            <i class="fas fa-history text-5xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">{{ _('No Activity') }}</h3>
+        <p class="text-text-muted-light dark:text-text-muted-dark max-w-md mx-auto">
+            {{ _('No recent activity to display. Activity will appear here as projects are updated and time entries are logged.') }}
+        </p>
+    </div>
 </div>
 {% endif %}
 {% endblock %}
