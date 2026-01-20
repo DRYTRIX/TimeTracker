@@ -137,40 +137,52 @@ class StockMovement(db.Model):
             stock.adjust_on_hand(quantity)
             updated_stock = stock
 
-        # --- Lot/valuation layer tracking (best-effort, backward compatible) ---
+        # --- Lot/valuation layer tracking ---
         if update_lots:
-            try:
-                item = StockItem.query.get(stock_item_id)
-                if item and item.is_trackable:
-                    cls._apply_lot_changes(
-                        movement=movement,
-                        item=item,
-                        updated_stock=updated_stock,
-                        unit_cost=unit_cost,
-                        lot_type=lot_type,
-                        consume_from_lot_id=consume_from_lot_id,
-                    )
-            except Exception:
-                # Do not break core stock tracking if lot tracking fails;
-                # keep lots as an enhancement layer.
-                pass
+            item = StockItem.query.get(stock_item_id)
+            if item and item.is_trackable:
+                cls._apply_lot_changes(
+                    movement=movement,
+                    item=item,
+                    updated_stock=updated_stock,
+                    unit_cost=unit_cost,
+                    lot_type=lot_type,
+                    consume_from_lot_id=consume_from_lot_id,
+                )
 
         return movement, updated_stock
 
     @classmethod
-    def _ensure_legacy_lot(cls, item, warehouse_id, moved_by, updated_stock=None):
-        """If there are no lots but there is stock, seed a legacy lot."""
+    def _ensure_legacy_lot(cls, item, warehouse_id, moved_by, updated_stock=None, movement_qty=None):
+        """
+        If there are no lots but there is stock, seed a legacy lot so outflows can be allocated.
+
+        Only runs for outflows (movement_qty < 0) when called from _apply_lot_changes, or when
+        movement_qty is None (caller is record_devaluation). For outflows, uses pre-movement
+        total (updated_stock.quantity_on_hand + abs(movement_qty)) because updated_stock
+        has already been reduced by adjust_on_hand.
+        """
         from .stock_lot import StockLot
+
+        # Inbound from _apply_lot_changes: never create a legacy (we create a new lot for the inbound).
+        if movement_qty is not None and movement_qty >= 0:
+            return
 
         existing = StockLot.query.filter_by(stock_item_id=item.id, warehouse_id=warehouse_id).first()
         if existing:
             return
 
-        qty_on_hand = None
-        if updated_stock is not None:
+        if updated_stock is None:
+            return
+
+        if movement_qty is not None and movement_qty < 0:
+            # Outbound: updated_stock already reflects the reduction. Pre-movement total:
+            qty_on_hand = Decimal(str(updated_stock.quantity_on_hand or 0)) + abs(Decimal(str(movement_qty)))
+        else:
+            # record_devaluation: no prior adjust, use current stock as-is.
             qty_on_hand = Decimal(str(updated_stock.quantity_on_hand or 0))
 
-        if qty_on_hand is None or qty_on_hand <= 0:
+        if qty_on_hand <= 0:
             return
 
         legacy_cost = item.default_cost or Decimal("0")
@@ -199,9 +211,6 @@ class StockMovement(db.Model):
         qty = Decimal(str(movement.quantity or 0))
         if qty == 0:
             return
-
-        # Seed a legacy lot if needed so outflows can be allocated even for pre-lot stock.
-        cls._ensure_legacy_lot(item=item, warehouse_id=movement.warehouse_id, moved_by=movement.moved_by, updated_stock=updated_stock)
 
         # Handle inbound transfer: replicate allocations from the outbound paired movement if available.
         if qty > 0 and movement.movement_type == "transfer" and movement.reference_type == "transfer" and movement.reference_id:
@@ -312,7 +321,16 @@ class StockMovement(db.Model):
             # For rent, we don't consume from lots - this keeps the value in inventory
             # while removing physical quantity from warehouse
             return
-        
+
+        # Seed a legacy lot only for outflows when no lots exist (pre-lot stock).
+        cls._ensure_legacy_lot(
+            item=item,
+            warehouse_id=movement.warehouse_id,
+            moved_by=movement.moved_by,
+            updated_stock=updated_stock,
+            movement_qty=qty,
+        )
+
         qty_to_consume = abs(qty)
         allow_negative = movement.movement_type == "adjustment"
 

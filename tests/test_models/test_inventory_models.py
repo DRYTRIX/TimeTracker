@@ -339,6 +339,65 @@ class TestStockMovement:
         db_session.refresh(deval_lot)
         assert Decimal(str(deval_lot.quantity_on_hand)) == Decimal("0.00")
 
+    def test_first_inbound_with_no_lots_matches_warehouse_stock(self, db_session, test_user, test_stock_item, test_warehouse):
+        """First inbound (e.g. purchase) when no lots exist: sum(StockLot.quantity_on_hand) must equal WarehouseStock.quantity_on_hand."""
+        # No prior WarehouseStock or StockLot for this item/warehouse
+        StockMovement.record_movement(
+            movement_type="purchase",
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+            quantity=Decimal("10.00"),
+            moved_by=test_user.id,
+            unit_cost=Decimal("5.00"),
+            update_stock=True,
+        )
+        db_session.commit()
+
+        ws = WarehouseStock.query.filter_by(
+            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
+        ).first()
+        assert ws is not None
+        assert ws.quantity_on_hand == Decimal("10.00")
+
+        lots = StockLot.query.filter_by(
+            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
+        ).all()
+        lot_total = sum(Decimal(str(l.quantity_on_hand or 0)) for l in lots)
+        assert lot_total == ws.quantity_on_hand
+
+    def test_first_outbound_with_no_lots_matches_warehouse_stock(self, db_session, test_user, test_stock_item, test_warehouse):
+        """First outbound when no lots exist (pre-lot stock): after record_movement, sum(lots) must match WarehouseStock.quantity_on_hand."""
+        # Pre-lot: WarehouseStock exists, no StockLot (e.g. legacy data)
+        stock = WarehouseStock(
+            warehouse_id=test_warehouse.id,
+            stock_item_id=test_stock_item.id,
+            quantity_on_hand=Decimal("10.00"),
+        )
+        db_session.add(stock)
+        db_session.commit()
+        assert StockLot.query.filter_by(stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id).first() is None
+
+        StockMovement.record_movement(
+            movement_type="sale",
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+            quantity=Decimal("-3.00"),
+            moved_by=test_user.id,
+            update_stock=True,
+        )
+        db_session.commit()
+
+        ws = WarehouseStock.query.filter_by(
+            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
+        ).first()
+        assert ws.quantity_on_hand == Decimal("7.00")
+
+        lots = StockLot.query.filter_by(
+            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
+        ).all()
+        lot_total = sum(Decimal(str(l.quantity_on_hand or 0)) for l in lots)
+        assert lot_total == ws.quantity_on_hand
+
 
 class TestStockReservation:
     """Test StockReservation model"""

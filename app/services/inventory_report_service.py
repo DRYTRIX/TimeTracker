@@ -217,8 +217,8 @@ class InventoryReportService:
 
         # Get movements in the period
         query = StockMovement.query.filter(
-            StockMovement.movement_date >= start_date,
-            StockMovement.movement_date <= end_date,
+            StockMovement.moved_at >= start_date,
+            StockMovement.moved_at <= end_date,
             StockMovement.movement_type.in_(["sale", "usage", "consumption"]),
         )
 
@@ -286,8 +286,8 @@ class InventoryReportService:
         """Get stock level for an item at a specific date."""
         # Get the most recent movement before or at the date
         movement = (
-            StockMovement.query.filter(StockMovement.stock_item_id == item_id, StockMovement.movement_date <= date)
-            .order_by(StockMovement.movement_date.desc())
+            StockMovement.query.filter(StockMovement.stock_item_id == item_id, StockMovement.moved_at <= date)
+            .order_by(StockMovement.moved_at.desc())
             .first()
         )
 
@@ -318,9 +318,9 @@ class InventoryReportService:
         query = StockMovement.query
 
         if start_date:
-            query = query.filter(StockMovement.movement_date >= start_date)
+            query = query.filter(StockMovement.moved_at >= start_date)
         if end_date:
-            query = query.filter(StockMovement.movement_date <= end_date)
+            query = query.filter(StockMovement.moved_at <= end_date)
         if item_id:
             query = query.filter(StockMovement.stock_item_id == item_id)
         if warehouse_id:
@@ -328,13 +328,18 @@ class InventoryReportService:
         if movement_type:
             query = query.filter(StockMovement.movement_type == movement_type)
 
-        movements = query.order_by(StockMovement.movement_date.desc()).all()
+        movements = query.order_by(StockMovement.moved_at.desc()).all()
+
+        def _ref(m):
+            parts = [m.reference_type or "", str(m.reference_id) if m.reference_id is not None else ""]
+            s = "#".join(p for p in parts if p).strip("#") or None
+            return s
 
         return {
             "movements": [
                 {
                     "id": m.id,
-                    "date": m.movement_date.isoformat() if m.movement_date else None,
+                    "date": m.moved_at.isoformat() if m.moved_at else None,
                     "item_id": m.stock_item_id,
                     "item_sku": m.stock_item.sku if m.stock_item else None,
                     "item_name": m.stock_item.name if m.stock_item else None,
@@ -342,7 +347,7 @@ class InventoryReportService:
                     "warehouse_name": m.warehouse.name if m.warehouse else None,
                     "quantity": float(m.quantity),
                     "type": m.movement_type,
-                    "reference": m.reference,
+                    "reference": _ref(m),
                     "notes": m.notes,
                 }
                 for m in movements

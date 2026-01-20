@@ -16,7 +16,13 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-2xl mx-auto">
-    <form method="POST" action="{{ url_for('inventory.new_movement') }}">
+    <form method="POST" action="{{ url_for('inventory.new_movement') }}" id="movement_form"
+          data-hint-return="{{ _('Use a positive quantity (items coming back)') }}"
+          data-hint-waste="{{ _('Use a negative quantity (items written off)') }}"
+          data-hint-devaluation="{{ _('Quantity to revalue (positive)') }}"
+          data-hint-default="{{ _('Use positive values for additions, negative for removals') }}"
+          data-msg-return-positive="{{ _('Return requires a positive quantity.') }}"
+          data-msg-waste-negative="{{ _('Waste requires a negative quantity.') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
             <div>
@@ -53,7 +59,8 @@
             <div>
                 <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Quantity') }} *</label>
                 <input type="number" name="quantity" id="quantity" step="0.01" class="form-input" required>
-                <p class="mt-1 text-sm text-gray-500">{{ _('Use positive values for additions, negative for removals') }}</p>
+                <p class="mt-1 text-sm text-gray-500" id="quantity_hint">{{ _('Use positive values for additions, negative for removals') }}</p>
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400 hidden" id="quantity_error" role="alert"></p>
             </div>
 
             <!-- Devaluation options (Return / Waste / Devaluation) -->
@@ -112,6 +119,7 @@
 
 <script>
     (function () {
+        const form = document.getElementById('movement_form');
         const movementType = document.getElementById('movement_type');
         const section = document.getElementById('devaluation_section');
         const enabled = document.getElementById('devalue_enabled');
@@ -119,6 +127,10 @@
         const method = document.getElementById('devalue_method');
         const percentRow = document.getElementById('devalue_percent_row');
         const fixedRow = document.getElementById('devalue_fixed_row');
+        const quantityHint = document.getElementById('quantity_hint');
+        const quantityError = document.getElementById('quantity_error');
+        const devaluePercent = document.getElementById('devalue_percent');
+        const devalueUnitCost = document.getElementById('devalue_unit_cost');
 
         function refreshVisibility() {
             const type = (movementType.value || '').toLowerCase();
@@ -138,7 +150,34 @@
             const m = (method.value || 'percent');
             percentRow.classList.toggle('hidden', m !== 'percent');
             fixedRow.classList.toggle('hidden', m !== 'fixed');
+
+            // Dynamic quantity hint
+            var hintKey = type === 'return' ? 'hintReturn' : type === 'waste' ? 'hintWaste' : type === 'devaluation' ? 'hintDevaluation' : 'hintDefault';
+            quantityHint.textContent = (form.dataset[hintKey] || form.dataset.hintDefault) || '';
+
+            // Required on devaluation inputs when section is shown and method matches
+            devaluePercent.required = showFields && (m === 'percent');
+            devalueUnitCost.required = showFields && (m === 'fixed');
         }
+
+        form.addEventListener('submit', function (e) {
+            quantityError.classList.add('hidden');
+            quantityError.textContent = '';
+            var type = (movementType.value || '').toLowerCase();
+            var qty = parseFloat(form.querySelector('#quantity').value, 10);
+            if (type === 'return' && qty <= 0) {
+                e.preventDefault();
+                quantityError.textContent = form.dataset.msgReturnPositive || 'Return requires a positive quantity.';
+                quantityError.classList.remove('hidden');
+                return;
+            }
+            if (type === 'waste' && qty >= 0) {
+                e.preventDefault();
+                quantityError.textContent = form.dataset.msgWasteNegative || 'Waste requires a negative quantity.';
+                quantityError.classList.remove('hidden');
+                return;
+            }
+        });
 
         movementType.addEventListener('change', refreshVisibility);
         enabled.addEventListener('change', refreshVisibility);
