@@ -39,8 +39,12 @@ class InstallationConfig:
         return {}
 
     def _save_config(self):
-        """Save configuration to file"""
+        """Save configuration to file.
+        Merges with on-disk state so existing keys (e.g. setup_complete) are never dropped.
+        """
         try:
+            on_disk = self._load_config()
+            self._config = {**on_disk, **self._config}
             with open(self.config_path, "w") as f:
                 json.dump(self._config, f, indent=2)
         except Exception as e:
@@ -106,10 +110,12 @@ class InstallationConfig:
         self._save_config()
 
     def get_telemetry_preference(self) -> bool:
-        """Get user's telemetry preference"""
-        # Reload on read to reflect external updates (e.g., tests toggling state)
-        self._config = self._load_config()
-        return self._config.get("telemetry_enabled", False)
+        """Get user's telemetry preference.
+        Uses a local load only; does not overwrite self._config to avoid poisoning
+        the shared in-memory state when the on-disk file is corrupt or empty.
+        """
+        data = self._load_config()
+        return data.get("telemetry_enabled", False)
 
     def set_telemetry_preference(self, enabled: bool):
         """Set user's telemetry preference"""
