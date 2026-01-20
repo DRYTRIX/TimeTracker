@@ -43,13 +43,14 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <div id="gantt-container" class="overflow-x-auto">
+    <div id="gantt-container">
         <div id="gantt-chart" style="min-height: 500px;"></div>
     </div>
 </div>
 
-<!-- Include Frappe Gantt library -->
+<!-- Include Frappe Gantt library and app overrides -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gantt-chart.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
 
 <script>
@@ -136,10 +137,10 @@ async function loadGanttChart() {
             column_width: 30,
             step: 24,
             view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-            bar_height: 20,
-            bar_corner_radius: 3,
+            bar_height: 24,
+            bar_corner_radius: 6,
             arrow_curve: 5,
-            padding: 18,
+            padding: 20,
             date_format: 'YYYY-MM-DD',
             language: 'en',
             on_click: function(task) {
@@ -172,24 +173,5 @@ async function loadGanttChart() {
 }
 </script>
 
-<style>
-.gantt-container {
-    overflow-x: auto;
-}
-
-/* custom_class is on .bar-wrapper; we must target the child .bar rects */
-.gantt .bar-wrapper.gantt-project .bar { fill: #3b82f6 !important; }
-.gantt .bar-wrapper.gantt-project .bar-progress { fill: #3b82f6 !important; opacity: 0.4; }
-.gantt .bar-wrapper.gantt-task .bar { fill: #10b981 !important; }
-.gantt .bar-wrapper.gantt-task .bar-progress { fill: #10b981 !important; opacity: 0.4; }
-
-.gantt .bar-wrapper .bar {
-    cursor: pointer;
-}
-
-.gantt .bar-wrapper .bar-progress {
-    fill: rgba(0, 0, 0, 0.2);
-}
-</style>
 {% endblock %}
 

@@ -1,0 +1,262 @@
+/**
+ * Gantt Chart – styles aligned with TimeTracker app (light/dark, cards, primary)
+ * Overrides Frappe Gantt defaults. Load after frappe-gantt.css.
+ */
+
+/* ---- Chart wrapper (our #gantt-container) ---- */
+#gantt-container {
+  border-radius: 0.5rem;
+  border: 1px solid #E2E8F0;
+  overflow-x: auto;
+  background: #ffffff;
+  font-size: 13px;
+}
+.dark #gantt-container {
+  background: #2D3748;
+  border-color: #4A5568;
+}
+
+/* ---- Frappe .gantt (SVG root) ---- */
+.gantt .grid-background {
+  fill: none;
+}
+
+/* Grid header */
+.gantt .grid-header {
+  fill: #ffffff;
+  stroke: #E2E8F0;
+  stroke-width: 1.2;
+}
+.dark .gantt .grid-header {
+  fill: #2D3748;
+  stroke: #4A5568;
+}
+
+/* Grid rows – subtle alternating */
+.gantt .grid-row {
+  fill: #ffffff;
+}
+.gantt .grid-row:nth-child(even) {
+  fill: #F7F9FB;
+}
+.dark .gantt .grid-row {
+  fill: #2D3748;
+}
+.dark .gantt .grid-row:nth-child(even) {
+  fill: #374151;
+}
+
+/* Row and tick lines */
+.gantt .row-line {
+  stroke: #E2E8F0;
+}
+.dark .gantt .row-line {
+  stroke: #4A5568;
+}
+
+.gantt .tick {
+  stroke: #E2E8F0;
+  stroke-width: 0.5;
+}
+.gantt .tick.thick {
+  stroke: #E2E8F0;
+  stroke-width: 1;
+}
+.dark .gantt .tick {
+  stroke: #4A5568;
+}
+.dark .gantt .tick.thick {
+  stroke: #4A5568;
+}
+
+/* Today highlight – primary tint instead of yellow */
+.gantt .today-highlight {
+  fill: #4A90E2;
+  opacity: 0.08;
+}
+.dark .gantt .today-highlight {
+  fill: #4A90E2;
+  opacity: 0.12;
+}
+
+/* Dependency arrows */
+.gantt .arrow {
+  fill: none;
+  stroke: #A0AEC0;
+  stroke-width: 1.2;
+}
+.dark .gantt .arrow {
+  stroke: #718096;
+}
+
+/* ---- Bars (default; custom_class overrides per project/task) ---- */
+.gantt .bar {
+  fill: #b8c2cc;
+  stroke: transparent;
+  stroke-width: 0;
+  transition: stroke-width 0.2s ease, filter 0.2s ease;
+  user-select: none;
+}
+.gantt .bar-progress {
+  fill: #4A90E2;
+  opacity: 0.45;
+}
+.dark .gantt .bar {
+  fill: #4A5568;
+}
+.dark .gantt .bar-progress {
+  fill: #4A90E2;
+  opacity: 0.5;
+}
+
+/* Project (primary) and task (secondary) when no custom color */
+.gantt .bar-wrapper.gantt-project .bar {
+  fill: #4A90E2 !important;
+}
+.gantt .bar-wrapper.gantt-project .bar-progress {
+  fill: #4A90E2 !important;
+  opacity: 0.4;
+}
+.gantt .bar-wrapper.gantt-task .bar {
+  fill: #10b981 !important;
+}
+.gantt .bar-wrapper.gantt-task .bar-progress {
+  fill: #10b981 !important;
+  opacity: 0.4;
+}
+
+/* Bar hover/active – brighten; custom_class variants handle their own in JS */
+.gantt .bar-wrapper:hover .bar,
+.gantt .bar-wrapper.active .bar {
+  filter: brightness(1.08);
+}
+.gantt .bar-wrapper .bar {
+  cursor: pointer;
+}
+
+/* Invalid / placeholder bars */
+.gantt .bar-invalid {
+  fill: transparent;
+  stroke: #A0AEC0;
+  stroke-width: 1;
+  stroke-dasharray: 5;
+}
+.dark .gantt .bar-invalid {
+  stroke: #718096;
+}
+.gantt .bar-invalid ~ .bar-label {
+  fill: #718096;
+}
+.dark .gantt .bar-invalid ~ .bar-label {
+  fill: #A0AEC0;
+}
+
+/* Bar label – white on colored bars */
+.gantt .bar-label {
+  fill: #ffffff;
+  dominant-baseline: central;
+  text-anchor: middle;
+  font-size: 12px;
+  font-weight: 500;
+}
+.gantt .bar-label.big {
+  fill: #2D3748;
+  text-anchor: start;
+  font-weight: 500;
+}
+.dark .gantt .bar-label.big {
+  fill: #E2E8F0;
+}
+
+/* Resize handles */
+.gantt .handle {
+  fill: rgba(255, 255, 255, 0.9);
+  stroke: #E2E8F0;
+  stroke-width: 1;
+  cursor: ew-resize;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease;
+}
+.dark .gantt .handle {
+  fill: #4A5568;
+  stroke: #718096;
+}
+.gantt .bar-wrapper:hover .handle,
+.gantt .bar-wrapper.active .handle {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Header text (dates) */
+.gantt .upper-text {
+  fill: #A0AEC0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.gantt .lower-text {
+  fill: #2D3748;
+  font-size: 12px;
+  font-weight: 500;
+}
+.dark .gantt .upper-text {
+  fill: #718096;
+}
+.dark .gantt .lower-text {
+  fill: #E2E8F0;
+}
+
+.gantt .hide {
+  display: none;
+}
+
+/* ---- Popup (tooltip on hover) – match app card ---- */
+.gantt-container .popup-wrapper {
+  background: #ffffff;
+  color: #2D3748;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  padding: 0;
+  overflow: hidden;
+}
+.dark .gantt-container .popup-wrapper {
+  background: #2D3748;
+  color: #E2E8F0;
+  border-color: #4A5568;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.gantt-container .popup-wrapper .title {
+  border-bottom: 2px solid #4A90E2;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.dark .gantt-container .popup-wrapper .title {
+  border-bottom-color: #4A90E2;
+}
+
+.gantt-container .popup-wrapper .subtitle {
+  padding: 10px 12px;
+  color: #718096;
+  font-size: 12px;
+}
+.dark .gantt-container .popup-wrapper .subtitle {
+  color: #A0AEC0;
+}
+
+.gantt-container .popup-wrapper .pointer {
+  border-top-color: #ffffff;
+}
+.dark .gantt-container .popup-wrapper .pointer {
+  border-top-color: #2D3748;
+}
+
+/* ---- View switcher (if Frappe renders buttons in HTML) ---- */
+.gantt-container .view-mode-switcher,
+.gantt .view-mode {
+  /* Frappe 0.6.x may render mode buttons; keep fallbacks minimal */
+}
