@@ -43,13 +43,14 @@
 </div>
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <div id="gantt-container" class="overflow-x-auto">
+    <div id="gantt-container">
         <div id="gantt-chart" style="min-height: 500px;"></div>
     </div>
 </div>
 
-<!-- Include Frappe Gantt library -->
+<!-- Include Frappe Gantt library and app overrides -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gantt-chart.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
 
 <script>
@@ -80,17 +81,47 @@ async function loadGanttChart() {
     try {
         const response = await fetch(`{{ url_for('gantt.gantt_data') }}?${params}`);
         const data = await response.json();
-        
-        // Transform data for Frappe Gantt
-        const tasks = data.data.map(item => ({
-            id: item.id,
-            name: item.name,
-            start: item.start,
-            end: item.end,
-            progress: item.progress || 0,
-            dependencies: item.dependencies.join(',') || '',
-            custom_class: item.type === 'project' ? 'gantt-project' : 'gantt-task'
-        }));
+
+        // Collect custom hex colors for dynamic CSS (item.color is 6-char hex without #)
+        const customColors = new Set();
+        const tasks = data.data.map(item => {
+            const hex = (item.color && /^[0-9a-fA-F]{6}$/.test(item.color)) ? String(item.color).toLowerCase() : null;
+            const customClass = hex
+                ? 'gantt-fill-' + hex
+                : (item.type === 'project' ? 'gantt-project' : 'gantt-task');
+            if (hex) customColors.add(hex);
+            return {
+                id: item.id,
+                name: item.name,
+                start: item.start,
+                end: item.end,
+                progress: item.progress || 0,
+                dependencies: Array.isArray(item.dependencies) ? item.dependencies.join(',') : (item.dependencies || ''),
+                custom_class: customClass,
+                type: item.type,
+                project_id: item.project_id,
+                task_id: item.task_id
+            };
+        });
+
+        // Inject dynamic CSS for custom bar colors
+        let styleEl = document.getElementById('gantt-dynamic-colors');
+        if (styleEl) styleEl.remove();
+        if (customColors.size > 0) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'gantt-dynamic-colors';
+            const rules = [];
+            customColors.forEach(function(c) {
+                const h = '#' + c;
+                const sel = '.gantt .bar-wrapper.gantt-fill-' + c;
+                rules.push(sel + ' .bar { fill: ' + h + ' !important; }');
+                rules.push(sel + ' .bar-progress { fill: ' + h + ' !important; opacity: 0.4; }');
+                rules.push(sel + ':hover .bar, ' + sel + '.active .bar { fill: ' + h + ' !important; }');
+                rules.push(sel + ':hover .bar-progress, ' + sel + '.active .bar-progress { fill: ' + h + ' !important; opacity: 0.5; }');
+            });
+            styleEl.textContent = rules.join('\n');
+            document.head.appendChild(styleEl);
+        }
         
         // Destroy existing chart
         if (ganttChart) {
@@ -106,10 +137,10 @@ async function loadGanttChart() {
             column_width: 30,
             step: 24,
             view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-            bar_height: 20,
-            bar_corner_radius: 3,
+            bar_height: 24,
+            bar_corner_radius: 6,
             arrow_curve: 5,
-            padding: 18,
+            padding: 20,
             date_format: 'YYYY-MM-DD',
             language: 'en',
             on_click: function(task) {
@@ -142,26 +173,5 @@ async function loadGanttChart() {
 }
 </script>
 
-<style>
-.gantt-container {
-    overflow-x: auto;
-}
-
-.gantt-project {
-    fill: #3b82f6;
-}
-
-.gantt-task {
-    fill: #10b981;
-}
-
-.gantt .bar-wrapper .bar {
-    cursor: pointer;
-}
-
-.gantt .bar-wrapper .bar-progress {
-    fill: rgba(0, 0, 0, 0.2);
-}
-</style>
 {% endblock %}
 

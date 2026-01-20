@@ -30,6 +30,8 @@ class Project(db.Model):
     archived_at = db.Column(db.DateTime, nullable=True, index=True)
     archived_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     archived_reason = db.Column(db.Text, nullable=True)
+    # Gantt chart bar color (hex e.g. #3b82f6)
+    color = db.Column(db.String(7), nullable=True)
 
     # Relationships
     time_entries = db.relationship("TimeEntry", backref="project", lazy="dynamic", cascade="all, delete-orphan")
@@ -398,6 +400,7 @@ class Project(db.Model):
             "archived_at": self.archived_at.isoformat() if self.archived_at else None,
             "archived_by": self.archived_by,
             "archived_reason": self.archived_reason,
+            "color": self.color,
         }
         # Include favorite status if user is provided
         if user:

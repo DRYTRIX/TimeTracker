@@ -5,6 +5,7 @@ Tests for installation configuration and setup
 import os
 import json
 import pytest
+from unittest import mock
 from unittest.mock import patch
 from app.utils.installation import InstallationConfig, get_installation_config
 
@@ -157,6 +158,41 @@ class TestInstallationConfig:
         """Test that initial data seeding defaults to False"""
         # Should default to False for new installations
         assert installation_config.is_initial_data_seeded() is False
+
+    def test_set_telemetry_preference_does_not_remove_setup_complete(self, installation_config, temp_config_dir):
+        """set_telemetry_preference must not remove setup_complete from disk (Issue #436)."""
+        installation_config.mark_setup_complete(telemetry_enabled=True)
+        assert installation_config.is_setup_complete() is True
+
+        installation_config.set_telemetry_preference(True)
+        assert installation_config.is_setup_complete() is True
+        installation_config.set_telemetry_preference(False)
+        assert installation_config.is_setup_complete() is True
+
+        config_path = os.path.join(temp_config_dir, "installation.json")
+        with open(config_path, "r") as f:
+            data = json.load(f)
+        assert data.get("setup_complete") is True
+
+    def test_get_telemetry_bad_load_does_not_poison_then_wipe_setup_complete(
+        self, installation_config, temp_config_dir
+    ):
+        """A bad _load_config in get_telemetry_preference must not poison _config so that
+        a later set_telemetry_preference wipes setup_complete (Issue #436).
+        """
+        installation_config.mark_setup_complete(telemetry_enabled=False)
+        assert installation_config.is_setup_complete() is True
+
+        with mock.patch.object(installation_config, "_load_config", return_value={}):
+            _ = installation_config.get_telemetry_preference()
+
+        installation_config.set_telemetry_preference(True)
+
+        assert installation_config.is_setup_complete() is True
+        config_path = os.path.join(temp_config_dir, "installation.json")
+        with open(config_path, "r") as f:
+            data = json.load(f)
+        assert data.get("setup_complete") is True
 
 
 class TestSetupRoutes:
