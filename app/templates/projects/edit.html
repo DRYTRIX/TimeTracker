@@ -79,6 +79,15 @@
                     </div>
                 </div>
 
+                <div>
+                    <label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Gantt color') }}</label>
+                    <div class="gantt-color-picker flex items-center gap-3 mt-1">
+                        <div class="gantt-color-picker-swatch rounded border border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0" style="width:2.5rem;height:2.5rem;min-width:2.5rem;min-height:2.5rem;"></div>
+                        <input type="text" name="color" id="color" value="{{ request.form.get('color', project.color or '#3b82f6') }}" class="form-input w-28 font-mono text-sm" maxlength="7" placeholder="#3b82f6" data-color-input>
+                    </div>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Color for this project on the Gantt chart. Pick or enter a hex code (e.g. #3b82f6).') }}</p>
+                </div>
+
                 {% if custom_field_definitions %}
                 <div class="mt-6 border-t border-border-light dark:border-border-dark pt-6">
                     <h3 class="text-lg font-semibold mb-4">{{ _('Custom Fields') }}</h3>
@@ -122,6 +131,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
 <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css">
 {% endblock %}
 
 <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
@@ -198,6 +208,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+<script src="{{ url_for('static', filename='js/gantt-color-picker.js') }}"></script>
 {% endblock %}
 
 

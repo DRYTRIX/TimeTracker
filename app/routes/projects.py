@@ -31,6 +31,7 @@ from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.timezone import convert_app_datetime_to_user
 import csv
+import re
 import io
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
@@ -327,6 +328,13 @@ def create_project():
 
         project = result["project"]
 
+        # Gantt color (hex e.g. #3b82f6)
+        color_val = request.form.get("color", "").strip()
+        if color_val and re.match(r"^#[0-9A-Fa-f]{6}$", color_val):
+            project.color = color_val
+        elif color_val == "":
+            project.color = None
+
         # Parse custom fields from global definitions
         # Format: custom_field_<field_key> = value
         from app.models import CustomFieldDefinition
@@ -346,10 +354,12 @@ def create_project():
         # Set custom fields if any
         if custom_fields:
             project.custom_fields = custom_fields
-            if not safe_commit("create_project_custom_fields", {"project_id": project.id}):
-                flash(_("Could not save project custom fields due to a database error"), "error")
-                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+
+        # Persist color and/or custom fields
+        if not safe_commit("create_project_custom_fields_and_color", {"project_id": project.id}):
+            flash(_("Could not save project due to a database error"), "error")
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
 
         # Track project created event
         log_event(
@@ -844,6 +854,13 @@ def edit_project(project_id):
 
         project = result["project"]
 
+        # Gantt color (hex e.g. #3b82f6)
+        color_val = request.form.get("color", "").strip()
+        if color_val and re.match(r"^#[0-9A-Fa-f]{6}$", color_val):
+            project.color = color_val
+        elif color_val == "":
+            project.color = None
+
         # Parse custom fields from global definitions
         # Format: custom_field_<field_key> = value
         from app.models import CustomFieldDefinition
@@ -864,12 +881,12 @@ def edit_project(project_id):
         if custom_fields:
             project.custom_fields = custom_fields
         else:
-            # Clear custom fields if all are empty
+            # Clear custom fields when all are empty
             project.custom_fields = {}
         
-        # Commit custom fields changes
-        if not safe_commit("update_project_custom_fields", {"project_id": project.id}):
-            flash(_("Could not update project custom fields due to a database error"), "error")
+        # Commit custom fields and color changes
+        if not safe_commit("update_project_custom_fields_and_color", {"project_id": project.id}):
+            flash(_("Could not update project due to a database error"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
             return render_template("projects/edit.html", project=project, clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
 

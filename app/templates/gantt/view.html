@@ -80,17 +80,47 @@ async function loadGanttChart() {
     try {
         const response = await fetch(`{{ url_for('gantt.gantt_data') }}?${params}`);
         const data = await response.json();
-        
-        // Transform data for Frappe Gantt
-        const tasks = data.data.map(item => ({
-            id: item.id,
-            name: item.name,
-            start: item.start,
-            end: item.end,
-            progress: item.progress || 0,
-            dependencies: item.dependencies.join(',') || '',
-            custom_class: item.type === 'project' ? 'gantt-project' : 'gantt-task'
-        }));
+
+        // Collect custom hex colors for dynamic CSS (item.color is 6-char hex without #)
+        const customColors = new Set();
+        const tasks = data.data.map(item => {
+            const hex = (item.color && /^[0-9a-fA-F]{6}$/.test(item.color)) ? String(item.color).toLowerCase() : null;
+            const customClass = hex
+                ? 'gantt-fill-' + hex
+                : (item.type === 'project' ? 'gantt-project' : 'gantt-task');
+            if (hex) customColors.add(hex);
+            return {
+                id: item.id,
+                name: item.name,
+                start: item.start,
+                end: item.end,
+                progress: item.progress || 0,
+                dependencies: Array.isArray(item.dependencies) ? item.dependencies.join(',') : (item.dependencies || ''),
+                custom_class: customClass,
+                type: item.type,
+                project_id: item.project_id,
+                task_id: item.task_id
+            };
+        });
+
+        // Inject dynamic CSS for custom bar colors
+        let styleEl = document.getElementById('gantt-dynamic-colors');
+        if (styleEl) styleEl.remove();
+        if (customColors.size > 0) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'gantt-dynamic-colors';
+            const rules = [];
+            customColors.forEach(function(c) {
+                const h = '#' + c;
+                const sel = '.gantt .bar-wrapper.gantt-fill-' + c;
+                rules.push(sel + ' .bar { fill: ' + h + ' !important; }');
+                rules.push(sel + ' .bar-progress { fill: ' + h + ' !important; opacity: 0.4; }');
+                rules.push(sel + ':hover .bar, ' + sel + '.active .bar { fill: ' + h + ' !important; }');
+                rules.push(sel + ':hover .bar-progress, ' + sel + '.active .bar-progress { fill: ' + h + ' !important; opacity: 0.5; }');
+            });
+            styleEl.textContent = rules.join('\n');
+            document.head.appendChild(styleEl);
+        }
         
         // Destroy existing chart
         if (ganttChart) {
@@ -147,13 +177,11 @@ async function loadGanttChart() {
     overflow-x: auto;
 }
 
-.gantt-project {
-    fill: #3b82f6;
-}
-
-.gantt-task {
-    fill: #10b981;
-}
+/* custom_class is on .bar-wrapper; we must target the child .bar rects */
+.gantt .bar-wrapper.gantt-project .bar { fill: #3b82f6 !important; }
+.gantt .bar-wrapper.gantt-project .bar-progress { fill: #3b82f6 !important; opacity: 0.4; }
+.gantt .bar-wrapper.gantt-task .bar { fill: #10b981 !important; }
+.gantt .bar-wrapper.gantt-task .bar-progress { fill: #10b981 !important; opacity: 0.4; }
 
 .gantt .bar-wrapper .bar {
     cursor: pointer;

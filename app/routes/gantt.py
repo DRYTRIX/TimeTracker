@@ -98,6 +98,9 @@ def gantt_data():
             project_end = end_dt
 
         # Add project as parent task
+        proj_color = (project.color or "#3b82f6").lstrip("#")
+        if len(proj_color) != 6 or not all(c in "0123456789aAbBcCdDeEfF" for c in proj_color):
+            proj_color = "3b82f6"
         gantt_data.append(
             {
                 "id": f"project-{project.id}",
@@ -108,6 +111,7 @@ def gantt_data():
                 "type": "project",
                 "project_id": project.id,
                 "dependencies": [],
+                "color": proj_color,
             }
         )
 
@@ -129,6 +133,8 @@ def gantt_data():
 
             dependencies = []
             # Task dependencies would need to be added to Task model if needed
+            # Use project color for tasks (Task model has no color after revert)
+            task_color = proj_color
 
             gantt_data.append(
                 {
@@ -143,6 +149,7 @@ def gantt_data():
                     "parent": f"project-{project.id}",
                     "dependencies": dependencies,
                     "status": task.status,
+                    "color": task_color,
                 }
             )
 
