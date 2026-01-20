@@ -175,7 +175,7 @@
         </div>
         <div class="flex gap-2">
             {% if pagination.has_prev %}
-                <a href="{{ url_for('timer.time_entries_overview', page=pagination.prev_num, **filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="{{ url_for('timer.time_entries_overview', page=pagination.prev_num, **url_filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                     {{ _('Previous') }}
                 </a>
             {% endif %}
@@ -184,7 +184,7 @@
                     {% if page_num == pagination.page %}
                         <span class="px-3 py-1 bg-primary text-white rounded-lg">{{ page_num }}</span>
                     {% else %}
-                        <a href="{{ url_for('timer.time_entries_overview', page=page_num, **filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <a href="{{ url_for('timer.time_entries_overview', page=page_num, **url_filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                             {{ page_num }}
                         </a>
                     {% endif %}
@@ -193,7 +193,7 @@
                 {% endif %}
             {% endfor %}
             {% if pagination.has_next %}
-                <a href="{{ url_for('timer.time_entries_overview', page=pagination.next_num, **filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="{{ url_for('timer.time_entries_overview', page=pagination.next_num, **url_filters) }}" class="px-3 py-1 bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                     {{ _('Next') }}
                 </a>
             {% endif %}

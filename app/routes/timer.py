@@ -1979,6 +1979,18 @@ def time_entries_overview():
         "per_page": per_page
     }
     
+    # Build URL-safe filters for url_for (exclude dict and page; expand client_custom_field).
+    # Passing client_custom_field (a dict) or page into url_for breaks URL building and can
+    # cause 500s. Pagination links pass page explicitly, so we omit it here.
+    url_filters = {
+        k: v
+        for k, v in filters_dict.items()
+        if k not in ("client_custom_field", "page") and v is not None and v != ""
+    }
+    for k, v in (filters_dict.get("client_custom_field") or {}).items():
+        if v:
+            url_filters[f"custom_field_{k}"] = v
+    
     # Get custom field definitions for filter UI
     from app.models import CustomFieldDefinition
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
@@ -2011,6 +2023,7 @@ def time_entries_overview():
             pagination=pagination,
             can_view_all=can_view_all,
             filters=filters_dict,
+            url_filters=url_filters,
             custom_field_definitions=custom_field_definitions,
             link_templates_by_field=link_templates_by_field,
         ))
@@ -2026,6 +2039,7 @@ def time_entries_overview():
         users=users,
         can_view_all=can_view_all,
         filters=filters_dict,
+        url_filters=url_filters,
         custom_field_definitions=custom_field_definitions,
         link_templates_by_field=link_templates_by_field,
         totals={
