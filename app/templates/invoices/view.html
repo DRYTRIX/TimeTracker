@@ -27,6 +27,11 @@
             <i class="fas fa-paper-plane mr-1"></i>Send via Peppol
         </button>
         {% endif %}
+        {% if peppol_recipient_ready and (invoices_peppol_compliant or peppol_enabled) %}
+        <a href="{{ url_for('invoices.export_invoice_ubl', invoice_id=invoice.id) }}" class="bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700">
+            <i class="fas fa-file-code mr-1"></i>{{ _('Download UBL') }}
+        </a>
+        {% endif %}
         {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
         <a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
@@ -113,6 +118,17 @@
             {% endif %}
         </div>
     </div>
+
+    {% if peppol_compliance_warnings %}
+    <div class="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <h3 class="font-semibold text-amber-900 dark:text-amber-100">{{ _('PEPPOL compliance: the following are missing') }}</h3>
+        <ul class="mt-2 text-sm text-amber-800 dark:text-amber-200 list-disc list-inside space-y-1">
+            {% for msg in peppol_compliance_warnings %}
+            <li>{{ msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
     
     {% if invoice.status == 'draft' and (current_user.is_admin or has_permission('create_invoices')) %}
     <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">

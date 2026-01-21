@@ -161,7 +161,18 @@ def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: 
 
     _text(inv_el, cbc + "CustomizationID", PEPPOL_BIS3_CUSTOMIZATION_ID)
     _text(inv_el, cbc + "ProfileID", PEPPOL_BIS3_PROFILE_ID)
+    _text(inv_el, cbc + "InvoiceTypeCode", "380")  # 380 = commercial invoice (PEPPOL BT-3)
     _text(inv_el, cbc + "ID", getattr(invoice, "invoice_number", None) or str(getattr(invoice, "id", "")))
+
+    # BuyerReference (BT-10): required by PEPPOL; use buyer_reference, project name, or invoice number
+    _buyer_ref = (
+        (getattr(invoice, "buyer_reference", None) or "").strip()
+        or (getattr(getattr(invoice, "project", None), "name", None) or "").strip()
+        or (getattr(invoice, "invoice_number", None) or "").strip()
+        or str(getattr(invoice, "id", ""))
+    )
+    if _buyer_ref:
+        _text(inv_el, cbc + "BuyerReference", _buyer_ref)
 
     issue_date = getattr(invoice, "issue_date", None) or date.today()
     if hasattr(issue_date, "isoformat"):

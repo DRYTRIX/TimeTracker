@@ -51,6 +51,7 @@ class Settings(db.Model):
     peppol_access_point_token = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
     peppol_access_point_timeout = db.Column(db.Integer, default=30, nullable=True)
     peppol_provider = db.Column(db.String(50), default="generic", nullable=True)
+    invoices_peppol_compliant = db.Column(db.Boolean, default=False, nullable=False)
 
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
@@ -164,6 +165,7 @@ class Settings(db.Model):
         self.peppol_access_point_token = kwargs.get("peppol_access_point_token", "")
         self.peppol_access_point_timeout = kwargs.get("peppol_access_point_timeout", 30)
         self.peppol_provider = kwargs.get("peppol_provider", "generic")
+        self.invoices_peppol_compliant = kwargs.get("invoices_peppol_compliant", False)
 
         # Kiosk mode defaults
         self.kiosk_mode_enabled = kwargs.get("kiosk_mode_enabled", False)
@@ -373,6 +375,7 @@ class Settings(db.Model):
             "peppol_access_point_token_set": bool(getattr(self, "peppol_access_point_token", "")),
             "peppol_access_point_timeout": getattr(self, "peppol_access_point_timeout", None),
             "peppol_provider": getattr(self, "peppol_provider", "") or "",
+            "invoices_peppol_compliant": getattr(self, "invoices_peppol_compliant", False),
             "invoice_pdf_template_html": self.invoice_pdf_template_html,
             "invoice_pdf_template_css": self.invoice_pdf_template_css,
             "invoice_pdf_design_json": self.invoice_pdf_design_json,

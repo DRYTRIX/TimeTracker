@@ -530,7 +530,10 @@ class InvoicePDFGenerator:
         
         # Project
         invoice_wrapper.project = self.invoice.project
-        
+
+        # Client (for PEPPOL compliance when setting is on)
+        invoice_wrapper.client = getattr(self.invoice, "client", None)
+
         # Settings
         settings_wrapper = SimpleNamespace()
         for attr in ['company_name', 'company_address', 'company_email', 'company_phone', 
@@ -565,14 +568,27 @@ class InvoicePDFGenerator:
                 return f"{float(value):,.2f} {self.settings.currency}"
             except Exception:
                 return f"{value} {self.settings.currency}"
-        
-        return {
+
+        # PEPPOL compliance: include when invoices_peppol_compliant is on
+        result = {
             'invoice': invoice_wrapper,
             'settings': settings_wrapper,
             'get_logo_base64': get_logo_base64,
             'format_date': format_date,
             'format_money': format_money,
         }
+        if getattr(self.settings, "invoices_peppol_compliant", False):
+            client = getattr(self.invoice, "client", None)
+            result['peppol_compliance'] = {
+                'enabled': True,
+                'seller_endpoint_id': (getattr(self.settings, "peppol_sender_endpoint_id", None) or "").strip(),
+                'seller_scheme_id': (getattr(self.settings, "peppol_sender_scheme_id", None) or "").strip(),
+                'seller_vat': (getattr(self.settings, "company_tax_id", None) or "").strip(),
+                'buyer_endpoint_id': (client.get_custom_field("peppol_endpoint_id", "") or "").strip() if client else "",
+                'buyer_scheme_id': (client.get_custom_field("peppol_scheme_id", "") or "").strip() if client else "",
+                'buyer_vat': (client.get_custom_field("vat_id", "") or client.get_custom_field("tax_id", "") or "").strip() if client else "",
+            }
+        return result
     
     def _generate_pdf_with_default(self):
         """Generate PDF using default fallback ReportLab generator"""

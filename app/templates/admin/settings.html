@@ -152,6 +152,16 @@
                         </p>
                     </div>
 
+                    <div class="md:col-span-2 flex items-start">
+                        <input type="checkbox" name="invoices_peppol_compliant" id="invoices_peppol_compliant" {% if settings.invoices_peppol_compliant %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
+                        <div class="ml-2">
+                            <label for="invoices_peppol_compliant" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Make all invoices PEPPOL compliant</label>
+                            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                                When enabled, PDFs include PEPPOL/EN 16931 identifiers (seller/buyer endpoint and VAT), and warnings are shown when required data is missing. UBL for Peppol includes mandatory elements.
+                            </p>
+                        </div>
+                    </div>
+
                     <div>
                         <label for="peppol_sender_endpoint_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Endpoint ID</label>
                         <input type="text" name="peppol_sender_endpoint_id" id="peppol_sender_endpoint_id" value="{{ settings.peppol_sender_endpoint_id or '' }}" class="form-input" placeholder="e.g. 9915:BE0123456789">

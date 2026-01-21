@@ -1040,6 +1040,7 @@ def settings():
                 settings_obj.peppol_access_point_timeout = 30
 
             settings_obj.peppol_provider = (request.form.get("peppol_provider", "") or "").strip() or "generic"
+            settings_obj.invoices_peppol_compliant = request.form.get("invoices_peppol_compliant") == "on"
         except AttributeError:
             # Peppol columns don't exist yet (migration not run)
             pass

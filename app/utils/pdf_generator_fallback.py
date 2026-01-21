@@ -141,6 +141,12 @@ class InvoicePDFGeneratorFallback:
         if self.settings.company_tax_id:
             company_info.append(Paragraph(f"Tax ID: {self.settings.company_tax_id}", self.styles["NormalText"]))
 
+        if getattr(self.settings, "invoices_peppol_compliant", False):
+            sid = (getattr(self.settings, "peppol_sender_endpoint_id", None) or "").strip()
+            ssc = (getattr(self.settings, "peppol_sender_scheme_id", None) or "").strip()
+            if sid and ssc:
+                company_info.append(Paragraph(f"PEPPOL Endpoint: {ssc}:{sid}", self.styles["NormalText"]))
+
         # Invoice information (right side)
         invoice_info = []
 
@@ -200,6 +206,16 @@ class InvoicePDFGeneratorFallback:
 
         if self.invoice.client_address:
             story.append(Paragraph(self.invoice.client_address, self.styles["NormalText"]))
+
+        if getattr(self.settings, "invoices_peppol_compliant", False) and getattr(self.invoice, "client", None):
+            client = self.invoice.client
+            bvat = (client.get_custom_field("vat_id", "") or client.get_custom_field("tax_id", "") or "").strip()
+            if bvat:
+                story.append(Paragraph(f"VAT ID: {bvat}", self.styles["NormalText"]))
+            beid = (client.get_custom_field("peppol_endpoint_id", "") or "").strip()
+            bsc = (client.get_custom_field("peppol_scheme_id", "") or "").strip()
+            if beid and bsc:
+                story.append(Paragraph(f"PEPPOL Endpoint: {bsc}:{beid}", self.styles["NormalText"]))
 
         story.append(Spacer(1, 12))
 

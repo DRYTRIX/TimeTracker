@@ -41,6 +41,10 @@
                         <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Address') }}</label>
                         <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ request.form.get('client_address','') }}</textarea>
                     </div>
+                    <div class="md:col-span-2">
+                        <label for="buyer_reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
+                        <input type="text" name="buyer_reference" id="buyer_reference" value="{{ request.form.get('buyer_reference','') }}" class="form-input" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
+                    </div>
                     <div>
                         <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tax Rate (%)') }}</label>
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" class="form-input">

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, current_app
+from flask import Blueprint, Response, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
@@ -84,6 +84,7 @@ def create_invoice():
         client_name = request.form.get("client_name", "").strip()
         client_email = request.form.get("client_email", "").strip()
         client_address = request.form.get("client_address", "").strip()
+        buyer_reference = (request.form.get("buyer_reference", "") or "").strip() or None
         due_date_str = request.form.get("due_date", "").strip()
         tax_rate = request.form.get("tax_rate", "0").strip()
         notes = request.form.get("notes", "").strip()
@@ -156,6 +157,7 @@ def create_invoice():
             quote_id=quote_id,
             client_email=client_email,
             client_address=client_address,
+            buyer_reference=buyer_reference,
             tax_rate=tax_rate,
             notes=notes,
             terms=terms,
@@ -253,6 +255,28 @@ def view_invoice(invoice_id):
         # Migration might not be applied yet; don't block invoice view.
         peppol_history = []
 
+    # PEPPOL compliance warnings when invoices_peppol_compliant is on
+    peppol_compliance_warnings = []
+    try:
+        settings_obj = Settings.get_settings()
+        if getattr(settings_obj, "invoices_peppol_compliant", False):
+            if not (getattr(settings_obj, "company_tax_id", None) or "").strip():
+                peppol_compliance_warnings.append(_("Company Tax ID (VAT) is missing in Admin → Settings → Company Branding."))
+            if not (getattr(settings_obj, "peppol_sender_endpoint_id", None) or "").strip():
+                peppol_compliance_warnings.append(_("Sender Endpoint ID is missing in Admin → Settings → Peppol e-Invoicing."))
+            if not (getattr(settings_obj, "peppol_sender_scheme_id", None) or "").strip():
+                peppol_compliance_warnings.append(_("Sender Scheme ID is missing in Admin → Settings → Peppol e-Invoicing."))
+            client = getattr(invoice, "client", None)
+            if client:
+                if not (client.get_custom_field("peppol_endpoint_id", "") or "").strip():
+                    peppol_compliance_warnings.append(_("Client Peppol Endpoint ID is missing. Add peppol_endpoint_id to the client's custom fields."))
+                if not (client.get_custom_field("peppol_scheme_id", "") or "").strip():
+                    peppol_compliance_warnings.append(_("Client Peppol Scheme ID is missing. Add peppol_scheme_id to the client's custom fields."))
+            else:
+                peppol_compliance_warnings.append(_("Invoice has no linked client; buyer PEPPOL identifiers cannot be checked."))
+    except Exception:
+        pass
+
     # Get approval information
     from app.services.invoice_approval_service import InvoiceApprovalService
 
@@ -285,6 +309,8 @@ def view_invoice(invoice_id):
         peppol_history=peppol_history,
         peppol_enabled=peppol_enabled_flag,
         peppol_recipient_ready=peppol_recipient_ready,
+        peppol_compliance_warnings=peppol_compliance_warnings,
+        invoices_peppol_compliant=getattr(Settings.get_settings(), "invoices_peppol_compliant", False),
         approval=approval,
         link_templates_by_field=link_templates_by_field,
     )
@@ -306,6 +332,8 @@ def edit_invoice(invoice_id):
         invoice.client_name = request.form.get("client_name", "").strip()
         invoice.client_email = request.form.get("client_email", "").strip()
         invoice.client_address = request.form.get("client_address", "").strip()
+        _br = request.form.get("buyer_reference", "").strip()
+        invoice.buyer_reference = _br if _br else None
         invoice.due_date = datetime.strptime(request.form.get("due_date"), "%Y-%m-%d").date()
         invoice.tax_rate = Decimal(request.form.get("tax_rate", "0"))
         invoice.notes = request.form.get("notes", "").strip()
@@ -1031,6 +1059,33 @@ def export_invoice_csv(invoice_id):
     )
 
 
+@invoices_bp.route("/invoices/<int:invoice_id>/export/ubl")
+@login_required
+def export_invoice_ubl(invoice_id):
+    """Export invoice as PEPPOL UBL 2.1 XML. Requires sender and client PEPPOL ids."""
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        flash(_("You do not have permission to export this invoice"), "error")
+        return redirect(request.referrer or url_for("invoices.list_invoices"))
+    try:
+        from app.services.peppol_service import PeppolService
+        from app.integrations.peppol import build_peppol_ubl_invoice_xml
+
+        svc = PeppolService()
+        sender = svc._get_sender_party()
+        recipient_party, _, _ = svc._get_recipient_party(invoice)
+        ubl_xml, _ = build_peppol_ubl_invoice_xml(invoice=invoice, supplier=sender, customer=recipient_party)
+        fn = f"invoice_{invoice.invoice_number}.xml"
+        return Response(ubl_xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"})
+    except ValueError as e:
+        flash(_("Cannot generate UBL: %(msg)s", msg=str(e)), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
+    except Exception as e:
+        current_app.logger.exception("UBL export failed for invoice %s", invoice_id)
+        flash(_("UBL export failed: %(msg)s", msg=str(e)), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
+
+
 @invoices_bp.route("/invoices/<int:invoice_id>/export/pdf")
 @login_required
 def export_invoice_pdf(invoice_id):
@@ -1121,6 +1176,7 @@ def duplicate_invoice(invoice_id):
         client_name=original_invoice.client_name,
         client_email=original_invoice.client_email,
         client_address=original_invoice.client_address,
+        buyer_reference=original_invoice.buyer_reference,
         due_date=original_invoice.due_date + timedelta(days=30),  # 30 days from original due date
         created_by=current_user.id,
         client_id=original_invoice.client_id,
