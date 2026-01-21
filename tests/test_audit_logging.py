@@ -74,54 +74,42 @@ class TestAuditLoggingUtility:
 class TestAuditLoggingIntegration:
     """Integration tests for audit logging"""
 
-    def test_audit_logging_on_create(self, app, test_user):
+    def test_audit_logging_on_create(self, app, test_user, test_client):
         """Test that audit logs are created when entities are created"""
         with app.app_context():
-            # Create a project
-            project = Project(name="Test Project", client_id=1)  # Assuming test_client exists
+            project = Project(name="Test Project", client_id=test_client.id)
             db.session.add(project)
-            db.session.flush()  # Flush to trigger audit logging
+            db.session.flush()
 
-            # Check if audit log was created
             audit_logs = AuditLog.query.filter_by(entity_type="Project", entity_id=project.id, action="created").all()
-
-            # Note: Audit logging happens on flush, so we should have at least one log
-            # The exact behavior depends on the event listener implementation
-            assert len(audit_logs) >= 0  # May be 0 if entity_id is None before commit
+            assert len(audit_logs) >= 1, "At least one audit log should be created for entity create"
+            assert audit_logs[0].action == "created"
+            assert audit_logs[0].entity_type == "Project"
 
     def test_audit_logging_on_update(self, app, test_user, test_project):
         """Test that audit logs are created when entities are updated"""
         with app.app_context():
-            original_name = test_project.name
+            project_id = test_project.id
+            merged = db.session.merge(test_project)
+            merged.name = "Updated Project Name"
+            db.session.flush()
 
-            # Update the project
-            test_project.name = "Updated Project Name"
-            # Ensure instance is attached to the current session
-            test_project = db.session.merge(test_project)
-            db.session.flush()  # Flush to trigger audit logging
-
-            # Check if audit log was created
             audit_logs = AuditLog.query.filter_by(
-                entity_type="Project", entity_id=test_project.id, action="updated"
+                entity_type="Project", entity_id=project_id, action="updated"
             ).all()
-
-            # Note: The exact behavior depends on the event listener implementation
-            # This test verifies the mechanism works, even if no logs are created
-            # (which might happen if the entity_id is not yet available)
-            assert isinstance(audit_logs, list)
+            assert len(audit_logs) >= 1, "At least one audit log should be created for entity update"
+            assert audit_logs[0].action == "updated"
+            assert audit_logs[0].entity_type == "Project"
 
     def test_audit_logging_on_delete(self, app, test_user, test_project):
         """Test that audit logs are created when entities are deleted"""
         with app.app_context():
             project_id = test_project.id
-
-            # Delete the project
             merged = db.session.merge(test_project)
             db.session.delete(merged)
-            db.session.flush()  # Flush to trigger audit logging
+            db.session.flush()
 
-            # Check if audit log was created
             audit_logs = AuditLog.query.filter_by(entity_type="Project", entity_id=project_id, action="deleted").all()
-
-            # Note: The exact behavior depends on the event listener implementation
-            assert isinstance(audit_logs, list)
+            assert len(audit_logs) >= 1, "At least one audit log should be created for entity delete"
+            assert audit_logs[0].action == "deleted"
+            assert audit_logs[0].entity_type == "Project"

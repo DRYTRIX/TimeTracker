@@ -119,12 +119,10 @@ class AuditLog(db.Model):
         )
 
         try:
-            # Add to session - don't commit here as we're likely in the middle of a transaction
-            # The main transaction will commit everything together
+            # Add to session - don't commit here as we're likely in the middle of a transaction.
+            # The main flush (or the explicit session.flush() in receive_after_flush for creates)
+            # will persist the audit row.
             db.session.add(audit_log)
-            # Flush to ensure the audit log is part of the current transaction
-            # but don't commit - let the main transaction handle that
-            db.session.flush()
         except Exception as e:
             # Don't rollback - that would rollback the entire transaction including the main operation!
             # Just remove the audit log from the session and continue
