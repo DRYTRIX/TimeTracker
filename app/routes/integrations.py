@@ -75,8 +75,12 @@ def connect_integration(provider):
     if provider == "caldav_calendar":
         return redirect(url_for("integrations.caldav_setup"))
 
-    # Google Calendar and CalDAV are per-user, all others are global
-    is_global = provider not in ("google_calendar", "caldav_calendar")
+    # ActivityWatch doesn't use OAuth - redirect to setup form
+    if provider == "activitywatch":
+        return redirect(url_for("integrations.activitywatch_setup"))
+
+    # Google Calendar, CalDAV, and ActivityWatch are per-user, all others are global
+    is_global = provider not in ("google_calendar", "caldav_calendar", "activitywatch")
 
     if is_global:
         # For global integrations, check if one exists
@@ -295,7 +299,7 @@ def manage_integration(provider):
     settings = Settings.get_settings()
 
     # Get or create integration
-    is_global = provider not in ("google_calendar", "caldav_calendar")
+    is_global = provider not in ("google_calendar", "caldav_calendar", "activitywatch")
     integration = None
     if is_global:
         integration = service.get_global_integration(provider)
@@ -1028,6 +1032,123 @@ def caldav_setup():
     )
 
 
+@integrations_bp.route("/integrations/activitywatch/setup", methods=["GET", "POST"])
+@login_required
+def activitywatch_setup():
+    """Setup ActivityWatch integration (no OAuth, config only)."""
+    from urllib.parse import urlparse
+
+    from app.models import Project
+
+    service = IntegrationService()
+
+    # Get or create integration
+    existing = Integration.query.filter_by(provider="activitywatch", user_id=current_user.id, is_global=False).first()
+    if existing:
+        integration = existing
+    else:
+        result = service.create_integration("activitywatch", user_id=current_user.id, is_global=False)
+        if not result["success"]:
+            flash(result["message"], "error")
+            return redirect(url_for("integrations.list_integrations"))
+        integration = result["integration"]
+
+    connector = None
+    try:
+        connector = service.get_connector(integration)
+    except Exception as e:
+        logger.debug(f"Could not initialize ActivityWatch connector (may be normal during setup): {e}")
+
+    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+
+    if request.method == "POST":
+        server_url = request.form.get("server_url", "").strip()
+        default_project_id = request.form.get("default_project_id", "").strip()
+        lookback_days_str = request.form.get("lookback_days", "7") or "7"
+        bucket_ids = request.form.get("bucket_ids", "").strip()
+        auto_sync = request.form.get("auto_sync") == "on"
+        sync_interval = request.form.get("sync_interval", "manual") or "manual"
+
+        errors = []
+
+        if not server_url:
+            errors.append(_("ActivityWatch server URL is required."))
+        else:
+            try:
+                parsed = urlparse(server_url)
+                if not parsed.scheme or not parsed.netloc:
+                    errors.append(_("Server URL must be a valid URL (e.g., http://localhost:5600)."))
+            except Exception:
+                errors.append(_("Server URL format is invalid."))
+
+        if default_project_id:
+            try:
+                project_id_int = int(default_project_id)
+                project = Project.query.filter_by(id=project_id_int, status="active").first()
+                if not project:
+                    errors.append(_("Selected project not found or is not active."))
+            except ValueError:
+                errors.append(_("Invalid project selected."))
+
+        try:
+            lookback_days = int(lookback_days_str)
+            if lookback_days < 1 or lookback_days > 90:
+                errors.append(_("Lookback days must be between 1 and 90."))
+        except ValueError:
+            errors.append(_("Lookback days must be a valid number."))
+            lookback_days = 7
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return render_template(
+                "integrations/activitywatch_setup.html",
+                integration=integration,
+                connector=connector,
+                projects=projects,
+            )
+
+        if not integration.config:
+            integration.config = {}
+        integration.config["server_url"] = server_url.rstrip("/")
+        integration.config["default_project_id"] = int(default_project_id) if default_project_id else None
+        integration.config["lookback_days"] = lookback_days
+        integration.config["bucket_ids"] = bucket_ids if bucket_ids else None
+        integration.config["auto_sync"] = auto_sync
+        integration.config["sync_interval"] = sync_interval
+        from sqlalchemy.orm.attributes import flag_modified
+
+        flag_modified(integration, "config")
+
+        test_result = service.test_connection(integration.id, current_user.id)
+        if test_result.get("success"):
+            integration.is_active = True
+            integration.last_error = None
+        else:
+            integration.is_active = False
+            integration.last_error = test_result.get("message", "Connection test failed")
+
+        if safe_commit("activitywatch_setup", {"integration_id": integration.id}):
+            if test_result.get("success"):
+                flash(_("ActivityWatch integration configured successfully."), "success")
+                return redirect(url_for("integrations.view_integration", integration_id=integration.id))
+            else:
+                flash(
+                    _("Configuration saved but connection test failed: %(message)s", message=test_result.get("message", "")),
+                    "warning",
+                )
+                return redirect(url_for("integrations.view_integration", integration_id=integration.id))
+        else:
+            flash(_("Failed to save ActivityWatch configuration."), "error")
+
+    return render_template(
+        "integrations/activitywatch_setup.html",
+        integration=integration,
+        connector=connector,
+        projects=projects,
+    )
+
+
 @integrations_bp.route("/integrations/<provider>/webhook", methods=["POST"])
 def integration_webhook(provider):
     """Handle incoming webhooks from integration providers."""
@@ -1115,7 +1236,7 @@ def setup_wizard(provider):
     description = getattr(connector_class, "description", None) or ""
     
     # Get or create integration
-    is_global = provider not in ("google_calendar", "caldav_calendar")
+    is_global = provider not in ("google_calendar", "caldav_calendar", "activitywatch")
     integration = None
     if is_global:
         integration = service.get_global_integration(provider)
@@ -1314,7 +1435,7 @@ def test_connection_wizard(provider):
     service = IntegrationService()
     
     # Get integration
-    is_global = provider not in ("google_calendar", "caldav_calendar")
+    is_global = provider not in ("google_calendar", "caldav_calendar", "activitywatch")
     if is_global:
         integration = service.get_global_integration(provider)
     else:

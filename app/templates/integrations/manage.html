@@ -36,8 +36,8 @@
         </div>
     </div>
     {% endif %}
-    <!-- OAuth Credentials Setup Section (Admin only, not for CalDAV) -->
-    {% if current_user.is_admin and provider != 'caldav_calendar' %}
+    <!-- OAuth Credentials Setup Section (Admin only, not for CalDAV or ActivityWatch) -->
+    {% if current_user.is_admin and provider not in ('caldav_calendar', 'activitywatch') %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
         <h2 class="text-lg font-semibold mb-4">
             <i class="fas fa-key mr-2"></i>{{ _('OAuth Credentials Setup') }}
@@ -618,6 +618,16 @@
             </p>
             <a href="{{ url_for('integrations.caldav_setup') }}" class="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-cog mr-2"></i>{{ _('Setup CalDAV Integration') }}
+            </a>
+        </div>
+        {% elif provider == 'activitywatch' %}
+        <!-- ActivityWatch setup -->
+        <div class="space-y-4">
+            <p class="text-text-muted-light dark:text-text-muted-dark">
+                {{ _('ActivityWatch imports window and web activity from your local aw-server. Click below to configure.') }}
+            </p>
+            <a href="{{ url_for('integrations.activitywatch_setup') }}" class="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-cog mr-2"></i>{{ _('Setup ActivityWatch Integration') }}
             </a>
         </div>
         {% elif provider == 'trello' %}
