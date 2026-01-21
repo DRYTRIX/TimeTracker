@@ -39,6 +39,7 @@ class ReportEmailSchedule(db.Model):
     salesman_field_name = db.Column(db.String(50), nullable=True)  # Custom field name for salesman (default: 'salesman')
     email_distribution_mode = db.Column(db.String(20), nullable=True)  # 'mapping', 'template', 'single'
     recipient_email_template = db.Column(db.String(255), nullable=True)  # e.g., '{value}@test.de' for template mode
+    use_last_month_dates = db.Column(db.Boolean, default=False, nullable=False)  # For monthly: use previous calendar month as date range
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

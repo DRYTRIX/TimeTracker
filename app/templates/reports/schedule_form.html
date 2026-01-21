@@ -32,8 +32,11 @@
                     <i class="fas fa-envelope mr-2"></i>{{ _('Email Recipients') }} *
                 </label>
                 <input type="text" id="recipients" name="recipients" required class="form-input" placeholder="{{ _('email1@example.com, email2@example.com') }}">
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1" id="recipientsHelpDefault">
                     <i class="fas fa-info-circle mr-1"></i>{{ _('Enter one or more email addresses separated by commas. These recipients will receive the scheduled report via email.') }}
+                </p>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 hidden" id="recipientsHelpFallback">
+                    <i class="fas fa-info-circle mr-1"></i>{{ _('When using Mapping or Template, these are used as fallback if no address is found for a value.') }}
                 </p>
             </div>
             
@@ -46,6 +49,14 @@
                     <option value="monthly">{{ _('Monthly') }}</option>
                     <option value="custom-cron">{{ _('Custom (Cron)') }}</option>
                 </select>
+            </div>
+            
+            <div id="lastMonthField" class="hidden">
+                <label class="flex items-center cursor-pointer pt-8">
+                    <input type="checkbox" id="use_last_month_dates" name="use_last_month_dates" value="1" class="form-checkbox">
+                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Use previous calendar month as date range') }}</span>
+                </label>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 ml-6">{{ _('For monthly runs: report will use the first and last day of the previous month.') }}</p>
             </div>
             
             <div id="cronField" class="hidden">
@@ -62,10 +73,25 @@
                     <input type="checkbox" id="split_by_custom_field" name="split_by_custom_field" value="1" class="form-checkbox" onchange="toggleCustomFieldInput()">
                     <label for="split_by_custom_field" class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Split report by custom field value') }}</label>
                 </div>
-                <div id="customFieldInput" class="hidden">
-                    <label for="custom_field_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Custom Field Name') }}</label>
-                    <input type="text" id="custom_field_name" name="custom_field_name" class="form-input" placeholder="salesman">
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The custom field name to iterate over (e.g., "salesman"). A separate report will be generated for each unique value.') }}</p>
+                <div id="customFieldInput" class="hidden space-y-4 mt-3">
+                    <div>
+                        <label for="custom_field_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Custom Field Name') }}</label>
+                        <input type="text" id="custom_field_name" name="custom_field_name" class="form-input" placeholder="salesman">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The custom field name to iterate over (e.g., "salesman"). A separate report will be generated for each unique value.') }}</p>
+                    </div>
+                    <div>
+                        <label for="email_distribution_mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Email distribution') }}</label>
+                        <select id="email_distribution_mode" name="email_distribution_mode" class="form-input" onchange="toggleRecipientTemplateInput()">
+                            <option value="single">{{ _('All reports to recipients below') }}</option>
+                            <option value="mapping">{{ _('Per value: SalesmanEmailMapping table') }}</option>
+                            <option value="template">{{ _('Per value: email from template') }}</option>
+                        </select>
+                    </div>
+                    <div id="recipientTemplateInput" class="hidden">
+                        <label for="recipient_email_template" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Recipient email template') }}</label>
+                        <input type="text" id="recipient_email_template" name="recipient_email_template" class="form-input" placeholder="{value}@test.de">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Use {value} for the value (e.g. KF); {value}@test.de yields KF@test.de. Use {value_lower} for lowercase, e.g. {value_lower}@test.de yields kf@test.de.') }}</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -86,17 +112,64 @@ function toggleCronField() {
     } else {
         cronField.classList.add('hidden');
     }
+    toggleLastMonthField();
 }
 
 function toggleCustomFieldInput() {
     const splitCheckbox = document.getElementById('split_by_custom_field');
     const customFieldInput = document.getElementById('customFieldInput');
+    const recipientsHelpDefault = document.getElementById('recipientsHelpDefault');
+    const recipientsHelpFallback = document.getElementById('recipientsHelpFallback');
     if (splitCheckbox.checked) {
         customFieldInput.classList.remove('hidden');
+        const mode = document.getElementById('email_distribution_mode').value;
+        if (mode === 'mapping' || mode === 'template') {
+            recipientsHelpDefault.classList.add('hidden');
+            recipientsHelpFallback.classList.remove('hidden');
+        }
+        toggleRecipientTemplateInput();
     } else {
         customFieldInput.classList.add('hidden');
+        recipientsHelpDefault.classList.remove('hidden');
+        recipientsHelpFallback.classList.add('hidden');
     }
 }
+
+function toggleRecipientTemplateInput() {
+    const mode = document.getElementById('email_distribution_mode').value;
+    const recipientTemplateInput = document.getElementById('recipientTemplateInput');
+    const recipientsHelpDefault = document.getElementById('recipientsHelpDefault');
+    const recipientsHelpFallback = document.getElementById('recipientsHelpFallback');
+    if (mode === 'template') {
+        recipientTemplateInput.classList.remove('hidden');
+    } else {
+        recipientTemplateInput.classList.add('hidden');
+    }
+    const splitCheckbox = document.getElementById('split_by_custom_field');
+    if (splitCheckbox.checked) {
+        if (mode === 'mapping' || mode === 'template') {
+            recipientsHelpDefault.classList.add('hidden');
+            recipientsHelpFallback.classList.remove('hidden');
+        } else {
+            recipientsHelpDefault.classList.remove('hidden');
+            recipientsHelpFallback.classList.add('hidden');
+        }
+    }
+}
+
+function toggleLastMonthField() {
+    const cadence = document.getElementById('cadence').value;
+    const lastMonthField = document.getElementById('lastMonthField');
+    if (lastMonthField) {
+        if (cadence === 'monthly') {
+            lastMonthField.classList.remove('hidden');
+        } else {
+            lastMonthField.classList.add('hidden');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() { toggleCronField(); });
 </script>
 {% endblock %}
 
