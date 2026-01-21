@@ -73,3 +73,36 @@ Your adapter should:
 
 If the adapter returns HTTP \(\ge 400\), TimeTracker marks the attempt as **failed** and stores the error.
 
+## Make all invoices PEPPOL compliant
+
+In **Admin → Settings → Peppol e-Invoicing** you can enable **Make all invoices PEPPOL compliant**. When this is on:
+
+- **PDFs** include PEPPOL/EN 16931 identifiers (seller and buyer endpoint and VAT) where configured.
+- **Invoice view** shows warnings when required data is missing (company Tax ID, sender Endpoint/Scheme ID, or client `peppol_endpoint_id` / `peppol_scheme_id`).
+- **UBL** generated for Peppol includes mandatory BIS Billing 3.0 elements: `InvoiceTypeCode` (380) and `BuyerReference` (from invoice, project name, or invoice number).
+
+You can optionally set **Buyer reference (PEPPOL BT-10)** on each invoice (create/edit). If left empty, the UBL uses the project name or invoice number.
+
+When the setting is on **and** the client has Peppol endpoint details, the invoice view shows a **Download UBL** button to save the UBL 2.1 XML file.
+
+## Migrations
+
+After pulling these changes, run:
+
+```bash
+flask db upgrade
+```
+
+This applies:
+
+- `112_add_invoices_peppol_compliant` (adds `settings.invoices_peppol_compliant`)
+- `113_add_invoice_buyer_reference` (adds `invoices.buyer_reference`)
+
+## Testing
+
+With your virtual environment activated:
+
+```bash
+pytest tests/test_peppol_service.py -v
+```
+

@@ -96,6 +96,9 @@
         .sidebar-collapsed .sidebar-header-title { display: none; }
         .sidebar-collapsed #workDropdown, .sidebar-collapsed #insightsDropdown { display: none; }
         .sidebar-collapsed #sidebar { width: 4rem !important; overflow-x: hidden; }
+        /* Multi-line sidebar labels: left-align wrapped text, allow flex shrink for wrapping, keep icons/chevron centered */
+        #sidebar .sidebar-nav-item span.sidebar-label { text-align: start; min-width: 0; flex: 1 1 0%; }
+        #sidebar .sidebar-nav-item > i { flex-shrink: 0; }
         /* Shared bulk menu */
         .bulk-menu { z-index: 50; max-height: 16rem; overflow-y: auto; }
         /* Layout fixes */
@@ -257,14 +260,14 @@
                 </div>
                 <ul>
                     <li>
-                        <a href="{{ url_for('main.dashboard') }}" class="flex items-center p-2 rounded-lg {% if ep == 'main.dashboard' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <a href="{{ url_for('main.dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.dashboard' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-tachometer-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Dashboard') }}</span>
                         </a>
                     </li>
                     {% if is_module_enabled('calendar') %}
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('calendarDropdown')" data-dropdown="calendarDropdown" class="w-full flex items-center p-2 rounded-lg {% if calendar_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('calendarDropdown')" data-dropdown="calendarDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if calendar_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-calendar-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Calendar') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -286,7 +289,7 @@
                     </li>
                     {% endif %}
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('workDropdown')" data-dropdown="workDropdown" class="w-full flex items-center p-2 rounded-lg {% if work_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('workDropdown')" data-dropdown="workDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if work_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-briefcase w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Time Tracking') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -368,7 +371,7 @@
                         </ul>
                     </li>
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('crmDropdown')" data-dropdown="crmDropdown" class="w-full flex items-center p-2 rounded-lg {% if crm_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('crmDropdown')" data-dropdown="crmDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if crm_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-handshake w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('CRM') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -416,7 +419,7 @@
                         </ul>
                     </li>
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('financeDropdown')" data-dropdown="financeDropdown" class="w-full flex items-center p-2 rounded-lg {% if finance_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('financeDropdown')" data-dropdown="financeDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if finance_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-dollar-sign w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Finance & Expenses') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -466,6 +469,20 @@
                                     </li>
                                     {% endif %}
                                 </ul>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('custom_reports') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'custom_reports.report_builder' or ep == 'custom_reports.view_custom_report' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.report_builder') }}">
+                                    <i class="fas fa-magic w-4 mr-2"></i>{{ _('Report Builder') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('scheduled_reports') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('scheduled_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('scheduled_reports.list_scheduled') }}">
+                                    <i class="fas fa-clock w-4 mr-2"></i>{{ _('Scheduled Reports') }}
+                                </a>
                             </li>
                             {% endif %}
                             {% if is_module_enabled('invoices') %}
@@ -535,7 +552,7 @@
                     </li>
                     {% if is_module_enabled('inventory') and (current_user.is_admin or has_permission('view_inventory')) %}
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" class="w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-boxes w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Inventory') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -612,7 +629,7 @@
                     {% endif %}
                     {% if is_module_enabled('analytics') %}
                     <li class="mt-2">
-                        <a href="{{ url_for('analytics.analytics_dashboard') }}" class="flex items-center p-2 rounded-lg {% if analytics_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <a href="{{ url_for('analytics.analytics_dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if analytics_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Analytics') }}</span>
                         </a>
@@ -620,7 +637,7 @@
                     {% endif %}
                     {% if is_module_enabled('integrations') or is_module_enabled('import_export') or is_module_enabled('saved_filters') %}
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('toolsDropdown')" data-dropdown="toolsDropdown" class="w-full flex items-center p-2 rounded-lg {% if tools_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('toolsDropdown')" data-dropdown="toolsDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if tools_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-tools w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Tools & Data') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -655,7 +672,7 @@
                     {% endif %}
                     {% if current_user.is_admin or has_any_permission('view_users', 'manage_settings', 'view_system_info', 'manage_backups') %}
                     <li class="mt-2">
-                        <button onclick="toggleDropdown('adminDropdown')" data-dropdown="adminDropdown" class="w-full flex items-center p-2 rounded-lg {% if admin_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <button onclick="toggleDropdown('adminDropdown')" data-dropdown="adminDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if admin_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-cog w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Admin') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -874,19 +891,19 @@
             <div class="mt-auto pt-4 border-t border-border-light dark:border-border-dark">
                 <ul>
                     <li>
-                        <a href="{{ url_for('main.about') }}" class="flex items-center p-2 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
+                        <a href="{{ url_for('main.about') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
                             <i class="fas fa-circle-info w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('About') }}</span>
                         </a>
                     </li>
                     <li class="mt-2">
-                        <a href="{{ url_for('main.help') }}" class="flex items-center p-2 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
+                        <a href="{{ url_for('main.help') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
                             <i class="fas fa-life-ring w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Help') }}</span>
                         </a>
                     </li>
                     <li class="mt-2">
-                        <a href="{{ url_for('main.donate') }}" class="flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group">
+                        <a href="{{ url_for('main.donate') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group">
                             <i class="fas fa-mug-saucer w-6 text-center group-hover:scale-110 transition-transform"></i>
                             <span class="ml-3 sidebar-label font-medium">{{ _('Support Development') }}</span>
                             <span class="ml-auto text-xs opacity-70">☕</span>

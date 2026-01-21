@@ -84,7 +84,7 @@ def check_audit_setup():
             time.sleep(0.1)  # Small delay to ensure commit completed
             
             recent_logs = AuditLog.query.filter_by(
-                entity_type="time_entry",
+                entity_type="TimeEntry",
                 entity_id=test_entry.id,
                 action="updated"
             ).order_by(AuditLog.created_at.desc()).limit(1).all()

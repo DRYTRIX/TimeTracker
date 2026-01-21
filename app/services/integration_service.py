@@ -76,8 +76,8 @@ class IntegrationService:
         if provider not in self._connector_registry:
             return {"success": False, "message": f"Provider {provider} is not available."}
 
-        # Google Calendar and CalDAV are per-user, all others are global
-        if provider in ("google_calendar", "caldav_calendar"):
+        # Google Calendar, CalDAV, and ActivityWatch are per-user, all others are global
+        if provider in ("google_calendar", "caldav_calendar", "activitywatch"):
             is_global = False
             if not user_id:
                 return {"success": False, "message": f"{provider} integration requires a user_id."}

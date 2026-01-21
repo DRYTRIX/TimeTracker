@@ -109,6 +109,7 @@ def create_scheduled():
         custom_field_name = request.form.get("custom_field_name", "").strip() or None
         email_distribution_mode = request.form.get("email_distribution_mode", "").strip() or None
         recipient_email_template = request.form.get("recipient_email_template", "").strip() or None
+        use_last_month_dates = request.form.get("use_last_month_dates") == "1"
 
         if not saved_view_id or not recipients or not cadence:
             flash(_("Please fill in all required fields."), "error")
@@ -129,6 +130,7 @@ def create_scheduled():
             custom_field_name=custom_field_name,
             email_distribution_mode=email_distribution_mode,
             recipient_email_template=recipient_email_template,
+            use_last_month_dates=use_last_month_dates,
         )
 
         if result["success"]:
@@ -171,6 +173,7 @@ def api_create_scheduled():
     custom_field_name = data.get("custom_field_name", "").strip() or None
     email_distribution_mode = data.get("email_distribution_mode", "").strip() or None
     recipient_email_template = data.get("recipient_email_template", "").strip() or None
+    use_last_month_dates = data.get("use_last_month_dates", False)
 
     if not saved_view_id or not recipients or not cadence:
         return jsonify({"success": False, "error": _("Please fill in all required fields.")}), 400
@@ -189,6 +192,7 @@ def api_create_scheduled():
         custom_field_name=custom_field_name,
         email_distribution_mode=email_distribution_mode,
         recipient_email_template=recipient_email_template,
+        use_last_month_dates=use_last_month_dates,
     )
 
     if result["success"]:

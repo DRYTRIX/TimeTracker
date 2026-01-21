@@ -135,3 +135,7 @@ def test_peppol_service_success_creates_transmission(app, monkeypatch):
         assert found is not None
         assert found.status == "sent"
 
+        # UBL must include PEPPOL mandatory elements (InvoiceTypeCode 380, BuyerReference)
+        assert "InvoiceTypeCode" in tx.ubl_xml and "380" in tx.ubl_xml
+        assert "BuyerReference" in tx.ubl_xml
+

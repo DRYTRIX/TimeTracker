@@ -152,77 +152,55 @@ def serialize_value(value):
     return str(value)
 
 
-def receive_after_flush(session, flush_context):
-    """Track changes after flush but before commit"""
-    try:
-        # Check if audit_logs table exists before trying to log
-        # Force check every 100 calls to allow for table creation after migration
-        if not hasattr(receive_after_flush, "_call_count"):
-            receive_after_flush._call_count = 0
-        receive_after_flush._call_count += 1
+# Call count for table-exists check (force recheck every 100) and warning/debug logs
+_audit_call_count = 0
 
-        # Force check every 100 calls or if cache is None
-        force_check = receive_after_flush._call_count % 100 == 0
+
+def receive_before_flush(session, flush_context, instances=None):
+    """Track updates and deletes before flush; stash new objects for receive_after_flush.
+
+    At before_flush, session.dirty, session.deleted, and attribute history are still
+    valid. session.new is present but new objects do not have ids yet, so we stash
+    them in session.info to be logged in after_flush when ids are available.
+
+    Note: SQLAlchemy's before_flush passes (session, flush_context, instances);
+    we use session.new/dirty/deleted directly, so instances is not used.
+    """
+    global _audit_call_count
+    try:
+        if flush_context and getattr(flush_context, "nested", False):
+            return
+
+        _audit_call_count += 1
+        force_check = _audit_call_count % 100 == 0
         table_exists = check_audit_table_exists(force_check=force_check)
         if not table_exists:
-            # Log at info level (not debug) so it's visible if table doesn't exist
-            if receive_after_flush._call_count == 1 or force_check:
+            if _audit_call_count == 1 or force_check:
                 logger.warning("audit_logs table does not exist - audit logging disabled. Run migration: flask db upgrade")
             return
-        
-        # Log that the event listener is being triggered (only first few times for debugging)
-        if receive_after_flush._call_count <= 3:
-            logger.debug(f"Audit logging event listener triggered (call #{receive_after_flush._call_count})")
 
         user_id = get_current_user_id()
         ip_address, user_agent, request_path = get_request_info()
 
-        # Track inserts (creates)
-        for instance in session.new:
-            if should_track_model(instance):
-                entity_type = get_entity_type(instance)
-                entity_id = instance.id if hasattr(instance, "id") else None
-                entity_name = get_entity_name(instance)
-
-                # Log creation
-                AuditLog = get_audit_log_model()
-                AuditLog.log_change(
-                    user_id=user_id,
-                    action="created",
-                    entity_type=entity_type,
-                    entity_id=entity_id,
-                    entity_name=entity_name,
-                    change_description=f"Created {entity_type.lower()} '{entity_name}'",
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    request_path=request_path,
-                )
-
-        # Track updates
+        # Track updates (dirty) - attribute history is still valid in before_flush
         for instance in session.dirty:
             if should_track_model(instance):
                 entity_type = get_entity_type(instance)
                 entity_id = instance.id if hasattr(instance, "id") else None
                 entity_name = get_entity_name(instance)
 
-                # Get the instance state using SQLAlchemy inspect
                 try:
                     instance_state = inspect(instance)
-
-                    # Track individual field changes
                     changed_fields = []
                     for attr_name in instance_state.mapper.column_attrs.keys():
                         if should_track_field(attr_name):
-                            # Get history for this attribute
                             history = instance_state.get_history(attr_name, True)
                             if history.has_changes():
                                 old_value = history.deleted[0] if history.deleted else None
                                 new_value = history.added[0] if history.added else None
-
                                 if old_value != new_value:
                                     changed_fields.append({"field": attr_name, "old": old_value, "new": new_value})
 
-                    # Log each field change separately for detailed audit trail
                     AuditLog = get_audit_log_model()
                     if changed_fields:
                         for change in changed_fields:
@@ -241,7 +219,6 @@ def receive_after_flush(session, flush_context):
                                 request_path=request_path,
                             )
                     else:
-                        # Fallback: log update without field details if history is not available
                         AuditLog.log_change(
                             user_id=user_id,
                             action="updated",
@@ -254,7 +231,6 @@ def receive_after_flush(session, flush_context):
                             request_path=request_path,
                         )
                 except Exception as e:
-                    # Fallback: log update without field details if inspection fails
                     logger.warning(f"Could not inspect changes for {entity_type}#{entity_id}: {e}")
                     AuditLog = get_audit_log_model()
                     AuditLog.log_change(
@@ -275,8 +251,6 @@ def receive_after_flush(session, flush_context):
                 entity_type = get_entity_type(instance)
                 entity_id = instance.id if hasattr(instance, "id") else None
                 entity_name = get_entity_name(instance)
-
-                # Log deletion
                 try:
                     AuditLog = get_audit_log_model()
                     AuditLog.log_change(
@@ -290,14 +264,58 @@ def receive_after_flush(session, flush_context):
                         user_agent=user_agent,
                         request_path=request_path,
                     )
-                    logger.debug(f"Audit log: Deleted {entity_type}#{entity_id} by user#{user_id}")
                 except Exception as log_error:
-                    # Log the error but don't break the main flow
                     logger.error(f"Failed to log audit entry for deletion of {entity_type}#{entity_id}: {log_error}", exc_info=True)
 
+        # Stash new (creates) for after_flush when instance.id is available
+        info = getattr(session, "info", None)
+        if info is not None:
+            info["_audit_pending_creates"] = [o for o in session.new if should_track_model(o)]
+
     except Exception as e:
-        # Don't let audit logging break the main flow
-        logger.error(f"Error in audit logging: {e}", exc_info=True)
+        logger.error(f"Error in audit logging (before_flush): {e}", exc_info=True)
+
+
+def receive_after_flush(session, flush_context):
+    """Log creates from stashed new objects (now with ids) and flush audit rows."""
+    try:
+        if flush_context and getattr(flush_context, "nested", False):
+            return
+
+        table_exists = check_audit_table_exists(force_check=False)
+        if not table_exists:
+            return
+
+        user_id = get_current_user_id()
+        ip_address, user_agent, request_path = get_request_info()
+
+        info = getattr(session, "info", None)
+        pending = info.pop("_audit_pending_creates", []) if info is not None else []
+
+        for instance in pending:
+            entity_type = get_entity_type(instance)
+            entity_id = getattr(instance, "id", None)
+            if entity_id is None:
+                continue
+            entity_name = get_entity_name(instance)
+            AuditLog = get_audit_log_model()
+            AuditLog.log_change(
+                user_id=user_id,
+                action="created",
+                entity_type=entity_type,
+                entity_id=entity_id,
+                entity_name=entity_name,
+                change_description=f"Created {entity_type.lower()} '{entity_name}'",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                request_path=request_path,
+            )
+
+        if pending:
+            session.flush()
+
+    except Exception as e:
+        logger.error(f"Error in audit logging (after_flush): {e}", exc_info=True)
 
 
 def check_audit_table_exists(force_check=False):

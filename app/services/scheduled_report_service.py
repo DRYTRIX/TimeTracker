@@ -38,6 +38,7 @@ class ScheduledReportService:
         custom_field_name: Optional[str] = None,
         email_distribution_mode: Optional[str] = None,
         recipient_email_template: Optional[str] = None,
+        use_last_month_dates: bool = False,
     ) -> Dict[str, Any]:
         """
         Create a scheduled report.
@@ -75,6 +76,7 @@ class ScheduledReportService:
                 salesman_field_name=custom_field_name,  # Reuse existing field
                 email_distribution_mode=email_distribution_mode or ("single" if not split_by_custom_field else None),
                 recipient_email_template=recipient_email_template,
+                use_last_month_dates=use_last_month_dates,
             )
 
             db.session.add(schedule)
@@ -350,6 +352,17 @@ class ScheduledReportService:
             if not custom_field_name:
                 custom_field_name = schedule.salesman_field_name or saved_view.iterative_custom_field_name or "salesman"
             
+            # Override with previous calendar month when schedule has use_last_month_dates and cadence is monthly
+            if schedule.cadence == "monthly" and getattr(schedule, "use_last_month_dates", False):
+                now = now_in_app_timezone()
+                first_of_this = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                last_of_prev = first_of_this - timedelta(days=1)
+                first_of_prev = last_of_prev.replace(day=1)
+                if "filters" not in config:
+                    config["filters"] = {}
+                config["filters"]["start_date"] = first_of_prev.strftime("%Y-%m-%d")
+                config["filters"]["end_date"] = last_of_prev.strftime("%Y-%m-%d")
+            
             # Get date range from config or use defaults
             # Config can have filters at top level or nested
             filters = config.get("filters", {}) if isinstance(config.get("filters"), dict) else {}
@@ -536,10 +549,10 @@ class ScheduledReportService:
                 return default_recipients
         
         elif distribution_mode == "template":
-            # Use email template
+            # Use email template; supports {value} and {value_lower} (e.g. {value_lower}@test.de -> kf@test.de)
             template = schedule.recipient_email_template
-            if template and "{value}" in template:
-                email = template.replace("{value}", field_value)
+            if template and ("{value}" in template or "{value_lower}" in template):
+                email = template.replace("{value_lower}", field_value.lower()).replace("{value}", field_value)
                 return [email]
             else:
                 logger.warning(f"Invalid email template '{template}', using default recipients")

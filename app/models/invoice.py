@@ -14,6 +14,7 @@ class Invoice(db.Model):
     client_name = db.Column(db.String(200), nullable=False)
     client_email = db.Column(db.String(200), nullable=True)
     client_address = db.Column(db.Text, nullable=True)
+    buyer_reference = db.Column(db.String(200), nullable=True)  # PEPPOL BT-10 / EN 16931
     # Link to clients table (enforced by DB schema)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
     quote_id = db.Column(db.Integer, db.ForeignKey("quotes.id"), nullable=True, index=True)
@@ -81,6 +82,7 @@ class Invoice(db.Model):
         # Set optional fields
         self.client_email = kwargs.get("client_email")
         self.client_address = kwargs.get("client_address")
+        self.buyer_reference = kwargs.get("buyer_reference")
         self.issue_date = kwargs.get("issue_date", datetime.utcnow().date())
         self.notes = kwargs.get("notes")
         self.terms = kwargs.get("terms")
@@ -252,6 +254,7 @@ class Invoice(db.Model):
             "client_name": self.client_name,
             "client_email": self.client_email,
             "client_address": self.client_address,
+            "buyer_reference": self.buyer_reference,
             "client_id": self.client_id,
             "quote_id": self.quote_id,
             "issue_date": self.issue_date.isoformat() if self.issue_date else None,

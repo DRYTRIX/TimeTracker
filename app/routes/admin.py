@@ -949,6 +949,16 @@ def settings():
         "kiosk_default_movement_type": getattr(settings_obj, "kiosk_default_movement_type", "adjustment"),
     }
 
+    # Module visibility: non-CORE modules for admin toggles
+    from app.utils.module_registry import ModuleRegistry, ModuleCategory
+
+    ModuleRegistry.initialize_defaults()
+    modules_by_category = {}
+    for cat in ModuleCategory:
+        mods = [m for m in ModuleRegistry.get_by_category(cat) if m.category != ModuleCategory.CORE]
+        if mods:
+            modules_by_category[cat] = mods
+
     if request.method == "POST":
         # Validate timezone
         timezone = request.form.get("timezone") or settings_obj.timezone
@@ -964,6 +974,8 @@ def settings():
                 timezones=timezones,
                 kiosk_settings=kiosk_settings,
                 peppol_env_enabled=peppol_env_enabled,
+                modules_by_category=modules_by_category,
+                ModuleCategory=ModuleCategory,
             )
 
         # Update basic settings
@@ -1028,6 +1040,7 @@ def settings():
                 settings_obj.peppol_access_point_timeout = 30
 
             settings_obj.peppol_provider = (request.form.get("peppol_provider", "") or "").strip() or "generic"
+            settings_obj.invoices_peppol_compliant = request.form.get("invoices_peppol_compliant") == "on"
         except AttributeError:
             # Peppol columns don't exist yet (migration not run)
             pass
@@ -1059,6 +1072,15 @@ def settings():
             app_module.log_event("admin.analytics_toggled", user_id=current_user.id, new_state=allow_analytics)
             app_module.track_event(current_user.id, "admin.analytics_toggled", {"enabled": allow_analytics})
 
+        # Module visibility: build disabled_module_ids from unchecked module_enabled_* checkboxes
+        if hasattr(settings_obj, "disabled_module_ids"):
+            disabled = []
+            for mods in modules_by_category.values():
+                for m in mods:
+                    if ("module_enabled_" + m.id) not in request.form:
+                        disabled.append(m.id)
+            settings_obj.disabled_module_ids = disabled
+
         # Ensure settings object is in the session (important for new instances)
         if settings_obj not in db.session:
             db.session.add(settings_obj)
@@ -1071,6 +1093,8 @@ def settings():
                 timezones=timezones,
                 kiosk_settings=kiosk_settings,
                 peppol_env_enabled=peppol_env_enabled,
+                modules_by_category=modules_by_category,
+                ModuleCategory=ModuleCategory,
             )
         # #region agent log
         try:
@@ -1099,6 +1123,8 @@ def settings():
         timezones=timezones,
         kiosk_settings=kiosk_settings,
         peppol_env_enabled=peppol_env_enabled,
+        modules_by_category=modules_by_category,
+        ModuleCategory=ModuleCategory,
     )
 
 

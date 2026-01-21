@@ -21,6 +21,11 @@
     <!-- Sidebar: Data Sources & Components -->
     <div class="lg:col-span-1">
         <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow sticky top-4">
+            <h3 class="font-semibold mb-2">{{ _('Quick start') }}</h3>
+            <button type="button" onclick="applyUnpaidPreset()" class="w-full mb-4 p-3 text-left border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>{{ _('Unpaid time entries') }}
+            </button>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Time entries, unpaid only, last 30 days') }}</p>
             <h3 class="font-semibold mb-4">{{ _('Data Sources') }}</h3>
             <div class="space-y-2" id="dataSources">
                 {% for source in data_sources %}
@@ -101,7 +106,7 @@
                         </span>
                     </label>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-                        {{ _('Show only billable hours that have not been invoiced') }}
+                        {{ _('Unpaid = billable, not yet on any invoice.') }}
                     </p>
                 </div>
                 
@@ -220,6 +225,8 @@ let reportConfig = {
     filters: {}
 };
 
+const canvas = document.getElementById('reportCanvas');
+
 {% if saved_view %}
 // Load saved configuration when editing
 (function() {
@@ -233,7 +240,6 @@ let reportConfig = {
     };
     
     // Clear canvas first
-    const canvas = document.getElementById('reportCanvas');
     canvas.innerHTML = '<p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">{{ _("Drag data sources and components here to build your report") }}</p>';
     
     // Load data source
@@ -290,6 +296,7 @@ let reportConfig = {
 // Drag and drop handlers
 document.querySelectorAll('[draggable="true"]').forEach(item => {
     item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'copy';
         e.dataTransfer.setData('text/plain', JSON.stringify({
             type: item.dataset.source ? 'source' : 'component',
             id: item.dataset.source || item.dataset.component
@@ -297,7 +304,23 @@ document.querySelectorAll('[draggable="true"]').forEach(item => {
     });
 });
 
-const canvas = document.getElementById('reportCanvas');
+// Click to add (alternative to drag-and-drop)
+document.querySelectorAll('#dataSources [data-source]').forEach(item => {
+    item.addEventListener('click', (e) => {
+        const sourceId = item.getAttribute('data-source');
+        if (sourceId) {
+            reportConfig.data_source = sourceId;
+            addDataSourceToCanvas(sourceId);
+        }
+    });
+});
+document.querySelectorAll('[data-component]').forEach(item => {
+    item.addEventListener('click', (e) => {
+        const compId = item.getAttribute('data-component');
+        if (compId) addComponentToCanvas(compId);
+    });
+});
+
 canvas.addEventListener('dragover', (e) => {
     e.preventDefault();
     canvas.classList.add('border-primary');
@@ -633,25 +656,24 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Saving...") }}';
     
-    try {
-        const name = document.getElementById('reportName').value.trim();
-        const scope = document.getElementById('reportScope').value;
-        
-        // Validate name
-        if (!name) {
-            alert('{{ _("Please enter a report name") }}');
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalButtonText;
-            return;
-        }
-        
-        // Validate data source is selected
-        if (!reportConfig.data_source) {
-            alert('{{ _("Please select a data source first") }}');
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalButtonText;
-            return;
-        }
+    const name = document.getElementById('reportName').value.trim();
+    const scope = document.getElementById('reportScope').value;
+    
+    // Validate name
+    if (!name) {
+        alert('{{ _("Please enter a report name") }}');
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+        return;
+    }
+    
+    // Validate data source is selected
+    if (!reportConfig.data_source) {
+        alert('{{ _("Please select a data source first") }}');
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+        return;
+    }
     
     // Collect filters
     reportConfig.filters = {
@@ -789,6 +811,20 @@ document.getElementById('filterCustomFieldName')?.addEventListener('change', fun
         valueInput.value = '';
     }
 });
+
+function applyUnpaidPreset() {
+    addDataSourceToCanvas('time_entries');
+    const unpaidCb = document.getElementById('filterUnpaidOnly');
+    if (unpaidCb) unpaidCb.checked = true;
+    var end = new Date();
+    var start = new Date();
+    start.setDate(start.getDate() - 30);
+    var fmt = function(d) { return d.toISOString().slice(0, 10); };
+    var startEl = document.getElementById('filterStartDate');
+    var endEl = document.getElementById('filterEndDate');
+    if (startEl) startEl.value = fmt(start);
+    if (endEl) endEl.value = fmt(end);
+}
 
 // Show time entries filters only when time_entries is selected
 function updateFiltersVisibility() {

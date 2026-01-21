@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('ActivityWatch Setup') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Integrations', 'url': url_for('integrations.list_integrations')},
+    {'text': 'ActivityWatch Setup'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-desktop',
+    title_text=_('ActivityWatch Setup'),
+    subtitle_text=_('Import window and web activity from ActivityWatch (aw-server) as automatic time entries'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-lg font-semibold mb-4">{{ _('Server Connection') }}</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="server_url" class="block text-sm font-medium mb-2">
+                            {{ _('ActivityWatch Server URL') }} <span class="text-red-500">*</span>
+                        </label>
+                        <input type="url" 
+                               name="server_url" 
+                               id="server_url" 
+                               value="{{ integration.config.get('server_url', '') if integration.config else '' }}"
+                               class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                               placeholder="http://localhost:5600"
+                               required>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Base URL of your aw-server (no trailing slash). aw-server must be running and reachable from this server.') }}
+                            {{ _('Use http://localhost:5600 if TimeTracker runs on the same machine.') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-semibold mb-4">{{ _('Import Settings') }}</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="default_project_id" class="block text-sm font-medium mb-2">
+                            {{ _('Default Project') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                        </label>
+                        {% if projects %}
+                        <select name="default_project_id" 
+                                id="default_project_id" 
+                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                            <option value="">{{ _('No project (import without project)') }}</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" 
+                                    {% if integration.config and integration.config.get('default_project_id') == project.id %}selected{% endif %}>
+                                {{ project.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Assign imported activity events to this project. Leave empty to import without a project.') }}
+                        </p>
+                        {% else %}
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                            <p class="text-sm text-blue-800 dark:text-blue-200">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                {{ _('No active projects found. Events will be imported without a project.') }}
+                                {{ _('You can create a project later and assign events to it.') }}
+                            </p>
+                            <a href="{{ url_for('projects.create_project') }}" class="mt-2 inline-block text-sm text-blue-800 dark:text-blue-200 hover:underline">
+                                {{ _('Create a project') }} →
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="lookback_days" class="block text-sm font-medium mb-2">
+                            {{ _('Lookback Days') }}
+                        </label>
+                        <input type="number" 
+                               name="lookback_days" 
+                               id="lookback_days" 
+                               value="{{ integration.config.get('lookback_days', 7) if integration.config else 7 }}"
+                               min="1"
+                               max="90"
+                               class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('How many days back to import on full sync (1–90, default: 7).') }}
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <label for="bucket_ids" class="block text-sm font-medium mb-2">
+                            {{ _('Bucket IDs') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
+                        </label>
+                        <textarea name="bucket_ids" 
+                                  id="bucket_ids" 
+                                  rows="2"
+                                  class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                                  placeholder="aw-watcher-window_hostname, aw-watcher-web_hostname">{{ integration.config.get('bucket_ids', '') if integration.config else '' }}</textarea>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Comma-separated or JSON array. Leave empty to use all aw-watcher-window_* and aw-watcher-web_* buckets.') }}
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" 
+                                   name="auto_sync" 
+                                   id="auto_sync"
+                                   {% if integration.config and integration.config.get('auto_sync') %}checked{% endif %}
+                                   class="mr-2">
+                            <span class="text-sm">{{ _('Enable automatic sync') }}</span>
+                        </label>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                            {{ _('Automatically sync activity on a schedule. You can also trigger manual syncs.') }}
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <label for="sync_interval" class="block text-sm font-medium mb-2">
+                            {{ _('Sync Schedule') }}
+                        </label>
+                        <select name="sync_interval" 
+                                id="sync_interval" 
+                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                            <option value="manual" {% if not integration.config or integration.config.get('sync_interval', 'manual') == 'manual' %}selected{% endif %}>{{ _('Manual only') }}</option>
+                            <option value="hourly" {% if integration.config and integration.config.get('sync_interval') == 'hourly' %}selected{% endif %}>{{ _('Every hour') }}</option>
+                            <option value="daily" {% if integration.config and integration.config.get('sync_interval') == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-4">
+            <button type="submit" 
+                    class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
+            </button>
+            <a href="{{ url_for('integrations.list_integrations') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+
+{% if integration.config.get('server_url') %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <h3 class="text-lg font-semibold mb-4">{{ _('Test & Sync') }}</h3>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+        {{ _('After saving, you can test the connection and run a sync from the integration page.') }}
+    </p>
+    <a href="{{ url_for('integrations.view_integration', integration_id=integration.id) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-block">
+        <i class="fas fa-vial mr-2"></i>{{ _('Test Connection') }}
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -116,6 +116,10 @@
                 <a href="{{ url_for('integrations.caldav_setup') }}" class="mt-2 inline-block text-sm text-red-800 dark:text-red-200 hover:underline">
                     {{ _('Configure CalDAV Integration') }} →
                 </a>
+                {% elif integration.provider == 'activitywatch' %}
+                <a href="{{ url_for('integrations.activitywatch_setup') }}" class="mt-2 inline-block text-sm text-red-800 dark:text-red-200 hover:underline">
+                    {{ _('Configure ActivityWatch') }} →
+                </a>
                 {% endif %}
             </div>
             {% endif %}
@@ -148,6 +152,10 @@
                 </form>
                 {% if integration.provider == 'caldav_calendar' %}
                 <a href="{{ url_for('integrations.caldav_setup') }}" class="block w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-center">
+                    <i class="fas fa-cog mr-2"></i>{{ _('Edit Configuration') }}
+                </a>
+                {% elif integration.provider == 'activitywatch' %}
+                <a href="{{ url_for('integrations.activitywatch_setup') }}" class="block w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-center">
                     <i class="fas fa-cog mr-2"></i>{{ _('Edit Configuration') }}
                 </a>
                 {% endif %}

@@ -323,8 +323,9 @@ def create_app(config=None):
     from sqlalchemy.orm import Session
     
     # Register with generic SQLAlchemy Session (catches all Session instances)
+    event.listen(Session, "before_flush", audit.receive_before_flush)
     event.listen(Session, "after_flush", audit.receive_after_flush)
-    
+
     # Also register with Flask-SQLAlchemy's sessionmaker if available
     # Flask-SQLAlchemy creates sessions from a sessionmaker, so we register with that
     try:
@@ -335,19 +336,21 @@ def create_app(config=None):
                 # Register with the session class that the sessionmaker creates
                 session_class = sessionmaker.class_
                 if session_class:
+                    event.listen(session_class, "before_flush", audit.receive_before_flush)
                     event.listen(session_class, "after_flush", audit.receive_after_flush)
                     logger.info(f"Registered audit logging with Flask-SQLAlchemy session class: {session_class.__name__}")
     except Exception as e:
         logger.debug(f"Could not register with Flask-SQLAlchemy sessionmaker: {e}")
-    
+
     # Register with SignallingSession (Flask-SQLAlchemy 2.x)
     try:
         from flask_sqlalchemy import SignallingSession
+        event.listen(SignallingSession, "before_flush", audit.receive_before_flush)
         event.listen(SignallingSession, "after_flush", audit.receive_after_flush)
         logger.info("Registered audit logging with Flask-SQLAlchemy SignallingSession")
     except (ImportError, AttributeError):
         pass
-    
+
     logger.info("Audit logging event listeners registered")
 
     # Initialize Settings from environment variables on startup.
