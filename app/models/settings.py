@@ -55,6 +55,9 @@ class Settings(db.Model):
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
 
+    # Module visibility: admin-disabled module IDs (e.g. ["gantt", "leads"]). Empty/None = all enabled.
+    disabled_module_ids = db.Column(db.JSON, default=list, nullable=True)
+
     # Kiosk mode settings
     kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
     kiosk_auto_logout_minutes = db.Column(db.Integer, default=15, nullable=False)
@@ -374,6 +377,7 @@ class Settings(db.Model):
             "invoice_pdf_template_css": self.invoice_pdf_template_css,
             "invoice_pdf_design_json": self.invoice_pdf_design_json,
             "allow_analytics": self.allow_analytics,
+            "disabled_module_ids": (self.disabled_module_ids if self.disabled_module_ids is not None else []),
             "mail_enabled": self.mail_enabled,
             "mail_server": self.mail_server,
             "mail_port": self.mail_port,

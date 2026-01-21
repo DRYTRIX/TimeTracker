@@ -263,6 +263,49 @@
                 </div>
             </div>
 
+            <!-- Module visibility -->
+            {% if modules_by_category is defined and modules_by_category %}
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('Module Visibility') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Disable modules to hide them from all users. Disabled modules will not appear in the sidebar. Core modules (Dashboard, Projects, Timer, etc.) are always enabled.') }}
+                </p>
+                {% set _d = (settings.disabled_module_ids or []) %}
+                <div class="space-y-6">
+                    {% for category, modules in modules_by_category.items() %}
+                    <div>
+                        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-3">
+                            {% if category == ModuleCategory.TIME_TRACKING %}{{ _('Time Tracking') }}
+                            {% elif category == ModuleCategory.PROJECT_MANAGEMENT %}{{ _('Project Management') }}
+                            {% elif category == ModuleCategory.CRM %}{{ _('CRM') }}
+                            {% elif category == ModuleCategory.FINANCE %}{{ _('Finance & Expenses') }}
+                            {% elif category == ModuleCategory.INVENTORY %}{{ _('Inventory') }}
+                            {% elif category == ModuleCategory.ANALYTICS %}{{ _('Analytics') }}
+                            {% elif category == ModuleCategory.TOOLS %}{{ _('Tools & Data') }}
+                            {% elif category == ModuleCategory.ADVANCED %}{{ _('Advanced') }}
+                            {% else %}{{ category.value|title }}{% endif %}
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {% for module in modules %}
+                            <div class="flex items-center">
+                                <input type="checkbox" name="module_enabled_{{ module.id }}" id="module_enabled_{{ module.id }}"
+                                    {% if module.id not in _d %}checked{% endif %}
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <label for="module_enabled_{{ module.id }}" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                                    {{ module.name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Disabling "Reports" hides the whole Reports submenu including Report Builder and Scheduled Reports.') }}
+                </p>
+            </div>
+            {% endif %}
+
             <!-- Analytics Settings -->
             <div>
                 <h2 class="text-lg font-semibold mb-4">{{ _('Privacy & Analytics') }}</h2>

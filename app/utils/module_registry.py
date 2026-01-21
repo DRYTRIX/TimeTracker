@@ -107,7 +107,13 @@ class ModuleRegistry:
         for dep_id in module.dependencies:
             if not cls.is_enabled(dep_id, settings, user):
                 return False
-        
+
+        # Admin-disabled modules (settings.disabled_module_ids)
+        if settings:
+            disabled = getattr(settings, "disabled_module_ids", None) or []
+            if isinstance(disabled, list) and module_id in disabled:
+                return False
+
         return True
     
     @classmethod
