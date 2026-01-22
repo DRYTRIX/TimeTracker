@@ -72,6 +72,7 @@ def create():
     target_hours = request.form.get("target_hours", type=float)
     week_start_date_str = request.form.get("week_start_date")
     notes = request.form.get("notes", "").strip()
+    exclude_weekends = request.form.get("exclude_weekends") == "1"
 
     if not target_hours or target_hours <= 0:
         flash(_("Please enter a valid target hours (greater than 0)"), "error")
@@ -100,7 +101,11 @@ def create():
 
     # Create new goal
     goal = WeeklyTimeGoal(
-        user_id=current_user.id, target_hours=target_hours, week_start_date=week_start_date, notes=notes
+        user_id=current_user.id, 
+        target_hours=target_hours, 
+        week_start_date=week_start_date, 
+        notes=notes,
+        exclude_weekends=exclude_weekends
     )
 
     db.session.add(goal)
@@ -159,13 +164,20 @@ def view(goal_id):
     daily_hours = {}
     for entry in time_entries:
         entry_date = entry.start_time.date()
+        # If exclude_weekends is True, skip weekend entries
+        if goal.exclude_weekends and entry_date.weekday() >= 5:
+            continue
         if entry_date not in daily_hours:
             daily_hours[entry_date] = 0
         daily_hours[entry_date] += entry.duration_seconds / 3600
 
-    # Fill in missing days with 0
+    # Fill in missing days with 0 (excluding weekends if exclude_weekends is True)
     current_date = goal.week_start_date
     while current_date <= goal.week_end_date:
+        # Skip weekends if exclude_weekends is True
+        if goal.exclude_weekends and current_date.weekday() >= 5:
+            current_date += timedelta(days=1)
+            continue
         if current_date not in daily_hours:
             daily_hours[current_date] = 0
         current_date += timedelta(days=1)
@@ -204,6 +216,7 @@ def edit(goal_id):
     target_hours = request.form.get("target_hours", type=float)
     notes = request.form.get("notes", "").strip()
     status = request.form.get("status")
+    exclude_weekends = request.form.get("exclude_weekends") == "1"
 
     if not target_hours or target_hours <= 0:
         flash(_("Please enter a valid target hours (greater than 0)"), "error")
@@ -211,8 +224,17 @@ def edit(goal_id):
 
     # Update goal
     old_target = goal.target_hours
+    old_exclude_weekends = goal.exclude_weekends
     goal.target_hours = target_hours
     goal.notes = notes
+    goal.exclude_weekends = exclude_weekends
+    
+    # If exclude_weekends changed, recalculate week_end_date
+    if old_exclude_weekends != exclude_weekends:
+        if exclude_weekends:
+            goal.week_end_date = goal.week_start_date + timedelta(days=4)  # Monday to Friday
+        else:
+            goal.week_end_date = goal.week_start_date + timedelta(days=6)  # Monday to Sunday
 
     if status and status in ["active", "completed", "failed", "cancelled"]:
         goal.status = status

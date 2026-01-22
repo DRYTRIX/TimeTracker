@@ -13,6 +13,11 @@
             </h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">
                 {{ goal.week_label }}
+                {% if goal.exclude_weekends %}
+                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    <i class="fas fa-calendar-week mr-1"></i> {{ _('5-day work week') }}
+                </span>
+                {% endif %}
             </p>
         </div>
         <div class="flex space-x-2">
@@ -121,10 +126,15 @@
         
         <div class="space-y-2">
             {% for date, hours in daily_hours.items() %}
-            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+            {% set is_weekend = date.weekday() >= 5 %}
+            {% if not goal.exclude_weekends or not is_weekend %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg {% if is_weekend and goal.exclude_weekends %}opacity-50{% endif %}">
                 <div>
                     <p class="font-medium text-gray-900 dark:text-white">
                         {{ date.strftime('%A, %B %d') }}
+                        {% if is_weekend and goal.exclude_weekends %}
+                        <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">({{ _('excluded') }})</span>
+                        {% endif %}
                     </p>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -132,13 +142,15 @@
                         {{ "%.2f"|format(hours) }} hours
                     </span>
                     <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        {% set daily_target = goal.target_hours / 7 %}
+                        {% set work_days = 5 if goal.exclude_weekends else 7 %}
+                        {% set daily_target = goal.target_hours / work_days %}
                         {% set daily_percentage = (hours / daily_target * 100) if daily_target > 0 else 0 %}
                         <div class="bg-blue-500 rounded-full h-2" 
                              style="width: {{ [daily_percentage, 100]|min }}%"></div>
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
     </div>
