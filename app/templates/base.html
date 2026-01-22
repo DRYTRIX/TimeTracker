@@ -247,7 +247,7 @@
                 {% set tools_open = ep.startswith('import_export.') or ep.startswith('saved_filters.') or ep.startswith('integrations.') or ep == 'integrations.list_integrations' or ep == 'integrations.manage_integration' or ep == 'integrations.view_integration' or ep == 'integrations.connect_integration' or ep == 'integrations.caldav_setup' %}
                 {% set admin_open = ep.startswith('admin.') or ep.startswith('permissions.') or (ep.startswith('expense_categories.') and current_user.is_admin) or (ep.startswith('per_diem.list_rates') and current_user.is_admin) or ep.startswith('time_entry_templates.') or ep.startswith('audit_logs.') or ep.startswith('webhooks.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
                 {% set admin_user_mgmt_open = ep == 'admin.list_users' or ep.startswith('permissions.') %}
-                {% set admin_settings_open = ep == 'admin.settings' or ep == 'admin.email_support' or ep.startswith('admin.') and ('email_template' in ep or 'email-templates' in request.path) or ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' or ep == 'admin.oidc_debug' %}
+                {% set admin_settings_open = ep == 'admin.settings' or ep == 'admin.email_support' or ep == 'admin.manage_modules' or ep.startswith('admin.') and ('email_template' in ep or 'email-templates' in request.path) or ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' or ep == 'admin.oidc_debug' %}
                 {% set admin_security_open = ep == 'admin.api_tokens' or ep.startswith('webhooks.') or ep.startswith('audit_logs.') %}
                 {% set admin_data_open = ep == 'expense_categories.list_categories' or ep == 'per_diem.list_rates' or ep.startswith('time_entry_templates.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
                 {% set admin_maintenance_open = ep == 'admin.system_info' or ep == 'admin.backups_management' or ep == 'admin.telemetry_dashboard' %}
@@ -1312,6 +1312,177 @@
                     }
                 }, 150);
             });
+
+            // Preserve sidebar scroll position across page navigations
+            (function() {
+                const SIDEBAR_SCROLL_KEY = 'sidebar-scroll-position';
+                const LAST_URL_KEY = 'last-navigation-url';
+                
+                // Save sidebar scroll position before navigation
+                function saveSidebarScroll() {
+                    if (sidebar && !isSmallScreen()) {
+                        try {
+                            const scrollTop = sidebar.scrollTop;
+                            localStorage.setItem(SIDEBAR_SCROLL_KEY, String(scrollTop));
+                            localStorage.setItem(LAST_URL_KEY, window.location.pathname);
+                        } catch(e) {
+                            // Ignore localStorage errors
+                        }
+                    }
+                }
+                
+                // Restore sidebar scroll position after page load
+                function restoreSidebarScroll() {
+                    if (sidebar && !isSmallScreen()) {
+                        try {
+                            const savedScroll = localStorage.getItem(SIDEBAR_SCROLL_KEY);
+                            const lastUrl = localStorage.getItem(LAST_URL_KEY);
+                            const currentUrl = window.location.pathname;
+                            
+                            // Only restore if we're on the same section (admin pages, etc.)
+                            // This prevents restoring scroll when navigating to completely different sections
+                            if (savedScroll && lastUrl && currentUrl) {
+                                // Check if we're navigating within the same section
+                                const sameSection = (
+                                    (lastUrl.startsWith('/admin') && currentUrl.startsWith('/admin')) ||
+                                    (lastUrl.startsWith('/projects') && currentUrl.startsWith('/projects')) ||
+                                    (lastUrl.startsWith('/timer') && currentUrl.startsWith('/timer')) ||
+                                    (lastUrl.startsWith('/reports') && currentUrl.startsWith('/reports'))
+                                );
+                                
+                                if (sameSection) {
+                                    // Small delay to ensure DOM is ready
+                                    setTimeout(() => {
+                                        sidebar.scrollTop = parseInt(savedScroll, 10) || 0;
+                                    }, 50);
+                                }
+                            }
+                        } catch(e) {
+                            // Ignore localStorage errors
+                        }
+                    }
+                }
+                
+                // Save scroll position when clicking navigation links
+                if (sidebar) {
+                    const navLinks = sidebar.querySelectorAll('a[href]');
+                    navLinks.forEach(link => {
+                        link.addEventListener('click', function() {
+                            saveSidebarScroll();
+                        });
+                    });
+                }
+                
+                // Restore scroll position on page load
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', restoreSidebarScroll);
+                } else {
+                    restoreSidebarScroll();
+                }
+            })();
+
+            // Prevent unwanted scroll-to-top on navigation
+            (function() {
+                const MAIN_SCROLL_KEY = 'main-content-scroll-position';
+                const NAVIGATION_TYPE_KEY = 'navigation-type';
+                
+                // Use browser's scroll restoration if available
+                if ('scrollRestoration' in history) {
+                    history.scrollRestoration = 'manual';
+                }
+                
+                // Save main content scroll position before navigation
+                function saveMainScroll() {
+                    try {
+                        const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+                        localStorage.setItem(MAIN_SCROLL_KEY, String(scrollY));
+                        // Mark as programmatic navigation (not back/forward)
+                        sessionStorage.setItem(NAVIGATION_TYPE_KEY, 'navigate');
+                    } catch(e) {
+                        // Ignore storage errors
+                    }
+                }
+                
+                // Restore main content scroll position after page load
+                function restoreMainScroll() {
+                    try {
+                        const navType = sessionStorage.getItem(NAVIGATION_TYPE_KEY);
+                        const savedScroll = localStorage.getItem(MAIN_SCROLL_KEY);
+                        
+                        // Only restore scroll for back/forward navigation or same-section navigation
+                        // For fresh navigations, let browser handle it naturally
+                        if (navType === 'back-forward' && savedScroll) {
+                            // Restore scroll position for back/forward navigation
+                            setTimeout(() => {
+                                window.scrollTo(0, parseInt(savedScroll, 10) || 0);
+                            }, 0);
+                        } else if (navType === 'navigate' && savedScroll) {
+                            // For same-section navigation, restore scroll
+                            const lastUrl = localStorage.getItem('last-navigation-url');
+                            const currentUrl = window.location.pathname;
+                            
+                            if (lastUrl && currentUrl) {
+                                const sameSection = (
+                                    (lastUrl.startsWith('/admin') && currentUrl.startsWith('/admin')) ||
+                                    (lastUrl.startsWith('/projects') && currentUrl.startsWith('/projects')) ||
+                                    (lastUrl.startsWith('/timer') && currentUrl.startsWith('/timer')) ||
+                                    (lastUrl.startsWith('/reports') && currentUrl.startsWith('/reports'))
+                                );
+                                
+                                if (sameSection) {
+                                    setTimeout(() => {
+                                        window.scrollTo(0, parseInt(savedScroll, 10) || 0);
+                                    }, 50);
+                                }
+                            }
+                        }
+                        
+                        // Clear navigation type after processing
+                        sessionStorage.removeItem(NAVIGATION_TYPE_KEY);
+                    } catch(e) {
+                        // Ignore storage errors
+                    }
+                }
+                
+                // Detect back/forward navigation
+                window.addEventListener('popstate', function() {
+                    try {
+                        sessionStorage.setItem(NAVIGATION_TYPE_KEY, 'back-forward');
+                    } catch(e) {
+                        // Ignore storage errors
+                    }
+                });
+                
+                // Save scroll position when clicking navigation links
+                document.addEventListener('click', function(e) {
+                    const link = e.target.closest('a[href]');
+                    if (link && link.href && !link.target && !link.hasAttribute('download')) {
+                        const href = link.getAttribute('href');
+                        // Only handle internal links
+                        if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+                            try {
+                                const url = new URL(href, window.location.origin);
+                                // Only save if it's a same-origin navigation
+                                if (url.origin === window.location.origin) {
+                                    saveMainScroll();
+                                }
+                            } catch(e) {
+                                // If URL parsing fails, try to save anyway for relative URLs
+                                if (href.startsWith('/')) {
+                                    saveMainScroll();
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Restore scroll position on page load
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', restoreMainScroll);
+                } else {
+                    restoreMainScroll();
+                }
+            })();
 
             // Flyout submenu when collapsed
             function hideFlyout(){
