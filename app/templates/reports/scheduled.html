@@ -78,6 +78,15 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex justify-end gap-2">
+                            {% if schedule.saved_view and schedule.active %}
+                            <button 
+                                type="button" 
+                                class="trigger-report-btn text-blue-600 hover:text-blue-800" 
+                                data-schedule-id="{{ schedule.id }}"
+                                title="{{ _('Trigger report now (for testing)') }}">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            {% endif %}
                             {% if not schedule.saved_view %}
                             <form method="POST" action="{{ url_for('scheduled_reports.fix_scheduled', schedule_id=schedule.id) }}" class="inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -108,5 +117,57 @@
     ) }}
     {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const triggerButtons = document.querySelectorAll('.trigger-report-btn');
+    
+    triggerButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const scheduleId = this.getAttribute('data-schedule-id');
+            const originalIcon = this.innerHTML;
+            
+            // Disable button and show loading state
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Get CSRF token from meta tag or form
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                            document.querySelector('input[name="csrf_token"]')?.value || 
+                            '{{ csrf_token() }}';
+            
+            // Make API call
+            fetch(`/api/reports/scheduled/${scheduleId}/trigger`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    alert('{{ _("Report triggered successfully!") }}\n' + 
+                          (data.message || '{{ _("Report sent to recipients.") }}'));
+                } else {
+                    // Show error message
+                    alert('{{ _("Error triggering report:") }}\n' + (data.error || data.message || '{{ _("Unknown error") }}'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('{{ _("Error triggering report. Please check the console for details.") }}');
+            })
+            .finally(() => {
+                // Re-enable button and restore icon
+                this.disabled = false;
+                this.innerHTML = originalIcon;
+            });
+        });
+    });
+});
+</script>
 {% endblock %}
 

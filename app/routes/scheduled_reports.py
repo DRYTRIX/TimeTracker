@@ -309,3 +309,32 @@ def fix_scheduled(schedule_id):
     db.session.commit()
     flash(_("Scheduled report validated and reactivated."), "success")
     return redirect(url_for("scheduled_reports.list_scheduled"))
+
+
+@scheduled_reports_bp.route("/api/reports/scheduled/<int:schedule_id>/trigger", methods=["POST"])
+@login_required
+def api_trigger_scheduled(schedule_id):
+    """Manually trigger a scheduled report for testing"""
+    service = ScheduledReportService()
+    
+    schedule = ReportEmailSchedule.query.get_or_404(schedule_id)
+    
+    # Check permission
+    if schedule.created_by != current_user.id and not current_user.is_admin:
+        return jsonify({"success": False, "error": _("Permission denied")}), 403
+    
+    # Check if schedule is valid
+    if not schedule.saved_view:
+        return jsonify({"success": False, "error": _("Saved report view not found")}), 400
+    
+    # Trigger the report generation
+    result = service.generate_and_send_report(schedule_id)
+    
+    if result["success"]:
+        return jsonify({
+            "success": True,
+            "message": result["message"],
+            "sent_count": result.get("sent_count", 0)
+        })
+    else:
+        return jsonify({"success": False, "error": result["message"]}), 400

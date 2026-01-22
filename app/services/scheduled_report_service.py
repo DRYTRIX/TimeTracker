@@ -80,8 +80,7 @@ class ScheduledReportService:
             )
 
             db.session.add(schedule)
-            if not db.session.commit():
-                return {"success": False, "message": "Could not create schedule due to a database error."}
+            db.session.commit()
 
             return {"success": True, "message": "Scheduled report created successfully.", "schedule": schedule}
         except Exception as e:
