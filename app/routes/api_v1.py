@@ -716,6 +716,7 @@ def update_time_entry(entry_id):
         user_id=g.api_user.id,
         is_admin=g.api_user.is_admin,
         project_id=data.get("project_id"),
+        client_id=data.get("client_id"),
         task_id=data.get("task_id"),
         start_time=start_time,
         end_time=end_time,
@@ -724,6 +725,7 @@ def update_time_entry(entry_id):
         billable=data.get("billable"),
         paid=data.get("paid"),
         invoice_number=data.get("invoice_number"),
+        reason=data.get("reason"),
     )
 
     if not result.get("success"):
@@ -754,8 +756,16 @@ def delete_time_entry(entry_id):
     """
     from app.services import TimeTrackingService
 
+    data = request.get_json() or {}
+    reason = data.get("reason")  # Optional reason for deletion
+
     time_tracking_service = TimeTrackingService()
-    result = time_tracking_service.delete_entry(entry_id=entry_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
+    result = time_tracking_service.delete_entry(
+        entry_id=entry_id,
+        user_id=g.api_user.id,
+        is_admin=g.api_user.is_admin,
+        reason=reason,
+    )
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not delete time entry")}), 400

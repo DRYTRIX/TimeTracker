@@ -332,6 +332,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
+                <!-- Reason for Change -->
+                <div class="mb-6">
+                    <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <i class="fas fa-comment-alt mr-1"></i>{{ _('Reason for Change') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional but recommended') }})</span>
+                    </label>
+                    <textarea class="form-input" id="reason" name="reason" rows="3" placeholder="{{ _('e.g., Corrected duration, updated project assignment, etc.') }}"></textarea>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Explain why you are making these changes') }}</p>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-border-light dark:border-border-dark">
                     <div class="flex gap-2">
@@ -439,6 +448,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input type="text" class="form-input" id="invoice_number" name="invoice_number" placeholder="{{ _('Internal invoice reference') }}" value="{{ timer.invoice_number or '' }}" maxlength="100">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Reference to internal invoice number') }}</p>
                     </div>
+                </div>
+
+                <!-- Reason for Change -->
+                <div class="mb-6">
+                    <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <i class="fas fa-comment-alt mr-1"></i>{{ _('Reason for Change') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional but recommended') }})</span>
+                    </label>
+                    <textarea class="form-input" id="reason" name="reason" rows="3" placeholder="{{ _('e.g., Corrected duration, updated project assignment, etc.') }}"></textarea>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Explain why you are making these changes') }}</p>
                 </div>
 
                 <!-- Action Buttons -->

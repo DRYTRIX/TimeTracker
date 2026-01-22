@@ -45,6 +45,18 @@ class AuditLog(db.Model):
     # Human-readable change description
     change_description = db.Column(db.Text, nullable=True)
 
+    # User-provided reason for change/deletion
+    reason = db.Column(db.Text, nullable=True)
+
+    # Entity metadata (JSON-encoded for client_id, project_id, created_at, etc.)
+    entity_metadata = db.Column(db.JSON, nullable=True)  # JSON metadata (dict/list)
+
+    # Full entity state before change (JSON-encoded)
+    full_old_state = db.Column(db.Text, nullable=True)
+
+    # Full entity state after change (JSON-encoded)
+    full_new_state = db.Column(db.Text, nullable=True)
+
     # Additional context
     ip_address = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.Text, nullable=True)
@@ -79,6 +91,10 @@ class AuditLog(db.Model):
         new_value=None,
         entity_name=None,
         change_description=None,
+        reason=None,
+        entity_metadata=None,
+        full_old_state=None,
+        full_new_state=None,
         ip_address=None,
         user_agent=None,
         request_path=None,
@@ -95,6 +111,10 @@ class AuditLog(db.Model):
             new_value: New value (will be JSON-encoded)
             entity_name: Cached name of the entity for display
             change_description: Human-readable description of the change
+            reason: User-provided reason for the change/deletion
+            entity_metadata: Metadata dict/list (client_id, project_id, created_at, etc.) - will be stored as JSON
+            full_old_state: JSON-encoded full entity state before change
+            full_new_state: JSON-encoded full entity state after change
             ip_address: IP address of the request
             user_agent: User agent string
             request_path: Path of the request that triggered the change
@@ -102,6 +122,11 @@ class AuditLog(db.Model):
         # Encode values as JSON if they're not already strings
         old_val_str = cls._encode_value(old_value)
         new_val_str = cls._encode_value(new_value)
+        
+        # entity_metadata is stored as JSON type, so pass dict/list directly (not encoded)
+        # full_old_state and full_new_state are Text columns, so encode as JSON strings
+        full_old_str = cls._encode_value(full_old_state) if full_old_state else None
+        full_new_str = cls._encode_value(full_new_state) if full_new_state else None
 
         audit_log = cls(
             user_id=user_id,
@@ -113,6 +138,10 @@ class AuditLog(db.Model):
             new_value=new_val_str,
             entity_name=entity_name,
             change_description=change_description,
+            reason=reason,
+            entity_metadata=entity_metadata,  # Pass dict/list directly for JSON column
+            full_old_state=full_old_str,
+            full_new_state=full_new_str,
             ip_address=ip_address,
             user_agent=user_agent,
             request_path=request_path,
@@ -178,6 +207,22 @@ class AuditLog(db.Model):
         """Get the decoded new value"""
         return self._decode_value(self.new_value)
 
+    def get_entity_metadata(self):
+        """Get the entity metadata (already a dict/list for JSON column)"""
+        # For JSON columns, SQLAlchemy returns the dict/list directly
+        # For backward compatibility with Text columns, try to decode if it's a string
+        if isinstance(self.entity_metadata, str):
+            return self._decode_value(self.entity_metadata)
+        return self.entity_metadata
+
+    def get_full_old_state(self):
+        """Get the decoded full old state"""
+        return self._decode_value(self.full_old_state)
+
+    def get_full_new_state(self):
+        """Get the decoded full new state"""
+        return self._decode_value(self.full_new_state)
+
     @classmethod
     def get_for_entity(cls, entity_type, entity_id, limit=100):
         """Get audit logs for a specific entity"""
@@ -224,6 +269,10 @@ class AuditLog(db.Model):
             "old_value": self.get_old_value(),
             "new_value": self.get_new_value(),
             "change_description": self.change_description,
+            "reason": self.reason,
+            "entity_metadata": self.get_entity_metadata(),
+            "full_old_state": self.get_full_old_state(),
+            "full_new_state": self.get_full_new_state(),
             "ip_address": self.ip_address,
             "user_agent": self.user_agent,
             "request_path": self.request_path,

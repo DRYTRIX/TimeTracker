@@ -97,13 +97,37 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                         {{ badge(log.action, log.get_color()) }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                         <a href="{{ url_for('audit_logs.entity_history', entity_type=log.entity_type, entity_id=log.entity_id) }}" 
                            class="text-primary hover:underline">
                             {{ log.entity_type }}#{{ log.entity_id }}
                         </a>
                         {% if log.entity_name %}
                         <br><span class="text-xs text-gray-500">{{ log.entity_name }}</span>
+                        {% endif %}
+                        {% if log.entity_type == 'TimeEntry' and log.get_entity_metadata() %}
+                        {% set metadata = log.get_entity_metadata() %}
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 space-y-0.5">
+                            {% if metadata.project_name %}
+                            <div><i class="fas fa-project-diagram mr-1"></i>{{ _('Project') }}: {{ metadata.project_name }}{% if metadata.project_id %} (ID: {{ metadata.project_id }}){% endif %}</div>
+                            {% elif metadata.client_name %}
+                            <div><i class="fas fa-building mr-1"></i>{{ _('Client') }}: {{ metadata.client_name }}{% if metadata.client_id %} (ID: {{ metadata.client_id }}){% endif %}</div>
+                            {% endif %}
+                            {% if metadata.created_at %}
+                            <div><i class="fas fa-calendar-plus mr-1"></i>{{ _('Created') }}: 
+                                {% if metadata.created_at is string %}
+                                    {{ metadata.created_at[:16]|replace('T', ' ') }}
+                                {% else %}
+                                    {{ metadata.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if log.reason %}
+                        <div class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            <i class="fas fa-comment-alt mr-1"></i><strong>{{ _('Reason') }}:</strong> {{ log.reason }}
+                        </div>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">

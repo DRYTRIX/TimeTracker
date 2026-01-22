@@ -152,6 +152,64 @@ def serialize_value(value):
     return str(value)
 
 
+def capture_timeentry_metadata(entry):
+    """Capture TimeEntry metadata for audit logging
+    
+    Args:
+        entry: TimeEntry instance
+        
+    Returns:
+        dict with client_id, project_id, created_at, and related entity names
+    """
+    metadata = {
+        "client_id": entry.client_id,
+        "client_name": entry.client.name if entry.client else None,
+        "project_id": entry.project_id,
+        "project_name": entry.project.name if entry.project else None,
+        "task_id": entry.task_id,
+        "task_name": entry.task.name if entry.task else None,
+        "created_at": entry.created_at.isoformat() if hasattr(entry, "created_at") and entry.created_at else None,
+        "user_id": entry.user_id,
+        "user_name": entry.user.username if entry.user else None,
+    }
+    return metadata
+
+
+def capture_timeentry_state(entry):
+    """Capture full TimeEntry state for audit logging
+    
+    Args:
+        entry: TimeEntry instance
+        
+    Returns:
+        dict with all TimeEntry fields and related entity information
+    """
+    state = {
+        "id": entry.id if hasattr(entry, "id") else None,
+        "user_id": entry.user_id,
+        "project_id": entry.project_id,
+        "client_id": entry.client_id,
+        "task_id": entry.task_id,
+        "start_time": entry.start_time.isoformat() if entry.start_time else None,
+        "end_time": entry.end_time.isoformat() if entry.end_time else None,
+        "duration_seconds": entry.duration_seconds,
+        "notes": entry.notes,
+        "tags": entry.tags,
+        "source": entry.source,
+        "billable": entry.billable,
+        "paid": entry.paid,
+        "invoice_number": entry.invoice_number,
+        "created_at": entry.created_at.isoformat() if hasattr(entry, "created_at") and entry.created_at else None,
+        "updated_at": entry.updated_at.isoformat() if hasattr(entry, "updated_at") and entry.updated_at else None,
+        # Related entity names for context
+        "project_name": entry.project.name if entry.project else None,
+        "client_name": entry.client.name if entry.client else None,
+        "task_name": entry.task.name if entry.task else None,
+        "user_name": entry.user.username if entry.user else None,
+    }
+    return state
+
+
 # Call count for table-exists check (force recheck every 100) and warning/debug logs
 _audit_call_count = 0
 
@@ -190,6 +248,16 @@ def receive_before_flush(session, flush_context, instances=None):
                 entity_name = get_entity_name(instance)
 
                 try:
+                    # For TimeEntry, capture full old state before changes
+                    full_old_state = None
+                    entity_metadata = None
+                    if entity_type == "TimeEntry":
+                        try:
+                            full_old_state = capture_timeentry_state(instance)
+                            entity_metadata = capture_timeentry_metadata(instance)
+                        except Exception as e:
+                            logger.warning(f"Could not capture TimeEntry state for {entity_id}: {e}")
+
                     instance_state = inspect(instance)
                     changed_fields = []
                     for attr_name in instance_state.mapper.column_attrs.keys():
@@ -214,6 +282,8 @@ def receive_before_flush(session, flush_context, instances=None):
                                 new_value=serialize_value(change["new"]),
                                 entity_name=entity_name,
                                 change_description=f"Updated {entity_type.lower()} '{entity_name}': {change['field']}",
+                                entity_metadata=entity_metadata,
+                                full_old_state=full_old_state,
                                 ip_address=ip_address,
                                 user_agent=user_agent,
                                 request_path=request_path,
@@ -226,6 +296,8 @@ def receive_before_flush(session, flush_context, instances=None):
                             entity_id=entity_id,
                             entity_name=entity_name,
                             change_description=f"Updated {entity_type.lower()} '{entity_name}'",
+                            entity_metadata=entity_metadata,
+                            full_old_state=full_old_state,
                             ip_address=ip_address,
                             user_agent=user_agent,
                             request_path=request_path,
@@ -252,6 +324,16 @@ def receive_before_flush(session, flush_context, instances=None):
                 entity_id = instance.id if hasattr(instance, "id") else None
                 entity_name = get_entity_name(instance)
                 try:
+                    # For TimeEntry, capture full state and metadata before deletion
+                    full_old_state = None
+                    entity_metadata = None
+                    if entity_type == "TimeEntry":
+                        try:
+                            full_old_state = capture_timeentry_state(instance)
+                            entity_metadata = capture_timeentry_metadata(instance)
+                        except Exception as e:
+                            logger.warning(f"Could not capture TimeEntry state for deletion of {entity_id}: {e}")
+                    
                     AuditLog = get_audit_log_model()
                     AuditLog.log_change(
                         user_id=user_id,
@@ -260,6 +342,8 @@ def receive_before_flush(session, flush_context, instances=None):
                         entity_id=entity_id,
                         entity_name=entity_name,
                         change_description=f"Deleted {entity_type.lower()} '{entity_name}'",
+                        entity_metadata=entity_metadata,
+                        full_old_state=full_old_state,
                         ip_address=ip_address,
                         user_agent=user_agent,
                         request_path=request_path,
@@ -298,6 +382,17 @@ def receive_after_flush(session, flush_context):
             if entity_id is None:
                 continue
             entity_name = get_entity_name(instance)
+            
+            # For TimeEntry, capture full state and metadata
+            full_new_state = None
+            entity_metadata = None
+            if entity_type == "TimeEntry":
+                try:
+                    full_new_state = capture_timeentry_state(instance)
+                    entity_metadata = capture_timeentry_metadata(instance)
+                except Exception as e:
+                    logger.warning(f"Could not capture TimeEntry state for creation of {entity_id}: {e}")
+            
             AuditLog = get_audit_log_model()
             AuditLog.log_change(
                 user_id=user_id,
@@ -306,6 +401,8 @@ def receive_after_flush(session, flush_context):
                 entity_id=entity_id,
                 entity_name=entity_name,
                 change_description=f"Created {entity_type.lower()} '{entity_name}'",
+                entity_metadata=entity_metadata,
+                full_new_state=full_new_state,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 request_path=request_path,

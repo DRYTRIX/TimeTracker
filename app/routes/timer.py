@@ -418,7 +418,7 @@ def stop_timer():
         current_app.logger.info("Stopped timer id=%s for user=%s", active_timer.id, current_user.username)
 
         # Track timer stopped event
-        duration_seconds = active_timer.duration if hasattr(active_timer, "duration") else 0
+        duration_seconds = active_timer.duration_seconds if active_timer.duration_seconds else 0
         log_event(
             "timer.stopped",
             user_id=current_user.id,
@@ -467,30 +467,37 @@ def stop_timer():
                 current_user.id,
                 {"source": "timer", "duration_seconds": duration_seconds, "has_task": bool(active_timer.task_id)},
             )
+
+        # Emit WebSocket event for real-time updates
+        try:
+            socketio.emit(
+                "timer_stopped",
+                {"user_id": current_user.id, "timer_id": active_timer.id, "duration": active_timer.duration_formatted},
+            )
+        except Exception as e:
+            current_app.logger.warning("Socket emit failed for timer_stopped: %s", e)
+
+        # Invalidate dashboard cache so timer disappears immediately
+        try:
+            from app.utils.cache import get_cache
+            cache = get_cache()
+            cache_key = f"dashboard:{current_user.id}"
+            cache.delete(cache_key)
+            current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
+        except Exception as e:
+            current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+
+        flash(f"Timer stopped. Duration: {active_timer.duration_formatted}", "success")
+        return redirect(url_for("main.dashboard"))
+    except ValueError as e:
+        # Timer already stopped or invalid state
+        current_app.logger.warning("Cannot stop timer: %s", e)
+        flash(_("Cannot stop timer: %(error)s", error=str(e)), "error")
+        return redirect(url_for("main.dashboard"))
     except Exception as e:
         current_app.logger.exception("Error stopping timer: %s", e)
-
-    # Emit WebSocket event for real-time updates
-    try:
-        socketio.emit(
-            "timer_stopped",
-            {"user_id": current_user.id, "timer_id": active_timer.id, "duration": active_timer.duration_formatted},
-        )
-    except Exception as e:
-        current_app.logger.warning("Socket emit failed for timer_stopped: %s", e)
-
-    # Invalidate dashboard cache so timer disappears immediately
-    try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{current_user.id}"
-        cache.delete(cache_key)
-        current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
-    except Exception as e:
-        current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
-
-    flash(f"Timer stopped. Duration: {active_timer.duration_formatted}", "success")
-    return redirect(url_for("main.dashboard"))
+        flash(_("Could not stop timer due to an error. Please try again or contact support if the problem persists."), "error")
+        return redirect(url_for("main.dashboard"))
 
 
 @timer_bp.route("/timer/status")
@@ -529,18 +536,31 @@ def edit_timer(timer_id):
         return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
-        # Update timer details
-        timer.notes = request.form.get("notes", "").strip()
-        timer.tags = request.form.get("tags", "").strip()
-        timer.billable = request.form.get("billable") == "on"
-        timer.paid = request.form.get("paid") == "on"
+        # Get reason for change
+        reason = request.form.get("reason", "").strip() or None
+        
+        # Use service layer for update to get enhanced audit logging
+        from app.services import TimeTrackingService
+        service = TimeTrackingService()
+        
+        # Prepare update parameters
+        update_params = {
+            "entry_id": timer_id,
+            "user_id": current_user.id,
+            "is_admin": current_user.is_admin,
+            "notes": request.form.get("notes", "").strip() or None,
+            "tags": request.form.get("tags", "").strip() or None,
+            "billable": request.form.get("billable") == "on",
+            "paid": request.form.get("paid") == "on",
+            "reason": reason,
+        }
         
         # Update invoice number
         invoice_number = request.form.get("invoice_number", "").strip()
-        timer.invoice_number = invoice_number if invoice_number else None
+        update_params["invoice_number"] = invoice_number if invoice_number else None
         # Clear invoice number if marking as unpaid
-        if not timer.paid:
-            timer.invoice_number = None
+        if update_params["paid"] is False:
+            update_params["invoice_number"] = None
 
         # Admin users can edit additional fields
         if current_user.is_admin:
@@ -549,7 +569,7 @@ def edit_timer(timer_id):
             if new_project_id and new_project_id != timer.project_id:
                 new_project = Project.query.filter_by(id=new_project_id, status="active").first()
                 if new_project:
-                    timer.project_id = new_project_id
+                    update_params["project_id"] = new_project_id
                 else:
                     flash(_("Invalid project selected"), "error")
                     return render_template(
@@ -562,14 +582,16 @@ def edit_timer(timer_id):
                             else Task.query.filter_by(project_id=new_project_id).order_by(Task.name).all()
                         ),
                     )
+            else:
+                update_params["project_id"] = None  # Don't change if not provided
 
             # Update task if changed
             new_task_id = request.form.get("task_id", type=int)
             if new_task_id != timer.task_id:
                 if new_task_id:
-                    new_task = Task.query.filter_by(id=new_task_id, project_id=timer.project_id).first()
+                    new_task = Task.query.filter_by(id=new_task_id, project_id=update_params.get("project_id") or timer.project_id).first()
                     if new_task:
-                        timer.task_id = new_task_id
+                        update_params["task_id"] = new_task_id
                     else:
                         flash(_("Invalid task selected for the chosen project"), "error")
                         return render_template(
@@ -579,7 +601,9 @@ def edit_timer(timer_id):
                             tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
                         )
                 else:
-                    timer.task_id = None
+                    update_params["task_id"] = None
+            else:
+                update_params["task_id"] = None  # Don't change if not provided
 
             # Update start and end times if provided
             start_date = request.form.get("start_date")
@@ -606,7 +630,7 @@ def edit_timer(timer_id):
                             tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
                         )
 
-                    timer.start_time = new_start_time
+                    update_params["start_time"] = new_start_time
                 except ValueError:
                     flash(_("Invalid start date/time format"), "error")
                     return render_template(
@@ -615,6 +639,8 @@ def edit_timer(timer_id):
                         projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
                         tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
                     )
+            else:
+                update_params["start_time"] = None
 
             if end_date and end_time:
                 try:
@@ -623,7 +649,8 @@ def edit_timer(timer_id):
                     new_end_time = utc_to_local(parsed_end_utc).replace(tzinfo=None)
 
                     # Validate that end time is after start time
-                    if new_end_time <= timer.start_time:
+                    start_time_for_validation = update_params.get("start_time") or timer.start_time
+                    if new_end_time <= start_time_for_validation:
                         flash(_("End time must be after start time"), "error")
                         return render_template(
                             "timer/edit_timer.html",
@@ -632,9 +659,7 @@ def edit_timer(timer_id):
                             tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
                         )
 
-                    timer.end_time = new_end_time
-                    # Recalculate duration
-                    timer.calculate_duration()
+                    update_params["end_time"] = new_end_time
                 except ValueError:
                     flash(_("Invalid end date/time format"), "error")
                     return render_template(
@@ -643,15 +668,20 @@ def edit_timer(timer_id):
                         projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
                         tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
                     )
+            else:
+                update_params["end_time"] = None
 
-            # Update source if provided
-            new_source = request.form.get("source")
-            if new_source in ["manual", "auto"]:
-                timer.source = new_source
-
-        if not safe_commit("edit_timer", {"timer_id": timer.id}):
-            flash(_("Could not update timer due to a database error. Please check server logs."), "error")
-            return redirect(url_for("main.dashboard"))
+        # Call service layer to update
+        result = service.update_entry(**update_params)
+        
+        if not result.get("success"):
+            flash(_(result.get("message", "Could not update timer")), "error")
+            return render_template(
+                "timer/edit_timer.html",
+                timer=timer,
+                projects=Project.query.filter_by(status="active").order_by(Project.name).all() if current_user.is_admin else [],
+                tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all() if current_user.is_admin and timer.project_id else [],
+            )
 
         # Invalidate dashboard cache for the timer owner so changes appear immediately
         try:
@@ -830,9 +860,10 @@ def delete_timer(timer_id):
 @login_required
 def bulk_delete_time_entries():
     """Bulk delete time entries"""
-    from app.utils.db import safe_commit
+    from app.services import TimeTrackingService
     
     entry_ids = request.form.getlist("entry_ids[]")
+    reason = request.form.get("reason", "").strip() or None  # Optional reason for bulk deletion
     
     if not entry_ids:
         flash(_("No time entries selected"), "warning")
@@ -855,6 +886,9 @@ def bulk_delete_time_entries():
     deleted_count = 0
     skipped_count = 0
     
+    # Use service layer for proper audit logging
+    service = TimeTrackingService()
+    
     for entry in entries:
         # Check permissions
         if not can_view_all and entry.user_id != current_user.id:
@@ -866,28 +900,20 @@ def bulk_delete_time_entries():
             skipped_count += 1
             continue
         
-        # Delete the entry
-        db.session.delete(entry)
-        deleted_count += 1
-        
-        # Log activity
-        Activity.log(
+        # Delete using service layer to get enhanced audit logging
+        result = service.delete_entry(
             user_id=current_user.id,
-            action="deleted",
-            entity_type="time_entry",
-            entity_id=entry.id,
-            entity_name=f"Time entry #{entry.id}",
-            description=f"Deleted time entry",
-            extra_data={"project_id": entry.project_id, "client_id": entry.client_id, "duration": entry.duration_formatted},
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get("User-Agent"),
+            entry_id=entry.id,
+            is_admin=current_user.is_admin,
+            reason=reason,  # Use same reason for all entries in bulk delete
         )
+        
+        if result.get("success"):
+            deleted_count += 1
+        else:
+            skipped_count += 1
     
     if deleted_count > 0:
-        if not safe_commit("bulk_delete_time_entries", {"count": deleted_count}):
-            flash(_("Could not delete time entries due to a database error. Please check server logs."), "error")
-            return redirect(url_for("timer.time_entries_overview"))
-        
         flash(
             _("Successfully deleted %(count)d time entry/entries", count=deleted_count),
             "success"
@@ -1104,6 +1130,16 @@ def manual_entry():
                 )
             else:
                 flash(_("Manual entry created for %(target)s", target=target_name), "success")
+
+        # Invalidate dashboard cache so new entry appears immediately
+        try:
+            from app.utils.cache import get_cache
+            cache = get_cache()
+            cache_key = f"dashboard:{current_user.id}"
+            cache.delete(cache_key)
+            current_app.logger.debug("Invalidated dashboard cache for user %s after manual entry creation", current_user.id)
+        except Exception as e:
+            current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
         return redirect(url_for("main.dashboard"))
 

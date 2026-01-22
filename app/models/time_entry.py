@@ -136,11 +136,15 @@ class TimeEntry(db.Model):
     @property
     def duration_formatted(self):
         """Get duration formatted as HH:MM:SS"""
-        if not self.duration_seconds:
+        # For active timers (end_time is None), use current_duration_seconds
+        if not self.end_time:
+            total_seconds = self.current_duration_seconds
+        elif not self.duration_seconds:
             return "00:00:00"
+        else:
+            total_seconds = int(self.duration_seconds)
 
         # Convert to int to ensure integer values for formatting
-        total_seconds = int(self.duration_seconds)
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
         seconds = total_seconds % 60
