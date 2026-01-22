@@ -5,12 +5,14 @@ from app.models import User, Project, TimeEntry, Settings, Task, Payment, Invoic
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract, case
 import calendar
+from app.utils.module_helpers import module_enabled
 
 analytics_bp = Blueprint("analytics", __name__)
 
 
 @analytics_bp.route("/analytics")
 @login_required
+@module_enabled("analytics")
 def analytics_dashboard():
     """Main analytics dashboard with charts"""
     # Check if user agent indicates mobile device
@@ -30,6 +32,7 @@ def analytics_dashboard():
 
 @analytics_bp.route("/api/analytics/hours-by-day")
 @login_required
+@module_enabled("analytics")
 def hours_by_day():
     """Get hours worked per day for the last 30 days"""
     try:
@@ -91,6 +94,7 @@ def hours_by_day():
 
 @analytics_bp.route("/api/analytics/hours-by-project")
 @login_required
+@module_enabled("analytics")
 def hours_by_project():
     """Get total hours per project"""
     days = int(request.args.get("days", 30))
@@ -148,6 +152,7 @@ def hours_by_project():
 
 @analytics_bp.route("/api/analytics/hours-by-user")
 @login_required
+@module_enabled("analytics")
 def hours_by_user():
     """Get total hours per user (admin only)"""
     if not current_user.is_admin:
@@ -192,6 +197,7 @@ def hours_by_user():
 
 @analytics_bp.route("/api/analytics/hours-by-hour")
 @login_required
+@module_enabled("analytics")
 def hours_by_hour():
     """Get hours worked by hour of day (24-hour format)"""
     days = int(request.args.get("days", 30))
@@ -237,6 +243,7 @@ def hours_by_hour():
 
 @analytics_bp.route("/api/analytics/billable-vs-nonbillable")
 @login_required
+@module_enabled("analytics")
 def billable_vs_nonbillable():
     """Get billable vs non-billable hours breakdown"""
     days = int(request.args.get("days", 30))
@@ -282,6 +289,7 @@ def billable_vs_nonbillable():
 
 @analytics_bp.route("/api/analytics/weekly-trends")
 @login_required
+@module_enabled("analytics")
 def weekly_trends():
     """Get weekly trends over the last 12 weeks"""
     try:
@@ -378,6 +386,7 @@ def weekly_trends():
 
 @analytics_bp.route("/api/analytics/overtime")
 @login_required
+@module_enabled("analytics")
 def overtime_analytics():
     """Get overtime statistics for the current user or all users (if admin)"""
     try:
@@ -454,6 +463,7 @@ def overtime_analytics():
 
 @analytics_bp.route("/api/analytics/project-efficiency")
 @login_required
+@module_enabled("analytics")
 def project_efficiency():
     """Get project efficiency metrics (hours vs billable amount)"""
     days = int(request.args.get("days", 30))
@@ -514,6 +524,7 @@ def project_efficiency():
 
 @analytics_bp.route("/api/analytics/today-by-task")
 @login_required
+@module_enabled("analytics")
 def today_by_task():
     """Get today's total hours grouped by task (includes project-level entries without task).
 
@@ -581,6 +592,7 @@ def today_by_task():
 
 @analytics_bp.route("/api/analytics/summary-with-comparison")
 @login_required
+@module_enabled("analytics")
 def summary_with_comparison():
     """Get summary metrics with comparison to previous period"""
     days = int(request.args.get("days", 30))
@@ -668,6 +680,7 @@ def summary_with_comparison():
 
 @analytics_bp.route("/api/analytics/task-completion")
 @login_required
+@module_enabled("analytics")
 def task_completion():
     """Get task completion analytics"""
     days = int(request.args.get("days", 30))
@@ -736,6 +749,7 @@ def task_completion():
 
 @analytics_bp.route("/api/analytics/revenue-metrics")
 @login_required
+@module_enabled("analytics")
 def revenue_metrics():
     """Get revenue and financial metrics"""
     days = int(request.args.get("days", 30))
@@ -836,6 +850,7 @@ def revenue_metrics():
 
 @analytics_bp.route("/api/analytics/insights")
 @login_required
+@module_enabled("analytics")
 def insights():
     """Generate insights and recommendations based on analytics data"""
     days = int(request.args.get("days", 30))
@@ -954,6 +969,7 @@ def insights():
 
 @analytics_bp.route("/api/analytics/payments-over-time")
 @login_required
+@module_enabled("analytics")
 def payments_over_time():
     """Get payments over time"""
     days = int(request.args.get("days", 30))
@@ -1012,6 +1028,7 @@ def payments_over_time():
 
 @analytics_bp.route("/api/analytics/payments-by-status")
 @login_required
+@module_enabled("analytics")
 def payments_by_status():
     """Get payment breakdown by status"""
     days = int(request.args.get("days", 30))
@@ -1052,6 +1069,7 @@ def payments_by_status():
 
 @analytics_bp.route("/api/analytics/payments-by-method")
 @login_required
+@module_enabled("analytics")
 def payments_by_method():
     """Get payment breakdown by payment method"""
     days = int(request.args.get("days", 30))
@@ -1100,6 +1118,7 @@ def payments_by_method():
 
 @analytics_bp.route("/api/analytics/payment-summary")
 @login_required
+@module_enabled("analytics")
 def payment_summary():
     """Get payment summary statistics"""
     days = int(request.args.get("days", 30))
@@ -1181,6 +1200,7 @@ def payment_summary():
 
 @analytics_bp.route("/api/analytics/revenue-vs-payments")
 @login_required
+@module_enabled("analytics")
 def revenue_vs_payments():
     """Compare potential revenue (from time tracking) with actual payments"""
     days = int(request.args.get("days", 30))

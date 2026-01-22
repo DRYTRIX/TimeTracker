@@ -35,10 +35,12 @@ except ImportError:
     create_report_powerpoint = None
 
 reports_bp = Blueprint("reports", __name__)
+from app.utils.module_helpers import module_enabled
 
 
 @reports_bp.route("/reports")
 @login_required
+@module_enabled("reports")
 def reports():
     """Main reports page - REFACTORED to use service layer with optimized queries"""
     from app.services import ReportingService
@@ -61,6 +63,7 @@ def reports():
 
 @reports_bp.route("/reports/comparison")
 @login_required
+@module_enabled("reports")
 def comparison_view():
     """Get comparison data for reports"""
     period = request.args.get("period", "month")
@@ -107,6 +110,7 @@ def comparison_view():
 
 @reports_bp.route("/reports/project")
 @login_required
+@module_enabled("reports")
 def project_report():
     """Project-based time report"""
     project_id = request.args.get("project_id", type=int)
@@ -263,6 +267,7 @@ def project_report():
 
 @reports_bp.route("/reports/user")
 @login_required
+@module_enabled("reports")
 def user_report():
     """User-based time report"""
     user_id = request.args.get("user_id", type=int)
@@ -370,6 +375,7 @@ def user_report():
 
 @reports_bp.route("/reports/export/form")
 @login_required
+@module_enabled("reports")
 def export_form():
     """Display CSV export form with filter options"""
     # Get all users (for admin)
@@ -399,6 +405,7 @@ def export_form():
 
 @reports_bp.route("/reports/export/csv")
 @login_required
+@module_enabled("reports")
 def export_csv():
     """Export time entries as CSV with enhanced filters"""
     start_time = time.time()  # Start performance tracking
@@ -568,6 +575,7 @@ def export_csv():
 
 @reports_bp.route("/reports/summary")
 @login_required
+@module_enabled("reports")
 def summary_report():
     """Summary report with key metrics"""
     # Get date range
@@ -623,6 +631,7 @@ def summary_report():
 
 @reports_bp.route("/reports/tasks")
 @login_required
+@module_enabled("reports")
 def task_report():
     """Report of finished tasks within a project, including hours spent per task"""
     project_id = request.args.get("project_id", type=int)
@@ -713,6 +722,7 @@ def task_report():
 
 @reports_bp.route("/reports/export/excel")
 @login_required
+@module_enabled("reports")
 def export_excel():
     """Export time entries as Excel file"""
     start_date = request.args.get("start_date")
@@ -783,6 +793,7 @@ def export_excel():
 
 @reports_bp.route("/reports/project/export/excel")
 @login_required
+@module_enabled("reports")
 def export_project_excel():
     """Export project report as Excel file"""
     project_id = request.args.get("project_id", type=int)
@@ -870,6 +881,7 @@ def export_project_excel():
 
 @reports_bp.route("/reports/user/export/excel")
 @login_required
+@module_enabled("reports")
 def export_user_excel():
     """Export user report as Excel file"""
     user_id = request.args.get("user_id", type=int)
@@ -1017,6 +1029,7 @@ def export_user_excel():
 
 @reports_bp.route("/reports/task/export/excel")
 @login_required
+@module_enabled("reports")
 def export_task_excel():
     """Export task report as Excel file"""
     project_id = request.args.get("project_id", type=int)
@@ -1149,6 +1162,7 @@ def export_task_excel():
 
 @reports_bp.route("/reports/unpaid-hours")
 @login_required
+@module_enabled("reports")
 def unpaid_hours_report():
     """Report showing unpaid hours per client"""
     start_date = request.args.get("start_date")
@@ -1344,6 +1358,7 @@ def unpaid_hours_report():
 
 @reports_bp.route("/reports/unpaid-hours/export/excel")
 @login_required
+@module_enabled("reports")
 def export_unpaid_hours_excel():
     """Export unpaid hours report as Excel file, organized by project"""
     start_date = request.args.get("start_date")

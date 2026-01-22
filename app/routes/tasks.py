@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response, Response
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
@@ -184,6 +186,13 @@ def create_task():
                 users = User.query.order_by(User.username).all()
                 return render_template("tasks/create.html", projects=projects, users=users)
 
+        # Gantt color (hex e.g. #3b82f6)
+        color_val = request.form.get("color", "").strip()
+        if color_val and not re.match(r"^#[0-9A-Fa-f]{6}$", color_val):
+            color_val = None
+        if color_val == "":
+            color_val = None
+
         # Use service layer to create task
         from app.services import TaskService
 
@@ -198,6 +207,7 @@ def create_task():
             due_date=due_date,
             estimated_hours=estimated_hours,
             created_by=current_user.id,
+            color=color_val,
         )
 
         if not result["success"]:
@@ -415,6 +425,12 @@ def edit_task(task_id):
         task.estimated_hours = estimated_hours
         task.due_date = due_date
         task.assigned_to = assigned_to
+        # Gantt color (hex e.g. #3b82f6)
+        color_val = request.form.get("color", "").strip()
+        if color_val and re.match(r"^#[0-9A-Fa-f]{6}$", color_val):
+            task.color = color_val
+        elif color_val == "":
+            task.color = None
         # Handle status update (including reopening from done)
         selected_status = request.form.get("status", "").strip()
         valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)

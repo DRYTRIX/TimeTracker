@@ -3606,7 +3606,8 @@ function initializePDFEditor() {
         }
         
         // Decorative image properties
-        if (attrs.name === 'decorative-image') {
+        // Use includes() to handle cases where name might be modified (e.g., 'decorative-image element-overlap')
+        if (attrs.name && attrs.name.includes('decorative-image')) {
             // Use getAttr to ensure we get the imageUrl
             const imageUrl = node.getAttr('imageUrl') || attrs.imageUrl || '';
             console.log('Properties panel - decorative image URL:', imageUrl);
@@ -5143,6 +5144,17 @@ function initializePDFEditor() {
                         return;
                     }
                     
+                    // CRITICAL FIX: Filter out rectangles that are children of decorative-image groups
+                    // These are placeholder rectangles that should not appear in the preview
+                    const parent = child.getParent && child.getParent();
+                    if (parent) {
+                        const parentName = parent.attrs ? (parent.attrs.name || '') : '';
+                        if (parentName && parentName.includes('decorative-image')) {
+                            console.log('Skipping rectangle inside decorative-image group:', {rectName, parentName});
+                            return;
+                        }
+                    }
+                    
                     // Filter out zero-sized rectangles
                     if (rectWidth === 0 && rectHeight === 0) {
                         console.log('Skipping zero-sized rectangle');
@@ -5376,14 +5388,81 @@ function initializePDFEditor() {
                     let isItemsTable = child.attrs.name === 'items-table';
                     let isExpensesTable = child.attrs.name === 'expenses-table';
                     
+                    // CRITICAL FIX: Check if this is a decorative-image group (handle name variations)
+                    const groupName = child.attrs.name || '';
+                    const isDecorativeImage = groupName && groupName.includes('decorative-image');
+                    
                     // Fallback: Check if group has multiple children (header, line, items) - likely a table
-                    if (!isItemsTable && !isExpensesTable && child.children && child.children.length >= 3) {
+                    if (!isItemsTable && !isExpensesTable && !isDecorativeImage && child.children && child.children.length >= 3) {
                         const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
                         const hasLine = child.children.some(c => c.className === 'Line');
                         if (hasTextChildren && hasLine) {
                             console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
                             isItemsTable = true;
                         }
+                    }
+                    
+                    // Process decorative-image groups first (before tables)
+                    if (isDecorativeImage) {
+                        // Decorative image element
+                        // Get imageUrl from attrs - try multiple methods to ensure we get it
+                        let imageUrl = '';
+                        try {
+                            imageUrl = child.getAttr('imageUrl') || '';
+                        } catch(e) {
+                            console.warn('Could not get imageUrl via getAttr:', e);
+                        }
+                        if (!imageUrl) {
+                            imageUrl = attrs.imageUrl || '';
+                        }
+                        // Also check if stored in the node's attrs directly
+                        if (!imageUrl && child.attrs) {
+                            imageUrl = child.attrs.imageUrl || '';
+                        }
+                        
+                        console.log('Generating code for decorative image, URL:', imageUrl, 'attrs:', attrs);
+                        
+                        // Find the actual image in the group if it exists
+                        const children = child.getChildren ? child.getChildren() : (child.children || []);
+                        const imageElement = children.find(c => c.className === 'Image');
+                        
+                        let actualWidth = 100;
+                        let actualHeight = 100;
+                        
+                        if (imageElement) {
+                            actualWidth = Math.round(imageElement.width() || imageElement.attrs.width || 100);
+                            actualHeight = Math.round(imageElement.height() || imageElement.attrs.height || 100);
+                        } else {
+                            // Use group dimensions if available
+                            const groupBox = child.getClientRect();
+                            if (groupBox && groupBox.width > 0 && groupBox.height > 0) {
+                                actualWidth = Math.round(groupBox.width);
+                                actualHeight = Math.round(groupBox.height);
+                            }
+                        }
+                        
+                        console.log('Decorative image dimensions:', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
+                        
+                        // Add to ReportLab template JSON
+                        templateJson.elements.push({
+                            type: 'image',
+                            x: pxToPt(x),
+                            y: pxToPt(y),
+                            width: pxToPt(actualWidth),
+                            height: pxToPt(actualHeight),
+                            source: imageUrl || '',  // Store the image URL
+                            opacity: opacity,
+                            decorative: true  // Mark as decorative image
+                        });
+                        
+                        // Legacy HTML for preview - only generate image tag, not rectangle
+                        if (imageUrl && imageUrl.trim() !== '') {
+                            bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
+                        } else {
+                            bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;background:#f0f0f0;border:2px dashed #999;opacity:${opacity};display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>\n`;
+                        }
+                        // Skip processing children of decorative-image groups - they are just placeholders
+                        return; // Use return instead of continue in forEach
                     }
                     
                     if (isItemsTable) {
@@ -5544,8 +5623,9 @@ function initializePDFEditor() {
                     bodyContent += `    </table>\n`;
                     bodyContent += `  </div>\n`;
                     bodyContent += `  <!-- Expenses Table End -->\n`;
-                } else if (attrs.name === 'decorative-image') {
-                    // Decorative image element
+                } else if (attrs.name && attrs.name.includes('decorative-image')) {
+                    // Decorative image element (handles name variations like "decorative-image element-overlap")
+                    // This should not be reached if the earlier check worked, but keeping as fallback
                     // Get imageUrl from attrs - try multiple methods to ensure we get it
                     let imageUrl = '';
                     try {
@@ -5561,7 +5641,7 @@ function initializePDFEditor() {
                         imageUrl = child.attrs.imageUrl || '';
                     }
                     
-                    console.log('Generating code for decorative image, URL:', imageUrl, 'attrs:', attrs);
+                    console.log('Generating code for decorative image (fallback), URL:', imageUrl, 'attrs:', attrs);
                     
                     // Find the actual image in the group if it exists
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
@@ -5582,7 +5662,7 @@ function initializePDFEditor() {
                         }
                     }
                     
-                    console.log('Decorative image dimensions:', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
+                    console.log('Decorative image dimensions (fallback):', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
                     
                     // Add to ReportLab template JSON
                     templateJson.elements.push({
@@ -5596,7 +5676,7 @@ function initializePDFEditor() {
                         decorative: true  // Mark as decorative image
                     });
                     
-                    // Legacy HTML for preview
+                    // Legacy HTML for preview - only generate image tag, not rectangle
                     if (imageUrl && imageUrl.trim() !== '') {
                         bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
                     } else {

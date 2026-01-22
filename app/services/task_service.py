@@ -53,6 +53,7 @@ class TaskService:
         priority: str = "medium",
         due_date: Optional[Any] = None,
         estimated_hours: Optional[float] = None,
+        color: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new task.
@@ -66,6 +67,7 @@ class TaskService:
             due_date: Due date
             estimated_hours: Estimated hours
             created_by: User ID of creator
+            color: Optional Gantt chart bar color (hex e.g. #3b82f6)
 
         Returns:
             dict with 'success', 'message', and 'task' keys
@@ -87,6 +89,8 @@ class TaskService:
             status=TaskStatus.TODO.value,
             created_by=created_by,
         )
+        if color:
+            task.color = color
 
         if not safe_commit("create_task", {"project_id": project_id, "created_by": created_by}):
             return {

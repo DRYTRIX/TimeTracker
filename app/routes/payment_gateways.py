@@ -12,12 +12,14 @@ from app.utils.permissions import admin_or_permission_required
 from decimal import Decimal
 import json
 import os
+from app.utils.module_helpers import module_enabled
 
 payment_gateways_bp = Blueprint("payment_gateways", __name__)
 
 
 @payment_gateways_bp.route("/payment-gateways")
 @login_required
+@module_enabled("payment_gateways")
 @admin_or_permission_required("manage_payment_gateways")
 def list_gateways():
     """List payment gateways"""
@@ -27,6 +29,7 @@ def list_gateways():
 
 @payment_gateways_bp.route("/payment-gateways/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("payment_gateways")
 @admin_or_permission_required("manage_payment_gateways")
 def create_gateway():
     """Create a payment gateway"""
@@ -63,6 +66,7 @@ def create_gateway():
 
 @payment_gateways_bp.route("/invoices/<int:invoice_id>/pay", methods=["GET", "POST"])
 @login_required
+@module_enabled("payment_gateways")
 def pay_invoice(invoice_id):
     """Pay an invoice"""
     invoice = Invoice.query.get_or_404(invoice_id)
@@ -162,6 +166,7 @@ def stripe_webhook():
 
 @payment_gateways_bp.route("/payment-gateways/payment-success/<int:invoice_id>")
 @login_required
+@module_enabled("payment_gateways")
 def payment_success(invoice_id):
     """Payment success page"""
     invoice = Invoice.query.get_or_404(invoice_id)

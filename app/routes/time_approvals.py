@@ -9,12 +9,14 @@ from app.models.time_entry_approval import TimeEntryApproval, ApprovalPolicy, Ap
 from app.models import TimeEntry
 from app.services.time_approval_service import TimeApprovalService
 from flask_babel import gettext as _
+from app.utils.module_helpers import module_enabled
 
 time_approvals_bp = Blueprint("time_approvals", __name__)
 
 
 @time_approvals_bp.route("/approvals")
 @login_required
+@module_enabled("time_approvals")
 def list_approvals():
     """List pending approvals"""
     service = TimeApprovalService()
@@ -32,6 +34,7 @@ def list_approvals():
 
 @time_approvals_bp.route("/approvals/<int:approval_id>")
 @login_required
+@module_enabled("time_approvals")
 def view_approval(approval_id):
     """View approval details"""
     approval = TimeEntryApproval.query.get_or_404(approval_id)
@@ -49,6 +52,7 @@ def view_approval(approval_id):
 
 @time_approvals_bp.route("/approvals/<int:approval_id>/approve", methods=["POST"])
 @login_required
+@module_enabled("time_approvals")
 def approve_entry(approval_id):
     """Approve a time entry"""
     service = TimeApprovalService()
@@ -69,6 +73,7 @@ def approve_entry(approval_id):
 
 @time_approvals_bp.route("/approvals/<int:approval_id>/reject", methods=["POST"])
 @login_required
+@module_enabled("time_approvals")
 def reject_entry(approval_id):
     """Reject a time entry"""
     service = TimeApprovalService()
@@ -96,6 +101,7 @@ def reject_entry(approval_id):
 
 @time_approvals_bp.route("/time-entries/<int:entry_id>/request-approval", methods=["POST"])
 @login_required
+@module_enabled("time_approvals")
 def request_approval(entry_id):
     """Request approval for a time entry"""
     service = TimeApprovalService()
@@ -121,6 +127,7 @@ def request_approval(entry_id):
 
 @time_approvals_bp.route("/approvals/<int:approval_id>/cancel", methods=["POST"])
 @login_required
+@module_enabled("time_approvals")
 def cancel_approval(approval_id):
     """Cancel an approval request"""
     service = TimeApprovalService()
@@ -140,6 +147,7 @@ def cancel_approval(approval_id):
 
 @time_approvals_bp.route("/api/approvals/bulk-approve", methods=["POST"])
 @login_required
+@module_enabled("time_approvals")
 def bulk_approve():
     """Bulk approve multiple time entries"""
     service = TimeApprovalService()
@@ -156,6 +164,7 @@ def bulk_approve():
 
 @time_approvals_bp.route("/api/approvals/pending")
 @login_required
+@module_enabled("time_approvals")
 def api_pending_approvals():
     """API: Get pending approvals"""
     service = TimeApprovalService()

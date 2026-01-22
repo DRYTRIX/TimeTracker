@@ -6,12 +6,14 @@ from app.models import WeeklyTimeGoal, TimeEntry
 from app.utils.db import safe_commit
 from datetime import datetime, timedelta
 from sqlalchemy import func
+from app.utils.module_helpers import module_enabled
 
 weekly_goals_bp = Blueprint("weekly_goals", __name__)
 
 
 @weekly_goals_bp.route("/goals")
 @login_required
+@module_enabled("weekly_goals")
 def index():
     """Display weekly goals overview page"""
     current_app.logger.info(f"GET /goals user={current_user.username}")
@@ -57,6 +59,7 @@ def index():
 
 @weekly_goals_bp.route("/goals/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("weekly_goals")
 def create():
     """Create a new weekly time goal"""
     if request.method == "GET":
@@ -125,6 +128,7 @@ def create():
 
 @weekly_goals_bp.route("/goals/<int:goal_id>")
 @login_required
+@module_enabled("weekly_goals")
 def view(goal_id):
     """View details of a specific weekly goal"""
     current_app.logger.info(f"GET /goals/{goal_id} user={current_user.username}")
@@ -180,6 +184,7 @@ def view(goal_id):
 
 @weekly_goals_bp.route("/goals/<int:goal_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("weekly_goals")
 def edit(goal_id):
     """Edit a weekly time goal"""
     goal = WeeklyTimeGoal.query.get_or_404(goal_id)
@@ -236,6 +241,7 @@ def edit(goal_id):
 
 @weekly_goals_bp.route("/goals/<int:goal_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("weekly_goals")
 def delete(goal_id):
     """Delete a weekly time goal"""
     current_app.logger.info(f"POST /goals/{goal_id}/delete user={current_user.username}")
@@ -272,6 +278,7 @@ def delete(goal_id):
 
 @weekly_goals_bp.route("/api/goals/current")
 @login_required
+@module_enabled("weekly_goals")
 def api_current_goal():
     """API endpoint to get current week's goal"""
     current_app.logger.info(f"GET /api/goals/current user={current_user.username}")
@@ -287,6 +294,7 @@ def api_current_goal():
 
 @weekly_goals_bp.route("/api/goals")
 @login_required
+@module_enabled("weekly_goals")
 def api_list_goals():
     """API endpoint to list all goals for current user"""
     current_app.logger.info(f"GET /api/goals user={current_user.username}")
@@ -310,6 +318,7 @@ def api_list_goals():
 
 @weekly_goals_bp.route("/api/goals/<int:goal_id>")
 @login_required
+@module_enabled("weekly_goals")
 def api_get_goal(goal_id):
     """API endpoint to get a specific goal"""
     current_app.logger.info(f"GET /api/goals/{goal_id} user={current_user.username}")
@@ -326,6 +335,7 @@ def api_get_goal(goal_id):
 
 @weekly_goals_bp.route("/api/goals/stats")
 @login_required
+@module_enabled("weekly_goals")
 def api_stats():
     """API endpoint to get goal statistics"""
     current_app.logger.info(f"GET /api/goals/stats user={current_user.username}")

@@ -119,6 +119,7 @@
 
 <form id="bulkDeleteForm" method="POST" action="{{ url_for('timer.bulk_delete_time_entries') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="reason" id="bulkDeleteReason">
     {% for key, value in filters.items() %}
         {% if value %}
         <input type="hidden" name="{{ key }}" value="{{ value }}">
@@ -129,6 +130,30 @@
 <!-- Time Entries Table -->
 <div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
     {% include 'timer/_time_entries_list.html' %}
+</div>
+
+<!-- Bulk Delete Dialog -->
+<div id="bulkDeleteDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4 text-rose-600">{{ _('Delete Selected Time Entries') }}</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4" id="bulkDeleteMessage"></p>
+            <div class="mb-4">
+                <label for="bulkDeleteReasonInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ _('Reason for Deletion') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional but recommended') }})</span>
+                </label>
+                <textarea id="bulkDeleteReasonInput" class="form-input w-full" rows="3" placeholder="{{ _('e.g., Duplicate entry, incorrect time, etc.') }}"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkDeleteDialog()">
+                    {{ _('Cancel') }}
+                </button>
+                <button type="button" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors" onclick="confirmBulkDelete()">
+                    <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Bulk Mark Paid Dialog -->
@@ -295,21 +320,28 @@ function showBulkDeleteConfirm() {
     }
     const count = checkboxes.length;
     const msg = `{{ _("Are you sure you want to delete") }} ${count} {{ _("time entry/entries") }}? {{ _("This action cannot be undone.") }}`;
-    if (window.showConfirm) {
-        window.showConfirm(msg, { title: '{{ _("Delete Time Entries") }}', confirmText: '{{ _("Delete") }}', variant: 'danger' }).then(function(ok) {
-            if (ok) submitBulkDelete();
-        });
-    } else if (confirm(msg)) {
-        submitBulkDelete();
-    }
+    
+    // Show custom dialog with reason field
+    document.getElementById('bulkDeleteMessage').textContent = msg;
+    document.getElementById('bulkDeleteReasonInput').value = '';
+    document.getElementById('bulkDeleteDialog').classList.remove('hidden');
+    
     // Close the menu
     document.getElementById('bulkActionsMenu').classList.add('hidden');
     return false;
 }
 
-function submitBulkDelete() {
+function closeBulkDeleteDialog() {
+    document.getElementById('bulkDeleteDialog').classList.add('hidden');
+}
+
+function confirmBulkDelete() {
     const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
     const form = document.getElementById('bulkDeleteForm');
+    const reasonInput = document.getElementById('bulkDeleteReasonInput');
+    
+    // Set reason in form
+    document.getElementById('bulkDeleteReason').value = reasonInput.value.trim();
     
     // Clear existing entry IDs
     form.querySelectorAll('input[name="entry_ids[]"]').forEach(input => input.remove());
@@ -323,6 +355,8 @@ function submitBulkDelete() {
         form.appendChild(input);
     });
     
+    // Close dialog and submit
+    closeBulkDeleteDialog();
     form.submit();
 }
 

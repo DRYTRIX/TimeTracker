@@ -9,12 +9,14 @@ from app import db
 from app.models import Project, Task, TimeEntry
 from datetime import datetime, timedelta
 from sqlalchemy import func
+from app.utils.module_helpers import module_enabled
 
 gantt_bp = Blueprint("gantt", __name__)
 
 
 @gantt_bp.route("/gantt")
 @login_required
+@module_enabled("gantt")
 def gantt_view():
     """Main Gantt chart view."""
     project_id = request.args.get("project_id", type=int)
@@ -25,6 +27,7 @@ def gantt_view():
 
 @gantt_bp.route("/api/gantt/data")
 @login_required
+@module_enabled("gantt")
 def gantt_data():
     """Get Gantt chart data as JSON."""
     project_id = request.args.get("project_id", type=int)
@@ -133,8 +136,12 @@ def gantt_data():
 
             dependencies = []
             # Task dependencies would need to be added to Task model if needed
-            # Use project color for tasks (Task model has no color after revert)
-            task_color = proj_color
+            # Use task-level color when set, otherwise project color
+            raw = (task.color or "").strip().lstrip("#")
+            if raw and len(raw) == 6 and all(c in "0123456789aAbBcCdDeEfF" for c in raw):
+                task_color = raw.lower()
+            else:
+                task_color = proj_color
 
             gantt_data.append(
                 {

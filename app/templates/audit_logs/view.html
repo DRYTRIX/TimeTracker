@@ -71,13 +71,52 @@
                 </dd>
             </div>
             {% endif %}
+            {% if audit_log.reason %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Reason') }}</dt>
+                <dd class="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                    <i class="fas fa-comment-alt mr-1"></i>{{ audit_log.reason }}
+                </dd>
+            </div>
+            {% endif %}
+            {% if audit_log.entity_type == 'TimeEntry' and audit_log.get_entity_metadata() %}
+            {% set metadata = audit_log.get_entity_metadata() %}
+            <div>
+                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Entity Context') }}</dt>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    <div class="space-y-1">
+                        {% if metadata.project_name %}
+                        <div><i class="fas fa-project-diagram mr-1"></i><strong>{{ _('Project') }}:</strong> {{ metadata.project_name }}{% if metadata.project_id %} (ID: {{ metadata.project_id }}){% endif %}</div>
+                        {% endif %}
+                        {% if metadata.client_name %}
+                        <div><i class="fas fa-building mr-1"></i><strong>{{ _('Client') }}:</strong> {{ metadata.client_name }}{% if metadata.client_id %} (ID: {{ metadata.client_id }}){% endif %}</div>
+                        {% endif %}
+                        {% if metadata.task_name %}
+                        <div><i class="fas fa-tasks mr-1"></i><strong>{{ _('Task') }}:</strong> {{ metadata.task_name }}{% if metadata.task_id %} (ID: {{ metadata.task_id }}){% endif %}</div>
+                        {% endif %}
+                        {% if metadata.created_at %}
+                        <div><i class="fas fa-calendar-plus mr-1"></i><strong>{{ _('TimeEntry Created') }}:</strong> 
+                            {% if metadata.created_at is string %}
+                                {{ metadata.created_at[:19]|replace('T', ' ') }}
+                            {% else %}
+                                {{ metadata.created_at|user_datetime('%Y-%m-%d %H:%M:%S') }}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if metadata.user_name %}
+                        <div><i class="fas fa-user mr-1"></i><strong>{{ _('Entry Owner') }}:</strong> {{ metadata.user_name }}{% if metadata.user_id %} (ID: {{ metadata.user_id }}){% endif %}</div>
+                        {% endif %}
+                    </div>
+                </dd>
+            </div>
+            {% endif %}
         </dl>
     </div>
     
     <!-- Change Details -->
     {% if audit_log.field_name %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4">{{ _('Change Details') }}</h2>
+        <h2 class="text-xl font-semibold mb-4">{{ _('Field Change Details') }}</h2>
         <div class="space-y-4">
             {% if audit_log.old_value %}
             <div>
@@ -93,6 +132,41 @@
                 <dd class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                     <pre class="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{{ audit_log.get_new_value() }}</pre>
                 </dd>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Full Entity State -->
+    {% if audit_log.get_full_old_state() or audit_log.get_full_new_state() %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow lg:col-span-2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Full Entity State') }}</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {% if audit_log.get_full_old_state() %}
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{{ _('Before Change') }}</h3>
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    {% set old_state = audit_log.get_full_old_state() %}
+                    {% if old_state is mapping or old_state is iterable and old_state is not string %}
+                        <pre class="text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{{ old_state|tojson(indent=2) }}</pre>
+                    {% else %}
+                        <pre class="text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{{ old_state }}</pre>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% if audit_log.get_full_new_state() %}
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{{ _('After Change') }}</h3>
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    {% set new_state = audit_log.get_full_new_state() %}
+                    {% if new_state is mapping or new_state is iterable and new_state is not string %}
+                        <pre class="text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{{ new_state|tojson(indent=2) }}</pre>
+                    {% else %}
+                        <pre class="text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{{ new_state }}</pre>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
         </div>

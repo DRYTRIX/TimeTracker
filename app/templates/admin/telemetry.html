@@ -5,37 +5,37 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ _('Telemetry & Analytics Dashboard') }}</h1>
-        <p class="text-gray-600">Monitor what data is being collected and manage your privacy settings</p>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{{ _('Telemetry & Analytics Dashboard') }}</h1>
+        <p class="text-gray-600 dark:text-gray-400">Monitor what data is being collected and manage your privacy settings</p>
     </div>
 
     <!-- Telemetry Status Card -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">📊 Telemetry Status</h2>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">📊 Telemetry Status</h2>
             {% if telemetry.enabled %}
-            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Enabled</span>
+            <span class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm font-medium">Enabled</span>
             {% else %}
-            <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Disabled</span>
+            <span class="px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-sm font-medium">Disabled</span>
             {% endif %}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Installation ID</p>
-                <p class="font-mono text-sm">{{ telemetry.installation_id }}</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Installation ID</p>
+                <p class="font-mono text-sm text-text-light dark:text-text-dark">{{ telemetry.installation_id }}</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Telemetry Fingerprint</p>
-                <p class="font-mono text-sm break-all">{{ telemetry.fingerprint[:32] }}...</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Telemetry Fingerprint</p>
+                <p class="font-mono text-sm break-all text-text-light dark:text-text-dark">{{ telemetry.fingerprint[:32] }}...</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Salt (Partial)</p>
-                <p class="font-mono text-sm">{{ telemetry.telemetry_salt }}</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Salt (Partial)</p>
+                <p class="font-mono text-sm text-text-light dark:text-text-dark">{{ telemetry.telemetry_salt }}</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Setup Status</p>
-                <p class="font-medium">{{ 'Complete' if telemetry.setup_complete else 'Pending' }}</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Setup Status</p>
+                <p class="font-medium text-text-light dark:text-text-dark">{{ 'Complete' if telemetry.setup_complete else 'Pending' }}</p>
             </div>
         </div>
 
@@ -44,19 +44,19 @@
             <button type="submit" class="px-4 py-2 rounded-lg transition {% if telemetry.enabled %}bg-red-600 hover:bg-red-700 text-white{% else %}bg-green-600 hover:bg-green-700 text-white{% endif %}">
                 {% if telemetry.enabled %}Disable Telemetry{% else %}Enable Telemetry{% endif %}
             </button>
-            <p class="text-xs text-gray-600 mt-2">Tip: You can also manage this setting in <a href="{{ url_for('admin.settings') }}" class="text-primary hover:underline">{{ _('Admin → Settings') }}</a> ({{ _('Privacy & Analytics') }} section)</p>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">Tip: You can also manage this setting in <a href="{{ url_for('admin.settings') }}" class="text-primary hover:underline">{{ _('Admin → Settings') }}</a> ({{ _('Privacy & Analytics') }} section)</p>
         </form>
 
         {% if telemetry.enabled %}
-        <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-            <p class="text-sm text-green-800">
+        <div class="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <p class="text-sm text-green-800 dark:text-green-200">
                 <strong>Thank you!</strong> Your anonymous telemetry data helps us improve TimeTracker.
                 No personally identifiable information is ever collected.
             </p>
         </div>
         {% else %}
-        <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <p class="text-sm text-gray-700">
+        <div class="mt-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
                 Telemetry is currently disabled. No data is being sent.
             </p>
         </div>
@@ -64,89 +64,89 @@
     </div>
 
     <!-- PostHog Status Card -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">📈 PostHog (Product Analytics)</h2>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">📈 PostHog (Product Analytics)</h2>
             {% if posthog.enabled %}
-            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Configured</span>
+            <span class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm font-medium">Configured</span>
             {% else %}
-            <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Not Configured</span>
+            <span class="px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-sm font-medium">Not Configured</span>
             {% endif %}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">API Key</p>
-                <p class="font-medium">{{ 'Set' if posthog.api_key_set else 'Not Set' }}</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">API Key</p>
+                <p class="font-medium text-text-light dark:text-text-dark">{{ 'Set' if posthog.api_key_set else 'Not Set' }}</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Host</p>
-                <p class="font-mono text-sm">{{ posthog.host }}</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Host</p>
+                <p class="font-mono text-sm text-text-light dark:text-text-dark">{{ posthog.host }}</p>
             </div>
         </div>
 
         {% if posthog.enabled %}
-        <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p class="text-sm text-blue-800">
+        <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <p class="text-sm text-blue-800 dark:text-blue-200">
                 <strong>PostHog is tracking:</strong> User behavior events like timer starts, project creation, etc.
                 Uses internal user IDs only (no PII).
             </p>
         </div>
         {% else %}
-        <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <p class="text-sm text-gray-700">
-                To enable PostHog, set <code class="bg-gray-200 px-1 py-0.5 rounded">POSTHOG_API_KEY</code> in your environment variables.
+        <div class="mt-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                To enable PostHog, set <code class="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-text-light dark:text-text-dark">POSTHOG_API_KEY</code> in your environment variables.
             </p>
         </div>
         {% endif %}
     </div>
 
     <!-- Sentry Status Card -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">🔍 Sentry (Error Monitoring)</h2>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">🔍 Sentry (Error Monitoring)</h2>
             {% if sentry.enabled %}
-            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Configured</span>
+            <span class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm font-medium">Configured</span>
             {% else %}
-            <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">Not Configured</span>
+            <span class="px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-sm font-medium">Not Configured</span>
             {% endif %}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">DSN</p>
-                <p class="font-medium">{{ 'Set' if sentry.dsn_set else 'Not Set' }}</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">DSN</p>
+                <p class="font-medium text-text-light dark:text-text-dark">{{ 'Set' if sentry.dsn_set else 'Not Set' }}</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Traces Sample Rate</p>
-                <p class="font-medium">{{ sentry.traces_rate }}</p>
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Traces Sample Rate</p>
+                <p class="font-medium text-text-light dark:text-text-dark">{{ sentry.traces_rate }}</p>
             </div>
         </div>
 
         {% if sentry.enabled %}
-        <div class="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <p class="text-sm text-purple-800">
+        <div class="mt-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+            <p class="text-sm text-purple-800 dark:text-purple-200">
                 <strong>Sentry is monitoring:</strong> Application errors and performance issues.
                 Helps identify and fix bugs quickly.
             </p>
         </div>
         {% else %}
-        <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <p class="text-sm text-gray-700">
-                To enable Sentry, set <code class="bg-gray-200 px-1 py-0.5 rounded">SENTRY_DSN</code> in your environment variables.
+        <div class="mt-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                To enable Sentry, set <code class="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-text-light dark:text-text-dark">SENTRY_DSN</code> in your environment variables.
             </p>
         </div>
         {% endif %}
     </div>
 
     <!-- What Data is Collected -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">📋 What Data is Collected</h2>
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">📋 What Data is Collected</h2>
 
         <div class="space-y-4">
             <div>
-                <h3 class="font-semibold text-gray-900 mb-2">✅ What We Collect (When Enabled)</h3>
-                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 ml-4">
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">✅ What We Collect (When Enabled)</h3>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300 ml-4">
                     <li>Anonymous installation fingerprint (hashed, cannot identify you)</li>
                     <li>Application version and platform information</li>
                     <li>Feature usage events (e.g., "timer started", "project created")</li>
@@ -157,8 +157,8 @@
             </div>
 
             <div>
-                <h3 class="font-semibold text-gray-900 mb-2">❌ What We DON'T Collect</h3>
-                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 ml-4">
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">❌ What We DON'T Collect</h3>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300 ml-4">
                     <li>Email addresses or usernames</li>
                     <li>IP addresses</li>
                     <li>Project names or descriptions</li>
@@ -171,19 +171,19 @@
     </div>
 
     <!-- Privacy & Documentation -->
-    <div class="bg-gray-50 rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">📚 Documentation & Privacy</h2>
-        <div class="space-y-2 text-sm text-gray-700">
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">📚 Documentation & Privacy</h2>
+        <div class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <p>
-                <a href="/docs/analytics.md" class="text-indigo-600 hover:text-indigo-800 underline">📖 Analytics Documentation</a> - 
+                <a href="/docs/analytics.md" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 underline">📖 Analytics Documentation</a> - 
                 Complete guide to analytics features
             </p>
             <p>
-                <a href="/docs/events.md" class="text-indigo-600 hover:text-indigo-800 underline">📊 Events Schema</a> - 
+                <a href="/docs/events.md" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 underline">📊 Events Schema</a> - 
                 List of all tracked events
             </p>
             <p>
-                <a href="/docs/privacy.md" class="text-indigo-600 hover:text-indigo-800 underline">🔒 Privacy Policy</a> - 
+                <a href="/docs/privacy.md" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 underline">🔒 Privacy Policy</a> - 
                 Data collection and your rights
             </p>
         </div>

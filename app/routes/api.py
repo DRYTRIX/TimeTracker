@@ -851,6 +851,31 @@ def create_entry():
 
     entry = result.get("entry")
     
+    # Log activity
+    if entry:
+        from app.models import Activity
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        task_name = entry.task.name if entry.task else None
+        duration_formatted = entry.duration_formatted if hasattr(entry, 'duration_formatted') else "0:00"
+        
+        Activity.log(
+            user_id=entry.user_id,
+            action="created",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+            description=f'Created time entry for {entity_name}' + (f" - {task_name}" if task_name else "") + f' - {duration_formatted}',
+            extra_data={
+                "project_name": entry.project.name if entry.project else None,
+                "client_name": entry.client.name if entry.client else None,
+                "task_name": task_name,
+                "duration_formatted": duration_formatted,
+                "duration_hours": entry.duration_hours if hasattr(entry, 'duration_hours') else None,
+            },
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+    
     # Invalidate dashboard cache for the entry owner so new entry appears immediately
     try:
         from app.utils.cache import get_cache
@@ -1418,15 +1443,7 @@ def update_entry(entry_id):
         return jsonify({"error": "Access denied"}), 403
 
     data = request.get_json() or {}
-
-    # Optional: project change (admin only)
-    new_project_id = data.get("project_id")
-    if new_project_id is not None and current_user.is_admin:
-        if new_project_id != entry.project_id:
-            project = Project.query.filter_by(id=new_project_id, status="active").first()
-            if not project:
-                return jsonify({"error": "Invalid project"}), 400
-            entry.project_id = new_project_id
+    reason = data.get("reason")  # Optional reason for the change
 
     # Optional: start/end time updates (admin only for safety)
     # Accept HTML datetime-local format: YYYY-MM-DDTHH:MM
@@ -1445,66 +1462,54 @@ def update_entry(entry_id):
         except Exception:
             return None
 
-    if current_user.is_admin:
-        start_time_str = data.get("start_time")
-        end_time_str = data.get("end_time")
+    # Use service layer for update to get enhanced audit logging
+    from app.services import TimeTrackingService
+    service = TimeTrackingService()
+    
+    # Convert data to service parameters
+    result = service.update_entry(
+        entry_id=entry_id,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
+        project_id=data.get("project_id") if current_user.is_admin else None,
+        client_id=data.get("client_id") if current_user.is_admin else None,
+        task_id=data.get("task_id"),
+        start_time=parse_dt_local(data.get("start_time")) if current_user.is_admin and data.get("start_time") else None,
+        end_time=parse_dt_local(data.get("end_time")) if current_user.is_admin and data.get("end_time") else None,
+        notes=data.get("notes"),
+        tags=data.get("tags"),
+        billable=data.get("billable"),
+        paid=data.get("paid"),
+        invoice_number=data.get("invoice_number"),
+        reason=reason,
+    )
+    
+    if not result.get("success"):
+        return jsonify({"error": result.get("message", "Could not update entry")}), 400
 
-        if start_time_str:
-            parsed_start = parse_dt_local(start_time_str)
-            if not parsed_start:
-                return jsonify({"error": "Invalid start time format"}), 400
-            entry.start_time = parsed_start
-
-        if end_time_str is not None:
-            if end_time_str == "" or end_time_str is False:
-                entry.end_time = None
-                entry.duration_seconds = None
-            else:
-                parsed_end = parse_dt_local(end_time_str)
-                if not parsed_end:
-                    return jsonify({"error": "Invalid end time format"}), 400
-                if parsed_end <= (entry.start_time or parsed_end):
-                    return jsonify({"error": "End time must be after start time"}), 400
-                entry.end_time = parsed_end
-                # Recalculate duration
-                entry.calculate_duration()
-
-    # Prevent multiple active timers for the same user when editing
-    if entry.end_time is None:
-        conflict = (
-            TimeEntry.query.filter(TimeEntry.user_id == entry.user_id)
-            .filter(TimeEntry.end_time.is_(None))
-            .filter(TimeEntry.id != entry.id)
-            .first()
+    entry = result.get("entry")
+    
+    # Log activity
+    if entry:
+        from app.models import Activity
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        task_name = entry.task.name if entry.task else None
+        
+        Activity.log(
+            user_id=current_user.id,
+            action="updated",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+            description=f'Updated time entry for {entity_name}' + (f" - {task_name}" if task_name else ""),
+            extra_data={
+                "project_name": entry.project.name if entry.project else None,
+                "client_name": entry.client.name if entry.client else None,
+                "task_name": task_name,
+            },
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
         )
-        if conflict:
-            return jsonify({"error": "User already has an active timer"}), 400
-
-    # Notes, tags, billable (both admin and owner can change)
-    if "notes" in data:
-        entry.notes = data["notes"].strip() if data["notes"] else None
-
-    if "tags" in data:
-        entry.tags = data["tags"].strip() if data["tags"] else None
-
-    if "billable" in data:
-        entry.billable = bool(data["billable"])
-
-    if "paid" in data:
-        entry.paid = bool(data["paid"])
-        # Clear invoice number if marking as unpaid
-        if not entry.paid:
-            entry.invoice_number = None
-
-    if "invoice_number" in data:
-        invoice_number = data["invoice_number"]
-        entry.invoice_number = invoice_number.strip() if invoice_number else None
-
-    # Prefer local time for updated_at per project preference
-    entry.updated_at = local_now()
-
-    if not safe_commit("api_update_entry", {"entry_id": entry_id}):
-        return jsonify({"error": "Database error while updating entry"}), 500
 
     # Invalidate dashboard cache for the entry owner so changes appear immediately
     try:
@@ -1525,49 +1530,32 @@ def update_entry(entry_id):
 @login_required
 def delete_entry(entry_id):
     """Delete a time entry"""
-    entry = TimeEntry.query.get_or_404(entry_id)
-
-    # Check permissions
-    if entry.user_id != current_user.id and not current_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
-
-    # Don't allow deletion of active timers
-    if entry.is_active:
-        return jsonify({"error": "Cannot delete active timer"}), 400
-
-    # Capture entry info for logging before deletion
-    project_name = entry.project.name if entry.project else None
-    client_name = entry.client.name if entry.client else None
-    entity_name = project_name or client_name or "Unknown"
-    duration_formatted = entry.duration_formatted
-    entry_user_id = entry.user_id  # Capture user_id before deletion
-
-    db.session.delete(entry)
-    db.session.commit()
+    data = request.get_json() or {}
+    reason = data.get("reason")  # Optional reason for deletion
+    
+    # Use service layer for deletion to get enhanced audit logging
+    from app.services import TimeTrackingService
+    service = TimeTrackingService()
+    
+    result = service.delete_entry(
+        user_id=current_user.id,
+        entry_id=entry_id,
+        is_admin=current_user.is_admin,
+        reason=reason,
+    )
+    
+    if not result.get("success"):
+        return jsonify({"error": result.get("message", "Could not delete entry")}), 400
 
     # Invalidate dashboard cache for the entry owner so changes appear immediately
     try:
         from app.utils.cache import get_cache
         cache = get_cache()
-        cache_key = f"dashboard:{entry_user_id}"
+        cache_key = f"dashboard:{current_user.id}"
         cache.delete(cache_key)
-        current_app.logger.debug("Invalidated dashboard cache for user %s after entry deletion", entry_user_id)
+        current_app.logger.debug("Invalidated dashboard cache for user %s after entry deletion", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
-
-    # Log activity
-    from app.models import Activity
-    Activity.log(
-        user_id=current_user.id,
-        action="deleted",
-        entity_type="time_entry",
-        entity_id=entry_id,
-        entity_name=entity_name,
-        description=f'Deleted time entry for {entity_name} - {duration_formatted}',
-        extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted},
-        ip_address=request.remote_addr,
-        user_agent=request.headers.get("User-Agent"),
-    )
 
     return jsonify({"success": True})
 

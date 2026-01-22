@@ -5,12 +5,14 @@ from app import db, socketio
 from app.models import KanbanColumn, Task
 from app.utils.db import safe_commit
 from app.routes.admin import admin_required
+from app.utils.module_helpers import module_enabled
 
 kanban_bp = Blueprint("kanban", __name__)
 
 
 @kanban_bp.route("/kanban")
 @login_required
+@module_enabled("kanban")
 def board():
     """Kanban board page with optional project and user filters"""
     project_id = request.args.get("project_id", type=int)
@@ -55,6 +57,7 @@ def board():
 
 @kanban_bp.route("/kanban/columns")
 @login_required
+@module_enabled("kanban")
 @admin_required
 def list_columns():
     """List kanban columns for management, optionally filtered by project"""
@@ -79,6 +82,7 @@ def list_columns():
 
 @kanban_bp.route("/kanban/columns/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("kanban")
 @admin_required
 def create_column():
     """Create a new kanban column"""
@@ -183,6 +187,7 @@ def create_column():
 
 @kanban_bp.route("/kanban/columns/<int:column_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("kanban")
 @admin_required
 def edit_column(column_id):
     """Edit an existing kanban column"""
@@ -248,6 +253,7 @@ def edit_column(column_id):
 
 @kanban_bp.route("/kanban/columns/<int:column_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("kanban")
 @admin_required
 def delete_column(column_id):
     """Delete a kanban column (only if not system and has no tasks)"""
@@ -322,6 +328,7 @@ def delete_column(column_id):
 
 @kanban_bp.route("/kanban/columns/<int:column_id>/toggle", methods=["POST"])
 @login_required
+@module_enabled("kanban")
 @admin_required
 def toggle_column(column_id):
     """Toggle column active status"""
@@ -369,6 +376,7 @@ def toggle_column(column_id):
 
 @kanban_bp.route("/api/kanban/columns/reorder", methods=["POST"])
 @login_required
+@module_enabled("kanban")
 @admin_required
 def reorder_columns():
     """Reorder kanban columns via API"""
@@ -410,6 +418,7 @@ def reorder_columns():
 
 @kanban_bp.route("/api/kanban/columns")
 @login_required
+@module_enabled("kanban")
 def api_list_columns():
     """API endpoint to get active kanban columns, optionally filtered by project"""
     project_id = request.args.get("project_id", type=int)

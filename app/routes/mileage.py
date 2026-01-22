@@ -6,6 +6,7 @@ from app.models import Mileage, Project, Client, Expense
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
 import csv
 import io
 
@@ -14,6 +15,7 @@ mileage_bp = Blueprint("mileage", __name__)
 
 @mileage_bp.route("/mileage")
 @login_required
+@module_enabled("mileage")
 def list_mileage():
     """List all mileage entries with filters"""
     from app import track_page_view
@@ -131,6 +133,7 @@ def list_mileage():
 
 @mileage_bp.route("/mileage/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("mileage")
 def create_mileage():
     """Create a new mileage entry"""
     if request.method == "GET":
@@ -215,6 +218,7 @@ def create_mileage():
 
 @mileage_bp.route("/mileage/<int:mileage_id>")
 @login_required
+@module_enabled("mileage")
 def view_mileage(mileage_id):
     """View mileage entry details"""
     mileage = Mileage.query.get_or_404(mileage_id)
@@ -233,6 +237,7 @@ def view_mileage(mileage_id):
 
 @mileage_bp.route("/mileage/<int:mileage_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("mileage")
 def edit_mileage(mileage_id):
     """Edit a mileage entry"""
     mileage = Mileage.query.get_or_404(mileage_id)
@@ -294,6 +299,7 @@ def edit_mileage(mileage_id):
 
 @mileage_bp.route("/mileage/<int:mileage_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("mileage")
 def delete_mileage(mileage_id):
     """Delete a mileage entry"""
     mileage = Mileage.query.get_or_404(mileage_id)
@@ -322,6 +328,7 @@ def delete_mileage(mileage_id):
 
 @mileage_bp.route("/mileage/bulk-delete", methods=["POST"])
 @login_required
+@module_enabled("mileage")
 def bulk_delete_mileage():
     """Delete multiple mileage entries at once"""
     mileage_ids = request.form.getlist("mileage_ids[]")
@@ -391,6 +398,7 @@ def bulk_delete_mileage():
 
 @mileage_bp.route("/mileage/bulk-status", methods=["POST"])
 @login_required
+@module_enabled("mileage")
 def bulk_update_status():
     """Update status for multiple mileage entries at once"""
     mileage_ids = request.form.getlist("mileage_ids[]")
@@ -458,6 +466,7 @@ def bulk_update_status():
 
 @mileage_bp.route("/mileage/<int:mileage_id>/approve", methods=["POST"])
 @login_required
+@module_enabled("mileage")
 def approve_mileage(mileage_id):
     """Approve a mileage entry"""
     if not current_user.is_admin:
@@ -490,6 +499,7 @@ def approve_mileage(mileage_id):
 
 @mileage_bp.route("/mileage/<int:mileage_id>/reject", methods=["POST"])
 @login_required
+@module_enabled("mileage")
 def reject_mileage(mileage_id):
     """Reject a mileage entry"""
     if not current_user.is_admin:
@@ -526,6 +536,7 @@ def reject_mileage(mileage_id):
 
 @mileage_bp.route("/mileage/<int:mileage_id>/reimburse", methods=["POST"])
 @login_required
+@module_enabled("mileage")
 def mark_reimbursed(mileage_id):
     """Mark a mileage entry as reimbursed"""
     if not current_user.is_admin:
@@ -558,6 +569,7 @@ def mark_reimbursed(mileage_id):
 # API endpoints
 @mileage_bp.route("/api/mileage", methods=["GET"])
 @login_required
+@module_enabled("mileage")
 def api_list_mileage():
     """API endpoint to list mileage entries"""
     status = request.args.get("status", "").strip()
@@ -577,6 +589,7 @@ def api_list_mileage():
 
 @mileage_bp.route("/api/mileage/<int:mileage_id>", methods=["GET"])
 @login_required
+@module_enabled("mileage")
 def api_get_mileage(mileage_id):
     """API endpoint to get a single mileage entry"""
     mileage = Mileage.query.get_or_404(mileage_id)
@@ -590,6 +603,7 @@ def api_get_mileage(mileage_id):
 
 @mileage_bp.route("/api/mileage/default-rates", methods=["GET"])
 @login_required
+@module_enabled("mileage")
 def api_get_default_rates():
     """API endpoint to get default mileage rates"""
     return jsonify(Mileage.get_default_rates())

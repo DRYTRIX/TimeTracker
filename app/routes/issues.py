@@ -12,12 +12,14 @@ from app.models import Issue, Client, Project, Task, User
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
 from sqlalchemy import or_
+from app.utils.module_helpers import module_enabled
 
 issues_bp = Blueprint("issues", __name__)
 
 
 @issues_bp.route("/issues")
 @login_required
+@module_enabled("issues")
 def list_issues():
     """List all issues with filtering options"""
     page, per_page = get_pagination_params()
@@ -155,6 +157,7 @@ def list_issues():
 
 @issues_bp.route("/issues/new", methods=["GET", "POST"])
 @login_required
+@module_enabled("issues")
 def new_issue():
     """Create a new issue"""
     # Check permissions
@@ -222,6 +225,7 @@ def new_issue():
 
 @issues_bp.route("/issues/<int:issue_id>")
 @login_required
+@module_enabled("issues")
 def view_issue(issue_id):
     """View a specific issue"""
     issue = Issue.query.get_or_404(issue_id)
@@ -292,6 +296,7 @@ def view_issue(issue_id):
 
 @issues_bp.route("/issues/<int:issue_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("issues")
 def edit_issue(issue_id):
     """Edit an issue"""
     issue = Issue.query.get_or_404(issue_id)
@@ -389,6 +394,7 @@ def edit_issue(issue_id):
 
 @issues_bp.route("/issues/<int:issue_id>/link-task", methods=["POST"])
 @login_required
+@module_enabled("issues")
 def link_task(issue_id):
     """Link an issue to an existing task"""
     issue = Issue.query.get_or_404(issue_id)
@@ -409,6 +415,7 @@ def link_task(issue_id):
 
 @issues_bp.route("/issues/<int:issue_id>/create-task", methods=["POST"])
 @login_required
+@module_enabled("issues")
 def create_task_from_issue(issue_id):
     """Create a new task from an issue"""
     issue = Issue.query.get_or_404(issue_id)
@@ -434,6 +441,7 @@ def create_task_from_issue(issue_id):
 
 @issues_bp.route("/issues/<int:issue_id>/status", methods=["POST"])
 @login_required
+@module_enabled("issues")
 def update_status(issue_id):
     """Update issue status"""
     issue = Issue.query.get_or_404(issue_id)
@@ -467,6 +475,7 @@ def update_status(issue_id):
 
 @issues_bp.route("/issues/<int:issue_id>/assign", methods=["POST"])
 @login_required
+@module_enabled("issues")
 def assign_issue(issue_id):
     """Assign issue to a user"""
     issue = Issue.query.get_or_404(issue_id)
@@ -483,6 +492,7 @@ def assign_issue(issue_id):
 
 @issues_bp.route("/issues/<int:issue_id>/priority", methods=["POST"])
 @login_required
+@module_enabled("issues")
 def update_priority(issue_id):
     """Update issue priority"""
     issue = Issue.query.get_or_404(issue_id)
@@ -503,6 +513,7 @@ def update_priority(issue_id):
 
 @issues_bp.route("/issues/<int:issue_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("issues")
 def delete_issue(issue_id):
     """Delete an issue"""
     if not current_user.is_admin:

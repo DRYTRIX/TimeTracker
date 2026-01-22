@@ -4,7 +4,7 @@ Module Registry System
 Centralized registry for managing module metadata, dependencies, and visibility.
 """
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from enum import Enum
 
 
@@ -124,6 +124,63 @@ class ModuleRegistry:
             if cls.is_enabled(module.id, settings, user):
                 enabled.append(module)
         return sorted(enabled, key=lambda m: (m.category.value, m.order))
+    
+    @classmethod
+    def get_dependents(cls, module_id: str) -> List[ModuleDefinition]:
+        """
+        Get all modules that depend on the given module.
+        
+        Args:
+            module_id: The module ID to check for dependents
+            
+        Returns:
+            List of ModuleDefinition objects that depend on the given module
+        """
+        dependents = []
+        target_module = cls.get(module_id)
+        if not target_module:
+            return dependents
+        
+        for module in cls._modules.values():
+            if module_id in module.dependencies:
+                dependents.append(module)
+        
+        return dependents
+    
+    @classmethod
+    def validate_module_disable(cls, module_id: str, disabled_list: List[str]) -> Tuple[bool, List[str]]:
+        """
+        Validate if a module can be disabled, checking for dependent modules.
+        
+        Args:
+            module_id: The module ID to check
+            disabled_list: List of module IDs that will be disabled
+            
+        Returns:
+            Tuple of (can_disable, affected_modules)
+            - can_disable: True if module can be disabled without breaking dependencies
+            - affected_modules: List of module IDs that depend on this module and will be affected
+        """
+        module = cls.get(module_id)
+        if not module:
+            return True, []
+        
+        # Core modules cannot be disabled
+        if module.category == ModuleCategory.CORE:
+            return False, []
+        
+        # Get all modules that depend on this one
+        dependents = cls.get_dependents(module_id)
+        affected = []
+        
+        for dependent in dependents:
+            # If the dependent is not in the disabled list, disabling this module will break it
+            if dependent.id not in disabled_list:
+                affected.append(dependent.id)
+        
+        # Can disable if no unaffected dependents exist
+        can_disable = len(affected) == 0
+        return can_disable, affected
     
     @classmethod
     def initialize_defaults(cls):

@@ -7,12 +7,14 @@ from datetime import datetime, date, time
 from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
+from app.utils.module_helpers import module_enabled
 
 per_diem_bp = Blueprint("per_diem", __name__)
 
 
 @per_diem_bp.route("/per-diem")
 @login_required
+@module_enabled("per_diem")
 def list_per_diem():
     """List all per diem claims with filters"""
     from app import track_page_view
@@ -96,6 +98,7 @@ def list_per_diem():
 
 @per_diem_bp.route("/per-diem/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("per_diem")
 def create_per_diem():
     """Create a new per diem claim"""
     if request.method == "GET":
@@ -227,6 +230,7 @@ def create_per_diem():
 
 @per_diem_bp.route("/per-diem/<int:per_diem_id>")
 @login_required
+@module_enabled("per_diem")
 def view_per_diem(per_diem_id):
     """View per diem claim details"""
     per_diem = PerDiem.query.get_or_404(per_diem_id)
@@ -245,6 +249,7 @@ def view_per_diem(per_diem_id):
 
 @per_diem_bp.route("/per-diem/<int:per_diem_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("per_diem")
 def edit_per_diem(per_diem_id):
     """Edit a per diem claim"""
     per_diem = PerDiem.query.get_or_404(per_diem_id)
@@ -303,6 +308,7 @@ def edit_per_diem(per_diem_id):
 
 @per_diem_bp.route("/per-diem/<int:per_diem_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("per_diem")
 def delete_per_diem(per_diem_id):
     """Delete a per diem claim"""
     per_diem = PerDiem.query.get_or_404(per_diem_id)
@@ -331,6 +337,7 @@ def delete_per_diem(per_diem_id):
 
 @per_diem_bp.route("/per-diem/bulk-delete", methods=["POST"])
 @login_required
+@module_enabled("per_diem")
 def bulk_delete_per_diem():
     """Delete multiple per diem claims at once"""
     per_diem_ids = request.form.getlist("per_diem_ids[]")
@@ -388,6 +395,7 @@ def bulk_delete_per_diem():
 
 @per_diem_bp.route("/per-diem/bulk-status", methods=["POST"])
 @login_required
+@module_enabled("per_diem")
 def bulk_update_status():
     """Update status for multiple per diem claims at once"""
     per_diem_ids = request.form.getlist("per_diem_ids[]")
@@ -443,6 +451,7 @@ def bulk_update_status():
 
 @per_diem_bp.route("/per-diem/<int:per_diem_id>/approve", methods=["POST"])
 @login_required
+@module_enabled("per_diem")
 def approve_per_diem(per_diem_id):
     """Approve a per diem claim"""
     if not current_user.is_admin:
@@ -475,6 +484,7 @@ def approve_per_diem(per_diem_id):
 
 @per_diem_bp.route("/per-diem/<int:per_diem_id>/reject", methods=["POST"])
 @login_required
+@module_enabled("per_diem")
 def reject_per_diem(per_diem_id):
     """Reject a per diem claim"""
     if not current_user.is_admin:
@@ -512,6 +522,7 @@ def reject_per_diem(per_diem_id):
 # Per Diem Rates Management
 @per_diem_bp.route("/per-diem/rates")
 @login_required
+@module_enabled("per_diem")
 @admin_or_permission_required("per_diem_rates.view")
 def list_rates():
     """List all per diem rates"""
@@ -530,6 +541,7 @@ def list_rates():
 
 @per_diem_bp.route("/per-diem/rates/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("per_diem")
 @admin_or_permission_required("per_diem_rates.create")
 def create_rate():
     """Create a new per diem rate"""
@@ -583,6 +595,7 @@ def create_rate():
 
 @per_diem_bp.route("/per-diem/rates/<int:rate_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("per_diem")
 @admin_or_permission_required("per_diem_rates.edit")
 def edit_rate(rate_id):
     """Edit an existing per diem rate"""
@@ -641,6 +654,7 @@ def edit_rate(rate_id):
 
 @per_diem_bp.route("/per-diem/rates/<int:rate_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("per_diem")
 @admin_or_permission_required("per_diem_rates.delete")
 def delete_rate(rate_id):
     """Delete a per diem rate"""
@@ -681,6 +695,7 @@ def delete_rate(rate_id):
 # API endpoints
 @per_diem_bp.route("/api/per-diem", methods=["GET"])
 @login_required
+@module_enabled("per_diem")
 def api_list_per_diem():
     """API endpoint to list per diem claims"""
     status = request.args.get("status", "").strip()
@@ -700,6 +715,7 @@ def api_list_per_diem():
 
 @per_diem_bp.route("/api/per-diem/rates/search", methods=["GET"])
 @login_required
+@module_enabled("per_diem")
 def api_search_rates():
     """API endpoint to search for per diem rates"""
     country = request.args.get("country", "").strip()
@@ -721,6 +737,7 @@ def api_search_rates():
 
 @per_diem_bp.route("/api/per-diem/calculate-days", methods=["POST"])
 @login_required
+@module_enabled("per_diem")
 def api_calculate_days():
     """API endpoint to calculate full/half days from dates and times"""
     data = request.get_json()

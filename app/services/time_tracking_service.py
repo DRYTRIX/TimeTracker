@@ -301,9 +301,26 @@ class TimeTrackingService:
         billable: Optional[bool] = None,
         paid: Optional[bool] = None,
         invoice_number: Optional[str] = None,
+        reason: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Update a time entry.
+
+        Args:
+            entry_id: ID of the time entry to update
+            user_id: ID of the user performing the update
+            is_admin: Whether the user is an admin
+            project_id: Optional new project ID
+            client_id: Optional new client ID
+            task_id: Optional new task ID
+            start_time: Optional new start time
+            end_time: Optional new end time
+            notes: Optional new notes
+            tags: Optional new tags
+            billable: Optional new billable status
+            paid: Optional new paid status
+            invoice_number: Optional new invoice number
+            reason: Optional reason for the change
 
         Returns:
             dict with 'success', 'message', and 'entry' keys
@@ -324,6 +341,11 @@ class TimeTrackingService:
                 "message": "Cannot set end_time on active timer. Stop the timer first.",
                 "error": "timer_active",
             }
+
+        # Capture old state before changes
+        from app.utils.audit import capture_timeentry_state, capture_timeentry_metadata
+        full_old_state = capture_timeentry_state(entry)
+        entity_metadata = capture_timeentry_metadata(entry)
 
         # Update fields
         if project_id is not None:
@@ -384,11 +406,51 @@ class TimeTrackingService:
                 "error": "database_error",
             }
 
+        # Capture new state after changes and create comprehensive audit log
+        try:
+            # Refresh entry to get updated values
+            db.session.refresh(entry)
+            full_new_state = capture_timeentry_state(entry)
+            updated_metadata = capture_timeentry_metadata(entry)
+            
+            from app.models.audit_log import AuditLog
+            from app.utils.audit import get_request_info
+            ip_address, user_agent, request_path = get_request_info()
+            
+            entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+            
+            AuditLog.log_change(
+                user_id=user_id,
+                action="updated",
+                entity_type="TimeEntry",
+                entity_id=entry_id,
+                entity_name=entity_name,
+                change_description=f"Updated time entry for {entity_name}",
+                reason=reason,
+                entity_metadata=updated_metadata,
+                full_old_state=full_old_state,
+                full_new_state=full_new_state,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                request_path=request_path,
+            )
+            db.session.commit()
+        except Exception as e:
+            # Don't fail update if audit logging fails
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to create audit log for TimeEntry update: {e}")
+
         return {"success": True, "message": "Time entry updated successfully", "entry": entry}
 
-    def delete_entry(self, user_id: int, entry_id: int, is_admin: bool = False) -> Dict[str, Any]:
+    def delete_entry(self, user_id: int, entry_id: int, is_admin: bool = False, reason: Optional[str] = None) -> Dict[str, Any]:
         """
         Delete a time entry.
+
+        Args:
+            user_id: ID of the user performing the deletion
+            entry_id: ID of the time entry to delete
+            is_admin: Whether the user is an admin
+            reason: Optional reason for deletion
 
         Returns:
             dict with 'success' and 'message' keys
@@ -416,11 +478,41 @@ class TimeTrackingService:
         entity_name = project_name or client_name or "Unknown"
         duration_formatted = entry.duration_formatted
 
+        # Capture full state and metadata for audit logging
+        from app.utils.audit import capture_timeentry_state, capture_timeentry_metadata, get_request_info
+        from app.models.audit_log import AuditLog
+        
+        full_old_state = capture_timeentry_state(entry)
+        entity_metadata = capture_timeentry_metadata(entry)
+        ip_address, user_agent, request_path = get_request_info()
+
         if self.time_entry_repo.delete(entry):
             if safe_commit("delete_entry", {"user_id": user_id, "entry_id": entry_id}):
+                # Create comprehensive audit log entry
+                try:
+                    AuditLog.log_change(
+                        user_id=user_id,
+                        action="deleted",
+                        entity_type="TimeEntry",
+                        entity_id=entry_id,
+                        entity_name=entity_name,
+                        change_description=f"Deleted time entry for {entity_name} - {duration_formatted}",
+                        reason=reason,
+                        entity_metadata=entity_metadata,
+                        full_old_state=full_old_state,
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        request_path=request_path,
+                    )
+                    db.session.commit()
+                except Exception as e:
+                    # Don't fail deletion if audit logging fails
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to create audit log for TimeEntry deletion: {e}")
+
                 # Log activity
                 from app.models import Activity
-                from flask import request, has_request_context
+                from flask import request
                 Activity.log(
                     user_id=user_id,
                     action="deleted",
@@ -428,9 +520,9 @@ class TimeTrackingService:
                     entity_id=entry_id,
                     entity_name=entity_name,
                     description=f'Deleted time entry for {entity_name} - {duration_formatted}',
-                    extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted},
-                    ip_address=request.remote_addr if has_request_context() else None,
-                    user_agent=request.headers.get("User-Agent") if has_request_context() else None,
+                    extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted, "reason": reason},
+                    ip_address=ip_address,
+                    user_agent=user_agent,
                 )
                 return {"success": True, "message": "Time entry deleted successfully"}
 

@@ -24,6 +24,8 @@ class Task(db.Model):
     updated_at = db.Column(db.DateTime, default=now_in_app_timezone, onupdate=now_in_app_timezone, nullable=False)
     started_at = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
+    # Gantt chart bar color (hex e.g. #3b82f6). Overrides project color when set.
+    color = db.Column(db.String(7), nullable=True)
 
     # Relationships
     # project relationship is defined via backref in Project model

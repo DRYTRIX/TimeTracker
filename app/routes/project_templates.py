@@ -9,6 +9,7 @@ from app import db
 from app.models import ProjectTemplate, Client
 from app.services.project_template_service import ProjectTemplateService
 from app.utils.permissions import admin_or_permission_required
+from app.utils.module_helpers import module_enabled
 import json
 
 project_templates_bp = Blueprint("project_templates", __name__)
@@ -57,6 +58,7 @@ def _parse_tasks_from_request_form():
 
 @project_templates_bp.route("/project-templates")
 @login_required
+@module_enabled("project_templates")
 def list_templates():
     """List project templates"""
     page = request.args.get("page", 1, type=int)
@@ -92,6 +94,7 @@ def list_templates():
 
 @project_templates_bp.route("/project-templates/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("project_templates")
 @admin_or_permission_required("create_projects")
 def create_template():
     """Create a new project template"""
@@ -164,6 +167,7 @@ def create_template():
 
 @project_templates_bp.route("/project-templates/<int:template_id>")
 @login_required
+@module_enabled("project_templates")
 def view_template(template_id):
     """View a project template"""
     service = ProjectTemplateService()
@@ -183,6 +187,7 @@ def view_template(template_id):
 
 @project_templates_bp.route("/project-templates/<int:template_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("project_templates")
 def edit_template(template_id):
     """Edit a project template"""
     service = ProjectTemplateService()
@@ -266,6 +271,7 @@ def edit_template(template_id):
 
 @project_templates_bp.route("/project-templates/<int:template_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("project_templates")
 def delete_template(template_id):
     """Delete a project template"""
     service = ProjectTemplateService()
@@ -282,6 +288,7 @@ def delete_template(template_id):
 
 @project_templates_bp.route("/project-templates/<int:template_id>/create-project", methods=["GET", "POST"])
 @login_required
+@module_enabled("project_templates")
 @admin_or_permission_required("create_projects")
 def create_project_from_template(template_id):
     """Create a project from a template"""

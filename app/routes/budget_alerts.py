@@ -19,12 +19,14 @@ from app.utils.budget_forecasting import (
 )
 from datetime import datetime, timedelta
 from sqlalchemy import func
+from app.utils.module_helpers import module_enabled
 
 budget_alerts_bp = Blueprint("budget_alerts", __name__)
 
 
 @budget_alerts_bp.route("/budget/dashboard")
 @login_required
+@module_enabled("budget_alerts")
 def budget_dashboard():
     """Budget alerts and forecasting dashboard"""
     # Get projects with budgets
@@ -92,6 +94,7 @@ def budget_dashboard():
 
 @budget_alerts_bp.route("/api/budget/burn-rate/<int:project_id>")
 @login_required
+@module_enabled("budget_alerts")
 def get_burn_rate(project_id):
     """Get burn rate for a project"""
     project = Project.query.get_or_404(project_id)
@@ -119,6 +122,7 @@ def get_burn_rate(project_id):
 
 @budget_alerts_bp.route("/api/budget/completion-estimate/<int:project_id>")
 @login_required
+@module_enabled("budget_alerts")
 def get_completion_estimate(project_id):
     """Get estimated completion date for a project"""
     project = Project.query.get_or_404(project_id)
@@ -145,6 +149,7 @@ def get_completion_estimate(project_id):
 
 @budget_alerts_bp.route("/api/budget/resource-allocation/<int:project_id>")
 @login_required
+@module_enabled("budget_alerts")
 def get_resource_allocation(project_id):
     """Get resource allocation analysis for a project"""
     project = Project.query.get_or_404(project_id)
@@ -171,6 +176,7 @@ def get_resource_allocation(project_id):
 
 @budget_alerts_bp.route("/api/budget/cost-trends/<int:project_id>")
 @login_required
+@module_enabled("budget_alerts")
 def get_cost_trends(project_id):
     """Get cost trend analysis for a project"""
     project = Project.query.get_or_404(project_id)
@@ -202,6 +208,7 @@ def get_cost_trends(project_id):
 
 @budget_alerts_bp.route("/api/budget/status/<int:project_id>")
 @login_required
+@module_enabled("budget_alerts")
 def get_project_budget_status(project_id):
     """Get comprehensive budget status for a project"""
     project = Project.query.get_or_404(project_id)
@@ -225,6 +232,7 @@ def get_project_budget_status(project_id):
 
 @budget_alerts_bp.route("/api/budget/alerts")
 @login_required
+@module_enabled("budget_alerts")
 def get_alerts():
     """Get budget alerts"""
     project_id = request.args.get("project_id", type=int)
@@ -256,6 +264,7 @@ def get_alerts():
 
 @budget_alerts_bp.route("/api/budget/alerts/<int:alert_id>/acknowledge", methods=["POST"])
 @login_required
+@module_enabled("budget_alerts")
 def acknowledge_alert(alert_id):
     """Acknowledge a budget alert"""
     alert = BudgetAlert.query.get_or_404(alert_id)
@@ -281,6 +290,7 @@ def acknowledge_alert(alert_id):
 
 @budget_alerts_bp.route("/api/budget/check-alerts/<int:project_id>", methods=["POST"])
 @login_required
+@module_enabled("budget_alerts")
 def check_project_alerts(project_id):
     """Manually check and create alerts for a project (admin only)"""
     if not current_user.is_admin:
@@ -314,6 +324,7 @@ def check_project_alerts(project_id):
 
 @budget_alerts_bp.route("/budget/project/<int:project_id>")
 @login_required
+@module_enabled("budget_alerts")
 def project_budget_detail(project_id):
     """Detailed budget view for a specific project"""
     project = Project.query.get_or_404(project_id)
@@ -370,6 +381,7 @@ def project_budget_detail(project_id):
 
 @budget_alerts_bp.route("/api/budget/summary")
 @login_required
+@module_enabled("budget_alerts")
 def get_budget_summary():
     """Get summary of all budget alerts and project statuses"""
     if current_user.is_admin:

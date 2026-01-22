@@ -9,12 +9,14 @@ from sqlalchemy import func, and_, or_
 from flask import send_file
 from app.utils.db import safe_commit
 from app.utils.excel_export import create_payments_list_excel
+from app.utils.module_helpers import module_enabled
 
 payments_bp = Blueprint("payments", __name__)
 
 
 @payments_bp.route("/payments")
 @login_required
+@module_enabled("payments")
 def list_payments():
     """List all payments"""
     # Get filter parameters
@@ -119,6 +121,7 @@ def list_payments():
 
 @payments_bp.route("/payments/<int:payment_id>")
 @login_required
+@module_enabled("payments")
 def view_payment(payment_id):
     """View payment details"""
     payment = Payment.query.get_or_404(payment_id)
@@ -133,6 +136,7 @@ def view_payment(payment_id):
 
 @payments_bp.route("/payments/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("payments")
 def create_payment():
     """Create a new payment"""
     if request.method == "POST":
@@ -309,6 +313,7 @@ def create_payment():
 
 @payments_bp.route("/payments/<int:payment_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("payments")
 def edit_payment(payment_id):
     """Edit payment"""
     payment = Payment.query.get_or_404(payment_id)
@@ -416,6 +421,7 @@ def edit_payment(payment_id):
 
 @payments_bp.route("/payments/<int:payment_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("payments")
 def delete_payment(payment_id):
     """Delete payment"""
     payment = Payment.query.get_or_404(payment_id)
@@ -454,6 +460,7 @@ def delete_payment(payment_id):
 
 @payments_bp.route("/payments/bulk-delete", methods=["POST"])
 @login_required
+@module_enabled("payments")
 def bulk_delete_payments():
     """Delete multiple payments at once"""
     payment_ids = request.form.getlist("payment_ids[]")
@@ -519,6 +526,7 @@ def bulk_delete_payments():
 
 @payments_bp.route("/payments/bulk-status", methods=["POST"])
 @login_required
+@module_enabled("payments")
 def bulk_update_status():
     """Update status for multiple payments at once"""
     payment_ids = request.form.getlist("payment_ids[]")
@@ -592,6 +600,7 @@ def bulk_update_status():
 
 @payments_bp.route("/api/payments/stats")
 @login_required
+@module_enabled("payments")
 def payment_stats():
     """Get payment statistics"""
     # Base query based on user role
@@ -659,6 +668,7 @@ def payment_stats():
 
 @payments_bp.route("/payments/export/excel")
 @login_required
+@module_enabled("payments")
 def export_payments_excel():
     """Export payments list as Excel file"""
     # Get filter parameters
