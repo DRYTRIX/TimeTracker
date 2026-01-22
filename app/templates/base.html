@@ -471,20 +471,6 @@
                                 </ul>
                             </li>
                             {% endif %}
-                            {% if is_module_enabled('custom_reports') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'custom_reports.report_builder' or ep == 'custom_reports.view_custom_report' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('custom_reports.report_builder') }}">
-                                    <i class="fas fa-magic w-4 mr-2"></i>{{ _('Report Builder') }}
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if is_module_enabled('scheduled_reports') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('scheduled_reports.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('scheduled_reports.list_scheduled') }}">
-                                    <i class="fas fa-clock w-4 mr-2"></i>{{ _('Scheduled Reports') }}
-                                </a>
-                            </li>
-                            {% endif %}
                             {% if is_module_enabled('invoices') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
