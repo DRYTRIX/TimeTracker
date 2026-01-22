@@ -11,6 +11,7 @@ from app.utils.db import safe_commit
 from app.services.unpaid_hours_service import UnpaidHoursService
 import json
 from datetime import datetime, timedelta
+from app.utils.module_helpers import module_enabled
 
 custom_reports_bp = Blueprint("custom_reports", __name__)
 
@@ -18,6 +19,7 @@ custom_reports_bp = Blueprint("custom_reports", __name__)
 @custom_reports_bp.route("/reports/builder")
 @custom_reports_bp.route("/reports/builder/<int:view_id>/edit")
 @login_required
+@module_enabled("custom_reports")
 def report_builder(view_id=None):
     """Custom report builder page. If view_id is provided, load that saved view for editing."""
     # Also check for view_id in query parameters as fallback
@@ -74,6 +76,7 @@ def report_builder(view_id=None):
 
 @custom_reports_bp.route("/reports/builder/save", methods=["POST"])
 @login_required
+@module_enabled("custom_reports")
 def save_report_view():
     """Save a custom report view."""
     try:
@@ -168,6 +171,7 @@ def save_report_view():
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>")
 @login_required
+@module_enabled("custom_reports")
 def view_custom_report(view_id):
     """View a custom report. Supports iterative generation if enabled."""
     saved_view = SavedReportView.query.get_or_404(view_id)
@@ -177,12 +181,13 @@ def view_custom_report(view_id):
         flash(_("You do not have permission to view this report."), "error")
         return redirect(url_for("custom_reports.report_builder"))
 
-        # Parse config
-        try:
-            config = json.loads(saved_view.config_json)
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
-            current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
-            config = {}
+    # Parse config
+    try:
+        config = json.loads(saved_view.config_json)
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        from flask import current_app
+        current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
+        config = {}
 
     # Check if iterative report generation is enabled
     if saved_view.iterative_report_generation and saved_view.iterative_custom_field_name:
@@ -197,6 +202,7 @@ def view_custom_report(view_id):
 
 @custom_reports_bp.route("/reports/builder/preview", methods=["POST"])
 @login_required
+@module_enabled("custom_reports")
 def preview_report():
     """Preview report data based on configuration."""
     try:
@@ -227,6 +233,7 @@ def preview_report():
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>/data", methods=["GET"])
 @login_required
+@module_enabled("custom_reports")
 def get_report_data(view_id):
     """Get report data as JSON."""
     saved_view = SavedReportView.query.get_or_404(view_id)
@@ -235,12 +242,13 @@ def get_report_data(view_id):
     if saved_view.owner_id != current_user.id and saved_view.scope == "private":
         return jsonify({"error": "Access denied"}), 403
 
-        # Parse config
-        try:
-            config = json.loads(saved_view.config_json)
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
-            current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
-            config = {}
+    # Parse config
+    try:
+        config = json.loads(saved_view.config_json)
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        from flask import current_app
+        current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
+        config = {}
 
     # Generate report data
     report_data = generate_report_data(config, current_user.id)
@@ -446,6 +454,7 @@ def generate_report_data(config, user_id=None):
 
 @custom_reports_bp.route("/reports/builder/saved")
 @login_required
+@module_enabled("custom_reports")
 def list_saved_views():
     """List all saved report views for the current user."""
     from app.utils.timezone import convert_app_datetime_to_user
@@ -455,6 +464,7 @@ def list_saved_views():
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>/edit", methods=["GET"])
 @login_required
+@module_enabled("custom_reports")
 def edit_saved_view(view_id):
     """Edit a saved report view - redirects to builder with view_id in path."""
     saved_view = SavedReportView.query.get_or_404(view_id)
@@ -470,6 +480,7 @@ def edit_saved_view(view_id):
 
 @custom_reports_bp.route("/api/reports/builder/custom-field-values", methods=["GET"])
 @login_required
+@module_enabled("custom_reports")
 def get_custom_field_values():
     """Get unique values for a custom field from clients."""
     custom_field_name = request.args.get("field_name")
@@ -495,6 +506,7 @@ def get_custom_field_values():
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("custom_reports")
 def delete_saved_view(view_id):
     """Delete a saved report view."""
     saved_view = SavedReportView.query.get_or_404(view_id)

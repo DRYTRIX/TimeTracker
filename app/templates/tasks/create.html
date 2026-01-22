@@ -5,6 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
 <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css">
 {% endblock %}
 
 {% block content %}
@@ -109,6 +110,16 @@
                                 {% endfor %}
                             </select>
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Assign this task to a team member') }}</p>
+                        </div>
+
+                        <!-- Gantt color -->
+                        <div class="mb-4">
+                            <label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Gantt color') }}</label>
+                            <div class="gantt-color-picker flex items-center gap-3 mt-1">
+                                <div class="gantt-color-picker-swatch rounded border border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0" style="width:2.5rem;height:2.5rem;min-width:2.5rem;min-height:2.5rem;"></div>
+                                <input type="text" name="color" id="color" value="{{ request.form.get('color', '') }}" class="form-input w-28 font-mono text-sm" maxlength="7" placeholder="#3b82f6" data-color-input>
+                            </div>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Color for this task on the Gantt chart. If unset, the project color is used. Pick or enter a hex code (e.g. #3b82f6).') }}</p>
                         </div>
 
                         <!-- Form Actions -->
@@ -465,4 +476,9 @@ document.addEventListener('DOMContentLoaded', function() {
     handlePreviewChange();
 });
 </script>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+<script src="{{ url_for('static', filename='js/gantt-color-picker.js') }}"></script>
 {% endblock %}

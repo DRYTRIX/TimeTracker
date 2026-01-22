@@ -8,6 +8,7 @@ from flask_login import login_required, current_user
 from app.models import SavedReportView, ReportEmailSchedule
 from app.services.scheduled_report_service import ScheduledReportService
 import logging
+from app.utils.module_helpers import module_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ scheduled_reports_bp = Blueprint("scheduled_reports", __name__)
 
 @scheduled_reports_bp.route("/api/reports/scheduled", methods=["GET"])
 @login_required
+@module_enabled("scheduled_reports")
 def api_list_scheduled():
     """Get scheduled reports as JSON"""
     from sqlalchemy.orm import joinedload
@@ -52,6 +54,7 @@ def api_list_scheduled():
 
 @scheduled_reports_bp.route("/reports/scheduled")
 @login_required
+@module_enabled("scheduled_reports")
 def list_scheduled():
     """List scheduled reports with error handling"""
     try:
@@ -94,6 +97,7 @@ def list_scheduled():
 
 @scheduled_reports_bp.route("/reports/scheduled/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("scheduled_reports")
 def create_scheduled():
     """Create a scheduled report"""
     service = ScheduledReportService()
@@ -144,6 +148,7 @@ def create_scheduled():
 
 @scheduled_reports_bp.route("/reports/scheduled/<int:schedule_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("scheduled_reports")
 def delete_scheduled(schedule_id):
     """Delete a scheduled report"""
     service = ScheduledReportService()
@@ -159,6 +164,7 @@ def delete_scheduled(schedule_id):
 
 @scheduled_reports_bp.route("/api/reports/scheduled", methods=["POST"])
 @login_required
+@module_enabled("scheduled_reports")
 def api_create_scheduled():
     """Create scheduled report via API"""
     service = ScheduledReportService()
@@ -218,6 +224,7 @@ def api_create_scheduled():
 
 @scheduled_reports_bp.route("/api/reports/scheduled/<int:schedule_id>/toggle", methods=["POST"])
 @login_required
+@module_enabled("scheduled_reports")
 def api_toggle_scheduled(schedule_id):
     """Toggle active status of scheduled report"""
     from app import db
@@ -235,6 +242,7 @@ def api_toggle_scheduled(schedule_id):
 
 @scheduled_reports_bp.route("/api/reports/scheduled/<int:schedule_id>", methods=["DELETE"])
 @login_required
+@module_enabled("scheduled_reports")
 def api_delete_scheduled(schedule_id):
     """Delete scheduled report via API"""
     service = ScheduledReportService()
@@ -248,6 +256,7 @@ def api_delete_scheduled(schedule_id):
 
 @scheduled_reports_bp.route("/api/reports/saved-views", methods=["GET"])
 @login_required
+@module_enabled("scheduled_reports")
 def api_saved_views():
     """Get saved report views for current user"""
     saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).all()
@@ -267,6 +276,7 @@ def api_saved_views():
 
 @scheduled_reports_bp.route("/reports/scheduled/<int:schedule_id>/fix", methods=["POST"])
 @login_required
+@module_enabled("scheduled_reports")
 def fix_scheduled(schedule_id):
     """Fix or remove an invalid scheduled report"""
     from app import db
@@ -313,6 +323,7 @@ def fix_scheduled(schedule_id):
 
 @scheduled_reports_bp.route("/api/reports/scheduled/<int:schedule_id>/trigger", methods=["POST"])
 @login_required
+@module_enabled("scheduled_reports")
 def api_trigger_scheduled(schedule_id):
     """Manually trigger a scheduled report for testing"""
     service = ScheduledReportService()

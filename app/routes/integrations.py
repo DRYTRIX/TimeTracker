@@ -12,6 +12,7 @@ from app.utils.db import safe_commit
 import secrets
 import logging
 import os
+from app.utils.module_helpers import module_enabled
 
 # Import registry to ensure connectors are registered
 try:
@@ -35,6 +36,7 @@ def has_setup_wizard(provider):
 
 @integrations_bp.route("/integrations")
 @login_required
+@module_enabled("integrations")
 def list_integrations():
     """List all integrations accessible to the current user (global + per-user)."""
     service = IntegrationService()
@@ -55,6 +57,7 @@ def list_integrations():
 
 @integrations_bp.route("/integrations/<provider>/connect", methods=["GET", "POST"])
 @login_required
+@module_enabled("integrations")
 def connect_integration(provider):
     """Start OAuth flow for connecting an integration."""
     service = IntegrationService()
@@ -155,6 +158,7 @@ def connect_integration(provider):
 
 @integrations_bp.route("/integrations/<provider>/callback")
 @login_required
+@module_enabled("integrations")
 def oauth_callback(provider):
     """Handle OAuth callback."""
     service = IntegrationService()
@@ -271,6 +275,7 @@ def oauth_callback(provider):
 
 @integrations_bp.route("/integrations/<provider>/manage", methods=["GET", "POST"])
 @login_required
+@module_enabled("integrations")
 def manage_integration(provider):
     """Manage an integration: configure OAuth credentials (admin) and connection management (all users)."""
     from app.models import Settings
@@ -684,6 +689,7 @@ def manage_integration(provider):
 
 @integrations_bp.route("/integrations/<int:integration_id>")
 @login_required
+@module_enabled("integrations")
 def view_integration(integration_id):
     """View integration details."""
     service = IntegrationService()
@@ -727,6 +733,7 @@ def view_integration(integration_id):
 
 @integrations_bp.route("/integrations/<int:integration_id>/test", methods=["POST"])
 @login_required
+@module_enabled("integrations")
 def test_integration(integration_id):
     """Test integration connection."""
     service = IntegrationService()
@@ -769,6 +776,7 @@ def test_integration(integration_id):
 
 @integrations_bp.route("/integrations/<int:integration_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("integrations")
 def delete_integration(integration_id):
     """Delete an integration."""
     service = IntegrationService()
@@ -789,6 +797,7 @@ def delete_integration(integration_id):
 
 @integrations_bp.route("/integrations/<int:integration_id>/reset", methods=["POST"])
 @login_required
+@module_enabled("integrations")
 def reset_integration(integration_id):
     """Reset an integration by removing credentials and clearing config."""
     service = IntegrationService()
@@ -812,6 +821,7 @@ def reset_integration(integration_id):
 
 @integrations_bp.route("/integrations/<int:integration_id>/sync", methods=["POST"])
 @login_required
+@module_enabled("integrations")
 def sync_integration(integration_id):
     """Trigger a sync for an integration."""
     service = IntegrationService()
@@ -869,6 +879,7 @@ def sync_integration(integration_id):
 
 @integrations_bp.route("/integrations/caldav_calendar/setup", methods=["GET", "POST"])
 @login_required
+@module_enabled("integrations")
 def caldav_setup():
     """Setup CalDAV integration (non-OAuth, uses username/password)."""
     from app.models import Project
@@ -1034,6 +1045,7 @@ def caldav_setup():
 
 @integrations_bp.route("/integrations/activitywatch/setup", methods=["GET", "POST"])
 @login_required
+@module_enabled("integrations")
 def activitywatch_setup():
     """Setup ActivityWatch integration (no OAuth, config only)."""
     from urllib.parse import urlparse
@@ -1211,6 +1223,7 @@ def integration_webhook(provider):
 
 @integrations_bp.route("/integrations/<provider>/wizard", methods=["GET", "POST"])
 @login_required
+@module_enabled("integrations")
 def setup_wizard(provider):
     """Setup wizard for integration configuration."""
     # Check if wizard exists
@@ -1428,6 +1441,7 @@ def setup_wizard(provider):
 
 @integrations_bp.route("/integrations/<provider>/wizard/test-connection", methods=["POST"])
 @login_required
+@module_enabled("integrations")
 def test_connection_wizard(provider):
     """Test connection from wizard."""
     from flask import request as flask_request

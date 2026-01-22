@@ -15,6 +15,7 @@ from app import log_event, track_event
 from app.models import Activity
 import logging
 import json
+from app.utils.module_helpers import module_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ saved_filters_bp = Blueprint("saved_filters", __name__)
 
 @saved_filters_bp.route("/filters")
 @login_required
+@module_enabled("saved_filters")
 def list_filters():
     """List all saved filters for the current user."""
     filters = SavedFilter.query.filter_by(user_id=current_user.id).order_by(SavedFilter.created_at.desc()).all()
@@ -39,6 +41,7 @@ def list_filters():
 
 @saved_filters_bp.route("/api/filters", methods=["GET"])
 @login_required
+@module_enabled("saved_filters")
 def get_filters_api():
     """Get saved filters for the current user (API endpoint)."""
     scope = request.args.get("scope")  # Optional filter by scope
@@ -55,6 +58,7 @@ def get_filters_api():
 
 @saved_filters_bp.route("/api/filters", methods=["POST"])
 @login_required
+@module_enabled("saved_filters")
 def create_filter_api():
     """Create a new saved filter (API endpoint)."""
     try:
@@ -118,6 +122,7 @@ def create_filter_api():
 
 @saved_filters_bp.route("/api/filters/<int:filter_id>", methods=["GET"])
 @login_required
+@module_enabled("saved_filters")
 def get_filter_api(filter_id):
     """Get a specific saved filter (API endpoint)."""
     saved_filter = SavedFilter.query.filter_by(id=filter_id, user_id=current_user.id).first_or_404()
@@ -127,6 +132,7 @@ def get_filter_api(filter_id):
 
 @saved_filters_bp.route("/api/filters/<int:filter_id>", methods=["PUT"])
 @login_required
+@module_enabled("saved_filters")
 def update_filter_api(filter_id):
     """Update a saved filter (API endpoint)."""
     try:
@@ -188,6 +194,7 @@ def update_filter_api(filter_id):
 
 @saved_filters_bp.route("/api/filters/<int:filter_id>", methods=["DELETE"])
 @login_required
+@module_enabled("saved_filters")
 def delete_filter_api(filter_id):
     """Delete a saved filter (API endpoint)."""
     try:
@@ -229,6 +236,7 @@ def delete_filter_api(filter_id):
 
 @saved_filters_bp.route("/filters/<int:filter_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("saved_filters")
 def delete_filter(filter_id):
     """Delete a saved filter (web form)."""
     saved_filter = SavedFilter.query.filter_by(id=filter_id, user_id=current_user.id).first_or_404()

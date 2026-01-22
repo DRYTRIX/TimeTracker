@@ -10,12 +10,14 @@ from app.models import Project, User
 from flask_babel import gettext as _
 from datetime import datetime
 from sqlalchemy import and_, or_
+from app.utils.module_helpers import module_enabled
 
 team_chat_bp = Blueprint("team_chat", __name__)
 
 
 @team_chat_bp.route("/chat")
 @login_required
+@module_enabled("team_chat")
 def chat_index():
     """Main chat interface"""
     # Get all channels user is member of
@@ -42,6 +44,7 @@ def chat_index():
 
 @team_chat_bp.route("/chat/channels/<int:channel_id>")
 @login_required
+@module_enabled("team_chat")
 def chat_channel(channel_id):
     """View a specific chat channel"""
     channel = ChatChannel.query.get_or_404(channel_id)
@@ -78,6 +81,7 @@ def chat_channel(channel_id):
 
 @team_chat_bp.route("/chat/channels/<int:channel_id>/send-message", methods=["POST"])
 @login_required
+@module_enabled("team_chat")
 def send_message(channel_id):
     """Send a message via form submission (supports attachments)"""
     import json
@@ -161,6 +165,7 @@ def send_message(channel_id):
 
 @team_chat_bp.route("/api/chat/channels", methods=["GET", "POST"])
 @login_required
+@module_enabled("team_chat")
 def api_channels():
     """Get or create channels"""
     if request.method == "POST":
@@ -205,6 +210,7 @@ def api_channels():
 
 @team_chat_bp.route("/api/chat/channels/<int:channel_id>/messages", methods=["GET", "POST"])
 @login_required
+@module_enabled("team_chat")
 def api_messages(channel_id):
     """Get or create messages"""
     channel = ChatChannel.query.get_or_404(channel_id)
@@ -284,6 +290,7 @@ def api_messages(channel_id):
 
 @team_chat_bp.route("/api/chat/messages/<int:message_id>", methods=["PUT", "DELETE"])
 @login_required
+@module_enabled("team_chat")
 def api_message(message_id):
     """Update or delete message"""
     message = ChatMessage.query.get_or_404(message_id)
@@ -313,6 +320,7 @@ def api_message(message_id):
 
 @team_chat_bp.route("/api/chat/messages/<int:message_id>/react", methods=["POST"])
 @login_required
+@module_enabled("team_chat")
 def api_react(message_id):
     """Add or remove reaction to message"""
     message = ChatMessage.query.get_or_404(message_id)
@@ -341,6 +349,7 @@ def api_react(message_id):
 
 @team_chat_bp.route("/chat/channels/<int:channel_id>/messages/<int:message_id>/attachments/download")
 @login_required
+@module_enabled("team_chat")
 def download_attachment(channel_id, message_id):
     """Download an attachment from a chat message"""
     from flask import send_file, current_app
@@ -380,6 +389,7 @@ def download_attachment(channel_id, message_id):
 
 @team_chat_bp.route("/chat/channels/<int:channel_id>/upload-attachment", methods=["POST"])
 @login_required
+@module_enabled("team_chat")
 def upload_attachment(channel_id):
     """Upload an attachment for a chat message"""
     from werkzeug.utils import secure_filename

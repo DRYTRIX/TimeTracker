@@ -15,6 +15,7 @@ from app import log_event, track_event
 from app.models import Activity
 from sqlalchemy import desc
 import logging
+from app.utils.module_helpers import module_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ time_entry_templates_bp = Blueprint("time_entry_templates", __name__)
 
 @time_entry_templates_bp.route("/templates")
 @login_required
+@module_enabled("time_entry_templates")
 def list_templates():
     """List all time entry templates for the current user."""
     from sqlalchemy.orm import joinedload
@@ -39,6 +41,7 @@ def list_templates():
 
 @time_entry_templates_bp.route("/templates/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("time_entry_templates")
 def create_template():
     """Create a new time entry template."""
     if request.method == "POST":
@@ -130,6 +133,7 @@ def create_template():
 
 @time_entry_templates_bp.route("/templates/<int:template_id>")
 @login_required
+@module_enabled("time_entry_templates")
 def view_template(template_id):
     """View a specific template."""
     from sqlalchemy.orm import joinedload
@@ -145,6 +149,7 @@ def view_template(template_id):
 
 @time_entry_templates_bp.route("/templates/<int:template_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("time_entry_templates")
 def edit_template(template_id):
     """Edit an existing time entry template."""
     template = TimeEntryTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
@@ -231,6 +236,7 @@ def edit_template(template_id):
 
 @time_entry_templates_bp.route("/templates/<int:template_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("time_entry_templates")
 def delete_template(template_id):
     """Delete a time entry template."""
     template = TimeEntryTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
@@ -268,6 +274,7 @@ def delete_template(template_id):
 
 @time_entry_templates_bp.route("/api/templates", methods=["GET"])
 @login_required
+@module_enabled("time_entry_templates")
 def get_templates_api():
     """Get templates as JSON (for AJAX requests)."""
     from sqlalchemy.orm import joinedload
@@ -284,6 +291,7 @@ def get_templates_api():
 
 @time_entry_templates_bp.route("/api/templates/<int:template_id>", methods=["GET"])
 @login_required
+@module_enabled("time_entry_templates")
 def get_template_api(template_id):
     """Get a specific template as JSON."""
     from sqlalchemy.orm import joinedload
@@ -299,6 +307,7 @@ def get_template_api(template_id):
 
 @time_entry_templates_bp.route("/api/templates/<int:template_id>/use", methods=["POST"])
 @login_required
+@module_enabled("time_entry_templates")
 def use_template_api(template_id):
     """Mark template as used and update last_used_at."""
     template = TimeEntryTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
@@ -321,6 +330,7 @@ def use_template_api(template_id):
 
 @time_entry_templates_bp.route("/api/projects/<int:project_id>/tasks", methods=["GET"])
 @login_required
+@module_enabled("time_entry_templates")
 def get_project_tasks_api(project_id):
     """Deprecated: use main API endpoint at /api/projects/<project_id>/tasks"""
     from app.routes.api import get_project_tasks as _api_get_project_tasks

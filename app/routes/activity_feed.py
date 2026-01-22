@@ -9,12 +9,14 @@ from app.models import Activity
 from flask_babel import gettext as _
 from sqlalchemy import and_
 from datetime import datetime, timedelta
+from app.utils.module_helpers import module_enabled
 
 activity_feed_bp = Blueprint("activity_feed", __name__)
 
 
 @activity_feed_bp.route("/activity")
 @login_required
+@module_enabled("activity_feed")
 def activity_feed():
     """Main activity feed page"""
     # Get query parameters
@@ -81,6 +83,7 @@ def activity_feed():
 
 @activity_feed_bp.route("/api/activity")
 @login_required
+@module_enabled("activity_feed")
 def api_activity_feed():
     """API endpoint for activity feed"""
     # Get query parameters

@@ -619,9 +619,6 @@ async function confirmRemoveLogo() {
     }
 }
 
-    }, 10);
-}
-
 // Initialize: keep collapsed by default
 document.addEventListener('DOMContentLoaded', function() {
     const content = document.getElementById('integrationCredentialsContent');
@@ -650,18 +647,22 @@ function initializeModuleVisibility() {
 
 // Module dependency data (populated from server)
 const moduleDependencies = {
+    {% set ns = namespace(first=true) %}
     {% for category, modules in modules_by_category.items() %}
     {% for module in modules %}
-    '{{ module.id }}': {{ module.dependencies|tojson }}{% if not (loop.last and loop.parent.loop.last) %},{% endif %}
+    {% if not ns.first %},{% endif %}{% set ns.first = false %}
+    '{{ module.id }}': {{ module.dependencies|tojson }}
     {% endfor %}
     {% endfor %}
 };
 
 // Module name mappings for display
 const moduleNames = {
+    {% set ns = namespace(first=true) %}
     {% for category, modules in modules_by_category.items() %}
     {% for module in modules %}
-    '{{ module.id }}': '{{ module.name }}'{% if not (loop.last and loop.parent.loop.last) %},{% endif %}
+    {% if not ns.first %},{% endif %}{% set ns.first = false %}
+    '{{ module.id }}': '{{ module.name }}'
     {% endfor %}
     {% endfor %}
 };

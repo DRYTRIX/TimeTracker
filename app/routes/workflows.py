@@ -9,12 +9,14 @@ from app.models.workflow import WorkflowRule, WorkflowExecution
 from app.services.workflow_engine import WorkflowEngine
 from app.utils.decorators import admin_required
 from flask_babel import gettext as _
+from app.utils.module_helpers import module_enabled
 
 workflows_bp = Blueprint("workflows", __name__)
 
 
 @workflows_bp.route("/workflows")
 @login_required
+@module_enabled("workflows")
 def list_workflows():
     """List all workflows"""
     workflows = (
@@ -28,6 +30,7 @@ def list_workflows():
 
 @workflows_bp.route("/workflows/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("workflows")
 def create_workflow():
     """Create a new workflow rule"""
     if request.method == "POST":
@@ -82,6 +85,7 @@ def create_workflow():
 
 @workflows_bp.route("/workflows/<int:workflow_id>")
 @login_required
+@module_enabled("workflows")
 def view_workflow(workflow_id):
     """View workflow details"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)
@@ -102,6 +106,7 @@ def view_workflow(workflow_id):
 
 @workflows_bp.route("/workflows/<int:workflow_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("workflows")
 def edit_workflow(workflow_id):
     """Edit workflow"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)
@@ -152,6 +157,7 @@ def edit_workflow(workflow_id):
 
 @workflows_bp.route("/workflows/<int:workflow_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("workflows")
 def delete_workflow(workflow_id):
     """Delete workflow"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)
@@ -171,6 +177,7 @@ def delete_workflow(workflow_id):
 
 @workflows_bp.route("/workflows/<int:workflow_id>/toggle", methods=["POST"])
 @login_required
+@module_enabled("workflows")
 def toggle_workflow(workflow_id):
     """Toggle workflow enabled status"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)
@@ -186,6 +193,7 @@ def toggle_workflow(workflow_id):
 
 @workflows_bp.route("/api/workflows", methods=["GET"])
 @login_required
+@module_enabled("workflows")
 def api_list_workflows():
     """API: List workflows"""
     workflows = WorkflowRule.query.filter(WorkflowRule.user_id == current_user.id).all()
@@ -194,6 +202,7 @@ def api_list_workflows():
 
 @workflows_bp.route("/api/workflows", methods=["POST"])
 @login_required
+@module_enabled("workflows")
 def api_create_workflow():
     """API: Create workflow"""
     data = request.get_json()
@@ -218,6 +227,7 @@ def api_create_workflow():
 
 @workflows_bp.route("/api/workflows/<int:workflow_id>", methods=["GET"])
 @login_required
+@module_enabled("workflows")
 def api_get_workflow(workflow_id):
     """API: Get workflow"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)
@@ -230,6 +240,7 @@ def api_get_workflow(workflow_id):
 
 @workflows_bp.route("/api/workflows/<int:workflow_id>", methods=["PUT"])
 @login_required
+@module_enabled("workflows")
 def api_update_workflow(workflow_id):
     """API: Update workflow"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)
@@ -254,6 +265,7 @@ def api_update_workflow(workflow_id):
 
 @workflows_bp.route("/api/workflows/<int:workflow_id>", methods=["DELETE"])
 @login_required
+@module_enabled("workflows")
 def api_delete_workflow(workflow_id):
     """API: Delete workflow"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)
@@ -269,6 +281,7 @@ def api_delete_workflow(workflow_id):
 
 @workflows_bp.route("/api/workflows/<int:workflow_id>/test", methods=["POST"])
 @login_required
+@module_enabled("workflows")
 def test_workflow(workflow_id):
     """Test workflow with sample event"""
     workflow = WorkflowRule.query.get_or_404(workflow_id)

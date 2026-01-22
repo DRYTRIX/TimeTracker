@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import logging
 from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
 
 recurring_invoices_bp = Blueprint("recurring_invoices", __name__)
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 @recurring_invoices_bp.route("/recurring-invoices")
 @login_required
+@module_enabled("recurring_invoices")
 def list_recurring_invoices():
     """List all recurring invoices"""
     # Get filter parameters
@@ -39,6 +41,7 @@ def list_recurring_invoices():
 
 @recurring_invoices_bp.route("/recurring-invoices/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("recurring_invoices")
 def create_recurring_invoice():
     """Create a new recurring invoice"""
     if request.method == "POST":
@@ -151,6 +154,7 @@ def create_recurring_invoice():
 
 @recurring_invoices_bp.route("/recurring-invoices/<int:recurring_id>")
 @login_required
+@module_enabled("recurring_invoices")
 def view_recurring_invoice(recurring_id):
     """View recurring invoice details"""
     recurring = RecurringInvoice.query.get_or_404(recurring_id)
@@ -168,6 +172,7 @@ def view_recurring_invoice(recurring_id):
 
 @recurring_invoices_bp.route("/recurring-invoices/<int:recurring_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("recurring_invoices")
 def edit_recurring_invoice(recurring_id):
     """Edit recurring invoice"""
     recurring = RecurringInvoice.query.get_or_404(recurring_id)
@@ -218,6 +223,7 @@ def edit_recurring_invoice(recurring_id):
 
 @recurring_invoices_bp.route("/recurring-invoices/<int:recurring_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("recurring_invoices")
 def delete_recurring_invoice(recurring_id):
     """Delete recurring invoice"""
     recurring = RecurringInvoice.query.get_or_404(recurring_id)
@@ -239,6 +245,7 @@ def delete_recurring_invoice(recurring_id):
 
 @recurring_invoices_bp.route("/recurring-invoices/<int:recurring_id>/generate", methods=["POST"])
 @login_required
+@module_enabled("recurring_invoices")
 def generate_invoice_now(recurring_id):
     """Manually generate an invoice from a recurring template"""
     recurring = RecurringInvoice.query.get_or_404(recurring_id)

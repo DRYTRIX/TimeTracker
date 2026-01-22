@@ -16,6 +16,7 @@ from app.utils.db import safe_commit
 from datetime import datetime, timedelta
 from sqlalchemy import func
 from functools import wraps
+from app.utils.module_helpers import module_enabled
 
 client_portal_bp = Blueprint("client_portal", __name__)
 

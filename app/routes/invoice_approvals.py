@@ -9,12 +9,14 @@ from app.models import Invoice, InvoiceApproval, User
 from app.services.invoice_approval_service import InvoiceApprovalService
 from app.utils.permissions import admin_or_permission_required
 import json
+from app.utils.module_helpers import module_enabled
 
 invoice_approvals_bp = Blueprint("invoice_approvals", __name__)
 
 
 @invoice_approvals_bp.route("/invoices/<int:invoice_id>/request-approval", methods=["GET", "POST"])
 @login_required
+@module_enabled("invoice_approvals")
 @admin_or_permission_required("create_invoices")
 def request_approval(invoice_id):
     """Request approval for an invoice"""
@@ -56,6 +58,7 @@ def request_approval(invoice_id):
 
 @invoice_approvals_bp.route("/invoice-approvals")
 @login_required
+@module_enabled("invoice_approvals")
 def list_approvals():
     """List pending approvals"""
     service = InvoiceApprovalService()
@@ -66,6 +69,7 @@ def list_approvals():
 
 @invoice_approvals_bp.route("/invoice-approvals/<int:approval_id>/approve", methods=["POST"])
 @login_required
+@module_enabled("invoice_approvals")
 def approve(approval_id):
     """Approve an invoice"""
     service = InvoiceApprovalService()
@@ -84,6 +88,7 @@ def approve(approval_id):
 
 @invoice_approvals_bp.route("/invoice-approvals/<int:approval_id>/reject", methods=["POST"])
 @login_required
+@module_enabled("invoice_approvals")
 def reject(approval_id):
     """Reject an invoice approval"""
     service = InvoiceApprovalService()
@@ -107,6 +112,7 @@ def reject(approval_id):
 
 @invoice_approvals_bp.route("/invoice-approvals/<int:approval_id>")
 @login_required
+@module_enabled("invoice_approvals")
 def view_approval(approval_id):
     """View approval details"""
     service = InvoiceApprovalService()

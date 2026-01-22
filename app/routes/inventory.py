@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
+from app.utils.module_helpers import module_enabled
 from sqlalchemy import func, or_
 
 inventory_bp = Blueprint("inventory", __name__)
@@ -32,6 +33,7 @@ inventory_bp = Blueprint("inventory", __name__)
 
 @inventory_bp.route("/api/inventory/stock-items/search")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def search_stock_items():
     """Search stock items for dropdown/autocomplete (returns JSON)"""
@@ -68,6 +70,7 @@ def search_stock_items():
 
 @inventory_bp.route("/api/inventory/stock-items/<int:item_id>/availability")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def get_item_availability(item_id):
     """Get stock availability for a specific item across warehouses"""
@@ -99,6 +102,7 @@ def get_item_availability(item_id):
 
 @inventory_bp.route("/inventory/items")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def list_stock_items():
     """List all stock items"""
@@ -155,6 +159,7 @@ def list_stock_items():
 
 @inventory_bp.route("/inventory/items/new", methods=["GET", "POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_stock_items")
 def new_stock_item():
     """Create a new stock item"""
@@ -288,6 +293,7 @@ def new_stock_item():
 
 @inventory_bp.route("/inventory/items/<int:item_id>")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def view_stock_item(item_id):
     """View stock item details"""
@@ -551,6 +557,7 @@ def edit_stock_item(item_id):
 
 @inventory_bp.route("/inventory/items/<int:item_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_stock_items")
 def delete_stock_item(item_id):
     """Delete stock item"""
@@ -582,6 +589,7 @@ def delete_stock_item(item_id):
 
 @inventory_bp.route("/inventory/warehouses")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def list_warehouses():
     """List all warehouses"""
@@ -599,6 +607,7 @@ def list_warehouses():
 
 @inventory_bp.route("/inventory/warehouses/new", methods=["GET", "POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_warehouses")
 def new_warehouse():
     """Create a new warehouse"""
@@ -640,6 +649,7 @@ def new_warehouse():
 
 @inventory_bp.route("/inventory/warehouses/<int:warehouse_id>")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def view_warehouse(warehouse_id):
     """View warehouse details"""
@@ -665,6 +675,7 @@ def view_warehouse(warehouse_id):
 
 @inventory_bp.route("/inventory/warehouses/<int:warehouse_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_warehouses")
 def edit_warehouse(warehouse_id):
     """Edit warehouse"""
@@ -735,6 +746,7 @@ def delete_warehouse(warehouse_id):
 
 @inventory_bp.route("/inventory/stock-levels")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_stock_levels")
 def stock_levels():
     """View stock levels across all warehouses"""
@@ -828,6 +840,7 @@ def stock_levels_by_warehouse(warehouse_id):
 
 @inventory_bp.route("/inventory/stock-levels/item/<int:item_id>")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_stock_levels")
 def stock_levels_by_item(item_id):
     """View stock levels for a specific item across all warehouses"""
@@ -843,6 +856,7 @@ def stock_levels_by_item(item_id):
 
 @inventory_bp.route("/inventory/movements")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_stock_history")
 def list_movements():
     """List stock movements"""
@@ -1136,6 +1150,7 @@ def new_movement():
 
 @inventory_bp.route("/inventory/transfers")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("transfer_stock")
 def list_transfers():
     """List stock transfers between warehouses"""
@@ -1289,6 +1304,7 @@ def new_transfer():
 
 @inventory_bp.route("/inventory/adjustments")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_stock_history")
 def list_adjustments():
     """List stock adjustments"""
@@ -1341,6 +1357,7 @@ def list_adjustments():
 
 @inventory_bp.route("/inventory/adjustments/new", methods=["GET", "POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_stock_movements")
 def new_adjustment():
     """Create a stock adjustment"""
@@ -1392,6 +1409,7 @@ def new_adjustment():
 
 @inventory_bp.route("/inventory/items/<int:item_id>/history")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_stock_history")
 def stock_item_history(item_id):
     """View movement history for a stock item"""
@@ -1448,6 +1466,7 @@ def stock_item_history(item_id):
 
 @inventory_bp.route("/inventory/low-stock")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def low_stock_alerts():
     """View low stock alerts"""
@@ -1478,6 +1497,7 @@ def low_stock_alerts():
 
 @inventory_bp.route("/inventory/reservations")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_stock_history")
 def list_reservations():
     """List stock reservations"""
@@ -1495,6 +1515,7 @@ def list_reservations():
 
 @inventory_bp.route("/inventory/reservations/<int:reservation_id>/fulfill", methods=["POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_stock_reservations")
 def fulfill_reservation(reservation_id):
     """Fulfill a stock reservation"""
@@ -1515,6 +1536,7 @@ def fulfill_reservation(reservation_id):
 
 @inventory_bp.route("/inventory/reservations/<int:reservation_id>/cancel", methods=["POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_stock_reservations")
 def cancel_reservation(reservation_id):
     """Cancel a stock reservation"""
@@ -1538,6 +1560,7 @@ def cancel_reservation(reservation_id):
 
 @inventory_bp.route("/inventory/suppliers")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def list_suppliers():
     """List all suppliers"""
@@ -1560,6 +1583,7 @@ def list_suppliers():
 
 @inventory_bp.route("/inventory/suppliers/new", methods=["GET", "POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_suppliers")
 def new_supplier():
     """Create a new supplier"""
@@ -1606,6 +1630,7 @@ def new_supplier():
 
 @inventory_bp.route("/inventory/suppliers/<int:supplier_id>")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def view_supplier(supplier_id):
     """View supplier details"""
@@ -1628,6 +1653,7 @@ def view_supplier(supplier_id):
 
 @inventory_bp.route("/inventory/suppliers/<int:supplier_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_suppliers")
 def edit_supplier(supplier_id):
     """Edit supplier"""
@@ -1705,6 +1731,7 @@ def delete_supplier(supplier_id):
 
 @inventory_bp.route("/inventory/purchase-orders")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def list_purchase_orders():
     """List all purchase orders"""
@@ -1847,6 +1874,7 @@ def new_purchase_order():
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory")
 def view_purchase_order(po_id):
     """View purchase order details"""
@@ -1857,6 +1885,7 @@ def view_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_purchase_orders")
 def edit_purchase_order(po_id):
     """Edit purchase order"""
@@ -1959,6 +1988,7 @@ def edit_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/send", methods=["POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_purchase_orders")
 def send_purchase_order(po_id):
     """Mark purchase order as sent to supplier"""
@@ -1980,6 +2010,7 @@ def send_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/cancel", methods=["POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_purchase_orders")
 def cancel_purchase_order(po_id):
     """Cancel purchase order"""
@@ -2028,6 +2059,7 @@ def delete_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/receive", methods=["POST"])
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("manage_purchase_orders")
 def receive_purchase_order(po_id):
     """Mark purchase order as received and update stock"""
@@ -2071,6 +2103,7 @@ def receive_purchase_order(po_id):
 
 @inventory_bp.route("/inventory/reports")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory_reports")
 def reports_dashboard():
     """Inventory reports dashboard"""
@@ -2174,6 +2207,7 @@ def reports_valuation():
 
 @inventory_bp.route("/inventory/reports/movement-history")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory_reports")
 def reports_movement_history():
     """Movement history report"""
@@ -2292,6 +2326,7 @@ def reports_turnover():
 
 @inventory_bp.route("/inventory/reports/low-stock")
 @login_required
+@module_enabled("inventory")
 @admin_or_permission_required("view_inventory_reports")
 def reports_low_stock():
     """Low stock report"""

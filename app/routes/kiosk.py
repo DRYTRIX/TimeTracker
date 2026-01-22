@@ -10,12 +10,14 @@ from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
 from sqlalchemy import func, or_
+from app.utils.module_helpers import module_enabled
 
 kiosk_bp = Blueprint("kiosk", __name__)
 
 
 @kiosk_bp.route("/kiosk")
 @login_required
+@module_enabled("kiosk")
 def kiosk_dashboard():
     """Main kiosk interface"""
     # Check if kiosk mode is enabled (handle missing columns gracefully)
@@ -149,6 +151,7 @@ def kiosk_login():
 
 @kiosk_bp.route("/kiosk/logout", methods=["GET", "POST"])
 @login_required
+@module_enabled("kiosk")
 def kiosk_logout():
     """Logout from kiosk mode"""
     user_id = current_user.id
@@ -175,6 +178,7 @@ def kiosk_logout():
 
 @kiosk_bp.route("/api/kiosk/barcode-lookup", methods=["POST"])
 @login_required
+@module_enabled("kiosk")
 def barcode_lookup():
     """Look up stock item by barcode or SKU"""
     data = request.get_json() or {}
@@ -244,6 +248,7 @@ def barcode_lookup():
 
 @kiosk_bp.route("/api/kiosk/adjust-stock", methods=["POST"])
 @login_required
+@module_enabled("kiosk")
 def adjust_stock():
     """Quick stock adjustment from kiosk"""
     data = request.get_json() or {}
@@ -325,6 +330,7 @@ def adjust_stock():
 
 @kiosk_bp.route("/api/kiosk/transfer-stock", methods=["POST"])
 @login_required
+@module_enabled("kiosk")
 def transfer_stock():
     """Transfer stock between warehouses"""
     data = request.get_json() or {}
@@ -435,6 +441,7 @@ def transfer_stock():
 
 @kiosk_bp.route("/api/kiosk/start-timer", methods=["POST"])
 @login_required
+@module_enabled("kiosk")
 def kiosk_start_timer():
     """Start timer from kiosk interface"""
     data = request.get_json() or {}
@@ -494,6 +501,7 @@ def kiosk_start_timer():
 
 @kiosk_bp.route("/api/kiosk/stop-timer", methods=["POST"])
 @login_required
+@module_enabled("kiosk")
 def kiosk_stop_timer():
     """Stop timer from kiosk interface"""
     active_timer = current_user.active_timer
@@ -518,6 +526,7 @@ def kiosk_stop_timer():
 
 @kiosk_bp.route("/api/kiosk/timer-status", methods=["GET"])
 @login_required
+@module_enabled("kiosk")
 def kiosk_timer_status():
     """Get current timer status"""
     active_timer = current_user.active_timer
@@ -545,6 +554,7 @@ def kiosk_timer_status():
 
 @kiosk_bp.route("/api/kiosk/warehouses", methods=["GET"])
 @login_required
+@module_enabled("kiosk")
 def kiosk_warehouses():
     """Get list of active warehouses"""
     warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
@@ -554,6 +564,7 @@ def kiosk_warehouses():
 
 @kiosk_bp.route("/api/kiosk/projects", methods=["GET"])
 @login_required
+@module_enabled("kiosk")
 def kiosk_projects():
     """Get list of active projects for timer"""
     try:
@@ -597,6 +608,7 @@ def kiosk_projects():
 
 @kiosk_bp.route("/api/kiosk/settings", methods=["GET"])
 @login_required
+@module_enabled("kiosk")
 def kiosk_settings_api():
     """Get kiosk settings for frontend"""
     try:

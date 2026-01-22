@@ -19,6 +19,7 @@ from app.utils.data_export import export_user_data_gdpr, export_filtered_data, c
 from datetime import datetime, timedelta
 import os
 import json
+from app.utils.module_helpers import module_enabled
 
 import_export_bp = Blueprint("import_export", __name__)
 
@@ -30,6 +31,7 @@ import_export_bp = Blueprint("import_export", __name__)
 
 @import_export_bp.route("/import-export")
 @login_required
+@module_enabled("import_export")
 def import_export_page():
     """Render the import/export page"""
     return render_template("import_export/index.html")
@@ -37,6 +39,7 @@ def import_export_page():
 
 @import_export_bp.route("/api/import/csv", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def import_csv():
     """
     Import time entries from CSV file
@@ -79,6 +82,7 @@ def import_csv():
 
 @import_export_bp.route("/api/import/toggl", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def import_toggl():
     """
     Import time entries from Toggl Track
@@ -137,6 +141,7 @@ def import_toggl():
 
 @import_export_bp.route("/api/import/harvest", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def import_harvest():
     """
     Import time entries from Harvest
@@ -195,6 +200,7 @@ def import_harvest():
 
 @import_export_bp.route("/api/import/status/<int:import_id>")
 @login_required
+@module_enabled("import_export")
 def import_status(import_id):
     """Get status of an import operation"""
     import_record = DataImport.query.get_or_404(import_id)
@@ -208,6 +214,7 @@ def import_status(import_id):
 
 @import_export_bp.route("/api/import/history")
 @login_required
+@module_enabled("import_export")
 def import_history():
     """Get import history for current user"""
     if current_user.is_admin:
@@ -227,6 +234,7 @@ def import_history():
 
 @import_export_bp.route("/api/export/gdpr", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def export_gdpr():
     """
     Export all user data for GDPR compliance
@@ -278,6 +286,7 @@ def export_gdpr():
 
 @import_export_bp.route("/api/export/filtered", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def export_filtered():
     """
     Export filtered data
@@ -345,6 +354,7 @@ def export_filtered():
 
 @import_export_bp.route("/api/export/backup", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def export_backup():
     """
     Create a full database backup (admin only)
@@ -388,6 +398,7 @@ def export_backup():
 
 @import_export_bp.route("/api/export/download/<int:export_id>")
 @login_required
+@module_enabled("import_export")
 def download_export(export_id):
     """Download an export file"""
     export_record = DataExport.query.get_or_404(export_id)
@@ -415,6 +426,7 @@ def download_export(export_id):
 
 @import_export_bp.route("/api/export/status/<int:export_id>")
 @login_required
+@module_enabled("import_export")
 def export_status(export_id):
     """Get status of an export operation"""
     export_record = DataExport.query.get_or_404(export_id)
@@ -428,6 +440,7 @@ def export_status(export_id):
 
 @import_export_bp.route("/api/export/history")
 @login_required
+@module_enabled("import_export")
 def export_history():
     """Get export history for current user"""
     if current_user.is_admin:
@@ -447,6 +460,7 @@ def export_history():
 
 @import_export_bp.route("/api/backup/restore", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def restore_backup():
     """
     Restore from backup file (admin only)
@@ -513,6 +527,7 @@ def restore_backup():
 
 @import_export_bp.route("/api/migration/wizard/start", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def start_migration_wizard():
     """
     Start the migration wizard
@@ -552,6 +567,7 @@ def start_migration_wizard():
 
 @import_export_bp.route("/api/migration/wizard/<wizard_id>/preview", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def preview_migration(wizard_id):
     """
     Preview data before importing
@@ -568,6 +584,7 @@ def preview_migration(wizard_id):
 
 @import_export_bp.route("/api/migration/wizard/<wizard_id>/execute", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def execute_migration(wizard_id):
     """
     Execute the migration after preview
@@ -586,6 +603,7 @@ def execute_migration(wizard_id):
 
 @import_export_bp.route("/api/import/csv/clients", methods=["POST"])
 @login_required
+@module_enabled("import_export")
 def import_csv_clients_route():
     """
     Import clients from CSV file
@@ -689,6 +707,7 @@ def import_csv_clients_route():
 
 @import_export_bp.route("/api/import/template/csv")
 @login_required
+@module_enabled("import_export")
 def download_csv_template():
     """Download CSV import template for time entries"""
     template_content = """project_name,client_name,task_name,start_time,end_time,duration_hours,notes,tags,billable
@@ -707,6 +726,7 @@ Another Project,Another Client,,2024-01-01 14:00:00,2024-01-01 16:00:00,2.0,Deve
 
 @import_export_bp.route("/api/import/template/csv/clients")
 @login_required
+@module_enabled("import_export")
 def download_csv_template_clients():
     """Download CSV import template for clients"""
     template_content = """name,description,contact_person,email,phone,address,default_hourly_rate,status,prepaid_hours_monthly,prepaid_reset_day,custom_field_erp_id,custom_field_debtor_number,contact_1_first_name,contact_1_last_name,contact_1_email,contact_1_phone,contact_1_title,contact_1_role,contact_1_is_primary,contact_2_first_name,contact_2_last_name,contact_2_email,contact_2_phone,contact_2_title,contact_2_role,contact_2_is_primary

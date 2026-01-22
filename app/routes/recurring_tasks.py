@@ -9,12 +9,14 @@ from app.models.recurring_task import RecurringTask
 from app.models import Project
 from flask_babel import gettext as _
 from datetime import datetime, date
+from app.utils.module_helpers import module_enabled
 
 recurring_tasks_bp = Blueprint("recurring_tasks", __name__)
 
 
 @recurring_tasks_bp.route("/recurring-tasks")
 @login_required
+@module_enabled("recurring_tasks")
 def list_recurring_tasks():
     """List all recurring tasks"""
     if current_user.is_admin:
@@ -29,6 +31,7 @@ def list_recurring_tasks():
 
 @recurring_tasks_bp.route("/recurring-tasks/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("recurring_tasks")
 def create_recurring_task():
     """Create a new recurring task"""
     if request.method == "POST":
@@ -67,6 +70,7 @@ def create_recurring_task():
 
 @recurring_tasks_bp.route("/recurring-tasks/<int:task_id>")
 @login_required
+@module_enabled("recurring_tasks")
 def view_recurring_task(task_id):
     """View recurring task details"""
     recurring_task = RecurringTask.query.get_or_404(task_id)
@@ -80,6 +84,7 @@ def view_recurring_task(task_id):
 
 @recurring_tasks_bp.route("/recurring-tasks/<int:task_id>/toggle", methods=["POST"])
 @login_required
+@module_enabled("recurring_tasks")
 def toggle_recurring_task(task_id):
     """Toggle recurring task active status"""
     recurring_task = RecurringTask.query.get_or_404(task_id)
