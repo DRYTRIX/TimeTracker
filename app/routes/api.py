@@ -851,6 +851,31 @@ def create_entry():
 
     entry = result.get("entry")
     
+    # Log activity
+    if entry:
+        from app.models import Activity
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        task_name = entry.task.name if entry.task else None
+        duration_formatted = entry.duration_formatted if hasattr(entry, 'duration_formatted') else "0:00"
+        
+        Activity.log(
+            user_id=entry.user_id,
+            action="created",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+            description=f'Created time entry for {entity_name}' + (f" - {task_name}" if task_name else "") + f' - {duration_formatted}',
+            extra_data={
+                "project_name": entry.project.name if entry.project else None,
+                "client_name": entry.client.name if entry.client else None,
+                "task_name": task_name,
+                "duration_formatted": duration_formatted,
+                "duration_hours": entry.duration_hours if hasattr(entry, 'duration_hours') else None,
+            },
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+    
     # Invalidate dashboard cache for the entry owner so new entry appears immediately
     try:
         from app.utils.cache import get_cache
@@ -1462,18 +1487,42 @@ def update_entry(entry_id):
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not update entry")}), 400
 
+    entry = result.get("entry")
+    
+    # Log activity
+    if entry:
+        from app.models import Activity
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        task_name = entry.task.name if entry.task else None
+        
+        Activity.log(
+            user_id=current_user.id,
+            action="updated",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+            description=f'Updated time entry for {entity_name}' + (f" - {task_name}" if task_name else ""),
+            extra_data={
+                "project_name": entry.project.name if entry.project else None,
+                "client_name": entry.client.name if entry.client else None,
+                "task_name": task_name,
+            },
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+
     # Invalidate dashboard cache for the entry owner so changes appear immediately
     try:
         from app.utils.cache import get_cache
         cache = get_cache()
-        cache_key = f"dashboard:{result['entry'].user_id}"
+        cache_key = f"dashboard:{entry.user_id}"
         cache.delete(cache_key)
-        current_app.logger.debug("Invalidated dashboard cache for user %s after entry update", result['entry'].user_id)
+        current_app.logger.debug("Invalidated dashboard cache for user %s after entry update", entry.user_id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
-    payload = result["entry"].to_dict()
-    payload["project_name"] = result["entry"].project.name if result["entry"].project else None
+    payload = entry.to_dict()
+    payload["project_name"] = entry.project.name if entry.project else None
     return jsonify({"success": True, "entry": payload})
 
 

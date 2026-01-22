@@ -666,6 +666,36 @@ def create_time_entry():
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not create time entry")}), 400
 
+    entry = result.get("entry")
+    
+    # Log activity
+    if entry:
+        from app.models import Activity
+        from app.utils.audit import get_request_info
+        
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        task_name = entry.task.name if entry.task else None
+        duration_formatted = entry.duration_formatted if hasattr(entry, 'duration_formatted') else "0:00"
+        ip_address, user_agent, _ = get_request_info()
+        
+        Activity.log(
+            user_id=g.api_user.id,
+            action="created",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+            description=f'Created time entry for {entity_name}' + (f" - {task_name}" if task_name else "") + f' - {duration_formatted}',
+            extra_data={
+                "project_name": entry.project.name if entry.project else None,
+                "client_name": entry.client.name if entry.client else None,
+                "task_name": task_name,
+                "duration_formatted": duration_formatted,
+                "duration_hours": entry.duration_hours if hasattr(entry, 'duration_hours') else None,
+            },
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
     return jsonify({"message": "Time entry created successfully", "time_entry": result["entry"].to_dict()}), 201
 
 
@@ -730,6 +760,33 @@ def update_time_entry(entry_id):
 
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not update time entry")}), 400
+
+    entry = result.get("entry")
+    
+    # Log activity
+    if entry:
+        from app.models import Activity
+        from app.utils.audit import get_request_info
+        
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        task_name = entry.task.name if entry.task else None
+        ip_address, user_agent, _ = get_request_info()
+        
+        Activity.log(
+            user_id=g.api_user.id,
+            action="updated",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+            description=f'Updated time entry for {entity_name}' + (f" - {task_name}" if task_name else ""),
+            extra_data={
+                "project_name": entry.project.name if entry.project else None,
+                "client_name": entry.client.name if entry.client else None,
+                "task_name": task_name,
+            },
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
 
     return jsonify({"message": "Time entry updated successfully", "time_entry": result["entry"].to_dict()})
 

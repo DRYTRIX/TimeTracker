@@ -683,6 +683,29 @@ def edit_timer(timer_id):
                 tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all() if current_user.is_admin and timer.project_id else [],
             )
 
+        entry = result.get("entry")
+        
+        # Log activity
+        if entry:
+            entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+            task_name = entry.task.name if entry.task else None
+            
+            Activity.log(
+                user_id=current_user.id,
+                action="updated",
+                entity_type="time_entry",
+                entity_id=entry.id,
+                entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+                description=f'Updated time entry for {entity_name}' + (f" - {task_name}" if task_name else ""),
+                extra_data={
+                    "project_name": entry.project.name if entry.project else None,
+                    "client_name": entry.client.name if entry.client else None,
+                    "task_name": task_name,
+                },
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get("User-Agent"),
+            )
+
         # Invalidate dashboard cache for the timer owner so changes appear immediately
         try:
             from app.utils.cache import get_cache
@@ -1130,6 +1153,29 @@ def manual_entry():
                 )
             else:
                 flash(_("Manual entry created for %(target)s", target=target_name), "success")
+
+            # Log activity
+            entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+            task_name = entry.task.name if entry.task else None
+            duration_formatted = entry.duration_formatted if hasattr(entry, 'duration_formatted') else "0:00"
+            
+            Activity.log(
+                user_id=current_user.id,
+                action="created",
+                entity_type="time_entry",
+                entity_id=entry.id,
+                entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
+                description=f'Created time entry for {entity_name}' + (f" - {task_name}" if task_name else "") + f' - {duration_formatted}',
+                extra_data={
+                    "project_name": entry.project.name if entry.project else None,
+                    "client_name": entry.client.name if entry.client else None,
+                    "task_name": task_name,
+                    "duration_formatted": duration_formatted,
+                    "duration_hours": entry.duration_hours if hasattr(entry, 'duration_hours') else None,
+                },
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get("User-Agent"),
+            )
 
         # Invalidate dashboard cache so new entry appears immediately
         try:
