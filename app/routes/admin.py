@@ -284,7 +284,7 @@ body {{
             base_style_parts.append(f"transform: rotate({rotation}deg)")
             base_style_parts.append("transform-origin: top left")
         
-        style_str_base = "; ".join(base_style_parts) + ";"
+        style_str_base = "; ".join(base_style_parts)
         
         if elem_type == "text":
             text = element.get("text", "")
