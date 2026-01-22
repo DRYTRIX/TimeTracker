@@ -1079,6 +1079,33 @@ def settings():
                 for m in mods:
                     if ("module_enabled_" + m.id) not in request.form:
                         disabled.append(m.id)
+            
+            # Validate module dependencies before saving
+            validation_errors = []
+            for module_id in disabled:
+                can_disable, affected = ModuleRegistry.validate_module_disable(module_id, disabled)
+                if not can_disable and affected:
+                    module = ModuleRegistry.get(module_id)
+                    module_name = module.name if module else module_id
+                    affected_names = [ModuleRegistry.get(aid).name if ModuleRegistry.get(aid) else aid for aid in affected]
+                    validation_errors.append(
+                        _("Cannot disable '%(module)s' because the following modules depend on it: %(dependents)s",
+                          module=module_name, dependents=", ".join(affected_names))
+                    )
+            
+            if validation_errors:
+                for error in validation_errors:
+                    flash(error, "error")
+                return render_template(
+                    "admin/settings.html",
+                    settings=settings_obj,
+                    timezones=timezones,
+                    kiosk_settings=kiosk_settings,
+                    peppol_env_enabled=peppol_env_enabled,
+                    modules_by_category=modules_by_category,
+                    ModuleCategory=ModuleCategory,
+                )
+            
             settings_obj.disabled_module_ids = disabled
 
         # Ensure settings object is in the session (important for new instances)
