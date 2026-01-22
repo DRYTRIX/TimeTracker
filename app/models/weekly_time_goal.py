@@ -24,7 +24,8 @@ class WeeklyTimeGoal(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     target_hours = db.Column(db.Float, nullable=False)  # Target hours for the week
     week_start_date = db.Column(db.Date, nullable=False, index=True)  # Monday of the week
-    week_end_date = db.Column(db.Date, nullable=False)  # Sunday of the week
+    week_end_date = db.Column(db.Date, nullable=False)  # Sunday of the week (or Friday if exclude_weekends is True)
+    exclude_weekends = db.Column(db.Boolean, default=False, nullable=False)  # If True, only count weekdays (5-day work week)
     status = db.Column(db.String(20), default="active", nullable=False)  # 'active', 'completed', 'failed', 'cancelled'
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
@@ -33,7 +34,7 @@ class WeeklyTimeGoal(db.Model):
     # Relationships
     user = db.relationship("User", backref=db.backref("weekly_goals", lazy="dynamic", cascade="all, delete-orphan"))
 
-    def __init__(self, user_id, target_hours, week_start_date=None, notes=None, **kwargs):
+    def __init__(self, user_id, target_hours, week_start_date=None, notes=None, exclude_weekends=False, **kwargs):
         """Initialize a WeeklyTimeGoal instance.
 
         Args:
@@ -41,10 +42,12 @@ class WeeklyTimeGoal(db.Model):
             target_hours: Target hours for the week
             week_start_date: Start date of the week (Monday). If None, uses current week.
             notes: Optional notes about the goal
+            exclude_weekends: If True, only count weekdays (5-day work week). Default False.
             **kwargs: Additional keyword arguments (for SQLAlchemy compatibility)
         """
         self.user_id = user_id
         self.target_hours = target_hours
+        self.exclude_weekends = exclude_weekends
 
         # If no week_start_date provided, calculate the current week's Monday
         if week_start_date is None:
@@ -61,7 +64,11 @@ class WeeklyTimeGoal(db.Model):
             week_start_date = today - timedelta(days=days_since_week_start)
 
         self.week_start_date = week_start_date
-        self.week_end_date = week_start_date + timedelta(days=6)
+        # If exclude_weekends is True, week ends on Friday (4 days after Monday), otherwise Sunday (6 days after Monday)
+        if exclude_weekends:
+            self.week_end_date = week_start_date + timedelta(days=4)  # Monday to Friday
+        else:
+            self.week_end_date = week_start_date + timedelta(days=6)  # Monday to Sunday
         self.notes = notes
 
         # Allow status override from kwargs
@@ -77,18 +84,19 @@ class WeeklyTimeGoal(db.Model):
         from app.models.time_entry import TimeEntry
 
         # Query time entries for this user within the week range
-        total_seconds = (
-            db.session.query(func.sum(TimeEntry.duration_seconds))
-            .filter(
-                TimeEntry.user_id == self.user_id,
-                TimeEntry.end_time.isnot(None),
-                func.date(TimeEntry.start_time) >= self.week_start_date,
-                func.date(TimeEntry.start_time) <= self.week_end_date,
-            )
-            .scalar()
-            or 0
-        )
-
+        entries = TimeEntry.query.filter(
+            TimeEntry.user_id == self.user_id,
+            TimeEntry.end_time.isnot(None),
+            func.date(TimeEntry.start_time) >= self.week_start_date,
+            func.date(TimeEntry.start_time) <= self.week_end_date,
+        ).all()
+        
+        # If exclude_weekends is True, filter out Saturday (5) and Sunday (6)
+        # Python weekday: Monday=0, Tuesday=1, ..., Sunday=6
+        if self.exclude_weekends:
+            entries = [e for e in entries if e.start_time.date().weekday() < 5]
+        
+        total_seconds = sum(entry.duration_seconds for entry in entries)
         return round(total_seconds / 3600, 2)
 
     @property
@@ -134,6 +142,8 @@ class WeeklyTimeGoal(db.Model):
     @property
     def week_label(self):
         """Get a human-readable label for the week"""
+        if self.exclude_weekends:
+            return f"{self.week_start_date.strftime('%b %d')} - {self.week_end_date.strftime('%b %d, %Y')} (Weekdays only)"
         return f"{self.week_start_date.strftime('%b %d')} - {self.week_end_date.strftime('%b %d, %Y')}"
 
     def update_status(self):
@@ -163,6 +173,7 @@ class WeeklyTimeGoal(db.Model):
             "actual_hours": self.actual_hours,
             "week_start_date": self.week_start_date.isoformat(),
             "week_end_date": self.week_end_date.isoformat(),
+            "exclude_weekends": self.exclude_weekends,
             "week_label": self.week_label,
             "status": self.status,
             "notes": self.notes,

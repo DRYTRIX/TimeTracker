@@ -56,6 +56,27 @@
                 </p>
             </div>
 
+            <!-- Exclude Weekends -->
+            <div class="mb-6">
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        <input type="checkbox" 
+                               id="exclude_weekends" 
+                               name="exclude_weekends" 
+                               value="1"
+                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="exclude_weekends" class="font-medium text-gray-700 dark:text-gray-300">
+                            {{ _('Exclude weekends (5-day work week)') }}
+                        </label>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1">
+                            {{ _('If checked, the goal will only count Monday through Friday. Week ends on Friday instead of Sunday.') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notes -->
             <div class="mb-6">
                 <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -127,6 +148,7 @@
                         <li>{{ _('Start conservative: You can always adjust your goal later') }}</li>
                         <li>{{ _('Track progress: Check your dashboard regularly to stay on track') }}</li>
                         <li>{{ _('Typical full-time: 40 hours per week (8 hours/day, 5 days)') }}</li>
+                        <li>{{ _('Use "Exclude weekends" for a 5-day work week (Monday-Friday) instead of 7 days') }}</li>
                     </ul>
                 </div>
             </div>
