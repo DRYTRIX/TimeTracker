@@ -3192,7 +3192,8 @@ function initializePDFEditor() {
         }
         
         // Decorative image properties
-        if (attrs.name === 'decorative-image') {
+        // Use includes() to handle cases where name might be modified (e.g., 'decorative-image element-overlap')
+        if (attrs.name && attrs.name.includes('decorative-image')) {
             // Use getAttr to ensure we get the imageUrl
             const imageUrl = node.getAttr('imageUrl') || attrs.imageUrl || '';
             console.log('Properties panel - decorative image URL:', imageUrl);
