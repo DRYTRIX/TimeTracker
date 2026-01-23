@@ -1,100 +1,545 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+
+{% block extra_css %}
+<style>
+.rotate-180 {
+    transform: rotate(180deg);
+}
+.category-chevron {
+    transition: transform 0.2s ease;
+}
+</style>
+{% endblock %}
 
 {% block title %}{{ _('Module Management') }} - {{ _('Admin') }}{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ _('Available Modules') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('All modules are enabled by default. Users can customize which modules appear in their navigation in their profile settings.') }}</p>
-    </div>
+{% set breadcrumbs = [
+    {'text': 'Admin', 'url': url_for('admin.admin_dashboard')},
+    {'text': 'System Settings'},
+    {'text': 'Module Management'}
+] %}
 
-    <div class="space-y-6">
-        {% for category, modules in modules_by_category.items() %}
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-6">
-            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">
-                {% if category == ModuleCategory.TIME_TRACKING %}
-                    <i class="fas fa-clock mr-2"></i>{{ _('Time Tracking') }}
-                {% elif category == ModuleCategory.PROJECT_MANAGEMENT %}
-                    <i class="fas fa-project-diagram mr-2"></i>{{ _('Project Management') }}
-                {% elif category == ModuleCategory.CRM %}
-                    <i class="fas fa-handshake mr-2"></i>{{ _('CRM') }}
-                {% elif category == ModuleCategory.FINANCE %}
-                    <i class="fas fa-dollar-sign mr-2"></i>{{ _('Finance & Expenses') }}
-                {% elif category == ModuleCategory.INVENTORY %}
-                    <i class="fas fa-boxes mr-2"></i>{{ _('Inventory') }}
-                {% elif category == ModuleCategory.ANALYTICS %}
-                    <i class="fas fa-chart-line mr-2"></i>{{ _('Analytics') }}
-                {% elif category == ModuleCategory.TOOLS %}
-                    <i class="fas fa-tools mr-2"></i>{{ _('Tools & Data') }}
-                {% elif category == ModuleCategory.ADVANCED %}
-                    <i class="fas fa-rocket mr-2"></i>{{ _('Advanced Features') }}
-                {% else %}
-                    {{ category.value|title }}
-                {% endif %}
-            </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {% for module in modules %}
-                <div class="flex items-start space-x-3 p-3 rounded-lg {% if module.category == ModuleCategory.CORE %}bg-background-light dark:bg-background-dark{% else %}hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-2">
-                            {% if module.icon %}
-                            <i class="fas {{ module.icon }} text-primary"></i>
-                            {% endif %}
-                            <div class="font-medium text-text-light dark:text-text-dark">
-                                {% if module.category == ModuleCategory.CORE %}
-                                <span class="text-sm text-text-muted-light dark:text-text-muted-dark">({{ _('Core') }}) </span>
-                                {% endif %}
-                                <span>{{ module.name }}</span>
-                            </div>
-                        </div>
-                        {% if module.description %}
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1 ml-6">{{ module.description }}</p>
-                        {% endif %}
-                        {% if module.dependencies %}
-                        <div class="mt-2 ml-6">
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                                <i class="fas fa-link mr-1"></i>{{ _('Depends on') }}: 
-                                {% for dep_id in module.dependencies %}
-                                    {% set dep_module = None %}
-                                    {% for cat, mods in modules_by_category.items() %}
-                                        {% for mod in mods %}
-                                            {% if mod.id == dep_id %}
-                                                {% set dep_module = mod %}
-                                            {% endif %}
-                                        {% endfor %}
-                                    {% endfor %}
-                                    {% if dep_module %}
-                                        {{ dep_module.name }}{% if not loop.last %}, {% endif %}
-                                    {% else %}
-                                        {{ dep_id }}{% if not loop.last %}, {% endif %}
-                                    {% endif %}
-                                {% endfor %}
-                            </p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
+{{ page_header(
+    icon_class='fas fa-puzzle-piece',
+    title_text='Module Management',
+    subtitle_text='Enable or disable modules system-wide. Disabled modules will not appear in the navigation for any users.',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
+
+<!-- Main Module Management Form -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    {% if modules_by_category is defined and modules_by_category %}
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-lg font-semibold">{{ _('Module Visibility') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ _('Disable modules to hide them from all users. Disabled modules will not appear in the sidebar. Core modules (Dashboard, Projects, Timer, etc.) are always enabled and cannot be disabled.') }}
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="enableAllModules()" class="text-xs px-3 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800">
+                    {{ _('Enable All') }}
+                </button>
+                <button type="button" onclick="disableAllModules()" class="text-xs px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800">
+                    {{ _('Disable All') }}
+                </button>
             </div>
         </div>
-        {% endfor %}
-    </div>
 
-    <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div class="flex items-start">
-            <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1 mr-3"></i>
-            <div class="text-sm text-blue-800 dark:text-blue-200">
-                <p class="font-semibold mb-1">{{ _('Note') }}:</p>
-                <ul class="list-disc list-inside space-y-1">
-                    <li>{{ _('All modules are enabled by default.') }}</li>
-                    <li>{{ _('Core modules cannot be disabled as they are required for the application to function.') }}</li>
-                    <li>{{ _('Individual users can customize which modules appear in their navigation in their profile settings.') }}</li>
-                </ul>
+        {% set _d = (settings.disabled_module_ids or []) %}
+        {% set _total_modules = 0 %}
+        {% set _enabled_count = 0 %}
+        {% for category, modules in modules_by_category.items() %}
+            {% set _total_modules = _total_modules + modules|length %}
+            {% for module in modules %}
+                {% if module.id not in _d %}{% set _enabled_count = _enabled_count + 1 %}{% endif %}
+            {% endfor %}
+        {% endfor %}
+
+        <!-- Summary Statistics -->
+        <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center gap-4 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="font-medium">{{ _('Total Modules:') }}</span>
+                <span class="text-gray-700 dark:text-gray-300">{{ _total_modules }}</span>
             </div>
+            <div class="flex items-center gap-2">
+                <span class="font-medium text-green-600 dark:text-green-400">{{ _('Enabled:') }}</span>
+                <span id="enabled-count" class="text-green-600 dark:text-green-400 font-semibold">{{ _enabled_count }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="font-medium text-red-600 dark:text-red-400">{{ _('Disabled:') }}</span>
+                <span id="disabled-count" class="text-red-600 dark:text-red-400 font-semibold">{{ _total_modules - _enabled_count }}</span>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="mb-4 space-y-3">
+            <div class="flex gap-3 flex-wrap">
+                <div class="flex-1 min-w-[200px]">
+                    <input type="text" id="module-search" placeholder="{{ _('Search modules...') }}" 
+                        class="w-full form-input text-sm" oninput="filterModules()">
+                </div>
+                <select id="category-filter" class="form-input text-sm" onchange="filterModules()">
+                    <option value="">{{ _('All Categories') }}</option>
+                    {% for category in modules_by_category.keys() %}
+                    <option value="{{ category.value }}">
+                        {% if category == ModuleCategory.TIME_TRACKING %}{{ _('Time Tracking') }}
+                        {% elif category == ModuleCategory.PROJECT_MANAGEMENT %}{{ _('Project Management') }}
+                        {% elif category == ModuleCategory.CRM %}{{ _('CRM') }}
+                        {% elif category == ModuleCategory.FINANCE %}{{ _('Finance & Expenses') }}
+                        {% elif category == ModuleCategory.INVENTORY %}{{ _('Inventory') }}
+                        {% elif category == ModuleCategory.ANALYTICS %}{{ _('Analytics') }}
+                        {% elif category == ModuleCategory.TOOLS %}{{ _('Tools & Data') }}
+                        {% elif category == ModuleCategory.ADVANCED %}{{ _('Advanced') }}
+                        {% else %}{{ category.value|title }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" id="show-disabled-only" onchange="filterModules()" class="h-4 w-4">
+                    <span>{{ _('Show disabled only') }}</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" id="show-with-deps" onchange="filterModules()" class="h-4 w-4">
+                    <span>{{ _('Show with dependencies') }}</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Impact Preview (hidden by default) -->
+        <div id="impact-preview" class="hidden mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div class="flex items-start gap-2">
+                <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 mt-0.5"></i>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">{{ _('Warning: Disabling these modules will also affect dependent modules:') }}</p>
+                    <ul id="impact-list" class="text-sm text-yellow-700 dark:text-yellow-400 list-disc list-inside"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module Categories -->
+        <div class="space-y-4">
+            {% for category, modules in modules_by_category.items() %}
+            <div class="module-category border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden" data-category="{{ category.value }}">
+                <div class="category-header bg-gray-50 dark:bg-gray-800 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onclick="toggleCategory('{{ category.value }}')">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-chevron-down category-chevron text-gray-500 dark:text-gray-400 transition-transform"></i>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {% if category == ModuleCategory.TIME_TRACKING %}{{ _('Time Tracking') }}
+                            {% elif category == ModuleCategory.PROJECT_MANAGEMENT %}{{ _('Project Management') }}
+                            {% elif category == ModuleCategory.CRM %}{{ _('CRM') }}
+                            {% elif category == ModuleCategory.FINANCE %}{{ _('Finance & Expenses') }}
+                            {% elif category == ModuleCategory.INVENTORY %}{{ _('Inventory') }}
+                            {% elif category == ModuleCategory.ANALYTICS %}{{ _('Analytics') }}
+                            {% elif category == ModuleCategory.TOOLS %}{{ _('Tools & Data') }}
+                            {% elif category == ModuleCategory.ADVANCED %}{{ _('Advanced') }}
+                            {% else %}{{ category.value|title }}{% endif %}
+                        </h3>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">({{ modules|length }})</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="event.stopPropagation(); enableCategoryModules('{{ category.value }}')" 
+                            class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800">
+                            {{ _('Enable All') }}
+                        </button>
+                        <button type="button" onclick="event.stopPropagation(); disableCategoryModules('{{ category.value }}')" 
+                            class="text-xs px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800">
+                            {{ _('Disable All') }}
+                        </button>
+                    </div>
+                </div>
+                <div class="category-content p-4 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% for module in modules %}
+                        {% set _module_enabled = module.id not in _d %}
+                        {% set _has_deps = module.dependencies|length > 0 %}
+                        <div class="module-card border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-md transition-shadow {% if not _module_enabled %}opacity-60{% endif %}" 
+                            data-module-id="{{ module.id }}" 
+                            data-module-name="{{ module.name|lower }}" 
+                            data-category="{{ category.value }}"
+                            data-has-deps="{{ _has_deps|lower }}">
+                            <div class="flex items-start gap-3">
+                                <input type="checkbox" 
+                                    name="module_enabled_{{ module.id }}" 
+                                    id="module_enabled_{{ module.id }}"
+                                    {% if _module_enabled %}checked{% endif %}
+                                    class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 module-checkbox"
+                                    onchange="updateModuleCounts(); validateModuleDependencies('{{ module.id }}');">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        {% if module.icon %}
+                                        <i class="{{ module.icon }} text-gray-500 dark:text-gray-400"></i>
+                                        {% endif %}
+                                        <label for="module_enabled_{{ module.id }}" class="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer flex-1">
+                                            {{ module.name }}
+                                        </label>
+                                        {% if _module_enabled %}
+                                        <span class="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400 rounded">{{ _('Enabled') }}</span>
+                                        {% else %}
+                                        <span class="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-400 rounded">{{ _('Disabled') }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if module.description %}
+                                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ module.description }}</p>
+                                    {% endif %}
+                                    {% if _has_deps %}
+                                    <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-link"></i>
+                                        <span>{{ _('Depends on:') }}</span>
+                                        <span class="font-medium" data-dependencies="{{ module.dependencies|join(',') }}">
+                                            {% for dep_id in module.dependencies %}
+                                                {% set dep_name = dep_id %}
+                                                {% for cat, mods in modules_by_category.items() %}
+                                                    {% for m in mods %}
+                                                        {% if m.id == dep_id %}
+                                                            {% set dep_name = m.name %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endfor %}
+                                                {{ dep_name }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <p class="mt-4 text-xs text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Disabling "Reports" hides the whole Reports submenu including Report Builder and Scheduled Reports.') }}
+        </p>
+
+        <div class="mt-8 pt-6 flex justify-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
+        </div>
+    </form>
+    {% else %}
+    <div class="text-center py-8">
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No modules available.') }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Information Box -->
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+    <div class="flex items-start">
+        <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1 mr-3"></i>
+        <div class="text-sm text-blue-800 dark:text-blue-200">
+            <p class="font-semibold mb-1">{{ _('Note') }}:</p>
+            <ul class="list-disc list-inside space-y-1">
+                <li>{{ _('All modules are enabled by default.') }}</li>
+                <li>{{ _('Core modules cannot be disabled as they are required for the application to function.') }}</li>
+                <li>{{ _('Disabling a module affects all users system-wide. Disabled modules will not appear in the navigation sidebar.') }}</li>
+            </ul>
         </div>
     </div>
 </div>
-{% endblock %}
 
+<script>
+// Initialize module visibility features
+document.addEventListener('DOMContentLoaded', function() {
+    initializeModuleVisibility();
+});
+
+// Module Visibility JavaScript Functions
+function initializeModuleVisibility() {
+    // Expand first category by default
+    const firstCategory = document.querySelector('.module-category');
+    if (firstCategory) {
+        const categoryValue = firstCategory.getAttribute('data-category');
+        toggleCategory(categoryValue, true);
+    }
+    updateModuleCounts();
+}
+
+// Module dependency data (populated from server)
+const moduleDependencies = {
+    {% set ns = namespace(first=true) %}
+    {% for category, modules in modules_by_category.items() %}
+    {% for module in modules %}
+    {% if not ns.first %},{% endif %}{% set ns.first = false %}
+    '{{ module.id }}': {{ module.dependencies|tojson }}
+    {% endfor %}
+    {% endfor %}
+};
+
+// Module name mappings for display
+const moduleNames = {
+    {% set ns = namespace(first=true) %}
+    {% for category, modules in modules_by_category.items() %}
+    {% for module in modules %}
+    {% if not ns.first %},{% endif %}{% set ns.first = false %}
+    '{{ module.id }}': '{{ module.name }}'
+    {% endfor %}
+    {% endfor %}
+};
+
+// Get all modules that depend on a given module
+function getDependentModules(moduleId) {
+    const dependents = [];
+    for (const [modId, deps] of Object.entries(moduleDependencies)) {
+        if (deps && deps.includes(moduleId)) {
+            dependents.push(modId);
+        }
+    }
+    return dependents;
+}
+
+// Toggle category collapse/expand
+function toggleCategory(categoryValue, forceOpen = false) {
+    const category = document.querySelector(`.module-category[data-category="${categoryValue}"]`);
+    if (!category) return;
+    
+    const content = category.querySelector('.category-content');
+    const chevron = category.querySelector('.category-chevron');
+    
+    if (forceOpen || content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+    } else {
+        content.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+    }
+}
+
+// Filter modules based on search and filters
+function filterModules() {
+    const searchTerm = document.getElementById('module-search')?.value.toLowerCase() || '';
+    const categoryFilter = document.getElementById('category-filter')?.value || '';
+    const showDisabledOnly = document.getElementById('show-disabled-only')?.checked || false;
+    const showWithDeps = document.getElementById('show-with-deps')?.checked || false;
+    
+    const moduleCards = document.querySelectorAll('.module-card');
+    const categories = document.querySelectorAll('.module-category');
+    
+    let visibleCount = 0;
+    
+    moduleCards.forEach(card => {
+        const moduleName = card.getAttribute('data-module-name') || '';
+        const category = card.getAttribute('data-category') || '';
+        const hasDeps = card.getAttribute('data-has-deps') === 'true';
+        const checkbox = card.querySelector('.module-checkbox');
+        const isDisabled = !checkbox?.checked;
+        
+        let visible = true;
+        
+        // Search filter
+        if (searchTerm && !moduleName.includes(searchTerm)) {
+            visible = false;
+        }
+        
+        // Category filter
+        if (categoryFilter && category !== categoryFilter) {
+            visible = false;
+        }
+        
+        // Show disabled only
+        if (showDisabledOnly && !isDisabled) {
+            visible = false;
+        }
+        
+        // Show with dependencies
+        if (showWithDeps && !hasDeps) {
+            visible = false;
+        }
+        
+        if (visible) {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Show/hide categories based on visible modules
+    categories.forEach(category => {
+        const categoryValue = category.getAttribute('data-category');
+        const visibleCards = Array.from(category.querySelectorAll('.module-card')).filter(card => 
+            card.style.display !== 'none'
+        );
+        
+        if (visibleCards.length === 0 && (categoryFilter && categoryValue !== categoryFilter)) {
+            category.style.display = 'none';
+        } else {
+            category.style.display = '';
+        }
+    });
+}
+
+// Update module counts
+function updateModuleCounts() {
+    const checkboxes = document.querySelectorAll('.module-checkbox');
+    let enabled = 0;
+    let disabled = 0;
+    
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            enabled++;
+        } else {
+            disabled++;
+        }
+    });
+    
+    const enabledEl = document.getElementById('enabled-count');
+    const disabledEl = document.getElementById('disabled-count');
+    
+    if (enabledEl) enabledEl.textContent = enabled;
+    if (disabledEl) disabledEl.textContent = disabled;
+}
+
+// Validate module dependencies when checkbox changes
+function validateModuleDependencies(moduleId) {
+    const checkbox = document.getElementById(`module_enabled_${moduleId}`);
+    if (!checkbox) return;
+    
+    // If unchecking (disabling)
+    if (!checkbox.checked) {
+        const dependents = getDependentModules(moduleId);
+        const enabledDependents = dependents.filter(depId => {
+            const depCheckbox = document.getElementById(`module_enabled_${depId}`);
+            return depCheckbox && depCheckbox.checked;
+        });
+        
+        if (enabledDependents.length > 0) {
+            // Show warning
+            const impactPreview = document.getElementById('impact-preview');
+            const impactList = document.getElementById('impact-list');
+            
+            if (impactPreview && impactList) {
+                impactList.innerHTML = enabledDependents.map(depId => {
+                    const depName = moduleNames[depId] || depId;
+                    return `<li>${depName}</li>`;
+                }).join('');
+                impactPreview.classList.remove('hidden');
+            }
+            
+            // Highlight dependent modules
+            enabledDependents.forEach(depId => {
+                const depCard = document.querySelector(`.module-card[data-module-id="${depId}"]`);
+                if (depCard) {
+                    depCard.classList.add('border-yellow-400', 'bg-yellow-50', 'dark:bg-yellow-900/20');
+                }
+            });
+        } else {
+            hideImpactPreview();
+        }
+    } else {
+        // If enabling, hide warnings
+        hideImpactPreview();
+    }
+}
+
+function hideImpactPreview() {
+    const impactPreview = document.getElementById('impact-preview');
+    if (impactPreview) {
+        impactPreview.classList.add('hidden');
+    }
+    
+    // Remove highlights
+    document.querySelectorAll('.module-card').forEach(card => {
+        card.classList.remove('border-yellow-400', 'bg-yellow-50', 'dark:bg-yellow-900/20');
+    });
+}
+
+// Bulk operations
+function enableAllModules() {
+    if (!confirm('{{ _("Enable all modules?") }}')) return;
+    document.querySelectorAll('.module-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateModuleCounts();
+    hideImpactPreview();
+}
+
+function disableAllModules() {
+    if (!confirm('{{ _("Disable all modules? This may affect functionality.") }}')) return;
+    document.querySelectorAll('.module-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateModuleCounts();
+    hideImpactPreview();
+}
+
+function enableCategoryModules(categoryValue) {
+    const category = document.querySelector(`.module-category[data-category="${categoryValue}"]`);
+    if (!category) return;
+    
+    category.querySelectorAll('.module-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateModuleCounts();
+    hideImpactPreview();
+}
+
+function disableCategoryModules(categoryValue) {
+    const category = document.querySelector(`.module-category[data-category="${categoryValue}"]`);
+    if (!category) return;
+    
+    const checkboxes = Array.from(category.querySelectorAll('.module-checkbox'));
+    const willDisable = checkboxes.filter(cb => cb.checked);
+    
+    if (willDisable.length > 0 && !confirm(`{{ _("Disable") }} ${willDisable.length} {{ _("module(s) in this category?") }}`)) {
+        return;
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateModuleCounts();
+    hideImpactPreview();
+}
+
+// Form validation before submit
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const checkboxes = document.querySelectorAll('.module-checkbox');
+            const disabled = [];
+            
+            checkboxes.forEach(checkbox => {
+                if (!checkbox.checked) {
+                    const moduleId = checkbox.id.replace('module_enabled_', '');
+                    disabled.push(moduleId);
+                }
+            });
+            
+            // Validate dependencies
+            const errors = [];
+            for (const moduleId of disabled) {
+                const dependents = getDependentModules(moduleId);
+                const enabledDependents = dependents.filter(depId => {
+                    const depCheckbox = document.getElementById(`module_enabled_${depId}`);
+                    return depCheckbox && depCheckbox.checked && !disabled.includes(depId);
+                });
+                
+                if (enabledDependents.length > 0) {
+                    const moduleName = moduleNames[moduleId] || moduleId;
+                    const depNames = enabledDependents.map(depId => moduleNames[depId] || depId).join(', ');
+                    
+                    errors.push(`Cannot disable "${moduleName}" because these modules depend on it: ${depNames}`);
+                }
+            }
+            
+            if (errors.length > 0) {
+                e.preventDefault();
+                alert('{{ _("Validation errors:") }}\n\n' + errors.join('\n'));
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

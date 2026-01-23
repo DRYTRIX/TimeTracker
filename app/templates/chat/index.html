@@ -51,14 +51,28 @@
                 <a href="{{ url_for('team_chat.chat_channel', channel_id=channel.id) }}" 
                    class="block p-2 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                     <div class="flex items-center gap-2">
-                        <i class="fas fa-user-circle"></i>
-                        <span class="font-medium">
-                            {% for member in channel.members %}
-                                {% if member.user_id != current_user.id %}
-                                    {{ member.user.username }}
-                                {% endif %}
-                            {% endfor %}
-                        </span>
+                        {% for member in channel.members %}
+                            {% if member.user_id != current_user.id %}
+                                {% set other_user = member.user %}
+                                {% set user_status = other_user.get_status() if other_user else 'offline' %}
+                                {% set status_colors = {'online': 'bg-green-500', 'away': 'bg-yellow-500', 'offline': 'bg-gray-400'} %}
+                                {% set status_color = status_colors.get(user_status, 'bg-gray-400') %}
+                                <div class="relative flex-shrink-0">
+                                    {% if other_user.get_avatar_url() %}
+                                        <img src="{{ other_user.get_avatar_url() }}" alt="{{ other_user.display_name }}" class="w-8 h-8 rounded-full object-cover" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-xs" style="display: none;">
+                                            {{ other_user.display_name[0:1].upper() }}
+                                        </div>
+                                    {% else %}
+                                        <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-xs">
+                                            {{ other_user.display_name[0:1].upper() }}
+                                        </div>
+                                    {% endif %}
+                                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 {{ status_color }} border-2 border-card-light dark:border-card-dark rounded-full"></span>
+                                </div>
+                                <span class="font-medium">{{ other_user.display_name }}</span>
+                            {% endif %}
+                        {% endfor %}
                     </div>
                 </a>
                 {% endfor %}

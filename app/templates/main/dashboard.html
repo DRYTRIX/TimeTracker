@@ -3,141 +3,215 @@
 {% from "components/ui.html" import confirm_dialog %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
     <div>
-        <h1 class="text-2xl font-bold">{{ _('Dashboard') }}</h1>
+        <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ _('Dashboard') }}</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _("Here's a quick overview of your work.") }}</p>
     </div>
-    <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2 md:mt-0">
-        <i class="fas fa-tachometer-alt"></i> / {{ _('Dashboard') }}
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2 md:mt-0 flex items-center gap-2">
+        <i class="fas fa-tachometer-alt text-primary"></i>
+        <span>/ {{ _('Dashboard') }}</span>
     </div>
-    </div>
+</div>
 
 <!-- Key Stats with Sparklines -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget" id="todayHours">
-        <div class="flex items-center justify-between mb-2">
-            <h3 class="text-label text-text-muted-light dark:text-text-muted-dark">Today's Hours</h3>
-            <i class="fas fa-clock text-primary"></i>
-        </div>
-        <div class="flex items-baseline gap-2 mb-4">
-            <span class="text-h1 text-text-light dark:text-text-dark stat-value" id="todayHoursValue">{{ "%.2f"|format(today_hours) }}</span> <span class="text-body-sm text-text-muted-light dark:text-text-muted-dark">hours</span>
+    <!-- Today's Hours Card -->
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dashboard-widget" id="todayHours">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{{ _('Today\'s Hours') }}</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-bold text-blue-900 dark:text-blue-100 stat-value" id="todayHoursValue">{{ "%.2f"|format(today_hours) }}</span>
+                    <span class="text-sm text-blue-600/70 dark:text-blue-400/70">hours</span>
+                </div>
+            </div>
+            <div class="bg-blue-500/10 dark:bg-blue-400/10 p-4 rounded-full">
+                <i class="fas fa-clock text-blue-600 dark:text-blue-400 text-2xl"></i>
+            </div>
         </div>
         <div class="sparkline-container" data-sparkline='[2.5, 3.2, 2.8, 3.5, 4.1, 3.9, 4.2]' data-color="#3b82f6" id="sparkline-today"></div>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget" id="weekHours">
-        <div class="flex items-center justify-between mb-2">
-            <h3 class="text-label text-text-muted-light dark:text-text-muted-dark">Week's Hours</h3>
-            <i class="fas fa-calendar-week text-green-600"></i>
-        </div>
-        <div class="flex items-baseline gap-2 mb-4">
-            <span class="text-h1 text-text-light dark:text-text-dark stat-value" id="weekHoursValue">{{ "%.2f"|format(week_hours) }}</span> <span class="text-body-sm text-text-muted-light dark:text-text-muted-dark">hours</span>
+    <!-- Week's Hours Card -->
+    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dashboard-widget" id="weekHours">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-1">{{ _('Week\'s Hours') }}</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-bold text-green-900 dark:text-green-100 stat-value" id="weekHoursValue">{{ "%.2f"|format(week_hours) }}</span>
+                    <span class="text-sm text-green-600/70 dark:text-green-400/70">hours</span>
+                </div>
+            </div>
+            <div class="bg-green-500/10 dark:bg-green-400/10 p-4 rounded-full">
+                <i class="fas fa-calendar-week text-green-600 dark:text-green-400 text-2xl"></i>
+            </div>
         </div>
         <div class="sparkline-container" data-sparkline='[18.5, 20.2, 22.8, 24.5, 26.1, 28.9, 30.2]' data-color="#10b981" id="sparkline-week"></div>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget" id="monthHours">
-        <div class="flex items-center justify-between mb-2">
-            <h3 class="text-label text-text-muted-light dark:text-text-muted-dark">Month's Hours</h3>
-            <i class="fas fa-calendar-alt text-purple-600"></i>
-        </div>
-        <div class="flex items-baseline gap-2 mb-4">
-            <span class="text-h1 text-text-light dark:text-text-dark stat-value" id="monthHoursValue">{{ "%.2f"|format(month_hours) }}</span> <span class="text-body-sm text-text-muted-light dark:text-text-muted-dark">hours</span>
+    <!-- Month's Hours Card -->
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dashboard-widget" id="monthHours">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">{{ _('Month\'s Hours') }}</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-bold text-purple-900 dark:text-purple-100 stat-value" id="monthHoursValue">{{ "%.2f"|format(month_hours) }}</span>
+                    <span class="text-sm text-purple-600/70 dark:text-purple-400/70">hours</span>
+                </div>
+            </div>
+            <div class="bg-purple-500/10 dark:bg-purple-400/10 p-4 rounded-full">
+                <i class="fas fa-calendar-alt text-purple-600 dark:text-purple-400 text-2xl"></i>
+            </div>
         </div>
         <div class="sparkline-container" data-sparkline='[120.5, 135.2, 148.8, 162.5, 176.1, 188.9, 202.2]' data-color="#8b5cf6" id="sparkline-month"></div>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
     <!-- Left Column: Active Timer & Recent Entries -->
     <div class="lg:col-span-2 space-y-6">
         <!-- Active Timer -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget animated-card">
-            <div class="flex items-center justify-between mb-2">
-                <h2 class="text-lg font-semibold">{{ _('Timer') }}</h2>
+        <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark{% endif %} p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="{% if active_timer %}bg-blue-500/10 dark:bg-blue-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg">
+                        <i class="fas fa-stopwatch {% if active_timer %}text-blue-600 dark:text-blue-400 animate-pulse{% else %}text-gray-600 dark:text-gray-400{% endif %} text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
+                </div>
                 {% if not active_timer %}
-                <button type="button" id="openStartTimer" class="bg-primary text-white px-4 py-2 rounded-lg btn-press shadow-md transition-smooth">{{ _('Start Timer') }}</button>
+                <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                    <i class="fas fa-play mr-2"></i>{{ _('Start Timer') }}
+                </button>
                 {% endif %}
             </div>
             {% if active_timer %}
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="font-semibold">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                <span class="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full mr-2 animate-pulse"></span>
+                                {{ _('Running') }}
+                            </span>
+                        </div>
+                        <p class="font-semibold text-lg text-text-light dark:text-text-dark mb-1">
                             {% if active_timer.project %}
-                                {{ active_timer.project.name }}
+                                <i class="fas fa-folder text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.project.name }}
                             {% elif active_timer.client %}
-                                {{ active_timer.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                                <i class="fas fa-building text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
                             {% else %}
                                 {{ _('No project') }}
                             {% endif %}
                         </p>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Started at') }} {{ active_timer.start_time|user_time('%I:%M %p') }}
+                            <i class="fas fa-clock mr-1"></i>{{ _('Started at') }} {{ active_timer.start_time|user_time('%I:%M %p') }}
                         </p>
                     </div>
                     <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg btn-press shadow-md transition-smooth action-danger">{{ _('Stop Timer') }}</button>
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                            <i class="fas fa-stop mr-2"></i>{{ _('Stop Timer') }}
+                        </button>
                     </form>
                 </div>
             {% else %}
-                <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No active timer.') }}</p>
+                <div class="text-center py-4">
+                    <p class="text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('No active timer.') }}</p>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Click "Start Timer" to begin tracking your time.') }}</p>
+                </div>
             {% endif %}
         </div>
 
         <!-- Recent Entries -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget animated-card">
-            <h2 class="text-lg font-semibold mb-4">Recent Entries</h2>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="bg-primary/10 dark:bg-primary/20 p-3 rounded-lg">
+                        <i class="fas fa-history text-primary text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Recent Entries') }}</h2>
+                </div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="border-b border-border-light dark:border-border-dark">
+                    <thead class="border-b-2 border-border-light dark:border-border-dark">
                         <tr>
-                            <th class="p-4">{{ _('Source') }}</th>
-                            <th class="p-4">{{ _('Task') }}</th>
-                            <th class="p-4">{{ _('Notes') }}</th>
-                            <th class="p-4">{{ _('Tags') }}</th>
-                            <th class="p-4">{{ _('Duration') }}</th>
-                            <th class="p-4">{{ _('Date') }}</th>
-                            <th class="p-4">{{ _('Actions') }}</th>
+                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Source') }}</th>
+                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Task') }}</th>
+                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Notes') }}</th>
+                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Tags') }}</th>
+                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
+                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
+                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for entry in recent_entries %}
-                        <tr class="border-b border-border-light dark:border-border-dark">
+                        <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors duration-150">
                             <td class="p-4">
                                 {% if entry.project %}
-                                    <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:text-primary-dark hover:underline">
-                                        {{ entry.project.name }}
+                                    <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="inline-flex items-center gap-2 text-primary hover:text-primary-dark hover:underline font-medium">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                            <i class="fas fa-folder mr-1"></i>{{ entry.project.name }}
+                                        </span>
                                     </a>
                                 {% elif entry.client %}
-                                    <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="text-primary hover:text-primary-dark hover:underline">
-                                        {{ entry.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                                    <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="inline-flex items-center gap-2 text-primary hover:text-primary-dark hover:underline font-medium">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                                            <i class="fas fa-building mr-1"></i>{{ entry.client.name }} <span class="ml-1 text-xs opacity-75">({{ _('Direct') }})</span>
+                                        </span>
                                     </a>
                                 {% else %}
-                                    {{ _('N/A') }}
+                                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">{{ entry.task.name if entry.task else '-' }}</td>
-                            <td class="p-4">{% if entry.notes %}<span title="{{ entry.notes }}">{{ entry.notes[:60] }}{% if entry.notes|length > 60 %}...{% endif %}</span>{% else %}-{% endif %}</td>
-                            <td class="p-4">{{ entry.tags or '-' }}</td>
-                            <td class="p-4">{{ entry.duration_formatted }}</td>
-                            <td class="p-4">{{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="p-4">
+                                {% if entry.task %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                        {{ entry.task.name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4">
+                                {% if entry.notes %}
+                                    <span class="text-sm text-text-light dark:text-text-dark" title="{{ entry.notes }}">{{ entry.notes[:60] }}{% if entry.notes|length > 60 %}...{% endif %}</span>
+                                {% else %}
+                                    <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4">
+                                {% if entry.tags %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                        {{ entry.tags }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                    <i class="fas fa-clock mr-1"></i>{{ entry.duration_formatted }}
+                                </span>
+                            </td>
+                            <td class="p-4 text-sm text-text-light dark:text-text-dark">{{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') }}</td>
                             <td class="p-4">
                                 <div class="flex gap-2">
-                                    <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Resume - Start a new timer with same properties') }}">
-                                        <i class="fas fa-play"></i>
+                                    <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-colors" title="{{ _('Resume - Start a new timer with same properties') }}">
+                                        <i class="fas fa-play text-xs"></i>
                                     </a>
-                                    <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary-dark" title="{{ _('Edit entry') }}">
-                                        <i class="fas fa-edit"></i>
+                                    <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 text-primary dark:text-primary transition-colors" title="{{ _('Edit entry') }}">
+                                        <i class="fas fa-edit text-xs"></i>
                                     </a>
-                                    <a href="{{ url_for('timer.duplicate_timer', timer_id=entry.id) }}" class="text-blue-600 hover:text-blue-800" title="{{ _('Duplicate entry') }}">
-                                        <i class="fas fa-copy"></i>
+                                    <a href="{{ url_for('timer.duplicate_timer', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors" title="{{ _('Duplicate entry') }}">
+                                        <i class="fas fa-copy text-xs"></i>
                                     </a>
                                     {% if current_user.is_admin or entry.user_id == current_user.id %}
                                     <form id="confirmDeleteEntry-{{ entry.id }}-form" method="POST" action="{{ url_for('timer.delete_timer', timer_id=entry.id) }}" class="hidden">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     </form>
-                                    <button type="button" class="text-red-600 hover:text-red-800" title="{{ _('Delete entry') }}" onclick="document.getElementById('confirmDeleteEntry-{{ entry.id }}').classList.remove('hidden')">
-                                        <i class="fas fa-trash"></i>
+                                    <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-colors" title="{{ _('Delete entry') }}" onclick="document.getElementById('confirmDeleteEntry-{{ entry.id }}').classList.remove('hidden')">
+                                        <i class="fas fa-trash text-xs"></i>
                                     </button>
                                     {% endif %}
                                 </div>
@@ -145,7 +219,15 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No recent entries found.') }}</td>
+                            <td colspan="7" class="p-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                                        <i class="fas fa-inbox text-3xl text-gray-400"></i>
+                                    </div>
+                                    <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No recent entries found.') }}</p>
+                                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Start tracking time to see entries here.') }}</p>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -159,55 +241,59 @@
         <!-- Weekly Goal Widget -->
         {% if is_module_enabled('weekly_goals') %}
             {% if current_week_goal %}
-            <div class="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-lg shadow-lg dashboard-widget animated-card text-white">
+            <div class="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card text-white">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold">
-                        <i class="fas fa-bullseye mr-2"></i>
-                        {{ _('Weekly Goal') }}
-                    </h2>
-                    <a href="{{ url_for('weekly_goals.index') }}" class="text-white hover:text-gray-200 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
+                            <i class="fas fa-bullseye text-xl"></i>
+                        </div>
+                        <h2 class="text-lg font-semibold">{{ _('Weekly Goal') }}</h2>
+                    </div>
+                    <a href="{{ url_for('weekly_goals.index') }}" class="text-white/80 hover:text-white transition-colors">
                         <i class="fas fa-external-link-alt"></i>
                     </a>
                 </div>
                 <div class="mb-4">
-                    <div class="flex justify-between text-sm mb-2 opacity-90">
-                        <span>{{ current_week_goal.actual_hours }}h / {{ current_week_goal.target_hours }}h</span>
-                        <span>{{ current_week_goal.progress_percentage }}%</span>
+                    <div class="flex justify-between text-sm mb-3 opacity-90">
+                        <span class="font-medium">{{ current_week_goal.actual_hours }}h / {{ current_week_goal.target_hours }}h</span>
+                        <span class="font-bold">{{ current_week_goal.progress_percentage }}%</span>
                     </div>
-                    <div class="w-full bg-white bg-opacity-30 rounded-full h-3">
-                        <div class="bg-white rounded-full h-3 transition-all duration-300" 
+                    <div class="w-full bg-white/30 backdrop-blur-sm rounded-full h-3 overflow-hidden shadow-inner">
+                        <div class="bg-white rounded-full h-3 transition-all duration-500 shadow-sm" 
                              style="width: {{ current_week_goal.progress_percentage }}%"></div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3 text-sm">
-                    <div class="bg-white bg-opacity-20 rounded p-2">
-                        <div class="opacity-90 text-xs">{{ _('Remaining') }}</div>
-                        <div class="font-semibold">{{ current_week_goal.remaining_hours }}h</div>
+                <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+                        <div class="opacity-90 text-xs mb-1">{{ _('Remaining') }}</div>
+                        <div class="font-bold text-lg">{{ current_week_goal.remaining_hours }}h</div>
                     </div>
-                    <div class="bg-white bg-opacity-20 rounded p-2">
-                        <div class="opacity-90 text-xs">{{ _('Days Left') }}</div>
-                        <div class="font-semibold">{{ current_week_goal.days_remaining }}</div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+                        <div class="opacity-90 text-xs mb-1">{{ _('Days Left') }}</div>
+                        <div class="font-bold text-lg">{{ current_week_goal.days_remaining }}</div>
                     </div>
                 </div>
                 {% if current_week_goal.days_remaining > 0 and current_week_goal.remaining_hours > 0 %}
-                <div class="mt-3 text-sm opacity-90">
-                    <i class="fas fa-info-circle mr-1"></i>
+                <div class="mt-3 text-sm opacity-90 bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/10">
+                    <i class="fas fa-info-circle mr-2"></i>
                     {{ _('Need') }} {{ current_week_goal.average_hours_per_day }}h/day {{ _('to reach goal') }}
                 </div>
                 {% endif %}
             </div>
             {% else %}
-            <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card border-2 border-dashed border-gray-300 dark:border-gray-600">
-                <div class="text-center">
-                    <i class="fas fa-bullseye text-4xl text-gray-400 mb-3"></i>
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animated-card border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <div class="text-center py-2">
+                    <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-bullseye text-3xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-text-light dark:text-text-dark mb-2">
                         {{ _('No Weekly Goal') }}
                     </h3>
-                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
                         {{ _('Set a weekly time goal to track your progress') }}
                     </p>
                     <a href="{{ url_for('weekly_goals.create') }}" 
-                       class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">
+                       class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5">
                         <i class="fas fa-plus mr-2"></i> {{ _('Create Goal') }}
                     </a>
                 </div>
@@ -215,77 +301,137 @@
             {% endif %}
         {% endif %}
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget animated-card">
-            <h2 class="text-h3 text-text-light dark:text-text-dark mb-4">{{ _('Top Projects (30 days)') }}</h2>
-            <ul class="space-y-3">
-                {% for item in top_projects %}
-                <li class="flex items-center justify-between">
-                    <div>
-                        <div class="font-medium">{{ item.project.name }}</div>
-                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Billable') }}: {{ '%.1f'|format(item.billable_hours) }}h</div>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="bg-purple-500/10 dark:bg-purple-400/10 p-3 rounded-lg">
+                        <i class="fas fa-chart-line text-purple-600 dark:text-purple-400 text-xl"></i>
                     </div>
-                    <div class="text-right font-semibold">{{ '%.1f'|format(item.hours) }}h</div>
-                </li>
-                {% else %}
-                <li class="text-text-muted-light dark:text-text-muted-dark">{{ _('No activity in the last 30 days.') }}</li>
-                {% endfor %}
-            </ul>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Top Projects (30 days)') }}</h2>
+                </div>
+            </div>
+            {% if top_projects %}
+                {% set max_hours = top_projects[0].hours if top_projects and top_projects[0].hours > 0 else 1 %}
+                <ul class="space-y-4">
+                    {% for item in top_projects %}
+                    <li class="group">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2 flex-1 min-w-0">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+                                    {{ loop.index }}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-semibold text-text-light dark:text-text-dark truncate">{{ item.project.name }}</div>
+                                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-2 mt-1">
+                                        <span class="inline-flex items-center">
+                                            <i class="fas fa-dollar-sign text-green-600 dark:text-green-400 mr-1"></i>
+                                            {{ _('Billable') }}: {{ '%.1f'|format(item.billable_hours) }}h
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right ml-3">
+                                <div class="font-bold text-lg text-text-light dark:text-text-dark">{{ '%.1f'|format(item.hours) }}h</div>
+                            </div>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                            <div class="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all duration-500" style="width: {{ (item.hours / max_hours * 100)|round }}%"></div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="text-center py-8">
+                    <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-folder-open text-3xl text-gray-400"></i>
+                    </div>
+                    <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No activity in the last 30 days.') }}</p>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Start tracking time on projects to see them here.') }}</p>
+                </div>
+            {% endif %}
         </div>
 
         <!-- Activity Timeline Widget -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md dashboard-widget">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-h3 text-text-light dark:text-text-dark">{{ _('Recent Activity') }}</h2>
-                <span class="real-time-indicator">
-                    <span>Live</span>
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-500/10 dark:bg-indigo-400/10 p-3 rounded-lg">
+                        <i class="fas fa-stream text-indigo-600 dark:text-indigo-400 text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Recent Activity') }}</h2>
+                </div>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse">
+                    <span class="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full mr-2"></span>
+                    {{ _('Live') }}
                 </span>
             </div>
             <div id="activityTimeline" class="activity-timeline">
                 {% if recent_activities %}
                     {% for activity in recent_activities %}
-                        <div class="activity-timeline-item">
-                            <div class="flex items-start gap-3">
-                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                    <i class="fas fa-circle text-sm text-blue-600 dark:text-blue-400"></i>
+                        <div class="activity-timeline-item group">
+                            <div class="flex items-start gap-4">
+                                <div class="flex-shrink-0 relative">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                                        <i class="fas fa-circle text-xs text-white"></i>
+                                    </div>
+                                    {% if not loop.last %}
+                                    <div class="absolute left-1/2 top-10 w-0.5 h-6 bg-gradient-to-b from-indigo-300 to-transparent dark:from-indigo-700 dark:to-transparent transform -translate-x-1/2"></div>
+                                    {% endif %}
                                 </div>
-                                <div class="flex-1">
-                                    <p class="text-sm text-text-light dark:text-text-dark">{{ activity.description or 'Activity' }}</p>
-                                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ activity.created_at|local_datetime_short }}</p>
+                                <div class="flex-1 pb-6 group-last:pb-0">
+                                    <p class="text-sm font-medium text-text-light dark:text-text-dark mb-1 group-hover:text-primary dark:group-hover:text-primary transition-colors">{{ activity.description or 'Activity' }}</p>
+                                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">
+                                        <i class="fas fa-clock"></i>
+                                        {{ activity.created_at|local_datetime_short }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
                     {% endfor %}
                 {% else %}
-                    <div class="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
-                        <i class="fas fa-inbox text-4xl mb-4 opacity-50"></i>
-                        <p>No recent activity</p>
+                    <div class="text-center py-12">
+                        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                            <i class="fas fa-inbox text-3xl text-gray-400"></i>
+                        </div>
+                        <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No recent activity') }}</p>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Activity will appear here as you use the system.') }}</p>
                     </div>
                 {% endif %}
             </div>
         </div>
 
         <!-- Support TimeTracker Widget -->
-        <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-6 rounded-lg shadow-lg dashboard-widget animated-card text-white">
-            <div class="flex items-start justify-between mb-3">
-                <div class="flex-1">
-                    <h2 class="text-lg font-semibold mb-1">
-                        <i class="fas fa-mug-saucer mr-2"></i>
-                        {{ _('Support TimeTracker') }}
-                    </h2>
-                    <p class="text-sm opacity-90 mb-4">
-                        {{ _('Your support helps fund server costs, new features, and keeps TimeTracker free for everyone.') }}
-                    </p>
-                    {% if time_entries_count > 0 or total_hours > 0 %}
-                    <div class="text-xs opacity-75 mb-3 space-y-1">
+        <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card text-white">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
+                        <i class="fas fa-mug-saucer text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold">{{ _('Support TimeTracker') }}</h2>
+                </div>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm opacity-90 mb-4">
+                    {{ _('Your support helps fund server costs, new features, and keeps TimeTracker free for everyone.') }}
+                </p>
+                {% if time_entries_count > 0 or total_hours > 0 %}
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/10 mb-4">
+                    <div class="text-xs opacity-90 space-y-2">
                         {% if time_entries_count > 0 %}
-                        <div><i class="fas fa-check-circle mr-1"></i>{{ _('You\'ve tracked %(count)s time entries', count=time_entries_count) }}</div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i>
+                            <span>{{ _('You\'ve tracked %(count)s time entries', count=time_entries_count) }}</span>
+                        </div>
                         {% endif %}
                         {% if total_hours > 0 %}
-                        <div><i class="fas fa-check-circle mr-1"></i>{{ _('You\'ve logged %(hours)s hours', hours="%.1f"|format(total_hours)) }}</div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i>
+                            <span>{{ _('You\'ve logged %(hours)s hours', hours="%.1f"|format(total_hours)) }}</span>
+                        </div>
                         {% endif %}
                     </div>
-                    {% endif %}
                 </div>
+                {% endif %}
             </div>
             <div class="flex gap-2">
                 <a href="{{ url_for('main.donate') }}" 

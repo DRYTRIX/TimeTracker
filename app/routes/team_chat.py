@@ -117,6 +117,7 @@ def send_message(channel_id):
             attachment_size = attachment_info.get("size")
             message_type = "file"
         except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
+            from flask import current_app
             current_app.logger.debug(f"Could not parse attachment data: {e}")
             pass
 
@@ -463,6 +464,7 @@ def upload_attachment(channel_id):
     file_path = os.path.join(upload_dir, filename)
     try:
         file.save(file_path)
+        file_size = os.path.getsize(file_path)
     except (OSError, IOError) as e:
         current_app.logger.error(f"Failed to save file {filename}: {e}")
         return jsonify({"error": _("Server error: Could not save file")}), 500
@@ -478,3 +480,81 @@ def upload_attachment(channel_id):
             },
         }
     )
+
+
+@team_chat_bp.route("/api/chat/users", methods=["GET"])
+@login_required
+@module_enabled("team_chat")
+def api_chat_users():
+    """Get list of users for chat selection"""
+    # Get all active users except current user
+    # Order by full_name if available, otherwise by username
+    users = (
+        User.query.filter(User.id != current_user.id, User.is_active == True)
+        .order_by(User.full_name, User.username)
+        .all()
+    )
+    
+    return jsonify({"users": [user.to_dict() for user in users]})
+
+
+@team_chat_bp.route("/api/chat/direct-message/<int:user_id>", methods=["POST"])
+@login_required
+@module_enabled("team_chat")
+def api_create_direct_message(user_id):
+    """Create or find existing direct message channel with a user"""
+    # CSRF token is validated automatically for form submissions
+    # Get target user
+    target_user = User.query.get_or_404(user_id)
+    
+    if target_user.id == current_user.id:
+        return jsonify({"error": _("Cannot create direct message with yourself")}), 400
+    
+    if not target_user.is_active:
+        return jsonify({"error": _("User is not active")}), 400
+    
+    # Check if direct message channel already exists
+    # Direct messages have type='direct' and exactly 2 members
+    existing_channels = (
+        ChatChannel.query.join(ChatChannelMember)
+        .filter(
+            ChatChannel.channel_type == "direct",
+            ChatChannel.is_archived == False,
+            ChatChannelMember.user_id == current_user.id
+        )
+        .all()
+    )
+    
+    # Check each channel to see if it's a direct message with target_user
+    for channel in existing_channels:
+        members = [m.user_id for m in channel.members.all()]
+        if len(members) == 2 and target_user.id in members:
+            # Found existing direct message channel
+            return jsonify({
+                "success": True,
+                "channel_id": channel.id,
+                "channel": channel.to_dict()
+            })
+    
+    # Create new direct message channel
+    channel = ChatChannel(
+        name=f"{current_user.display_name} & {target_user.display_name}",
+        channel_type="direct",
+        created_by=current_user.id,
+    )
+    db.session.add(channel)
+    db.session.flush()
+    
+    # Add both users as members
+    member1 = ChatChannelMember(channel_id=channel.id, user_id=current_user.id)
+    member2 = ChatChannelMember(channel_id=channel.id, user_id=target_user.id)
+    db.session.add(member1)
+    db.session.add(member2)
+    
+    db.session.commit()
+    
+    return jsonify({
+        "success": True,
+        "channel_id": channel.id,
+        "channel": channel.to_dict()
+    })

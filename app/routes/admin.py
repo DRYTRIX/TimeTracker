@@ -551,6 +551,8 @@ def get_upload_folder():
 def admin_dashboard():
     """Admin dashboard"""
     from app.config import Config
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, case
 
     # Get system statistics
     total_users = User.query.count()
@@ -584,6 +586,73 @@ def admin_dashboard():
         # Log error but continue - OIDC user count is not critical for dashboard display
         current_app.logger.warning(f"Failed to count OIDC users: {e}", exc_info=True)
 
+    # Calculate chart data for last 30 days
+    from datetime import time as time_class
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=30)
+
+    # User activity over time (daily user counts who created entries)
+    user_activity_data = []
+    for i in range(30):
+        date = (end_date - timedelta(days=i)).date()
+        date_start = datetime.combine(date, time_class(0, 0, 0))
+        date_end = datetime.combine(date, time_class(23, 59, 59, 999999))
+        
+        # Count distinct users who logged time on this date
+        user_count = (
+            db.session.query(func.count(func.distinct(TimeEntry.user_id)))
+            .filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= date_start,
+                TimeEntry.start_time <= date_end
+            )
+            .scalar() or 0
+        )
+        
+        user_activity_data.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'count': user_count
+        })
+    
+    user_activity_data.reverse()  # Oldest to newest
+
+    # Project status distribution
+    project_status_data = {}
+    status_counts = (
+        db.session.query(Project.status, func.count(Project.id))
+        .group_by(Project.status)
+        .all()
+    )
+    for status, count in status_counts:
+        project_status_data[status or 'none'] = count
+
+    # Daily time entry hours for last 30 days
+    time_entries_daily = []
+    for i in range(30):
+        date = (end_date - timedelta(days=i)).date()
+        date_start = datetime.combine(date, time_class(0, 0, 0))
+        date_end = datetime.combine(date, time_class(23, 59, 59, 999999))
+        
+        # Get total hours for this day
+        total_seconds = (
+            db.session.query(func.sum(TimeEntry.duration_seconds))
+            .filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= date_start,
+                TimeEntry.start_time <= date_end
+            )
+            .scalar() or 0
+        )
+        
+        hours = round(total_seconds / 3600, 2) if total_seconds else 0
+        
+        time_entries_daily.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'hours': hours
+        })
+    
+    time_entries_daily.reverse()  # Oldest to newest
+
     # Build stats object expected by the template
     stats = {
         "total_users": total_users,
@@ -591,9 +660,17 @@ def admin_dashboard():
         "total_projects": total_projects,
         "active_projects": active_projects,
         "total_entries": total_entries,
+        "active_timers": active_timers,
         "total_hours": TimeEntry.get_total_hours_for_period(),
         "billable_hours": TimeEntry.get_total_hours_for_period(billable_only=True),
         "last_backup": None,
+    }
+
+    # Chart data
+    chart_data = {
+        'user_activity': user_activity_data,
+        'project_status': project_status_data,
+        'time_entries_daily': time_entries_daily,
     }
 
     return render_template(
@@ -605,6 +682,7 @@ def admin_dashboard():
         oidc_configured=oidc_configured,
         oidc_auth_method=auth_method,
         oidc_users_count=oidc_users_count,
+        chart_data=chart_data,
     )
 
 
@@ -899,27 +977,81 @@ def clear_cache():
     return render_template("admin/clear_cache.html")
 
 
-@admin_bp.route("/admin/modules", methods=["GET"])
+@admin_bp.route("/admin/modules", methods=["GET", "POST"])
 @login_required
 @admin_or_permission_required("manage_settings")
 def manage_modules():
-    """View available modules (all modules are enabled by default)"""
+    """Manage module visibility - enable/disable modules system-wide"""
     from app.utils.module_registry import ModuleRegistry, ModuleCategory
     
     # Initialize registry
     ModuleRegistry.initialize_defaults()
     
-    # Group modules by category for display
+    # Get settings to access disabled_module_ids
+    settings_obj = Settings.get_settings()
+    
+    # Module visibility: non-CORE modules for admin toggles
     modules_by_category = {}
-    for category in ModuleCategory:
-        modules = ModuleRegistry.get_by_category(category)
-        if modules:  # Only include categories with modules
-            modules_by_category[category] = modules
+    for cat in ModuleCategory:
+        mods = [m for m in ModuleRegistry.get_by_category(cat) if m.category != ModuleCategory.CORE]
+        if mods:
+            modules_by_category[cat] = mods
+    
+    if request.method == "POST":
+        # Module visibility: build disabled_module_ids from unchecked module_enabled_* checkboxes
+        if hasattr(settings_obj, "disabled_module_ids"):
+            disabled = []
+            for mods in modules_by_category.values():
+                for m in mods:
+                    if ("module_enabled_" + m.id) not in request.form:
+                        disabled.append(m.id)
+            
+            # Validate module dependencies before saving
+            validation_errors = []
+            for module_id in disabled:
+                can_disable, affected = ModuleRegistry.validate_module_disable(module_id, disabled)
+                if not can_disable and affected:
+                    module = ModuleRegistry.get(module_id)
+                    module_name = module.name if module else module_id
+                    affected_names = [ModuleRegistry.get(aid).name if ModuleRegistry.get(aid) else aid for aid in affected]
+                    validation_errors.append(
+                        _("Cannot disable '%(module)s' because the following modules depend on it: %(dependents)s",
+                          module=module_name, dependents=", ".join(affected_names))
+                    )
+            
+            if validation_errors:
+                for error in validation_errors:
+                    flash(error, "error")
+                return render_template(
+                    "admin/modules.html",
+                    modules_by_category=modules_by_category,
+                    ModuleCategory=ModuleCategory,
+                    settings=settings_obj,
+                )
+            
+            settings_obj.disabled_module_ids = disabled
+            
+            # Ensure settings object is in the session
+            if settings_obj not in db.session:
+                db.session.add(settings_obj)
+            
+            if not safe_commit("admin_update_module_visibility"):
+                flash(_("Could not update module visibility due to a database error. Please check server logs."), "error")
+                return render_template(
+                    "admin/modules.html",
+                    modules_by_category=modules_by_category,
+                    ModuleCategory=ModuleCategory,
+                    settings=settings_obj,
+                )
+            
+            flash(_("Module visibility updated successfully"), "success")
+            return redirect(url_for("admin.manage_modules"))
     
     return render_template(
         "admin/modules.html",
         modules_by_category=modules_by_category,
         ModuleCategory=ModuleCategory,
+        settings=settings_obj,
     )
 
 
@@ -949,16 +1081,6 @@ def settings():
         "kiosk_default_movement_type": getattr(settings_obj, "kiosk_default_movement_type", "adjustment"),
     }
 
-    # Module visibility: non-CORE modules for admin toggles
-    from app.utils.module_registry import ModuleRegistry, ModuleCategory
-
-    ModuleRegistry.initialize_defaults()
-    modules_by_category = {}
-    for cat in ModuleCategory:
-        mods = [m for m in ModuleRegistry.get_by_category(cat) if m.category != ModuleCategory.CORE]
-        if mods:
-            modules_by_category[cat] = mods
-
     if request.method == "POST":
         # Validate timezone
         timezone = request.form.get("timezone") or settings_obj.timezone
@@ -974,8 +1096,6 @@ def settings():
                 timezones=timezones,
                 kiosk_settings=kiosk_settings,
                 peppol_env_enabled=peppol_env_enabled,
-                modules_by_category=modules_by_category,
-                ModuleCategory=ModuleCategory,
             )
 
         # Update basic settings
@@ -1072,42 +1192,6 @@ def settings():
             app_module.log_event("admin.analytics_toggled", user_id=current_user.id, new_state=allow_analytics)
             app_module.track_event(current_user.id, "admin.analytics_toggled", {"enabled": allow_analytics})
 
-        # Module visibility: build disabled_module_ids from unchecked module_enabled_* checkboxes
-        if hasattr(settings_obj, "disabled_module_ids"):
-            disabled = []
-            for mods in modules_by_category.values():
-                for m in mods:
-                    if ("module_enabled_" + m.id) not in request.form:
-                        disabled.append(m.id)
-            
-            # Validate module dependencies before saving
-            validation_errors = []
-            for module_id in disabled:
-                can_disable, affected = ModuleRegistry.validate_module_disable(module_id, disabled)
-                if not can_disable and affected:
-                    module = ModuleRegistry.get(module_id)
-                    module_name = module.name if module else module_id
-                    affected_names = [ModuleRegistry.get(aid).name if ModuleRegistry.get(aid) else aid for aid in affected]
-                    validation_errors.append(
-                        _("Cannot disable '%(module)s' because the following modules depend on it: %(dependents)s",
-                          module=module_name, dependents=", ".join(affected_names))
-                    )
-            
-            if validation_errors:
-                for error in validation_errors:
-                    flash(error, "error")
-                return render_template(
-                    "admin/settings.html",
-                    settings=settings_obj,
-                    timezones=timezones,
-                    kiosk_settings=kiosk_settings,
-                    peppol_env_enabled=peppol_env_enabled,
-                    modules_by_category=modules_by_category,
-                    ModuleCategory=ModuleCategory,
-                )
-            
-            settings_obj.disabled_module_ids = disabled
-
         # Ensure settings object is in the session (important for new instances)
         if settings_obj not in db.session:
             db.session.add(settings_obj)
@@ -1120,8 +1204,6 @@ def settings():
                 timezones=timezones,
                 kiosk_settings=kiosk_settings,
                 peppol_env_enabled=peppol_env_enabled,
-                modules_by_category=modules_by_category,
-                ModuleCategory=ModuleCategory,
             )
         # #region agent log
         try:
@@ -1150,8 +1232,6 @@ def settings():
         timezones=timezones,
         kiosk_settings=kiosk_settings,
         peppol_env_enabled=peppol_env_enabled,
-        modules_by_category=modules_by_category,
-        ModuleCategory=ModuleCategory,
     )
 
 

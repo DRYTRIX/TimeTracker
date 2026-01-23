@@ -222,6 +222,33 @@ class User(UserMixin, db.Model):
         self.last_login = datetime.utcnow()
         db.session.commit()
 
+    def is_online(self):
+        """Check if user is currently online (active within last 15 minutes)"""
+        if not self.last_login:
+            return False
+        from datetime import timedelta
+        threshold = datetime.utcnow() - timedelta(minutes=15)
+        return self.last_login >= threshold
+
+    def get_status(self):
+        """Get user status: 'online', 'offline', or 'away'"""
+        if not self.last_login:
+            return "offline"
+        
+        from datetime import timedelta
+        now = datetime.utcnow()
+        time_since_login = now - self.last_login
+        
+        # Online if active within last 15 minutes
+        if time_since_login <= timedelta(minutes=15):
+            return "online"
+        # Away if active within last 1 hour
+        elif time_since_login <= timedelta(hours=1):
+            return "away"
+        # Offline otherwise
+        else:
+            return "offline"
+
     def to_dict(self):
         """Convert user to dictionary for API responses"""
         return {
@@ -236,6 +263,7 @@ class User(UserMixin, db.Model):
             "is_active": self.is_active,
             "total_hours": self.total_hours,
             "avatar_url": self.get_avatar_url(),
+            "status": self.get_status(),
         }
 
     # Avatar helpers
