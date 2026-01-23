@@ -1,0 +1,448 @@
+{# Persistent Chat Widget - Always Available #}
+{% if is_module_enabled('team_chat') %}
+<div id="persistentChatWidget" class="fixed bottom-20 right-4 z-[60]">
+    <!-- Minimized State - Chat Button -->
+    <button 
+        id="chatWidgetToggle"
+        onclick="toggleChatWidget()"
+        class="w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition-all flex items-center justify-center relative"
+        aria-label="{{ _('Toggle chat') }}"
+    >
+        <i class="fas fa-comments text-xl"></i>
+        <span id="chatUnreadBadge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+    </button>
+
+    <!-- Expanded State - Chat Panel -->
+    <div id="chatWidgetPanel" class="hidden w-96 h-[600px] bg-card-light dark:bg-card-dark rounded-lg shadow-2xl border border-border-light dark:border-border-dark flex flex-col">
+        <!-- Header -->
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-gradient-to-r from-primary/10 to-primary/5">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-comments text-primary"></i>
+                <h3 class="font-semibold text-text-light dark:text-text-dark">{{ _('Chat') }}</h3>
+            </div>
+            <div class="flex items-center gap-2">
+                <button 
+                    onclick="openChatUserSelector()" 
+                    class="p-1.5 hover:bg-background-light dark:hover:bg-background-dark rounded transition-colors"
+                    title="{{ _('Start new chat') }}"
+                >
+                    <i class="fas fa-plus text-text-muted-light dark:text-text-muted-dark"></i>
+                </button>
+                <button 
+                    onclick="loadChatWidgetChannels(); if(chatWidgetState.currentChannelId) loadChatWidgetMessages(chatWidgetState.currentChannelId);" 
+                    class="p-1.5 hover:bg-background-light dark:hover:bg-background-dark rounded transition-colors"
+                    title="{{ _('Refresh') }}"
+                >
+                    <i class="fas fa-sync-alt text-text-muted-light dark:text-text-muted-dark"></i>
+                </button>
+                <button 
+                    onclick="toggleChatWidget()" 
+                    class="p-1.5 hover:bg-background-light dark:hover:bg-background-dark rounded transition-colors"
+                    title="{{ _('Minimize chat') }}"
+                >
+                    <i class="fas fa-minus text-text-muted-light dark:text-text-muted-dark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Channels/DMs List -->
+            <div id="chatWidgetSidebar" class="w-1/3 border-r border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark overflow-y-auto">
+                <div class="p-2">
+                    <div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase px-2 py-1 mb-1">{{ _('Channels') }}</div>
+                    <div id="chatWidgetChannels" class="space-y-1">
+                        <!-- Channels will be loaded here -->
+                    </div>
+                    
+                    <div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase px-2 py-1 mt-4 mb-1">{{ _('Direct Messages') }}</div>
+                    <div id="chatWidgetDirectMessages" class="space-y-1">
+                        <!-- Direct messages will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Messages Area -->
+            <div id="chatWidgetMessages" class="flex-1 flex flex-col">
+                <!-- No channel selected state -->
+                <div id="chatWidgetEmpty" class="flex-1 flex items-center justify-center p-4 text-center text-text-muted-light dark:text-text-muted-dark">
+                    <div>
+                        <i class="fas fa-comments text-4xl mb-2 opacity-50"></i>
+                        <p class="text-sm">{{ _('Select a channel to start chatting') }}</p>
+                    </div>
+                </div>
+
+                <!-- Active channel view -->
+                <div id="chatWidgetActiveChannel" class="hidden flex-1 flex flex-col">
+                    <!-- Channel header -->
+                    <div id="chatWidgetChannelHeader" class="p-3 border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 id="chatWidgetChannelName" class="font-semibold text-text-light dark:text-text-dark"></h4>
+                                <p id="chatWidgetChannelStatus" class="text-xs text-text-muted-light dark:text-text-muted-dark"></p>
+                            </div>
+                            <a 
+                                id="chatWidgetViewFull"
+                                href="#"
+                                target="_blank"
+                                class="text-xs text-primary hover:underline"
+                            >
+                                {{ _('View full') }}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Messages container -->
+                    <div id="chatWidgetMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <!-- Messages will be loaded here -->
+                    </div>
+
+                    <!-- Message input -->
+                    <div class="p-3 border-t border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark">
+                        <form id="chatWidgetMessageForm" class="flex gap-2">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input 
+                                type="text" 
+                                id="chatWidgetMessageInput" 
+                                placeholder="{{ _('Type a message...') }}" 
+                                class="flex-1 form-input text-sm"
+                                autocomplete="off"
+                            >
+                            <button 
+                                type="submit"
+                                class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm"
+                            >
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Chat widget state
+let chatWidgetState = {
+    isOpen: false,
+    currentChannelId: null,
+    channels: [],
+    directMessages: []
+};
+
+// Initialize chat widget
+function initChatWidget() {
+    // Load state from localStorage
+    const savedState = localStorage.getItem('chatWidgetState');
+    if (savedState) {
+        try {
+            const parsed = JSON.parse(savedState);
+            chatWidgetState.isOpen = parsed.isOpen || false;
+            chatWidgetState.currentChannelId = parsed.currentChannelId || null;
+        } catch (e) {
+            console.error('Failed to load chat widget state:', e);
+        }
+    }
+
+    // Widget is always visible, just set initial state
+    const widget = document.getElementById('persistentChatWidget');
+    if (widget) {
+        if (chatWidgetState.isOpen) {
+            openChatWidget();
+        } else {
+            // Ensure minimized state is shown
+            const toggle = document.getElementById('chatWidgetToggle');
+            const panel = document.getElementById('chatWidgetPanel');
+            if (toggle) toggle.classList.remove('hidden');
+            if (panel) panel.classList.add('hidden');
+        }
+    }
+
+    // Load channels and messages
+    loadChatWidgetChannels();
+    
+    // Set up message form handler
+    const messageForm = document.getElementById('chatWidgetMessageForm');
+    if (messageForm) {
+        messageForm.addEventListener('submit', handleChatWidgetMessageSubmit);
+    }
+
+    // Load current channel if one was open
+    if (chatWidgetState.currentChannelId) {
+        loadChatWidgetChannel(chatWidgetState.currentChannelId);
+    }
+}
+
+// Toggle chat widget open/closed
+function toggleChatWidget() {
+    if (chatWidgetState.isOpen) {
+        closeChatWidget();
+    } else {
+        openChatWidget();
+    }
+}
+
+// Open chat widget
+function openChatWidget() {
+    const toggle = document.getElementById('chatWidgetToggle');
+    const panel = document.getElementById('chatWidgetPanel');
+    
+    if (toggle && panel) {
+        toggle.classList.add('hidden');
+        panel.classList.remove('hidden');
+        chatWidgetState.isOpen = true;
+        saveChatWidgetState();
+    }
+}
+
+// Close chat widget (minimize)
+function closeChatWidget() {
+    const toggle = document.getElementById('chatWidgetToggle');
+    const panel = document.getElementById('chatWidgetPanel');
+    
+    if (toggle && panel) {
+        toggle.classList.remove('hidden');
+        panel.classList.add('hidden');
+        chatWidgetState.isOpen = false;
+        saveChatWidgetState();
+    }
+}
+
+// Save widget state to localStorage
+function saveChatWidgetState() {
+    try {
+        localStorage.setItem('chatWidgetState', JSON.stringify({
+            isOpen: chatWidgetState.isOpen,
+            currentChannelId: chatWidgetState.currentChannelId
+        }));
+    } catch (e) {
+        console.error('Failed to save chat widget state:', e);
+    }
+}
+
+// Load channels and direct messages
+function loadChatWidgetChannels() {
+    fetch('/api/chat/channels', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.channels) {
+            chatWidgetState.channels = data.channels.filter(c => c.channel_type !== 'direct');
+            chatWidgetState.directMessages = data.channels.filter(c => c.channel_type === 'direct');
+            renderChatWidgetChannels();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading channels:', error);
+    });
+}
+
+// Render channels and direct messages
+function renderChatWidgetChannels() {
+    const channelsEl = document.getElementById('chatWidgetChannels');
+    const dmsEl = document.getElementById('chatWidgetDirectMessages');
+    
+    if (!channelsEl || !dmsEl) return;
+
+    // Render channels
+    if (chatWidgetState.channels.length === 0) {
+        channelsEl.innerHTML = '<p class="text-xs text-text-muted-light dark:text-text-muted-dark px-2 py-1">No channels</p>';
+    } else {
+        channelsEl.innerHTML = chatWidgetState.channels.map(channel => `
+            <button
+                onclick="loadChatWidgetChannel(${channel.id})"
+                class="w-full text-left px-2 py-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm ${chatWidgetState.currentChannelId === channel.id ? 'bg-primary/10 text-primary font-semibold' : 'text-text-light dark:text-text-dark'}"
+            >
+                <i class="fas fa-hashtag text-xs mr-1"></i>
+                ${channel.name}
+            </button>
+        `).join('');
+    }
+
+    // Render direct messages
+    if (chatWidgetState.directMessages.length === 0) {
+        dmsEl.innerHTML = '<p class="text-xs text-text-muted-light dark:text-text-muted-dark px-2 py-1">No messages</p>';
+    } else {
+        dmsEl.innerHTML = chatWidgetState.directMessages.map(channel => `
+            <button
+                onclick="loadChatWidgetChannel(${channel.id})"
+                class="w-full text-left px-2 py-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm ${chatWidgetState.currentChannelId === channel.id ? 'bg-primary/10 text-primary font-semibold' : 'text-text-light dark:text-text-dark'}"
+            >
+                <i class="fas fa-user-circle text-xs mr-1"></i>
+                ${channel.name}
+            </button>
+        `).join('');
+    }
+}
+
+// Load a specific channel
+function loadChatWidgetChannel(channelId) {
+    chatWidgetState.currentChannelId = channelId;
+    saveChatWidgetState();
+
+    // Hide empty state, show active channel
+    const emptyEl = document.getElementById('chatWidgetEmpty');
+    const activeEl = document.getElementById('chatWidgetActiveChannel');
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (activeEl) activeEl.classList.remove('hidden');
+
+    // Update channel header
+    const channel = [...chatWidgetState.channels, ...chatWidgetState.directMessages].find(c => c.id === channelId);
+    if (channel) {
+        const nameEl = document.getElementById('chatWidgetChannelName');
+        const viewFullEl = document.getElementById('chatWidgetViewFull');
+        if (nameEl) nameEl.textContent = channel.name;
+        if (viewFullEl) viewFullEl.href = `/chat/channels/${channelId}`;
+    }
+
+    // Load messages
+    loadChatWidgetMessages(channelId);
+    
+    // Update active state in sidebar
+    renderChatWidgetChannels();
+}
+
+// Load messages for a channel
+function loadChatWidgetMessages(channelId) {
+    const container = document.getElementById('chatWidgetMessagesContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-text-muted-light dark:text-text-muted-dark"></i></div>';
+
+    fetch(`/api/chat/channels/${channelId}/messages?limit=50`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.messages) {
+            renderChatWidgetMessages(data.messages);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading messages:', error);
+        container.innerHTML = '<div class="text-center py-4 text-rose-600 dark:text-rose-400 text-sm">{{ _("Failed to load messages") }}</div>';
+    });
+}
+
+// Render messages
+function renderChatWidgetMessages(messages) {
+    const container = document.getElementById('chatWidgetMessagesContainer');
+    if (!container) return;
+
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-text-muted-light dark:text-text-muted-dark text-sm">{{ _("No messages yet") }}</div>';
+        return;
+    }
+
+    container.innerHTML = messages.map(msg => {
+        const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `
+            <div class="flex items-start gap-2">
+                <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-primary text-xs font-semibold">${(msg.display_name || msg.username || 'U')[0].toUpperCase()}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold text-sm text-text-light dark:text-text-dark">${msg.display_name || msg.username || 'Unknown'}</span>
+                        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">${time}</span>
+                    </div>
+                    <div class="text-sm text-text-light dark:text-text-dark whitespace-pre-wrap">${escapeHtml(msg.message || '')}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+// Handle message submission
+function handleChatWidgetMessageSubmit(e) {
+    e.preventDefault();
+    
+    if (!chatWidgetState.currentChannelId) return;
+
+    const input = document.getElementById('chatWidgetMessageInput');
+    if (!input || !input.value.trim()) return;
+
+    const message = input.value.trim();
+    input.value = '';
+
+    // Get CSRF token from meta tag or form
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                     document.querySelector('input[name="csrf_token"]')?.value || '';
+
+    // Use FormData to send message (this endpoint handles CSRF properly)
+    const formData = new FormData();
+    formData.append('content', message);
+    formData.append('csrf_token', csrfToken);
+
+    fetch(`/chat/channels/${chatWidgetState.currentChannelId}/send-message`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload messages
+            loadChatWidgetMessages(chatWidgetState.currentChannelId);
+            // Reload channels to update last message
+            loadChatWidgetChannels();
+        } else {
+            alert(data.error || '{{ _("Failed to send message") }}');
+            input.value = message; // Restore message
+        }
+    })
+    .catch(error => {
+        console.error('Error sending message:', error);
+        alert('{{ _("Failed to send message") }}');
+        input.value = message; // Restore message
+    });
+}
+
+// Escape HTML helper
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChatWidget);
+} else {
+    initChatWidget();
+}
+
+// Reload channels periodically
+setInterval(loadChatWidgetChannels, 30000); // Every 30 seconds
+
+// Reload channels when page becomes visible (user switches back to tab)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && chatWidgetState.isOpen) {
+        loadChatWidgetChannels();
+        if (chatWidgetState.currentChannelId) {
+            loadChatWidgetMessages(chatWidgetState.currentChannelId);
+        }
+    }
+});
+
+// Make functions globally available for integration
+window.openChatWidget = openChatWidget;
+window.closeChatWidget = closeChatWidget;
+window.loadChatWidgetChannel = loadChatWidgetChannel;
+window.loadChatWidgetChannels = loadChatWidgetChannels;
+window.toggleChatWidget = toggleChatWidget;
+</script>
+{% endif %}

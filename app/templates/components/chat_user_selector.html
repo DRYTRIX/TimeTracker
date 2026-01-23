@@ -1,0 +1,285 @@
+{# Chat User Selector Modal #}
+<div id="chatUserSelectorModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" data-overlay onclick="closeChatUserSelector()"></div>
+    <div class="relative max-w-md mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg max-h-[80vh] flex flex-col">
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <div class="text-lg font-semibold">{{ _('Start a Chat') }}</div>
+            <button type="button" onclick="closeChatUserSelector()" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Search Input -->
+        <div class="p-4 border-b border-border-light dark:border-border-dark">
+            <input 
+                type="text" 
+                id="chatUserSearch" 
+                placeholder="{{ _('Search users...') }}" 
+                class="form-input w-full"
+                oninput="filterChatUsers()"
+            >
+        </div>
+        
+        <!-- Loading State -->
+        <div id="chatUsersLoading" class="p-8 text-center text-text-muted-light dark:text-text-muted-dark">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+            <p>{{ _('Loading users...') }}</p>
+        </div>
+        
+        <!-- Error State -->
+        <div id="chatUsersError" class="hidden p-8 text-center text-rose-600 dark:text-rose-400">
+            <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+            <p id="chatUsersErrorMessage">{{ _('Failed to load users') }}</p>
+        </div>
+        
+        <!-- Users List -->
+        <div id="chatUsersList" class="flex-1 overflow-y-auto p-2 hidden">
+            <!-- Users will be populated here by JavaScript -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="chatUsersEmpty" class="hidden p-8 text-center text-text-muted-light dark:text-text-muted-dark">
+            <i class="fas fa-users text-2xl mb-2 opacity-50"></i>
+            <p>{{ _('No users found') }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Chat user selector state
+let chatUsersData = [];
+let filteredChatUsers = [];
+
+// Open chat user selector modal
+function openChatUserSelector() {
+    const modal = document.getElementById('chatUserSelectorModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        loadChatUsers();
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = document.getElementById('chatUserSearch');
+            if (searchInput) searchInput.focus();
+        }, 100);
+    }
+}
+
+// Close chat user selector modal
+function closeChatUserSelector() {
+    const modal = document.getElementById('chatUserSelectorModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        // Clear search
+        const searchInput = document.getElementById('chatUserSearch');
+        if (searchInput) searchInput.value = '';
+        filteredChatUsers = [];
+    }
+}
+
+// Load users from API
+function loadChatUsers() {
+    const loadingEl = document.getElementById('chatUsersLoading');
+    const errorEl = document.getElementById('chatUsersError');
+    const listEl = document.getElementById('chatUsersList');
+    const emptyEl = document.getElementById('chatUsersEmpty');
+    
+    // Show loading, hide others
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
+    if (listEl) listEl.classList.add('hidden');
+    if (emptyEl) emptyEl.classList.add('hidden');
+    
+    fetch('/api/chat/users', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to load users');
+        }
+        return response.json();
+    })
+    .then(data => {
+        chatUsersData = data.users || [];
+        filteredChatUsers = [...chatUsersData];
+        renderChatUsers();
+    })
+    .catch(error => {
+        console.error('Error loading chat users:', error);
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (errorEl) {
+            errorEl.classList.remove('hidden');
+            const errorMsg = document.getElementById('chatUsersErrorMessage');
+            if (errorMsg) {
+                errorMsg.textContent = error.message || '{{ _("Failed to load users") }}';
+            }
+        }
+    });
+}
+
+// Filter users by search input
+function filterChatUsers() {
+    const searchInput = document.getElementById('chatUserSearch');
+    if (!searchInput) return;
+    
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+        filteredChatUsers = [...chatUsersData];
+    } else {
+        filteredChatUsers = chatUsersData.filter(user => {
+            const displayName = (user.display_name || user.username || '').toLowerCase();
+            const username = (user.username || '').toLowerCase();
+            return displayName.includes(searchTerm) || username.includes(searchTerm);
+        });
+    }
+    
+    renderChatUsers();
+}
+
+// Render users list
+function renderChatUsers() {
+    const loadingEl = document.getElementById('chatUsersLoading');
+    const errorEl = document.getElementById('chatUsersError');
+    const listEl = document.getElementById('chatUsersList');
+    const emptyEl = document.getElementById('chatUsersEmpty');
+    
+    // Hide loading and error
+    if (loadingEl) loadingEl.classList.add('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
+    
+    if (filteredChatUsers.length === 0) {
+        if (listEl) listEl.classList.add('hidden');
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+    
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (listEl) {
+        listEl.classList.remove('hidden');
+        
+        // Render users
+        listEl.innerHTML = filteredChatUsers.map(user => {
+            const status = user.status || 'offline';
+            const statusColors = {
+                'online': 'bg-green-500',
+                'away': 'bg-yellow-500',
+                'offline': 'bg-gray-400'
+            };
+            const statusColor = statusColors[status] || statusColors['offline'];
+            const avatarUrl = user.avatar_url || '';
+            const displayName = user.display_name || user.username || 'Unknown';
+            const initials = displayName.charAt(0).toUpperCase();
+            
+            return `
+                <button 
+                    type="button"
+                    onclick="startChatWithUser(${user.id})"
+                    class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors text-left"
+                >
+                    <div class="relative flex-shrink-0">
+                        ${avatarUrl ? 
+                            `<img src="${avatarUrl}" alt="${displayName}" class="w-12 h-12 rounded-full object-cover" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             <div class="w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-lg" style="display: none;">
+                                 ${initials}
+                             </div>` :
+                            `<div class="w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-lg">
+                                 ${initials}
+                             </div>`
+                        }
+                        <span class="absolute bottom-0 right-0 w-3 h-3 ${statusColor} border-2 border-card-light dark:border-card-dark rounded-full"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-text-light dark:text-text-dark truncate">${displayName}</div>
+                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark capitalize">${status}</div>
+                    </div>
+                    <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark"></i>
+                </button>
+            `;
+        }).join('');
+    }
+}
+
+// Start chat with selected user
+function startChatWithUser(userId) {
+    // Show loading state
+    const listEl = document.getElementById('chatUsersList');
+    if (listEl) {
+        listEl.innerHTML = `
+            <div class="p-8 text-center">
+                <i class="fas fa-spinner fa-spin text-2xl mb-2 text-primary"></i>
+                <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Starting chat...') }}</p>
+            </div>
+        `;
+    }
+    
+    // Get CSRF token from meta tag or form
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                     document.querySelector('input[name="csrf_token"]')?.value || '';
+    
+    // Use FormData to ensure CSRF token is properly sent
+    const formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    
+    fetch(`/api/chat/direct-message/${userId}`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || 'Failed to start chat'); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.channel_id) {
+            // Close the user selector
+            closeChatUserSelector();
+            
+            // Refresh channels list in widget
+            if (typeof loadChatWidgetChannels === 'function') {
+                loadChatWidgetChannels();
+            }
+            
+            // Open the persistent chat widget if it exists
+            if (typeof openChatWidget === 'function') {
+                openChatWidget();
+            }
+            
+            // Load the channel in the widget
+            if (typeof loadChatWidgetChannel === 'function') {
+                // Small delay to ensure channels are loaded
+                setTimeout(() => {
+                    loadChatWidgetChannel(data.channel_id);
+                }, 100);
+            } else {
+                // Fallback: redirect to full chat page
+                window.location.href = `/chat/channels/${data.channel_id}`;
+            }
+        } else {
+            throw new Error('Invalid response from server');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting chat:', error);
+        alert(error.message || '{{ _("Failed to start chat") }}');
+        // Reload users list
+        loadChatUsers();
+    });
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('chatUserSelectorModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            closeChatUserSelector();
+        }
+    }
+});
+</script>

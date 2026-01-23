@@ -84,12 +84,38 @@
             <h4 class="text-sm font-semibold mb-2">{{ _('Members') }} ({{ members|length }})</h4>
             <div class="space-y-2">
                 {% for member in members %}
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <i class="fas fa-user text-primary text-xs"></i>
+                {% set user = member.user %}
+                {% if user %}
+                    {% set user_status = user.get_status() %}
+                    {% set status_colors = {'online': 'bg-green-500', 'away': 'bg-yellow-500', 'offline': 'bg-gray-400'} %}
+                    {% set status_color = status_colors.get(user_status, 'bg-gray-400') %}
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-shrink-0">
+                            {% if user.get_avatar_url() %}
+                                <img src="{{ user.get_avatar_url() }}" alt="{{ user.display_name }}" class="w-8 h-8 rounded-full object-cover" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-xs" style="display: none;">
+                                    {{ user.display_name[0:1].upper() }}
+                                </div>
+                            {% else %}
+                                <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-xs">
+                                    {{ user.display_name[0:1].upper() }}
+                                </div>
+                            {% endif %}
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 {{ status_color }} border-2 border-card-light dark:border-card-dark rounded-full" title="{{ user_status|capitalize }}"></span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-sm font-medium">{{ user.display_name }}</span>
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark ml-2 capitalize">({{ user_status }})</span>
+                        </div>
                     </div>
-                    <span class="text-sm">{{ member.user.username if member.user else 'Unknown' }}</span>
-                </div>
+                {% else %}
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                            <i class="fas fa-user text-primary text-xs"></i>
+                        </div>
+                        <span class="text-sm">Unknown</span>
+                    </div>
+                {% endif %}
                 {% endfor %}
             </div>
         </div>

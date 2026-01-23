@@ -946,6 +946,14 @@
                         <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
                     </button>
 
+                    <!-- Chat Button -->
+                    {% if is_module_enabled('team_chat') %}
+                    <button onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="relative flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Open chat') }}" title="{{ _('Open chat') }}">
+                        <i class="fas fa-comments"></i>
+                        <span class="ml-2 hidden lg:inline">{{ _('Chat') }}</span>
+                    </button>
+                    {% endif %}
+
                     <!-- Language Switcher -->
                     <div class="relative z-50">
                         <button onclick="toggleDropdown('langDropdown')" class="flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdown" title="{{ _('Change language') }}">
@@ -1006,6 +1014,12 @@
 
             <!-- Offline Indicator -->
             {% include 'components/offline_indicator.html' %}
+
+            <!-- Chat User Selector -->
+            {% if is_module_enabled('team_chat') %}
+            {% include 'components/chat_user_selector.html' %}
+            {% include 'components/persistent_chat_widget.html' %}
+            {% endif %}
 
             <!-- Flash Messages (hidden, converted to toasts by toast-notifications.js) -->
             <div id="flash-messages-container" class="hidden">
