@@ -1,6 +1,5 @@
 {% extends "base.html" %}
-{% from "components/cards.html" import info_card %}
-{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -15,100 +14,517 @@
     actions_html=None
 ) }}
 
+<!-- Enhanced Stat Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    {{ info_card("Total Users", stats.total_users, "All time") }}
-    {{ info_card("Active Users", stats.active_users, "Currently active") }}
-    {{ info_card("Total Projects", stats.total_projects, "All time") }}
-    {{ info_card("Active Projects", stats.active_projects, "Currently active") }}
+    <!-- Total Users -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Users') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.total_users }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('All time') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-users text-blue-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Users -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Users') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.active_users }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Currently active') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-green-500/10 dark:bg-green-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-user-check text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Projects -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-indigo-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Projects') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.total_projects }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('All time') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-folder text-indigo-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Projects -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-purple-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Projects') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.active_projects }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Currently active') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-folder-open text-purple-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Entries -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 to-teal-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Entries') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.total_entries }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Time entries logged') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-teal-500/10 dark:bg-teal-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-clock text-teal-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Timers -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-orange-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Timers') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.active_timers }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Currently running') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-orange-500/10 dark:bg-orange-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-play-circle text-orange-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Hours -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-cyan-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Hours') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ "%.1f"|format(stats.total_hours / 3600 if stats.total_hours else 0) }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('All time tracked') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-cyan-500/10 dark:bg-cyan-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-hourglass-half text-cyan-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Billable Hours -->
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-amber-400"></div>
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Billable Hours') }}</p>
+                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ "%.1f"|format(stats.billable_hours / 3600 if stats.billable_hours else 0) }}</h3>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Billable time') }}</p>
+            </div>
+            <div class="w-12 h-12 bg-amber-500/10 dark:bg-amber-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                <i class="fas fa-dollar-sign text-amber-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
 </div>
 
+<!-- Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- User Activity Chart -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="font-semibold mb-3 flex items-center gap-2">
+            <i class="fas fa-chart-line text-blue-500"></i>
+            {{ _('User Activity (30 Days)') }}
+        </h3>
+        <div class="relative h-[250px]">
+            <canvas id="userActivityChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Project Status Chart -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="font-semibold mb-3 flex items-center gap-2">
+            <i class="fas fa-chart-pie text-purple-500"></i>
+            {{ _('Project Status') }}
+        </h3>
+        <div class="relative h-[250px]">
+            <canvas id="projectStatusChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Time Entry Trends Chart -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <h3 class="font-semibold mb-3 flex items-center gap-2">
+            <i class="fas fa-chart-bar text-green-500"></i>
+            {{ _('Time Entry Trends (30 Days)') }}
+        </h3>
+        <div class="relative h-[250px]">
+            <canvas id="timeEntryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- System Health Section -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <h2 class="text-lg font-semibold mb-4">{{ _('Admin Sections') }}</h2>
+    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <i class="fas fa-heartbeat text-red-500"></i>
+        {{ _('System Health') }}
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Database Status -->
+        <div class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg">
+            <div class="w-10 h-10 bg-green-500/10 dark:bg-green-500/20 rounded-full flex items-center justify-center">
+                <i class="fas fa-database text-green-500"></i>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('Database') }}</div>
+                <div class="text-xs text-green-600 dark:text-green-400">{{ _('Connected') }}</div>
+            </div>
+        </div>
+        
+        <!-- OIDC Status -->
+        <div class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg">
+            <div class="w-10 h-10 {% if oidc_configured %}bg-green-500/10 dark:bg-green-500/20{% else %}bg-gray-500/10 dark:bg-gray-500/20{% endif %} rounded-full flex items-center justify-center">
+                <i class="fas fa-shield-alt {% if oidc_configured %}text-green-500{% else %}text-gray-500{% endif %}"></i>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('OIDC Authentication') }}</div>
+                <div class="text-xs {% if oidc_configured %}text-green-600 dark:text-green-400{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+                    {% if oidc_configured %}{{ _('Configured') }}{% else %}{{ _('Not Configured') }}{% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- OIDC Users -->
+        {% if oidc_enabled %}
+        <div class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg">
+            <div class="w-10 h-10 bg-blue-500/10 dark:bg-blue-500/20 rounded-full flex items-center justify-center">
+                <i class="fas fa-users text-blue-500"></i>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('OIDC Users') }}</div>
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ oidc_users_count }} {{ _('users') }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Admin Sections -->
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <i class="fas fa-cogs text-primary"></i>
+        {{ _('Admin Sections') }}
+    </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <a href="{{ url_for('admin.list_users') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
-            <i class="fas fa-users mb-2"></i>
-            <div>Manage Users</div>
+        <!-- User Management -->
+        <a href="{{ url_for('admin.list_users') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-users text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Manage Users</div>
         </a>
-        <a href="{{ url_for('permissions.list_roles') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
-            <i class="fas fa-shield-alt mb-2"></i>
-            <div>Roles & Permissions</div>
+        
+        <!-- Roles & Permissions -->
+        <a href="{{ url_for('permissions.list_roles') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-shield-alt text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Roles & Permissions</div>
         </a>
-        <a href="{{ url_for('admin.api_tokens') }}" class="bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700">
-            <i class="fas fa-key mb-2"></i>
-            <div>API Tokens</div>
-            <div class="text-xs mt-1 opacity-90">REST API Access</div>
+        
+        <!-- API Tokens -->
+        <a href="{{ url_for('admin.api_tokens') }}" class="group bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg text-center hover:from-green-600 hover:to-green-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-key text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">API Tokens</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">REST API Access</div>
         </a>
-        <a href="{{ url_for('webhooks.list_webhooks') }}" class="bg-indigo-600 text-white p-4 rounded-lg text-center hover:bg-indigo-700">
-            <i class="fas fa-plug mb-2"></i>
-            <div>Webhooks</div>
-            <div class="text-xs mt-1 opacity-90">Outgoing Events</div>
+        
+        <!-- Webhooks -->
+        <a href="{{ url_for('webhooks.list_webhooks') }}" class="group bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-lg text-center hover:from-indigo-600 hover:to-indigo-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-plug text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Webhooks</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">Outgoing Events</div>
         </a>
-        <a href="{{ url_for('integrations.list_integrations') }}" class="bg-purple-600 text-white p-4 rounded-lg text-center hover:bg-purple-700">
-            <i class="fas fa-plug mb-2"></i>
-            <div>Integrations</div>
-            <div class="text-xs mt-1 opacity-90">OAuth Setup</div>
+        
+        <!-- Integrations -->
+        <a href="{{ url_for('integrations.list_integrations') }}" class="group bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg text-center hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-plug text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Integrations</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">OAuth Setup</div>
         </a>
-        <a href="{{ url_for('admin.email_support') }}" class="bg-purple-600 text-white p-4 rounded-lg text-center hover:bg-purple-700">
-            <i class="fas fa-envelope mb-2"></i>
-            <div>Email Configuration</div>
-            <div class="text-xs mt-1 opacity-90">Test & Configure</div>
+        
+        <!-- Email Configuration -->
+        <a href="{{ url_for('admin.email_support') }}" class="group bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg text-center hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-envelope text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Email Configuration</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">Test & Configure</div>
         </a>
-        <a href="{{ url_for('admin.list_email_templates') }}" class="bg-purple-600 text-white p-4 rounded-lg text-center hover:bg-purple-700">
-            <i class="fas fa-file-alt mb-2"></i>
-            <div>Email Templates</div>
-            <div class="text-xs mt-1 opacity-90">Invoice Email Templates</div>
+        
+        <!-- Email Templates -->
+        <a href="{{ url_for('admin.list_email_templates') }}" class="group bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg text-center hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-file-alt text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Email Templates</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">Invoice Email Templates</div>
         </a>
-        <a href="{{ url_for('admin.settings') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
-            <i class="fas fa-cog mb-2"></i>
-            <div>Settings</div>
+        
+        <!-- Settings -->
+        <a href="{{ url_for('admin.settings') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-cog text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Settings</div>
         </a>
-        <a href="{{ url_for('admin.system_info') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-blue-600">
-            <i class="fas fa-info-circle mb-2"></i>
-            <div>System Info</div>
+        
+        <!-- System Info -->
+        <a href="{{ url_for('admin.system_info') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-info-circle text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">System Info</div>
         </a>
-        <a href="{{ url_for('custom_field_definitions.list_custom_field_definitions') }}" class="bg-orange-600 text-white p-4 rounded-lg text-center hover:bg-orange-700">
-            <i class="fas fa-tags mb-2"></i>
-            <div>Custom Fields</div>
-            <div class="text-xs mt-1 opacity-90">Global Field Definitions</div>
+        
+        <!-- Custom Fields -->
+        <a href="{{ url_for('custom_field_definitions.list_custom_field_definitions') }}" class="group bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg text-center hover:from-orange-600 hover:to-orange-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-tags text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Custom Fields</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">Global Field Definitions</div>
         </a>
-        <a href="{{ url_for('link_templates.list_link_templates') }}" class="bg-teal-600 text-white p-4 rounded-lg text-center hover:bg-teal-700">
-            <i class="fas fa-link mb-2"></i>
-            <div>Link Templates</div>
-            <div class="text-xs mt-1 opacity-90">URL Templates for Fields</div>
+        
+        <!-- Link Templates -->
+        <a href="{{ url_for('link_templates.list_link_templates') }}" class="group bg-gradient-to-br from-teal-500 to-teal-600 text-white p-5 rounded-lg text-center hover:from-teal-600 hover:to-teal-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-link text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Link Templates</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">URL Templates for Fields</div>
         </a>
-        <a href="{{ url_for('salesman_reports.list_email_mappings') }}" class="bg-amber-600 text-white p-4 rounded-lg text-center hover:bg-amber-700">
-            <i class="fas fa-envelope mb-2"></i>
-            <div>Salesman Email Mappings</div>
-            <div class="text-xs mt-1 opacity-90">Report Distribution</div>
+        
+        <!-- Salesman Email Mappings -->
+        <a href="{{ url_for('salesman_reports.list_email_mappings') }}" class="group bg-gradient-to-br from-amber-500 to-amber-600 text-white p-5 rounded-lg text-center hover:from-amber-600 hover:to-amber-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <i class="fas fa-envelope text-2xl mb-2 relative z-10"></i>
+            <div class="font-semibold relative z-10">Salesman Email Mappings</div>
+            <div class="text-xs mt-1 opacity-90 relative z-10">Report Distribution</div>
         </a>
     </div>
 </div>
 
+<!-- Recent Activity -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <h2 class="text-lg font-semibold mb-4">{{ _('Recent Activity') }}</h2>
-    <table class="w-full text-left">
-        <thead class="border-b border-border-light dark:border-border-dark">
-            <tr>
-                <th class="p-4">User</th>
-                <th class="p-4">Project</th>
-                <th class="p-4">Duration</th>
-                <th class="p-4">Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in recent_entries %}
-            <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-4">{{ entry.user.username }}</td>
-                <td class="p-4">{{ entry.project.name }}</td>
-                <td class="p-4">{{ entry.duration }}</td>
-                <td class="p-4">{{ entry.start_time|user_date('%Y-%m-%d') }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">No recent activity.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <i class="fas fa-history text-primary"></i>
+        {{ _('Recent Activity') }}
+    </h2>
+    {% if recent_entries %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b-2 border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-4 font-semibold text-text-light dark:text-text-dark">{{ _('User') }}</th>
+                    <th class="p-4 font-semibold text-text-light dark:text-text-dark">{{ _('Project') }}</th>
+                    <th class="p-4 font-semibold text-text-light dark:text-text-dark">{{ _('Duration') }}</th>
+                    <th class="p-4 font-semibold text-text-light dark:text-text-dark">{{ _('Date') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in recent_entries %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors {% if loop.index % 2 == 0 %}bg-background-light/50 dark:bg-background-dark/50{% endif %}">
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-user text-text-muted-light dark:text-text-muted-dark"></i>
+                            <span class="text-text-light dark:text-text-dark">{{ entry.user.username }}</span>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-folder text-text-muted-light dark:text-text-muted-dark"></i>
+                            <span class="text-text-light dark:text-text-dark">{{ entry.project.name if entry.project else _('N/A') }}</span>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-clock text-text-muted-light dark:text-text-muted-dark"></i>
+                            <span class="text-text-light dark:text-text-dark">{{ entry.duration }}</span>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-calendar text-text-muted-light dark:text-text-muted-dark"></i>
+                            <span class="text-text-light dark:text-text-dark">{{ entry.start_time|user_date('%Y-%m-%d %H:%M') }}</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {{ empty_state('fas fa-inbox', 'No Recent Activity', 'There are no recent time entries to display.', None, type='no-data') }}
+    {% endif %}
 </div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<!-- Chart.js Scripts -->
+<script>
+{% autoescape false %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme-aware colors
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#E5E7EB' : '#1F2937';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: { color: textColor }
+            },
+            tooltip: {
+                backgroundColor: isDark ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                titleColor: textColor,
+                bodyColor: textColor,
+                borderColor: gridColor,
+                borderWidth: 1
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: textColor },
+                grid: { color: gridColor }
+            },
+            y: {
+                ticks: { color: textColor },
+                grid: { color: gridColor },
+                beginAtZero: true
+            }
+        }
+    };
+    
+    // User Activity Chart
+    {% if chart_data and chart_data.user_activity %}
+    const userActivityCtx = document.getElementById('userActivityChart');
+    if (userActivityCtx) {
+        new Chart(userActivityCtx, {
+            type: 'line',
+            data: {
+                labels: [
+                    {% for item in chart_data.user_activity %}
+                    {{ item.date|tojson }}{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: {{ _('Active Users')|tojson }},
+                    data: [
+                        {% for item in chart_data.user_activity %}
+                        {{ item.count }}{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                ...commonOptions,
+                plugins: {
+                    ...commonOptions.plugins,
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+    {% endif %}
+    
+    // Project Status Chart
+    {% if chart_data and chart_data.project_status %}
+    const projectStatusCtx = document.getElementById('projectStatusChart');
+    if (projectStatusCtx) {
+        const projectStatusData = {{ chart_data.project_status|tojson }};
+        const labels = Object.keys(projectStatusData);
+        const values = Object.values(projectStatusData);
+        
+        new Chart(projectStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels.map(label => label.charAt(0).toUpperCase() + label.slice(1)),
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',  // green for active
+                        'rgba(107, 114, 128, 0.8)', // gray for inactive
+                        'rgba(239, 68, 68, 0.8)',   // red for cancelled
+                        'rgba(59, 130, 246, 0.8)'   // blue for other
+                    ],
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1F2937' : '#FFFFFF'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: textColor }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+    
+    // Time Entry Trends Chart
+    {% if chart_data and chart_data.time_entries_daily %}
+    const timeEntryCtx = document.getElementById('timeEntryChart');
+    if (timeEntryCtx) {
+        new Chart(timeEntryCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for item in chart_data.time_entries_daily %}
+                    {{ item.date|tojson }}{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: {{ _('Hours')|tojson }},
+                    data: [
+                        {% for item in chart_data.time_entries_daily %}
+                        {{ item.hours }}{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: 'rgb(16, 185, 129)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...commonOptions,
+                plugins: {
+                    ...commonOptions.plugins,
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+{% endautoescape %}
+</script>
 {% endblock %}

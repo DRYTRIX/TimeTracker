@@ -551,6 +551,8 @@ def get_upload_folder():
 def admin_dashboard():
     """Admin dashboard"""
     from app.config import Config
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, case
 
     # Get system statistics
     total_users = User.query.count()
@@ -584,6 +586,73 @@ def admin_dashboard():
         # Log error but continue - OIDC user count is not critical for dashboard display
         current_app.logger.warning(f"Failed to count OIDC users: {e}", exc_info=True)
 
+    # Calculate chart data for last 30 days
+    from datetime import time as time_class
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=30)
+
+    # User activity over time (daily user counts who created entries)
+    user_activity_data = []
+    for i in range(30):
+        date = (end_date - timedelta(days=i)).date()
+        date_start = datetime.combine(date, time_class(0, 0, 0))
+        date_end = datetime.combine(date, time_class(23, 59, 59, 999999))
+        
+        # Count distinct users who logged time on this date
+        user_count = (
+            db.session.query(func.count(func.distinct(TimeEntry.user_id)))
+            .filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= date_start,
+                TimeEntry.start_time <= date_end
+            )
+            .scalar() or 0
+        )
+        
+        user_activity_data.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'count': user_count
+        })
+    
+    user_activity_data.reverse()  # Oldest to newest
+
+    # Project status distribution
+    project_status_data = {}
+    status_counts = (
+        db.session.query(Project.status, func.count(Project.id))
+        .group_by(Project.status)
+        .all()
+    )
+    for status, count in status_counts:
+        project_status_data[status or 'none'] = count
+
+    # Daily time entry hours for last 30 days
+    time_entries_daily = []
+    for i in range(30):
+        date = (end_date - timedelta(days=i)).date()
+        date_start = datetime.combine(date, time_class(0, 0, 0))
+        date_end = datetime.combine(date, time_class(23, 59, 59, 999999))
+        
+        # Get total hours for this day
+        total_seconds = (
+            db.session.query(func.sum(TimeEntry.duration_seconds))
+            .filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= date_start,
+                TimeEntry.start_time <= date_end
+            )
+            .scalar() or 0
+        )
+        
+        hours = round(total_seconds / 3600, 2) if total_seconds else 0
+        
+        time_entries_daily.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'hours': hours
+        })
+    
+    time_entries_daily.reverse()  # Oldest to newest
+
     # Build stats object expected by the template
     stats = {
         "total_users": total_users,
@@ -591,9 +660,17 @@ def admin_dashboard():
         "total_projects": total_projects,
         "active_projects": active_projects,
         "total_entries": total_entries,
+        "active_timers": active_timers,
         "total_hours": TimeEntry.get_total_hours_for_period(),
         "billable_hours": TimeEntry.get_total_hours_for_period(billable_only=True),
         "last_backup": None,
+    }
+
+    # Chart data
+    chart_data = {
+        'user_activity': user_activity_data,
+        'project_status': project_status_data,
+        'time_entries_daily': time_entries_daily,
     }
 
     return render_template(
@@ -605,6 +682,7 @@ def admin_dashboard():
         oidc_configured=oidc_configured,
         oidc_auth_method=auth_method,
         oidc_users_count=oidc_users_count,
+        chart_data=chart_data,
     )
 
 
