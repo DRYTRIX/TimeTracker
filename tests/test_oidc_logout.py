@@ -79,6 +79,7 @@ def test_logout_with_post_logout_uri_config(oidc_authenticated_client, app):
     logout attempts RP-Initiated Logout at the provider.
     """
     with app.app_context():
+        app.config["AUTH_METHOD"] = "oidc"
         # Mock oauth client and Config
         with patch("app.routes.auth.oauth") as mock_oauth, patch("app.routes.auth.Config") as mock_config:
             # Configure OIDC with post-logout redirect
@@ -108,6 +109,7 @@ def test_logout_oidc_provider_has_revocation_endpoint_only(oidc_authenticated_cl
     Should use revocation_endpoint as fallback when post_logout URI is configured.
     """
     with app.app_context():
+        app.config["AUTH_METHOD"] = "oidc"
         with patch("app.routes.auth.oauth") as mock_oauth, patch("app.routes.auth.Config") as mock_config:
             mock_config.AUTH_METHOD = "oidc"
             mock_config.OIDC_POST_LOGOUT_REDIRECT_URI = "https://app.example.com/"
