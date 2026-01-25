@@ -26,7 +26,10 @@ class ClientNote(db.Model):
 
     # Relationships
     author = db.relationship("User", backref="client_notes")
-    client = db.relationship("Client", backref=db.backref("notes", lazy="dynamic"), passive_deletes=True)
+    client = db.relationship(
+        "Client",
+        backref=db.backref("notes", lazy="dynamic", cascade="all, delete-orphan", passive_deletes=True),
+    )
 
     def __init__(self, content, user_id, client_id, is_important=False):
         """Create a client note.
