@@ -99,6 +99,8 @@ jobs:
         run: |
           if [ "${{ matrix.test-group }}" == "api" ]; then
             pytest -m "api and integration" -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
+          elif [ "${{ matrix.test-group }}" == "routes" ]; then
+            pytest -m "unit and routes" -v -n 0 --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
           else
             pytest -m "unit and ${{ matrix.test-group }}" -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
           fi

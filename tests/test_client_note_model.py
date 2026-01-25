@@ -111,7 +111,7 @@ def test_client_has_notes_relationship(app, user, test_client):
         db.session.commit()
 
         db.session.refresh(client)
-        assert len(client.notes) == 2
+        assert client.notes.count() == 2
 
 
 @pytest.mark.unit

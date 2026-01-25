@@ -132,10 +132,9 @@ def test_delete_role_flow(app, client, admin_user):
     response = client.post(f"/admin/roles/{role_id}/delete", follow_redirects=True)
     assert response.status_code == 200
 
-    # Verify deletion
+    # Verify deletion (assert by name; redirect may trigger sync_permissions_and_roles and reuse id)
     with app.app_context():
-        role = Role.query.get(role_id)
-        assert role is None
+        assert Role.query.filter_by(name="deletable_role").first() is None
 
 
 @pytest.mark.integration

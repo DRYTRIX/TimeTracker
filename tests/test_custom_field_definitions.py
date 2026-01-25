@@ -72,8 +72,9 @@ def test_count_clients_with_value_with_clients(app, admin_user, test_client):
         db.session.add(definition)
         db.session.commit()
 
-        # Set custom field value for client
-        test_client.set_custom_field("test_field", "test_value")
+        # Re-query client so it's in the current session
+        client = Client.query.get(test_client.id)
+        client.set_custom_field("test_field", "test_value")
         db.session.commit()
 
         count = definition.count_clients_with_value()
@@ -102,22 +103,24 @@ def test_count_clients_with_value_ignores_empty(app, admin_user, test_client):
         db.session.add(definition)
         db.session.commit()
 
+        # Re-query client so it's in the current session
+        client = Client.query.get(test_client.id)
         # Set empty value
-        test_client.set_custom_field("test_field", "")
+        client.set_custom_field("test_field", "")
         db.session.commit()
 
         count = definition.count_clients_with_value()
         assert count == 0
 
         # Set whitespace-only value
-        test_client.set_custom_field("test_field", "   ")
+        client.set_custom_field("test_field", "   ")
         db.session.commit()
 
         count = definition.count_clients_with_value()
         assert count == 0
 
         # Set actual value
-        test_client.set_custom_field("test_field", "valid_value")
+        client.set_custom_field("test_field", "valid_value")
         db.session.commit()
 
         count = definition.count_clients_with_value()
@@ -137,15 +140,17 @@ def test_count_clients_with_value_ignores_other_fields(app, admin_user, test_cli
         db.session.add(definition)
         db.session.commit()
 
+        # Re-query client so it's in the current session
+        client = Client.query.get(test_client.id)
         # Set a different field
-        test_client.set_custom_field("other_field", "value")
+        client.set_custom_field("other_field", "value")
         db.session.commit()
 
         count = definition.count_clients_with_value()
         assert count == 0
 
         # Set the correct field
-        test_client.set_custom_field("test_field", "value")
+        client.set_custom_field("test_field", "value")
         db.session.commit()
 
         count = definition.count_clients_with_value()
@@ -190,10 +195,10 @@ def test_delete_custom_field_removes_from_clients(app, admin_user, test_client, 
         deleted_definition = CustomFieldDefinition.query.get(definition.id)
         assert deleted_definition is None
 
-        # Verify field is removed from client
-        db.session.refresh(test_client)
-        assert test_client.get_custom_field("debtor_number") is None
-        assert "debtor_number" not in (test_client.custom_fields or {})
+        # Verify field is removed from client (re-query; test_client may be detached after request)
+        client_after = Client.query.get(test_client.id)
+        assert client_after.get_custom_field("debtor_number") is None
+        assert "debtor_number" not in (client_after.custom_fields or {})
 
 
 @pytest.mark.integration
@@ -297,8 +302,8 @@ def test_delete_custom_field_preserves_other_fields(app, admin_user, test_client
 
         assert response.status_code == 200
 
-        # Verify field1 is removed but field2 remains
-        db.session.refresh(test_client)
-        assert test_client.get_custom_field("field1") is None
-        assert test_client.get_custom_field("field2") == "value2"
+        # Verify field1 is removed but field2 remains (re-query; test_client may be detached after request)
+        client_after = Client.query.get(test_client.id)
+        assert client_after.get_custom_field("field1") is None
+        assert client_after.get_custom_field("field2") == "value2"
 
