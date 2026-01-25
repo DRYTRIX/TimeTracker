@@ -1,11 +1,14 @@
 """Excel export utilities for reports and data export"""
 
 import io
+import logging
 from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from app.utils.timezone import convert_app_datetime_to_user
+
+logger = logging.getLogger(__name__)
 
 
 def create_time_entries_excel(entries, filename_prefix="timetracker_export"):

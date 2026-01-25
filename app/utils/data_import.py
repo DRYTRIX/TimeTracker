@@ -4,6 +4,7 @@ Data import utilities for importing time tracking data from various sources
 
 import json
 import csv
+import logging
 import requests
 from datetime import datetime, timedelta
 from io import StringIO
@@ -11,6 +12,8 @@ from flask import current_app
 from app import db
 from app.models import User, Project, TimeEntry, Task, Client, Expense, ExpenseCategory, Contact
 from app.utils.db import safe_commit
+
+logger = logging.getLogger(__name__)
 
 
 class ImportError(Exception):

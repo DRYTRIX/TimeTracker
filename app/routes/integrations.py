@@ -317,6 +317,8 @@ def manage_integration(provider):
         # Per-user integration
         integration = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
 
+    user_integration = None if is_global else integration
+
     # Handle POST (OAuth credential updates - admin only for global integrations)
     if request.method == "POST":
         if is_global and not current_user.is_admin:

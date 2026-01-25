@@ -1536,7 +1536,7 @@ def update_invoice(invoice_id):
             current_app.logger.warning(f"Invalid tax_rate value in invoice update: {data.get('tax_rate')} - {e}")
     if "amount_paid" in data:
         try:
-            from decimal import Decimal
+            from decimal import Decimal, InvalidOperation
 
             update_kwargs["amount_paid"] = Decimal(str(data["amount_paid"]))
         except (ValueError, TypeError, InvalidOperation) as e:

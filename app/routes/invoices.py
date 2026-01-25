@@ -1073,8 +1073,8 @@ def export_invoice_ubl(invoice_id):
 
         svc = PeppolService()
         sender = svc._get_sender_party()
-        recipient_party, _, _ = svc._get_recipient_party(invoice)
-        ubl_xml, _ = build_peppol_ubl_invoice_xml(invoice=invoice, supplier=sender, customer=recipient_party)
+        recipient_party, _ign, _ign = svc._get_recipient_party(invoice)
+        ubl_xml, _ign = build_peppol_ubl_invoice_xml(invoice=invoice, supplier=sender, customer=recipient_party)
         fn = f"invoice_{invoice.invoice_number}.xml"
         return Response(ubl_xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"})
     except ValueError as e:
