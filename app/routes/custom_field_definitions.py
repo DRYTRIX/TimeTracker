@@ -166,9 +166,10 @@ def delete_custom_field_definition(definition_id):
             flash(_("Could not remove custom field from clients due to a database error."), "error")
             return redirect(url_for("custom_field_definitions.list_custom_field_definitions"))
     
-    # Now delete the definition
+    # Now delete the definition (capture id before delete to avoid using detached object)
+    definition_id = definition.id
     db.session.delete(definition)
-    if not safe_commit("delete_custom_field_definition", {"definition_id": definition.id}):
+    if not safe_commit("delete_custom_field_definition", {"definition_id": definition_id}):
         flash(_("Could not delete custom field definition due to a database error."), "error")
     else:
         if client_count > 0:
