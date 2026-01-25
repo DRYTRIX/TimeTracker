@@ -267,14 +267,16 @@ class TestClientPortalRoutes:
     """Test client portal routes"""
 
     def test_client_portal_dashboard_requires_access(self, app, client, user):
-        """Test dashboard requires client portal access"""
+        """Test dashboard requires client portal access - redirects to client portal login when user has no portal access"""
         with app.app_context():
             # Login user without portal access
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
 
             response = client.get("/client-portal/dashboard")
-            assert response.status_code == 403
+            assert response.status_code == 302
+            # Client portal 403 handler redirects authenticated non-portal users to client portal login
+            assert "client-portal" in (response.location or "") and "login" in (response.location or "")
 
     def test_client_portal_dashboard_with_access(self, app, client, user, test_client):
         """Test dashboard accessible with portal access"""

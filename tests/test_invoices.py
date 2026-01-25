@@ -1489,7 +1489,7 @@ def test_invoice_view_has_delete_button(app, client, user, project):
     from app.models import Client
 
     # Authenticate using login endpoint
-    client.post("/login", data={"username": user.username}, follow_redirects=True)
+    client.post("/login", data={"username": user.username, "password": "password123"}, follow_redirects=True)
 
     # Create client and invoice
     cl = ClientFactory(name="Delete Button Test Client", email="button@test.com")
@@ -1534,7 +1534,7 @@ def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     project_id = project.id
 
     # Authenticate as admin using login endpoint
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Create client and invoices
     cl = Client(name="List Delete Test Client", email="listdelete@test.com")
@@ -1591,7 +1591,7 @@ def test_delete_invoice_with_complex_data_smoke(app, client, user, project):
     from app.models.payments import Payment
 
     # Authenticate using login endpoint
-    client.post("/login", data={"username": user.username}, follow_redirects=True)
+    client.post("/login", data={"username": user.username, "password": "password123"}, follow_redirects=True)
 
     # Create client and invoice
     cl = Client(name="Complex Delete Test", email="complex@test.com")

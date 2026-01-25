@@ -22,6 +22,7 @@ def temp_config_dir(tmp_path):
 def installation_config(temp_config_dir, monkeypatch):
     """Create an InstallationConfig instance with temporary directory"""
     monkeypatch.setattr("app.utils.installation.InstallationConfig.CONFIG_DIR", temp_config_dir)
+    monkeypatch.setenv("INSTALLATION_CONFIG_DIR", temp_config_dir)
     config = InstallationConfig()
     return config
 

@@ -130,7 +130,20 @@ class WeeklyTimeGoal(db.Model):
         today = local_now().date()
         if today > self.week_end_date:
             return 0
-        return (self.week_end_date - today).days + 1
+        
+        if self.exclude_weekends:
+            # Count only weekdays (Monday-Friday)
+            days = 0
+            current_date = today
+            while current_date <= self.week_end_date:
+                # Python weekday: Monday=0, Tuesday=1, ..., Sunday=6
+                if current_date.weekday() < 5:  # Monday through Friday
+                    days += 1
+                current_date += timedelta(days=1)
+            return days
+        else:
+            # Count all days
+            return (self.week_end_date - today).days + 1
 
     @property
     def average_hours_per_day(self):

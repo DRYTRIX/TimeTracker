@@ -13,6 +13,7 @@ from app import db, create_app
 from app.models import User, Project, Settings, Client, Payment, Invoice, Expense
 from factories import ClientFactory, ProjectFactory, InvoiceFactory, ExpenseFactory
 from flask_login import login_user
+from sqlalchemy import text
 from sqlalchemy.pool import StaticPool
 
 
@@ -108,13 +109,16 @@ def app():
                         except Exception:
                             pass
 
-        try:
-            db.session.execute("PRAGMA journal_mode=WAL;")
-            db.session.execute("PRAGMA synchronous=NORMAL;")
-            db.session.execute("PRAGMA busy_timeout=30000;")
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
+        # PRAGMAs only for file-based SQLite; in-memory (sqlite://) can leave the session broken
+        db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "") or ""
+        if db_uri.strip().startswith("sqlite:///") and db_uri != "sqlite://":
+            try:
+                db.session.execute(text("PRAGMA journal_mode=WAL;"))
+                db.session.execute(text("PRAGMA synchronous=NORMAL;"))
+                db.session.execute(text("PRAGMA busy_timeout=30000;"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         try:
             yield app
         finally:

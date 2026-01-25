@@ -11,12 +11,13 @@ def test_create_task_page_has_tips(client, app):
         # Minimal data to render page
         user = User(username="ui_user", role="user")
         user.is_active = True
+        user.set_password("password123")
         db.session.add(user)
         db.session.add(Project(name="UI Test Project", client="UI Test Client"))
         db.session.commit()
 
         # Login using the login endpoint
-        client.post("/login", data={"username": user.username}, follow_redirects=True)
+        client.post("/login", data={"username": user.username, "password": "password123"}, follow_redirects=True)
 
         resp = client.get("/tasks/create")
         assert resp.status_code == 200
@@ -30,6 +31,7 @@ def test_edit_task_page_has_tips(client, app):
         # Minimal data to render page
         user = User(username="ui_editor", role="user")
         user.is_active = True
+        user.set_password("password123")
         project = Project(name="Edit UI Project", client="Client X")
         db.session.add_all([user, project])
         db.session.commit()
@@ -39,7 +41,7 @@ def test_edit_task_page_has_tips(client, app):
         db.session.commit()
 
         # Login using the login endpoint
-        client.post("/login", data={"username": user.username}, follow_redirects=True)
+        client.post("/login", data={"username": user.username, "password": "password123"}, follow_redirects=True)
 
         resp = client.get(f"/tasks/{task.id}/edit")
         assert resp.status_code == 200
@@ -57,12 +59,13 @@ def test_kanban_board_aria_and_dnd(authenticated_client, app):
 
         # Minimal data for rendering board
         user = User(username="kanban_user", role="admin")
+        user.set_password("password123")
         project = Project(name="Kanban Project", client="Client K", code="KAN")
         db.session.add_all([user, project])
         db.session.commit()
 
         # authenticated_client already has a logged-in user, but we need to login as the new user
-        authenticated_client.post("/login", data={"username": user.username}, follow_redirects=True)
+        authenticated_client.post("/login", data={"username": user.username, "password": "password123"}, follow_redirects=True)
 
         resp = authenticated_client.get("/kanban")
         assert resp.status_code == 200
@@ -82,6 +85,7 @@ def test_kanban_card_shows_project_code_and_no_status_dropdown(authenticated_cli
         KanbanColumn.initialize_default_columns()
 
         admin = User(username="admin_user", role="admin")
+        admin.set_password("password123")
         project = Project(name="Very Long Project Name", client="CL", code="VLPN")
         db.session.add_all([admin, project])
         db.session.commit()
@@ -91,7 +95,7 @@ def test_kanban_card_shows_project_code_and_no_status_dropdown(authenticated_cli
         db.session.commit()
 
         # Login as admin using the login endpoint
-        authenticated_client.post("/login", data={"username": admin.username}, follow_redirects=True)
+        authenticated_client.post("/login", data={"username": admin.username, "password": "password123"}, follow_redirects=True)
 
         resp = authenticated_client.get("/kanban")
         assert resp.status_code == 200

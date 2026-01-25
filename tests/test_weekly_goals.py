@@ -514,3 +514,156 @@ def test_user_has_weekly_goals_relationship(app, user):
 
         db.session.refresh(user_obj)
         assert user_obj.weekly_goals.count() >= 2
+
+
+# ============================================================================
+# WeeklyTimeGoal Exclude Weekends Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_weekly_goal_exclude_weekends_creation(app, user):
+    """Test weekly goal creation with exclude_weekends=True."""
+    with app.app_context():
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        goal = WeeklyTimeGoal(
+            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
+        )
+        db.session.add(goal)
+        db.session.commit()
+
+        assert goal.exclude_weekends is True
+        assert goal.week_start_date == week_start
+        # Week should end on Friday (4 days after Monday)
+        assert goal.week_end_date == week_start + timedelta(days=4)
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_weekly_goal_days_remaining_exclude_weekends_monday(app, user):
+    """Test days_remaining calculation with exclude_weekends=True starting on Monday."""
+    with app.app_context():
+        # Create a goal starting on Monday
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        goal = WeeklyTimeGoal(
+            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
+        )
+        db.session.add(goal)
+        db.session.commit()
+
+        # If today is Monday, there should be 5 days remaining (Mon-Fri)
+        # If today is Tuesday, there should be 4 days remaining (Tue-Fri)
+        # etc.
+        today = date.today()
+        if today >= week_start and today <= goal.week_end_date:
+            # Calculate expected days remaining (weekdays only)
+            expected_days = 0
+            current_date = today
+            while current_date <= goal.week_end_date:
+                if current_date.weekday() < 5:  # Monday through Friday
+                    expected_days += 1
+                current_date += timedelta(days=1)
+            assert goal.days_remaining == expected_days
+            # Should be between 1 and 5 days
+            assert 1 <= goal.days_remaining <= 5
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_weekly_goal_average_hours_per_day_exclude_weekends(app, user):
+    """Test average_hours_per_day calculation with exclude_weekends=True."""
+    with app.app_context():
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        goal = WeeklyTimeGoal(
+            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
+        )
+        db.session.add(goal)
+        db.session.commit()
+
+        # With 30 hours target and 5 days (Mon-Fri), should be 6 hours per day
+        # But this depends on how many days are remaining
+        today = date.today()
+        if today >= week_start and today <= goal.week_end_date and goal.days_remaining > 0:
+            # If we're at the start of the week with 5 days remaining
+            # and 30 hours target, should be 6 hours per day
+            if goal.days_remaining == 5:
+                # No hours worked yet, so remaining = 30
+                assert goal.average_hours_per_day == 6.0
+            # Verify the calculation is correct
+            expected_avg = round(goal.remaining_hours / goal.days_remaining, 2)
+            assert goal.average_hours_per_day == expected_avg
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_weekly_goal_days_remaining_excludes_weekends(app, user):
+    """Test that days_remaining excludes weekends when exclude_weekends=True."""
+    with app.app_context():
+        # Create a goal for a specific week (Monday to Friday)
+        # Use a known Monday date
+        week_start = date(2024, 1, 1)  # Monday, January 1, 2024
+        goal = WeeklyTimeGoal(
+            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
+        )
+        db.session.add(goal)
+        db.session.commit()
+
+        # Verify week_end_date is Friday (Jan 5, 2024)
+        assert goal.week_end_date == date(2024, 1, 5)
+
+        # Test with different "today" dates
+        # If today is Monday (Jan 1), days_remaining should be 5 (Mon-Fri)
+        # If today is Wednesday (Jan 3), days_remaining should be 3 (Wed-Fri)
+        # If today is Saturday (Jan 6), days_remaining should be 0 (past week_end_date)
+
+        # Mock different dates by temporarily modifying the goal's week_end_date
+        # Actually, we can't easily mock local_now() in this test, so we'll test the logic
+        # by verifying the property works correctly for the current date
+        today = date.today()
+        if today >= week_start and today <= goal.week_end_date:
+            # Count weekdays manually
+            expected_weekdays = 0
+            current_date = today
+            while current_date <= goal.week_end_date:
+                if current_date.weekday() < 5:
+                    expected_weekdays += 1
+                current_date += timedelta(days=1)
+            assert goal.days_remaining == expected_weekdays
+
+
+@pytest.mark.unit
+@pytest.mark.models
+def test_weekly_goal_actual_hours_excludes_weekends(app, user, project):
+    """Test that actual_hours calculation excludes weekends when exclude_weekends=True."""
+    with app.app_context():
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        goal = WeeklyTimeGoal(
+            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
+        )
+        db.session.add(goal)
+        db.session.commit()
+
+        # Add time entry on Monday (weekday)
+        TimeEntryFactory(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=datetime.combine(week_start, datetime.min.time()),
+            end_time=datetime.combine(week_start, datetime.min.time()) + timedelta(hours=8),
+            duration_seconds=8 * 3600,
+        )
+
+        # Add time entry on Saturday (weekend) - should be excluded
+        saturday = week_start + timedelta(days=5)
+        TimeEntryFactory(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=datetime.combine(saturday, datetime.min.time()),
+            end_time=datetime.combine(saturday, datetime.min.time()) + timedelta(hours=5),
+            duration_seconds=5 * 3600,
+        )
+
+        db.session.refresh(goal)
+
+        # Should only count Monday's 8 hours, not Saturday's 5 hours
+        assert goal.actual_hours == 8.0

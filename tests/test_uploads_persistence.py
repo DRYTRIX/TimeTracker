@@ -44,7 +44,7 @@ def authenticated_admin_client(client, admin_user):
     except Exception:
         csrf_enabled = False
 
-    login_data = {"username": admin_user.username}
+    login_data = {"username": admin_user.username, "password": "testpass123"}
     headers = {}
 
     if csrf_enabled:
