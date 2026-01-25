@@ -408,9 +408,6 @@ def receive_after_flush(session, flush_context):
                 request_path=request_path,
             )
 
-        if pending:
-            session.flush()
-
     except Exception as e:
         logger.error(f"Error in audit logging (after_flush): {e}", exc_info=True)
 

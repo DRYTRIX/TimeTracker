@@ -22,10 +22,12 @@ class TestAuditTrailSmoke:
                 change_description="Smoke test audit log",
             )
 
-            # Verify log was created
-            logs = AuditLog.query.filter_by(entity_type="Project", entity_id=test_project.id).all()
+            # Verify log was created (filter by user so we get the one we created, not fixture-created logs)
+            logs = AuditLog.query.filter_by(
+                entity_type="Project", entity_id=test_project.id, user_id=test_user.id, action="created"
+            ).all()
 
-            assert len(logs) > 0
+            assert len(logs) >= 1
             assert logs[0].action == "created"
             assert logs[0].user_id == test_user.id
 
@@ -69,12 +71,14 @@ class TestAuditTrailSmoke:
                     entity_name=test_project.name,
                 )
 
-            # Retrieve entity history
+            # Retrieve entity history (may include fixture-created log; we expect at least our 3 updates)
             history = AuditLog.get_for_entity("Project", test_project.id, limit=10)
 
-            assert len(history) == 3
+            assert len(history) >= 3
             assert all(log.entity_type == "Project" for log in history)
             assert all(log.entity_id == test_project.id for log in history)
+            updated_logs = [log for log in history if log.action == "updated"]
+            assert len(updated_logs) == 3
 
     def test_audit_log_user_activity_smoke(self, app, test_user, test_project):
         """Smoke test: Retrieve user activity history"""
@@ -127,10 +131,13 @@ class TestAuditTrailSmoke:
                 entity_name=test_project.name,
             )
 
-            # Filter by action
-            created_logs = AuditLog.get_recent(action="created", limit=10)
-            assert len(created_logs) == 1
+            # Filter by action and user so we only count the test's created log, not fixture-created logs
+            created_logs = AuditLog.get_recent(action="created", user_id=test_user.id, limit=10)
+            assert len(created_logs) >= 1
             assert created_logs[0].action == "created"
+            # Our created log is for this project
+            our_created = [log for log in created_logs if log.entity_type == "Project" and log.entity_id == test_project.id]
+            assert len(our_created) == 1
 
             # Filter by entity type
             project_logs = AuditLog.get_recent(entity_type="Project", limit=10)

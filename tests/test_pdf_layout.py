@@ -118,16 +118,16 @@ def test_pdf_layout_save_custom_template(admin_authenticated_client, app):
 
     assert response.status_code == 200
 
-    # Verify settings were saved (for A4, it also updates Settings for backwards compatibility)
+    # Verify settings were saved (app may normalize CSS with @page rule; require our custom part)
     with app.app_context():
         settings = Settings.get_settings()
         assert settings.invoice_pdf_template_html == custom_html
-        assert settings.invoice_pdf_template_css == custom_css
+        assert custom_css in (settings.invoice_pdf_template_css or "")
 
         # Also check InvoicePDFTemplate
         template = InvoicePDFTemplate.get_template("A4")
         assert template.template_html == custom_html
-        assert template.template_css == custom_css
+        assert custom_css in (template.template_css or "")
 
 
 @pytest.mark.smoke
@@ -170,7 +170,17 @@ def test_pdf_layout_get_defaults(admin_authenticated_client):
 @pytest.mark.admin
 def test_pdf_layout_preview(admin_authenticated_client, sample_invoice):
     """Test PDF layout preview functionality."""
-    # Test preview with custom HTML/CSS
+    # Preview requires a saved template; save a minimal one first
+    admin_authenticated_client.post(
+        "/admin/pdf-layout",
+        data={
+            "invoice_pdf_template_html": "<h1>Test Invoice {{ invoice.invoice_number }}</h1>",
+            "invoice_pdf_template_css": "h1 { color: red; }",
+            "page_size": "A4",
+        },
+        follow_redirects=True,
+    )
+
     response = admin_authenticated_client.post(
         "/admin/pdf-layout/preview",
         data={
@@ -181,7 +191,7 @@ def test_pdf_layout_preview(admin_authenticated_client, sample_invoice):
     )
 
     assert response.status_code == 200
-    # Should return HTML content
+    # Should return HTML content (invoice number or heading)
     assert b"Test Invoice" in response.data or b"INV-2024-001" in response.data
 
 

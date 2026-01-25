@@ -9,7 +9,7 @@ from app.models import User, Permission, Role
 def test_roles_list_page(client, admin_user):
     """Test that roles list page loads for admin"""
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Access roles list page
     response = client.get("/admin/roles")
@@ -20,7 +20,7 @@ def test_roles_list_page(client, admin_user):
 @pytest.mark.smoke
 def test_create_role_page(client, admin_user):
     """Test that create role page loads for admin"""
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     response = client.get("/admin/roles/create")
     assert response.status_code == 200
@@ -30,7 +30,7 @@ def test_create_role_page(client, admin_user):
 @pytest.mark.smoke
 def test_permissions_list_page(client, admin_user):
     """Test that permissions list page loads for admin"""
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     response = client.get("/admin/permissions")
     assert response.status_code == 200
@@ -48,7 +48,7 @@ def test_create_role_flow(app, client, admin_user):
         perm_id = permission.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Create role
     response = client.post(
@@ -78,7 +78,7 @@ def test_view_role_page(app, client, admin_user):
         role_id = role.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # View role
     response = client.get(f"/admin/roles/{role_id}")
@@ -97,7 +97,7 @@ def test_edit_role_flow(app, client, admin_user):
         role_id = role.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Edit role
     response = client.post(
@@ -126,7 +126,7 @@ def test_delete_role_flow(app, client, admin_user):
         role_id = role.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Delete role
     response = client.post(f"/admin/roles/{role_id}/delete", follow_redirects=True)
@@ -149,7 +149,7 @@ def test_cannot_delete_system_role(app, client, admin_user):
         role_id = role.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Try to delete system role
     response = client.post(f"/admin/roles/{role_id}/delete", follow_redirects=True)
@@ -172,7 +172,7 @@ def test_cannot_edit_system_role(app, client, admin_user):
         role_id = role.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Try to edit system role
     response = client.post(
@@ -201,7 +201,7 @@ def test_manage_user_roles_page(app, client, admin_user):
         user_id = user.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Access manage roles page
     response = client.get(f"/admin/users/{user_id}/roles")
@@ -222,7 +222,7 @@ def test_assign_roles_to_user(app, client, admin_user):
         role_id = role.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Assign role to user
     response = client.post(f"/admin/users/{user_id}/roles", data={"roles": [str(role_id)]}, follow_redirects=True)
@@ -253,7 +253,7 @@ def test_api_get_user_permissions(app, client, admin_user):
         user_id = user.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Get user permissions via API
     response = client.get(f"/api/users/{user_id}/permissions")
@@ -280,7 +280,7 @@ def test_api_get_role_permissions(app, client, admin_user):
         role_id = role.id
 
     # Login as admin
-    client.post("/login", data={"username": admin_user.username}, follow_redirects=True)
+    client.post("/login", data={"username": admin_user.username, "password": "password123"}, follow_redirects=True)
 
     # Get role permissions via API
     response = client.get(f"/api/roles/{role_id}/permissions")

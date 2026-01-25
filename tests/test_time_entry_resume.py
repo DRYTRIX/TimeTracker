@@ -363,7 +363,7 @@ def test_resume_timer_smoke(client, user, project):
         timer_id = timer.id
 
     # Login using the login endpoint (after creating timer)
-    client.post("/login", data={"username": user.username}, follow_redirects=True)
+    client.post("/login", data={"username": user.username, "password": "password123"}, follow_redirects=True)
 
     # Resume the timer
     response = client.get(f"/timer/resume/{timer_id}", follow_redirects=True)
