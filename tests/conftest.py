@@ -7,6 +7,11 @@ import pytest
 import os
 import tempfile
 import uuid
+
+# Set before app is imported so InstallationConfig uses a writable dir in tests (avoids /data on CI)
+if "INSTALLATION_CONFIG_DIR" not in os.environ:
+    os.environ["INSTALLATION_CONFIG_DIR"] = tempfile.mkdtemp(prefix="timetracker_install_")
+
 from datetime import datetime, timedelta
 from decimal import Decimal
 from sqlalchemy.pool import NullPool

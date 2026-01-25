@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from .client_prepaid_consumption import ClientPrepaidConsumption
 import secrets
@@ -215,12 +216,14 @@ class Client(db.Model):
             self.custom_fields = {}
         self.custom_fields[key] = value
         self.updated_at = datetime.utcnow()
+        flag_modified(self, "custom_fields")
 
     def remove_custom_field(self, key):
         """Remove a custom field"""
         if self.custom_fields and key in self.custom_fields:
             del self.custom_fields[key]
             self.updated_at = datetime.utcnow()
+            flag_modified(self, "custom_fields")
 
     def get_rendered_links(self):
         """Get all rendered links from active link templates that match this client's custom fields"""

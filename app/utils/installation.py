@@ -16,17 +16,19 @@ from typing import Dict, Optional
 class InstallationConfig:
     """Manages installation-specific configuration"""
 
-    CONFIG_DIR = "/data"
+    CONFIG_DIR = "/data"  # default; overridden by INSTALLATION_CONFIG_DIR when set
     CONFIG_FILE = "installation.json"
 
     def __init__(self):
-        self.config_path = os.path.join(self.CONFIG_DIR, self.CONFIG_FILE)
-        self._ensure_config_dir()
+        effective_dir = os.environ.get("INSTALLATION_CONFIG_DIR", self.CONFIG_DIR)
+        self.config_path = os.path.join(effective_dir, self.CONFIG_FILE)
+        self._ensure_config_dir(effective_dir)
         self._config = self._load_config()
 
-    def _ensure_config_dir(self):
-        """Ensure the configuration directory exists"""
-        os.makedirs(self.CONFIG_DIR, exist_ok=True)
+    def _ensure_config_dir(self, config_dir=None):
+        """Ensure the configuration directory exists."""
+        dir_path = config_dir if config_dir is not None else os.environ.get("INSTALLATION_CONFIG_DIR", self.CONFIG_DIR)
+        os.makedirs(dir_path, exist_ok=True)
 
     def _load_config(self) -> Dict:
         """Load configuration from file"""
