@@ -2,7 +2,7 @@
 Routes for invoice approval workflow.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app.models import Invoice, InvoiceApproval, User

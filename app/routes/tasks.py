@@ -1,6 +1,6 @@
 import re
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response, Response, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module

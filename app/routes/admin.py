@@ -2148,6 +2148,7 @@ def pdf_layout_preview():
         from datetime import date
 
         invoice = SimpleNamespace(
+            id=None,
             invoice_number="0000",
             issue_date=date.today(),
             due_date=date.today(),
@@ -2155,6 +2156,7 @@ def pdf_layout_preview():
             client_name="Sample Client",
             client_email="",
             client_address="",
+            client=SimpleNamespace(name="Sample Client", email="", address=""),
             project=SimpleNamespace(name="Sample Project", description=""),
             items=[],
             extra_goods=[],
@@ -2209,16 +2211,17 @@ def pdf_layout_preview():
             pass
 
     # Copy relationship attributes (project, client)
+    _invoice_id = getattr(invoice, "id", None)
     try:
         invoice_wrapper.project = invoice.project
     except (AttributeError, RuntimeError) as e:
-        current_app.logger.debug(f"Could not access invoice.project for invoice {invoice.id}: {e}")
+        current_app.logger.debug(f"Could not access invoice.project for invoice {_invoice_id}: {e}")
         invoice_wrapper.project = SimpleNamespace(name="Sample Project", description="")
 
     try:
-        invoice_wrapper.client = invoice.client
+        invoice_wrapper.client = getattr(invoice, "client", None)
     except (AttributeError, RuntimeError) as e:
-        current_app.logger.debug(f"Could not access invoice.client for invoice {invoice.id}: {e}")
+        current_app.logger.debug(f"Could not access invoice.client for invoice {_invoice_id}: {e}")
         invoice_wrapper.client = None
 
     # Convert items from Query to list
