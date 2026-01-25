@@ -1,7 +1,28 @@
 from datetime import datetime
+import os
+import threading
+
 from app import db
 from app.config import Config
-import os
+
+# Re-entrancy guard: avoid add+commit when get_settings is called from inside a flush/commit
+_creating_settings = threading.local()
+
+
+def _session_in_flush(session):
+    """Return True if the session is currently in a flush (to avoid nested add+commit)."""
+    try:
+        # SQLAlchemy sets _flushing on the session during flush
+        if getattr(session, "_flushing", False):
+            return True
+        # Fallback: in a transaction and inside a flush context (if exposed)
+        if getattr(session, "in_transaction", lambda: False)() and getattr(
+            session, "_current_flush_context", None
+        ) is not None:
+            return True
+        return False
+    except Exception:
+        return False
 
 
 class Settings(db.Model):
@@ -482,13 +503,17 @@ class Settings(db.Model):
             return cls()
 
         # Avoid performing session writes during flush/commit phases.
-        # When called from default column factories (e.g., created_at=local_now),
+        # When called from default column factories or listeners during flush,
         # SQLAlchemy may be in the middle of a flush. Writing here would raise
-        # SAWarnings/ResourceClosedError. In that case, return a transient instance
-        # with sensible defaults; the persistent row can be created later by
-        # initialization code or explicit admin flows.
+        # SAWarnings/ResourceClosedError. Skip add+commit and return a transient
+        # instance; the persistent row can be created later by init or admin flows.
         try:
-            if not getattr(db.session, "_flushing", False):
+            if getattr(_creating_settings, "active", False):
+                return cls()
+            if _session_in_flush(db.session):
+                return cls()
+            try:
+                _creating_settings.active = True
                 # Create new settings instance initialized from environment variables
                 settings = cls()
                 # Initialize from environment variables (.env file)
@@ -496,6 +521,8 @@ class Settings(db.Model):
                 db.session.add(settings)
                 db.session.commit()
                 return settings
+            finally:
+                _creating_settings.active = False
         except Exception:
             # If anything goes wrong creating the persistent row, rollback and
             # fall back to an in-memory Settings instance.

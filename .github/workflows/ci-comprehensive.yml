@@ -167,6 +167,7 @@ jobs:
           FLASK_APP: app.py
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
+          INSTALLATION_CONFIG_DIR: ${{ github.workspace }}/.test_installation_config
         run: |
           pytest -m integration -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
       
@@ -453,6 +454,7 @@ jobs:
           FLASK_APP: app.py
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
+          INSTALLATION_CONFIG_DIR: ${{ github.workspace }}/.test_installation_config
         run: |
           pytest -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing \
                  --junitxml=junit.xml --maxfail=5
