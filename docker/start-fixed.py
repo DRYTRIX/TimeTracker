@@ -15,6 +15,27 @@ from urllib.parse import urlparse
 def _truthy(v: str) -> bool:
     return str(v or "").strip().lower() in ("1", "true", "yes", "y", "on")
 
+
+def _sqlite_path_from_url(db_url: str):
+    """Resolve SQLite DATABASE_URL to an absolute file path. Returns None for non-file SQLite (e.g. :memory:)."""
+    if not (db_url or "").strip().startswith("sqlite"):
+        return None
+    prefix_four = "sqlite:////"
+    prefix_three = "sqlite:///"
+    if db_url.startswith("sqlite:////"):
+        # sqlite:////absolute/path -> /absolute/path
+        rest = db_url[len("sqlite:////"):].lstrip("/")
+        return "/" + rest if rest else None
+    if db_url.startswith("sqlite:///"):
+        raw = db_url[len("sqlite:///"):]
+        if raw.startswith("/"):
+            return raw
+        return os.path.abspath(os.path.join(os.getcwd(), raw))
+    if ":memory:" in db_url or db_url.strip() == "sqlite://":
+        return None
+    return None
+
+
 def wait_for_database():
     """Wait for database to be ready with proper connection testing"""
     # Logging is handled by main()
@@ -22,38 +43,20 @@ def wait_for_database():
     # Get database URL from environment
     db_url = os.getenv('DATABASE_URL', 'postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker')
 
-    # If using SQLite, ensure the database directory exists and return immediately
+    # If using SQLite, ensure the database directory exists and return immediately.
+    # Resolve path the same way the app will: absolute stays absolute, relative is
+    # resolved against current working directory (so it matches gunicorn's CWD).
     if db_url.startswith('sqlite:'):
         try:
-            # Normalize file path from URL
-            db_path = None
-            prefix_four = 'sqlite:////'
-            prefix_three = 'sqlite:///'
-            prefix_mem = 'sqlite://'
-            if db_url.startswith(prefix_four):
-                db_path = '/' + db_url[len(prefix_four):]
-            elif db_url.startswith(prefix_three):
-                # Relative inside container; keep as-is
-                db_path = db_url[len(prefix_three):]
-                # If it's a relative path, make sure directory exists
-                if not db_path.startswith('/'):
-                    db_path = '/' + db_path
-            elif db_url.startswith(prefix_mem):
-                # Could be sqlite:///:memory:
-                if db_url.endswith(':memory:'):
-                    return True
-                # Fallback: strip scheme
-                db_path = db_url[len(prefix_mem):]
-
-            if db_path:
-                import os as _os
-                import sqlite3 as _sqlite3
-                dir_path = _os.path.dirname(db_path)
-                if dir_path:
-                    _os.makedirs(dir_path, exist_ok=True)
-                # Try to open the database to ensure writability
-                conn = _sqlite3.connect(db_path)
-                conn.close()
+            import sqlite3 as _sqlite3
+            db_path = _sqlite_path_from_url(db_url)
+            if db_path is None:
+                return True  # :memory: or similar
+            dir_path = os.path.dirname(db_path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+            conn = _sqlite3.connect(db_path)
+            conn.close()
             return True
         except Exception as e:
             print(f"SQLite path/setup check failed: {e}")
@@ -167,77 +170,84 @@ def detect_corrupted_database_state(app):
 
 
 def cleanup_corrupted_database_state(app):
-    """Attempt to clean up corrupted database state by removing unexpected tables.
-    
-    This is only safe when:
-    - Database has tables but NO alembic_version (migrations never ran)
-    - Database has tables but NO core tables (corrupted/partial state)
-    - User can disable with TT_SKIP_DB_CLEANUP env var
-    
-    Only removes tables when it's safe (no alembic_version = migrations haven't run yet).
+    """Attempt to clean up corrupted database state.
+
+    PostgreSQL: remove unexpected tables when there are tables but no alembic_version/core tables.
+    SQLite: remove the DB file when corrupted (alembic_version but no core tables, or tables but
+    no alembic/core), so migrations can run on a fresh file.
     """
     if os.getenv("TT_SKIP_DB_CLEANUP", "").strip().lower() in ("1", "true", "yes"):
         log("Database cleanup skipped (TT_SKIP_DB_CLEANUP is set)", "INFO")
         return False
-        
+
+    db_url = os.getenv("DATABASE_URL", "")
+
     try:
         from app import db
         from sqlalchemy import text
-        
+
         with app.app_context():
-            # Only cleanup if PostgreSQL (SQLite cleanup is more risky)
-            if not os.getenv("DATABASE_URL", "").startswith("postgresql"):
-                return False
-                
-            # Get all tables
-            all_tables_result = db.session.execute(
-                text("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name")
-            )
-            all_tables = [row[0] for row in all_tables_result]
-            
-            # Check if alembic_version exists
-            has_alembic_version = 'alembic_version' in all_tables
-            
-            # Only cleanup if alembic_version does NOT exist (migrations haven't run)
-            # If alembic_version exists, migrations have run and we shouldn't drop tables
-            if has_alembic_version:
-                log("alembic_version table exists - skipping cleanup (migrations may have run)", "INFO")
-                return False
-                
-            # Check for core tables
-            core_tables = ['users', 'projects', 'time_entries', 'settings', 'clients']
-            has_core_tables = any(t in all_tables for t in core_tables)
-            
-            # Only cleanup if we have tables but no core tables (corrupted state)
-            if not all_tables:
-                return False  # Empty database, nothing to clean
-                
-            if has_core_tables:
-                log("Core tables exist - skipping cleanup", "INFO")
-                return False
-                
-            # We have tables but no alembic_version and no core tables
-            # These are likely test/manual tables that prevent migrations
-            log(f"Attempting to clean up {len(all_tables)} unexpected table(s): {all_tables}", "INFO")
-            log("These appear to be test/manual tables that prevent migrations from running.", "INFO")
-            
-            # Drop all unexpected tables
-            cleaned = False
-            for table in all_tables:
+            if db_url.startswith("postgresql"):
+                # PostgreSQL: drop unexpected tables only when safe
+                all_tables_result = db.session.execute(
+                    text("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name")
+                )
+                all_tables = [row[0] for row in all_tables_result]
+                has_alembic_version = "alembic_version" in all_tables
+                core_tables = ["users", "projects", "time_entries", "settings", "clients"]
+                has_core_tables = any(t in all_tables for t in core_tables)
+                if has_alembic_version:
+                    log("alembic_version table exists - skipping cleanup (migrations may have run)", "INFO")
+                    return False
+                if not all_tables or has_core_tables:
+                    return False
+                log(f"Attempting to clean up {len(all_tables)} unexpected table(s): {all_tables}", "INFO")
+                cleaned = False
+                for table in all_tables:
+                    try:
+                        db.session.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+                        db.session.commit()
+                        log(f"✓ Dropped table: {table}", "SUCCESS")
+                        cleaned = True
+                    except Exception as e:
+                        log(f"Failed to drop table {table}: {e}", "WARNING")
+                        db.session.rollback()
+                return cleaned
+
+            if db_url.startswith("sqlite"):
+                # SQLite: when corrupted, remove the file so migrations can create a fresh DB
+                db_path = _sqlite_path_from_url(db_url)
+                if not db_path or not os.path.isfile(db_path):
+                    return False
+                all_tables_result = db.session.execute(
+                    text("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+                )
+                all_tables = [row[0] for row in all_tables_result]
+                has_alembic_version = "alembic_version" in all_tables
+                core_tables = ["users", "projects", "time_entries", "settings", "clients"]
+                has_core_tables = any(t in all_tables for t in core_tables)
+                is_corrupted = (
+                    (has_alembic_version and not has_core_tables)
+                    or (len(all_tables) > 0 and not has_alembic_version and not has_core_tables)
+                )
+                if not is_corrupted:
+                    return False
+                db.session.close()
                 try:
-                    log(f"Dropping unexpected table: {table}", "INFO")
-                    db.session.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
-                    db.session.commit()
-                    log(f"✓ Dropped table: {table}", "SUCCESS")
-                    cleaned = True
+                    db.engine.dispose()
+                except Exception:
+                    pass
+                try:
+                    os.remove(db_path)
+                    log(f"Removed corrupted SQLite DB at {db_path}; migrations will recreate it.", "INFO")
+                    return True
                 except Exception as e:
-                    log(f"Failed to drop table {table}: {e}", "WARNING")
-                    db.session.rollback()
-                    
-            return cleaned
+                    log(f"Failed to remove SQLite file {db_path}: {e}", "WARNING")
+                    return False
+
+            return False
     except Exception as e:
         log(f"Database cleanup failed: {e}", "WARNING")
-        import traceback
         traceback.print_exc()
         return False
 
@@ -270,6 +280,8 @@ def run_migrations():
             pass
 
         with app.app_context():
+            _is_pg = os.getenv("DATABASE_URL", "").strip().lower().startswith("postgresql")
+
             # Check for corrupted database state BEFORE migrations
             is_corrupted, reason = detect_corrupted_database_state(app)
             if is_corrupted:
@@ -288,10 +300,16 @@ def run_migrations():
                 from app import db as _db
                 from sqlalchemy import text as _text
 
-                cur_db = _db.session.execute(_text("select current_database()")).scalar()
-                table_count = _db.session.execute(
-                    _text("select count(1) from information_schema.tables where table_schema='public'")
-                ).scalar()
+                if _is_pg:
+                    cur_db = _db.session.execute(_text("select current_database()")).scalar()
+                    table_count = _db.session.execute(
+                        _text("select count(1) from information_schema.tables where table_schema='public'")
+                    ).scalar()
+                else:
+                    cur_db = "sqlite"
+                    table_count = _db.session.execute(
+                        _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                    ).scalar() or 0
                 log(f"Pre-migration DB: {cur_db} (public tables={table_count})", "INFO")
             except Exception as e:
                 log(f"Pre-migration DB probe failed: {e}", "WARNING")
@@ -304,17 +322,42 @@ def run_migrations():
                 from app import db as _db
                 from sqlalchemy import text as _text
 
-                cur_db = _db.session.execute(_text("select current_database()")).scalar()
-                table_count = _db.session.execute(
-                    _text("select count(1) from information_schema.tables where table_schema='public'")
-                ).scalar()
+                if _is_pg:
+                    cur_db = _db.session.execute(_text("select current_database()")).scalar()
+                    table_count = _db.session.execute(
+                        _text("select count(1) from information_schema.tables where table_schema='public'")
+                    ).scalar()
+                    alembic_exists = _db.session.execute(
+                        _text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
+                    ).scalar()
+                    core_tables_check = _db.session.execute(
+                        _text("""
+                            SELECT COUNT(*)
+                            FROM information_schema.tables
+                            WHERE table_schema='public'
+                            AND table_name IN ('users', 'projects', 'time_entries', 'settings', 'clients')
+                        """)
+                    ).scalar()
+                else:
+                    cur_db = "sqlite"
+                    table_count = _db.session.execute(
+                        _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                    ).scalar() or 0
+                    alembic_exists = (
+                        _db.session.execute(
+                            _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='alembic_version'")
+                        ).scalar()
+                        or 0
+                    ) > 0
+                    core_tables_check = (
+                        _db.session.execute(
+                            _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('users','projects','time_entries','settings','clients')")
+                        ).scalar()
+                        or 0
+                    )
                 log(f"Post-migration DB: {cur_db} (public tables={table_count})", "INFO")
                 
                 # Check if alembic_version table exists (migrations actually ran)
-                alembic_exists = _db.session.execute(
-                    _text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
-                ).scalar()
-                
                 if not alembic_exists:
                     log("✗ WARNING: alembic_version table missing after migrations!", "ERROR")
                     log("Migrations reported success but alembic_version table was not created.", "ERROR")
@@ -327,15 +370,6 @@ def run_migrations():
                     return None
                 
                 # Check if core tables exist
-                core_tables_check = _db.session.execute(
-                    _text("""
-                        SELECT COUNT(*) 
-                        FROM information_schema.tables 
-                        WHERE table_schema='public' 
-                        AND table_name IN ('users', 'projects', 'time_entries', 'settings', 'clients')
-                    """)
-                ).scalar()
-                
                 if core_tables_check < 5:
                     log(f"✗ WARNING: Only {core_tables_check}/5 core tables exist after migrations!", "ERROR")
                     log("Migrations reported success but core tables are missing.", "ERROR")
@@ -415,27 +449,39 @@ def verify_core_tables(app):
                 log(f"✓ Core tables verified: {sorted(found_tables)}", "SUCCESS")
                 return True
             
-            # SQLite check (simpler)
+            # SQLite: same checks as PostgreSQL — list all tables, then verify required core tables exist
             else:
-                # Build IN clause with placeholders for SQLite
-                placeholders = ",".join(["?" for _ in core_tables])
-                query = text(f"SELECT name FROM sqlite_master WHERE type='table' AND name IN ({placeholders})")
-                result = db.session.execute(query, core_tables)
-                found_tables = [row[0] for row in result]
+                sqlite_path = _sqlite_path_from_url(os.getenv("DATABASE_URL", ""))
+                # List ALL tables for debugging (parity with PostgreSQL)
+                try:
+                    all_tables_result = db.session.execute(
+                        text("SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('sqlite_sequence') ORDER BY name")
+                    )
+                    all_tables = [row[0] for row in all_tables_result]
+                    log(f"All tables in database: {all_tables}", "INFO")
+                except Exception as e:
+                    log(f"Could not list all tables: {e}", "WARNING")
+                    all_tables = []
+
+                # Verify each core table exists (explicit check for each so we report accurately)
+                found_tables = [t for t in core_tables if t in all_tables]
                 missing = set(core_tables) - set(found_tables)
-                
+
                 if missing:
                     log(f"✗ Core tables missing: {sorted(missing)}", "ERROR")
+                    log(f"Found core tables: {sorted(found_tables)}", "ERROR")
+                    if sqlite_path:
+                        log(f"Database file: {sqlite_path}", "ERROR")
+                    log("Database migrations may have failed silently.", "ERROR")
+                    log("Try removing the database file and restarting, or run: docker compose down -v && docker compose up -d", "ERROR")
                     return False
-                
-                # Check alembic_version
-                alembic_check = db.session.execute(
-                    text("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'")
-                ).fetchone()
-                if not alembic_check:
+
+                if "alembic_version" not in all_tables:
                     log("✗ alembic_version table missing - migrations may not have been applied", "ERROR")
+                    if sqlite_path:
+                        log(f"Database file: {sqlite_path}", "ERROR")
                     return False
-                
+
                 log(f"✓ Core tables verified: {sorted(found_tables)}", "SUCCESS")
                 return True
                 
