@@ -16,6 +16,7 @@ from app.utils.data_import import (
     ImportError as DataImportError,
 )
 from app.utils.data_export import export_user_data_gdpr, export_filtered_data, create_backup
+from app.utils.backup import restore_backup as restore_backup_archive
 from datetime import datetime, timedelta
 import os
 import json
@@ -478,9 +479,11 @@ def restore_backup():
     if file.filename == "":
         return jsonify({"error": "No file selected"}), 400
 
-    if not file.filename.endswith(".json"):
-        return jsonify({"error": "File must be a JSON backup file"}), 400
+    fn_lower = (file.filename or "").lower()
+    if not (fn_lower.endswith(".json") or fn_lower.endswith(".zip")):
+        return jsonify({"error": "File must be a JSON or ZIP backup file"}), 400
 
+    filepath = None
     try:
         # Save uploaded file temporarily
         backup_dir = os.path.join(current_app.config.get("UPLOAD_FOLDER", "/data/uploads"), "backups")
@@ -490,34 +493,56 @@ def restore_backup():
         filepath = os.path.join(backup_dir, f"restore_{filename}")
         file.save(filepath)
 
-        # Create import record
-        import_record = DataImport(user_id=current_user.id, import_type="backup", source_file=filename)
-        db.session.add(import_record)
-        db.session.commit()
+        is_zip = fn_lower.endswith(".zip")
 
-        # Perform restore
-        statistics = restore_from_backup(user_id=current_user.id, backup_file_path=filepath)
+        if is_zip:
+            # Full system backup (same as Admin restore)
+            app_obj = current_app._get_current_object()
+            success, message = restore_backup_archive(app_obj, filepath)
+            if not success:
+                return jsonify({"error": message}), 400
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "import_id": None,
+                        "statistics": {"message": message},
+                        "message": "Backup restored successfully",
+                    }
+                ),
+                200,
+            )
+        else:
+            # JSON backup (Import/Export style)
+            import_record = DataImport(user_id=current_user.id, import_type="backup", source_file=filename)
+            db.session.add(import_record)
+            db.session.commit()
 
-        # Clean up temporary file
-        os.remove(filepath)
+            statistics = restore_from_backup(user_id=current_user.id, backup_file_path=filepath)
 
-        return (
-            jsonify(
-                {
-                    "success": True,
-                    "import_id": import_record.id,
-                    "statistics": statistics,
-                    "message": "Backup restored successfully",
-                }
-            ),
-            200,
-        )
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "import_id": import_record.id,
+                        "statistics": statistics,
+                        "message": "Backup restored successfully",
+                    }
+                ),
+                200,
+            )
 
     except DataImportError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Backup restore error: {str(e)}")
         return jsonify({"error": "Restore failed. Please check the backup file."}), 500
+    finally:
+        if filepath and os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
 
 
 # ============================================================================

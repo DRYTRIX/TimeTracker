@@ -108,12 +108,12 @@
                 <!-- Restore Backup -->
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Restore from Backup') }}</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Restore data from a backup file') }}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Restore data from a JSON or ZIP backup file') }}</p>
                     
                     <label for="backup-file" class="cursor-pointer bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition inline-block">
                         <i class="fas fa-file-upload mr-2"></i>{{ _('Restore Backup') }}
                     </label>
-                    <input type="file" id="backup-file" accept=".json" class="hidden" onchange="handleBackupRestore(this)">
+                    <input type="file" id="backup-file" accept=".json,.zip" class="hidden" onchange="handleBackupRestore(this)">
                     <div id="backup-restore-status" class="mt-2 text-sm"></div>
                 </div>
                 {% endif %}
