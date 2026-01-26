@@ -29,23 +29,26 @@ def init_mail(app):
     app.config["MAIL_MAX_EMAILS"] = int(os.getenv("MAIL_MAX_EMAILS", 100))
 
     # Check if database settings should override environment variables
-    # Database settings persist between restarts and updates
+    # Database settings persist between restarts and updates.
+    # Use app_context so this works when create_app() is called from gunicorn workers
+    # (no request context yet), giving SQLite and PostgreSQL the same behavior.
     try:
-        from app.models import Settings
-        from app import db
+        with app.app_context():
+            from app.models import Settings
+            from app import db
 
-        if db.session.is_active:
-            settings = Settings.get_settings()
-            db_config = settings.get_mail_config()
+            if db.session.is_active:
+                settings = Settings.get_settings()
+                db_config = settings.get_mail_config()
 
-            if db_config:
-                # Database settings take precedence and persist between restarts
-                app.config.update(db_config)
-                app.logger.info(
-                    f"✓ Using database email configuration (persistent): {db_config.get('MAIL_SERVER')}:{db_config.get('MAIL_PORT')}"
-                )
-            else:
-                app.logger.info("Using environment variable email configuration (database email not enabled)")
+                if db_config:
+                    # Database settings take precedence and persist between restarts
+                    app.config.update(db_config)
+                    app.logger.info(
+                        f"✓ Using database email configuration (persistent): {db_config.get('MAIL_SERVER')}:{db_config.get('MAIL_PORT')}"
+                    )
+                else:
+                    app.logger.info("Using environment variable email configuration (database email not enabled)")
     except Exception as e:
         # If database is not available, fall back to environment variables
         app.logger.debug(f"Could not load email settings from database: {e}")

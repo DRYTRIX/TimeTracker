@@ -383,6 +383,9 @@ class TimeTrackingService:
             entry.start_time = start_time
         if end_time is not None:
             entry.end_time = end_time
+        # Recompute stored duration when start or end time changed
+        if entry.end_time and (start_time is not None or end_time is not None):
+            entry.calculate_duration()
         if notes is not None:
             entry.notes = notes
         if tags is not None:

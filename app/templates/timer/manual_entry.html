@@ -119,9 +119,12 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', async function(){
-    // Default values for date/time to now
-    const today = new Date().toISOString().split('T')[0];
+    // Default values for date/time to now (use local date, not UTC, for timezones ahead of UTC)
     const now = new Date();
+    const yyyy = now.getFullYear();
+    const monthPad = String(now.getMonth() + 1).padStart(2, '0');
+    const dayPad = String(now.getDate()).padStart(2, '0');
+    const today = `${yyyy}-${monthPad}-${dayPad}`;
     const hh = String(now.getHours()).padStart(2,'0');
     const mm = String(now.getMinutes()).padStart(2,'0');
     const startDate = document.getElementById('start_date');

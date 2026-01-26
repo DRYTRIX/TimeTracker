@@ -261,10 +261,10 @@ Admins can create full database backups:
 ⚠️ **Warning**: Restore will overwrite existing data!
 
 1. Click "Restore Backup"
-2. Select backup file (JSON format)
+2. Select a backup file: **JSON** (Export-style backup from this page) or **ZIP** (full system backup from Admin or scheduled backups; same restore as Admin → Backups → Restore)
 3. Confirm restoration
 4. Wait for restore to complete
-5. Review Import History for results
+5. Review Import History for results (JSON restores only; ZIP restores do not create import history entries)
 
 #### Best Practices
 

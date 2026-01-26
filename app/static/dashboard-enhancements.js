@@ -8,12 +8,20 @@
     let sparklineCharts = new Map();
     let realTimeUpdateInterval = null;
     let activityTimeline = null;
+    let lastDashboardUpdateAt = 0;
+    const MIN_UPDATE_INTERVAL_MS = 5000; // Throttle: no updates more than once per 5s
 
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
+    }
+
+    function isDashboardPage() {
+        return window.location.pathname === '/dashboard' ||
+            document.getElementById('todayHoursValue') != null ||
+            document.querySelector('[data-sparkline]') != null;
     }
 
     function init() {
@@ -250,9 +258,17 @@
     }
 
     /**
-     * Initialize real-time updates
+     * Initialize real-time updates (only on dashboard page; avoids repeated API calls on other pages)
      */
     function initRealTimeUpdates() {
+        if (!isDashboardPage()) return;
+
+        // Avoid stacking intervals if init runs more than once
+        if (realTimeUpdateInterval) {
+            clearInterval(realTimeUpdateInterval);
+            realTimeUpdateInterval = null;
+        }
+
         // Add real-time indicator
         const dashboard = document.querySelector('[data-dashboard]');
         if (dashboard) {
@@ -267,18 +283,23 @@
             updateDashboardData();
         }, 30000); // Update every 30 seconds
 
-        // Update immediately
+        // Update immediately (throttled inside updateDashboardData)
         updateDashboardData();
     }
 
     /**
-     * Update dashboard data
+     * Update dashboard data (throttled to prevent runaway callers from causing requests every few ms)
      */
     async function updateDashboardData() {
+        if (!isDashboardPage()) return;
+        const now = Date.now();
+        if (now - lastDashboardUpdateAt < MIN_UPDATE_INTERVAL_MS) return;
+        lastDashboardUpdateAt = now;
+
         try {
             // Update stats
             await updateStats();
-            
+
             // Update activity timeline
             if (activityTimeline) {
                 await loadActivityTimeline();

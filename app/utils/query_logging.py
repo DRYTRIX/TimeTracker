@@ -10,7 +10,6 @@ from contextlib import contextmanager
 from flask import current_app, g
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
 
 
 logger = logging.getLogger(__name__)
@@ -116,14 +115,16 @@ def enable_query_counting(app):
     Args:
         app: Flask application instance
     """
+    from flask import has_request_context
 
     @app.before_request
     def reset_query_count():
         """Reset query count at start of request"""
         g.query_count = 0
 
-    @event.listens_for(Session, "before_cursor_execute")
+    # SQLAlchemy 2: "before_cursor_execute" exists on Engine, not Session
+    @event.listens_for(Engine, "before_cursor_execute")
     def receive_before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-        """Increment query count"""
-        if hasattr(g, "query_count"):
+        """Increment query count when inside a request"""
+        if has_request_context() and hasattr(g, "query_count"):
             g.query_count += 1
