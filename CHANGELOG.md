@@ -10,6 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Additional features and improvements in development
 
+## [4.14.0] - 2025-01-27
+
+### Changed
+- **Version Update** - Updated to version 4.14.0
+- **Documentation** - Comprehensive README and documentation updates for clarity and completeness
+- **Technology Stack** - Added complete technology stack overview to README
+- **Quick Start** - Enhanced with prerequisites, clearer instructions, and troubleshooting links
+- **System Requirements** - Added detailed system requirements section
+- **Documentation Organization** - Improved organization by use case and user type
+
+### Fixed
+- **Version Consistency** - Fixed version inconsistencies across all documentation files
+- **Documentation Links** - Fixed broken links and improved navigation
+- **Feature Documentation** - Added comprehensive links to feature guides throughout README
+
+## [4.13.2] - 2025-01-27
+
+### Changed
+- **Version Update** - Updated to version 4.13.2
+- **Documentation** - Comprehensive README and documentation updates for clarity and completeness
+
+### Fixed
+- **Version Consistency** - Fixed version inconsistencies across all documentation files
+
 ## [4.8.8] - 2025-01-27
 
 ### Changed

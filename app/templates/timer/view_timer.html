@@ -44,7 +44,7 @@
                 {% if timer.notes %}
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Notes') }}</h3>
-                    <p class="text-text-light dark:text-text-dark whitespace-pre-wrap">{{ timer.notes }}</p>
+                    <div class="prose prose-sm dark:prose-invert max-w-none">{{ timer.notes | markdown | safe }}</div>
                 </div>
                 {% endif %}
                 {% if timer.tags %}

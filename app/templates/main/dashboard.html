@@ -2,6 +2,11 @@
 {% from "components/cards.html" import info_card, stat_card %}
 {% from "components/ui.html" import confirm_dialog %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
     <div>
@@ -175,7 +180,7 @@
                             </td>
                             <td class="p-4">
                                 {% if entry.notes %}
-                                    <span class="text-sm text-text-light dark:text-text-dark" title="{{ entry.notes }}">{{ entry.notes[:60] }}{% if entry.notes|length > 60 %}...{% endif %}</span>
+                                    <span class="text-sm text-text-light dark:text-text-dark" title="{{ entry.notes|striptags }}">{{ entry.notes|striptags|truncate(60) }}</span>
                                 {% else %}
                                     <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
                                 {% endif %}
@@ -473,7 +478,7 @@
                 <div class="text-lg font-semibold">{{ _('Start Timer') }}</div>
                 <button type="button" data-close class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
             </div>
-            <form method="POST" action="{{ url_for('timer.start_timer') }}" class="p-4">
+            <form method="POST" action="{{ url_for('timer.start_timer') }}" id="startTimerForm" class="p-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -521,8 +526,11 @@
                         </p>
                     </div>
                     <div>
-                        <label for="startTimerNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes (optional)') }}</label>
-                        <textarea id="startTimerNotes" name="notes" rows="3" class="form-input" placeholder="{{ _('What are you working on?') }}"></textarea>
+                        <label for="startTimerNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes (optional)') }}</label>
+                        <div class="markdown-editor-wrapper">
+                            <textarea id="startTimerNotes" name="notes" class="hidden" placeholder="{{ _('What are you working on?') }}"></textarea>
+                            <div id="startTimerNotes_editor"></div>
+                        </div>
                     </div>
                     {% if templates %}
                     <div>
@@ -853,6 +861,12 @@
                 }
                 if (template.default_notes) {
                     notesField.value = template.default_notes;
+                    // Update markdown editor if it exists
+                    if (window.dashboardNotesEditor && typeof window.dashboardNotesEditor.setMarkdown === 'function') {
+                        try {
+                            window.dashboardNotesEditor.setMarkdown(template.default_notes);
+                        } catch (e) {}
+                    }
                 }
                 
                 // Mark template as used
@@ -870,5 +884,82 @@
             }
         };
     });
+
+    // Initialize Toast UI Editor for timer notes
+    const notesInput = document.getElementById('startTimerNotes');
+    if (notesInput && window.toastui && window.toastui.Editor) {
+        const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        window.dashboardNotesEditor = new toastui.Editor({
+            el: document.getElementById('startTimerNotes_editor'),
+            height: '250px',
+            initialEditType: 'wysiwyg',
+            previewStyle: 'vertical',
+            usageStatistics: false,
+            hideModeSwitch: false,
+            placeholder: '{{ _("What are you working on?") }}',
+            theme: theme,
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task'],
+                ['link', 'code', 'codeblock', 'table'],
+                ['image'],
+                ['scrollSync']
+            ],
+            initialValue: notesInput.value || ''
+        });
+
+        // Apply theme changes dynamically if supported
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class' && window.dashboardNotesEditor) {
+                    const nextTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                    try {
+                        if (typeof window.dashboardNotesEditor.setTheme === 'function') {
+                            window.dashboardNotesEditor.setTheme(nextTheme);
+                        }
+                    } catch (e) {}
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        // Image upload hook
+        window.dashboardNotesEditor.removeHook && window.dashboardNotesEditor.removeHook('addImageBlobHook');
+        window.dashboardNotesEditor.addHook && window.dashboardNotesEditor.addHook('addImageBlobHook', async (blob, callback) => {
+            try {
+                const formData = new FormData();
+                formData.append('image', blob, blob.name || 'upload.png');
+                const res = await fetch('{{ url_for('api.upload_editor_image') }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data && data.url) {
+                    callback(data.url, blob.name || 'image');
+                } else {
+                    console.warn('Upload failed', data);
+                }
+            } catch (e) { console.error('Image upload error', e); }
+        });
+
+        // Sync editor content to hidden textarea on form submit
+        const startTimerForm = document.getElementById('startTimerForm');
+        if (startTimerForm) {
+            startTimerForm.addEventListener('submit', function(e) {
+                if (window.dashboardNotesEditor && notesInput) {
+                    try {
+                        notesInput.value = window.dashboardNotesEditor.getMarkdown();
+                    } catch (err) {
+                        console.error('Failed to sync markdown editor:', err);
+                    }
+                }
+            });
+        }
+    }
+});
 </script>
+
+<!-- Toast UI Editor -->
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
 {% endblock %}

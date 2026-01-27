@@ -82,7 +82,7 @@
                         <td class="p-3">{{ entry.task.name if entry.task else '—' }}</td>
                         <td class="p-3">
                             {% if entry.notes %}
-                                <span class="break-words">{{ entry.notes }}</span>
+                                <div class="prose prose-sm dark:prose-invert max-w-none">{{ entry.notes | markdown | safe }}</div>
                             {% else %}
                                 <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                             {% endif %}

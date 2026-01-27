@@ -86,8 +86,14 @@
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                             {{ entry.duration_formatted }}
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
-                            {{ entry.notes or '-' }}
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 max-w-xs">
+                            {% if entry.notes %}
+                                <div class="truncate" title="{{ entry.notes|striptags }}">
+                                    {{ entry.notes|striptags|truncate(60) }}
+                                </div>
+                            {% else %}
+                                -
+                            {% endif %}
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                             {% if entry.tags %}

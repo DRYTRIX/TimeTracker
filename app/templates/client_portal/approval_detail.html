@@ -79,7 +79,7 @@
     {% if approval.time_entry.notes %}
     <div class="mb-6">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Notes') }}</h3>
-        <p class="whitespace-pre-line bg-background-light dark:bg-background-dark p-4 rounded-lg">{{ approval.time_entry.notes }}</p>
+        <div class="prose prose-sm dark:prose-invert max-w-none bg-background-light dark:bg-background-dark p-4 rounded-lg">{{ approval.time_entry.notes | markdown | safe }}</div>
     </div>
     {% endif %}
     

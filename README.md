@@ -24,13 +24,61 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 
 ---
 
+## 🛠️ Technology Stack
+
+TimeTracker is built with modern, reliable technologies:
+
+### Backend
+- **Python 3.11+** — Core programming language
+- **Flask 3.0.0** — Web framework
+- **SQLAlchemy 2.0.23** — ORM and database toolkit
+- **Flask-SocketIO 5.3.6** — WebSocket support for real-time updates
+- **Flask-Migrate 4.0.5** — Database migrations
+- **Flask-Babel 4.0.0** — Internationalization (i18n)
+
+### Frontend
+- **HTML5, JavaScript (ES6+)** — Modern web standards
+- **Tailwind CSS 3.3.5** — Utility-first CSS framework
+- **Chart.js** — Interactive data visualization
+- **Command Palette (cmdk)** — Keyboard-driven navigation
+- **Framer Motion** — Smooth animations and transitions
+
+### Database
+- **PostgreSQL** — Production database (recommended)
+- **SQLite** — Development and testing database
+
+### Deployment & Infrastructure
+- **Docker & Docker Compose** — Containerization and orchestration
+- **Nginx** — Reverse proxy and HTTPS termination
+- **Gunicorn** — Production WSGI server
+- **Eventlet** — Async networking library
+
+### Key Libraries & Tools
+- **WeasyPrint** — PDF generation for invoices
+- **Flask-WTF** — Form handling and CSRF protection
+- **Authlib** — OAuth/OIDC authentication
+- **APScheduler** — Background task scheduling
+- **Prometheus Client** — Metrics collection
+- **Sentry SDK** — Error monitoring (optional)
+- **PostHog** — Product analytics (optional)
+
+### Development & Testing
+- **pytest** — Testing framework
+- **black** — Code formatting
+- **flake8** — Linting
+- **coverage** — Test coverage analysis
+
+**📖 For detailed architecture information, see [Project Structure](docs/development/PROJECT_STRUCTURE.md)**
+
+---
+
 ## 🆕 What's New
 
 TimeTracker has been continuously enhanced with powerful new features! Here's what's been added recently:
 
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
-**Latest Release: v4.8.8** (January 2025)
+**Latest Release: v4.14.0** (January 2025)
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
 
@@ -124,26 +172,35 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 TimeTracker includes **130+ features** across 13 major categories. See the [Complete Features Documentation](docs/FEATURES_COMPLETE.md) for a comprehensive overview.
 
+**📖 Quick Links:**
+- [📋 Complete Features List](docs/FEATURES_COMPLETE.md) — All features in detail
+- [⏱️ Time Tracking](docs/FEATURES_COMPLETE.md#time-tracking-features) — Timer and time entry features
+- [📊 Project Management](docs/FEATURES_COMPLETE.md#project-management) — Projects, tasks, and organization
+- [🧾 Invoicing](docs/INVOICE_FEATURE_README.md) — Invoice generation and billing
+- [💰 Financial Management](docs/FEATURES_COMPLETE.md#financial-management) — Expenses, payments, and tracking
+- [📈 Reporting & Analytics](docs/FEATURES_COMPLETE.md#reporting--analytics) — Reports and insights
+
 ### ⏱️ **Smart Time Tracking**
 - **One-Click Timers** — Start tracking with a single click
 - **Persistent Timers** — Timers keep running even after browser closes
 - **Idle Detection** — Automatic pause after configurable idle time
 - **Manual Entry** — Add historical time entries with notes and tags
-- **Bulk Time Entry** — Create multiple entries for consecutive days with weekend skipping
-- **Time Entry Templates** — Save and reuse common time entries for faster logging
-- **Calendar View** — Visual calendar interface for viewing and managing time entries
+- **Bulk Time Entry** — Create multiple entries for consecutive days with weekend skipping ([Guide](docs/BULK_TIME_ENTRY_README.md))
+- **Time Entry Templates** — Save and reuse common time entries for faster logging ([Guide](docs/TIME_ENTRY_TEMPLATES.md))
+- **Calendar View** — Visual calendar interface for viewing and managing time entries ([Guide](docs/CALENDAR_FEATURES_README.md))
 - **Focus Sessions** — Pomodoro-style focus session tracking
 - **Recurring Time Blocks** — Weekly recurring time block templates
-- **Time Rounding** — Configurable rounding intervals
+- **Time Rounding** — Configurable rounding intervals ([Guide](docs/TIME_ROUNDING_PREFERENCES.md))
 - **Real-time Updates** — See live timer updates across all devices via WebSocket
 
 ### 📊 **Project & Task Management**
 - **Unlimited Projects & Tasks** — Organize work your way
-- **Client Management** — Store client details, contacts, and billing rates
+- **Client Management** — Store client details, contacts, and billing rates ([Guide](docs/CLIENT_MANAGEMENT_README.md))
 - **Task Board** — Visual task management with priorities and assignments
 - **Kanban Board** — Drag-and-drop task management with customizable columns
+- **Task Management** — Complete task tracking system ([Guide](docs/TASK_MANAGEMENT_README.md))
 - **Status Tracking** — Monitor progress from to-do to completion
-- **Budget Tracking** — Monitor project budgets with alerts and forecasting
+- **Budget Tracking** — Monitor project budgets with alerts and forecasting ([Guide](docs/BUDGET_ALERTS_AND_FORECASTING.md))
 - **Project Costs** — Track direct project expenses
 - **Task Comments** — Collaborate with threaded comments on tasks
 - **Markdown Support** — Rich text formatting in project and task descriptions
@@ -162,6 +219,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 
 ### 🧾 **Professional Invoicing**
 - **Generate from Time** — Convert tracked hours to invoices automatically
+- **Invoice System** — Complete invoicing solution ([Guide](docs/INVOICE_FEATURE_README.md))
 - **Custom Line Items** — Add manual items for expenses or services
 - **Tax Calculation** — Automatic tax calculations with configurable rates
 - **PDF Export** — Professional PDF invoice generation with customizable layouts
@@ -171,11 +229,11 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Recurring Invoices** — Automate recurring billing
 - **Multi-Currency** — Support for multiple currencies with conversion
 - **Invoice Email** — Send invoices directly to clients
-- **Peppol e-Invoicing (BIS Billing 3.0)** — Send invoices electronically via Peppol (configure in **Admin → System Settings**; docs: [PEPPOL_EINVOICING.md](docs/admin/configuration/PEPPOL_EINVOICING.md))
+- **Peppol e-Invoicing (BIS Billing 3.0)** — Send invoices electronically via Peppol ([Setup Guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
 
 ### 💰 **Financial Management**
-- **Expense Tracking** — Track business expenses with receipts and categories
-- **Payment Tracking** — Monitor invoice payments and payment methods
+- **Expense Tracking** — Track business expenses with receipts and categories ([Guide](docs/EXPENSE_TRACKING.md))
+- **Payment Tracking** — Monitor invoice payments and payment methods ([Guide](docs/PAYMENT_TRACKING.md))
 - **Reimbursement Management** — Handle expense approvals and reimbursements
 - **Billable Expenses** — Mark expenses as billable and add to invoices
 - **Payment Gateway Integration** — Track gateway transactions and fees
@@ -191,23 +249,23 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Custom Date Ranges** — Flexible reporting periods
 - **Saved Filters** — Save frequently used report filters for quick access
 - **User Analytics** — Individual performance metrics and productivity insights
-- **Budget Alerts** — Automatic alerts when budget thresholds are exceeded
+- **Budget Alerts** — Automatic alerts when budget thresholds are exceeded ([Guide](docs/BUDGET_ALERTS_AND_FORECASTING.md))
 - **Budget Forecasting** — Predict project completion dates based on burn rates
-- **Weekly Time Goals** — Set and track weekly hour targets
+- **Weekly Time Goals** — Set and track weekly hour targets ([Guide](docs/WEEKLY_TIME_GOALS.md))
 - **Overtime Tracking** — Monitor and report overtime hours
 
 ### 🔐 **Multi-User & Security**
-- **Role-Based Access Control** — Granular permissions system with custom roles
+- **Role-Based Access Control** — Granular permissions system with custom roles ([Guide](docs/ADVANCED_PERMISSIONS.md))
 - **User Management** — Add team members and manage access
 - **Self-Hosted** — Complete control over your data
-- **Flexible Authentication** — Username-only, OIDC/SSO (Azure AD, Authelia, etc.)
+- **Flexible Authentication** — Username-only, OIDC/SSO (Azure AD, Authelia, etc.) ([Setup Guide](docs/admin/configuration/OIDC_SETUP.md))
 - **Session Management** — Secure cookies and session handling
 - **Profile Pictures** — Users can upload profile pictures
-- **API Tokens** — Generate tokens for API access and integrations
+- **API Tokens** — Generate tokens for API access and integrations ([API Docs](docs/api/REST_API.md))
 - **Audit Logs** — Track all system activity and user actions
 
 ### ⌨️ **Productivity Features**
-- **Command Palette** — Keyboard-driven navigation with shortcuts (press `?`)
+- **Command Palette** — Keyboard-driven navigation with shortcuts (press `?`) ([Guide](docs/COMMAND_PALETTE_USAGE.md))
 - **Keyboard Shortcuts** — 50+ shortcuts for lightning-fast navigation and actions
 - **Quick Search** — Enhanced instant search with autocomplete and categorized results (Ctrl+K)
 - **Quick Actions Menu** — Floating action button with 6 quick actions (bottom-right)
@@ -327,65 +385,150 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+Before you begin, ensure you have:
+- **Docker** (20.10+) and **Docker Compose** (2.0+) installed
+- **Git** for cloning the repository
+- **2GB+ RAM** available for Docker containers
+- **Port 80/443** (HTTPS) or **8080** (HTTP) available
+
+> **💡 New to Docker?** See [Docker Installation Guide](https://docs.docker.com/get-docker/) for your platform.
+
 ### Option 1: Docker with HTTPS (Recommended for Production)
 
 Get TimeTracker running in under 2 minutes with automatic HTTPS:
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
-# Create your environment file from the template
+# 2. Create your environment file from the template
 cp env.example .env
 
-# IMPORTANT: Edit .env and set a strong SECRET_KEY
+# 3. IMPORTANT: Edit .env and set a strong SECRET_KEY
 # Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
 # Also set your timezone (TZ) and currency (CURRENCY)
 nano .env  # or use any text editor
 
-# Start with Docker Compose (includes HTTPS via nginx with self-signed cert)
+# 4. Start with Docker Compose (includes HTTPS via nginx with self-signed cert)
 docker-compose up -d
 
-# Access at https://localhost
+# 5. Access at https://localhost
 # Your browser will warn about the self-signed certificate - that's normal
+# Click "Advanced" → "Proceed to localhost" to continue
 ```
 
 **First login creates the admin account** — just enter your username!
 
 **📖 See the complete setup guide:** [`docs/admin/configuration/DOCKER_COMPOSE_SETUP.md`](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)
 
+**🔧 Troubleshooting:**
+- **Port already in use?** Change ports in `docker-compose.yml` or stop conflicting services
+- **Docker won't start?** See [Docker Startup Troubleshooting](docs/admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)
+- **CSRF errors?** See [CSRF Troubleshooting](docs/admin/security/CSRF_TROUBLESHOOTING.md)
+- **Database connection issues?** See [Database Troubleshooting](docker/TROUBLESHOOTING_DB_CONNECTION.md)
+
 ### Option 2: Docker with Plain HTTP (Development/Testing)
 
 For local development or testing without HTTPS:
 
 ```bash
-# Clone and navigate to the repository
+# 1. Clone and navigate to the repository
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
-# Use the example compose file that exposes HTTP directly
+# 2. Use the example compose file that exposes HTTP directly
 docker-compose -f docker-compose.example.yml up -d
 
-# Access at http://localhost:8080
+# 3. Access at http://localhost:8080
 ```
+
+**Note:** This setup uses HTTP only. For production, use Option 1 with HTTPS.
 
 ### Option 3: Quick Test with SQLite
 
-Want to try it out without any configuration?
+Want to try it out without any configuration? Perfect for quick testing:
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
-# Start with the local test configuration (uses SQLite, no PostgreSQL)
+# 2. Start with the local test configuration (uses SQLite, no PostgreSQL)
 docker-compose -f docker-compose.local-test.yml up --build
 
-# Access at http://localhost:8080
+# 3. Access at http://localhost:8080
 ```
 
-No database setup or .env file needed — perfect for quick testing!
+**Benefits:**
+- ✅ No database setup required
+- ✅ No .env file configuration needed
+- ✅ Perfect for quick testing and evaluation
+- ⚠️ **Note:** SQLite is not recommended for production use
+
+**📖 Need help?** Check the [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
+
+---
+
+## 💻 System Requirements
+
+### Minimum Requirements
+
+**For Small Teams (1-5 users):**
+- **CPU**: 1 core (2.0 GHz+)
+- **RAM**: 2 GB
+- **Storage**: 10 GB free space
+- **OS**: Linux, macOS, or Windows (with Docker)
+- **Docker**: 20.10+ and Docker Compose 2.0+
+
+**For Production (5+ users):**
+- **CPU**: 2+ cores (2.4 GHz+)
+- **RAM**: 4 GB
+- **Storage**: 20 GB free space (SSD recommended)
+- **OS**: Linux (Ubuntu 20.04+, Debian 11+, or similar)
+- **Docker**: 20.10+ and Docker Compose 2.0+
+- **PostgreSQL**: 13+ (included in Docker Compose)
+
+### Recommended Requirements
+
+**For Optimal Performance:**
+- **CPU**: 4+ cores (3.0 GHz+)
+- **RAM**: 8 GB
+- **Storage**: 50+ GB SSD
+- **Network**: Stable internet connection (for updates and optional telemetry)
+- **Backup**: Automated backup solution for database
+
+### Platform Support
+
+- ✅ **Linux** (Ubuntu, Debian, CentOS, RHEL, etc.)
+- ✅ **macOS** (Intel and Apple Silicon)
+- ✅ **Windows** (Windows 10/11 with WSL2 or Docker Desktop)
+- ✅ **Raspberry Pi** (Raspberry Pi 4 with 2GB+ RAM)
+- ✅ **Cloud Platforms** (AWS, Azure, GCP, DigitalOcean, etc.)
+
+### Database Options
+
+- **PostgreSQL** (Recommended for production)
+  - Version 13+ required
+  - Included in Docker Compose setup
+  - Supports all features including full-text search
+
+- **SQLite** (Development/Testing only)
+  - No setup required
+  - Suitable for single-user or testing
+  - Limited concurrent write performance
+
+### Browser Support
+
+TimeTracker works with all modern browsers:
+- ✅ Chrome/Edge 90+
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Opera 76+
+
+**📖 For detailed requirements, see [Requirements Documentation](docs/REQUIREMENTS.md)**
 
 ---
 
@@ -420,46 +563,89 @@ Even if you're not billing anyone, understanding where your time goes is valuabl
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the [`docs/`](docs/) directory:
+Comprehensive documentation is available in the [`docs/`](docs/) directory. See the [Documentation Index](docs/README.md) for a complete overview.
 
-### Release Information
-- **[📋 Changelog](CHANGELOG.md)** — Complete release history with all changes and new features (⭐ See what's new!)
+### 📖 Documentation by Use Case
 
-### Getting Started
-- **[📖 Getting Started Guide](docs/GETTING_STARTED.md)** — Complete beginner's guide (⭐ Start here!)
+**For New Users:**
+- **[Getting Started Guide](docs/GETTING_STARTED.md)** — Complete beginner's tutorial (⭐ Start here!)
 - **[Installation Guide](docs/admin/configuration/DOCKER_PUBLIC_SETUP.md)** — Detailed setup instructions
-- **[Requirements](docs/REQUIREMENTS.md)** — System requirements and dependencies
-- **[Troubleshooting](docs/admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Common issues and solutions
-- **[CSRF Token Issues](docs/admin/security/CSRF_TROUBLESHOOTING.md)** — Fix "CSRF token missing or invalid" errors
-- **[CSRF IP Access Fix](docs/admin/security/CSRF_IP_ACCESS_FIX.md)** — 🔥 Fix cookies not working when accessing via IP address
-- **[HTTPS Auto-Setup](docs/admin/security/README_HTTPS_AUTO.md)** — 🚀 Automatic HTTPS at startup (one command!)
-- **[HTTPS Manual Setup (mkcert)](docs/admin/security/README_HTTPS.md)** — 🔒 Manual HTTPS with no certificate warnings
+- **[Quick Start Guide](docs/guides/QUICK_START_GUIDE.md)** — Get up and running quickly
 
-### Features
-- **[📋 Complete Features Overview](docs/FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features (⭐ Complete reference!)
-- **[Task Management](docs/TASK_MANAGEMENT_README.md)** — Break projects into manageable tasks
-- **[Invoice System](docs/INVOICE_FEATURE_README.md)** — Generate professional invoices
-- **[Peppol e-Invoicing](docs/admin/configuration/PEPPOL_EINVOICING.md)** — Enable and configure Peppol sending
-- **[Client Management](docs/CLIENT_MANAGEMENT_README.md)** — Manage client relationships
-- **[Calendar Features](docs/CALENDAR_FEATURES_README.md)** — Calendar and bulk entry features
-- **[Bulk Time Entry](docs/BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
-- **[Command Palette](docs/COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts for power users
-- **[Expense Tracking](docs/EXPENSE_TRACKING.md)** — Track business expenses
-- **[Payment Tracking](docs/PAYMENT_TRACKING.md)** — Track invoice payments
-- **[Budget Alerts & Forecasting](docs/BUDGET_ALERTS_AND_FORECASTING.md)** — Monitor project budgets
-- **[Weekly Time Goals](docs/WEEKLY_TIME_GOALS.md)** — Set and track weekly hour targets
-- **[Role-Based Permissions](docs/ADVANCED_PERMISSIONS.md)** — Granular access control
+**For Administrators:**
+- **[Docker Compose Setup](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Production deployment guide
+- **[Configuration Guide](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)** — All configuration options
+- **[OIDC/SSO Setup](docs/admin/configuration/OIDC_SETUP.md)** — Enterprise authentication
+- **[Email Configuration](docs/admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
+- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Updates and releases
 
-### Technical Documentation
+**For Developers:**
+- **[Contributing Guidelines](docs/development/CONTRIBUTING.md)** — How to contribute
 - **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase architecture
-- **[Database Migrations](migrations/README.md)** — Database schema management
-- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Release and versioning
-- **[CSRF Configuration](docs/admin/security/CSRF_CONFIGURATION.md)** — Security and CSRF token setup for Docker
-- **[CI/CD Documentation](docs/cicd/)** — Continuous integration setup
+- **[API Documentation](docs/api/REST_API.md)** — Complete REST API reference
+- **[Database Migrations](migrations/README.md)** — Schema management
+- **[CI/CD Documentation](docs/cicd/CI_CD_DOCUMENTATION.md)** — Build and deployment
 
-### Contributing
+**For Troubleshooting:**
+- **[Docker Startup Issues](docs/admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Common startup problems
+- **[CSRF Token Issues](docs/admin/security/CSRF_TROUBLESHOOTING.md)** — Fix CSRF errors
+- **[Database Connection](docker/TROUBLESHOOTING_DB_CONNECTION.md)** — Database issues
+- **[Solution Guide](docs/SOLUTION_GUIDE.md)** — General problem solving
+
+### 🎯 Feature Documentation
+
+**Core Features:**
+- **[📋 Complete Features Overview](docs/FEATURES_COMPLETE.md)** — All 130+ features (⭐ Complete reference!)
+- **[Time Tracking](docs/FEATURES_COMPLETE.md#time-tracking-features)** — Timer and entry features
+- **[Task Management](docs/TASK_MANAGEMENT_README.md)** — Task tracking system
+- **[Client Management](docs/CLIENT_MANAGEMENT_README.md)** — Client relationships
+- **[Invoice System](docs/INVOICE_FEATURE_README.md)** — Invoice generation
+
+**Advanced Features:**
+- **[Calendar & Bulk Entry](docs/CALENDAR_FEATURES_README.md)** — Calendar view and bulk operations
+- **[Bulk Time Entry](docs/BULK_TIME_ENTRY_README.md)** — Create multiple entries
+- **[Time Entry Templates](docs/TIME_ENTRY_TEMPLATES.md)** — Reusable templates
+- **[Expense Tracking](docs/EXPENSE_TRACKING.md)** — Business expenses
+- **[Payment Tracking](docs/PAYMENT_TRACKING.md)** — Invoice payments
+- **[Budget Alerts & Forecasting](docs/BUDGET_ALERTS_AND_FORECASTING.md)** — Budget monitoring
+- **[Weekly Time Goals](docs/WEEKLY_TIME_GOALS.md)** — Weekly targets
+
+**Productivity:**
+- **[Command Palette](docs/COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts
+- **[Role-Based Permissions](docs/ADVANCED_PERMISSIONS.md)** — Access control
+
+**Integrations:**
+- **[Peppol e-Invoicing](docs/admin/configuration/PEPPOL_EINVOICING.md)** — Electronic invoicing
+- **[API Documentation](docs/api/REST_API.md)** — REST API reference
+- **[API Token Scopes](docs/api/API_TOKEN_SCOPES.md)** — Token permissions
+
+### 🔧 Technical Documentation
+
+- **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase architecture
+- **[Database Migrations](migrations/README.md)** — Schema management
+- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Release process
+- **[CSRF Configuration](docs/admin/security/CSRF_CONFIGURATION.md)** — Security setup
+- **[CI/CD Setup](docs/cicd/CI_CD_DOCUMENTATION.md)** — Continuous integration
+
+### 🔒 Security & Configuration
+
+- **[HTTPS Setup (Auto)](docs/admin/security/README_HTTPS_AUTO.md)** — Automatic HTTPS
+- **[HTTPS Setup (mkcert)](docs/admin/security/README_HTTPS.md)** — Manual HTTPS
+- **[CSRF Troubleshooting](docs/admin/security/CSRF_TROUBLESHOOTING.md)** — CSRF issues
+- **[CSRF IP Access Fix](docs/admin/security/CSRF_IP_ACCESS_FIX.md)** — IP access issues
+- **[OIDC/SSO Setup](docs/admin/configuration/OIDC_SETUP.md)** — Enterprise auth
+
+### 🤝 Contributing
+
 - **[Contributing Guidelines](docs/development/CONTRIBUTING.md)** — How to contribute
 - **[Code of Conduct](docs/development/CODE_OF_CONDUCT.md)** — Community standards
+- **[Development Setup](docs/development/LOCAL_TESTING_WITH_SQLITE.md)** — Local development
+
+### 📋 Reference
+
+- **[📋 Changelog](CHANGELOG.md)** — Complete release history (⭐ See what's new!)
+- **[Requirements](docs/REQUIREMENTS.md)** — System requirements
+- **[Documentation Index](docs/README.md)** — Complete documentation overview
 
 ---
 
@@ -522,7 +708,7 @@ docker-compose up -d
 # Use mkcert for locally-trusted certificates
 docker-compose -f docker-compose.https-mkcert.yml up -d
 ```
-**📖 See [HTTPS Setup Guide](README_HTTPS.md) for detailed instructions**
+**📖 See [HTTPS Setup Guide](docs/admin/security/README_HTTPS.md) for detailed instructions**
 
 ### Monitoring & Analytics
 ```bash
@@ -742,7 +928,32 @@ We welcome contributions! Whether it's:
 - 📝 **Documentation** — Improve our docs
 - 💻 **Code Contributions** — Submit pull requests
 
-**📖 See [Contributing Guidelines](docs/development/CONTRIBUTING.md) to get started**
+### Quick Start for Contributors
+
+1. **Fork and Clone**
+   ```bash
+   git clone https://github.com/your-username/TimeTracker.git
+   cd TimeTracker
+   ```
+
+2. **Set Up Development Environment**
+   ```bash
+   # Use SQLite for quick local testing
+   docker-compose -f docker-compose.local-test.yml up -d
+   ```
+
+3. **Make Your Changes**
+   - Follow the [Contributing Guidelines](docs/development/CONTRIBUTING.md)
+   - Write tests for new features
+   - Update documentation as needed
+
+4. **Submit a Pull Request**
+   - Create a clear description of your changes
+   - Reference any related issues
+   - Ensure all tests pass
+
+**📖 See [Contributing Guidelines](docs/development/CONTRIBUTING.md) for complete details**  
+**📖 See [Development Setup](docs/development/LOCAL_TESTING_WITH_SQLITE.md) for local development**
 
 ---
 

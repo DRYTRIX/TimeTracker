@@ -376,8 +376,8 @@
                             </td>
                             <td class="p-3">
                                 {% if entry.notes %}
-                                    <span class="text-sm" title="{{ entry.notes }}">
-                                        {{ entry.notes[:50] }}{% if entry.notes|length > 50 %}...{% endif %}
+                                    <span class="text-sm" title="{{ entry.notes|striptags }}">
+                                        {{ entry.notes|striptags|truncate(50) }}
                                     </span>
                                 {% else %}
                                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">-</span>
