@@ -2,6 +2,11 @@
 
 {% block title %}{{ _('Edit Time Entry') }} - {{ app_name }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+{% endblock %}
+
 {% block extra_js %}
 {% if current_user.is_admin %}
 <script>
@@ -59,7 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const startTime = document.getElementById('start_time').value;
             const endDate = document.getElementById('end_date').value;
             const endTime = document.getElementById('end_time').value;
-            const notesVal = document.getElementById('notes').value || '';
+            const notesInput = document.getElementById('notes');
+            const notesVal = (notesInput && notesInput.value) ? notesInput.value : '';
             const tagsVal = document.getElementById('tags').value || '';
             const billableVal = document.getElementById('billable').checked;
             
@@ -301,7 +307,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         <i class="fas fa-sticky-note mr-1"></i>{{ _('Notes') }}
                     </label>
-                    <textarea class="form-input" id="notes" name="notes" rows="4" placeholder="{{ _('Describe what you worked on') }}">{{ timer.notes or '' }}</textarea>
+                    <div class="markdown-editor-wrapper">
+                        <textarea class="form-input hidden" id="notes" name="notes" placeholder="{{ _('Describe what you worked on') }}">{{ timer.notes or '' }}</textarea>
+                        <div id="notes_editor"></div>
+                    </div>
                 </div>
 
                 <!-- Tags -->
@@ -409,7 +418,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         <i class="fas fa-sticky-note mr-1"></i>{{ _('Notes') }}
                     </label>
-                    <textarea class="form-input" id="notes" name="notes" rows="4" placeholder="{{ _('Describe what you worked on') }}">{{ timer.notes or '' }}</textarea>
+                    <div class="markdown-editor-wrapper">
+                        <textarea class="form-input hidden" id="notes" name="notes" placeholder="{{ _('Describe what you worked on') }}">{{ timer.notes or '' }}</textarea>
+                        <div id="notes_editor"></div>
+                    </div>
                 </div>
 
                 <!-- Tags and Billable -->
@@ -512,4 +524,86 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     </div>
 </div>
+
+<!-- Toast UI Editor -->
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const notesInput = document.getElementById('notes');
+    let mdEditor = null;
+
+    // Initialize Toast UI Editor for notes
+    if (notesInput && window.toastui && window.toastui.Editor) {
+        const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        mdEditor = new toastui.Editor({
+            el: document.getElementById('notes_editor'),
+            height: '300px',
+            initialEditType: 'wysiwyg',
+            previewStyle: 'vertical',
+            usageStatistics: false,
+            hideModeSwitch: false,
+            placeholder: '{{ _("Describe what you worked on") }}',
+            theme: theme,
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task'],
+                ['link', 'code', 'codeblock', 'table'],
+                ['image'],
+                ['scrollSync']
+            ],
+            initialValue: notesInput.value || ''
+        });
+
+        // Apply theme changes dynamically if supported
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class' && mdEditor) {
+                    const nextTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                    try {
+                        if (typeof mdEditor.setTheme === 'function') {
+                            mdEditor.setTheme(nextTheme);
+                        }
+                    } catch (e) {}
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        // Image upload hook
+        mdEditor.removeHook && mdEditor.removeHook('addImageBlobHook');
+        mdEditor.addHook && mdEditor.addHook('addImageBlobHook', async (blob, callback) => {
+            try {
+                const formData = new FormData();
+                formData.append('image', blob, blob.name || 'upload.png');
+                const res = await fetch('{{ url_for('api.upload_editor_image') }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data && data.url) {
+                    callback(data.url, blob.name || 'image');
+                } else {
+                    console.warn('Upload failed', data);
+                }
+            } catch (e) { console.error('Image upload error', e); }
+        });
+
+        // Sync editor content to hidden textarea on form submit
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                if (mdEditor && notesInput) {
+                    try {
+                        notesInput.value = mdEditor.getMarkdown();
+                    } catch (err) {
+                        console.error('Failed to sync markdown editor:', err);
+                    }
+                }
+            });
+        }
+    }
+});
+</script>
 {% endblock %}

@@ -95,8 +95,11 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes') }}</label>
-                    <textarea name="notes" id="notes" rows="4" class="form-input" placeholder="{{ _('What did you work on?') }}">{{ prefill_notes or '' }}</textarea>
+                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes') }}</label>
+                    <div class="markdown-editor-wrapper">
+                        <textarea name="notes" id="notes" class="hidden">{{ prefill_notes or '' }}</textarea>
+                        <div id="notes_editor"></div>
+                    </div>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -314,7 +317,15 @@ document.addEventListener('DOMContentLoaded', async function(){
             const notes = document.getElementById('notes');
             const tagsInput = document.getElementById('tags');
             const billable = document.getElementById('billable');
-            if (notes && tpl.default_notes) notes.value = tpl.default_notes;
+            if (notes && tpl.default_notes) {
+                notes.value = tpl.default_notes;
+                // Update markdown editor if it exists
+                if (window.mdEditor && typeof window.mdEditor.setMarkdown === 'function') {
+                    try {
+                        window.mdEditor.setMarkdown(tpl.default_notes);
+                    } catch (e) {}
+                }
+            }
             if (tagsInput && tpl.tags) tagsInput.value = tpl.tags;
             if (billable != null && typeof tpl.billable === 'boolean') billable.checked = !!tpl.billable;
 
@@ -348,6 +359,97 @@ document.addEventListener('DOMContentLoaded', async function(){
                 try { sessionStorage.removeItem('activeTemplate'); } catch(_) {}
             }
         } catch(_) {}
+    }
+});
+</script>
+
+<!-- Toast UI Editor -->
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const notesInput = document.getElementById('notes');
+    let mdEditor = null;
+
+    // Initialize Toast UI Editor for notes
+    if (notesInput && window.toastui && window.toastui.Editor) {
+        const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        mdEditor = new toastui.Editor({
+            el: document.getElementById('notes_editor'),
+            height: '300px',
+            initialEditType: 'wysiwyg',
+            previewStyle: 'vertical',
+            usageStatistics: false,
+            hideModeSwitch: false,
+            placeholder: '{{ _("What did you work on?") }}',
+            theme: theme,
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task'],
+                ['link', 'code', 'codeblock', 'table'],
+                ['image'],
+                ['scrollSync']
+            ],
+            initialValue: notesInput.value || ''
+        });
+
+        // Apply theme changes dynamically if supported
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class' && mdEditor) {
+                    const nextTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                    try {
+                        if (typeof mdEditor.setTheme === 'function') {
+                            mdEditor.setTheme(nextTheme);
+                        }
+                    } catch (e) {}
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        // Image upload hook
+        mdEditor.removeHook && mdEditor.removeHook('addImageBlobHook');
+        mdEditor.addHook && mdEditor.addHook('addImageBlobHook', async (blob, callback) => {
+            try {
+                const formData = new FormData();
+                formData.append('image', blob, blob.name || 'upload.png');
+                const res = await fetch('{{ url_for('api.upload_editor_image') }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data && data.url) {
+                    callback(data.url, blob.name || 'image');
+                } else {
+                    console.warn('Upload failed', data);
+                }
+            } catch (e) { console.error('Image upload error', e); }
+        });
+
+        // Make editor accessible globally for template application
+        window.mdEditor = mdEditor;
+
+        // Sync editor content to hidden textarea on form submit
+        const form = document.getElementById('manualEntryForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                if (mdEditor && notesInput) {
+                    try {
+                        notesInput.value = mdEditor.getMarkdown();
+                    } catch (err) {
+                        console.error('Failed to sync markdown editor:', err);
+                    }
+                }
+            });
+        }
+
+        // Update notes when template is applied
+        const originalNotesHandler = window.addEventListener;
+        // This will be handled in the existing template application code
     }
 });
 </script>
