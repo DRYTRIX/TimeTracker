@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Additional features and improvements in development
 
+## [4.13.2] - 2025-01-27
+
+### Changed
+- **Version Update** - Updated to version 4.13.2
+- **Documentation** - Comprehensive README and documentation updates for clarity and completeness
+
+### Fixed
+- **Version Consistency** - Fixed version inconsistencies across all documentation files
+
 ## [4.8.8] - 2025-01-27
 
 ### Changed

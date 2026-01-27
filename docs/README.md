@@ -55,7 +55,7 @@ docs/
 - **[Quick Start Local Development](guides/QUICK_START_LOCAL_DEVELOPMENT.md)** — Local development setup
 
 ### Feature Documentation
-- **[📋 Complete Features Overview](FEATURES_COMPLETE.md)** — Comprehensive documentation of all 120+ features (⭐ Complete reference!)
+- **[📋 Complete Features Overview](FEATURES_COMPLETE.md)** — Comprehensive documentation of all 130+ features (⭐ Complete reference!)
 - **[Task Management](TASK_MANAGEMENT_README.md)** — Complete task tracking system
 - **[Client Management](CLIENT_MANAGEMENT_README.md)** — Manage clients and relationships
 - **[Invoice System](INVOICE_FEATURE_README.md)** — Generate and track invoices
@@ -65,7 +65,10 @@ docs/
 - **[Budget Alerts & Forecasting](BUDGET_ALERTS_AND_FORECASTING.md)** — Monitor project budgets
 - **[Command Palette](COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts and quick actions
 - **[Bulk Time Entry](BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
+- **[Time Entry Templates](TIME_ENTRY_TEMPLATES.md)** — Reusable time entry templates
 - **[Weekly Time Goals](WEEKLY_TIME_GOALS.md)** — Set and track weekly hour targets
+- **[Time Rounding](TIME_ROUNDING_PREFERENCES.md)** — Configurable time rounding
+- **[Role-Based Permissions](ADVANCED_PERMISSIONS.md)** — Granular access control
 
 See [features/](features/) for additional feature documentation.
 
@@ -87,6 +90,10 @@ See [features/](features/) for additional feature documentation.
 
 ### Security
 - **[Security Documentation](admin/security/)** — Security guides and configuration
+- **[CSRF Configuration](admin/security/CSRF_CONFIGURATION.md)** — CSRF token setup
+- **[CSRF Troubleshooting](admin/security/CSRF_TROUBLESHOOTING.md)** — Fix CSRF errors
+- **[HTTPS Setup (Auto)](admin/security/README_HTTPS_AUTO.md)** — Automatic HTTPS
+- **[HTTPS Setup (mkcert)](admin/security/README_HTTPS.md)** — Manual HTTPS with mkcert
 - See [admin/security/](admin/security/) for all security-related documentation
 
 ### Monitoring
@@ -131,12 +138,30 @@ See [features/](features/) for additional feature documentation.
 
 ## 📚 API Documentation
 
-- **[REST API](api/REST_API.md)** — Complete API reference with all endpoints
+- **[REST API](api/REST_API.md)** — Complete API reference with all endpoints (⭐ Start here!)
 - **[API Token Scopes](api/API_TOKEN_SCOPES.md)** — Understanding token permissions and scopes
 - **[API Versioning](api/API_VERSIONING.md)** — API versioning strategy
 - **[API Enhancements](api/API_ENHANCEMENTS.md)** — Recent API improvements
 
 **📖 See [api/README.md](api/README.md) for complete API documentation**
+
+### Quick API Examples
+
+**Authentication:**
+```bash
+curl -H "Authorization: Bearer YOUR_API_TOKEN" \
+     https://your-domain.com/api/v1/projects
+```
+
+**Create Time Entry:**
+```bash
+curl -X POST -H "Authorization: Bearer YOUR_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"project_id": 1, "start_time": "2025-01-27T09:00:00", "end_time": "2025-01-27T17:00:00"}' \
+     https://your-domain.com/api/v1/time-entries
+```
+
+See [REST API Documentation](api/REST_API.md) for complete examples and endpoint details.
 
 ---
 
