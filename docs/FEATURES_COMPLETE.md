@@ -1,6 +1,6 @@
 # TimeTracker - Complete Features Documentation
 
-**Version:** 4.13.2  
+**Version:** 4.14.0  
 **Last Updated:** 2025-01-27
 
 ---
