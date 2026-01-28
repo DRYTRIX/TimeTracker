@@ -88,7 +88,7 @@ def import_csv_time_entries(user_id, csv_content, import_record):
             if task_name:
                 task = Task.query.filter_by(name=task_name, project_id=project.id).first()
                 if not task:
-                    task = Task(name=task_name, project_id=project.id, status="in_progress")
+                    task = Task(name=task_name, project_id=project.id, status="in_progress", created_by=user_id)
                     db.session.add(task)
                     db.session.flush()
 
@@ -419,7 +419,7 @@ def import_from_harvest(user_id, account_id, api_token, start_date, end_date, im
             if task_name:
                 task = Task.query.filter_by(name=task_name, project_id=project.id).first()
                 if not task:
-                    task = Task(name=task_name, project_id=project.id, status="in_progress")
+                    task = Task(name=task_name, project_id=project.id, status="in_progress", created_by=user_id)
                     db.session.add(task)
                     db.session.flush()
 
