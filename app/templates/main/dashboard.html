@@ -84,7 +84,7 @@
                     <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
                 </div>
                 {% if not active_timer %}
-                <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" onclick="var m=document.getElementById('startTimerModal'); if(m){ m.classList.remove('hidden'); m.setAttribute('aria-hidden','false'); } return false;">
                     <i class="fas fa-play mr-2"></i>{{ _('Start Timer') }}
                 </button>
                 {% endif %}
@@ -471,9 +471,9 @@
     {% endfor %}
 
     <!-- Start Timer Modal -->
-    <div id="startTimerModal" class="fixed inset-0 z-50 hidden">
+    <div id="startTimerModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
         <div class="absolute inset-0 bg-black/50" data-overlay></div>
-        <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg">
+        <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg" data-modal-content>
             <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                 <div class="text-lg font-semibold">{{ _('Start Timer') }}</div>
                 <button type="button" data-close class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
@@ -588,17 +588,31 @@
         } catch(e) { /* no-op if animation lib missing */ }
 
         const modal = document.getElementById('startTimerModal');
-        // Open via event delegation to avoid missed binding
+        // Open modal: direct binding (reliable) and delegation (backup)
+        function openStartTimerModal(e) {
+            if (e) e.preventDefault();
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.setAttribute('aria-hidden', 'false');
+            }
+        }
+        const openBtn = document.getElementById('openStartTimer');
+        if (openBtn && modal) {
+            openBtn.addEventListener('click', openStartTimerModal);
+        }
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('#openStartTimer');
             if (btn && modal) {
                 e.preventDefault();
-                modal.classList.remove('hidden');
+                openStartTimerModal(e);
             }
         });
         if (modal) {
-            modal.querySelector('[data-close]')?.addEventListener('click', () => modal.classList.add('hidden'));
-            modal.addEventListener('click', (e) => { if (e.target === modal || e.target.hasAttribute('data-overlay')) modal.classList.add('hidden'); });
+            modal.querySelector('[data-close]')?.addEventListener('click', () => { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); });
+            modal.addEventListener('click', (e) => { if (e.target === modal || e.target.hasAttribute('data-overlay')) { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); } });
+            // Prevent clicks inside modal content from closing the modal
+            const modalContent = modal.querySelector('[data-modal-content]');
+            if (modalContent) modalContent.addEventListener('click', (e) => e.stopPropagation());
 
             const projectSelect = document.getElementById('startTimerProject');
             const clientSelect = document.getElementById('startTimerClient');
@@ -809,6 +823,16 @@
                     // Debug: Log form data before submission
                     if (taskInputId && taskInputId.value) {
                         console.log('Submitting form with task_id:', taskInputId.value);
+                    }
+                    
+                    // Sync Toast UI Editor notes into hidden textarea (programmatic submit does not fire submit event)
+                    const notesEl = document.getElementById('startTimerNotes');
+                    if (notesEl && window.dashboardNotesEditor && typeof window.dashboardNotesEditor.getMarkdown === 'function') {
+                        try {
+                            notesEl.value = window.dashboardNotesEditor.getMarkdown();
+                        } catch (err) {
+                            console.error('Failed to sync markdown editor:', err);
+                        }
                     }
                     
                     // Now submit the form normally
