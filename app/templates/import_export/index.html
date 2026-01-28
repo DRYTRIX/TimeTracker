@@ -294,6 +294,12 @@ async function handleCsvUpload(input) {
     const formData = new FormData();
     formData.append('file', file);
     
+    // Get CSRF token from meta tag and add to form data
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        formData.append('csrf_token', csrfToken);
+    }
+    
     try {
         const response = await fetch('/api/import/csv', {
             method: 'POST',

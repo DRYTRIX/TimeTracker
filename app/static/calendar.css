@@ -28,9 +28,9 @@
 }
 
 .day-events-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    position: relative;
+    height: 1440px; /* 24 hours × 60px per hour */
+    width: 100%;
 }
 
 .event-card {
@@ -41,6 +41,20 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+/* Absolutely positioned event cards for day view */
+.day-events-container .event-card {
+    position: absolute;
+    left: 0.25rem;
+    width: calc(100% - 0.5rem);
+    min-height: 30px;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.day-events-container .event-card:hover {
+    z-index: 2;
 }
 
 .event-card:hover {
@@ -139,6 +153,13 @@
     text-align: center;
 }
 
+.week-table th.hour-label-header {
+    width: 60px;
+    min-width: 60px;
+    padding: 0.5rem;
+    background-color: var(--header-bg, #f9fafb);
+}
+
 .week-table th.today {
     background-color: #dbeafe;
     color: #1e40af;
@@ -153,12 +174,32 @@
     color: #93c5fd;
 }
 
+.hour-label-cell {
+    width: 60px;
+    min-width: 60px;
+    height: 60px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    background-color: var(--header-bg, #f9fafb);
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted, #6b7280);
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.dark .hour-label-cell {
+    background-color: var(--header-dark-bg, #1e293b);
+    color: var(--text-muted, #9ca3af);
+}
+
 .week-cell {
     height: 60px;
     border: 1px solid var(--border-color, #e2e8f0);
     padding: 0.25rem;
     vertical-align: top;
     position: relative;
+    overflow: visible;
 }
 
 .week-cell:hover {
@@ -190,7 +231,20 @@
     background-color: #10b981 !important;
     cursor: default !important;
     opacity: 0.8 !important;
-    pointer-events: none;
+    pointer-events: auto;
+    left: 2px;
+    right: 2px;
+    margin: 0;
+    padding: 0.125rem 0.25rem;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 2px;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .event-chip.task-chip {

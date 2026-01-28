@@ -171,20 +171,21 @@ class EnhancedErrorHandler {
                 padding-top: 12px;
                 border-top: 1px solid rgba(255, 255, 255, 0.2);
                 display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 12px;
+                flex-direction: column;
+                gap: 8px;
             }
             
             .error-retry-btn {
-                padding: 6px 12px;
+                padding: 8px 16px;
                 background: rgba(255, 255, 255, 0.2);
                 color: white;
                 border: 1px solid rgba(255, 255, 255, 0.3);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
+                font-weight: 500;
                 transition: all 0.2s;
+                align-self: flex-start;
             }
             
             .error-retry-btn:hover {
@@ -201,40 +202,25 @@ class EnhancedErrorHandler {
             }
             
             .error-recovery-options {
-                margin-top: 12px;
-                padding-top: 12px;
-                border-top: 1px solid rgba(0, 0, 0, 0.1);
-            }
-            
-            .dark .error-recovery-options {
-                border-top-color: rgba(255, 255, 255, 0.1);
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 4px;
             }
             
             .error-recovery-btn {
-                display: inline-block;
-                margin: 4px 8px 4px 0;
                 padding: 6px 12px;
-                background: #f3f4f6;
-                color: #374151;
-                border: 1px solid #d1d5db;
+                background: rgba(255, 255, 255, 0.15);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.25);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
                 transition: all 0.2s;
             }
             
-            .dark .error-recovery-btn {
-                background: #374151;
-                color: #e5e7eb;
-                border-color: #4b5563;
-            }
-            
             .error-recovery-btn:hover {
-                background: #e5e7eb;
-            }
-            
-            .dark .error-recovery-btn:hover {
-                background: #4b5563;
+                background: rgba(255, 255, 255, 0.25);
             }
         `;
         document.head.appendChild(style);
@@ -481,6 +467,15 @@ class EnhancedErrorHandler {
         const options = [];
         
         switch (status) {
+            case 0:
+                // Connection errors - offer refresh option
+                options.push({
+                    label: 'Refresh',
+                    action: () => {
+                        window.location.reload();
+                    }
+                });
+                break;
             case 401:
                 options.push({
                     label: 'Go to Login',
@@ -516,7 +511,7 @@ class EnhancedErrorHandler {
             case 503:
             case 504:
                 options.push({
-                    label: 'Refresh Page',
+                    label: 'Refresh',
                     action: () => {
                         window.location.reload();
                     }

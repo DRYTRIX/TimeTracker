@@ -1030,6 +1030,25 @@ def calendar_events():
         ]
         return colors[project_id % len(colors)] if project_id else "#6b7280"
 
+    # Helper function to convert ISO string from app timezone to user timezone and format for FullCalendar
+    def convert_time_for_calendar(iso_str):
+        """Convert ISO time string from app timezone to user timezone for FullCalendar."""
+        if not iso_str:
+            return None
+        try:
+            # Parse the ISO string (format: YYYY-MM-DDTHH:mm:ss, no timezone)
+            dt = datetime.fromisoformat(iso_str)
+            # Convert from app timezone to user's local timezone
+            user_dt = convert_app_datetime_to_user(dt, user=current_user)
+            # Convert to naive datetime (remove timezone info) for FullCalendar
+            # FullCalendar with timeZone: 'local' expects times without timezone to be treated as local
+            naive_dt = user_dt.replace(tzinfo=None) if user_dt.tzinfo else user_dt
+            # Format as ISO string for FullCalendar
+            return naive_dt.strftime("%Y-%m-%dT%H:%M:%S")
+        except Exception:
+            # If parsing fails, return original
+            return iso_str
+
     # Apply filters and format time entries
     time_entries = []
     for e in result.get("time_entries", []):
@@ -1045,8 +1064,8 @@ def calendar_events():
             {
                 "id": e["id"],
                 "title": e["title"],
-                "start": e["start"],
-                "end": e["end"],
+                "start": convert_time_for_calendar(e["start"]),
+                "end": convert_time_for_calendar(e["end"]),
                 "editable": True,
                 "allDay": False,
                 "backgroundColor": get_project_color(e.get("projectId")),
@@ -1075,12 +1094,19 @@ def calendar_events():
     # Format calendar events
     events = []
     for ev in result.get("events", []):
+        # Only convert times for non-all-day events
+        event_start = ev["start"]
+        event_end = ev["end"]
+        if not ev.get("allDay", False):
+            event_start = convert_time_for_calendar(ev["start"])
+            event_end = convert_time_for_calendar(ev["end"])
+        
         events.append(
             {
                 "id": ev["id"],
                 "title": ev["title"],
-                "start": ev["start"],
-                "end": ev["end"],
+                "start": event_start,
+                "end": event_end,
                 "allDay": ev.get("allDay", False),
                 "editable": True,
                 "backgroundColor": ev.get("color", "#3b82f6"),
@@ -1598,6 +1624,51 @@ def upload_editor_image():
 
     url = f"/uploads/editor/{unique_name}"
     return jsonify({"success": True, "url": url})
+
+
+@api_bp.route("/api/uploads/images/bulk", methods=["POST"])
+@login_required
+def upload_editor_images_bulk():
+    """Handle multiple image uploads from the markdown editor."""
+    if "images" not in request.files:
+        return jsonify({"error": "No images provided"}), 400
+    
+    files = request.files.getlist("images")
+    if not files or all(f.filename == "" for f in files):
+        return jsonify({"error": "No images provided"}), 400
+    
+    uploaded_urls = []
+    errors = []
+    
+    for idx, file in enumerate(files):
+        if file.filename == "":
+            continue
+        
+        if not allowed_image_file(file.filename):
+            errors.append(f"File {idx + 1} ({file.filename}): Invalid file type")
+            continue
+        
+        try:
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit(".", 1)[1].lower()
+            unique_name = f"editor_{uuid.uuid4().hex[:12]}.{ext}"
+            folder = get_editor_upload_folder()
+            path = os.path.join(folder, unique_name)
+            file.save(path)
+            
+            url = f"/uploads/editor/{unique_name}"
+            uploaded_urls.append(url)
+        except Exception as e:
+            errors.append(f"File {idx + 1} ({file.filename}): {str(e)}")
+    
+    if not uploaded_urls and errors:
+        return jsonify({"error": "All uploads failed", "details": errors}), 400
+    
+    response = {"success": True, "urls": uploaded_urls}
+    if errors:
+        response["warnings"] = errors
+    
+    return jsonify(response)
 
 
 @api_bp.route("/uploads/editor/<path:filename>")

@@ -634,6 +634,47 @@
     .bulk-actions-bar-enhanced.show {
         transform: translateX(0) translateY(0);
     }
+    
+    /* ToastUI Editor modal mobile adjustments */
+    .toastui-editor-popup {
+        max-width: calc(100vw - 2rem) !important;
+        max-height: calc(100vh - 2rem) !important;
+        margin: 1rem !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 9999 !important;
+    }
+    
+    .toastui-editor-popup-body {
+        padding: 1rem !important;
+        max-height: calc(100vh - 8rem) !important;
+        overflow-y: auto !important;
+    }
+    
+    /* Touch-friendly file input */
+    .toastui-editor-popup input[type="file"] {
+        min-height: 44px;
+        font-size: 16px; /* Prevents iOS zoom */
+        width: 100%;
+        padding: 0.5rem;
+    }
+    
+    /* Ensure modal buttons are touch-friendly */
+    .toastui-editor-popup button {
+        min-height: 44px;
+        padding: 0.75rem 1rem;
+        font-size: 16px;
+    }
+    
+    /* Adjust modal input fields */
+    .toastui-editor-popup input[type="text"],
+    .toastui-editor-popup input[type="url"] {
+        min-height: 44px;
+        font-size: 16px; /* Prevents iOS zoom */
+        width: 100%;
+    }
 }
 
 /* Accessibility */
