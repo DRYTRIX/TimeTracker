@@ -571,23 +571,100 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
-        // Image upload hook
+        // Multiple image upload handler
         mdEditor.removeHook && mdEditor.removeHook('addImageBlobHook');
-        mdEditor.addHook && mdEditor.addHook('addImageBlobHook', async (blob, callback) => {
+        
+        // Create custom multiple file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.multiple = true;
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+        
+        // Intercept image button click after editor is fully initialized
+        setTimeout(() => {
+            try {
+                const toolbar = mdEditor.getUI().getToolbar();
+                if (toolbar) {
+                    // Find image button by tooltip or class
+                    const imageButton = toolbar.querySelector('[data-tooltip="Insert image"], .toastui-editor-toolbar-icons.image');
+                    if (imageButton) {
+                        imageButton.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            fileInput.click();
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn('Could not intercept image button, falling back to default behavior', err);
+                // Fallback to default single image upload
+                mdEditor.addHook && mdEditor.addHook('addImageBlobHook', async (blob, callback) => {
+                    try {
+                        const formData = new FormData();
+                        formData.append('image', blob, blob.name || 'upload.png');
+                        const res = await fetch('{{ url_for('api.upload_editor_image') }}', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await res.json();
+                        if (data && data.url) {
+                            callback(data.url, blob.name || 'image');
+                        } else {
+                            console.warn('Upload failed', data);
+                        }
+                    } catch (e) { console.error('Image upload error', e); }
+                });
+            }
+        }, 500);
+        
+        // Handle multiple file selection
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            // Show loading indicator (optional - could use toast notification)
+            const loadingMsg = files.length > 1 ? `Uploading ${files.length} images...` : 'Uploading image...';
+            
             try {
                 const formData = new FormData();
-                formData.append('image', blob, blob.name || 'upload.png');
-                const res = await fetch('{{ url_for('api.upload_editor_image') }}', {
+                files.forEach(file => {
+                    formData.append('images', file);
+                });
+                
+                const res = await fetch('{{ url_for('api.upload_editor_images_bulk') }}', {
                     method: 'POST',
                     body: formData
                 });
+                
                 const data = await res.json();
-                if (data && data.url) {
-                    callback(data.url, blob.name || 'image');
+                if (data && data.urls && data.urls.length > 0) {
+                    // Insert all images into editor
+                    const currentMarkdown = mdEditor.getMarkdown();
+                    const imagesMarkdown = data.urls.map((url, index) => {
+                        const fileName = files[index].name || 'image';
+                        return `![${fileName}](${url})`;
+                    }).join('\n\n');
+                    
+                    // Insert images at cursor position or append
+                    mdEditor.insertText(imagesMarkdown);
+                    
+                    // Show warnings if any
+                    if (data.warnings && data.warnings.length > 0) {
+                        console.warn('Some images failed to upload:', data.warnings);
+                    }
                 } else {
-                    console.warn('Upload failed', data);
+                    console.error('Upload failed', data);
+                    alert('Failed to upload images. Please try again.');
                 }
-            } catch (e) { console.error('Image upload error', e); }
+            } catch (error) {
+                console.error('Multiple image upload error', error);
+                alert('Failed to upload images. Please try again.');
+            }
+            
+            // Reset file input
+            fileInput.value = '';
         });
 
         // Sync editor content to hidden textarea on form submit
