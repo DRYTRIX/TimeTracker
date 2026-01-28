@@ -3,6 +3,13 @@ from app import db
 from app.utils.timezone import now_in_app_timezone
 
 
+def _isoformat_calendar(dt):
+    """Return YYYY-MM-DDTHH:mm:ss for calendar API (no microseconds)."""
+    if dt is None:
+        return None
+    return dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+
 class CalendarEvent(db.Model):
     """Calendar event model for scheduling meetings, appointments, and other events"""
 
@@ -215,8 +222,8 @@ class CalendarEvent(db.Model):
                 {
                     "id": entry.id,
                     "title": f"Time: {entry.project.name if entry.project else 'Unknown'}",
-                    "start": entry.start_time.isoformat() if entry.start_time else None,
-                    "end": entry.end_time.isoformat() if entry.end_time else None,
+                    "start": _isoformat_calendar(entry.start_time),
+                    "end": _isoformat_calendar(entry.end_time),
                     "projectId": entry.project_id,
                     "taskId": entry.task_id,
                     "notes": entry.notes,
