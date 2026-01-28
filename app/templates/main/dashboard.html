@@ -924,65 +924,213 @@
         });
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
-        // Multiple image upload handler
+        // Multiple image upload handler - improved version
         window.dashboardNotesEditor.removeHook && window.dashboardNotesEditor.removeHook('addImageBlobHook');
         
-        // Create custom multiple file input
-        const dashboardFileInput = document.createElement('input');
-        dashboardFileInput.type = 'file';
-        dashboardFileInput.accept = 'image/*';
-        dashboardFileInput.multiple = true;
-        dashboardFileInput.style.display = 'none';
-        document.body.appendChild(dashboardFileInput);
+        // Create custom multiple file input with unique ID
+        const dashboardFileInputId = 'dashboard-image-input-' + Date.now();
+        let dashboardFileInput = document.getElementById(dashboardFileInputId);
+        if (!dashboardFileInput) {
+            dashboardFileInput = document.createElement('input');
+            dashboardFileInput.id = dashboardFileInputId;
+            dashboardFileInput.type = 'file';
+            dashboardFileInput.accept = 'image/*';
+            dashboardFileInput.setAttribute('multiple', 'multiple'); // Use setAttribute to ensure it's set
+            dashboardFileInput.style.display = 'none';
+            dashboardFileInput.style.position = 'absolute';
+            dashboardFileInput.style.left = '-9999px';
+            document.body.appendChild(dashboardFileInput);
+        }
         
-        // Intercept image button click after editor is fully initialized
-        setTimeout(() => {
-            try {
-                const toolbar = window.dashboardNotesEditor.getUI().getToolbar();
-                if (toolbar) {
-                    // Find image button by tooltip or class
-                    const imageButton = toolbar.querySelector('[data-tooltip="Insert image"], .toastui-editor-toolbar-icons.image');
-                    if (imageButton) {
-                        imageButton.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            dashboardFileInput.click();
-                        });
-                    }
-                }
-            } catch (err) {
-                console.warn('Could not intercept image button, falling back to default behavior', err);
-                // Fallback to default single image upload
-                window.dashboardNotesEditor.addHook && window.dashboardNotesEditor.addHook('addImageBlobHook', async (blob, callback) => {
-                    try {
-                        const formData = new FormData();
-                        formData.append('image', blob, blob.name || 'upload.png');
-                        const res = await fetch('{{ url_for('api.upload_editor_image') }}', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        const data = await res.json();
-                        if (data && data.url) {
-                            callback(data.url, blob.name || 'image');
-                        } else {
-                            console.warn('Upload failed', data);
+        // Verify multiple attribute is set
+        if (!dashboardFileInput.hasAttribute('multiple')) {
+            dashboardFileInput.setAttribute('multiple', 'multiple');
+        }
+        console.log('File input multiple attribute:', dashboardFileInput.multiple, dashboardFileInput.hasAttribute('multiple'));
+        
+        // Function to find image button with multiple strategies
+        function findImageButton(toolbar, retries = 0) {
+            if (!toolbar) return null;
+            
+            // Try multiple selectors in order of reliability
+            const selectors = [
+                '[data-tooltip="Insert image"]',
+                '[data-tooltip*="image" i]',
+                '[aria-label*="image" i]',
+                '.toastui-editor-toolbar-icons.image',
+                'button[class*="image"]',
+                '.toastui-editor-toolbar-group button:nth-child(5)', // Common position for image button
+                '.toastui-editor-toolbar-group button:nth-child(6)',
+                '.toastui-editor-toolbar-group button:nth-child(4)'
+            ];
+            
+            for (const selector of selectors) {
+                try {
+                    const button = toolbar.querySelector(selector);
+                    if (button) {
+                        // Verify it's likely the image button by checking if it has image-related attributes or classes
+                        const buttonText = (button.textContent || '').toLowerCase();
+                        const buttonTitle = (button.title || button.getAttribute('title') || '').toLowerCase();
+                        if (buttonText.includes('image') || buttonTitle.includes('image') || 
+                            selector.includes('image') || button.classList.toString().includes('image')) {
+                            return button;
                         }
-                    } catch (e) { console.error('Image upload error', e); }
-                });
+                    }
+                } catch (e) {
+                    // Continue to next selector
+                }
             }
-        }, 500);
+            
+            return null;
+        }
         
-        // Handle multiple file selection
+        // Function to intercept image button with retry logic
+        function setupImageButtonInterception(editor, input, maxRetries = 5) {
+            let attempts = 0;
+            let intercepted = false;
+            
+            function tryIntercept() {
+                attempts++;
+                try {
+                    // Get the editor's root element - try multiple ways
+                    const editorContainer = document.getElementById('startTimerNotes_editor');
+                    if (!editorContainer) {
+                        throw new Error('Editor container element not found');
+                    }
+                    
+                    // Find toolbar - try multiple ways to access it
+                    let toolbar = null;
+                    // Try finding toolbar relative to editor container
+                    let editorWrapper = null;
+                    if (editorContainer.closest) {
+                        editorWrapper = editorContainer.closest('.toastui-editor');
+                    }
+                    if (!editorWrapper && editorContainer.parentElement) {
+                        editorWrapper = editorContainer.parentElement;
+                    }
+                    if (editorWrapper) {
+                        toolbar = editorWrapper.querySelector('.toastui-editor-toolbar');
+                    }
+                    // Fallback: search entire document
+                    if (!toolbar) {
+                        toolbar = document.querySelector('.toastui-editor-toolbar');
+                    }
+                    
+                    if (toolbar && !intercepted) {
+                        const imageButton = findImageButton(toolbar, attempts);
+                        if (imageButton) {
+                            // Use capture phase to intercept before ToastUI's handler
+                            imageButton.addEventListener('click', function handler(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                
+                                // Small delay to ensure default behavior is prevented
+                                setTimeout(() => {
+                                    input.click();
+                                }, 10);
+                                
+                                return false;
+                            }, true); // Use capture phase
+                            
+                            intercepted = true;
+                            console.log('Successfully intercepted image button for multiple file selection');
+                            return true;
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Error intercepting image button (attempt ' + attempts + '):', err);
+                }
+                
+                // Retry if we haven't exceeded max retries
+                if (attempts < maxRetries && !intercepted) {
+                    setTimeout(tryIntercept, 200 * attempts); // Exponential backoff
+                    return false;
+                } else if (!intercepted) {
+                    console.warn('Could not intercept image button after ' + maxRetries + ' attempts. Multiple image selection may not work via toolbar button.');
+                    return false;
+                }
+                return false;
+            }
+            
+            // Start with initial delay to ensure toolbar is ready
+            setTimeout(tryIntercept, 100);
+        }
+        
+        // Override the addImageBlobHook to use multiple file selection
+        // This is the fallback if button interception fails
+        if (window.dashboardNotesEditor && typeof window.dashboardNotesEditor.addHook === 'function') {
+            window.dashboardNotesEditor.addHook('addImageBlobHook', async function(blob, callback) {
+                // Prevent the default single file behavior
+                // Trigger our multiple file input instead
+                setTimeout(function() {
+                    dashboardFileInput.click();
+                }, 10);
+                // Don't call callback - let dashboardFileInput.change handle it
+            });
+        }
+        
+        // Setup button interception
+        if (window.dashboardNotesEditor) {
+            setupImageButtonInterception(window.dashboardNotesEditor, dashboardFileInput);
+        }
+        
+        // Handle multiple file selection with progress feedback
         dashboardFileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
-            if (files.length === 0) return;
+            console.log('File input changed. Files selected:', files.length, 'Multiple attribute:', dashboardFileInput.multiple);
             
-            // Show loading indicator (optional - could use toast notification)
-            const loadingMsg = files.length > 1 ? `Uploading ${files.length} images...` : 'Uploading image...';
+            if (files.length === 0) {
+                console.log('No files selected');
+                return;
+            }
+            
+            // Log file details for debugging
+            files.forEach((file, index) => {
+                console.log(`File ${index + 1}: ${file.name}, type: ${file.type}, size: ${file.size}`);
+            });
+            
+            // Validate file types
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+            const validFiles = files.filter(file => {
+                const isValid = allowedTypes.includes(file.type) || /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
+                if (!isValid) {
+                    console.warn('Skipping invalid file type:', file.name, file.type);
+                }
+                return isValid;
+            });
+            
+            if (validFiles.length === 0) {
+                alert('{{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.") }}');
+                dashboardFileInput.value = '';
+                return;
+            }
+            
+            if (validFiles.length < files.length) {
+                console.warn('Some files were skipped due to invalid type');
+            }
+            
+            // Show loading feedback
+            const fileCount = validFiles.length;
+            const loadingMsg = fileCount > 1 ? 
+                `{{ _("Uploading") }} ${fileCount} {{ _("images") }}...` : 
+                '{{ _("Uploading image") }}...';
+            
+            // Try to show a temporary loading indicator (if toast/notification system exists)
+            let loadingIndicator = null;
+            try {
+                // Check if there's a toast/notification system we can use
+                if (window.showToast || window.showNotification) {
+                    const showToast = window.showToast || window.showNotification;
+                    loadingIndicator = showToast(loadingMsg, 'info', { duration: 0 });
+                }
+            } catch (e) {
+                // No toast system available, continue without it
+            }
             
             try {
                 const formData = new FormData();
-                files.forEach(file => {
+                validFiles.forEach(file => {
                     formData.append('images', file);
                 });
                 
@@ -994,26 +1142,57 @@
                 const data = await res.json();
                 if (data && data.urls && data.urls.length > 0) {
                     // Insert all images into editor
-                    const currentMarkdown = window.dashboardNotesEditor.getMarkdown();
                     const imagesMarkdown = data.urls.map((url, index) => {
-                        const fileName = files[index].name || 'image';
+                        const fileName = validFiles[index].name || 'image';
                         return `![${fileName}](${url})`;
                     }).join('\n\n');
                     
-                    // Insert images at cursor position or append
-                    window.dashboardNotesEditor.insertText(imagesMarkdown);
+                    // Get current markdown content
+                    const currentMarkdown = window.dashboardNotesEditor.getMarkdown() || '';
+                    
+                    // Append images to current content (with proper spacing)
+                    const newMarkdown = currentMarkdown 
+                        ? currentMarkdown + '\n\n' + imagesMarkdown
+                        : imagesMarkdown;
+                    
+                    // Set the markdown which will properly render images in WYSIWYG mode
+                    window.dashboardNotesEditor.setMarkdown(newMarkdown);
+                    
+                    // Show success message
+                    const successMsg = data.urls.length > 1 ? 
+                        `{{ _("Successfully uploaded") }} ${data.urls.length} {{ _("images") }}` : 
+                        '{{ _("Image uploaded successfully") }}';
+                    
+                    if (loadingIndicator && typeof loadingIndicator.update === 'function') {
+                        loadingIndicator.update(successMsg, 'success');
+                        setTimeout(() => loadingIndicator.remove && loadingIndicator.remove(), 2000);
+                    }
                     
                     // Show warnings if any
                     if (data.warnings && data.warnings.length > 0) {
                         console.warn('Some images failed to upload:', data.warnings);
+                        const warningMsg = `{{ _("Warning") }}: ${data.warnings.length} {{ _("image(s) failed to upload") }}`;
+                        if (window.showToast || window.showNotification) {
+                            const showToast = window.showToast || window.showNotification;
+                            showToast(warningMsg, 'warning');
+                        } else {
+                            alert(warningMsg);
+                        }
                     }
                 } else {
+                    const errorMsg = data.error || '{{ _("Failed to upload images. Please try again.") }}';
                     console.error('Upload failed', data);
-                    alert('Failed to upload images. Please try again.');
+                    if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
+                        loadingIndicator.remove();
+                    }
+                    alert(errorMsg);
                 }
             } catch (error) {
                 console.error('Multiple image upload error', error);
-                alert('Failed to upload images. Please try again.');
+                if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
+                    loadingIndicator.remove();
+                }
+                alert('{{ _("Failed to upload images. Please check your connection and try again.") }}');
             }
             
             // Reset file input
