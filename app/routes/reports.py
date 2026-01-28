@@ -17,7 +17,7 @@ from app.models import (
 )
 from app.services.scheduled_report_service import ScheduledReportService
 from datetime import datetime, timedelta
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, case
 import csv
 import io
 import pytz
@@ -633,7 +633,7 @@ def summary_report():
 @login_required
 @module_enabled("reports")
 def task_report():
-    """Report of finished tasks within a project, including hours spent per task"""
+    """Report of all tasks (completed and incomplete) with time entries logged within the date range, including hours spent per task"""
     project_id = request.args.get("project_id", type=int)
     user_id = request.args.get("user_id", type=int)
     start_date = request.args.get("start_date")
@@ -656,21 +656,26 @@ def task_report():
         flash(_("Invalid date format"), "error")
         return render_template("reports/task_report.html", projects=projects, users=users)
 
-    # Base tasks query: finished tasks
-    tasks_query = Task.query.filter(Task.status == "done")
+    # Base tasks query: all tasks that have time entries within the date range
+    tasks_query = Task.query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt
+    )
 
     if project_id:
-        tasks_query = tasks_query.filter(Task.project_id == project_id)
-
-    # Filter by completion window intersects [start_dt, end_dt]
-    tasks_query = tasks_query.filter(Task.completed_at.isnot(None))
-    tasks_query = tasks_query.filter(Task.completed_at >= start_dt, Task.completed_at <= end_dt)
+        tasks_query = tasks_query.filter(TimeEntry.project_id == project_id)
 
     # Optional: only tasks that have time entries by a specific user
     if user_id:
-        tasks_query = tasks_query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(TimeEntry.user_id == user_id)
+        tasks_query = tasks_query.filter(TimeEntry.user_id == user_id)
 
-    tasks = tasks_query.order_by(Task.completed_at.desc()).all()
+    # Get distinct task IDs (PostgreSQL requires ORDER BY cols in SELECT when using DISTINCT)
+    task_ids_subq = tasks_query.with_entities(Task.id).distinct()
+    tasks = Task.query.filter(Task.id.in_(task_ids_subq)).order_by(
+        case((Task.status == "done", 0), else_=1),
+        Task.name
+    ).all()
 
     # Compute hours per task (sum of entry durations; respect user/project filters and date range)
     task_rows = []
@@ -696,6 +701,7 @@ def task_report():
                 "task": task,
                 "project": task.project,
                 "assignee": task.assigned_user,
+                "status": task.status,
                 "completed_at": task.completed_at,
                 "hours": round(hours, 2),
                 "entries_count": len(entries),
@@ -1031,7 +1037,7 @@ def export_user_excel():
 @login_required
 @module_enabled("reports")
 def export_task_excel():
-    """Export task report as Excel file"""
+    """Export task report as Excel file - includes all tasks (completed and incomplete) with time entries in date range"""
     project_id = request.args.get("project_id", type=int)
     user_id = request.args.get("user_id", type=int)
     start_date = request.args.get("start_date")
@@ -1050,15 +1056,25 @@ def export_task_excel():
         flash(_("Invalid date format"), "error")
         return redirect(url_for("reports.task_report"))
 
-    # Get tasks
-    tasks_query = Task.query.filter(Task.status == "done")
+    # Get tasks: all tasks that have time entries within the date range
+    tasks_query = Task.query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt
+    )
+
     if project_id:
-        tasks_query = tasks_query.filter(Task.project_id == project_id)
-    tasks_query = tasks_query.filter(Task.completed_at.isnot(None))
-    tasks_query = tasks_query.filter(Task.completed_at >= start_dt, Task.completed_at <= end_dt)
+        tasks_query = tasks_query.filter(TimeEntry.project_id == project_id)
+
     if user_id:
-        tasks_query = tasks_query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(TimeEntry.user_id == user_id)
-    tasks = tasks_query.order_by(Task.completed_at.desc()).all()
+        tasks_query = tasks_query.filter(TimeEntry.user_id == user_id)
+
+    # Get distinct task IDs (PostgreSQL requires ORDER BY cols in SELECT when using DISTINCT)
+    task_ids_subq = tasks_query.with_entities(Task.id).distinct()
+    tasks = Task.query.filter(Task.id.in_(task_ids_subq)).order_by(
+        case((Task.status == "done", 0), else_=1),
+        Task.name
+    ).all()
 
     # Compute hours per task
     task_rows = []
@@ -1081,6 +1097,7 @@ def export_task_excel():
             {
                 "task": task,
                 "project": task.project,
+                "status": task.status,
                 "completed_at": task.completed_at,
                 "hours": round(hours, 2),
             }
@@ -1103,14 +1120,14 @@ def export_task_excel():
     )
 
     # Title
-    ws.merge_cells("A1:D1")
+    ws.merge_cells("A1:E1")
     title_cell = ws["A1"]
     title_cell.value = f"Task Report: {start_date} to {end_date}"
     title_cell.font = Font(bold=True, size=14)
     title_cell.alignment = Alignment(horizontal="center")
 
     # Headers
-    headers = ["Task", "Project", "Completed At", "Hours"]
+    headers = ["Task", "Project", "Status", "Completed At", "Hours"]
     for col_num, header in enumerate(headers, 1):
         cell = ws.cell(row=3, column=col_num)
         cell.value = header
@@ -1124,15 +1141,16 @@ def export_task_excel():
     for row_data in task_rows:
         ws.cell(row=row_num, column=1).value = row_data["task"].name
         ws.cell(row=row_num, column=2).value = row_data["project"].name if row_data["project"] else "N/A"
-        ws.cell(row=row_num, column=3).value = (
+        ws.cell(row=row_num, column=3).value = row_data["status"].replace("_", " ").title()
+        ws.cell(row=row_num, column=4).value = (
             row_data["completed_at"].strftime("%Y-%m-%d") if row_data["completed_at"] else "N/A"
         )
-        ws.cell(row=row_num, column=4).value = row_data["hours"]
+        ws.cell(row=row_num, column=5).value = row_data["hours"]
 
         for col_num in range(1, len(headers) + 1):
             cell = ws.cell(row=row_num, column=col_num)
             cell.border = border
-            if col_num == 4:
+            if col_num == 5:
                 cell.number_format = "0.00"
 
         row_num += 1

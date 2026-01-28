@@ -14,15 +14,25 @@ from sqlalchemy.exc import ProgrammingError
 timer_bp = Blueprint("timer", __name__)
 
 
+def _parse_optional_int(value):
+    """Return int(value) if value is a non-empty string that converts to int, else None."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
 @timer_bp.route("/timer/start", methods=["POST"])
 @login_required
 def start_timer():
     """Start a new timer for the current user"""
-    project_id = request.form.get("project_id", type=int)
-    client_id = request.form.get("client_id", type=int)
-    task_id = request.form.get("task_id", type=int)
+    project_id = _parse_optional_int(request.form.get("project_id"))
+    client_id = _parse_optional_int(request.form.get("client_id"))
+    task_id = _parse_optional_int(request.form.get("task_id"))
     notes = request.form.get("notes", "").strip()
-    template_id = request.form.get("template_id", type=int)
+    template_id = _parse_optional_int(request.form.get("template_id"))
     current_app.logger.info(
         "POST /timer/start user=%s project_id=%s task_id=%s template_id=%s",
         current_user.username,
