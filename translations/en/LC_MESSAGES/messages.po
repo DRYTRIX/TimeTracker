@@ -8257,6 +8257,22 @@ msgstr ""
 msgid "Warehouse"
 msgstr ""
 
+#: app/templates/invoices/edit.html:125
+msgid "Project / Stock Item"
+msgstr ""
+
+#: app/templates/invoices/edit.html:126
+msgid "Task / Warehouse"
+msgstr ""
+
+#: app/templates/invoices/edit.html:167
+msgid "Quantity is from logged hours and cannot be edited"
+msgstr ""
+
+#: app/templates/invoices/edit.html
+msgid "Project hours"
+msgstr ""
+
 #: app/templates/inventory/adjustments/form.html:34
 #: app/templates/inventory/movements/form.html:45
 #: app/templates/inventory/purchase_orders/form.html:131
