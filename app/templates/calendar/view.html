@@ -26,14 +26,17 @@
                 <!-- View Type Selector -->
                 <div class="btn-group" role="group">
                     <a href="{{ url_for('calendar.view_calendar', view='day', date=current_date.strftime('%Y-%m-%d')) }}" 
+                       data-view="day"
                        class="btn btn-sm {% if view_type == 'day' %}btn-primary{% else %}btn-secondary{% endif %}">
                         <i class="fas fa-calendar-day mr-1"></i> {{ _('Day') }}
                     </a>
                     <a href="{{ url_for('calendar.view_calendar', view='week', date=current_date.strftime('%Y-%m-%d')) }}" 
+                       data-view="week"
                        class="btn btn-sm {% if view_type == 'week' %}btn-primary{% else %}btn-secondary{% endif %}">
                         <i class="fas fa-calendar-week mr-1"></i> {{ _('Week') }}
                     </a>
                     <a href="{{ url_for('calendar.view_calendar', view='month', date=current_date.strftime('%Y-%m-%d')) }}" 
+                       data-view="month"
                        class="btn btn-sm {% if view_type == 'month' %}btn-primary{% else %}btn-secondary{% endif %}">
                         <i class="fas fa-calendar mr-1"></i> {{ _('Month') }}
                     </a>
