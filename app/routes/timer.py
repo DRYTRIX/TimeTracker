@@ -3,7 +3,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, socketio, log_event, track_event
 from app.models import User, Project, TimeEntry, Task, Settings, Activity, Client
-from app.utils.timezone import parse_local_datetime, utc_to_local
+from app.utils.timezone import parse_local_datetime, parse_user_local_datetime, utc_to_local
 from datetime import datetime, timedelta
 import json
 from app.utils.db import safe_commit
@@ -1068,10 +1068,10 @@ def manual_entry():
                 prefill_end_time=end_time,
             )
 
-        # Parse datetime with timezone awareness
+        # Parse datetime: treat form input as user's local time, store in app timezone
         try:
-            start_time_parsed = parse_local_datetime(start_date, start_time)
-            end_time_parsed = parse_local_datetime(end_date, end_time)
+            start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
+            end_time_parsed = parse_user_local_datetime(end_date, end_time, current_user)
         except ValueError:
             flash(_("Invalid date/time format"), "error")
             return render_template(
