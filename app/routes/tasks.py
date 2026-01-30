@@ -16,20 +16,48 @@ import io
 
 tasks_bp = Blueprint("tasks", __name__)
 
+ALLOWED_NEXT_PREFIXES = ("/kanban", "/gantt", "/tasks", "/projects")
+
+
+def _is_safe_next_url(next_url):
+    """Validate next URL to avoid open redirects. Allow relative paths with allowed prefixes."""
+    if not next_url or not isinstance(next_url, str):
+        return False
+    next_url = next_url.strip()
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        return False
+    return any(next_url == p or next_url.startswith(p + "?") or next_url.startswith(p + "#") for p in ALLOWED_NEXT_PREFIXES)
+
 
 @tasks_bp.route("/tasks")
 @login_required
 def list_tasks():
-    """List all tasks with filtering options - REFACTORED to use service layer with eager loading"""
+    """List all tasks with filtering options - REFACTORED to use service layer with eager loading (supports multi-select)"""
     from app.services import TaskService
 
     # Get pagination parameters from request (respects per_page query param, defaults to DEFAULT_PAGE_SIZE)
     page, per_page = get_pagination_params()
     
+    # Parse filter parameters - support both single ID (backward compatibility) and multi-select
+    def parse_ids(param_name):
+        """Parse comma-separated IDs or single ID into a list of integers"""
+        # Try multi-select parameter first (e.g., project_ids)
+        multi_param = request.args.get(param_name + 's', '').strip()
+        if multi_param:
+            try:
+                return [int(x.strip()) for x in multi_param.split(',') if x.strip()]
+            except (ValueError, AttributeError):
+                return []
+        # Fall back to single parameter for backward compatibility (e.g., project_id)
+        single_param = request.args.get(param_name, type=int)
+        if single_param:
+            return [single_param]
+        return []
+    
     status = request.args.get("status", "")
     priority = request.args.get("priority", "")
-    project_id = request.args.get("project_id", type=int)
-    assigned_to = request.args.get("assigned_to", type=int)
+    project_ids = parse_ids('project_id')
+    assigned_to_ids = parse_ids('assigned_to')
     search = request.args.get("search", "").strip()
     overdue_param = request.args.get("overdue", "").strip().lower()
     overdue = overdue_param in ["1", "true", "on", "yes"]
@@ -49,8 +77,8 @@ def list_tasks():
     result = task_service.list_tasks(
         status=status if status else None,
         priority=priority if priority else None,
-        project_id=project_id,
-        assigned_to=assigned_to,
+        project_ids=project_ids if project_ids else None,
+        assigned_to_ids=assigned_to_ids if assigned_to_ids else None,
         search=search if search else None,
         overdue=overdue,
         user_id=current_user.id,
@@ -69,8 +97,11 @@ def list_tasks():
             pagination=result["pagination"],
             status=status,
             priority=priority,
-            project_id=project_id,
-            assigned_to=assigned_to,
+            project_ids=project_ids,
+            assigned_to_ids=assigned_to_ids,
+            # Keep old single params for backward compatibility
+            project_id=project_ids[0] if len(project_ids) == 1 else None,
+            assigned_to=assigned_to_ids[0] if len(assigned_to_ids) == 1 else None,
             search=search,
             overdue=overdue,
         ))
@@ -108,8 +139,11 @@ def list_tasks():
         kanban_columns=kanban_columns,
         status=status,
         priority=priority,
-        project_id=project_id,
-        assigned_to=assigned_to,
+        project_ids=project_ids,
+        assigned_to_ids=assigned_to_ids,
+        # Keep old single params for backward compatibility
+        project_id=project_ids[0] if len(project_ids) == 1 else None,
+        assigned_to=assigned_to_ids[0] if len(assigned_to_ids) == 1 else None,
         search=search,
         overdue=overdue,
         task_counts=task_counts,
@@ -165,6 +199,11 @@ def create_task():
         if priority not in ["low", "medium", "high", "urgent"]:
             priority = "medium"
 
+        # Validate initial status
+        status = request.form.get("status", "todo").strip()
+        if status not in ("todo", "in_progress", "review", "done", "cancelled"):
+            status = "todo"
+
         # Parse estimated hours
         estimated_hours = None
         if estimated_hours_str:
@@ -208,6 +247,7 @@ def create_task():
             estimated_hours=estimated_hours,
             created_by=current_user.id,
             color=color_val,
+            status=status,
         )
 
         if not result["success"]:
@@ -240,6 +280,9 @@ def create_task():
         )
 
         flash(f'Task "{name}" created successfully', "success")
+        next_url = request.form.get("next") or request.args.get("next")
+        if next_url and _is_safe_next_url(next_url):
+            return redirect(next_url)
         return redirect(url_for("tasks.view_task", task_id=task.id))
 
     # Get available projects and users for form

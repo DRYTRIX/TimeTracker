@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/multi_select.html" import multi_select %}
 
 {% block title %}{{ _('Kanban') }} - {{ app_name }}{% endblock %}
 
@@ -9,22 +10,37 @@
 ] %}
 
 {% set kanban_actions %}
-<div class="flex items-center gap-3">
-    <form method="get" class="flex items-center gap-2">
-        <label for="project_id" class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</label>
-        <select id="project_id" name="project_id" class="bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 px-3 text-sm text-text-light dark:text-text-dark" onchange="this.form.submit()">
-            <option value="">{{ _('All') }}</option>
-            {% for p in projects %}
-            <option value="{{ p.id }}" {% if project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
-            {% endfor %}
-        </select>
-        <label for="user_id" class="text-sm text-text-muted-light dark:text-text-muted-dark ml-2">{{ _('Assigned To') }}</label>
-        <select id="user_id" name="user_id" class="bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 px-3 text-sm text-text-light dark:text-text-dark" onchange="this.form.submit()">
-            <option value="">{{ _('All') }}</option>
-            {% for u in users %}
-            <option value="{{ u.id }}" {% if user_id == u.id %}selected{% endif %}>{{ u.display_name }}</option>
-            {% endfor %}
-        </select>
+<div class="flex items-center gap-3 flex-wrap">
+    <a href="{{ url_for('tasks.create_task', project_id=project_id if project_id else none, next=request.full_path) }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-plus"></i> {{ _('Add task') }}
+    </a>
+    <form method="get" id="kanbanFilterForm" class="flex items-center gap-3 flex-wrap">
+        <div class="min-w-[200px]">
+            {{ multi_select(
+                field_name='project_ids',
+                label='Project',
+                items=projects,
+                selected_ids=project_ids,
+                item_id_attr='id',
+                item_label_attr='name',
+                placeholder='All Projects',
+                show_search=True,
+                form_id='kanbanFilterForm'
+            ) }}
+        </div>
+        <div class="min-w-[200px]">
+            {{ multi_select(
+                field_name='user_ids',
+                label='Assigned To',
+                items=users,
+                selected_ids=user_ids,
+                item_id_attr='id',
+                item_label_attr='display_name',
+                placeholder='All Users',
+                show_search=True,
+                form_id='kanbanFilterForm'
+            ) }}
+        </div>
     </form>
     {% if current_user.is_admin %}
     <a href="{{ url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition-colors">
@@ -43,6 +59,7 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark rounded-lg shadow" role="application" aria-label="{{ _('Kanban board') }}">
+    {% set kanban_return_url = request.full_path %}
     {% include 'projects/_kanban_tailwind.html' %}
 </div>
 

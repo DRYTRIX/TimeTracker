@@ -22,6 +22,7 @@
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
                     <form method="POST" id="createTaskForm" novalidate data-validate-form>
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
                         <!-- Task Name -->
                         <div class="mb-4">
                             <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task Name') }} *</label>
@@ -68,11 +69,12 @@
                             <div>
                                 <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Initial Status') }}</label>
                                 <select id="status" name="status" class="form-input">
-                                    <option value="todo" {% if request.form.get('status') == 'todo' or not request.form.get('status') %}selected{% endif %}>{{ _('To Do') }}</option>
-                                    <option value="in_progress" {% if request.form.get('status') == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
-                                    <option value="review" {% if request.form.get('status') == 'review' %}selected{% endif %}>{{ _('Review') }}</option>
-                                    <option value="done" {% if request.form.get('status') == 'done' %}selected{% endif %}>{{ _('Done') }}</option>
-                                    <option value="cancelled" {% if request.form.get('status') == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                                    {% set initial_status = request.form.get('status') or request.args.get('status') or 'todo' %}
+                                    <option value="todo" {% if initial_status == 'todo' %}selected{% endif %}>{{ _('To Do') }}</option>
+                                    <option value="in_progress" {% if initial_status == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
+                                    <option value="review" {% if initial_status == 'review' %}selected{% endif %}>{{ _('Review') }}</option>
+                                    <option value="done" {% if initial_status == 'done' %}selected{% endif %}>{{ _('Done') }}</option>
+                                    <option value="cancelled" {% if initial_status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
                                 </select>
                             </div>
                         </div>
@@ -81,8 +83,9 @@
                             <span id="priorityPreview" class="priority-badge priority-{{ request.form.get('priority', 'medium') }}">
                                 {% if request.form.get('priority') == 'low' %}{{ _('Low') }}{% elif request.form.get('priority') == 'high' %}{{ _('High') }}{% elif request.form.get('priority') == 'urgent' %}{{ _('Urgent') }}{% else %}{{ _('Medium') }}{% endif %}
                             </span>
-                            <span id="statusPreview" class="status-badge status-{{ request.form.get('status', 'todo') }}">
-                                {% if request.form.get('status') == 'in_progress' %}{{ _('In Progress') }}{% elif request.form.get('status') == 'review' %}{{ _('Review') }}{% elif request.form.get('status') == 'done' %}{{ _('Done') }}{% elif request.form.get('status') == 'cancelled' %}{{ _('Cancelled') }}{% else %}{{ _('To Do') }}{% endif %}
+                            <span id="statusPreview" class="status-badge status-{{ request.form.get('status') or request.args.get('status') or 'todo' }}">
+                                {% set status_preview = request.form.get('status') or request.args.get('status') or 'todo' %}
+                                {% if status_preview == 'in_progress' %}{{ _('In Progress') }}{% elif status_preview == 'review' %}{{ _('Review') }}{% elif status_preview == 'done' %}{{ _('Done') }}{% elif status_preview == 'cancelled' %}{{ _('Cancelled') }}{% else %}{{ _('To Do') }}{% endif %}
                             </span>
                         </div>
 
