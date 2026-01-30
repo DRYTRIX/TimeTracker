@@ -138,6 +138,8 @@ def create_recurring_invoice():
     # GET request - show form
     projects = Project.query.filter_by(status="active", billable=True).order_by(Project.name).all()
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
     settings = Settings.get_settings()
 
     # Set default next run date to tomorrow
@@ -147,6 +149,8 @@ def create_recurring_invoice():
         "recurring_invoices/create.html",
         projects=projects,
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         settings=settings,
         default_next_run_date=default_next_run_date,
     )
@@ -218,7 +222,16 @@ def edit_recurring_invoice(recurring_id):
     # GET request - show edit form
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
-    return render_template("recurring_invoices/edit.html", recurring=recurring, projects=projects, clients=clients)
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
+    return render_template(
+        "recurring_invoices/edit.html",
+        recurring=recurring,
+        projects=projects,
+        clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
+    )
 
 
 @recurring_invoices_bp.route("/recurring-invoices/<int:recurring_id>/delete", methods=["POST"])

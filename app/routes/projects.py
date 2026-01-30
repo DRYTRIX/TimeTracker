@@ -238,6 +238,9 @@ def export_projects():
 @admin_or_permission_required("create_projects")
 def create_project():
     """Create a new project"""
+    clients = Client.get_active_clients()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
 
     # Track project setup started when user opens the form
     if request.method == "GET":
@@ -272,14 +275,14 @@ def create_project():
                 current_app.logger.warning("Validation failed: missing required fields for project creation")
             except Exception:
                 pass
-            return render_template("projects/create.html", clients=Client.get_active_clients())
+            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
             flash(_("Invalid hourly rate format"), "error")
-            return render_template("projects/create.html", clients=Client.get_active_clients())
+            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Validate budgets
         budget_amount = None
@@ -291,7 +294,7 @@ def create_project():
                     raise ValueError("Budget cannot be negative")
             except Exception:
                 flash(_("Invalid budget amount"), "error")
-                return render_template("projects/create.html", clients=Client.get_active_clients())
+                return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
         if budget_threshold_raw:
             try:
                 budget_threshold_percent = int(budget_threshold_raw)
@@ -299,7 +302,7 @@ def create_project():
                     raise ValueError("Invalid threshold")
             except Exception:
                 flash(_("Invalid budget threshold percent (0-100)"), "error")
-                return render_template("projects/create.html", clients=Client.get_active_clients())
+                return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Normalize code
         normalized_code = code.upper() if code else None
@@ -324,7 +327,7 @@ def create_project():
 
         if not result.get("success"):
             flash(_(result.get("message", "Could not create project")), "error")
-            return render_template("projects/create.html", clients=Client.get_active_clients())
+            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         project = result["project"]
 
@@ -349,7 +352,7 @@ def create_project():
                 # Validate mandatory fields
                 flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
                 custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+                return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
         
         # Set custom fields if any
         if custom_fields:
@@ -359,7 +362,7 @@ def create_project():
         if not safe_commit("create_project_custom_fields_and_color", {"project_id": project.id}):
             flash(_("Could not save project due to a database error"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
 
         # Track project created event
         log_event(
@@ -439,7 +442,7 @@ def create_project():
 
     from app.models import CustomFieldDefinition
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    return render_template("projects/create.html", clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+    return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
 
 
 @projects_bp.route("/projects/<int:project_id>")
@@ -782,6 +785,9 @@ def project_time_entries_overview(project_id):
 def edit_project(project_id):
     """Edit project details"""
     project = Project.query.get_or_404(project_id)
+    clients = Client.get_active_clients()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -797,14 +803,14 @@ def edit_project(project_id):
         # Validate required fields
         if not name or not client_id:
             flash(_("Project name and client are required"), "error")
-            return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
+            return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
             flash(_("Invalid hourly rate format"), "error")
-            return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
+            return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Validate budgets
         budget_amount = None
@@ -815,7 +821,7 @@ def edit_project(project_id):
                     raise ValueError("Budget cannot be negative")
             except Exception:
                 flash(_("Invalid budget amount"), "error")
-                return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
+                return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
         budget_threshold_percent = project.budget_threshold_percent or 80
         if budget_threshold_raw:
             try:
@@ -824,7 +830,7 @@ def edit_project(project_id):
                     raise ValueError("Invalid threshold")
             except Exception:
                 flash(_("Invalid budget threshold percent (0-100)"), "error")
-                return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
+                return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Normalize code
         normalized_code = code.upper().strip() if code else None
@@ -850,7 +856,7 @@ def edit_project(project_id):
 
         if not result.get("success"):
             flash(_(result.get("message", "Could not update project")), "error")
-            return render_template("projects/edit.html", project=project, clients=Client.get_active_clients())
+            return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         project = result["project"]
 
@@ -875,7 +881,7 @@ def edit_project(project_id):
                 # Validate mandatory fields
                 flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
                 custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("projects/edit.html", project=project, clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+                return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
         
         # Update custom fields
         if custom_fields:
@@ -907,7 +913,7 @@ def edit_project(project_id):
 
     from app.models import CustomFieldDefinition
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    return render_template("projects/edit.html", project=project, clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+    return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
 
 
 @projects_bp.route("/projects/<int:project_id>/archive", methods=["GET", "POST"])

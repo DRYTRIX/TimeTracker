@@ -28,12 +28,17 @@
                     </div>
                     <div>
                         <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }} *</label>
+                        {% if only_one_client and single_client %}
+                        <input type="hidden" name="client_id" id="client_id" value="{{ single_client.id }}" data-default-rate="{{ single_client.default_hourly_rate or '' }}">
+                        <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75" value="{{ single_client.name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
+                        {% else %}
                         <select id="client_id" name="client_id" required class="form-input">
                             <option value="">{{ _('Select a client...') }}</option>
                             {% for client in clients %}
                             <option value="{{ client.id }}" {% if request.form.get('client_id', project.client_id) == client.id %}selected{% endif %} data-default-rate="{{ client.default_hourly_rate or '' }}">{{ client.name }}</option>
                             {% endfor %}
                         </select>
+                        {% endif %}
                         <p class="text-xs mt-1"><a href="{{ url_for('clients.create_client') }}" class="text-primary hover:underline">{{ _('Create new client') }}</a></p>
                     </div>
                 </div>
@@ -140,13 +145,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientSelect = document.getElementById('client_id');
     const hourlyRateInput = document.getElementById('hourly_rate');
     const descriptionInput = document.getElementById('description');
-    clientSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const defaultRate = selectedOption.getAttribute('data-default-rate');
+    function applyClientDefaultRate() {
+        let defaultRate = null;
+        if (clientSelect.tagName === 'INPUT' && clientSelect.type === 'hidden') {
+            defaultRate = clientSelect.getAttribute('data-default-rate');
+        } else if (clientSelect.options && clientSelect.selectedIndex >= 0) {
+            const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+            defaultRate = selectedOption ? selectedOption.getAttribute('data-default-rate') : null;
+        }
         if (defaultRate && !hourlyRateInput.value) {
             hourlyRateInput.value = defaultRate;
         }
-    });
+    }
+    clientSelect.addEventListener('change', applyClientDefaultRate);
+    applyClientDefaultRate();
 
     // Initialize Markdown editor
     let mdEditor = null;

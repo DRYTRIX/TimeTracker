@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "components/cards.html" import info_card, stat_card %}
 {% from "components/ui.html" import confirm_dialog %}
+{% from "components/client_select.html" import client_select %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
@@ -493,12 +494,7 @@
                         </div>
                         <div>
                             <label for="startTimerClient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</label>
-                            <select id="startTimerClient" name="client_id" class="form-input">
-                                <option value="">{{ _('Select a client (optional)') }}</option>
-                                {% for client in active_clients %}
-                                <option value="{{ client.id }}">{{ client.name }}</option>
-                                {% endfor %}
-                            </select>
+                            {{ client_select('client_id', active_clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='startTimerClient') }}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                                 {{ _('Select either a project or a client') }}
                             </p>
@@ -693,11 +689,16 @@
                 });
             }
 
+            const onlyOneClient = {{ 'true' if only_one_client|default(false) else 'false' }};
+            const singleClientId = {{ ('"' ~ single_client.id ~ '"') if single_client else 'null' }};
+
             if (projectSelect && clientSelect && taskInput) {
                 projectSelect.addEventListener('change', () => {
                     const pid = projectSelect.value;
                     if (pid) {
                         clientSelect.value = '';
+                    } else if (onlyOneClient && singleClientId) {
+                        clientSelect.value = singleClientId;
                     }
                     loadTasksForProject(pid);
                 });

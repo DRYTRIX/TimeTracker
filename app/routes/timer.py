@@ -989,6 +989,8 @@ def manual_entry():
     # Get active projects and clients for dropdown (used for both GET and error re-renders on POST)
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(active_clients) == 1
+    single_client = active_clients[0] if only_one_client else None
 
     # Get project_id, client_id, and task_id from query parameters for pre-filling
     project_id = request.args.get("project_id", type=int)
@@ -1035,6 +1037,8 @@ def manual_entry():
                 "timer/manual_entry.html",
                 projects=active_projects,
                 clients=active_clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
                 selected_project_id=project_id,
                 selected_client_id=client_id,
                 selected_task_id=task_id,
@@ -1055,6 +1059,8 @@ def manual_entry():
                 "timer/manual_entry.html",
                 projects=active_projects,
                 clients=active_clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
                 selected_project_id=project_id,
                 selected_client_id=client_id,
                 selected_task_id=task_id,
@@ -1078,6 +1084,8 @@ def manual_entry():
                 "timer/manual_entry.html",
                 projects=active_projects,
                 clients=active_clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
                 selected_project_id=project_id,
                 selected_client_id=client_id,
                 selected_task_id=task_id,
@@ -1098,6 +1106,8 @@ def manual_entry():
                 "timer/manual_entry.html",
                 projects=active_projects,
                 clients=active_clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
                 selected_project_id=project_id,
                 selected_client_id=client_id,
                 selected_task_id=task_id,
@@ -1131,6 +1141,8 @@ def manual_entry():
                 "timer/manual_entry.html",
                 projects=active_projects,
                 clients=active_clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
                 selected_project_id=project_id,
                 selected_client_id=client_id,
                 selected_task_id=task_id,
@@ -1203,6 +1215,8 @@ def manual_entry():
         "timer/manual_entry.html",
         projects=active_projects,
         clients=active_clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         selected_project_id=project_id,
         selected_client_id=client_id,
         selected_task_id=task_id,
@@ -1214,6 +1228,8 @@ def manual_entry():
 @login_required
 def manual_entry_for_project(project_id):
     """Create a manual time entry for a specific project"""
+    from app.models import Client
+
     task_id = request.args.get("task_id", type=int)
 
     # Check if project exists and is active
@@ -1222,11 +1238,20 @@ def manual_entry_for_project(project_id):
         flash("Invalid project selected", "error")
         return redirect(url_for("main.dashboard"))
 
-    # Get active projects for dropdown
+    # Get active projects and clients for dropdown
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(active_clients) == 1
+    single_client = active_clients[0] if only_one_client else None
 
     return render_template(
-        "timer/manual_entry.html", projects=active_projects, selected_project_id=project_id, selected_task_id=task_id
+        "timer/manual_entry.html",
+        projects=active_projects,
+        clients=active_clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
+        selected_project_id=project_id,
+        selected_task_id=task_id,
     )
 
 
@@ -1481,6 +1506,8 @@ def timer_page():
     # Get active projects and clients for dropdown
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(active_clients) == 1
+    single_client = active_clients[0] if only_one_client else None
 
     # Get recent projects (projects used in last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -1538,6 +1565,8 @@ def timer_page():
         active_timer=active_timer,
         projects=active_projects,
         clients=active_clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         recent_projects=recent_projects,
         tasks=tasks,
         templates=templates,
@@ -1577,6 +1606,8 @@ def bulk_entry_for_project(project_id):
 @login_required
 def duplicate_timer(timer_id):
     """Duplicate an existing time entry - opens manual entry form with pre-filled data"""
+    from app.models import Client
+
     timer = TimeEntry.query.get_or_404(timer_id)
 
     # Check if user can duplicate this timer
@@ -1584,8 +1615,11 @@ def duplicate_timer(timer_id):
         flash(_("You can only duplicate your own timers"), "error")
         return redirect(url_for("main.dashboard"))
 
-    # Get active projects for dropdown
+    # Get active projects and clients for dropdown
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(active_clients) == 1
+    single_client = active_clients[0] if only_one_client else None
 
     # Track duplication event
     log_event(
@@ -1611,7 +1645,11 @@ def duplicate_timer(timer_id):
     return render_template(
         "timer/manual_entry.html",
         projects=active_projects,
+        clients=active_clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         selected_project_id=timer.project_id,
+        selected_client_id=timer.client_id,
         selected_task_id=timer.task_id,
         prefill_notes=timer.notes,
         prefill_tags=timer.tags,

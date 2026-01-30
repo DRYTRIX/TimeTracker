@@ -139,10 +139,18 @@ def create_mileage():
     if request.method == "GET":
         projects = Project.query.filter_by(status="active").order_by(Project.name).all()
         clients = Client.get_active_clients()
+        only_one_client = len(clients) == 1
+        single_client = clients[0] if only_one_client else None
         default_rates = Mileage.get_default_rates()
 
         return render_template(
-            "mileage/form.html", mileage=None, projects=projects, clients=clients, default_rates=default_rates
+            "mileage/form.html",
+            mileage=None,
+            projects=projects,
+            clients=clients,
+            only_one_client=only_one_client,
+            single_client=single_client,
+            default_rates=default_rates,
         )
 
     try:
@@ -255,10 +263,18 @@ def edit_mileage(mileage_id):
     if request.method == "GET":
         projects = Project.query.filter_by(status="active").order_by(Project.name).all()
         clients = Client.get_active_clients()
+        only_one_client = len(clients) == 1
+        single_client = clients[0] if only_one_client else None
         default_rates = Mileage.get_default_rates()
 
         return render_template(
-            "mileage/form.html", mileage=mileage, projects=projects, clients=clients, default_rates=default_rates
+            "mileage/form.html",
+            mileage=mileage,
+            projects=projects,
+            clients=clients,
+            only_one_client=only_one_client,
+            single_client=single_client,
+            default_rates=default_rates,
         )
 
     try:

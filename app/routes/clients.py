@@ -308,6 +308,15 @@ def create_client():
         app_module.log_event("client.created", user_id=current_user.id, client_id=client.id)
         app_module.track_event(current_user.id, "client.created", {"client_id": client.id})
 
+        # Invalidate dashboard cache so single-client state updates (Issue #467)
+        try:
+            from app.utils.cache import get_cache
+            cache = get_cache()
+            if cache:
+                cache.delete(f"dashboard:{current_user.id}")
+        except Exception:
+            pass
+
         if wants_json:
             return (
                 jsonify(
@@ -691,6 +700,13 @@ def archive_client(client_id):
         app_module.log_event("client.archived", user_id=current_user.id, client_id=client.id)
         app_module.track_event(current_user.id, "client.archived", {"client_id": client.id})
         flash(f'Client "{client.name}" archived successfully', "success")
+        try:
+            from app.utils.cache import get_cache
+            c = get_cache()
+            if c:
+                c.delete(f"dashboard:{current_user.id}")
+        except Exception:
+            pass
 
     return redirect(url_for("clients.list_clients"))
 
@@ -711,6 +727,13 @@ def activate_client(client_id):
     else:
         client.activate()
         flash(f'Client "{client.name}" activated successfully', "success")
+        try:
+            from app.utils.cache import get_cache
+            c = get_cache()
+            if c:
+                c.delete(f"dashboard:{current_user.id}")
+        except Exception:
+            pass
 
     return redirect(url_for("clients.list_clients"))
 
@@ -757,6 +780,14 @@ def delete_client(client_id):
     # Log client deletion
     app_module.log_event("client.deleted", user_id=current_user.id, client_id=client_id_for_log)
     app_module.track_event(current_user.id, "client.deleted", {"client_id": client_id_for_log})
+
+    try:
+        from app.utils.cache import get_cache
+        c = get_cache()
+        if c:
+            c.delete(f"dashboard:{current_user.id}")
+    except Exception:
+        pass
 
     flash(f'Client "{client_name}" deleted successfully', "success")
     return redirect(url_for("clients.list_clients"))
@@ -833,6 +864,13 @@ def bulk_delete_clients():
     # Show appropriate messages
     if deleted_count > 0:
         flash(f'Successfully deleted {deleted_count} client{"s" if deleted_count != 1 else ""}', "success")
+        try:
+            from app.utils.cache import get_cache
+            c = get_cache()
+            if c:
+                c.delete(f"dashboard:{current_user.id}")
+        except Exception:
+            pass
 
     if skipped_count > 0:
         flash(

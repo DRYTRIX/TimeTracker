@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/client_select.html" import client_select %}
 {% from "components/ui.html" import page_header %}
 
 {% block content %}
@@ -34,12 +35,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="client_id" class="block text-sm font-medium mb-1">{{ _('Client') }} <span class="text-red-500">*</span></label>
-                    <select id="client_id" name="client_id" class="form-input w-full" required>
-                        <option value="">{{ _('Select a client') }}</option>
-                        {% for client in clients %}
-                        <option value="{{ client.id }}" {% if request.form.get('client_id')|int == client.id %}selected{% endif %}>{{ client.name }}</option>
-                        {% endfor %}
-                    </select>
+                    {{ client_select('client_id', clients, selected_id=request.form.get('client_id')|int, required=True, only_one_client=only_one_client|default(false), single_client=single_client) }}
                 </div>
                 
                 <div>

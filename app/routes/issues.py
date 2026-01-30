@@ -212,12 +212,16 @@ def new_issue():
     
     # GET - show create form
     clients = Client.query.filter_by(status="active").order_by(Client.name).limit(500).all()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
     projects = Project.query.filter_by(status="active").order_by(Project.name).limit(500).all()
     users = User.query.filter_by(is_active=True).order_by(User.username).limit(200).all()
     
     return render_template(
         "issues/new.html",
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         projects=projects,
         users=users,
     )

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/client_select.html" import client_select %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -52,12 +53,7 @@
                 </div>
                 <div>
                     <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</label>
-                    <select name="client_id" id="client_id" class="form-input">
-                        <option value="">{{ _('Select a client (optional)') }}</option>
-                        {% for client in clients %}
-                        <option value="{{ client.id }}" {% if selected_client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
-                        {% endfor %}
-                    </select>
+                    {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
                 </div>
             </div>
@@ -146,12 +142,18 @@ document.addEventListener('DOMContentLoaded', async function(){
     const noTaskText = '{{ _('No task') }}';
     const failedToLoadTasksText = '{{ _('Failed to load tasks') }}';
     
+    // Single-client mode: when project cleared, restore client (Issue #467)
+    const onlyOneClient = {{ 'true' if only_one_client else 'false' }};
+    const singleClientId = {{ ('"' ~ single_client.id ~ '"') if single_client else 'null' }};
+
     // Function to ensure only one of project or client is selected
     function syncProjectClientSelection() {
         if (!projectSelect || !clientSelect) return;
         projectSelect.addEventListener('change', function() {
             if (this.value) {
                 clientSelect.value = '';
+            } else if (onlyOneClient && singleClientId) {
+                clientSelect.value = singleClientId;
             }
             loadTasks(this.value);
         });

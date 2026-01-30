@@ -234,6 +234,8 @@ def create_expense():
         # Get data for form
         projects = Project.query.filter_by(status="active").order_by(Project.name).all()
         clients = Client.get_active_clients()
+        only_one_client = len(clients) == 1
+        single_client = clients[0] if only_one_client else None
         categories = Expense.get_expense_categories()
         payment_methods = Expense.get_payment_methods()
 
@@ -242,6 +244,8 @@ def create_expense():
             expense=None,
             projects=projects,
             clients=clients,
+            only_one_client=only_one_client,
+            single_client=single_client,
             categories=categories,
             payment_methods=payment_methods,
         )
@@ -478,6 +482,8 @@ def edit_expense(expense_id):
     if request.method == "GET":
         projects = Project.query.filter_by(status="active").order_by(Project.name).all()
         clients = Client.get_active_clients()
+        only_one_client = len(clients) == 1
+        single_client = clients[0] if only_one_client else None
         categories = Expense.get_expense_categories()
         payment_methods = Expense.get_payment_methods()
 
@@ -486,6 +492,8 @@ def edit_expense(expense_id):
             expense=expense,
             projects=projects,
             clients=clients,
+            only_one_client=only_one_client,
+            single_client=single_client,
             categories=categories,
             payment_methods=payment_methods,
         )

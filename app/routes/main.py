@@ -56,6 +56,8 @@ def dashboard():
     client_repo = ClientRepository()
     active_projects = project_repo.get_active_projects()
     active_clients = client_repo.get_active_clients()
+    only_one_client = len(active_clients) == 1
+    single_client = active_clients[0] if only_one_client else None
 
     # Get user statistics using analytics service
     from app.services import AnalyticsService
@@ -133,6 +135,8 @@ def dashboard():
         "recent_entries": recent_entries,
         "active_projects": active_projects,
         "active_clients": active_clients,
+        "only_one_client": only_one_client,
+        "single_client": single_client,
         "today_hours": today_hours,
         "week_hours": week_hours,
         "month_hours": month_hours,
