@@ -386,7 +386,3 @@ class TaskService:
         logger.info(f"[TaskService.list_tasks] Total time: {total_time:.2f}ms (tasks: {len(tasks) if tasks else 0}, page: {page}, per_page: {per_page})")
 
         return {"tasks": tasks, "pagination": pagination, "total": pagination.total}
-me) * 1000
-        logger.info(f"[TaskService.list_tasks] Total time: {total_time:.2f}ms (tasks: {len(tasks) if tasks else 0}, page: {page}, per_page: {per_page})")
-
-        return {"tasks": tasks, "pagination": pagination, "total": pagination.total}

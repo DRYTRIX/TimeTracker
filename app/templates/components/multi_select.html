@@ -84,10 +84,10 @@
             
             <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
             
-            {# Individual items #}
+            {# Individual items (support both dict-like and ORM objects) #}
             {% for item in items %}
-            {% set item_id = item[item_id_attr] if item_id_attr in item.__dict__ else item.get(item_id_attr) %}
-            {% set item_label = item[item_label_attr] if item_label_attr in item.__dict__ else item.get(item_label_attr, item.display_name if 'display_name' in item.__dict__ else item_id) %}
+            {% set item_id = item.get(item_id_attr) if item is mapping else getattr(item, item_id_attr, None) %}
+            {% set item_label = (item.get(item_label_attr, item.get('display_name', item_id)) if item is mapping else getattr(item, item_label_attr, getattr(item, 'display_name', item_id))) %}
             <label class="multi-select-option flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors" data-search-text="{{ item_label|lower }}">
                 <input 
                     type="checkbox" 
