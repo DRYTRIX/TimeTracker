@@ -496,15 +496,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // View Controls
   document.getElementById('todayBtn').addEventListener('click', () => calendar.today());
   document.getElementById('dayBtn').addEventListener('click', () => {
-    calendar.changeView('timeGridDay');
+    calendar.changeView('timeGridDay', calendar.getDate());
     setActiveView('calendar');
   });
   document.getElementById('weekBtn').addEventListener('click', () => {
-    calendar.changeView('timeGridWeek');
+    calendar.changeView('timeGridWeek', calendar.getDate());
     setActiveView('calendar');
   });
   document.getElementById('monthBtn').addEventListener('click', () => {
-    calendar.changeView('dayGridMonth');
+    calendar.changeView('dayGridMonth', calendar.getDate());
     setActiveView('calendar');
   });
   document.getElementById('agendaBtn').addEventListener('click', () => {
@@ -1294,7 +1294,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Views
       case 'd':
-        calendar.changeView('timeGridDay');
+        calendar.changeView('timeGridDay', calendar.getDate());
         setActiveView('calendar');
         document.getElementById('dayBtn').classList.add('active');
         document.getElementById('weekBtn').classList.remove('active');
@@ -1302,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', function() {
         break;
         
       case 'w':
-        calendar.changeView('timeGridWeek');
+        calendar.changeView('timeGridWeek', calendar.getDate());
         setActiveView('calendar');
         document.getElementById('weekBtn').classList.add('active');
         document.getElementById('dayBtn').classList.remove('active');
@@ -1310,7 +1310,7 @@ document.addEventListener('DOMContentLoaded', function() {
         break;
         
       case 'm':
-        calendar.changeView('dayGridMonth');
+        calendar.changeView('dayGridMonth', calendar.getDate());
         setActiveView('calendar');
         document.getElementById('monthBtn').classList.add('active');
         document.getElementById('dayBtn').classList.remove('active');

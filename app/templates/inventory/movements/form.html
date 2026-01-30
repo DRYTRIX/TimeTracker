@@ -37,6 +37,7 @@
                     <option value="waste">{{ _('Waste') }}</option>
                     <option value="devaluation">{{ _('Devaluation') }}</option>
                 </select>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden" id="devaluation_discovery_hint">{{ _('You can apply devaluation below to record returned or wasted items at a reduced cost.') }}</p>
             </div>
             <div>
                 <label for="stock_item_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Stock Item') }} *</label>
@@ -131,11 +132,15 @@
         const quantityError = document.getElementById('quantity_error');
         const devaluePercent = document.getElementById('devalue_percent');
         const devalueUnitCost = document.getElementById('devalue_unit_cost');
+        const discoveryHint = document.getElementById('devaluation_discovery_hint');
 
         function refreshVisibility() {
             const type = (movementType.value || '').toLowerCase();
             const showSection = (type === 'return' || type === 'waste' || type === 'devaluation');
             section.classList.toggle('hidden', !showSection);
+
+            const showDiscoveryHint = (type === 'return' || type === 'waste');
+            if (discoveryHint) discoveryHint.classList.toggle('hidden', !showDiscoveryHint);
 
             if (type === 'devaluation') {
                 enabled.checked = true;

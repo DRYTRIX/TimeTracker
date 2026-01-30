@@ -14,21 +14,43 @@ kanban_bp = Blueprint("kanban", __name__)
 @login_required
 @module_enabled("kanban")
 def board():
-    """Kanban board page with optional project and user filters"""
-    project_id = request.args.get("project_id", type=int)
-    user_id = request.args.get("user_id", type=int)
+    """Kanban board page with optional project and user filters (supports multi-select)"""
+    # Parse filter parameters - support both single ID (backward compatibility) and multi-select
+    def parse_ids(param_name):
+        """Parse comma-separated IDs or single ID into a list of integers"""
+        # Try multi-select parameter first (e.g., project_ids)
+        multi_param = request.args.get(param_name + 's', '').strip()
+        if multi_param:
+            try:
+                return [int(x.strip()) for x in multi_param.split(',') if x.strip()]
+            except (ValueError, AttributeError):
+                return []
+        # Fall back to single parameter for backward compatibility (e.g., project_id)
+        single_param = request.args.get(param_name, type=int)
+        if single_param:
+            return [single_param]
+        return []
+    
+    project_ids = parse_ids('project_id')
+    user_ids = parse_ids('user_id')
+    
+    # Build query with filters
     query = Task.query
-    if project_id:
-        query = query.filter_by(project_id=project_id)
-    if user_id:
-        query = query.filter_by(assigned_to=user_id)
+    if project_ids:
+        query = query.filter(Task.project_id.in_(project_ids))
+    if user_ids:
+        query = query.filter(Task.assigned_to.in_(user_ids))
+    
     # Order tasks for stable rendering
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
-    # Fresh columns - use project-specific columns if project_id is provided
+    
+    # Fresh columns - use project-specific columns if single project is selected
     db.session.expire_all()
     if KanbanColumn:
+        # Only use project-specific columns if exactly one project is selected
+        single_project_id = project_ids[0] if len(project_ids) == 1 else None
         # Try to get project-specific columns first
-        columns = KanbanColumn.get_active_columns(project_id=project_id)
+        columns = KanbanColumn.get_active_columns(project_id=single_project_id)
         # If no project-specific columns exist, fall back to global columns
         if not columns:
             columns = KanbanColumn.get_active_columns(project_id=None)
@@ -38,15 +60,26 @@ def board():
                 columns = KanbanColumn.get_active_columns(project_id=None)
     else:
         columns = []
+    
     # Provide projects for filter dropdown
     from app.models import Project, User
 
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     # Provide users for filter dropdown (active users only)
     users = User.query.filter_by(is_active=True).order_by(User.full_name, User.username).all()
+    
     # No-cache
     response = render_template(
-        "kanban/board.html", tasks=tasks, kanban_columns=columns, projects=projects, users=users, project_id=project_id, user_id=user_id
+        "kanban/board.html", 
+        tasks=tasks, 
+        kanban_columns=columns, 
+        projects=projects, 
+        users=users, 
+        project_ids=project_ids,
+        user_ids=user_ids,
+        # Keep old single params for backward compatibility in templates
+        project_id=project_ids[0] if len(project_ids) == 1 else None,
+        user_id=user_ids[0] if len(user_ids) == 1 else None
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

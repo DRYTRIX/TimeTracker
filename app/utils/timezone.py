@@ -222,6 +222,26 @@ def parse_local_datetime(date_str, time_str):
         raise ValueError(f"Invalid date/time format: {e}")
 
 
+def parse_user_local_datetime(date_str, time_str, user=None):
+    """Parse date and time strings as user's local time; return naive datetime in app timezone for storage.
+
+    Use this for manual time entry forms where the user enters a time in their local timezone.
+    When user has no timezone set, falls back to app timezone (same as parse_local_datetime input semantics).
+    """
+    try:
+        datetime_str = f"{date_str} {time_str}"
+        naive_dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+
+        # Treat input as user's timezone (or app timezone if no user / no user TZ)
+        user_tz = get_timezone_for_user(user)
+        app_tz = get_timezone_obj()
+        localized_in_user_tz = _localize_with_timezone(naive_dt, user_tz)
+        in_app_tz = localized_in_user_tz.astimezone(app_tz)
+        return in_app_tz.replace(tzinfo=None)
+    except ValueError as e:
+        raise ValueError(f"Invalid date/time format: {e}")
+
+
 def format_local_datetime(utc_dt, format_str="%Y-%m-%d %H:%M"):
     """Format UTC datetime in local application timezone."""
     if utc_dt is None:

@@ -63,6 +63,10 @@ def list_quotes():
 @admin_or_permission_required("create_quotes")
 def create_quote():
     """Create a new quote"""
+    clients = Client.get_active_clients()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
+
     if request.method == "POST":
         client_id = request.form.get("client_id", "").strip()
         title = request.form.get("title", "").strip()
@@ -94,13 +98,13 @@ def create_quote():
         # Validate required fields
         if not title or not client_id:
             flash(_("Quote title and client are required"), "error")
-            return render_template("quotes/create.html", clients=Client.get_active_clients())
+            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Get client and validate
         client = Client.query.get(client_id)
         if not client:
             flash(_("Selected client not found"), "error")
-            return render_template("quotes/create.html", clients=Client.get_active_clients())
+            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Validate amounts
         try:
@@ -109,7 +113,7 @@ def create_quote():
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Invalid total amount format"), "error")
-            return render_template("quotes/create.html", clients=Client.get_active_clients())
+            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
@@ -117,7 +121,7 @@ def create_quote():
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Invalid hourly rate format"), "error")
-            return render_template("quotes/create.html", clients=Client.get_active_clients())
+            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         try:
             estimated_hours = float(estimated_hours) if estimated_hours else None
@@ -125,7 +129,7 @@ def create_quote():
                 raise ValueError
         except ValueError:
             flash(_("Invalid estimated hours format"), "error")
-            return render_template("quotes/create.html", clients=Client.get_active_clients())
+            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         try:
             tax_rate = Decimal(tax_rate) if tax_rate else Decimal("0")
@@ -133,7 +137,7 @@ def create_quote():
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Invalid tax rate format"), "error")
-            return render_template("quotes/create.html", clients=Client.get_active_clients())
+            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Validate discount fields
         discount_amount_decimal = None
@@ -150,7 +154,7 @@ def create_quote():
                     discount_type = None  # Invalid type, ignore discount
             except (InvalidOperation, ValueError):
                 flash(_("Invalid discount amount format"), "error")
-                return render_template("quotes/create.html", clients=Client.get_active_clients())
+                return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Parse valid_until date
         valid_until_date = None
@@ -159,7 +163,7 @@ def create_quote():
                 valid_until_date = datetime.strptime(valid_until, "%Y-%m-%d").date()
             except ValueError:
                 flash(_("Invalid date format for valid until"), "error")
-                return render_template("quotes/create.html", clients=Client.get_active_clients())
+                return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Generate quote number
         quote_number = Quote.generate_quote_number()
@@ -219,7 +223,7 @@ def create_quote():
 
         if not safe_commit("create_quote", {"title": title, "client_id": client_id}):
             flash(_("Could not create quote due to a database error. Please check server logs."), "error")
-            return render_template("quotes/create.html", clients=Client.get_active_clients())
+            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
         # Log event
         log_event("quote.created", user_id=current_user.id, quote_id=quote.id, quote_title=title, client_id=client_id)
@@ -230,7 +234,7 @@ def create_quote():
         flash(_("Quote created successfully"), "success")
         return redirect(url_for("quotes.view_quote", quote_id=quote.id))
 
-    return render_template("quotes/create.html", clients=Client.get_active_clients())
+    return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
 
 
 @quotes_bp.route("/quotes/<int:quote_id>")

@@ -8,11 +8,18 @@
     {'text': 'Gantt Chart'}
 ] %}
 
+{% set gantt_actions %}
+<a href="{{ url_for('tasks.create_task', project_id=selected_project_id if selected_project_id else none, next=request.full_path) }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+    <i class="fas fa-plus"></i> {{ _('Add task') }}
+</a>
+{% endset %}
+
 {{ page_header(
     icon_class='fas fa-project-diagram',
     title_text='Gantt Chart',
     subtitle_text='Project timeline visualization',
-    breadcrumbs=breadcrumbs
+    breadcrumbs=breadcrumbs,
+    actions_html=gantt_actions
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">

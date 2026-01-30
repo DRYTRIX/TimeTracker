@@ -344,6 +344,7 @@ def edit_invoice(invoice_id):
         descriptions = request.form.getlist("description[]")
         quantities = request.form.getlist("quantity[]")
         unit_prices = request.form.getlist("unit_price[]")
+        item_time_entry_ids_list = request.form.getlist("item_time_entry_ids[]")
 
         # Remove existing items
         invoice.items.delete()
@@ -354,6 +355,20 @@ def edit_invoice(invoice_id):
                 try:
                     quantity = Decimal(quantities[i])
                     unit_price = Decimal(unit_prices[i])
+
+                    # Get time entry ids if provided (for time-based items)
+                    time_entry_ids_val = None
+                    if i < len(item_time_entry_ids_list) and item_time_entry_ids_list[i].strip():
+                        time_entry_ids_val = item_time_entry_ids_list[i].strip()
+                        # Recalculate quantity from time entries (defense in depth)
+                        try:
+                            entry_ids = [int(x.strip()) for x in time_entry_ids_val.split(",") if x.strip()]
+                            if entry_ids:
+                                entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids)).all()
+                                total_seconds = sum(e.duration_seconds or 0 for e in entries)
+                                quantity = Decimal(str(round(total_seconds / 3600, 2)))
+                        except (ValueError, TypeError):
+                            pass
 
                     # Get stock item info if provided
                     stock_item_id = request.form.getlist("item_stock_item_id[]")
@@ -375,6 +390,7 @@ def edit_invoice(invoice_id):
                         description=descriptions[i].strip(),
                         quantity=quantity,
                         unit_price=unit_price,
+                        time_entry_ids=time_entry_ids_val,
                         stock_item_id=stock_item_id_val,
                         warehouse_id=warehouse_id_val,
                     )

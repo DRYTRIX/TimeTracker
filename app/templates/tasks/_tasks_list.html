@@ -4,7 +4,7 @@
             {{ tasks|length }} task{{ 's' if tasks|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('tasks.export_tasks', status=status, priority=priority, project_id=project_id, assigned_to=assigned_to, search=search, overdue=overdue) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="{{ _('Export to CSV') }}">
+            <a href="{{ url_for('tasks.export_tasks', status=status, priority=priority, project_ids=project_ids|join(',') if project_ids else '', assigned_to_ids=assigned_to_ids|join(',') if assigned_to_ids else '', search=search, overdue=overdue) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="{{ _('Export to CSV') }}">
                 <i class="fas fa-download mr-1"></i> Export
             </a>
             <div class="relative">

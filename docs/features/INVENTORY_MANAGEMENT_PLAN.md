@@ -101,7 +101,7 @@ This document outlines the complete implementation plan for adding a comprehensi
 
 **Fields**:
 - `id` (Integer, Primary Key)
-- `movement_type` (String(20), Required) - 'adjustment', 'transfer', 'sale', 'purchase', 'return', 'waste'
+- `movement_type` (String(20), Required) - 'adjustment', 'transfer', 'sale', 'purchase', 'return', 'waste', 'devaluation'
 - `stock_item_id` (Integer, ForeignKey -> stock_items.id, Required, Indexed)
 - `warehouse_id` (Integer, ForeignKey -> warehouses.id, Required, Indexed) - Source/target warehouse
 - `quantity` (Numeric(10, 2), Required) - Positive for additions, negative for removals
@@ -445,6 +445,22 @@ Add to `app/templates/base.html` after "Finance & Expenses" section:
 4. **ExtraGood Integration**
    - Link ExtraGood records to StockItems
    - Convert ExtraGood to StockItem (migration path)
+
+### 5.3 Stock Devaluation (Return and Waste)
+
+Stock can be devalued when recording **return** or **waste** movements so that items are valued at a reduced cost without creating new stock items. Valuation is handled via **stock lots** (valuation layers), not by creating separate items.
+
+1. **Return with devaluation**
+   - When recording a **return** (positive quantity, items coming back), you can enable **Apply devaluation** and set a new unit cost (percent off default cost or a fixed amount).
+   - The returned quantity is booked into a new lot with `lot_type="devalued"` at that cost.
+   - Use this when items return after a period (e.g. from rent or repair) and should be carried at a lower value.
+
+2. **Waste with devaluation**
+   - When recording **waste** (negative quantity, items written off), you can enable **Apply devaluation** so the write-off is valued at a reduced cost.
+   - The system first revalues that quantity into a devalued lot (FIFO consume from existing lots, create a devalued lot at the new cost), then records the waste movement consuming from that devalued lot.
+   - Use this when writing off damaged or obsolete stock at a lower value for accounting.
+
+**Requirements**: The stock item must be **trackable** and have a **default cost** set. Devaluation options are available on the Record Movement form when movement type is Return, Waste, or Devaluation (standalone revaluation of quantity in place).
 
 ---
 

@@ -104,8 +104,17 @@ def create_per_diem():
     if request.method == "GET":
         projects = Project.query.filter_by(status="active").order_by(Project.name).all()
         clients = Client.get_active_clients()
+        only_one_client = len(clients) == 1
+        single_client = clients[0] if only_one_client else None
 
-        return render_template("per_diem/form.html", per_diem=None, projects=projects, clients=clients)
+        return render_template(
+            "per_diem/form.html",
+            per_diem=None,
+            projects=projects,
+            clients=clients,
+            only_one_client=only_one_client,
+            single_client=single_client,
+        )
 
     try:
         # Get form data
@@ -267,8 +276,17 @@ def edit_per_diem(per_diem_id):
     if request.method == "GET":
         projects = Project.query.filter_by(status="active").order_by(Project.name).all()
         clients = Client.get_active_clients()
+        only_one_client = len(clients) == 1
+        single_client = clients[0] if only_one_client else None
 
-        return render_template("per_diem/form.html", per_diem=per_diem, projects=projects, clients=clients)
+        return render_template(
+            "per_diem/form.html",
+            per_diem=per_diem,
+            projects=projects,
+            clients=clients,
+            only_one_client=only_one_client,
+            single_client=single_client,
+        )
 
     try:
         # Update fields

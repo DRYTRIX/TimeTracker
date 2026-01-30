@@ -43,6 +43,8 @@ class TaskService:
         self.task_repo = TaskRepository()
         self.project_repo = ProjectRepository()
 
+    VALID_STATUSES = ("todo", "in_progress", "review", "done", "cancelled")
+
     def create_task(
         self,
         name: str,
@@ -54,6 +56,7 @@ class TaskService:
         due_date: Optional[Any] = None,
         estimated_hours: Optional[float] = None,
         color: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new task.
@@ -68,6 +71,7 @@ class TaskService:
             estimated_hours: Estimated hours
             created_by: User ID of creator
             color: Optional Gantt chart bar color (hex e.g. #3b82f6)
+            status: Optional initial status (todo, in_progress, review, done, cancelled)
 
         Returns:
             dict with 'success', 'message', and 'task' keys
@@ -76,6 +80,12 @@ class TaskService:
         project = self.project_repo.get_by_id(project_id)
         if not project:
             return {"success": False, "message": "Invalid project", "error": "invalid_project"}
+
+        task_status = (
+            status
+            if status and status in self.VALID_STATUSES
+            else TaskStatus.TODO.value
+        )
 
         # Create task
         task = self.task_repo.create(
@@ -86,7 +96,7 @@ class TaskService:
             priority=priority,
             due_date=due_date,
             estimated_hours=estimated_hours,
-            status=TaskStatus.TODO.value,
+            status=task_status,
             created_by=created_by,
         )
         if color:
@@ -186,6 +196,8 @@ class TaskService:
         has_view_all_tasks: bool = False,
         page: int = 1,
         per_page: int = 20,
+        project_ids: Optional[list] = None,
+        assigned_to_ids: Optional[list] = None,
     ) -> Dict[str, Any]:
         """
         List tasks with filtering and pagination.
@@ -225,10 +237,15 @@ class TaskService:
         if priority:
             query = query.filter(Task.priority == priority)
 
-        if project_id:
+        # Support both single ID (backward compatibility) and multi-select
+        if project_ids:
+            query = query.filter(Task.project_id.in_(project_ids))
+        elif project_id:
             query = query.filter(Task.project_id == project_id)
 
-        if assigned_to:
+        if assigned_to_ids:
+            query = query.filter(Task.assigned_to.in_(assigned_to_ids))
+        elif assigned_to:
             query = query.filter(Task.assigned_to == assigned_to)
 
         if search:
@@ -269,9 +286,14 @@ class TaskService:
                 count_query = count_query.filter(Task.status == status)
             if priority:
                 count_query = count_query.filter(Task.priority == priority)
-            if project_id:
+            # Support both single ID and multi-select
+            if project_ids:
+                count_query = count_query.filter(Task.project_id.in_(project_ids))
+            elif project_id:
                 count_query = count_query.filter(Task.project_id == project_id)
-            if assigned_to:
+            if assigned_to_ids:
+                count_query = count_query.filter(Task.assigned_to.in_(assigned_to_ids))
+            elif assigned_to:
                 count_query = count_query.filter(Task.assigned_to == assigned_to)
             if search:
                 like = f"%{search}%"

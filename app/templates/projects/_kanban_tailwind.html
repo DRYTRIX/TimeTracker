@@ -13,6 +13,9 @@
                     <span class="kanban-count bg-gray-200 dark:bg-gray-700 text-xs font-semibold px-2 py-1 rounded-full" data-status="{{ col.key }}" aria-live="polite" aria-atomic="true">
                         {{ tasks|selectattr('status', 'equalto', col.key)|list|length }}
                     </span>
+                    <a href="{{ url_for('tasks.create_task', project_id=project_id if project_id is defined and project_id else none, status=col.key, next=kanban_return_url if kanban_return_url is defined else request.full_path) }}" class="text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors" title="{{ _('Add task to this column') }}" aria-label="{{ _('Add task to this column') }}">
+                        <i class="fas fa-plus"></i>
+                    </a>
                     {% if current_user.is_admin %}
                     <a href="{{ url_for('kanban.edit_column', column_id=col.id) }}" class="text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors" title="{{ _('Edit swimlane') }}">
                         <i class="fas fa-pen"></i>

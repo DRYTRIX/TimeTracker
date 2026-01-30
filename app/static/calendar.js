@@ -24,6 +24,7 @@ class Calendar {
     init() {
         this.setupEventListeners();
         this.loadEvents();
+        this.updateViewLinks();
     }
     
     setupEventListeners() {
@@ -31,6 +32,7 @@ class Calendar {
         document.getElementById('todayBtn')?.addEventListener('click', () => {
             this.currentDate = new Date();
             this.loadEvents();
+            this.updateViewLinks();
         });
         
         document.getElementById('prevBtn')?.addEventListener('click', () => {
@@ -78,6 +80,7 @@ class Calendar {
                 break;
         }
         this.loadEvents();
+        this.updateViewLinks();
     }
     
     navigateNext() {
@@ -93,6 +96,7 @@ class Calendar {
                 break;
         }
         this.loadEvents();
+        this.updateViewLinks();
     }
     
     async loadEvents() {
@@ -176,6 +180,19 @@ class Calendar {
         return { start, end };
     }
     
+    updateViewLinks() {
+        const viewUrl = window.calendarData?.viewUrl;
+        if (!viewUrl) return;
+        const y = this.currentDate.getFullYear();
+        const m = String(this.currentDate.getMonth() + 1).padStart(2, '0');
+        const d = String(this.currentDate.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+        ['day', 'week', 'month'].forEach(view => {
+            const el = document.querySelector(`[data-view="${view}"]`);
+            if (el) el.href = `${viewUrl}?view=${view}&date=${dateStr}`;
+        });
+    }
+    
     render() {
         this.updateTitle();
         
@@ -246,6 +263,62 @@ class Calendar {
         }
         return slots.join('');
     }
+
+    /**
+     * Assign column indices to items so overlapping items (by time range) get different columns.
+     * Items must have startMs and endMs. Mutates and returns items with .column and .totalColumns.
+     */
+    assignOverlapColumnsByTime(items) {
+        if (items.length === 0) return items;
+        const sorted = items.slice().sort((a, b) => a.startMs - b.startMs);
+        const maxCols = 8;
+        const columnsEnd = [];
+        sorted.forEach(item => {
+            const start = item.startMs;
+            const end = item.endMs;
+            let col = 0;
+            while (col < columnsEnd.length && columnsEnd[col] > start) col++;
+            if (col >= maxCols) col = maxCols - 1;
+            item.column = col;
+            if (col === columnsEnd.length) columnsEnd.push(end);
+            else columnsEnd[col] = end;
+        });
+        const totalColumns = Math.min(columnsEnd.length, maxCols) || 1;
+        sorted.forEach(item => { item.totalColumns = totalColumns; });
+        return sorted;
+    }
+
+    /**
+     * Assign column indices to items that have top/height (%). Overlapping vertical ranges get different columns.
+     */
+    assignOverlapColumnsByPosition(items) {
+        if (items.length === 0) return items;
+        const sorted = items.slice().sort((a, b) => a.top - b.top);
+        const maxCols = 8;
+        const columnsEnd = [];
+        sorted.forEach(item => {
+            const start = item.top;
+            const end = item.top + item.height;
+            let col = 0;
+            while (col < columnsEnd.length && columnsEnd[col] > start) col++;
+            if (col >= maxCols) col = maxCols - 1;
+            item.column = col;
+            if (col === columnsEnd.length) columnsEnd.push(end);
+            else columnsEnd[col] = end;
+        });
+        const totalColumns = Math.min(columnsEnd.length, maxCols) || 1;
+        sorted.forEach(item => { item.totalColumns = totalColumns; });
+        return sorted;
+    }
+
+    /** Return CSS left/width for a column (gap 1% between columns). */
+    columnStyle(col, totalCols) {
+        if (totalCols <= 1) return { left: '0', width: '100%' };
+        const gapPct = 1;
+        const widthPct = (100 - (totalCols - 1) * gapPct) / totalCols;
+        const leftPct = col * (widthPct + gapPct);
+        return { left: leftPct + '%', width: widthPct + '%' };
+    }
     
     renderDayEvents() {
         const dayStart = new Date(this.currentDate);
@@ -253,45 +326,98 @@ class Calendar {
         const dayEnd = new Date(this.currentDate);
         dayEnd.setHours(23, 59, 59, 999);
         
-        let html = '<div class="day-events-container">';
+        const timedItems = [];
         
-        // Render events
         if (this.showEvents) {
             this.events.forEach(event => {
                 const eventStart = new Date(event.start);
                 const eventEnd = event.end ? new Date(event.end) : null;
-                
-                // Check if event overlaps with current day
-                if (eventStart <= dayEnd && (eventEnd ? eventEnd >= dayStart : true)) {
-                    const effectiveStart = eventStart < dayStart ? dayStart : eventStart;
-                    const effectiveEnd = eventEnd ? (eventEnd > dayEnd ? dayEnd : eventEnd) : new Date(effectiveStart.getTime() + 60 * 60 * 1000); // Default 1 hour if no end
-                    
-                    // Calculate position: each hour = 60px, each minute = 1px
-                    const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
-                    const topPosition = startMinutes;
-                    
-                    // Calculate height based on duration
-                    const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
-                    // Ensure height is at least 30px and doesn't exceed container (1440px)
-                    const heightMinutes = Math.max(30, Math.min(1440 - topPosition, durationMinutes));
-                    
-                    const time = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                    const eventTitle = this.escapeHtml(event.title);
-                    const eventColor = event.color || '#3b82f6';
-                    html += `
-                        <div class="event-card event" data-id="${event.id}" data-type="event" 
-                             style="border-left-color: ${eventColor}; top: ${topPosition}px; height: ${heightMinutes}px;" 
-                             onclick="window.calendar.showEventDetails(${event.id}, 'event')">
-                            <i class="fas fa-calendar mr-2 text-blue-600 dark:text-blue-400"></i>
-                            <strong>${eventTitle}</strong>
-                            <br><small>${time}</small>
-                        </div>
-                    `;
-                }
+                if (eventStart > dayEnd || (eventEnd && eventEnd < dayStart)) return;
+                const effectiveStart = eventStart < dayStart ? dayStart : eventStart;
+                const effectiveEnd = eventEnd ? (eventEnd > dayEnd ? dayEnd : eventEnd) : new Date(effectiveStart.getTime() + 60 * 60 * 1000);
+                const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
+                const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
+                const heightMinutes = Math.max(30, Math.min(1440 - startMinutes, durationMinutes));
+                timedItems.push({
+                    type: 'event',
+                    startMs: effectiveStart.getTime(),
+                    endMs: effectiveEnd.getTime(),
+                    event,
+                    topPosition: startMinutes,
+                    heightMinutes,
+                    time: effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+                    title: this.escapeHtml(event.title),
+                    color: event.color || '#3b82f6'
+                });
             });
         }
         
-        // Render tasks
+        if (this.showTimeEntries) {
+            this.timeEntries.forEach(entry => {
+                const entryStart = new Date(entry.start);
+                const entryEnd = entry.end ? new Date(entry.end) : null;
+                const entryEndForDay = entryEnd || new Date(entryStart.getTime() + 30 * 60 * 1000);
+                const effectiveStart = entryStart < dayStart ? dayStart : entryStart;
+                const effectiveEnd = entryEndForDay > dayEnd ? dayEnd : entryEndForDay;
+                if (effectiveStart > dayEnd || effectiveEnd < dayStart) return;
+                const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
+                let heightMinutes;
+                if (entryEnd) {
+                    const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
+                    heightMinutes = Math.max(30, Math.min(1440 - startMinutes, durationMinutes));
+                } else {
+                    heightMinutes = Math.min(30, 1440 - startMinutes);
+                }
+                const startTime = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                const endTimeStr = entryEnd ? effectiveEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+                const notesText = entry.notes || entry.extendedProps?.notes || '';
+                const notes = notesText ? `<br><small class="text-xs">${this.escapeHtml(notesText)}</small>` : '';
+                timedItems.push({
+                    type: 'time_entry',
+                    startMs: effectiveStart.getTime(),
+                    endMs: effectiveEnd.getTime(),
+                    entry,
+                    topPosition: startMinutes,
+                    heightMinutes,
+                    startTime,
+                    endTimeStr,
+                    entryEnd,
+                    title: this.escapeHtml(entry.title),
+                    notes
+                });
+            });
+        }
+        
+        this.assignOverlapColumnsByTime(timedItems);
+        
+        let html = '<div class="day-events-container">';
+        
+        timedItems.forEach(item => {
+            const { left, width } = this.columnStyle(item.column, item.totalColumns);
+            const style = `left: ${left}; width: ${width}; top: ${item.topPosition}px; height: ${item.heightMinutes}px;`;
+            if (item.type === 'event') {
+                html += `
+                    <div class="event-card event" data-id="${item.event.id}" data-type="event"
+                         style="border-left-color: ${item.color}; ${style}"
+                         onclick="window.calendar.showEventDetails(${item.event.id}, 'event')">
+                        <i class="fas fa-calendar mr-2 text-blue-600 dark:text-blue-400"></i>
+                        <strong>${item.title}</strong>
+                        <br><small>${item.time}</small>
+                    </div>
+                `;
+            } else {
+                const durationText = item.entryEnd ? `${item.startTime} - ${item.endTimeStr}` : `${item.startTime} (active)`;
+                html += `
+                    <div class="event-card time_entry" data-id="${item.entry.id}" data-type="time_entry"
+                         style="${style}">
+                        ⏱ <strong>${item.title}</strong>
+                        <br><small>${durationText}</small>
+                        ${item.notes}
+                    </div>
+                `;
+            }
+        });
+        
         if (this.showTasks) {
             this.tasks.forEach(task => {
                 const taskTitle = this.escapeHtml(task.title);
@@ -307,54 +433,6 @@ class Calendar {
             });
         }
         
-        // Render time entries
-        if (this.showTimeEntries) {
-            this.timeEntries.forEach(entry => {
-                const entryStart = new Date(entry.start);
-                const entryEnd = entry.end ? new Date(entry.end) : null;
-                
-                // Check if entry overlaps with current day
-                const entryEndForDay = entryEnd || new Date(entryStart.getTime() + 30 * 60 * 1000); // Default 30 min if no end
-                const effectiveStart = entryStart < dayStart ? dayStart : entryStart;
-                const effectiveEnd = entryEndForDay > dayEnd ? dayEnd : entryEndForDay;
-                
-                if (effectiveStart <= dayEnd && effectiveEnd >= dayStart) {
-                    // Calculate position: each hour = 60px, each minute = 1px
-                    const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
-                    const topPosition = startMinutes;
-                    
-                    // Calculate height based on duration
-                    let heightMinutes;
-                    if (entryEnd) {
-                        const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
-                        // Ensure height is at least 30px and doesn't exceed container (1440px)
-                        heightMinutes = Math.max(30, Math.min(1440 - topPosition, durationMinutes));
-                    } else {
-                        // Active timer without end time - show as minimum height with indicator
-                        // But don't exceed container bounds
-                        heightMinutes = Math.min(30, 1440 - topPosition);
-                    }
-                    
-                    const startTime = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                    const endTimeStr = entryEnd ? effectiveEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
-                    const entryTitle = this.escapeHtml(entry.title);
-                    // Check both entry.notes and entry.extendedProps.notes for compatibility
-                    const notesText = entry.notes || entry.extendedProps?.notes || '';
-                    const notes = notesText ? `<br><small class="text-xs">${this.escapeHtml(notesText)}</small>` : '';
-                    const durationText = entryEnd ? `${startTime} - ${endTimeStr}` : `${startTime} (active)`;
-                    
-                    html += `
-                        <div class="event-card time_entry" data-id="${entry.id}" data-type="time_entry" 
-                             style="top: ${topPosition}px; height: ${heightMinutes}px;">
-                            ⏱ <strong>${entryTitle}</strong>
-                            <br><small>${durationText}</small>
-                            ${notes}
-                        </div>
-                    `;
-                }
-            });
-        }
-        
         html += '</div>';
         return html;
     }
@@ -362,123 +440,130 @@ class Calendar {
     renderWeekView() {
         const { start } = this.getDateRange();
         const days = [];
-        
         for (let i = 0; i < 7; i++) {
             const day = new Date(start);
             day.setDate(start.getDate() + i);
             days.push(day);
         }
-        
-        let html = '<div class="calendar-week-view"><table class="week-table"><thead><tr>';
-        html += '<th class="hour-label-header"></th>'; // Empty header for hour labels column
-        days.forEach(day => {
+        const timeSlots = Array.from({ length: 24 }, (_, h) => `<div class="week-time-slot">${h.toString().padStart(2, '0')}:00</div>`).join('');
+        const dayColumns = days.map(day => {
+            const blocks = this.renderWeekDayBlocks(day);
+            return `<div class="week-day-column" data-date="${day.toISOString().split('T')[0]}"><div class="week-day-blocks">${blocks}</div></div>`;
+        }).join('');
+        const dayHeaders = days.map(day => {
             const isToday = this.isToday(day);
-            html += `<th class="${isToday ? 'today' : ''}">${day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</th>`;
-        });
-        
-        html += '</tr></thead><tbody>';
-        
-        // Time slots for each day
-        for (let hour = 0; hour < 24; hour++) {
-            html += '<tr>';
-            html += `<td class="hour-label-cell">${hour.toString().padStart(2, '0')}:00</td>`;
-            days.forEach(day => {
-                html += `<td class="week-cell" data-date="${day.toISOString()}" data-hour="${hour}">`;
-                html += this.renderWeekCellEvents(day, hour);
-                html += '</td>';
-            });
-            html += '</tr>';
-        }
-        
-        html += '</tbody></table></div>';
-        this.container.innerHTML = html;
-    }
-    
-    spanningItemOverlapsCell(item, cellStart, cellEnd) {
-        const itemStart = new Date(item.start);
-        const itemEnd = item.end ? new Date(item.end) : null;
-        if (!itemEnd || itemEnd <= itemStart) {
-            return itemStart >= cellStart && itemStart < cellEnd;
-        }
-        return itemStart < cellEnd && itemEnd > cellStart;
+            return `<div class="week-day-header-cell ${isToday ? 'today' : ''}">${day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>`;
+        }).join('');
+        this.container.innerHTML = `
+            <div class="calendar-week-view">
+                <div class="week-view-header">
+                    <div class="week-time-header"></div>
+                    ${dayHeaders}
+                </div>
+                <div class="week-view-body">
+                    <div class="week-time-column">${timeSlots}</div>
+                    ${dayColumns}
+                </div>
+            </div>
+        `;
     }
 
-    getSpanningItemPositionInCell(item, cellStart, cellEnd) {
-        const itemStart = new Date(item.start);
-        const itemEnd = item.end ? new Date(item.end) : null;
-        if (!itemEnd || itemEnd <= itemStart) {
-            const minutes = itemStart.getMinutes();
-            const seconds = itemStart.getSeconds();
-            const topPercent = ((minutes * 60 + seconds) / 3600) * 100;
-            return { top: topPercent, height: 10 };
-        }
-        const segmentStart = itemStart > cellStart ? itemStart : cellStart;
-        const segmentEnd = itemEnd < cellEnd ? itemEnd : cellEnd;
-        const cellDuration = cellEnd - cellStart;
-        const topOffset = segmentStart - cellStart;
-        const segmentDuration = segmentEnd - segmentStart;
-        const topPercent = (topOffset / cellDuration) * 100;
-        const heightPercent = (segmentDuration / cellDuration) * 100;
-        const minHeightPercent = Math.max(heightPercent, 4);
-        const height = Math.min(minHeightPercent, 100 - topPercent);
-        return {
-            top: Math.max(0, topPercent),
-            height: Math.max(4, height)
-        };
-    }
-    
-    renderWeekCellEvents(day, hour) {
-        const cellStart = new Date(day);
-        cellStart.setHours(hour, 0, 0, 0);
-        const cellEnd = new Date(day);
-        cellEnd.setHours(hour + 1, 0, 0, 0);
-        
-        let html = '';
-        
-        // Check events - span by start/end and align with timestamps
+    /**
+     * Render all event/time-entry blocks for one day as whole blocks (top + height in px), not per-hour.
+     */
+    renderWeekDayBlocks(day) {
+        const dayStart = new Date(day);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(day);
+        dayEnd.setHours(23, 59, 59, 999);
+        const timedItems = [];
         if (this.showEvents) {
             this.events.forEach(event => {
                 if (event.allDay) return;
-                if (!this.spanningItemOverlapsCell(event, cellStart, cellEnd)) return;
-                const position = this.getSpanningItemPositionInCell(event, cellStart, cellEnd);
-                const eventTitle = this.escapeHtml(event.title);
-                const eventColor = event.color || '#3b82f6';
                 const eventStart = new Date(event.start);
                 const eventEnd = event.end ? new Date(event.end) : null;
-                let timeRange = eventStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                if (eventEnd) timeRange += ' - ' + eventEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                const showText = position.height >= 15;
-                const displayText = showText ? `\uD83D\uDCC5 ${eventTitle}` : '\uD83D\uDCC5';
-                html += `<div class="event-chip" style="position: absolute; top: ${position.top}%; height: ${position.height}%; background-color: ${eventColor}; z-index: 1;" onclick="window.calendar.showEventDetails(${event.id}, 'event')" title="${eventTitle} (${timeRange})">${displayText}</div>`;
+                if (eventStart > dayEnd || (eventEnd && eventEnd < dayStart)) return;
+                const effectiveStart = eventStart < dayStart ? dayStart : eventStart;
+                const effectiveEnd = eventEnd ? (eventEnd > dayEnd ? dayEnd : eventEnd) : new Date(effectiveStart.getTime() + 60 * 60 * 1000);
+                const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
+                const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
+                const heightMinutes = Math.max(30, Math.min(1440 - startMinutes, durationMinutes));
+                const timeStr = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                timedItems.push({
+                    type: 'event',
+                    startMs: effectiveStart.getTime(),
+                    endMs: effectiveEnd.getTime(),
+                    event,
+                    topPosition: startMinutes,
+                    heightMinutes,
+                    title: this.escapeHtml(event.title),
+                    color: event.color || '#3b82f6',
+                    timeStr
+                });
             });
         }
-        
-        // Check tasks (only if they're due this hour)
+        if (this.showTimeEntries) {
+            this.timeEntries.forEach(entry => {
+                const entryStart = new Date(entry.start);
+                const entryEnd = entry.end ? new Date(entry.end) : null;
+                const entryEndForDay = entryEnd || new Date(entryStart.getTime() + 30 * 60 * 1000);
+                const effectiveStart = entryStart < dayStart ? dayStart : entryStart;
+                const effectiveEnd = entryEndForDay > dayEnd ? dayEnd : entryEndForDay;
+                if (effectiveStart > dayEnd || effectiveEnd < dayStart) return;
+                const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
+                let heightMinutes;
+                if (entryEnd) {
+                    const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
+                    heightMinutes = Math.max(30, Math.min(1440 - startMinutes, durationMinutes));
+                } else {
+                    heightMinutes = Math.min(30, 1440 - startMinutes);
+                }
+                const startTime = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                const endTimeStr = entryEnd ? effectiveEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+                timedItems.push({
+                    type: 'time_entry',
+                    startMs: effectiveStart.getTime(),
+                    endMs: effectiveEnd.getTime(),
+                    entry,
+                    topPosition: startMinutes,
+                    heightMinutes,
+                    title: this.escapeHtml(entry.title),
+                    startTime,
+                    endTimeStr,
+                    entryEnd
+                });
+            });
+        }
         if (this.showTasks) {
             this.tasks.forEach(task => {
                 const taskDate = new Date(task.start);
-                if (taskDate.toDateString() !== day.toDateString() || hour !== 9) return;
-                const taskTitle = this.escapeHtml(task.title);
-                html += `<div class="event-chip task-chip" style="background-color: #f59e0b" onclick="window.open('/tasks/${task.id}', '_blank'); event.stopPropagation();" title="${taskTitle}">\uD83D\uDCCB ${taskTitle}</div>`;
+                if (taskDate.toDateString() !== day.toDateString()) return;
+                const dueMinutes = 9 * 60;
+                timedItems.push({
+                    type: 'task',
+                    startMs: dayStart.getTime() + dueMinutes * 60 * 1000,
+                    endMs: dayStart.getTime() + (dueMinutes + 30) * 60 * 1000,
+                    task,
+                    topPosition: dueMinutes,
+                    heightMinutes: 30,
+                    title: this.escapeHtml(task.title)
+                });
             });
         }
-        
-        // Check time entries - span by start/end and align with timestamps
-        if (this.showTimeEntries) {
-            this.timeEntries.forEach(entry => {
-                if (!this.spanningItemOverlapsCell(entry, cellStart, cellEnd)) return;
-                const position = this.getSpanningItemPositionInCell(entry, cellStart, cellEnd);
-                const entryTitle = this.escapeHtml(entry.title);
-                const entryStart = new Date(entry.start);
-                const entryEnd = entry.end ? new Date(entry.end) : null;
-                let timeRange = entryStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                if (entryEnd) timeRange += ' - ' + entryEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                const showText = position.height >= 15;
-                const displayText = showText ? `\u23F1 ${entryTitle}` : '\u23F1';
-                html += `<div class="event-chip time-entry-chip" style="position: absolute; top: ${position.top}%; height: ${position.height}%; background-color: #10b981; opacity: 0.8; cursor: default; z-index: 1;" onclick="event.stopPropagation();" title="${entryTitle} (${timeRange})">${displayText}</div>`;
-            });
-        }
-        
+        this.assignOverlapColumnsByTime(timedItems);
+        let html = '';
+        timedItems.forEach(item => {
+            const { left, width } = this.columnStyle(item.column, item.totalColumns);
+            const style = `left: ${left}; width: ${width}; top: ${item.topPosition}px; height: ${item.heightMinutes}px;`;
+            if (item.type === 'event') {
+                html += `<div class="week-event-block event" data-id="${item.event.id}" data-type="event" style="border-left-color: ${item.color}; ${style}" onclick="window.calendar.showEventDetails(${item.event.id}, 'event')" title="${item.title} (${item.timeStr})"><i class="fas fa-calendar mr-1"></i><strong>${item.title}</strong><br><small>${item.timeStr}</small></div>`;
+            } else if (item.type === 'time_entry') {
+                const durationText = item.entryEnd ? `${item.startTime} - ${item.endTimeStr}` : `${item.startTime} (active)`;
+                html += `<div class="week-event-block time_entry" data-id="${item.entry.id}" data-type="time_entry" style="${style}" title="${item.title}"><i class="fas fa-clock mr-1"></i><strong>${item.title}</strong><br><small>${durationText}</small></div>`;
+            } else {
+                html += `<div class="week-event-block task" data-id="${item.task.id}" data-type="task" style="border-left-color: #f59e0b; ${style}" onclick="window.open('/tasks/${item.task.id}', '_blank'); event.stopPropagation();" title="${item.title}">\uD83D\uDCCB ${item.title}</div>`;
+            }
+        });
         return html;
     }
     

@@ -416,6 +416,24 @@ class InvoiceItem(db.Model):
     def __repr__(self):
         return f"<InvoiceItem {self.description} ({self.quantity}h @ {self.unit_price})>"
 
+    @property
+    def task_name_from_time_entries(self):
+        """Task name from first linked time entry, or None for project-level groups."""
+        if not self.time_entry_ids:
+            return None
+        first_id = self.time_entry_ids.split(",")[0].strip()
+        if not first_id:
+            return None
+        try:
+            from app.models import TimeEntry
+
+            entry = TimeEntry.query.get(int(first_id))
+            if entry and entry.task:
+                return entry.task.name
+            return None
+        except (ValueError, TypeError):
+            return None
+
     def to_dict(self):
         """Convert invoice item to dictionary"""
         return {

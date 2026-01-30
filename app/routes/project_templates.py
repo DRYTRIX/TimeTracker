@@ -305,8 +305,15 @@ def create_project_from_template(template_id):
 
         if not client_id:
             flash(_("Please select a client."), "error")
+            clients = Client.get_active_clients()
+            only_one_client = len(clients) == 1
+            single_client = clients[0] if only_one_client else None
             return render_template(
-                "project_templates/create_project.html", template=template, clients=Client.get_active_clients()
+                "project_templates/create_project.html",
+                template=template,
+                clients=clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
             )
 
         # Get override config
@@ -334,4 +341,12 @@ def create_project_from_template(template_id):
             flash(str(error_msg), "error")
 
     clients = Client.get_active_clients()
-    return render_template("project_templates/create_project.html", template=template, clients=clients)
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
+    return render_template(
+        "project_templates/create_project.html",
+        template=template,
+        clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
+    )

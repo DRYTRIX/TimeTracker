@@ -1,0 +1,266 @@
+{# ============================================
+   MULTI-SELECT COMPONENT
+   Reusable multi-select dropdown with checkboxes
+   ============================================ #}
+
+{% macro multi_select(
+    field_name,
+    label,
+    items,
+    selected_ids=[],
+    item_id_attr='id',
+    item_label_attr='name',
+    placeholder='All',
+    show_search=True,
+    form_id=None
+) %}
+{# 
+   Parameters:
+   - field_name: Name of the hidden input field (e.g., 'project_ids')
+   - label: Label text for the dropdown
+   - items: List of items to display (e.g., projects, users)
+   - selected_ids: List of currently selected IDs
+   - item_id_attr: Attribute name for item ID (default: 'id')
+   - item_label_attr: Attribute name for item label (default: 'name')
+   - placeholder: Text to show when nothing is selected (default: 'All')
+   - show_search: Whether to show search box (default: True)
+   - form_id: Optional form ID for auto-submit
+#}
+<div class="multi-select-wrapper relative" data-field-name="{{ field_name }}">
+    <label for="{{ field_name }}_button" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ _(label) }}
+    </label>
+    
+    {# Hidden input to store selected IDs as comma-separated values #}
+    <input type="hidden" name="{{ field_name }}" id="{{ field_name }}_input" value="{{ selected_ids|join(',') if selected_ids else '' }}">
+    
+    {# Dropdown button #}
+    <button 
+        type="button"
+        id="{{ field_name }}_button"
+        class="w-full bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 px-3 text-sm text-text-light dark:text-text-dark text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+    >
+        <span class="multi-select-label">
+            {% if selected_ids %}
+                {{ _('Selected') }}: <span class="font-semibold">{{ selected_ids|length }}</span>
+            {% else %}
+                {{ _(placeholder) }}
+            {% endif %}
+        </span>
+        <i class="fas fa-chevron-down text-xs transition-transform"></i>
+    </button>
+    
+    {# Dropdown menu #}
+    <div 
+        class="multi-select-dropdown absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg hidden"
+        role="listbox"
+        aria-label="{{ _(label) }} options"
+    >
+        {# Search box #}
+        {% if show_search and items|length > 5 %}
+        <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+            <input 
+                type="text" 
+                class="multi-select-search w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="{{ _('Search...') }}"
+                aria-label="{{ _('Search') }} {{ _(label) }}"
+            >
+        </div>
+        {% endif %}
+        
+        {# Options list #}
+        <div class="multi-select-options max-h-60 overflow-y-auto p-2">
+            {# "All" option #}
+            <label class="multi-select-option flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors">
+                <input 
+                    type="checkbox" 
+                    class="multi-select-all h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    aria-label="{{ _('Select all') }}"
+                >
+                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300 font-medium">{{ _('All') }}</span>
+            </label>
+            
+            <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+            
+            {# Individual items (support both dict-like and ORM objects) #}
+            {% for item in items %}
+            {% set item_id = item.get(item_id_attr) if item is mapping else getattr(item, item_id_attr, None) %}
+            {% set item_label = (item.get(item_label_attr, item.get('display_name', item_id)) if item is mapping else getattr(item, item_label_attr, getattr(item, 'display_name', item_id))) %}
+            <label class="multi-select-option flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors" data-search-text="{{ item_label|lower }}">
+                <input 
+                    type="checkbox" 
+                    class="multi-select-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    value="{{ item_id }}"
+                    {% if item_id in selected_ids %}checked{% endif %}
+                    aria-label="{{ item_label }}"
+                >
+                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ item_label }}</span>
+            </label>
+            {% endfor %}
+            
+            {% if not items %}
+            <div class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                {{ _('No items available') }}
+            </div>
+            {% endif %}
+        </div>
+        
+        {# Action buttons #}
+        <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex gap-2">
+            <button 
+                type="button" 
+                class="multi-select-clear flex-1 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+            >
+                {{ _('Clear') }}
+            </button>
+            <button 
+                type="button" 
+                class="multi-select-apply flex-1 px-3 py-1.5 text-xs text-white bg-primary hover:bg-primary/90 rounded transition-colors"
+            >
+                {{ _('Apply') }}
+            </button>
+        </div>
+    </div>
+</div>
+
+{# JavaScript for multi-select functionality #}
+<script>
+(function() {
+    'use strict';
+    
+    const wrapper = document.querySelector('.multi-select-wrapper[data-field-name="{{ field_name }}"]');
+    if (!wrapper) return;
+    
+    const button = wrapper.querySelector('#{{ field_name }}_button');
+    const dropdown = wrapper.querySelector('.multi-select-dropdown');
+    const hiddenInput = wrapper.querySelector('#{{ field_name }}_input');
+    const labelSpan = wrapper.querySelector('.multi-select-label');
+    const searchInput = wrapper.querySelector('.multi-select-search');
+    const allCheckbox = wrapper.querySelector('.multi-select-all');
+    const checkboxes = wrapper.querySelectorAll('.multi-select-checkbox');
+    const clearBtn = wrapper.querySelector('.multi-select-clear');
+    const applyBtn = wrapper.querySelector('.multi-select-apply');
+    const options = wrapper.querySelectorAll('.multi-select-option');
+    const chevron = button.querySelector('.fa-chevron-down');
+    
+    // Toggle dropdown
+    button.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = !dropdown.classList.contains('hidden');
+        
+        // Close all other multi-selects
+        document.querySelectorAll('.multi-select-dropdown').forEach(d => {
+            if (d !== dropdown) {
+                d.classList.add('hidden');
+                const otherButton = d.parentElement.querySelector('[aria-expanded]');
+                if (otherButton) {
+                    otherButton.setAttribute('aria-expanded', 'false');
+                    const otherChevron = otherButton.querySelector('.fa-chevron-down');
+                    if (otherChevron) otherChevron.classList.remove('rotate-180');
+                }
+            }
+        });
+        
+        dropdown.classList.toggle('hidden');
+        button.setAttribute('aria-expanded', !isOpen);
+        chevron.classList.toggle('rotate-180');
+        
+        if (!isOpen && searchInput) {
+            searchInput.focus();
+        }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!wrapper.contains(e.target)) {
+            dropdown.classList.add('hidden');
+            button.setAttribute('aria-expanded', 'false');
+            chevron.classList.remove('rotate-180');
+        }
+    });
+    
+    // Search functionality
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            options.forEach(option => {
+                if (option.classList.contains('multi-select-option') && option.dataset.searchText) {
+                    const matches = option.dataset.searchText.includes(searchTerm);
+                    option.style.display = matches ? '' : 'none';
+                }
+            });
+        });
+    }
+    
+    // Update label and hidden input
+    function updateSelection() {
+        const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        hiddenInput.value = selected.join(',');
+        
+        if (selected.length === 0) {
+            labelSpan.innerHTML = '{{ _(placeholder) }}';
+            if (allCheckbox) allCheckbox.checked = false;
+        } else if (selected.length === checkboxes.length) {
+            labelSpan.innerHTML = '{{ _("All") }}';
+            if (allCheckbox) allCheckbox.checked = true;
+        } else {
+            labelSpan.innerHTML = '{{ _("Selected") }}: <span class="font-semibold">' + selected.length + '</span>';
+            if (allCheckbox) allCheckbox.checked = false;
+        }
+    }
+    
+    // Handle individual checkbox changes
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelection();
+        });
+    });
+    
+    // Handle "All" checkbox
+    if (allCheckbox) {
+        allCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            checkboxes.forEach(cb => cb.checked = isChecked);
+            updateSelection();
+        });
+    }
+    
+    // Clear button
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            checkboxes.forEach(cb => cb.checked = false);
+            if (allCheckbox) allCheckbox.checked = false;
+            updateSelection();
+        });
+    }
+    
+    // Apply button - close dropdown and optionally submit form
+    if (applyBtn) {
+        applyBtn.addEventListener('click', function() {
+            dropdown.classList.add('hidden');
+            button.setAttribute('aria-expanded', 'false');
+            chevron.classList.remove('rotate-180');
+            
+            {% if form_id %}
+            // Auto-submit form if form_id is provided
+            const form = document.getElementById('{{ form_id }}');
+            if (form) {
+                // For AJAX forms, trigger custom event
+                if (form.hasAttribute('data-filter-form')) {
+                    const event = new Event('change', { bubbles: true });
+                    hiddenInput.dispatchEvent(event);
+                } else {
+                    form.submit();
+                }
+            }
+            {% endif %}
+        });
+    }
+    
+    // Initialize "All" checkbox state
+    updateSelection();
+})();
+</script>
+{% endmacro %}

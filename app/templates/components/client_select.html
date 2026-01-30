@@ -1,0 +1,16 @@
+{# Client select component - when only one client exists, pre-fill and gray out per Issue #467 #}
+{% macro client_select(name, clients, selected_id=None, required=False, only_one_client=False, single_client=None, id=None) %}
+{% set input_id = id or name %}
+{% if only_one_client and single_client %}
+    <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ single_client.id }}">
+    <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75" 
+           value="{{ single_client.name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
+{% else %}
+    <select name="{{ name }}" id="{{ input_id }}" class="form-input" {% if required %}required{% endif %}>
+        <option value="">{% if required %}{{ _('Select a client...') }}{% else %}{{ _('Select a client (optional)') }}{% endif %}</option>
+        {% for client in clients %}
+        <option value="{{ client.id }}" {% if selected_id is not none and selected_id|string == client.id|string %}selected{% endif %}>{{ client.name }}</option>
+        {% endfor %}
+    </select>
+{% endif %}
+{% endmacro %}

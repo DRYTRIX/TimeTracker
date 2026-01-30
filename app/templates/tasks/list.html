@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header, stat_card, badge, confirm_dialog %}
+{% from "components/multi_select.html" import multi_select %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -62,22 +63,28 @@
             </select>
         </div>
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
-            <select name="project_id" id="project_id" class="form-input">
-                <option value="">All</option>
-                {% for project in projects %}
-                <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
-                {% endfor %}
-            </select>
+            {{ multi_select(
+                field_name='project_ids',
+                label='Project',
+                items=projects,
+                selected_ids=project_ids,
+                item_id_attr='id',
+                item_label_attr='name',
+                placeholder='All Projects',
+                show_search=True
+            ) }}
         </div>
         <div>
-            <label for="assigned_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Assigned To</label>
-            <select name="assigned_to" id="assigned_to" class="form-input">
-                <option value="">All</option>
-                {% for user in users %}
-                <option value="{{ user.id }}" {% if assigned_to == user.id %}selected{% endif %}>{{ user.display_name }}</option>
-                {% endfor %}
-            </select>
+            {{ multi_select(
+                field_name='assigned_to_ids',
+                label='Assigned To',
+                items=users,
+                selected_ids=assigned_to_ids,
+                item_id_attr='id',
+                item_label_attr='display_name',
+                placeholder='All Users',
+                show_search=True
+            ) }}
         </div>
         <div class="flex items-center pt-5">
             <input type="checkbox" name="overdue" id="overdue" value="1" {% if overdue %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
@@ -614,9 +621,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-        // Auto-submit on checkbox changes
-        form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        // Auto-submit on checkbox changes (including overdue filter)
+        form.querySelectorAll('input[type="checkbox"]:not(.multi-select-checkbox):not(.multi-select-all)').forEach(checkbox => {
             checkbox.addEventListener('change', () => {
+                debouncedApplyFilters(100);
+            });
+        });
+        
+        // Auto-submit on multi-select hidden input changes (triggered by Apply button)
+        form.querySelectorAll('input[name="project_ids"], input[name="assigned_to_ids"]').forEach(input => {
+            input.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/client_select.html" import client_select %}
 {% from "components/ui.html" import page_header %}
 
 {% block content %}
@@ -223,15 +224,7 @@
                     <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Client
                     </label>
-                    <select name="client_id" id="client_id"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
-                        <option value="">No Client</option>
-                        {% for client in clients %}
-                        <option value="{{ client.id }}" {% if mileage and mileage.client_id == client.id %}selected{% endif %}>
-                            {{ client.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    {{ client_select('client_id', clients, selected_id=mileage.client_id if mileage else none, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
                 </div>
             </div>
         </div>
