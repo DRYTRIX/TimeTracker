@@ -4,7 +4,7 @@ import pytest
 from decimal import Decimal
 from flask import url_for
 from app import db
-from app.models import Warehouse, StockItem, WarehouseStock, User
+from app.models import Warehouse, StockItem, WarehouseStock, StockMovement, StockLot, User
 
 
 @pytest.fixture
@@ -28,8 +28,15 @@ def test_warehouse(db_session, test_user):
 
 @pytest.fixture
 def test_stock_item(db_session, test_user):
-    """Create a test stock item"""
-    item = StockItem(sku="TEST-001", name="Test Product", created_by=test_user.id, default_price=Decimal("10.00"))
+    """Create a test stock item (trackable with default_cost for devaluation tests)."""
+    item = StockItem(
+        sku="TEST-001",
+        name="Test Product",
+        created_by=test_user.id,
+        default_price=Decimal("10.00"),
+        default_cost=Decimal("5.00"),
+        is_trackable=True,
+    )
     db_session.add(item)
     db_session.commit()
     return item
@@ -199,3 +206,88 @@ class TestStockMovementsRoutes:
         stock = WarehouseStock.query.filter_by(warehouse_id=test_warehouse.id, stock_item_id=test_stock_item.id).first()
         assert stock is not None
         assert stock.quantity_on_hand == Decimal("50.00")
+
+    def test_create_return_with_devaluation(self, client, test_user, test_stock_item, test_warehouse):
+        """Test recording a return with devaluation creates a devalued lot."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(test_user.id)
+
+        response = client.post(
+            url_for("inventory.new_movement"),
+            data={
+                "movement_type": "return",
+                "stock_item_id": test_stock_item.id,
+                "warehouse_id": test_warehouse.id,
+                "quantity": "5.00",
+                "devalue_enabled": "on",
+                "devalue_method": "fixed",
+                "devalue_unit_cost": "2.50",
+                "reason": "Returned with damage",
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"devaluation" in response.data.lower() or b"success" in response.data.lower()
+
+        stock = WarehouseStock.query.filter_by(
+            warehouse_id=test_warehouse.id, stock_item_id=test_stock_item.id
+        ).first()
+        assert stock is not None
+        assert stock.quantity_on_hand == Decimal("5.00")
+
+        lots = StockLot.query.filter_by(
+            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
+        ).all()
+        assert len(lots) >= 1
+        devalued = [l for l in lots if l.lot_type == "devalued"]
+        assert len(devalued) >= 1
+        assert any(Decimal(str(l.quantity_on_hand)) == Decimal("5.00") for l in devalued)
+        assert any(Decimal(str(l.unit_cost)) == Decimal("2.50") for l in devalued)
+
+    def test_create_waste_with_devaluation(self, client, test_user, test_stock_item, test_warehouse):
+        """Test recording waste with devaluation consumes from a devalued lot."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(test_user.id)
+
+        # Create stock first via purchase
+        StockMovement.record_movement(
+            movement_type="purchase",
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+            quantity=Decimal("10.00"),
+            moved_by=test_user.id,
+            unit_cost=Decimal("5.00"),
+            update_stock=True,
+        )
+        db.session.commit()
+
+        response = client.post(
+            url_for("inventory.new_movement"),
+            data={
+                "movement_type": "waste",
+                "stock_item_id": test_stock_item.id,
+                "warehouse_id": test_warehouse.id,
+                "quantity": "-4.00",
+                "devalue_enabled": "on",
+                "devalue_method": "fixed",
+                "devalue_unit_cost": "1.00",
+                "reason": "Wasted impaired items",
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"devaluation" in response.data.lower() or b"success" in response.data.lower()
+
+        stock = WarehouseStock.query.filter_by(
+            warehouse_id=test_warehouse.id, stock_item_id=test_stock_item.id
+        ).first()
+        assert stock is not None
+        assert stock.quantity_on_hand == Decimal("6.00")
+
+        lots = StockLot.query.filter_by(
+            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
+        ).all()
+        devalued = [l for l in lots if l.lot_type == "devalued"]
+        assert any(Decimal(str(l.quantity_on_hand)) == Decimal("0.00") for l in devalued)
