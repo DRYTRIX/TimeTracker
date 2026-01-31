@@ -1139,12 +1139,24 @@ def bulk_move_project():
 @tasks_bp.route("/tasks/export")
 @login_required
 def export_tasks():
-    """Export tasks to CSV"""
-    # Get the same filters as the list view
+    """Export tasks to CSV (supports same filters as list view, including multi-select)"""
+    # Parse filter parameters - same logic as list_tasks (multi-select + backward compat)
+    def parse_ids(param_name):
+        multi_param = request.args.get(param_name + "s", "").strip()
+        if multi_param:
+            try:
+                return [int(x.strip()) for x in multi_param.split(",") if x.strip()]
+            except (ValueError, AttributeError):
+                return []
+        single_param = request.args.get(param_name, type=int)
+        if single_param:
+            return [single_param]
+        return []
+
     status = request.args.get("status", "")
     priority = request.args.get("priority", "")
-    project_id = request.args.get("project_id", type=int)
-    assigned_to = request.args.get("assigned_to", type=int)
+    project_ids = parse_ids("project_id")
+    assigned_to_ids = parse_ids("assigned_to")
     search = request.args.get("search", "").strip()
     overdue_param = request.args.get("overdue", "").strip().lower()
     overdue = overdue_param in ["1", "true", "on", "yes"]
@@ -1158,11 +1170,11 @@ def export_tasks():
     if priority:
         query = query.filter_by(priority=priority)
 
-    if project_id:
-        query = query.filter_by(project_id=project_id)
+    if project_ids:
+        query = query.filter(Task.project_id.in_(project_ids))
 
-    if assigned_to:
-        query = query.filter_by(assigned_to=assigned_to)
+    if assigned_to_ids:
+        query = query.filter(Task.assigned_to.in_(assigned_to_ids))
 
     if search:
         like = f"%{search}%"

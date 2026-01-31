@@ -84,6 +84,34 @@
                 <span class="ml-2">{{ _('Time Entries') }}</span>
             </label>
         </div>
+
+        <!-- Calendar colors -->
+        <div class="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+            <span class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('Calendar colors') }}</span>
+            <div class="flex flex-wrap items-center gap-4">
+                <label class="inline-flex items-center gap-2">
+                    <span class="text-sm">{{ _('Events') }}</span>
+                    <input type="color" id="calendarColorEvents" value="{{ type_colors.event }}" class="h-8 w-12 cursor-pointer rounded border border-border-light dark:border-border-dark" title="{{ _('Events') }}">
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <span class="text-sm">{{ _('Tasks') }}</span>
+                    <input type="color" id="calendarColorTasks" value="{{ type_colors.task }}" class="h-8 w-12 cursor-pointer rounded border border-border-light dark:border-border-dark" title="{{ _('Tasks') }}">
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <span class="text-sm">{{ _('Time Entries') }}</span>
+                    <input type="color" id="calendarColorTimeEntries" value="{{ type_colors.time_entry }}" class="h-8 w-12 cursor-pointer rounded border border-border-light dark:border-border-dark" title="{{ _('Time Entries') }}">
+                </label>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-muted">{{ _('Legend') }}:</span>
+                <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ type_colors.event }}"></span> {{ _('Events') }}</span>
+                <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ type_colors.task }}"></span> {{ _('Tasks') }}</span>
+                <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ type_colors.time_entry }}"></span> {{ _('Time Entries') }}</span>
+            </div>
+            <button type="button" id="saveCalendarColorsBtn" class="btn btn-sm btn-primary">
+                <i class="fas fa-save mr-1"></i>{{ _('Save') }}
+            </button>
+        </div>
     </div>
     
     <!-- Calendar Grid -->
@@ -103,9 +131,14 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">{{ _('Event Details') }}</h3>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <div class="modal-header-actions">
+                        <a href="#" id="eventModalGoToBtn" class="btn btn-primary btn-sm" style="display: none;">
+                            <i class="fas fa-external-link-alt me-1"></i>{{ _('Go to all details') }}
+                        </a>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="modal-body" id="eventDetails">
                     <!-- Event details will be loaded here -->
@@ -137,7 +170,13 @@
         deleteEventUrl: '{{ url_for('calendar.delete_event', event_id=0) }}'.replace('/0', ''),
         moveEventUrl: '{{ url_for('calendar.move_event', event_id=0) }}'.replace('/0', ''),
         resizeEventUrl: '{{ url_for('calendar.resize_event', event_id=0) }}'.replace('/0', ''),
-        csrfToken: '{{ csrf_token() }}'
+        csrfToken: '{{ csrf_token() }}',
+        typeColors: {
+            event: '{{ type_colors.event }}',
+            task: '{{ type_colors.task }}',
+            time_entry: '{{ type_colors.time_entry }}'
+        },
+        preferencesUrl: '{{ url_for('user.update_preferences') }}'
     };
 </script>
 {% endblock %}
