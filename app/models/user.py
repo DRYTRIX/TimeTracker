@@ -56,6 +56,11 @@ class User(UserMixin, db.Model):
         db.Integer, db.ForeignKey("clients.id", ondelete="SET NULL"), nullable=True, index=True
     )  # Link user to a client for portal access
 
+    # Calendar item type colors (hex e.g. #3b82f6); when null, app uses defaults
+    calendar_color_events = db.Column(db.String(7), nullable=True)
+    calendar_color_tasks = db.Column(db.String(7), nullable=True)
+    calendar_color_time_entries = db.Column(db.String(7), nullable=True)
+
     # UI feature flags - allow users to customize which features are visible
     # All default to True (enabled) for backward compatibility
     # Calendar section
