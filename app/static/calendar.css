@@ -77,8 +77,7 @@
     border-left-color: #10b981;
     background-color: #ecfdf5;
     opacity: 0.9;
-    cursor: default;
-    pointer-events: none;
+    cursor: pointer;
 }
 
 .event-card.time_entry::before {
@@ -457,6 +456,37 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.modal-header .modal-title {
+    margin: 0;
+    flex: 1;
+}
+
+.modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.event-detail-row {
+    margin-bottom: 0.75rem;
+}
+
+.event-detail-row:last-child {
+    margin-bottom: 0;
+}
+
+.event-detail-label {
+    font-size: 0.875rem;
+    color: var(--text-muted, #6b7280);
+    margin-bottom: 0.25rem;
+}
+
+.event-detail-value {
+    font-size: 1rem;
 }
 
 .modal-title {

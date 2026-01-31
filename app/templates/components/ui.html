@@ -7,7 +7,7 @@
    PAGE HEADERS
    ============================================ #}
 {% macro page_header(icon_class, title_text, subtitle_text=None, actions_html=None, breadcrumbs=None) %}
-<div class="bg-gradient-to-r from-card-light to-card-light/50 dark:from-card-dark dark:to-card-dark/50 rounded-lg shadow-sm mb-6 overflow-hidden">
+<div class="bg-gradient-to-r from-card-light to-card-light/50 dark:from-card-dark dark:to-card-dark/50 rounded-lg shadow-sm mb-6 overflow-visible relative z-20">
     {% if breadcrumbs %}
     <div class="px-6 pt-4 pb-2">
         {{ breadcrumb_nav(breadcrumbs) }}

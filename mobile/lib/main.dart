@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
+import 'package:timetracker_mobile/data/storage/local_storage.dart';
 import 'package:timetracker_mobile/presentation/screens/splash_screen.dart';
 import 'package:timetracker_mobile/presentation/screens/login_screen.dart';
 import 'package:timetracker_mobile/presentation/screens/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LocalStorage.init();
   runApp(
     const ProviderScope(
       child: TimeTrackerApp(),

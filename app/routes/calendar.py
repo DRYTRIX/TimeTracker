@@ -35,8 +35,21 @@ def view_calendar():
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     clients = Client.query.filter_by(is_active=True).order_by(Client.name).all()
 
+    # Type colors for calendar (user preference or defaults)
+    defaults = {"event": "#3b82f6", "task": "#f59e0b", "time_entry": "#10b981"}
+    type_colors = {
+        "event": current_user.calendar_color_events or defaults["event"],
+        "task": current_user.calendar_color_tasks or defaults["task"],
+        "time_entry": current_user.calendar_color_time_entries or defaults["time_entry"],
+    }
+
     return render_template(
-        "calendar/view.html", view_type=view_type, current_date=current_date, projects=projects, clients=clients
+        "calendar/view.html",
+        view_type=view_type,
+        current_date=current_date,
+        projects=projects,
+        clients=clients,
+        type_colors=type_colors,
     )
 
 
@@ -84,6 +97,31 @@ def get_events():
         include_tasks=include_tasks,
         include_time_entries=include_time_entries,
     )
+
+    # Effective type colors (user preference or defaults)
+    def get_type_color(typ):
+        defaults = {"event": "#3b82f6", "task": "#f59e0b", "time_entry": "#10b981"}
+        if typ == "event":
+            return (current_user.calendar_color_events or defaults["event"])
+        if typ == "task":
+            return (current_user.calendar_color_tasks or defaults["task"])
+        if typ == "time_entry":
+            return (current_user.calendar_color_time_entries or defaults["time_entry"])
+        return defaults.get(typ, "#6b7280")
+
+    # Attach color to each item
+    for ev in result.get("events", []):
+        ev["color"] = ev.get("color") or get_type_color("event")
+    for t in result.get("tasks", []):
+        t["color"] = get_type_color("task")
+    for e in result.get("time_entries", []):
+        e["color"] = get_type_color("time_entry")
+
+    result["typeColors"] = {
+        "event": get_type_color("event"),
+        "task": get_type_color("task"),
+        "time_entry": get_type_color("time_entry"),
+    }
 
     print(f"\n{'='*80}")
     print(f"ROUTE HANDLER - Result from get_events_in_range:")

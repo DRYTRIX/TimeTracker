@@ -1,5 +1,7 @@
 """User profile and settings routes"""
 
+import re
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app import db
@@ -8,6 +10,8 @@ from app.utils.db import safe_commit
 from flask_babel import gettext as _
 import pytz
 from app.utils.timezone import get_available_timezones
+
+HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 user_bp = Blueprint("user", __name__)
 
@@ -197,6 +201,20 @@ def update_preferences():
                     current_user.timezone = tz_value
                 except pytz.exceptions.UnknownTimeZoneError:
                     return jsonify({"error": "Invalid timezone"}), 400
+
+        for key, attr in (
+            ("calendar_color_events", "calendar_color_events"),
+            ("calendar_color_tasks", "calendar_color_tasks"),
+            ("calendar_color_time_entries", "calendar_color_time_entries"),
+        ):
+            if key in data:
+                val = data[key]
+                if val is None or val == "":
+                    setattr(current_user, attr, None)
+                elif isinstance(val, str) and HEX_COLOR_RE.match(val):
+                    setattr(current_user, attr, val)
+                else:
+                    return jsonify({"error": f"Invalid {key}: must be null or hex color (#RRGGBB)"}), 400
 
         db.session.commit()
 

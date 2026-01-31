@@ -5,6 +5,11 @@
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+<style>
+.event-modal-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.event-modal-header h3 { margin: 0; flex: 1; }
+.event-modal-header-actions { display: flex; align-items: center; gap: 0.5rem; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -209,8 +214,13 @@
 <div class="event-modal" id="eventDetailModal">
   <div class="event-modal-content">
     <div class="event-modal-header">
-      <h3><i class="fas fa-clock me-2 text-primary"></i>{{ _('Time Entry Details') }}</h3>
-      <button class="event-modal-close" onclick="closeModal('eventDetailModal')">&times;</button>
+      <h3 id="eventDetailModalTitle"><i class="fas fa-clock me-2 text-primary"></i>{{ _('Time Entry Details') }}</h3>
+      <div class="event-modal-header-actions">
+        <a href="#" id="eventDetailGoToBtn" class="btn btn-primary btn-sm event-detail-goto-btn" style="display: none;">
+          <i class="fas fa-external-link-alt me-1"></i>{{ _('Go to all details') }}
+        </a>
+        <button class="event-modal-close" onclick="closeModal('eventDetailModal')">&times;</button>
+      </div>
     </div>
     <div class="event-modal-body">
       <div class="event-detail" id="eventDetailContent">
@@ -443,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
     },
     
     eventClick: function(info) {
-      showEventDetails(info.event);
+      showEventDetails(info.event, info.jsEvent);
     },
     
     eventDrop: async function(info) {
@@ -765,13 +775,64 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function showEventDetails(event) {
-    const props = event.extendedProps;
+  function showEventDetails(event, clickEvent) {
+    const props = event.extendedProps || {};
+    // Prefer item_type; backend also sends "type" (time_entry/event/task). If missing, infer from props (duration_hours/source = time entry).
+    let itemType = props.item_type || props.type || null;
+    if (!itemType && (props.duration_hours != null || props.source != null || (props.projectId != null && !event.allDay))) {
+      itemType = 'time_entry';
+    }
+    if (!itemType) itemType = 'time_entry';
+    // Force time_entry link when event has time-entry-only props (registered time must go to /timer/edit/)
+    if (itemType === 'event' && (props.duration_hours != null || props.source != null || (props.projectId != null && !event.allDay))) {
+      itemType = 'time_entry';
+    }
     const content = document.getElementById('eventDetailContent');
-    
-    // Store current event for duplication
-    currentEventForDuplication = event;
-    
+    const goToBtn = document.getElementById('eventDetailGoToBtn');
+    const modalTitle = document.getElementById('eventDetailModalTitle');
+    const editEventBtn = document.getElementById('editEventBtn');
+    const deleteEventBtn = document.getElementById('deleteEventBtn');
+    const duplicateEventBtn = document.getElementById('duplicateEventBtn');
+
+    // Set detail URL and "Go to all details" by type
+    let detailUrl = '#';
+    let titleLabel = '{{ _("Time Entry Details") }}';
+    let titleIcon = 'fa-clock';
+    if (itemType === 'time_entry') {
+      detailUrl = `/timer/edit/${event.id}`;
+      titleLabel = '{{ _("Time Entry Details") }}';
+      titleIcon = 'fa-clock';
+    } else if (itemType === 'event') {
+      detailUrl = `/calendar/event/${event.id}`;
+      titleLabel = '{{ _("Event Details") }}';
+      titleIcon = 'fa-calendar';
+    } else if (itemType === 'task') {
+      detailUrl = `/tasks/${event.id}`;
+      titleLabel = '{{ _("Task") }}';
+      titleIcon = 'fa-tasks';
+    }
+    goToBtn.href = detailUrl;
+    goToBtn.style.display = '';
+    modalTitle.innerHTML = `<i class="fas ${titleIcon} me-2 text-primary"></i>${titleLabel}`;
+    editEventBtn.href = detailUrl;
+    editEventBtn.innerHTML = itemType === 'time_entry' ? '<i class="fas fa-edit me-1"></i>{{ _("Edit") }}' : '<i class="fas fa-external-link-alt me-1"></i>{{ _("Go to all details") }}';
+
+    // Show/hide time-entry-only actions
+    const isTimeEntry = itemType === 'time_entry';
+    deleteEventBtn.style.display = isTimeEntry ? '' : 'none';
+    duplicateEventBtn.style.display = isTimeEntry ? '' : 'none';
+    if (isTimeEntry) {
+      currentEventForDuplication = event;
+      deleteEventBtn.onclick = async () => {
+        const confirmed = await showConfirm(
+          '{{ _("Are you sure you want to delete this entry?") }}',
+          { title: '{{ _("Delete Entry") }}', confirmText: '{{ _("Delete") }}', cancelText: '{{ _("Cancel") }}', variant: 'danger' }
+        );
+        if (confirmed) await deleteEvent(event.id);
+      };
+      duplicateEventBtn.onclick = async () => { await duplicateEvent(event); };
+    }
+
     const formatDate = (date) => {
       return new Date(date).toLocaleString('{{ current_user.preferred_language or "en" }}', {
         year: 'numeric',
@@ -781,87 +842,81 @@ document.addEventListener('DOMContentLoaded', function() {
         minute: '2-digit'
       });
     };
-    
-    content.innerHTML = `
-      <div class="event-detail-row">
-        <div class="event-detail-label">{{ _("Project") }}</div>
-        <div class="event-detail-value">${props.project_name || '{{ _("N/A") }}'}</div>
-      </div>
-      
-      ${props.task_name ? `
+
+    if (itemType === 'task') {
+      const dueStr = event.start ? formatDate(event.start) : (props.dueDate || '{{ _("N/A") }}');
+      content.innerHTML = `
         <div class="event-detail-row">
-          <div class="event-detail-label">{{ _("Task") }}</div>
-          <div class="event-detail-value">${props.task_name}</div>
+          <div class="event-detail-label">{{ _("Title") }}</div>
+          <div class="event-detail-value">${event.title || props.title || '{{ _("N/A") }}'}</div>
         </div>
-      ` : ''}
-      
-      <div class="event-detail-row">
-        <div class="event-detail-label">{{ _("Start") }}</div>
-        <div class="event-detail-value">${formatDate(event.start)}</div>
-      </div>
-      
-      <div class="event-detail-row">
-        <div class="event-detail-label">{{ _("End") }}</div>
-        <div class="event-detail-value">${formatDate(event.end)}</div>
-      </div>
-      
-      <div class="event-detail-row">
-        <div class="event-detail-label">{{ _("Duration") }}</div>
-        <div class="event-detail-value">${(props.duration_hours || 0).toFixed(2)} {{ _("hours") }}</div>
-      </div>
-      
-      ${props.notes ? `
         <div class="event-detail-row">
-          <div class="event-detail-label">{{ _("Notes") }}</div>
-          <div class="event-detail-value">${props.notes}</div>
+          <div class="event-detail-label">{{ _("Due") }}</div>
+          <div class="event-detail-value">${dueStr}</div>
         </div>
-      ` : ''}
-      
-      ${props.tags ? `
+        ${props.status ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Status") }}</div><div class="event-detail-value">${props.status}</div></div>` : ''}
+        ${props.project_name ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Project") }}</div><div class="event-detail-value">${props.project_name}</div></div>` : ''}
+      `;
+    } else {
+      content.innerHTML = `
         <div class="event-detail-row">
-          <div class="event-detail-label">{{ _("Tags") }}</div>
-          <div class="event-detail-value">${props.tags}</div>
+          <div class="event-detail-label">{{ _("Project") }}</div>
+          <div class="event-detail-value">${props.project_name || '{{ _("N/A") }}'}</div>
         </div>
-      ` : ''}
-      
-      <div class="event-detail-row">
-        <div class="event-detail-label">{{ _("Billable") }}</div>
-        <div class="event-detail-value">
-          <span class="event-detail-badge ${props.billable ? 'billable' : 'non-billable'}">
-            ${props.billable ? '{{ _("Yes") }}' : '{{ _("No") }}'}
-          </span>
+        ${props.task_name ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Task") }}</div><div class="event-detail-value">${props.task_name}</div></div>` : ''}
+        <div class="event-detail-row">
+          <div class="event-detail-label">{{ _("Start") }}</div>
+          <div class="event-detail-value">${formatDate(event.start)}</div>
         </div>
-      </div>
-      
-      <div class="event-detail-row">
-        <div class="event-detail-label">{{ _("Source") }}</div>
-        <div class="event-detail-value">${props.source === 'auto' ? '{{ _("Automatic Timer") }}' : '{{ _("Manual Entry") }}'}</div>
-      </div>
-    `;
-    
-    // Set up edit and delete buttons
-    document.getElementById('editEventBtn').href = `/timer/edit/${event.id}`;
-    document.getElementById('deleteEventBtn').onclick = async () => {
-      const confirmed = await showConfirm(
-        '{{ _("Are you sure you want to delete this entry?") }}',
-        {
-          title: '{{ _("Delete Entry") }}',
-          confirmText: '{{ _("Delete") }}',
-          cancelText: '{{ _("Cancel") }}',
-          variant: 'danger'
-        }
-      );
-      if (confirmed) {
-        await deleteEvent(event.id);
-      }
-    };
-    
-    // Set up duplicate button
-    document.getElementById('duplicateEventBtn').onclick = async () => {
-      await duplicateEvent(event);
-    };
-    
+        <div class="event-detail-row">
+          <div class="event-detail-label">{{ _("End") }}</div>
+          <div class="event-detail-value">${formatDate(event.end)}</div>
+        </div>
+        <div class="event-detail-row">
+          <div class="event-detail-label">{{ _("Duration") }}</div>
+          <div class="event-detail-value">${(props.duration_hours != null ? props.duration_hours : 0).toFixed(2)} {{ _("hours") }}</div>
+        </div>
+        ${props.notes ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Notes") }}</div><div class="event-detail-value">${props.notes}</div></div>` : ''}
+        ${props.tags ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Tags") }}</div><div class="event-detail-value">${props.tags}</div></div>` : ''}
+        ${itemType === 'time_entry' ? `
+        <div class="event-detail-row">
+          <div class="event-detail-label">{{ _("Billable") }}</div>
+          <div class="event-detail-value">
+            <span class="event-detail-badge ${props.billable ? 'billable' : 'non-billable'}">${props.billable ? '{{ _("Yes") }}' : '{{ _("No") }}'}</span>
+          </div>
+        </div>
+        <div class="event-detail-row">
+          <div class="event-detail-label">{{ _("Source") }}</div>
+          <div class="event-detail-value">${props.source === 'auto' ? '{{ _("Automatic Timer") }}' : '{{ _("Manual Entry") }}'}</div>
+        </div>
+        ` : ''}
+      `;
+    }
+
     openModal('eventDetailModal');
+    const modalEl = document.getElementById('eventDetailModal');
+    const contentEl = modalEl && modalEl.querySelector('.event-modal-content');
+    if (clickEvent && contentEl) {
+      const pad = 16;
+      const x = clickEvent.clientX;
+      const y = clickEvent.clientY;
+      contentEl.style.position = 'fixed';
+      requestAnimationFrame(function() {
+        const rect = contentEl.getBoundingClientRect();
+        let left = x + pad;
+        let top = y + pad;
+        if (left + rect.width > window.innerWidth - pad) left = window.innerWidth - rect.width - pad;
+        if (top + rect.height > window.innerHeight - pad) top = window.innerHeight - rect.height - pad;
+        if (left < pad) left = pad;
+        if (top < pad) top = pad;
+        contentEl.style.left = left + 'px';
+        contentEl.style.top = top + 'px';
+      });
+    } else if (contentEl) {
+      contentEl.style.position = '';
+      contentEl.style.left = '';
+      contentEl.style.top = '';
+    }
   }
 
   async function deleteEvent(eventId) {

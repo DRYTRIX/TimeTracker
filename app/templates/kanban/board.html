@@ -10,8 +10,8 @@
 ] %}
 
 {% set kanban_actions %}
-<div class="flex items-center gap-3 flex-wrap">
-    <a href="{{ url_for('tasks.create_task', project_id=project_id if project_id else none, next=request.full_path) }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+<div class="flex items-end gap-3 flex-wrap">
+    <a href="{{ url_for('tasks.create_task', project_id=project_id if project_id else none, next=request.full_path) }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors shrink-0">
         <i class="fas fa-plus"></i> {{ _('Add task') }}
     </a>
     <form method="get" id="kanbanFilterForm" class="flex items-center gap-3 flex-wrap">
@@ -43,7 +43,7 @@
         </div>
     </form>
     {% if current_user.is_admin %}
-    <a href="{{ url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition-colors">
+    <a href="{{ url_for('kanban.list_columns') }}" class="inline-flex items-center gap-2 bg-primary text-white text-sm px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors shrink-0">
         <i class="fas fa-sliders-h"></i> {{ _('Manage Columns') }}
     </a>
     {% endif %}
