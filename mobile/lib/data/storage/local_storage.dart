@@ -10,7 +10,12 @@ class LocalStorage {
 
   static Future<void> init() async {
     await Hive.initFlutter();
-    
+
+    // Open all boxes at init so path/permission issues fail fast at startup
+    await Hive.openBox(_timeEntriesBox);
+    await Hive.openBox(_timerBox);
+    await Hive.openBox(_syncQueueBox);
+
     // Register adapters if needed (for now we'll use JSON strings)
     // In production, you'd want to create proper Hive adapters
   }
